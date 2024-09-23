@@ -5,7 +5,10 @@ namespace App\Controller;
 use App\Entity\UtilisateurJSB;
 use App\Form\UtilisateurJSBType;
 use App\Repository\UtilisateurJSBRepository;
+use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -28,14 +31,28 @@ class HomeController extends AbstractController
     }
 
     #[Route('/user_registration/{idUtilisateur}', name: 'app_user_registration')]
-    public function userRegistration(int $idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository): Response
+    public function userRegistration(int $idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, Request $request, EntityManagerInterface $manager): Response
     {
+        /** @var UtilisateurJSB */
         $utilisateurJSB = new UtilisateurJSB();
-        if($idUtilisateur != -1){
+        if ($idUtilisateur != -1) {
             $utilisateurJSB = $utilisateurJSBRepository->find($idUtilisateur);
         }
         $form = $this->createForm(UtilisateurJSBType::class, $utilisateurJSB);
-
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            if ($idUtilisateur == -1) {
+                $utilisateurJSB->setCreatedAt(new DateTimeImmutable('now'));
+                $utilisateurJSB->setUpdatedAt(new DateTimeImmutable('now'));
+                $manager->persist($utilisateurJSB);
+            } else {
+                $utilisateurJSB->setUpdatedAt(new DateTimeImmutable('now'));
+                $manager->refresh($utilisateurJSB);
+            }
+            $manager->flush();
+            $this->addFlash("success", "" . $utilisateurJSB->getNom() . " enregistré avec succès.");
+            return $this->redirectToRoute("app_user_login");
+        }
         return $this->render('home/user_registration.html.twig', [
             'pageName' => 'User Registration',
             'form' => $form,
