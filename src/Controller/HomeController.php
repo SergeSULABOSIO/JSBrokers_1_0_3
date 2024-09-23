@@ -2,6 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\UtilisateurJSB;
+use App\Form\UtilisateurJSBType;
+use App\Repository\UtilisateurJSBRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -24,16 +27,23 @@ class HomeController extends AbstractController
         ]);
     }
 
-    #[Route('/user_registration', name: 'app_user_registration')]
-    public function userRegistration(): Response
+    #[Route('/user_registration/{idUtilisateur}', name: 'app_user_registration')]
+    public function userRegistration(int $idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository): Response
     {
+        $utilisateurJSB = new UtilisateurJSB();
+        if($idUtilisateur != -1){
+            $utilisateurJSB = $utilisateurJSBRepository->find($idUtilisateur);
+        }
+        $form = $this->createForm(UtilisateurJSBType::class, $utilisateurJSB);
+
         return $this->render('home/user_registration.html.twig', [
             'pageName' => 'User Registration',
+            'form' => $form,
         ]);
     }
 
     #[Route('/user_dashbord/{idUtilisateur}', name: 'app_user_dashbord')]
-    public function userDashbord(int $idUtilisateur): Response
+    public function userDashbord(UtilisateurJSB $utilisateurJSB): Response
     {
         return $this->render('home/user_dashbord.html.twig', [
             'pageName' => 'User Dashbord',
@@ -41,7 +51,7 @@ class HomeController extends AbstractController
     }
 
     #[Route('/broker_registration/{idUtilisateur}', name: 'app_broker_registration')]
-    public function brokerRegistration(int $idUtilisateur): Response
+    public function brokerRegistration(UtilisateurJSB $utilisateurJSB): Response
     {
         return $this->render('home/broker_registration.html.twig', [
             'pageName' => 'Broker Registration',
