@@ -28,12 +28,12 @@ class UtilisateurJSBType extends AbstractType
             ->add('motDePasseConfirme', PasswordType::class, [
                 'label' => "Conformer Votre Mot de Passe"
             ])
-            ->add('createdAt', null, [
-                'widget' => 'single_text',
-            ])
-            ->add('updatedAt', null, [
-                'widget' => 'single_text',
-            ])
+            // ->add('createdAt', null, [
+            //     'widget' => 'single_text',
+            // ])
+            // ->add('updatedAt', null, [
+            //     'widget' => 'single_text',
+            // ])
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer"
             ])
