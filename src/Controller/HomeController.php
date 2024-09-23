@@ -17,6 +17,7 @@ class HomeController extends AbstractController
     #[Route('/', name: 'app_index')]
     public function index(): Response
     {
+        $this->addFlash("success", "Bienvenue chez JS Broker!");
         return $this->render('home/index.html.twig', [
             'pageName' => 'Home',
         ]);
