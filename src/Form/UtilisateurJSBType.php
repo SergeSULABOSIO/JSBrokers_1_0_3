@@ -68,11 +68,11 @@ class UtilisateurJSBType extends AbstractType
 
     public function onPostSubmitActions(PostSubmitEvent $event)
     {
-        /** @var UtilisateurJSB */
-        $data = $event->getData();
-        $data->setCreatedAt(new DateTimeImmutable("now"));
-        $data->setUpdatedAt(new DateTimeImmutable("now"));
-        dd($data);
+        // /** @var UtilisateurJSB */
+        // $data = $event->getData();
+        // $data->setCreatedAt(new DateTimeImmutable("now"));
+        // $data->setUpdatedAt(new DateTimeImmutable("now"));
+        // dd($data);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
