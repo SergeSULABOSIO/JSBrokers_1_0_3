@@ -3,7 +3,9 @@
 namespace App\Form;
 
 use App\Entity\UtilisateurJSB;
+use DateTimeImmutable;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Event\PostSubmitEvent;
 use Symfony\Component\Form\Event\PreSetDataEvent;
 use Symfony\Component\Form\Event\PreSubmitEvent;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
@@ -38,6 +40,7 @@ class UtilisateurJSBType extends AbstractType
             ])
             ->addEventListener(FormEvents::PRE_SUBMIT, $this->onPreSubmitActions(...))
             ->addEventListener(FormEvents::PRE_SET_DATA, $this->onPreSetDataActions(...))
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->onPostSubmitActions(...))
         ;
     }
 
@@ -61,7 +64,15 @@ class UtilisateurJSBType extends AbstractType
         // $user->setMotDePasseConfirme("ssula@gmail.com");
         // dd($user);
         // $event->setData($user);
+    }
 
+    public function onPostSubmitActions(PostSubmitEvent $event)
+    {
+        /** @var UtilisateurJSB */
+        $data = $event->getData();
+        $data->setCreatedAt(new DateTimeImmutable("now"));
+        $data->setUpdatedAt(new DateTimeImmutable("now"));
+        dd($data);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
