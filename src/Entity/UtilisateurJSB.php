@@ -4,8 +4,11 @@ namespace App\Entity;
 
 use App\Repository\UtilisateurJSBRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UtilisateurJSBRepository::class)]
+#[UniqueEntity("email")]
 class UtilisateurJSB
 {
     #[ORM\Id]
@@ -17,9 +20,11 @@ class UtilisateurJSB
     private ?string $nom = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\Email()]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\Length(min: 4)]
     private ?string $motDePasse = null;
 
     #[ORM\Column(length: 255)]
