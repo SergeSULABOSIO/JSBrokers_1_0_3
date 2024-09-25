@@ -46,7 +46,9 @@ class UtilisateurJSBType extends AbstractType
         // $data = $event->getData();
         // $slugger = new AsciiSlugger();
         // $data['nom'] = strtolower($slugger->slug($data['nom']));
+        // $event->setData($data);
         // dd($data);
+        
     }
 
     public function onPreSetDataActions(PreSetDataEvent $event)
@@ -55,7 +57,11 @@ class UtilisateurJSBType extends AbstractType
         // $user = $event->getData();
         // $user->setNom("SULA BOSIO Serge");
         // $user->setEmail("ssula@gmail.com");
+        // $user->setMotDePasse("ssula@gmail.com");
+        // $user->setMotDePasseConfirme("ssula@gmail.com");
         // dd($user);
+        // $event->setData($user);
+
     }
 
     public function configureOptions(OptionsResolver $resolver): void
