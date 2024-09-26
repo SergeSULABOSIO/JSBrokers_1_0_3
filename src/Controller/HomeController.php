@@ -27,7 +27,7 @@ class HomeController extends AbstractController
     public function userLogin(): Response
     {
         return $this->render('home/user_login.html.twig', [
-            'pageName' => 'User Login',
+            'pageName' => 'Connexion',
         ]);
     }
 
@@ -64,7 +64,7 @@ class HomeController extends AbstractController
     public function userDashbord(UtilisateurJSB $utilisateurJSB): Response
     {
         return $this->render('home/user_dashbord.html.twig', [
-            'pageName' => 'User Dashbord',
+            'pageName' => 'Dashbord Utilisateur',
         ]);
     }
 
@@ -72,7 +72,7 @@ class HomeController extends AbstractController
     public function brokerRegistration(UtilisateurJSB $utilisateurJSB): Response
     {
         return $this->render('home/broker_registration.html.twig', [
-            'pageName' => 'Broker Registration',
+            'pageName' => "Création de l'entreprise",
         ]);
     }
 
@@ -80,7 +80,7 @@ class HomeController extends AbstractController
     public function brokerDashbord(int $idUtilisateur, int $idEntreprise): Response
     {
         return $this->render('home/broker_dashbord.html.twig', [
-            'pageName' => 'Broker Dashbord',
+            'pageName' => 'Dashbord Entreprise',
         ]);
     }
 }
