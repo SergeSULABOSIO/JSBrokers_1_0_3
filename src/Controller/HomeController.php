@@ -2,17 +2,20 @@
 
 namespace App\Controller;
 
-use App\DTO\ContactDTO;
-use App\Entity\UtilisateurJSB;
-use App\Form\ContactType;
-use App\Form\UtilisateurJSBType;
-use App\Repository\UtilisateurJSBRepository;
 use DateTimeImmutable;
+use App\DTO\ContactDTO;
+use App\Form\ContactType;
+use App\Entity\UtilisateurJSB;
+use App\Form\UtilisateurJSBType;
+use Symfony\Component\Mime\Email;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Repository\UtilisateurJSBRepository;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class HomeController extends AbstractController
 {
@@ -106,13 +109,30 @@ class HomeController extends AbstractController
 
 
     #[Route('/contact', name: 'app_contact')]
-    public function userEmailContact(Request $request): Response
+    public function userEmailContact(Request $request, MailerInterface $mailer): Response
     {
+        /** @var ContactDTO */
         $data = new ContactDTO();
         $form = $this->createForm(ContactType::class, $data);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
+            $email = (new TemplatedEmail())
+                ->from($data->email)
+                ->to('infos@jsbrokers.com')
+                //->cc('cc@example.com')
+                //->bcc('bcc@example.com')
+                //->replyTo('fabien@example.com')
+                ->priority(Email::PRIORITY_HIGH)
+                ->subject('Demande de contact')
+                // ->text($data->message)
+                // ->html('<p>' . $data->message . '</p>');
+                ->htmlTemplate("home/mail/message.html.twig")
+                ->context(["data" => $data]);
+
+            $mailer->send($email);
+            $this->addFlash("success", "L'email a bien été envoyé.");
+            $this->redirectToRoute('app_contact');
         }
         return $this->render('home/contact.html.twig', [
             'pageName' => 'Formulaire de contact',
