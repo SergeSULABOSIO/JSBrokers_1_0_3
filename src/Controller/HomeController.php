@@ -83,4 +83,12 @@ class HomeController extends AbstractController
             'pageName' => 'Dashbord Entreprise',
         ]);
     }
+
+    #[Route('/contact', name: 'app_contact')]
+    public function userEmailContact(): Response
+    {
+        return $this->render('home/contact_email.html.twig', [
+            'pageName' => 'Formulaire de contact',
+        ]);
+    }
 }
