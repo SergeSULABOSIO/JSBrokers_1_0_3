@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\DTO\ContactDTO;
 use App\Entity\UtilisateurJSB;
+use App\Form\ContactType;
 use App\Form\UtilisateurJSBType;
 use App\Repository\UtilisateurJSBRepository;
 use DateTimeImmutable;
@@ -23,6 +25,9 @@ class HomeController extends AbstractController
         ]);
     }
 
+
+
+
     #[Route('/user_login', name: 'app_user_login')]
     public function userLogin(): Response
     {
@@ -30,6 +35,9 @@ class HomeController extends AbstractController
             'pageName' => 'Connexion',
         ]);
     }
+
+
+
 
     #[Route('/user_registration/{idUtilisateur}', name: 'app_user_registration')]
     public function userRegistration(int $idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, Request $request, EntityManagerInterface $manager): Response
@@ -60,6 +68,9 @@ class HomeController extends AbstractController
         ]);
     }
 
+
+
+
     #[Route('/user_dashbord/{idUtilisateur}', name: 'app_user_dashbord')]
     public function userDashbord(UtilisateurJSB $utilisateurJSB): Response
     {
@@ -67,6 +78,9 @@ class HomeController extends AbstractController
             'pageName' => 'Dashbord Utilisateur',
         ]);
     }
+
+
+
 
     #[Route('/broker_registration/{idUtilisateur}', name: 'app_broker_registration')]
     public function brokerRegistration(UtilisateurJSB $utilisateurJSB): Response
@@ -76,6 +90,9 @@ class HomeController extends AbstractController
         ]);
     }
 
+
+
+
     #[Route('/broker_dashbord/{idUtilisateur}/{idEntreprise}', name: 'app_broker_dashbord')]
     public function brokerDashbord(int $idUtilisateur, int $idEntreprise): Response
     {
@@ -84,11 +101,22 @@ class HomeController extends AbstractController
         ]);
     }
 
+
+
+
+
     #[Route('/contact', name: 'app_contact')]
-    public function userEmailContact(): Response
+    public function userEmailContact(Request $request): Response
     {
-        return $this->render('home/contact_email.html.twig', [
+        $data = new ContactDTO();
+        $form = $this->createForm(ContactType::class, $data);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
+        }
+        return $this->render('home/contact.html.twig', [
             'pageName' => 'Formulaire de contact',
+            'form' => $form,
         ]);
     }
 }

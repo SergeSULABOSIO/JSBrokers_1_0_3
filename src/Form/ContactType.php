@@ -3,12 +3,13 @@
 namespace App\Form;
 
 use App\DTO\ContactDTO;
-use Doctrine\DBAL\Types\TextType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class ContactType extends AbstractType
 {
@@ -16,13 +17,21 @@ class ContactType extends AbstractType
     {
         $builder
             ->add('name', TextType::class, [
+                'label' => "Nom complet",
                 'empty_data' => ''
             ])
             ->add('email', EmailType::class, [
+                'label' => "Votre addresse mail",
                 'empty_data' => ''
             ])
             ->add('message', TextareaType::class, [
+                'label' => "Votre message",
                 'empty_data' => ''
+            ])
+            
+            //Le bouton d'enregistrement / soumission
+            ->add('envoyer', SubmitType::class, [
+                'label' => "Envoyer le message"
             ])
         ;
     }
