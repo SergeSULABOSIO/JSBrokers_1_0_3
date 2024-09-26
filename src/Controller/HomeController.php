@@ -55,7 +55,7 @@ class HomeController extends AbstractController
             return $this->redirectToRoute("app_user_login");
         }
         return $this->render('home/user_registration.html.twig', [
-            'pageName' => 'User Registration',
+            'pageName' => 'Création du compte utilisateur',
             'form' => $form,
         ]);
     }

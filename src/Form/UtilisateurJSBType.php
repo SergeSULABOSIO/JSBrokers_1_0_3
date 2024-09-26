@@ -23,16 +23,16 @@ class UtilisateurJSBType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                'label' => "Nom Complet"
+                'label' => "Nom complet"
             ])
             ->add('email', EmailType::class, [
-                'label' => "Votre Adresse mail"
+                'label' => "Votre adresse mail"
             ])
             ->add('motDePasse', PasswordType::class, [
-                'label' => "Votre Mot de Passe"
+                'label' => "Votre mot de Passe"
             ])
             ->add('motDePasseConfirme', PasswordType::class, [
-                'label' => "Conformer Votre Mot de Passe"
+                'label' => "Conformer votre mot de passe"
             ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [

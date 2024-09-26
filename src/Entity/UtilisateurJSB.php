@@ -28,6 +28,7 @@ class UtilisateurJSB
     private ?string $motDePasse = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\Length(min: 4)]
     private ?string $motDePasseConfirme = null;
 
     #[ORM\Column]
