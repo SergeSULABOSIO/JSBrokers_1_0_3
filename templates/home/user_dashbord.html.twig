@@ -7,7 +7,7 @@
 
 {% block section_utilisateur %}
 	<div>
-		<a href="{{ path('app_broker_registration', { 'idUtilisateur':utilisateur.id })}}" type="button" class="btn btn-primary">Créer une entreprise</a>
+		<a href="{{ path('app_broker_registration', { 'idUtilisateur':utilisateur.id, 'idEntreprise':-1 })}}" type="button" class="btn btn-primary">Créer une entreprise</a>
 		<a href="{{ path('app_index')}}" type="button" class="btn btn-outline-danger">Déconnexion</a>
 	</div>
 {% endblock %}

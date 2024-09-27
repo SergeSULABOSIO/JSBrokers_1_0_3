@@ -4,12 +4,7 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\EntrepriseRepository;
-use Doctrine\Common\Collections\Collection;
-use Doctrine\Common\Collections\ArrayCollection;
-use App\Service\RefactoringJS\Evenements\Evenement;
-use App\Service\RefactoringJS\Evenements\Observateur;
 use Symfony\Component\Validator\Constraints as Assert;
-use App\Service\RefactoringJS\Commandes\ComDetecterEvenementAttribut;
 
 #[ORM\Entity(repositoryClass: EntrepriseRepository::class)]
 class Entreprise

@@ -5,10 +5,13 @@ namespace App\Controller;
 use App\DTO\ConnexionDTO;
 use DateTimeImmutable;
 use App\DTO\ContactDTO;
+use App\Entity\Entreprise;
 use App\Form\ContactType;
 use App\Entity\UtilisateurJSB;
 use App\Form\ConnexionType;
+use App\Form\EntrepriseType;
 use App\Form\UtilisateurJSBType;
+use App\Repository\EntrepriseRepository;
 use Symfony\Component\Mime\Email;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\UtilisateurJSBRepository;
@@ -117,15 +120,37 @@ class HomeController extends AbstractController
 
 
 
-    #[Route('/broker_registration/{idUtilisateur}', name: 'app_broker_registration')]
-    public function brokerRegistration(Request $request, $idUtilisateur, UtilisateurJSBRepository $repository): Response
+    #[Route('/broker_registration/{idUtilisateur}/{idEntreprise}', name: 'app_broker_registration')]
+    public function brokerRegistration(Request $request, $idUtilisateur, $idEntreprise, UtilisateurJSBRepository $repositoryUtilisateur, EntrepriseRepository $repositoryEntreprise, EntityManagerInterface $manager): Response
     {
         /** @var UtilisateurJSB */
-        $user = $repository->find($idUtilisateur);
+        $user = $repositoryUtilisateur->find($idUtilisateur);
+
+        /** @var Entreprise */
+        $entreprise = new Entreprise();
+        if ($idEntreprise != -1) {
+            $entreprise = $repositoryEntreprise->find($idEntreprise);
+        }
+        $form = $this->createForm(EntrepriseType::class, $entreprise);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            if ($idEntreprise == -1) {
+                $entreprise->setCreatedAt(new DateTimeImmutable('now'));
+                $manager->persist($entreprise);
+            } else {
+                $manager->refresh($entreprise);
+            }
+            $manager->flush();
+            $this->addFlash("success", "" . $user->getNom() . " est enregistrée avec succès.");
+            return $this->redirectToRoute("app_user_dashbord", [
+                "idUtilisateur" => $idUtilisateur,
+            ]);
+        }
 
         return $this->render('home/broker_registration.html.twig', [
             'pageName' => "Création de l'entreprise",
             'utilisateur' => $user,
+            'form' => $form,
         ]);
     }
 
