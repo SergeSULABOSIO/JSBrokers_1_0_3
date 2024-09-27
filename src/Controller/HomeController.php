@@ -55,12 +55,12 @@ class HomeController extends AbstractController
                 /** @var UtilisateurJSB */
                 $user = $tabResultats[0];
                 if ($user->getEmail() == $data->email && $user->getMotDePasse() == $data->motdepasse) {
+                    $this->addFlash("success", "Bienvenue " . $user->getNom());
                     return $this->redirectToRoute('app_user_dashbord', [
                         'idUtilisateur' => $user->getId()
                     ]);
                 }
             }
-            $this->addFlash("danger", "Les identifiants fournis sont incorrects. Merci de bien vérifier.");
         }
         return $this->render('home/user_login.html.twig', [
             'pageName' => 'Connexion',
@@ -107,7 +107,6 @@ class HomeController extends AbstractController
     public function userDashbord($idUtilisateur, UtilisateurJSBRepository $repository): Response
     {
         $utilisateurJSB = $repository->find($idUtilisateur);
-        $this->addFlash("success", "Bienvenue " . $utilisateurJSB->getNom());
         return $this->render('home/user_dashbord.html.twig', [
             'pageName' => 'Dashbord Utilisateur',
             'utilisateur' => $utilisateurJSB,
