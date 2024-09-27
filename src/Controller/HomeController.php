@@ -118,8 +118,8 @@ class HomeController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
             $email = (new TemplatedEmail())
+                ->to('contact@demo.fr')
                 ->from($data->email)
-                ->to('infos@contact.fr')
                 //->cc('cc@example.com')
                 //->bcc('bcc@example.com')
                 //->replyTo('fabien@example.com')
