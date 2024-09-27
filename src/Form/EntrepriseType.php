@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Event\PreSubmitEvent;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -53,6 +54,9 @@ class EntrepriseType extends AbstractType
                     'placeholder' => "NIF",
                 ],
             ])
+            ->add('secteur', NumberType::class, [
+                'label' => "Secteur D'activité",
+            ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer"
@@ -65,6 +69,8 @@ class EntrepriseType extends AbstractType
     {
         $data = $event->getData();
         $data['updatedAt'] = new DateTimeImmutable("now");
+        $event->setData($data);
+        // dd($data);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
