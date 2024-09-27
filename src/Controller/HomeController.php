@@ -125,15 +125,16 @@ class HomeController extends AbstractController
     {
         /** @var UtilisateurJSB */
         $user = $repositoryUtilisateur->find($idUtilisateur);
-
         /** @var Entreprise */
         $entreprise = new Entreprise();
         if ($idEntreprise != -1) {
             $entreprise = $repositoryEntreprise->find($idEntreprise);
         }
+        // dd($entreprise);
         $form = $this->createForm(EntrepriseType::class, $entreprise);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
+            dd("ici");
             if ($idEntreprise == -1) {
                 $entreprise->setCreatedAt(new DateTimeImmutable('now'));
                 $manager->persist($entreprise);
@@ -146,6 +147,7 @@ class HomeController extends AbstractController
                 "idUtilisateur" => $idUtilisateur,
             ]);
         }
+        // dd("ici");
 
         return $this->render('home/broker_registration.html.twig', [
             'pageName' => "Création de l'entreprise",
