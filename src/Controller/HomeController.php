@@ -129,10 +129,9 @@ class HomeController extends AbstractController
                 // ->html('<p>' . $data->message . '</p>');
                 ->htmlTemplate("home/mail/message_demande_de_contact.html.twig")
                 ->context(["data" => $data]);
-
             $mailer->send($email);
             $this->addFlash("success", "L'email a bien été envoyé.");
-            $this->redirectToRoute('app_contact');
+            return $this->redirectToRoute('app_contact');
         }
         return $this->render('home/contact.html.twig', [
             'pageName' => 'Formulaire de contact',
