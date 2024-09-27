@@ -2,14 +2,17 @@
 
 namespace App\Controller;
 
+use App\DTO\ConnexionDTO;
 use DateTimeImmutable;
 use App\DTO\ContactDTO;
 use App\Form\ContactType;
 use App\Entity\UtilisateurJSB;
+use App\Form\ConnexionType;
 use App\Form\UtilisateurJSBType;
 use Symfony\Component\Mime\Email;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\UtilisateurJSBRepository;
+use SebastianBergmann\CodeCoverage\Report\Xml\Report;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -32,10 +35,34 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_login', name: 'app_user_login')]
-    public function userLogin(): Response
+    public function userLogin(Request $request, UtilisateurJSBRepository $repository): Response
     {
+        /** @var ConnexionDTO */
+        $data = new ConnexionDTO();
+        $form = $this->createForm(ConnexionType::class, $data);
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $tabResultats = $repository->findBy([
+                'email' => $data->email,
+                'motDePasse' => $data->motdepasse
+            ]);
+
+            dd($data, $tabResultats);
+
+            /** @var UtilisateurJSB */
+            $user = $tabResultats[0];
+            if ($user->getEmail() == $data->email && $user->getMotDePasse() == $data->motdepasse) {
+                $this->addFlash("success", "Bienvenue cher utilisateur!");
+                return $this->redirectToRoute('app_user_dashbord', [
+                    'idUtilisateur' => $user->getId()
+                ]);
+            }else{
+                $this->addFlash("error", "Les identifiants fournis sont incorrects. Merci de bien vérifier.");
+            }
+        }
         return $this->render('home/user_login.html.twig', [
             'pageName' => 'Connexion',
+            'form' => $form
         ]);
     }
 
