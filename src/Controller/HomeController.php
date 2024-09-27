@@ -20,6 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
+use function PHPUnit\Framework\isEmpty;
+
 class HomeController extends AbstractController
 {
     #[Route('/', name: 'app_index')]
@@ -47,18 +49,18 @@ class HomeController extends AbstractController
                 'motDePasse' => $data->motdepasse
             ]);
 
-            dd($data, $tabResultats);
+            // dd($data, $tabResultats);
 
-            /** @var UtilisateurJSB */
-            $user = $tabResultats[0];
-            if ($user->getEmail() == $data->email && $user->getMotDePasse() == $data->motdepasse) {
-                $this->addFlash("success", "Bienvenue cher utilisateur!");
-                return $this->redirectToRoute('app_user_dashbord', [
-                    'idUtilisateur' => $user->getId()
-                ]);
-            }else{
-                $this->addFlash("error", "Les identifiants fournis sont incorrects. Merci de bien vérifier.");
+            if (isset($tabResultats) && count($tabResultats) != 0) {
+                /** @var UtilisateurJSB */
+                $user = $tabResultats[0];
+                if ($user->getEmail() == $data->email && $user->getMotDePasse() == $data->motdepasse) {
+                    return $this->redirectToRoute('app_user_dashbord', [
+                        'idUtilisateur' => $user->getId()
+                    ]);
+                }
             }
+            $this->addFlash("danger", "Les identifiants fournis sont incorrects. Merci de bien vérifier.");
         }
         return $this->render('home/user_login.html.twig', [
             'pageName' => 'Connexion',
@@ -102,10 +104,13 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_dashbord/{idUtilisateur}', name: 'app_user_dashbord')]
-    public function userDashbord(UtilisateurJSB $utilisateurJSB): Response
+    public function userDashbord($idUtilisateur, UtilisateurJSBRepository $repository): Response
     {
+        $utilisateurJSB = $repository->find($idUtilisateur);
+        $this->addFlash("success", "Bienvenue " . $utilisateurJSB->getNom());
         return $this->render('home/user_dashbord.html.twig', [
             'pageName' => 'Dashbord Utilisateur',
+            'utilisateur' => $utilisateurJSB,
         ]);
     }
 

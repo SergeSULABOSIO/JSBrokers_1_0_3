@@ -1,10 +1,71 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{pageName}}{% endblock %}
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+
+{% block section_utilisateur %}
+	<div>
+		<button type="button" class="btn btn-primary">Créer une entreprise</button>
+		<button type="button" class="btn btn-outline-danger">Déconnexion</button>
+	</div>
+{% endblock %}
+
 
 {% block body %}
-<div class="container">
-    <h1>{{ pageName }}</h1>
-    Bienvenue!
-</div>
+	<div class="container">
+		<p>
+			<h1>{{ pageName }}</h1>
+			Liste des entreprises de votre protefeuil, y compris les celles auxquelles vous êtes invité.
+		</p>
+
+		<div class="d-flex">
+			<div class="card m-2" style="width: 18rem;">
+				{# <img class="card-img-top" src="..." alt="Card image cap"> #}
+				<div class="card-body">
+					<h5 class="card-title">
+						<a href="#" class="text-primary">AIB RDC Sarl</a>
+					</h5>
+					<p class="card-text">Prins van Luikschool, Av de la Gombe, Gombe, Kinshasa, DRC</p>
+				</div>
+				<ul class="list-group list-group-flush">
+					<li class="list-group-item">www.aib-brokers.com</li>
+					<li class="list-group-item">(+243)82-87-27-706</li>
+					<li class="list-group-item">
+						<em>Créée le 27/09/2024 par vous.</em>
+					</li>
+				</ul>
+				<div class="card-body">
+					<a href="#" class="badge badge-secondary bg-success">Ouvrir</a>
+					<a href="#" class="badge badge-secondary bg-warning">Modifier</a>
+					<a href="#" class="badge badge-danger bg-danger">Supprimer</a>
+				</div>
+			</div>
+
+			<div class="card m-2" style="width: 18rem;">
+				{# <img class="card-img-top" src="..." alt="Card image cap"> #}
+				<div class="card-body">
+					<h5 class="card-title">
+						<a href="#" class="text-primary">ASCOMA RDC SA</a>
+					</h5>
+					<p class="card-text">Prins van Luikschool, Av de la Gombe, Gombe, Kinshasa, DRC</p>
+				</div>
+				<ul class="list-group list-group-flush">
+					<li class="list-group-item">www.aib-brokers.com</li>
+					<li class="list-group-item">(+243)82-87-27-706</li>
+					<li class="list-group-item">
+						<em>Vous êtes invité.</em>
+					</li>
+				</ul>
+				<div class="card-body">
+					<a href="#" class="badge badge-secondary bg-success">Ouvrir</a>
+					<a href="#" class="badge badge-secondary bg-warning">Modifier</a>
+					<a href="#" class="badge badge-danger bg-danger">Supprimer</a>
+				</div>
+			</div>
+		</div>
+
+
+	</div>
 {% endblock %}
