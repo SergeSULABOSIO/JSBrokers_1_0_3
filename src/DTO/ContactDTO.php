@@ -16,6 +16,6 @@ class ContactDTO
     public string $email = "";
 
     #[Assert\NotBlank]
-    #[Assert\Length(min: 4, max:100)]
+    #[Assert\Length(min: 4, max:400)]
     public string $message = "";
 }

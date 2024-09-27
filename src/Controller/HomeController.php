@@ -119,7 +119,7 @@ class HomeController extends AbstractController
             # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
             $email = (new TemplatedEmail())
                 ->from($data->email)
-                ->to('infos@jsbrokers.com')
+                ->to('infos@contact.fr')
                 //->cc('cc@example.com')
                 //->bcc('bcc@example.com')
                 //->replyTo('fabien@example.com')
