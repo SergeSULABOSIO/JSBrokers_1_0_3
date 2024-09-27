@@ -1,1 +1,11 @@
-Votre Message Ici.
+<p>
+    Une nouvelle demande de contact a été reçue.
+</p>
+<ul>
+    <li>Nom: {{ data.name }} </li>
+    <li>Email: {{ data.email }} </li>
+</ul>
+<p>
+    <strong>Contenu du message:</strong><br>
+    {{ data.message | nl2br }}
+</p>
