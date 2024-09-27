@@ -127,7 +127,7 @@ class HomeController extends AbstractController
                 ->subject('Demande de contact')
                 // ->text($data->message)
                 // ->html('<p>' . $data->message . '</p>');
-                ->htmlTemplate("home/mail/message.html.twig")
+                ->htmlTemplate("home/mail/message_demande_de_contact.html.twig")
                 ->context(["data" => $data]);
 
             $mailer->send($email);
