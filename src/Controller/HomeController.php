@@ -57,7 +57,8 @@ class HomeController extends AbstractController
                 if ($user->getEmail() == $data->email && $user->getMotDePasse() == $data->motdepasse) {
                     $this->addFlash("success", "Bienvenue " . $user->getNom());
                     return $this->redirectToRoute('app_user_dashbord', [
-                        'idUtilisateur' => $user->getId()
+                        'idUtilisateur' => $user->getId(),
+                        'utilisateur' => $user,
                     ]);
                 }
             }
@@ -117,10 +118,14 @@ class HomeController extends AbstractController
 
 
     #[Route('/broker_registration/{idUtilisateur}', name: 'app_broker_registration')]
-    public function brokerRegistration(UtilisateurJSB $utilisateurJSB): Response
+    public function brokerRegistration(Request $request, $idUtilisateur, UtilisateurJSBRepository $repository): Response
     {
+        /** @var UtilisateurJSB */
+        $user = $repository->find($idUtilisateur);
+
         return $this->render('home/broker_registration.html.twig', [
             'pageName' => "Création de l'entreprise",
+            'utilisateur' => $user,
         ]);
     }
 
