@@ -130,7 +130,7 @@ class HomeController extends AbstractController
                 ->htmlTemplate("home/mail/message_demande_de_contact.html.twig")
                 ->context(["data" => $data]);
             $mailer->send($email);
-            $this->addFlash("success", "L'email a bien été envoyé.");
+            $this->addFlash("success", "L'email a bien été envoyé. Nous vous reviendrons au plus vite.");
             return $this->redirectToRoute('app_contact');
         }
         return $this->render('home/contact.html.twig', [
