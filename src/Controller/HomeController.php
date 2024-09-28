@@ -83,28 +83,32 @@ class HomeController extends AbstractController
     #[Route('/user_registration/{idUtilisateur}', name: 'app_user_registration')]
     public function userRegistration(int $idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, Request $request, EntityManagerInterface $manager): Response
     {
+        $tittrePage = "Création du compte utilisateur";
+
         /** @var UtilisateurJSB */
         $utilisateurJSB = new UtilisateurJSB();
         if ($idUtilisateur != -1) {
             $utilisateurJSB = $utilisateurJSBRepository->find($idUtilisateur);
+            $tittrePage = "Edition du compte " . $utilisateurJSB->getNom();
         }
         $form = $this->createForm(UtilisateurJSBType::class, $utilisateurJSB);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            if ($idUtilisateur == -1) {
-                $utilisateurJSB->setCreatedAt(new DateTimeImmutable('now'));
-                $utilisateurJSB->setUpdatedAt(new DateTimeImmutable('now'));
-                $manager->persist($utilisateurJSB);
-            } else {
-                $utilisateurJSB->setUpdatedAt(new DateTimeImmutable('now'));
-                $manager->refresh($utilisateurJSB);
-            }
+            $manager->persist($utilisateurJSB);
             $manager->flush();
-            $this->addFlash("success", "" . $utilisateurJSB->getNom() . " enregistré avec succès.");
-            return $this->redirectToRoute("app_user_login");
+
+            if($idUtilisateur != -1){
+                $this->addFlash("success", "" . $utilisateurJSB->getNom() . ", votre profil est mis à jour avec succès.");
+                return $this->redirectToRoute("app_user_dashbord", [
+                    'idUtilisateur'=> $utilisateurJSB->getId()
+                ]);
+            }else{
+                $this->addFlash("success", "" . $utilisateurJSB->getNom() . ", votre compte vient d'être créée.");
+                return $this->redirectToRoute("app_user_login");
+            }
         }
         return $this->render('home/user_registration.html.twig', [
-            'pageName' => 'Création du compte utilisateur',
+            'pageName' => $tittrePage,
             'form' => $form,
         ]);
     }

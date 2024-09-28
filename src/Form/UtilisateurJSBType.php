@@ -37,8 +37,8 @@ class UtilisateurJSBType extends AbstractType
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer"
             ])
-            ->addEventListener(FormEvents::PRE_SUBMIT, $this->onPreSubmitActions(...))
-            ->addEventListener(FormEvents::PRE_SET_DATA, $this->onPreSetDataActions(...))
+            // ->addEventListener(FormEvents::PRE_SUBMIT, $this->onPreSubmitActions(...))
+            // ->addEventListener(FormEvents::PRE_SET_DATA, $this->onPreSetDataActions(...))
             ->addEventListener(FormEvents::POST_SUBMIT, $this->onPostSubmitActions(...))
         ;
     }
@@ -67,11 +67,13 @@ class UtilisateurJSBType extends AbstractType
 
     public function onPostSubmitActions(PostSubmitEvent $event)
     {
-        // /** @var UtilisateurJSB */
-        // $data = $event->getData();
-        // $data->setCreatedAt(new DateTimeImmutable("now"));
-        // $data->setUpdatedAt(new DateTimeImmutable("now"));
-        // dd($data);
+        /** @var UtilisateurJSB */
+        $utilisateur = $event->getData();
+        $utilisateur->setUpdatedAt(new DateTimeImmutable('now'));
+        if($utilisateur->getId() == null){
+            $utilisateur->setCreatedAt(new DateTimeImmutable('now'));
+        }
+        // dd($event);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
