@@ -47,7 +47,7 @@ class Entreprise
 
     public function __construct()
     {
-
+        
     }
 
 
