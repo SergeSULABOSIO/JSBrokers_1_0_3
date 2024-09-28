@@ -31,6 +31,12 @@ class EntrepriseType extends AbstractType
                     'placeholder' => "Adresse complète",
                 ],
             ])
+            ->add('licence', TextType::class, [
+                'label' => "Numéro d'agrément",
+                'attr' => [
+                    'placeholder' => "Numéro d'agrément",
+                ],
+            ])
             ->add('telephone', TextType::class, [
                 'label' => "Numéro de téléphone",
                 'attr' => [
@@ -54,9 +60,6 @@ class EntrepriseType extends AbstractType
                 'attr' => [
                     'placeholder' => "NIF",
                 ],
-            ])
-            ->add('secteur', NumberType::class, [
-                'label' => "Secteur D'activité",
             ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [

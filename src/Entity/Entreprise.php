@@ -18,6 +18,12 @@ class Entreprise
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
+
+    #[Assert\NotBlank()]
+    #[ORM\Column(length: 255)]
+    private ?string $licence = null;
+
+
     #[Assert\NotBlank()]
     #[ORM\Column(length: 255)]
     private ?string $adresse = null;
@@ -35,10 +41,6 @@ class Entreprise
     #[ORM\Column(length: 255)]
     private ?string $numimpot = null;
 
-    #[Assert\NotBlank()]
-    #[ORM\Column]
-    private ?int $secteur = null;
-
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -47,7 +49,7 @@ class Entreprise
 
     public function __construct()
     {
-        
+
     }
 
 
@@ -133,18 +135,6 @@ class Entreprise
         return $this->nom;
     }
 
-    public function getSecteur(): ?int
-    {
-        return $this->secteur;
-    }
-
-    public function setSecteur(?int $secteur): self
-    {
-        $this->secteur = $secteur;
-
-        return $this;
-    }
-
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
@@ -165,6 +155,26 @@ class Entreprise
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): self
     {
         $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of licence
+     */ 
+    public function getLicence()
+    {
+        return $this->licence;
+    }
+
+    /**
+     * Set the value of licence
+     *
+     * @return  self
+     */ 
+    public function setLicence($licence)
+    {
+        $this->licence = $licence;
 
         return $this;
     }

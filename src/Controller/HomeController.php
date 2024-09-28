@@ -47,13 +47,11 @@ class HomeController extends AbstractController
         $form = $this->createForm(ConnexionType::class, $data);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
+            $user = null;
             $tabResultats = $repository->findBy([
                 'email' => $data->email,
                 'motDePasse' => $data->motdepasse
             ]);
-
-            // dd($data, $tabResultats);
-
             if (isset($tabResultats) && count($tabResultats) != 0) {
                 /** @var UtilisateurJSB */
                 $user = $tabResultats[0];
@@ -65,6 +63,13 @@ class HomeController extends AbstractController
                     ]);
                 }
             }
+            // dd($data, $tabResultats);
+            // dd($failed);
+            $this->addFlash("danger", "Identifiants incorrects.");
+            return $this->redirectToRoute('app_user_login', [
+                'pageName' => 'Connexion',
+                'form' => $form
+            ]);
         }
         return $this->render('home/user_login.html.twig', [
             'pageName' => 'Connexion',
@@ -136,15 +141,15 @@ class HomeController extends AbstractController
         }
         // dd($entreprise);
         $form = $this->createForm(EntrepriseType::class, $entreprise);
-        
+
         $form->handleRequest($request);
-        
+
         if ($form->isSubmitted() && $form->isValid()) {
             $manager->persist($entreprise);
             $manager->flush();
-            if($idEntreprise == -1){
+            if ($idEntreprise == -1) {
                 $this->addFlash("success", "" . $entreprise->getNom() . " est ajoutée avec succès.");
-            }else{
+            } else {
                 $this->addFlash("success", "" . $entreprise->getNom() . " est mise à jour avec succès.");
             }
             return $this->redirectToRoute("app_user_dashbord", [
@@ -175,9 +180,9 @@ class HomeController extends AbstractController
         }
         $manager->remove($entreprise);
         $manager->flush();
-        
-        $this->addFlash("success", "" . $entreprise->getNom() . " vous venez de supprimer " . $entreprise->getNom());
-        
+
+        $this->addFlash("success", "" . $utilisateur->getNom() . " vous venez de supprimer " . $entreprise->getNom());
+
         return $this->redirectToRoute("app_user_dashbord", [
             "idUtilisateur" => $idUtilisateur,
         ]);
