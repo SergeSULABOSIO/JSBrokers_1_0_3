@@ -36,6 +36,7 @@ class Entreprise
     private ?string $numimpot = null;
 
     #[Assert\NotBlank()]
+    #[ORM\Column]
     private ?int $secteur = null;
 
     #[ORM\Column]
