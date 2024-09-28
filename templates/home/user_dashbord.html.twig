@@ -21,51 +21,30 @@
 		</p>
 
 		<div class="d-flex">
-			<div class="card m-2" style="width: 18rem;">
-				{# <img class="card-img-top" src="..." alt="Card image cap"> #}
-				<div class="card-body">
-					<h5 class="card-title">
-						<a href="#" class="text-primary">AIB RDC Sarl</a>
-					</h5>
-					<p class="card-text">Prins van Luikschool, Av de la Gombe, Gombe, Kinshasa, DRC</p>
+			{# Boucler les entreprises #}
+			{% for entreprise in listeEntreprises %}
+				<div class="card m-2" style="width: 18rem;">
+					{# <img class="card-img-top" src="..." alt="Card image cap"> #}
+					<div class="card-body">
+						<h5 class="card-title">
+							<a href="#" class="text-primary">{{ entreprise.nom }}</a>
+						</h5>
+						<p class="card-text">{{ entreprise.adresse }}</p>
+					</div>
+					<ul class="list-group list-group-flush">
+						<li class="list-group-item">RCCM: {{ entreprise.rccm }}| IDNAT: {{ entreprise.idnat }} | NIF:{{ entreprise.numimpot }}</li>
+						<li class="list-group-item">{{ entreprise.telephone }}</li>
+						<li class="list-group-item">
+							<em>Créée le {{ entreprise.createdAt | date("d/m/Y") }}</em>
+						</li>
+					</ul>
+					<div class="card-body">
+						<a href="#" class="m-2">Ouvrir</a>
+						<a href="{{ path('app_broker_registration', { 'idUtilisateur':utilisateur.id, 'idEntreprise':entreprise.id })}}" class="m-2">Modifier</a>
+						<a href="#" class="m-2">Supprimer</a>
+					</div>
 				</div>
-				<ul class="list-group list-group-flush">
-					<li class="list-group-item">www.aib-brokers.com</li>
-					<li class="list-group-item">(+243)82-87-27-706</li>
-					<li class="list-group-item">
-						<em>Créée le 27/09/2024 par vous.</em>
-					</li>
-				</ul>
-				<div class="card-body">
-					<a href="#" class="m-2">Ouvrir</a>
-					<a href="#" class="m-2">Modifier</a>
-					<a href="#" class="m-2">Supprimer</a>
-				</div>
-			</div>
-
-			<div class="card m-2" style="width: 18rem;">
-				{# <img class="card-img-top" src="..." alt="Card image cap"> #}
-				<div class="card-body">
-					<h5 class="card-title">
-						<a href="#" class="text-primary">ASCOMA RDC SA</a>
-					</h5>
-					<p class="card-text">Prins van Luikschool, Av de la Gombe, Gombe, Kinshasa, DRC</p>
-				</div>
-				<ul class="list-group list-group-flush">
-					<li class="list-group-item">www.aib-brokers.com</li>
-					<li class="list-group-item">(+243)82-87-27-706</li>
-					<li class="list-group-item">
-						<em>Vous êtes invité.</em>
-					</li>
-				</ul>
-				<div class="card-body">
-					<a href="#" class="m-2">Ouvrir</a>
-					<a href="#" class="m-2">Modifier</a>
-					<a href="#" class="m-2">Supprimer</a>
-				</div>
-			</div>
+			{% endfor %}
 		</div>
-
-
 	</div>
 {% endblock %}

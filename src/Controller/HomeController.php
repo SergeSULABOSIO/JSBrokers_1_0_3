@@ -108,12 +108,15 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_dashbord/{idUtilisateur}', name: 'app_user_dashbord')]
-    public function userDashbord($idUtilisateur, UtilisateurJSBRepository $repository): Response
+    public function userDashbord($idUtilisateur, UtilisateurJSBRepository $repositoryUtilisateur, EntrepriseRepository $repositoryEntreprise): Response
     {
-        $utilisateurJSB = $repository->find($idUtilisateur);
+        $utilisateurJSB = $repositoryUtilisateur->find($idUtilisateur);
+        $listeEntreprises = $repositoryEntreprise->findAll();
+        // dd($listeEntreprises);
         return $this->render('home/user_dashbord.html.twig', [
             'pageName' => 'Dashbord Utilisateur',
             'utilisateur' => $utilisateurJSB,
+            'listeEntreprises' => $listeEntreprises,
         ]);
     }
 
@@ -133,16 +136,16 @@ class HomeController extends AbstractController
         // dd($entreprise);
         $form = $this->createForm(EntrepriseType::class, $entreprise);
         $form->handleRequest($request);
+        
         if ($form->isSubmitted() && $form->isValid()) {
-            dd("ici");
+            // dd("ici");
             if ($idEntreprise == -1) {
-                $entreprise->setCreatedAt(new DateTimeImmutable('now'));
                 $manager->persist($entreprise);
             } else {
                 $manager->refresh($entreprise);
             }
             $manager->flush();
-            $this->addFlash("success", "" . $user->getNom() . " est enregistrée avec succès.");
+            $this->addFlash("success", "" . $entreprise->getNom() . " est enregistrée avec succès.");
             return $this->redirectToRoute("app_user_dashbord", [
                 "idUtilisateur" => $idUtilisateur,
             ]);

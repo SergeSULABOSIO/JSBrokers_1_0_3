@@ -6,6 +6,7 @@ use App\Entity\Entreprise;
 use DateTimeImmutable;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Event\PostSubmitEvent;
 use Symfony\Component\Form\Event\PreSubmitEvent;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -61,16 +62,19 @@ class EntrepriseType extends AbstractType
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer"
             ])
-            ->addEventListener(FormEvents::PRE_SUBMIT, $this->onPreSubmitActions(...))
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->onPostSubmitActions(...))
         ;
     }
 
-    public function onPreSubmitActions(PreSubmitEvent $event)
+    public function onPostSubmitActions(PostSubmitEvent $event)
     {
-        $data = $event->getData();
-        $data['updatedAt'] = new DateTimeImmutable("now");
-        $event->setData($data);
-        // dd($data);
+        /** @var Entreprise */
+        $entreprise = $event->getData();
+        $entreprise->setUpdatedAt(new DateTimeImmutable('now'));
+        if($entreprise->getId() == null){
+            $entreprise->setCreatedAt(new DateTimeImmutable('now'));
+        }
+        // dd($event);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
