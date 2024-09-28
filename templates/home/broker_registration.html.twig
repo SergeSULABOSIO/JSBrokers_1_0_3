@@ -11,7 +11,13 @@
 			<strong>{{ utilisateur.nom }}</strong>, vous êtes sur le point de créer une entreprise. Merci de fournir vos informations dans le formulaire ci-dessous.
 		</p>
 		<p>
-			{{ form(form) }}
+			{# {{ form(form) }} #}
+			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+				<div class="card-body">
+					{{ form(form) }}
+					</div>
+				</div>
+			</div>
 		</p>
 	</p>
 </div>{% endblock %}

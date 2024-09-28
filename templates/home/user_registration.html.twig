@@ -1,11 +1,17 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{pageName}}{% endblock %}
+{% block title %}
+	{{pageName}}
+{% endblock %}
 
 {% block body %}
-<div class="container">
-    <h1>{{ pageName }}</h1>
-    Bienvenue!
-    {{ form(form) }}
-</div>
-{% endblock %}
+	<div class="container">
+		<h1>{{ pageName }}</h1>
+		Bienvenue!
+		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+			<div class="card-body">
+				{{ form(form) }}
+				</div>
+			</div>
+		</div>
+	{% endblock %}
