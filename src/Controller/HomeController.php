@@ -128,6 +128,7 @@ class HomeController extends AbstractController
     {
         /** @var UtilisateurJSB */
         $user = $repositoryUtilisateur->find($idUtilisateur);
+
         /** @var Entreprise */
         $entreprise = new Entreprise();
         if ($idEntreprise != -1) {
@@ -135,27 +136,50 @@ class HomeController extends AbstractController
         }
         // dd($entreprise);
         $form = $this->createForm(EntrepriseType::class, $entreprise);
+        
         $form->handleRequest($request);
         
         if ($form->isSubmitted() && $form->isValid()) {
-            // dd("ici");
-            if ($idEntreprise == -1) {
-                $manager->persist($entreprise);
-            } else {
-                $manager->refresh($entreprise);
-            }
+            $manager->persist($entreprise);
             $manager->flush();
-            $this->addFlash("success", "" . $entreprise->getNom() . " est enregistrée avec succès.");
+            if($idEntreprise == -1){
+                $this->addFlash("success", "" . $entreprise->getNom() . " est ajoutée avec succès.");
+            }else{
+                $this->addFlash("success", "" . $entreprise->getNom() . " est mise à jour avec succès.");
+            }
             return $this->redirectToRoute("app_user_dashbord", [
                 "idUtilisateur" => $idUtilisateur,
             ]);
         }
-        // dd("ici");
 
         return $this->render('home/broker_registration.html.twig', [
             'pageName' => "Création de l'entreprise",
             'utilisateur' => $user,
             'form' => $form,
+        ]);
+    }
+
+
+
+
+    #[Route('/broker_destruction/{idUtilisateur}/{idEntreprise}', name: 'app_broker_destruction')]
+    public function brokerDestruction(Request $request, $idUtilisateur, $idEntreprise, UtilisateurJSBRepository $repositoryUtilisateur, EntrepriseRepository $repositoryEntreprise, EntityManagerInterface $manager): Response
+    {
+        /** @var UtilisateurJSB */
+        $utilisateur = $repositoryUtilisateur->find($idUtilisateur);
+
+        /** @var Entreprise */
+        $entreprise = new Entreprise();
+        if ($idEntreprise != -1) {
+            $entreprise = $repositoryEntreprise->find($idEntreprise);
+        }
+        $manager->remove($entreprise);
+        $manager->flush();
+        
+        $this->addFlash("success", "" . $entreprise->getNom() . " vous venez de supprimer " . $entreprise->getNom());
+        
+        return $this->redirectToRoute("app_user_dashbord", [
+            "idUtilisateur" => $idUtilisateur,
         ]);
     }
 
