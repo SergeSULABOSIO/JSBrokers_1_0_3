@@ -19,6 +19,7 @@
 		{% endblock %}
 	</head>
 	<body>
+		{# Barre d'outils #}
 		<nav class="navbar navbar-expand-lg bg-body-tertiary shadow-sm bg-body">
 			<div
 				class="container-fluid">
@@ -68,9 +69,44 @@
 				{% block section_utilisateur %}{% endblock %}
 			</div>
 		</nav>
+
+		{# Barre d'Alert #}
 		<div class="container">
-			{% include 'home/flash.html.twig' %}
+			<p>
+				{% include 'home/flash.html.twig' %}
+			</p>
 		</div>
-		{% block body %}{% endblock %}
+
+		{# Contenu de la page #}
+		{% block contenuPage %}
+			<div class="container">
+				{# Lite de la page #}
+				<p>
+					<h1>
+						{% block titreRubrique %}{% endblock %}
+					</h1>
+					{% block descriptionRubrique %}{% endblock %}
+				</p>
+				{# Corps de la page #}
+				<div class="row d-flex">
+					{# Menu de Gauche #}
+					<div class="col-2">
+						{% block menuLateraleGauche %}{% endblock %}
+					</div>
+					{# Contenu de droite #}
+					<div class="col">
+						{% block body %}{% endblock %}
+					</div>
+				</div>
+			</div>
+
+			{# bas de la page #}
+			<div class="row bottom p-3">
+				<div class="col text-center">
+					Bas de la page Bas de la page Bas de la page Bas de la page Bas de la page 
+					Bas de la page Bas de la page Bas de la page Bas de la page Bas de la page
+				</div>
+			</div>
+		{% endblock %}
 	</body>
 </html>

@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\DTO\ConnexionDTO;
-use DateTimeImmutable;
 use App\DTO\ContactDTO;
 use App\Entity\Entreprise;
 use App\Form\ContactType;
@@ -15,7 +14,6 @@ use App\Repository\EntrepriseRepository;
 use Symfony\Component\Mime\Email;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\UtilisateurJSBRepository;
-use SebastianBergmann\CodeCoverage\Report\Xml\Report;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -23,7 +21,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-use function PHPUnit\Framework\isEmpty;
 
 class HomeController extends AbstractController
 {
