@@ -2,14 +2,11 @@
 
 namespace App\Entity;
 
-use App\Repository\UtilisateurJSBRepository;
+use App\Repository\InviteRepository;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
-use Symfony\Component\Validator\Constraints as Assert;
 
-#[ORM\Entity(repositoryClass: UtilisateurJSBRepository::class)]
-#[UniqueEntity("email")]
-class invite
+#[ORM\Entity(repositoryClass: InviteRepository::class)]
+class Invite
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -17,9 +14,7 @@ class invite
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\Email()]
     private ?string $email = null;
-
 
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
