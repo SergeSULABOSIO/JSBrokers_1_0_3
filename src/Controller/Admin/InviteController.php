@@ -12,4 +12,19 @@ class InviteController extends AbstractController
     {
         
     }
+
+    public function create()
+    {
+        
+    }
+
+    public function edit()
+    {
+        
+    }
+
+    public function remove()
+    {
+        
+    }
 }
