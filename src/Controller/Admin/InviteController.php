@@ -23,14 +23,14 @@ class InviteController extends AbstractController
     }
 
 
-    #[Route('/{id}', name: 'edit', requirements: ['id'=>Requirement::DIGITS])]
+    #[Route('/{id}', name: 'edit', requirements: ['id'=>Requirement::DIGITS], methods:['GET', 'POST'])]
     public function edit()
     {
         
     }
 
 
-    #[Route('/{id}', name: 'remove', requirements: ['id'=>Requirement::DIGITS])]
+    #[Route('/{id}', name: 'remove', requirements: ['id'=>Requirement::DIGITS], methods:['DELETE'])]
     public function remove()
     {
         
