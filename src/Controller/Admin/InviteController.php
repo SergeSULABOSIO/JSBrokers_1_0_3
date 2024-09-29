@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
@@ -16,17 +17,16 @@ class InviteController extends AbstractController
 {
 
     public function __construct(
+        private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-    )
-    {
-        
-    }
+        private UtilisateurJSBRepository $utilisateurJSBRepository,
+    ) {}
 
     #[Route(name: 'index')]
-    public function index($idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository)
+    public function index($idUtilisateur)
     {
-        $utilisateur = $utilisateurJSBRepository->find($idUtilisateur);
+        $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
         return $this->render('admin/invite/index.html.twig', [
             'pageName' => "Liste d'invités",
             'utilisateur' => $utilisateur,
@@ -37,16 +37,16 @@ class InviteController extends AbstractController
 
 
     #[Route('/create', name: 'create')]
-    public function create($idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, Request $request, EntityManagerInterface $manager)
+    public function create($idUtilisateur, Request $request)
     {
-        $utilisateur = $utilisateurJSBRepository->find($idUtilisateur);
+        $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
         /** @var Invite */
         $invite = new Invite();
         $form = $this->createForm(Invite::class, $invite);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $manager->persist($invite);
-            $manager->flush();
+            $this->manager->persist($invite);
+            $this->manager->flush();
             $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
             return $this->redirectToRoute("admin.invite.index", [
                 'idUtilisateur' => $utilisateur->getId()
@@ -62,14 +62,14 @@ class InviteController extends AbstractController
 
 
     #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, Invite $invite, Request $request, EntityManagerInterface $manager)
+    public function edit($idUtilisateur, Invite $invite, Request $request)
     {
-        $utilisateur = $utilisateurJSBRepository->find($idUtilisateur);
+        $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
         $form = $this->createForm(Invite::class, $invite);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $manager->persist($invite);
-            $manager->flush();
+            $this->manager->persist($invite);
+            $this->manager->flush();
             $this->addFlash("success", $invite->getEmail() . " a été modifié avec succès.");
             return $this->redirectToRoute("admin.invite.index", [
                 'idUtilisateur' => $utilisateur->getId(),
@@ -86,11 +86,11 @@ class InviteController extends AbstractController
 
 
     #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, Invite $invite, EntityManagerInterface $manager)
+    public function remove($idUtilisateur, Invite $invite)
     {
-        $utilisateur = $utilisateurJSBRepository->find($idUtilisateur);
-        $manager->remove($invite);
-        $manager->flush();
+        $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
+        $this->manager->remove($invite);
+        $this->manager->flush();
         $this->addFlash("success", $invite->getEmail() . " a été supprimé avec succès.");
         return $this->redirectToRoute("admin.invite.index", [
             'idUtilisateur' => $utilisateur->getId()

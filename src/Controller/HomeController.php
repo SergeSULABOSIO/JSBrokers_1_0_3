@@ -27,8 +27,10 @@ class HomeController extends AbstractController
 {
 
     public function __construct(
+        private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
+        private UtilisateurJSBRepository $utilisateurJSBRepository,
     )
     {
         
@@ -48,7 +50,7 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_login', name: 'app_user_login')]
-    public function userLogin(Request $request, UtilisateurJSBRepository $repository): Response
+    public function userLogin(Request $request): Response
     {
         /** @var ConnexionDTO */
         $data = new ConnexionDTO();
@@ -56,7 +58,7 @@ class HomeController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $user = null;
-            $tabResultats = $repository->findBy([
+            $tabResultats = $this->utilisateurJSBRepository->findBy([
                 'email' => $data->email,
                 'motDePasse' => $data->motdepasse
             ]);
@@ -89,21 +91,21 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_registration/{idUtilisateur}', name: 'app_user_registration')]
-    public function userRegistration(int $idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, Request $request, EntityManagerInterface $manager): Response
+    public function userRegistration(int $idUtilisateur, Request $request): Response
     {
         $tittrePage = "Création du compte utilisateur";
 
         /** @var UtilisateurJSB */
         $utilisateurJSB = new UtilisateurJSB();
         if ($idUtilisateur != -1) {
-            $utilisateurJSB = $utilisateurJSBRepository->find($idUtilisateur);
+            $utilisateurJSB = $this->utilisateurJSBRepository->find($idUtilisateur);
             $tittrePage = "Edition du compte " . $utilisateurJSB->getNom();
         }
         $form = $this->createForm(UtilisateurJSBType::class, $utilisateurJSB);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $manager->persist($utilisateurJSB);
-            $manager->flush();
+            $this->manager->persist($utilisateurJSB);
+            $this->manager->flush();
 
             if($idUtilisateur != -1){
                 $this->addFlash("success", "" . $utilisateurJSB->getNom() . ", votre profil est mis à jour avec succès.");
@@ -125,12 +127,12 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_dashbord/{idUtilisateur}', name: 'app_user_dashbord')]
-    public function userDashbord($idUtilisateur, UtilisateurJSBRepository $repositoryUtilisateur): Response
+    public function userDashbord($idUtilisateur): Response
     {
         // dd($listeEntreprises);
         return $this->render('home/user_dashbord.html.twig', [
             'pageName' => "Liste d'entreprises",
-            'utilisateur' => $repositoryUtilisateur->find($idUtilisateur),
+            'utilisateur' => $this->utilisateurJSBRepository->find($idUtilisateur),
             'entreprises' => $this->entrepriseRepository->findAll(),
             'invites' => $this->inviteRepository->findAll(),
         ]);
@@ -140,16 +142,16 @@ class HomeController extends AbstractController
 
 
     #[Route('/broker_registration/{idUtilisateur}/{idEntreprise}', name: 'app_broker_registration')]
-    public function brokerRegistration(Request $request, $idUtilisateur, $idEntreprise, UtilisateurJSBRepository $repositoryUtilisateur, EntrepriseRepository $repositoryEntreprise, EntityManagerInterface $manager): Response
+    public function brokerRegistration(Request $request, $idUtilisateur, $idEntreprise): Response
     {
         $tittrePage = "Création de l'entreprise";
         /** @var UtilisateurJSB */
-        $user = $repositoryUtilisateur->find($idUtilisateur);
+        $user = $this->utilisateurJSBRepository->find($idUtilisateur);
 
         /** @var Entreprise */
         $entreprise = new Entreprise();
         if ($idEntreprise != -1) {
-            $entreprise = $repositoryEntreprise->find($idEntreprise);
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
             $tittrePage = "Modification de " . $entreprise->getNom();
         }
         // dd($entreprise);
@@ -158,8 +160,8 @@ class HomeController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $manager->persist($entreprise);
-            $manager->flush();
+            $this->manager->persist($entreprise);
+            $this->manager->flush();
             if ($idEntreprise == -1) {
                 $this->addFlash("success", "" . $entreprise->getNom() . " est ajoutée avec succès.");
             } else {
@@ -181,18 +183,18 @@ class HomeController extends AbstractController
 
 
     #[Route('/broker_destruction/{idUtilisateur}/{idEntreprise}', name: 'app_broker_destruction')]
-    public function brokerDestruction(Request $request, $idUtilisateur, $idEntreprise, UtilisateurJSBRepository $repositoryUtilisateur, EntrepriseRepository $repositoryEntreprise, EntityManagerInterface $manager): Response
+    public function brokerDestruction(Request $request, $idUtilisateur, $idEntreprise): Response
     {
         /** @var UtilisateurJSB */
-        $utilisateur = $repositoryUtilisateur->find($idUtilisateur);
+        $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
 
         /** @var Entreprise */
         $entreprise = new Entreprise();
         if ($idEntreprise != -1) {
-            $entreprise = $repositoryEntreprise->find($idEntreprise);
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
         }
-        $manager->remove($entreprise);
-        $manager->flush();
+        $this->manager->remove($entreprise);
+        $this->manager->flush();
 
         $this->addFlash("success", "" . $utilisateur->getNom() . " vous venez de supprimer " . $entreprise->getNom());
 
