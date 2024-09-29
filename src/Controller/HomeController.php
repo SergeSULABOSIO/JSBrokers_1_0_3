@@ -11,6 +11,7 @@ use App\Form\ConnexionType;
 use App\Form\EntrepriseType;
 use App\Form\UtilisateurJSBType;
 use App\Repository\EntrepriseRepository;
+use App\Repository\InviteRepository;
 use Symfony\Component\Mime\Email;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\UtilisateurJSBRepository;
@@ -24,6 +25,16 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class HomeController extends AbstractController
 {
+
+    public function __construct(
+        private EntrepriseRepository $entrepriseRepository,
+        private InviteRepository $inviteRepository,
+    )
+    {
+        
+    }
+
+
     #[Route('/', name: 'app_index')]
     public function index(): Response
     {
@@ -114,15 +125,14 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_dashbord/{idUtilisateur}', name: 'app_user_dashbord')]
-    public function userDashbord($idUtilisateur, UtilisateurJSBRepository $repositoryUtilisateur, EntrepriseRepository $repositoryEntreprise): Response
+    public function userDashbord($idUtilisateur, UtilisateurJSBRepository $repositoryUtilisateur): Response
     {
-        $utilisateurJSB = $repositoryUtilisateur->find($idUtilisateur);
-        $listeEntreprises = $repositoryEntreprise->findAll();
         // dd($listeEntreprises);
         return $this->render('home/user_dashbord.html.twig', [
             'pageName' => "Liste d'entreprises",
-            'utilisateur' => $utilisateurJSB,
-            'listeEntreprises' => $listeEntreprises,
+            'utilisateur' => $repositoryUtilisateur->find($idUtilisateur),
+            'entreprises' => $this->entrepriseRepository->findAll(),
+            'invites' => $this->inviteRepository->findAll(),
         ]);
     }
 

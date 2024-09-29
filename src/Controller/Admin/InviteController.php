@@ -2,6 +2,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
 use App\Repository\UtilisateurJSBRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -13,15 +14,24 @@ use Symfony\Component\HttpFoundation\Request;
 #[Route("/admin/{idUtilisateur}/invite", name: 'admin.invite.')]
 class InviteController extends AbstractController
 {
+
+    public function __construct(
+        private EntrepriseRepository $entrepriseRepository,
+        private InviteRepository $inviteRepository,
+    )
+    {
+        
+    }
+
     #[Route(name: 'index')]
-    public function index($idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository, InviteRepository $inviteRepository)
+    public function index($idUtilisateur, UtilisateurJSBRepository $utilisateurJSBRepository)
     {
         $utilisateur = $utilisateurJSBRepository->find($idUtilisateur);
         return $this->render('admin/invite/index.html.twig', [
             'pageName' => "Liste d'invités",
-            'idUtilisateur' => $utilisateur->getId(),
             'utilisateur' => $utilisateur,
-            'invites' => $inviteRepository->findAll(),
+            'invites' => $this->inviteRepository->findAll(),
+            'entreprises' => $this->entrepriseRepository->findAll(),
         ]);
     }
 
