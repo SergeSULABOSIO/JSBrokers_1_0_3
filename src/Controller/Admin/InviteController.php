@@ -39,6 +39,7 @@ class InviteController extends AbstractController
     #[Route('/create', name: 'create')]
     public function create($idUtilisateur, Request $request)
     {
+        dd("Je suis ici: création de l'invité.");
         $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
         /** @var Invite */
         $invite = new Invite();
