@@ -27,13 +27,13 @@
 {% block menuLateraleGauche %}
 	<h5 class="mb-1">Menu</h5>
 	<div class="list-group">
-		<a href="{{ path('app_user_dashbord', {'idUtilisateur': utilisateur.id})}}" class="list-group-item list-group-item-action active">
+		<a href="{{ path('app_user_dashbord', {'idUtilisateur': utilisateur.id})}}" class="list-group-item list-group-item-action">
 			<div class="d-flex w-100 justify-content-between">
 				<h6 class="mb-1">Entreprises</h6>
 				<small><span class="badge text-bg-warning rounded-pill">2</span></small>
 			</div>
 		</a>
-		<a href="{{ path('admin.invite.index', {'idUtilisateur': utilisateur.id})}}" class="list-group-item list-group-item-action">
+		<a href="{{ path('admin.invite.index', {'idUtilisateur': idUtilisateur})}}" class="list-group-item list-group-item-action active">
 			<div class="d-flex w-100 justify-content-between">
 				<h6 class="mb-1">Invités</h6>
 				<small><span class="badge text-bg-warning rounded-pill">0</span></small>
@@ -53,26 +53,18 @@
 	<div>
 		<div class="d-flex">
 			{# Boucler les entreprises #}
-			{% for entreprise in listeEntreprises %}
+			{% for invite in invites %}
 				<div class="card m-2 shadow-sm bg-body" style="width: 18rem;">
 					{# <img class="card-img-top" src="..." alt="Card image cap"> #}
 					<div class="card-body">
 						<h5 class="card-title">
-							<a href="#" class="text-primary">{{ entreprise.nom }}</a>
+							<a href="#" class="text-primary">{{ invite.email }}</a>
 						</h5>
-						<p class="card-text">{{ entreprise.adresse }}</p>
+						<p class="card-text">Autres informations sur l'invité.</p>
 					</div>
-					<ul class="list-group list-group-flush">
-						<li class="list-group-item">RCCM: {{ entreprise.rccm }}| IDNAT: {{ entreprise.idnat }} | NIF:{{ entreprise.numimpot }}</li>
-						<li class="list-group-item">Tél:{{ entreprise.telephone }} | Lince: {{ entreprise.licence }} </li>
-						<li class="list-group-item">
-							<em>Créée le {{ entreprise.createdAt | date("d/m/Y") }}</em>
-						</li>
-					</ul>
 					<div class="card-body">
-						<a href="#" class="m-2">Inviter</a>
-						<a href="{{ path('app_broker_registration', { 'idUtilisateur':utilisateur.id, 'idEntreprise':entreprise.id })}}" class="m-2">Modifier</a>
-						<a href="{{ path('app_broker_destruction', { 'idUtilisateur':utilisateur.id, 'idEntreprise':entreprise.id })}}" class="m-2">Supprimer</a>
+						<a href="" class="m-2">Modifier</a>
+						<a href="" class="m-2">Supprimer</a>
 					</div>
 				</div>
 			{% endfor %}
