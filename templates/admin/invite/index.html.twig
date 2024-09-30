@@ -9,7 +9,7 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ pageName }} / {{ utilisateur.nom }}
+	{{ utilisateur.nom }}>{{ pageName }}
 {% endblock %}
 
 {% block descriptionRubrique %}
@@ -41,18 +41,26 @@
 					{# Boucler les donnees #}
 					{% for invite in invites %}
 						<tr>
-							<td>Otto</td>
-							<td>@mdo</td>
+							<td>
+								<span class="fst-italic text-body-tertiary">
+									[Son compte JSBroker n'est pas encore créé]
+								</span>
+								{{ invite.email }}, 
+								<span class="fst-italic text-body-tertiary">
+									invité le {{ invite.createdAt|date('d/m/Y H:m') }}
+								</span>
+							</td>
+							<td>
+								{# Les actions sur l element de la liste #}
+								<a href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
+									Modifier
+								</a>
+								<a href="{{ path('admin.invite.remove', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'DELETE'>
+									Supprimer
+								</a>
+							</td>
 						</tr>
 					{% endfor %}
-					<tr>
-						<td>Thornton</td>
-						<td>@fat</td>
-					</tr>
-					<tr>
-						<td>Thornton</td>
-						<td>@fat</td>
-					</tr>
 				</tbody>
 			</table>
 		</div>
