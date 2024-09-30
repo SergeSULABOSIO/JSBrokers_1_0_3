@@ -33,8 +33,8 @@
 				</caption>
 				<thead class="table-light">
 					<tr>
-						<th scope="col">Invité</th>
-						<th scope="col">Actions</th>
+						<th scope="col"><div class='d-flex justify-content-start'>Détails relatifs aux invités</div></th>
+						<th scope="col"><div class='d-flex justify-content-end'>Actions</div></th>
 					</tr>
 				</thead>
 				<tbody class="table-group-divider">
@@ -51,7 +51,7 @@
 								</span>
 							</td>
 							<td>
-								<div class="d-flex gap-1">
+								<div class="d-flex gap-1 d-flex justify-content-end">
 									{# Les actions sur l element de la liste #}
 									<a class= "btn btn-outline-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
 										Modifier
