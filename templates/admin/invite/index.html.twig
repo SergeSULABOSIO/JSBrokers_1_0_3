@@ -51,13 +51,28 @@
 								</span>
 							</td>
 							<td>
-								{# Les actions sur l element de la liste #}
-								<a class= "btn btn-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
-									Modifier
-								</a>
-								<a href="{{ path('admin.invite.remove', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'DELETE'>
-									Supprimer
-								</a>
+								<div class="d-flex gap-1">
+									{# Les actions sur l element de la liste #}
+									<a class= "btn btn-outline-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
+										Modifier
+									</a>
+									<form action="{{ path('admin.invite.remove', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" method='POST'>
+										<input type='hidden' name='_method' value='DELETE'>
+										<button class='btn btn-outline-danger btn-sm' type='submit'>Supprimer</button>
+									</form>
+									<div class="dropdown">
+										<a class="btn btn-outline-secondary dropdown-toggle btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+											Autres
+										</a>
+										<ul class="dropdown-menu">
+											<li><a class="dropdown-item" href="#">Voir son rôle</a></li>
+											<li><a class="dropdown-item" href="#">Modifier son rôle</a></li>
+											<li><a class="dropdown-item" href="#">Envoyer l'email d'invitation</a></li>
+											<li><hr class="dropdown-divider"></li>
+											<li><a class="dropdown-item" href="#">Désactiver cet invité</a></li>
+										</ul>
+									</div>
+								</div>
 							</td>
 						</tr>
 					{% endfor %}
