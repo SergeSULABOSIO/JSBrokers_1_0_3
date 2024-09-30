@@ -43,7 +43,7 @@
 						<tr>
 							<td>
 								<span class="fst-italic text-body-tertiary">
-									[Son compte JSBroker n'est pas encore créé]
+									[Not a JSB user]
 								</span>
 								{{ invite.email }}, 
 								<span class="fst-italic text-body-tertiary">
@@ -52,7 +52,7 @@
 							</td>
 							<td>
 								{# Les actions sur l element de la liste #}
-								<a href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
+								<a class= "btn btn-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
 									Modifier
 								</a>
 								<a href="{{ path('admin.invite.remove', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'DELETE'>
