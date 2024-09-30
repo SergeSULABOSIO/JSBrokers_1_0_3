@@ -4,50 +4,21 @@
 	{{pageName}}
 {% endblock %}
 
-
 {% block section_utilisateur %}
-	<div>
-		<a href="{{ path('app_broker_registration', { 'idUtilisateur':utilisateur.id, 'idEntreprise':-1 })}}" type="button" class="btn btn-primary">Créer une entreprise</a>
-		<a href="{{ path('app_index')}}" type="button" class="btn btn-outline-danger">Déconnexion</a>
-		<a href="{{ path('app_user_registration', {'idUtilisateur':utilisateur.id})}}" type="button" class="btn btn-outline-primary">Paramètres</a>
-	</div>
+	{% include 'segments/boutons_user_dashbord.html.twig' %}
 {% endblock %}
-
 
 {%  block titreRubrique %}
 	{{ pageName }} / {{ utilisateur.nom }}
 {% endblock %}
 
-
 {% block descriptionRubrique %}
 	Liste des entreprises de votre protefeuil, y compris les celles auxquelles vous êtes invité.
 {% endblock %}
 
-
 {% block menuLateraleGauche %}
-	<h5 class="mb-1">Menu</h5>
-	<div class="list-group">
-		<a href="{{ path('app_user_dashbord', {'idUtilisateur': utilisateur.id})}}" class="list-group-item list-group-item-action active">
-			<div class="d-flex w-100 justify-content-between">
-				<h6 class="mb-1">Entreprises</h6>
-				<small><span class="badge text-bg-warning rounded-pill">{{ entreprises|length }}</span></small>
-			</div>
-		</a>
-		<a href="{{ path('admin.invite.index', {'idUtilisateur': utilisateur.id})}}" class="list-group-item list-group-item-action">
-			<div class="d-flex w-100 justify-content-between">
-				<h6 class="mb-1">Invités</h6>
-				<small><span class="badge text-bg-warning rounded-pill">{{ invites|length }}</span></small>
-			</div>
-		</a>
-		<a href="#" class="list-group-item list-group-item-action">
-			<div class="d-flex w-100 justify-content-between">
-				<h6 class="mb-1">Abonnement</h6>
-				<small><span class="badge text-bg-warning rounded-pill">0</span></small>
-			</div>
-		</a>
-	</div>
+	{% include 'segments/menu_user_dashbord.html.twig' %}
 {% endblock %}
-
 
 {% block body %}
 	<div>

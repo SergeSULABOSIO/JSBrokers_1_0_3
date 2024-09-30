@@ -1,0 +1,10 @@
+<div>
+    {% if app.current_route starts with 'admin.invite' %}
+        <a href="{{ path('admin.invite.create', { 'idUtilisateur':utilisateur.id })}}" type="button" class="btn btn-primary">Ajouter un invité</a>
+    {% endif %}
+    {% if app.current_route starts with 'app_user_dashbord' %}
+		<a href="{{ path('app_broker_registration', { 'idUtilisateur':utilisateur.id, 'idEntreprise':-1 })}}" type="button" class="btn btn-primary">Créer une entreprise</a>
+    {% endif %}
+    <a href="{{ path('app_index')}}" type="button" class="btn btn-outline-danger">Déconnexion</a>
+    <a href="{{ path('app_user_registration', {'idUtilisateur':utilisateur.id})}}" type="button" class="btn btn-outline-primary">Paramètres</a>
+</div>

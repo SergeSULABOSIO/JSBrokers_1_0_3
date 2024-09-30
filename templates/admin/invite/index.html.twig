@@ -4,69 +4,35 @@
 	{{pageName}}
 {% endblock %}
 
-
 {% block section_utilisateur %}
-	<div>
-		<a href="{{ path('admin.invite.create', { 'idUtilisateur':utilisateur.id })}}" type="button" class="btn btn-primary">Ajouter un invité</a>
-		<a href="{{ path('app_index')}}" type="button" class="btn btn-outline-danger">Déconnexion</a>
-		<a href="{{ path('app_user_registration', {'idUtilisateur':utilisateur.id})}}" type="button" class="btn btn-outline-primary">Paramètres</a>
-	</div>
+	{% include 'segments/boutons_user_dashbord.html.twig' %}
 {% endblock %}
-
 
 {%  block titreRubrique %}
 	{{ pageName }} / {{ utilisateur.nom }}
 {% endblock %}
 
-
 {% block descriptionRubrique %}
-	Liste des entreprises de votre protefeuil, y compris les celles auxquelles vous êtes invité.
+	Liste des invités de vos entreprises. Elle reprend tous les utilisateurs à qui vous avez accordé quelques droits d'accès aux données de vos entreprises.
 {% endblock %}
-
 
 {% block menuLateraleGauche %}
-	<h5 class="mb-1">Menu</h5>
-	<div class="list-group">
-		<a href="{{ path('app_user_dashbord', {'idUtilisateur': utilisateur.id})}}" class="list-group-item list-group-item-action">
-			<div class="d-flex w-100 justify-content-between">
-				<h6 class="mb-1">Entreprises</h6>
-				<small><span class="badge text-bg-warning rounded-pill">{{ entreprises|length }}</span></small>
-			</div>
-		</a>
-		<a href="{{ path('admin.invite.index', {'idUtilisateur': utilisateur.id})}}" class="list-group-item list-group-item-action active">
-			<div class="d-flex w-100 justify-content-between">
-				<h6 class="mb-1">Invités</h6>
-				<small><span class="badge text-bg-warning rounded-pill">{{ invites|length }}</span></small>
-			</div>
-		</a>
-		<a href="#" class="list-group-item list-group-item-action">
-			<div class="d-flex w-100 justify-content-between">
-				<h6 class="mb-1">Abonnement</h6>
-				<small><span class="badge text-bg-warning rounded-pill">0</span></small>
-			</div>
-		</a>
-	</div>
+	{% include 'segments/menu_user_dashbord.html.twig' %}
 {% endblock %}
-
 
 {% block body %}
 	<div>
 		<div class="d-flex">
-			{# Boucler les entreprises #}
+			{# Boucler les donnees #}
 			{% for invite in invites %}
-				<div class="card m-2 shadow-sm bg-body" style="width: 18rem;">
-					{# <img class="card-img-top" src="..." alt="Card image cap"> #}
-					<div class="card-body">
-						<h5 class="card-title">
-							<a href="#" class="text-primary">{{ invite.email }}</a>
-						</h5>
-						<p class="card-text">Autres informations sur l'invité.</p>
-					</div>
-					<div class="card-body">
-						<a href="" class="m-2">Modifier</a>
-						<a href="" class="m-2">Supprimer</a>
-					</div>
-				</div>
+				<table class="table table-striped table-hover table-sm">
+					<thead>
+						<tr>
+							<th scope="col">Invité</th>
+							<th scope="col">Actions</th>
+						</tr>
+					</thead>
+				</table>
 			{% endfor %}
 		</div>
 	</div>
