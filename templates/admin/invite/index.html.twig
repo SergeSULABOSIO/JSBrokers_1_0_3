@@ -23,17 +23,38 @@
 {% block body %}
 	<div>
 		<div class="d-flex">
-			{# Boucler les donnees #}
-			{% for invite in invites %}
-				<table class="table table-striped table-hover table-sm">
-					<thead>
+			<table class="table table-hover table-sm caption-top">
+				<caption>
+					{% if invites|length == 0 %}
+						Aucun enregistrement trouvé.
+					{% else %}
+						Invités : {{ invites|length }} enregistrement(s).
+					{% endif %}
+				</caption>
+				<thead class="table-light">
+					<tr>
+						<th scope="col">Invité</th>
+						<th scope="col">Actions</th>
+					</tr>
+				</thead>
+				<tbody class="table-group-divider">
+					{# Boucler les donnees #}
+					{% for invite in invites %}
 						<tr>
-							<th scope="col">Invité</th>
-							<th scope="col">Actions</th>
+							<td>Otto</td>
+							<td>@mdo</td>
 						</tr>
-					</thead>
-				</table>
-			{% endfor %}
+					{% endfor %}
+					<tr>
+						<td>Thornton</td>
+						<td>@fat</td>
+					</tr>
+					<tr>
+						<td>Thornton</td>
+						<td>@fat</td>
+					</tr>
+				</tbody>
+			</table>
 		</div>
 	</div>
 {% endblock %}
