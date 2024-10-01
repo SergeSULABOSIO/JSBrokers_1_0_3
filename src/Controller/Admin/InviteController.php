@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use App\Form\InviteType;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
 use App\Repository\UtilisateurJSBRepository;
@@ -39,11 +40,11 @@ class InviteController extends AbstractController
     #[Route('/create', name: 'create')]
     public function create($idUtilisateur, Request $request)
     {
-        dd("Je suis ici: création de l'invité.");
+        // dd("Je suis ici: création de l'invité.");
         $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
         /** @var Invite */
         $invite = new Invite();
-        $form = $this->createForm(Invite::class, $invite);
+        $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($invite);
@@ -57,6 +58,8 @@ class InviteController extends AbstractController
             'pageName' => 'Nouvel Invité',
             'idUtilisateur' => $utilisateur->getId(),
             'utilisateur' => $utilisateur,
+            'invites' => $this->inviteRepository->findAll(),
+            'entreprises' => $this->entrepriseRepository->findAll(),
             'form' => $form,
         ]);
     }

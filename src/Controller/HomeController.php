@@ -144,7 +144,7 @@ class HomeController extends AbstractController
     #[Route('/broker_registration/{idUtilisateur}/{idEntreprise}', name: 'app_broker_registration')]
     public function brokerRegistration(Request $request, $idUtilisateur, $idEntreprise): Response
     {
-        $tittrePage = "Création de l'entreprise";
+        $tittrePage = "Nouvelle entreprise";
         /** @var UtilisateurJSB */
         $user = $this->utilisateurJSBRepository->find($idUtilisateur);
 
@@ -175,6 +175,8 @@ class HomeController extends AbstractController
         return $this->render('home/broker_registration.html.twig', [
             'pageName' => $tittrePage,
             'utilisateur' => $user,
+            'invites' => $this->inviteRepository->findAll(),
+            'entreprises' => $this->entrepriseRepository->findAll(),
             'form' => $form,
         ]);
     }
