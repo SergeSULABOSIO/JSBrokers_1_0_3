@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}>Invités><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	JS Brokers est un outil de collaboration. Invitez des personnes (utilisateurs JS Brokers) à pouvoir accéder à votre entreprise afin d'y travailer.
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_user_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		<p>
+			{# {{ form(form) }} #}
+			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+				<div class="card-body">
+					<p>
+						<strong>{{ utilisateur.nom }}</strong>, 
+                        <br>Vous êtes sur le point de modifier l'invitation de <strong>{{ invite.email }}</strong>.
+                        <br><br>JS Broker lui enverra un email de notification.
+                        <br><br>Si <strong>{{ invite.email }}</strong> n'a toujours pas encore de compte JS Broker, ne vous inquiètez pas car il peut en créer même après et son invitation restera toujours valide en moins que vous-même puissiez la désactiver intentionnellement.
+                        <hr>
+                    </p>
+					{{ form(form) }}
+					</div>
+				</div>
+			</div>
+		</p>
+	</p>
+</div>{% endblock %}

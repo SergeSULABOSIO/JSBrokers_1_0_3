@@ -68,11 +68,12 @@ class InviteController extends AbstractController
     #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function edit($idUtilisateur, Invite $invite, Request $request)
     {
+        // dd($invite);
         $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
-        $form = $this->createForm(Invite::class, $invite);
+        $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($invite);
+            $this->manager->persist($invite); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
             $this->addFlash("success", $invite->getEmail() . " a été modifié avec succès.");
             return $this->redirectToRoute("admin.invite.index", [
@@ -82,6 +83,8 @@ class InviteController extends AbstractController
         return $this->render('admin/invite/edit.html.twig', [
             'pageName' => "Edition",
             'invite' => $invite,
+            'entreprises' => $this->entrepriseRepository->findAll(),
+            'invites' => $this->inviteRepository->findAll(),
             'idUtilisateur' => $utilisateur->getId(),
             'utilisateur' => $utilisateur,
             'form' => $form,
