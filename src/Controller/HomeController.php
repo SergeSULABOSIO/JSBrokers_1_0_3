@@ -131,7 +131,7 @@ class HomeController extends AbstractController
     {
         // dd($listeEntreprises);
         return $this->render('home/user_dashbord.html.twig', [
-            'pageName' => "Liste d'entreprises",
+            'pageName' => "Entreprises",
             'utilisateur' => $this->utilisateurJSBRepository->find($idUtilisateur),
             'entreprises' => $this->entrepriseRepository->findAll(),
             'invites' => $this->inviteRepository->findAll(),

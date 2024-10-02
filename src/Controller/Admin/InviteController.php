@@ -29,7 +29,7 @@ class InviteController extends AbstractController
     {
         $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
         return $this->render('admin/invite/index.html.twig', [
-            'pageName' => "Liste d'invités",
+            'pageName' => "Invités",
             'utilisateur' => $utilisateur,
             'invites' => $this->inviteRepository->findAll(),
             'entreprises' => $this->entrepriseRepository->findAll(),
