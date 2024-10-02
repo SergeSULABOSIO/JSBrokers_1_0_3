@@ -123,7 +123,7 @@ class InviteController extends AbstractController
             //->bcc('bcc@example.com')
             //->replyTo('fabien@example.com')
             ->priority(Email::PRIORITY_HIGH)
-            ->subject('invitation JS Brokers venant de ' . $utilisateur->getNom())
+            ->subject('Invitation JS Brokers venant de ' . $utilisateur->getNom())
             // ->text($data->message)
             // ->html('<p>' . $data->message . '</p>');
             ->htmlTemplate("home/mail/message_invitation.html.twig")
