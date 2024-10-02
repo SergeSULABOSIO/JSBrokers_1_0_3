@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Invite;
+use App\Services\FormListenerFactory;
 use DateTimeImmutable;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -14,6 +15,14 @@ use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class InviteType extends AbstractType
 {
+
+    public function __construct(
+        private FormListenerFactory $ecouteurFormulaire
+    )
+    {
+        
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -35,19 +44,8 @@ class InviteType extends AbstractType
              ->add('enregistrer', SubmitType::class, [
                 'label' => "Envoyer l'invitation"
             ])
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->onPostSubmitActions(...))
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
-    }
-
-    public function onPostSubmitActions(PostSubmitEvent $event)
-    {
-        /** @var Invite */
-        $invite = $event->getData();
-        $invite->setUpdatedAt(new DateTimeImmutable('now'));
-        if($invite->getId() == null){
-            $invite->setCreatedAt(new DateTimeImmutable('now'));
-        }
-        // dd($event);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
