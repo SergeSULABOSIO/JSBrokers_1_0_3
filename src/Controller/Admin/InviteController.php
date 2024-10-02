@@ -55,7 +55,7 @@ class InviteController extends AbstractController
             ]);
         }
         return $this->render('admin/invite/create.html.twig', [
-            'pageName' => 'Nouvel Invité',
+            'pageName' => 'Nouveau',
             'idUtilisateur' => $utilisateur->getId(),
             'utilisateur' => $utilisateur,
             'invites' => $this->inviteRepository->findAll(),
@@ -80,7 +80,7 @@ class InviteController extends AbstractController
             ]);
         }
         return $this->render('admin/invite/edit.html.twig', [
-            'pageName' => "Edition de l'invité",
+            'pageName' => "Edition",
             'invite' => $invite,
             'idUtilisateur' => $utilisateur->getId(),
             'utilisateur' => $utilisateur,

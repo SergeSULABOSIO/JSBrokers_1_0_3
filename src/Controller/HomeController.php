@@ -144,7 +144,7 @@ class HomeController extends AbstractController
     #[Route('/broker_registration/{idUtilisateur}/{idEntreprise}', name: 'app_broker_registration')]
     public function brokerRegistration(Request $request, $idUtilisateur, $idEntreprise): Response
     {
-        $tittrePage = "Nouvelle entreprise";
+        $tittrePage = "Nouveau";
         /** @var UtilisateurJSB */
         $user = $this->utilisateurJSBRepository->find($idUtilisateur);
 
