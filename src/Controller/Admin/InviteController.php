@@ -54,7 +54,7 @@ class InviteController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($invite);
             $this->manager->flush();
-            
+
             //Envoie de l'email de notification
             $this->envoyerEmail($invite, $utilisateur);
 
@@ -123,7 +123,7 @@ class InviteController extends AbstractController
             //->bcc('bcc@example.com')
             //->replyTo('fabien@example.com')
             ->priority(Email::PRIORITY_HIGH)
-            ->subject('Demande de contact')
+            ->subject('invitation JS Brokers venant de ' . $utilisateur->getNom())
             // ->text($data->message)
             // ->html('<p>' . $data->message . '</p>');
             ->htmlTemplate("home/mail/message_invitation.html.twig")
