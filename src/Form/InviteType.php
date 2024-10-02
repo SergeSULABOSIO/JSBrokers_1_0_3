@@ -20,6 +20,7 @@ class InviteType extends AbstractType
             ->add('email', EmailType::class, [
                 'label' => "L'addresse mail de l'invité",
                 'empty_data' => '',
+                'required' => true,
                 'attr' => [
                     'placeholder' => "Email",
                 ],

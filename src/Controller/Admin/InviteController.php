@@ -3,21 +3,26 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use App\Entity\UtilisateurJSB;
 use App\Form\InviteType;
-use App\Repository\EntrepriseRepository;
+use Symfony\Component\Mime\Email;
 use App\Repository\InviteRepository;
-use App\Repository\UtilisateurJSBRepository;
+use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\UtilisateurJSBRepository;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 
 #[Route("/admin/{idUtilisateur}/invite", name: 'admin.invite.')]
 class InviteController extends AbstractController
 {
 
     public function __construct(
+        private MailerInterface $mailer,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
@@ -49,6 +54,10 @@ class InviteController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($invite);
             $this->manager->flush();
+            
+            //Envoie de l'email de notification
+            $this->envoyerEmail($invite, $utilisateur);
+
             $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
             return $this->redirectToRoute("admin.invite.index", [
                 'idUtilisateur' => $utilisateur->getId()
@@ -102,5 +111,26 @@ class InviteController extends AbstractController
         return $this->redirectToRoute("admin.invite.index", [
             'idUtilisateur' => $utilisateur->getId()
         ]);
+    }
+
+    private function envoyerEmail(Invite $invite, UtilisateurJSB $utilisateur)
+    {
+        # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
+        $email = (new TemplatedEmail())
+            ->to($invite->getEmail())
+            ->from("info@jsbrokers.com")
+            //->cc('cc@example.com')
+            //->bcc('bcc@example.com')
+            //->replyTo('fabien@example.com')
+            ->priority(Email::PRIORITY_HIGH)
+            ->subject('Demande de contact')
+            // ->text($data->message)
+            // ->html('<p>' . $data->message . '</p>');
+            ->htmlTemplate("home/mail/message_invitation.html.twig")
+            ->context([
+                "invite" => $invite,
+                "utilisateur" => $utilisateur,
+            ]);
+        $this->mailer->send($email);
     }
 }
