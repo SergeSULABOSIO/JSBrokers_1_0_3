@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\EntrepriseRepository;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -47,9 +49,15 @@ class Entreprise
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    /**
+     * @var Collection<int, Invite>
+     */
+    #[ORM\ManyToMany(targetEntity: Invite::class, mappedBy: 'entreprises')]
+    private Collection $invites;
+
     public function __construct()
     {
-
+        $this->invites = new ArrayCollection();
     }
 
 
@@ -175,6 +183,33 @@ class Entreprise
     public function setLicence($licence)
     {
         $this->licence = $licence;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Invite>
+     */
+    public function getInvites(): Collection
+    {
+        return $this->invites;
+    }
+
+    public function addInvite(Invite $invite): static
+    {
+        if (!$this->invites->contains($invite)) {
+            $this->invites->add($invite);
+            $invite->addEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeInvite(Invite $invite): static
+    {
+        if ($this->invites->removeElement($invite)) {
+            $invite->removeEntreprise($this);
+        }
 
         return $this;
     }

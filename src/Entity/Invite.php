@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\InviteRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -23,6 +25,17 @@ class Invite
 
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
+
+    /**
+     * @var Collection<int, Entreprise>
+     */
+    #[ORM\ManyToMany(targetEntity: Entreprise::class, inversedBy: 'invites')]
+    private Collection $entreprises;
+
+    public function __construct()
+    {
+        $this->entreprises = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -61,6 +74,30 @@ class Invite
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Entreprise>
+     */
+    public function getEntreprises(): Collection
+    {
+        return $this->entreprises;
+    }
+
+    public function addEntreprise(Entreprise $entreprise): static
+    {
+        if (!$this->entreprises->contains($entreprise)) {
+            $this->entreprises->add($entreprise);
+        }
+
+        return $this;
+    }
+
+    public function removeEntreprise(Entreprise $entreprise): static
+    {
+        $this->entreprises->removeElement($entreprise);
 
         return $this;
     }
