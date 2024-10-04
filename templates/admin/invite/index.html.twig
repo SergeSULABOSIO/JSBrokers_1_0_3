@@ -33,7 +33,9 @@
 				</caption>
 				<thead class="table-light">
 					<tr>
-						<th scope="col"><div class='d-flex justify-content-start'>Détails relatifs aux invités</div></th>
+						<th scope="col"><div class='d-flex justify-content-start'>Nom / E-mail</div></th>
+						<th scope="col"><div class='d-flex justify-content-start'>Date d'invitation</div></th>
+						<th scope="col"><div class='d-flex justify-content-start'>Entreprises</div></th>
 						<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>Actions</div></th>
 					</tr>
 				</thead>
@@ -42,13 +44,20 @@
 					{% for invite in invites %}
 						<tr>
 							<td>
-								<span class="fst-italic text-body-tertiary">
-									[Not a JSB user]
-								</span>
-								{{ invite.email }}, 
-								<span class="fst-italic text-body-tertiary">
-									invité le {{ invite.createdAt|date('d/m/Y H:i') }}, update du {{ invite.updatedAt|date('d/m/Y H:i') }}
-								</span>
+								{{ invite.email }}<span class="fst-italic text-body-tertiary"> [Not a JSB user]</span>
+							</td>
+							<td>
+								{{ invite.createdAt|date('d/m/Y H:i') }}
+							</td>
+							<td>
+								{% if invite.entreprises|length != 0 %}
+									Invités dans 
+									{% for entreprise in invite.entreprises %}
+										{{ entreprise.nom }}, 
+									{% endfor %}
+								{% else %}
+									Aucune
+								{% endif %}
 							</td>
 							<td>
 								<div class="d-flex gap-1 d-flex justify-content-end">

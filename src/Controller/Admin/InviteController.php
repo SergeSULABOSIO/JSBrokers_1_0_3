@@ -30,8 +30,13 @@ class InviteController extends AbstractController
     ) {}
 
     #[Route(name: 'index')]
-    public function index($idUtilisateur)
+    public function index($idUtilisateur, InviteRepository $inviteRepository)
     {
+
+        $invites = $this->inviteRepository->findAll();
+        // dd($invites[0]->getEntreprises());
+
+
         $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
         return $this->render('admin/invite/index.html.twig', [
             'pageName' => "Invités",
