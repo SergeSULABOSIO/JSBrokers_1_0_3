@@ -51,7 +51,6 @@
 							</td>
 							<td>
 								{% if invite.entreprises|length != 0 %}
-									Invités dans 
 									{% for entreprise in invite.entreprises %}
 										{{ entreprise.nom }}, 
 									{% endfor %}
