@@ -40,8 +40,14 @@ class InviteType extends AbstractType
             // ->add('updatedAt', null, [
             //     'widget' => 'single_text',
             // ])
-            ->add('entreprises')
-            
+            ->add('entreprises', EntityType::class, [
+                'class' => Entreprise::class,
+                'choice_label' => "nom",
+                'multiple' => true,
+                'expanded' => true,
+                'by_reference' => false
+            ])
+
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Envoyer l'invitation"
