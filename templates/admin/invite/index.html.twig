@@ -49,11 +49,14 @@
 							<td>
 								{{ invite.createdAt|date('d/m/Y H:i') }}
 							</td>
-							<td>
-								{% if invite.entreprises|length != 0 %}
-									{% for entreprise in invite.entreprises %}
-										{{ entreprise.nom }}, 
-									{% endfor %}
+							<td class="justify-content-between">
+								{% if invite.entreprises|length == 1 %}
+									{{ invite.entreprises[0].nom }}
+								{% elseif invite.entreprises|length > 1 %}
+									{{ invite.entreprises[0].nom }} 
+									<span class="badge text-bg-secondary">
+										<small>+{{invite.entreprises|length -1}}</small>
+									</span>
 								{% else %}
 									Aucune
 								{% endif %}
