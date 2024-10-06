@@ -68,6 +68,7 @@ class EntrepriseType extends AbstractType
                 ],
             ])
             ->add('thumbnailFile', FileType::class, [
+                'label' => "Photo de profile",
                 'required' => false,
             ])
 
