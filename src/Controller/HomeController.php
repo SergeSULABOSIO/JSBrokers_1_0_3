@@ -21,7 +21,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class HomeController extends AbstractController
 {
@@ -31,10 +31,7 @@ class HomeController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private UtilisateurJSBRepository $utilisateurJSBRepository,
-    )
-    {
-        
-    }
+    ) {}
 
 
     #[Route('/', name: 'app_index')]
@@ -107,12 +104,12 @@ class HomeController extends AbstractController
             $this->manager->persist($utilisateurJSB);
             $this->manager->flush();
 
-            if($idUtilisateur != -1){
+            if ($idUtilisateur != -1) {
                 $this->addFlash("success", "" . $utilisateurJSB->getNom() . ", votre profil est mis à jour avec succès.");
                 return $this->redirectToRoute("app_user_dashbord", [
-                    'idUtilisateur'=> $utilisateurJSB->getId()
+                    'idUtilisateur' => $utilisateurJSB->getId()
                 ]);
-            }else{
+            } else {
                 $this->addFlash("success", "" . $utilisateurJSB->getNom() . ", votre compte vient d'être créée.");
                 return $this->redirectToRoute("app_user_login");
             }
@@ -161,6 +158,15 @@ class HomeController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($entreprise);
+
+            // if ($form->get('thumbnailFile')->getData()) {
+            //     /** @var UploadedFile $photoProfile */
+            //     $photoProfile = $form->get('thumbnailFile')->getData();
+            //     $fileName = $entreprise->getId() . "." . $photoProfile->getClientOriginalExtension();
+            //     $photoProfile->move($this->getParameter("kernel.project_dir") . "/public/profile_entreprise", $fileName);
+            //     $entreprise->setThumbnail($fileName);
+            // }
+
             $this->manager->flush();
             if ($idEntreprise == -1) {
                 $this->addFlash("success", "" . $entreprise->getNom() . " est ajoutée avec succès.");
@@ -176,6 +182,7 @@ class HomeController extends AbstractController
             'pageName' => $tittrePage,
             'utilisateur' => $user,
             'invites' => $this->inviteRepository->findAll(),
+            'entreprise' => $entreprise,
             'entreprises' => $this->entrepriseRepository->findAll(),
             'form' => $form,
         ]);

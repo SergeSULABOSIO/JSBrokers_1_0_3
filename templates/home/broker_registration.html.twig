@@ -29,6 +29,13 @@
 						<br>vous êtes sur le point de créer une entreprise. Merci de fournir vos informations dans le formulaire ci-dessous.
 						<hr>
 					</p>
+					{% if entreprise.thumbnail %}
+						<p class="d-flex justify-content-center">
+							{# <img src="/profile_entreprise/{{ entreprise.thumbnail }}" alt="" width="300px" height="300px"> #}
+							<img src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="" width="300px" height="300px">
+						</p>
+					{% endif %}
+					
 					{{ form(form) }}
 					</div>
 				</div>
