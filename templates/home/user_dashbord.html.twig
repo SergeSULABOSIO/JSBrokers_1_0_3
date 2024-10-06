@@ -25,9 +25,8 @@
 		<div class="d-flex">
 			{# Boucler les entreprises #}
 			{% for entreprise in entreprises %}
-				<div class="card m-2 shadow-sm bg-body" style="width: 18rem;">
-					{# <img class="card-img-top" src="..." alt="Card image cap"> #}
-					<img src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 18rem; height: 15rem;">
+				<div class="card m-2 p-2 shadow-sm bg-body" style="width: 18rem;">
+					<img src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 17rem; height: 15rem;">
 					<div class="card-body">
 						<h5 class="card-title">
 							<a href="#" class="text-primary">{{ entreprise.nom }}</a>
