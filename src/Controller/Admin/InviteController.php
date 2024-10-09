@@ -32,6 +32,7 @@ class InviteController extends AbstractController
     #[Route(name: 'index')]
     public function index($idUtilisateur, InviteRepository $inviteRepository)
     {
+        $this->denyAccessUnlessGranted("ROLE_USER");
 
         $invites = $this->inviteRepository->findAll();
         // dd($invites[0]->getEntreprises());

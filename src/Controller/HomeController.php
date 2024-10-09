@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\DTO\ConnexionDTO;
 use App\DTO\ContactDTO;
 use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
 use App\Form\ContactType;
 use App\Entity\UtilisateurJSB;
 use App\Form\ConnexionType;
@@ -22,6 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class HomeController extends AbstractController
 {
@@ -35,8 +37,17 @@ class HomeController extends AbstractController
 
 
     #[Route('/', name: 'app_index')]
-    public function index(): Response
+    public function index(EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
     {
+        //Création d'un utilisateur juste pour test
+        // $user = new Utilisateur();
+        // $user->setEmail("ssula@aib-brokers.com")
+        //     ->setNom("Serge SULA BOSIO de AIB")
+        //     ->setPassword($hasher->hashPassword($user, "abcd"))
+        //     ->setRoles([]);
+        // $em->persist($user);
+        // $em->flush();
+
         $this->addFlash("success", "Bienvenue chez JS Broker!");
         return $this->render('home/index.html.twig', [
             'pageName' => 'Home',
@@ -126,6 +137,8 @@ class HomeController extends AbstractController
     #[Route('/user_dashbord/{idUtilisateur}', name: 'app_user_dashbord')]
     public function userDashbord($idUtilisateur): Response
     {
+        $this->denyAccessUnlessGranted("ROLE_USER");
+
         // dd($listeEntreprises);
         return $this->render('home/user_dashbord.html.twig', [
             'pageName' => "Entreprises",
@@ -141,6 +154,8 @@ class HomeController extends AbstractController
     #[Route('/broker_registration/{idUtilisateur}/{idEntreprise}', name: 'app_broker_registration')]
     public function brokerRegistration(Request $request, $idUtilisateur, $idEntreprise): Response
     {
+        $this->denyAccessUnlessGranted("ROLE_USER");
+
         $tittrePage = "Nouveau";
         /** @var UtilisateurJSB */
         $user = $this->utilisateurJSBRepository->find($idUtilisateur);
@@ -194,6 +209,8 @@ class HomeController extends AbstractController
     #[Route('/broker_destruction/{idUtilisateur}/{idEntreprise}', name: 'app_broker_destruction')]
     public function brokerDestruction(Request $request, $idUtilisateur, $idEntreprise): Response
     {
+        $this->denyAccessUnlessGranted("ROLE_USER");
+
         /** @var UtilisateurJSB */
         $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
 
@@ -218,6 +235,8 @@ class HomeController extends AbstractController
     #[Route('/broker_dashbord/{idUtilisateur}/{idEntreprise}', name: 'app_broker_dashbord')]
     public function brokerDashbord(int $idUtilisateur, int $idEntreprise): Response
     {
+        $this->denyAccessUnlessGranted("ROLE_USER");
+
         return $this->render('home/broker_dashbord.html.twig', [
             'pageName' => 'Dashbord Entreprise',
         ]);
