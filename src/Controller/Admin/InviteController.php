@@ -3,8 +3,8 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
-use App\Entity\UtilisateurJSB;
 use App\Form\InviteType;
+use App\Entity\UtilisateurJSB;
 use Symfony\Component\Mime\Email;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -15,9 +15,11 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/{idUtilisateur}/invite", name: 'admin.invite.')]
+#[IsGranted('ROLE_USER')]
 class InviteController extends AbstractController
 {
 
@@ -32,8 +34,7 @@ class InviteController extends AbstractController
     #[Route(name: 'index')]
     public function index($idUtilisateur, InviteRepository $inviteRepository)
     {
-        $this->denyAccessUnlessGranted("ROLE_USER");
-
+        // $this->denyAccessUnlessGranted("ROLE_USER");
         $invites = $this->inviteRepository->findAll();
         // dd($invites[0]->getEntreprises());
 
