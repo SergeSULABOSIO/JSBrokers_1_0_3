@@ -8,10 +8,10 @@
 		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 			<div class="card-body">
 				<form method="post">
-                    {% if error %}
-                        <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-                    {% endif %}
                     <p>
+                        {% if error %}
+                            <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+                        {% endif %}
                         {% if app.user %}
                             Bonjour <strong>{{ app.user.nom }}</strong>,</br>
                             Vous êtes déjà connecté en tant que <strong>{{ app.user.userIdentifier }}</strong>.</br>
@@ -20,9 +20,11 @@
                             Bonjour cher <strong>visiteur</strong>, 
                             <br>Veuillez renseigner vos identifiants de connexion.
                         {% endif %}
-                        <hr>
                     </p>
-                    
+                    <p class="d-flex justify-content-center">
+                        <img class="rounded" src="/images/utilisateurs/default_login.jpg" alt="Image de l'entreprise" width="620px" height="350px">
+                    </p>
+                    <hr>
                     {# Email #}
                     <label for="inputEmail">Email</label>
                     <input type="email" value="{{ last_username }}" name="email" id="inputEmail" class="form-control" autocomplete="email" required autofocus>
