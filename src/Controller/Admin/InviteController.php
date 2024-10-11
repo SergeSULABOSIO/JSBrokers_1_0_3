@@ -22,7 +22,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class InviteController extends AbstractController
 {
-
     public function __construct(
         private MailerInterface $mailer,
         private EntityManagerInterface $manager,
