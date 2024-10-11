@@ -1,12 +1,11 @@
 <h1>Salut! Prière de confirmer votre adresse email!</h1>
 
 <p>
-    Veuillez, s'il vous plaît, confirmer votre adresse mail en cliquant sur ce lien : <br><br>
+    Veuillez, s'il vous plaît, confirmer votre adresse mail en cliquant sur ce lien : <br>
     {# Please confirm your email address by clicking the following link: <br><br> #}
-    <a href="{{ signedUrl|raw }}">Je confirme mon adresse mail</a>.
+    <a href="{{ signedUrl|raw }}">Je confirme mon adresse mail</a>.<br>
     Ce lien expirera dans {{ expiresAtMessageKey|trans(expiresAtMessageData, 'VerifyEmailBundle') }}.
 </p>
-
 <p>
     Cordialement!<br><br>
     L'équipe JS Brokers.
