@@ -2,18 +2,18 @@
 
 namespace App\Controller;
 
-use App\DTO\ConnexionDTO;
 use App\DTO\ContactDTO;
+use App\DTO\ConnexionDTO;
+use App\Form\ContactType;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
-use App\Form\ContactType;
-use App\Entity\UtilisateurJSB;
 use App\Form\ConnexionType;
 use App\Form\EntrepriseType;
+use App\Entity\UtilisateurJSB;
 use App\Form\UtilisateurJSBType;
-use App\Repository\EntrepriseRepository;
-use App\Repository\InviteRepository;
 use Symfony\Component\Mime\Email;
+use App\Repository\InviteRepository;
+use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\UtilisateurJSBRepository;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
@@ -21,14 +21,17 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class HomeController extends AbstractController
 {
 
     public function __construct(
+        private UrlGeneratorInterface $urlGenerator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
@@ -139,13 +142,20 @@ class HomeController extends AbstractController
     {
         $this->denyAccessUnlessGranted("ROLE_USER");
 
-        // dd($listeEntreprises);
-        return $this->render('home/user_dashbord.html.twig', [
-            'pageName' => "Entreprises",
-            'utilisateur' => $this->utilisateurJSBRepository->find($idUtilisateur),
-            'entreprises' => $this->entrepriseRepository->findAll(),
-            'invites' => $this->inviteRepository->findAll(),
-        ]);
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        if ($user->isVerified()) {
+            // dd($listeEntreprises);
+            return $this->render('home/user_dashbord.html.twig', [
+                'pageName' => "Entreprises",
+                'utilisateur' => $this->utilisateurJSBRepository->find($idUtilisateur),
+                'entreprises' => $this->entrepriseRepository->findAll(),
+                'invites' => $this->inviteRepository->findAll(),
+            ]);
+        } else {
+            $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail().".");
+            return new RedirectResponse($this->urlGenerator->generate("app_login"));
+        }
     }
 
 

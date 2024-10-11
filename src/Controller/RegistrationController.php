@@ -20,9 +20,7 @@ use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 
 class RegistrationController extends AbstractController
 {
-    public function __construct(private EmailVerifier $emailVerifier)
-    {
-    }
+    public function __construct(private EmailVerifier $emailVerifier) {}
 
     #[Route('/register', name: 'app_register')]
     public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager): Response
@@ -44,7 +42,9 @@ class RegistrationController extends AbstractController
             $entityManager->flush();
 
             // generate a signed url and email it to the user
-            $this->emailVerifier->sendEmailConfirmation('app_verify_email', $user,
+            $this->emailVerifier->sendEmailConfirmation(
+                'app_verify_email',
+                $user,
                 (new TemplatedEmail())
                     ->from(new Address('support@demo.fr', 'Support'))
                     ->to((string) $user->getEmail())
@@ -80,8 +80,29 @@ class RegistrationController extends AbstractController
         }
 
         // @TODO Change the redirect on success and handle or remove the flash message in your templates
-        $this->addFlash('success', 'Your email address has been verified.');
+        $this->addFlash('success', "Votre adresse mail vient d'être vérifiée et elle est bien valide. Vous pouvez maintenant travailler.");
 
-        return $this->redirectToRoute('app_register');
+        return $this->redirectToRoute('app_login');
+    }
+
+
+    #[Route('/reverify/email', name: 'app_reverify_email')]
+    public function reverifyUserEmail(Request $request, TranslatorInterface $translator, Security $security): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $this->emailVerifier->sendEmailConfirmation(
+            'app_verify_email',
+            $user,
+            (new TemplatedEmail())
+                ->from(new Address('support@demo.fr', 'Support'))
+                ->to((string) $user->getEmail())
+                ->subject("JS Brokers - Confirmation d'adresse mail - " . $user->getEmail())
+                ->htmlTemplate('registration/confirmation_email.html.twig')
+        );
+        $this->addFlash('success', "Nous venons de vous renvoyer un email de vérification. Ouvrez cet email et cliquez sur le lien de vérification afin que nous puissions valider votre adresse mail.");
+        return $security->login($user, AppAuthenticator::class, 'main');
     }
 }

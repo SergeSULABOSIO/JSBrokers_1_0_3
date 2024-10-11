@@ -43,7 +43,7 @@ class RegistrationFormType extends AbstractType
                         'message' => 'Prière de fournir le mot de passe.',
                     ]),
                     new Length([
-                        'min' => 6,
+                        'min' => 4,
                         'minMessage' => 'Votre mot de passe devrait avoit au moins {{ limit }} charactère(s)',
                         // max length allowed by Symfony for security reasons
                         'max' => 4096,
@@ -61,7 +61,7 @@ class RegistrationFormType extends AbstractType
             ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer"
+                'label' => "Créer un compte"
             ])
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;

@@ -16,6 +16,9 @@
                             Bonjour <strong>{{ app.user.nom }}</strong>,</br>
                             Vous êtes déjà connecté en tant que <strong>{{ app.user.userIdentifier }}</strong>.</br>
                             Si vous voulez vous déconnecter, cliquez <a href="{{ path('app_logout') }}">ici</a>.
+                            {% if app.user.verified == false %}
+                                </br><span class="text-danger">Notez que nous n'avons pas encore validé votre adresse mail. Veuillez cliquer <a href="{{ path('app_reverify_email') }}">ici</a> afin que nous puissions vous renvoyer le lien de validation de votre adresse mail.</span>
+                            {% endif %}
                         {% else %}
                             Bonjour cher <strong>visiteur</strong>, 
                             <br>Veuillez renseigner vos identifiants de connexion.
