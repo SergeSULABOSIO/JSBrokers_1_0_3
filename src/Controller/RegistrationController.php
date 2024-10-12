@@ -81,13 +81,12 @@ class RegistrationController extends AbstractController
 
         // @TODO Change the redirect on success and handle or remove the flash message in your templates
         $this->addFlash('success', "Votre adresse mail vient d'être vérifiée et elle est bien valide. Vous pouvez maintenant travailler.");
-
         return $this->redirectToRoute('app_login');
     }
 
 
     #[Route('/reverify/email', name: 'app_reverify_email')]
-    public function reverifyUserEmail(Request $request, TranslatorInterface $translator, Security $security): Response
+    public function reverifyUserEmail(Security $security): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         
