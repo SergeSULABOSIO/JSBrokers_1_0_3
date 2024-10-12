@@ -26,7 +26,6 @@ class InviteController extends AbstractController
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        // private UtilisateurJSBRepository $utilisateurJSBRepository,
     ) {}
 
     #[Route(name: 'index')]
