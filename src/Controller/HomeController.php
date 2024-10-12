@@ -167,10 +167,10 @@ class HomeController extends AbstractController
         $this->denyAccessUnlessGranted("ROLE_USER");
 
         $tittrePage = "Nouveau";
-        /** @var UtilisateurJSB */
+        /** @var UtilisateurJSB $user */
         $user = $this->utilisateurJSBRepository->find($idUtilisateur);
 
-        /** @var Entreprise */
+        /** @var Entreprise $entreprise */
         $entreprise = new Entreprise();
         if ($idEntreprise != -1) {
             $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -217,14 +217,14 @@ class HomeController extends AbstractController
 
 
     #[Route('/broker_destruction/{idUtilisateur}/{idEntreprise}', name: 'app_broker_destruction')]
-    public function brokerDestruction(Request $request, $idUtilisateur, $idEntreprise): Response
+    public function brokerDestruction($idUtilisateur, $idEntreprise): Response
     {
         $this->denyAccessUnlessGranted("ROLE_USER");
 
-        /** @var UtilisateurJSB */
+        /** @var UtilisateurJSB $utilisateur */
         $utilisateur = $this->utilisateurJSBRepository->find($idUtilisateur);
 
-        /** @var Entreprise */
+        /** @var Entreprise $entreprise */
         $entreprise = new Entreprise();
         if ($idEntreprise != -1) {
             $entreprise = $this->entrepriseRepository->find($idEntreprise);
