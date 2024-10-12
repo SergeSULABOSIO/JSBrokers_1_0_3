@@ -63,7 +63,7 @@ class HomeController extends AbstractController
     #[Route('/user_login', name: 'app_user_login')]
     public function userLogin(Request $request): Response
     {
-        /** @var ConnexionDTO */
+        /** @var ConnexionDTO $data */
         $data = new ConnexionDTO();
         $form = $this->createForm(ConnexionType::class, $data);
         $form->handleRequest($request);
@@ -74,7 +74,7 @@ class HomeController extends AbstractController
                 'motDePasse' => $data->motdepasse
             ]);
             if (isset($tabResultats) && count($tabResultats) != 0) {
-                /** @var UtilisateurJSB */
+                /** @var UtilisateurJSB $user */
                 $user = $tabResultats[0];
                 if ($user->getEmail() == $data->email && $user->getMotDePasse() == $data->motdepasse) {
                     $this->addFlash("success", "Bienvenue " . $user->getNom());
