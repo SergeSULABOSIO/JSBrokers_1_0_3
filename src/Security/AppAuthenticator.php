@@ -2,6 +2,8 @@
 
 namespace App\Security;
 
+use App\Entity\Utilisateur;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,9 +24,10 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
 
     public const LOGIN_ROUTE = 'app_login';
 
-    public function __construct(private UrlGeneratorInterface $urlGenerator)
-    {
-    }
+    public function __construct(
+        private UrlGeneratorInterface $urlGenerator,
+        private Security $security
+    ) {}
 
     public function authenticate(Request $request): Passport
     {
@@ -47,10 +50,13 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
             return new RedirectResponse($targetPath);
         }
+
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
         // For example:
         // return new RedirectResponse($this->urlGenerator->generate('some_route'));
         // throw new \Exception('TODO: provide a valid redirect inside '.__FILE__);app_index
-        return new RedirectResponse($this->urlGenerator->generate("app_user_dashbord", ['idUtilisateur' => 32]));
+        return new RedirectResponse($this->urlGenerator->generate("app_user_dashbord", ['idUtilisateur' => $user->getId()]));
         // return new RedirectResponse($this->urlGenerator->generate("admin.invite.index", ['idUtilisateur' => 32]));
     }
 

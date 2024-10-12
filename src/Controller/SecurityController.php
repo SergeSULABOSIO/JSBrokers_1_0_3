@@ -15,13 +15,13 @@ class SecurityController extends AbstractController
     #[Route(path: '/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
+        // dd($this->getUser());
         if ($this->getUser()) {
             /** @var Utilisateur $user */
             $user = $this->getUser();
             if ($user->isVerified()) {
-                // dd($user);
                 // return new RedirectResponse($this->urlGenerator->generate("app_user_dashbord", ['idUtilisateur' => 32]));
-                return $this->redirectToRoute('app_user_dashbord', ['idUtilisateur' => 32]);
+                return $this->redirectToRoute('app_user_dashbord');
             }
         }
 

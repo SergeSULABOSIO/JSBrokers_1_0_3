@@ -28,6 +28,12 @@ class RegistrationController extends AbstractController
         $titrePage = "Création du compte utilisateur";
 
         $user = new Utilisateur();
+        if ($this->getUser()) {
+            /** @var Utilisateur $user */
+            $user = $this->getUser();
+            $titrePage = "Edition de " . $user->getNom();
+        }
+
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
 
@@ -41,19 +47,19 @@ class RegistrationController extends AbstractController
             $entityManager->persist($user);
             $entityManager->flush();
 
-            // generate a signed url and email it to the user
-            $this->emailVerifier->sendEmailConfirmation(
-                'app_verify_email',
-                $user,
-                (new TemplatedEmail())
-                    ->from(new Address('support@demo.fr', 'Support'))
-                    ->to((string) $user->getEmail())
-                    ->subject("JS Brokers - Confirmation d'adresse mail - " . $user->getEmail())
-                    ->htmlTemplate('registration/confirmation_email.html.twig')
-            );
-
+            if (!$this->getUser()) {
+                // generate a signed url and email it to the user
+                $this->emailVerifier->sendEmailConfirmation(
+                    'app_verify_email',
+                    $user,
+                    (new TemplatedEmail())
+                        ->from(new Address('support@demo.fr', 'Support'))
+                        ->to((string) $user->getEmail())
+                        ->subject("JS Brokers - Confirmation d'adresse mail - " . $user->getEmail())
+                        ->htmlTemplate('registration/confirmation_email.html.twig')
+                );
+            }
             // do anything else you need here, like send an email
-
             return $security->login($user, AppAuthenticator::class, 'main');
         }
 
@@ -89,7 +95,7 @@ class RegistrationController extends AbstractController
     public function reverifyUserEmail(Security $security): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
         $this->emailVerifier->sendEmailConfirmation(
