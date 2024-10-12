@@ -19,7 +19,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class HomeController extends AbstractController
 {
@@ -34,7 +33,7 @@ class HomeController extends AbstractController
 
 
     #[Route('/', name: 'app_index')]
-    public function index(EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
+    public function index(): Response
     {
         $this->addFlash("success", "Bienvenue chez JS Broker!");
         return $this->render('home/index.html.twig', [
@@ -72,7 +71,7 @@ class HomeController extends AbstractController
 
 
     #[Route('/broker_registration/{idEntreprise}', name: 'app_broker_registration')]
-    public function brokerRegistration(Request $request, $idUtilisateur, $idEntreprise): Response
+    public function brokerRegistration(Request $request, $idEntreprise): Response
     {
         $this->denyAccessUnlessGranted("ROLE_USER");
 
@@ -117,7 +116,7 @@ class HomeController extends AbstractController
 
 
     #[Route('/broker_destruction/{idEntreprise}', name: 'app_broker_destruction')]
-    public function brokerDestruction($idUtilisateur, $idEntreprise): Response
+    public function brokerDestruction($idEntreprise): Response
     {
         $this->denyAccessUnlessGranted("ROLE_USER");
 
@@ -141,7 +140,7 @@ class HomeController extends AbstractController
 
 
     #[Route('/broker_dashbord/{idUtilisateur}/{idEntreprise}', name: 'app_broker_dashbord')]
-    public function brokerDashbord(int $idUtilisateur, int $idEntreprise): Response
+    public function brokerDashbord(): Response
     {
         $this->denyAccessUnlessGranted("ROLE_USER");
 
