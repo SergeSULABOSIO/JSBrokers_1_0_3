@@ -30,6 +30,9 @@
 					{% else %}
 						Invités : {{ invites|length }} enregistrement(s).
 					{% endif %}
+					<div class="d-flex gap-1">
+						{{ knp_pagination_render(invites) }}
+					</div>
 				</caption>
 				<thead class="table-light">
 					<tr>

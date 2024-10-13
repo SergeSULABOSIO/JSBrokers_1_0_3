@@ -29,9 +29,15 @@ class InviteController extends AbstractController
     ) {}
 
     #[Route(name: 'index')]
-    public function index(InviteRepository $inviteRepository)
+    public function index(Request $request)
     {
-        $invites = $this->inviteRepository->findAll();
+        $page = $request->query->getInt("page", 1);
+        $limit = 5;
+        // $invites = $this->inviteRepository->findAll();
+        $invites = $this->inviteRepository->paginateInvites($page, $limit);
+        $maxPage = ceil($invites->getTotalItemCount() / $limit);
+
+
         $entreprises = $this->entrepriseRepository->findAll();
 
         /** @var Utilisateur $user */
@@ -42,6 +48,8 @@ class InviteController extends AbstractController
             'utilisateur' => $user,
             'invites' => $invites,
             'entreprises' => $entreprises,
+            'maxPage' => $maxPage,
+            'page' => $page,
         ]);
     }
 
