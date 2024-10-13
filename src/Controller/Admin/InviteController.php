@@ -32,12 +32,8 @@ class InviteController extends AbstractController
     public function index(Request $request)
     {
         $page = $request->query->getInt("page", 1);
-        $limit = 5;
         // $invites = $this->inviteRepository->findAll();
-        $invites = $this->inviteRepository->paginateInvites($page, $limit);
-        $maxPage = ceil($invites->getTotalItemCount() / $limit);
-
-
+        $invites = $this->inviteRepository->paginateInvites($page);
         $entreprises = $this->entrepriseRepository->findAll();
 
         /** @var Utilisateur $user */
@@ -48,7 +44,6 @@ class InviteController extends AbstractController
             'utilisateur' => $user,
             'invites' => $invites,
             'entreprises' => $entreprises,
-            'maxPage' => $maxPage,
             'page' => $page,
         ]);
     }
