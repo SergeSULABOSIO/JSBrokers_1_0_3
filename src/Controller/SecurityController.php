@@ -19,7 +19,7 @@ class SecurityController extends AbstractController
             $user = $this->getUser();
             if ($user->isVerified()) {
                 // return new RedirectResponse($this->urlGenerator->generate("app_user_dashbord", ['idUtilisateur' => 32]));
-                return $this->redirectToRoute('app_user_dashbord');
+                return $this->redirectToRoute('admin.entreprise.index');
             }
         }
 

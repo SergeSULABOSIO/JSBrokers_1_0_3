@@ -1,12 +1,12 @@
 <h5 class="mb-1">Menu</h5>
 <div class="list-group">
-    <a href="{{ path('app_user_dashbord')}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'app_user_dashbord'? 'active' : '' }} {{ app.current_route starts with 'app_broker_registration'? 'active' : '' }}">
+    <a href="{{ path('admin.entreprise.index')}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise' ? 'active' : '' }}">
         <div class="d-flex w-100 justify-content-between">
             <h6 class="mb-1">Entreprises</h6>
             <small><span class="badge text-bg-warning rounded-pill">{{ entreprises|length }}</span></small>
         </div>
     </a>
-    <a href="{{ path('admin.invite.index')}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.invite'? 'active' : '' }}">
+    <a href="{{ path('admin.invite.index')}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.invite' ? 'active' : '' }}">
         <div class="d-flex w-100 justify-content-between">
             <h6 class="mb-1">Invités</h6>
             <small><span class="badge text-bg-warning rounded-pill">{{ invites|length }}</span></small>

@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	Liste des entreprises de votre protefeuil, y compris les celles auxquelles vous êtes invité.
+	Liste des invités de vos entreprises. Elle reprend tous les utilisateurs à qui vous avez accordé quelques droits d'accès aux données de vos entreprises.
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -57,8 +57,8 @@
 					</ul>
 					<div class="card-body">
 						<a href="#" class="m-2">Inviter</a>
-						<a href="{{ path('app_broker_registration', { 'idUtilisateur':utilisateur.id, 'idEntreprise':entreprise.id })}}" class="m-2">Modifier</a>
-						<a href="{{ path('app_broker_destruction', { 'idUtilisateur':utilisateur.id, 'idEntreprise':entreprise.id })}}" class="m-2">Supprimer</a>
+						<a href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}" class="m-2">Modifier</a>
+						<a href="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" class="m-2">Supprimer</a>
 					</div>
 				</div>
 			{% endfor %}

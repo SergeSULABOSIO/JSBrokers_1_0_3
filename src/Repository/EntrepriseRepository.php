@@ -78,7 +78,7 @@ class EntrepriseRepository extends ServiceEntityRepository
            ;
        }
 
-       public function paginateInvites(int $page): PaginationInterface
+       public function paginateEntreprises(int $page): PaginationInterface
        {
            return $this->paginator->paginate(
                $this->createQueryBuilder("e")

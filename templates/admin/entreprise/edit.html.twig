@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}>Entreprises><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	Votre entreprise est l'espace de travail dans lequel vous effectuerez vos tâches quotidiennes.
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_user_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		<p>
+			{# {{ form(form) }} #}
+			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+				<div class="card-body">
+					<p>
+						<strong>{{ utilisateur.nom }}</strong>, 
+						<br>vous êtes sur le point de modifier {{ entreprise.nom }}. Merci de modifier vos informations dans le formulaire ci-dessous.
+						<hr>
+					</p>
+					<p class="d-flex justify-content-center">
+						{% if entreprise.thumbnail %}
+							<img class="rounded" src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="" width="620px" height="300px">
+						{% else %}
+							<img class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" width="620px" height="300px">
+						{% endif %}
+					</p>
+					<hr>
+					{{ form(form) }}
+				</div>
+			</div>
+		</p>
+	</div>
+{% endblock %}

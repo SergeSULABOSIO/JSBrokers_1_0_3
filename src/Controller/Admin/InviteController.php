@@ -67,16 +67,11 @@ class InviteController extends AbstractController
             $this->envoyerEmail($invite, $user);
 
             $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
-            return $this->redirectToRoute("admin.invite.index", [
-                'idUtilisateur' => $user->getId()
-            ]);
+            return $this->redirectToRoute("admin.invite.index");
         }
         return $this->render('admin/invite/create.html.twig', [
             'pageName' => 'Nouveau',
-            'idUtilisateur' => $user->getId(),
             'utilisateur' => $user,
-            'invites' => $this->inviteRepository->findAll(),
-            'entreprises' => $this->entrepriseRepository->findAll(),
             'form' => $form,
         ]);
     }
@@ -100,9 +95,6 @@ class InviteController extends AbstractController
         return $this->render('admin/invite/edit.html.twig', [
             'pageName' => "Edition",
             'invite' => $invite,
-            'entreprises' => $this->entrepriseRepository->findAll(),
-            'invites' => $this->inviteRepository->findAll(),
-            'idUtilisateur' => $user->getId(),
             'utilisateur' => $user,
             'form' => $form,
         ]);
