@@ -32,6 +32,9 @@ class Invite
     #[ORM\ManyToMany(targetEntity: Entreprise::class, inversedBy: 'invites')]
     private Collection $entreprises;
 
+    #[ORM\ManyToOne(inversedBy: 'invites')]
+    private ?Utilisateur $utilisateur = null;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -98,6 +101,18 @@ class Invite
     public function removeEntreprise(Entreprise $entreprise): static
     {
         $this->entreprises->removeElement($entreprise);
+
+        return $this;
+    }
+
+    public function getUtilisateur(): ?Utilisateur
+    {
+        return $this->utilisateur;
+    }
+
+    public function setUtilisateur(?Utilisateur $utilisateur): static
+    {
+        $this->utilisateur = $utilisateur;
 
         return $this;
     }

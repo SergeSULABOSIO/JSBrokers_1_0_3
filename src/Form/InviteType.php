@@ -7,6 +7,7 @@ use App\Entity\Invite;
 use App\Services\FormListenerFactory;
 use DateTimeImmutable;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -52,6 +53,7 @@ class InviteType extends AbstractType
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Envoyer l'invitation"
             ])
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
