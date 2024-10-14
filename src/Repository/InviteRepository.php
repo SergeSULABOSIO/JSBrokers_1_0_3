@@ -26,7 +26,14 @@ class InviteRepository extends ServiceEntityRepository
             $this->createQueryBuilder("i")
                 ->orderBy('i.id', 'DESC'),
             $page,
-            5
+            5,
+            [
+                'distinct' => true,
+                'sortFieldAllowList' => [
+                    'i.email',
+                    'i.createdAt'
+                ],
+            ]
         );
     }
 
