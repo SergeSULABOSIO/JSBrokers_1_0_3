@@ -1,12 +1,10 @@
 <?php
 
-namespace App\Controller;
+namespace App\Controller\Admin;
+
 
 use App\DTO\ContactDTO;
 use App\Form\ContactType;
-use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
-use App\Form\EntrepriseType;
 use Symfony\Component\Mime\Email;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -16,33 +14,22 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-class HomeController extends AbstractController
+#[Route("/admin/demande_contact", name: 'admin.demande.contact.')]
+class DemandeContactController extends AbstractController
 {
-
     public function __construct(
         private UrlGeneratorInterface $urlGenerator,
+        private MailerInterface $mailer,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
     ) {}
 
-
-    #[Route('/', name: 'app_index')]
-    public function index(): Response
-    {
-        $this->addFlash("success", "Bienvenue chez JS Broker!");
-        return $this->render('home/index.html.twig', [
-            'pageName' => 'Home',
-        ]);
-    }
-
-
-    #[Route('/contact', name: 'app_contact')]
-    public function userEmailContact(Request $request, MailerInterface $mailer): Response
+    #[Route(name: 'index')]
+    public function index(Request $request, MailerInterface $mailer): Response
     {
         /** @var ContactDTO */
         $data = new ContactDTO();
@@ -64,11 +51,13 @@ class HomeController extends AbstractController
                 ->context(["data" => $data]);
             $mailer->send($email);
             $this->addFlash("success", "L'email a bien été envoyé. Nous vous reviendrons au plus vite.");
-            return $this->redirectToRoute('app_contact');
+            return $this->redirectToRoute('admin.demande.contact.index');
+            // return $this->redirectToRoute('app_contact');
         }
-        return $this->render('home/contact.html.twig', [
+        return $this->render('admin/demande_contact/index.html.twig', [
             'pageName' => 'Formulaire de contact',
             'form' => $form,
         ]);
     }
+
 }

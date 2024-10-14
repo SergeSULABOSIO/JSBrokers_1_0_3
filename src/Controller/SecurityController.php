@@ -10,6 +10,15 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class SecurityController extends AbstractController
 {
+    #[Route(path: '/', name: 'app_index')]
+    public function index(): Response
+    {
+        $this->addFlash("success", "Bienvenue chez JS Broker!");
+        return $this->render('home/index.html.twig', [
+            'pageName' => 'Home',
+        ]);
+    }
+
     #[Route(path: '/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
