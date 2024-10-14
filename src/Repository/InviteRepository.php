@@ -45,6 +45,17 @@ class InviteRepository extends ServiceEntityRepository
         );
     }
 
+
+    public function paginateInvitesWithCount(): array
+    {
+        return $this->createQueryBuilder("i")
+            ->select("i", "COUNT(i.id) as total")
+            ->leftJoin("i.entreprises", "e")
+            ->groupBy("i.id")
+            ->getQuery()
+            ->getResult();
+    }
+
     //    /**
     //     * @return Invite[] Returns an array of Invite objects
     //     */
