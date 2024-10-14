@@ -49,9 +49,10 @@ class InviteRepository extends ServiceEntityRepository
     public function paginateInvitesWithCount(): array
     {
         return $this->createQueryBuilder("i")
-            ->select("i", "COUNT(i.id) as total")
+            ->select("i as invite", "COUNT(i.id) as total")
             ->leftJoin("i.entreprises", "e")
             ->groupBy("i.id")
+            ->orderBy('i.id', 'DESC')
             ->getQuery()
             ->getResult();
     }
