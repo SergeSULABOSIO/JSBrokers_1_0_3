@@ -3,8 +3,8 @@
 namespace App\Controller\Admin;
 
 
-use App\DTO\ContactDTO;
-use App\Form\ContactType;
+use App\DTO\DemandeContactDTO;
+use App\Form\DemandeContactType;
 use Symfony\Component\Mime\Email;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -31,9 +31,9 @@ class DemandeContactController extends AbstractController
     #[Route(name: 'index')]
     public function index(Request $request, MailerInterface $mailer): Response
     {
-        /** @var ContactDTO */
-        $data = new ContactDTO();
-        $form = $this->createForm(ContactType::class, $data);
+        /** @var DemandeContactDTO $data */
+        $data = new DemandeContactDTO();
+        $form = $this->createForm(DemandeContactType::class, $data);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
