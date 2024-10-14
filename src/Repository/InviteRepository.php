@@ -3,10 +3,11 @@
 namespace App\Repository;
 
 use App\Entity\Invite;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use Knp\Component\Pager\Pagination\PaginationInterface;
 use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Knp\Component\Pager\Pagination\PaginationInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<Invite>
@@ -15,15 +16,22 @@ class InviteRepository extends ServiceEntityRepository
 {
     public function __construct(
         ManagerRegistry $registry,
-        private PaginatorInterface $paginator
+        private PaginatorInterface $paginator,
+        private Security $security
     ) {
         parent::__construct($registry, Invite::class);
     }
 
     public function paginateInvites(int $page): PaginationInterface
     {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+        $userId = $user->getId();
+
         return $this->paginator->paginate(
             $this->createQueryBuilder("i")
+                ->where('i.utilisateur =:user')
+                ->setParameter('user', '' . $userId . '')
                 ->orderBy('i.id', 'DESC'),
             $page,
             5,

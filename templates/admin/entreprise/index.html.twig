@@ -55,10 +55,14 @@
 							<em class="fst-italic text-body-tertiary">Créée le {{ entreprise.createdAt | date("d/m/Y") }}</em>
 						</li>
 					</ul>
-					<div class="card-body">
-						<a href="#" class="m-2">Inviter</a>
-						<a href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}" class="m-2">Modifier</a>
-						<a href="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" class="m-2">Supprimer</a>
+					<div class="d-flex justify-content-center">
+						<a href="#" class='btn btn-outline-primary btn-sm m-1'>Inviter</a>
+						<a class='btn btn-outline-primary btn-sm m-1' href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}">Modifier</a>
+						<form action="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" method='POST'>
+							<input type='hidden' name='_method' value='DELETE'>
+							<button class='btn btn-outline-danger btn-sm m-1' type='submit'>Supprimer</button>
+						</form>
+						{# <a href="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" class="m-2">Supprimer</a> #}
 					</div>
 				</div>
 			{% endfor %}

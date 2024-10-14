@@ -70,7 +70,7 @@
 									<a class= "btn btn-outline-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
 										Modifier
 									</a>
-									<form action="{{ path('admin.invite.remove', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" method='POST'>
+									<form action="{{ path('admin.invite.remove', {'id':invite.id })}}" method='POST'>
 										<input type='hidden' name='_method' value='DELETE'>
 										<button class='btn btn-outline-danger btn-sm' type='submit'>Supprimer</button>
 									</form>

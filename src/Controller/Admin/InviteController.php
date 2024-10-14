@@ -72,6 +72,8 @@ class InviteController extends AbstractController
         return $this->render('admin/invite/create.html.twig', [
             'pageName' => 'Nouveau',
             'utilisateur' => $user,
+            'entreprises' => $this->entrepriseRepository->findAll(),
+            'invites' => $this->inviteRepository->findAll(),
             'form' => $form,
         ]);
     }
@@ -96,6 +98,8 @@ class InviteController extends AbstractController
             'pageName' => "Edition",
             'invite' => $invite,
             'utilisateur' => $user,
+            'entreprises' => $this->entrepriseRepository->findAll(),
+            'invites' => $this->inviteRepository->findAll(),
             'form' => $form,
         ]);
     }

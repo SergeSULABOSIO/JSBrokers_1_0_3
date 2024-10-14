@@ -66,6 +66,9 @@ class Entreprise
     #[Assert\Image()]
     private ?File $thumbnailFile = null;
 
+    #[ORM\ManyToOne(inversedBy: 'entreprises')]
+    private ?Utilisateur $utilisateur = null;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -246,6 +249,18 @@ class Entreprise
     public function setThumbnail(?string $thumbnail): static
     {
         $this->thumbnail = $thumbnail;
+
+        return $this;
+    }
+
+    public function getUtilisateur(): ?Utilisateur
+    {
+        return $this->utilisateur;
+    }
+
+    public function setUtilisateur(?Utilisateur $utilisateur): static
+    {
+        $this->utilisateur = $utilisateur;
 
         return $this;
     }

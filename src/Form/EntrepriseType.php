@@ -76,6 +76,7 @@ class EntrepriseType extends AbstractType
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer"
             ])
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }

@@ -3,10 +3,12 @@
 namespace App\Repository;
 
 use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
 use Doctrine\Persistence\ManagerRegistry;
 use Knp\Component\Pager\PaginatorInterface;
 use Knp\Component\Pager\Pagination\PaginationInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Symfony\Bundle\SecurityBundle\Security;
 
 /**
  * @extends ServiceEntityRepository<Entreprise>
@@ -20,9 +22,9 @@ class EntrepriseRepository extends ServiceEntityRepository
 {
     public function __construct(
         ManagerRegistry $registry,
-        private PaginatorInterface $paginator
-        )
-    {
+        private PaginatorInterface $paginator,
+        private Security $security
+    ) {
         parent::__construct($registry, Entreprise::class);
     }
 
@@ -44,12 +46,12 @@ class EntrepriseRepository extends ServiceEntityRepository
         }
     }
 
-   /**
-    * @return Entreprise[] Returns an array of Entreprise objects
-    */
-   public function findByMotCle($criteres): array
-   {
-       $query = $this->createQueryBuilder('e')
+    /**
+     * @return Entreprise[] Returns an array of Entreprise objects
+     */
+    public function findByMotCle($criteres): array
+    {
+        $query = $this->createQueryBuilder('e')
             ->where('e.nom like :valMotCle')
             ->orWhere('e.adresse like :valMotCle')
             ->orWhere('e.telephone like :valMotCle')
@@ -64,27 +66,34 @@ class EntrepriseRepository extends ServiceEntityRepository
             ->getResult();
 
         return $query;
-   }
+    }
 
 
-   public function stat_get_nombres_enregistrements()
-       {
-           return $this->createQueryBuilder('a')
-               ->select('count(a.id) as nombre')
+    public function stat_get_nombres_enregistrements()
+    {
+        return $this->createQueryBuilder('a')
+            ->select('count(a.id) as nombre')
             //    ->select('a.exampleField = :val')
             //    ->setParameter('val', $value)
-               ->getQuery()
-               ->getSingleScalarResult()
-           ;
-       }
+            ->getQuery()
+            ->getSingleScalarResult()
+        ;
+    }
 
-       public function paginateEntreprises(int $page): PaginationInterface
-       {
-           return $this->paginator->paginate(
-               $this->createQueryBuilder("e")
-                   ->orderBy('e.id', 'DESC'),
-               $page,
-               3,
+    public function paginateEntreprises(int $page): PaginationInterface
+    {
+    
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+        $userId = $user->getId();
+
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("e")
+                ->where('e.utilisateur =:user')
+                ->setParameter('user', '' . $userId . '')
+                ->orderBy('e.id', 'DESC'),
+            $page,
+            3,
             //    [
             //        'distinct' => false,
             //        'sortFieldAllowList' => [
@@ -92,16 +101,16 @@ class EntrepriseRepository extends ServiceEntityRepository
             //            'i.createdAt'
             //        ],
             //    ]
-           );
-       }
+        );
+    }
 
-//    public function findOneBySomeField($value): ?Entreprise
-//    {
-//        return $this->createQueryBuilder('e')
-//            ->andWhere('e.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+    //    public function findOneBySomeField($value): ?Entreprise
+    //    {
+    //        return $this->createQueryBuilder('e')
+    //            ->andWhere('e.exampleField = :val')
+    //            ->setParameter('val', $value)
+    //            ->getQuery()
+    //            ->getOneOrNullResult()
+    //        ;
+    //    }
 }
