@@ -22,6 +22,17 @@
 
 {% block body %}
 	<div>
+		<caption>
+			{% if invites|length == 0 %}
+				Aucun enregistrement trouvé.
+			{% else %}
+				Entreprises : {{ entreprises|length }} enregistrement(s).
+			{% endif %}
+			<div class="d-flex gap-1">
+				{{ knp_pagination_render(entreprises) }}
+			</div>
+		</caption>
+		
 		<div class="d-flex">
 			{# Boucler les entreprises #}
 			{% for entreprise in entreprises %}

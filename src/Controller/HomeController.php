@@ -43,13 +43,15 @@ class HomeController extends AbstractController
 
 
     #[Route('/user_dashbord', name: 'app_user_dashbord')]
-    public function userDashbord(): Response
+    public function userDashbord(Request $request): Response
     {
         $this->denyAccessUnlessGranted("ROLE_USER");
 
+        $page = $request->query->getInt("page", 1);
         /** @var Utilisateur $user */
         $user = $this->getUser();
-
+        $entreprises = $this->entrepriseRepository->paginateInvites($page);
+        
         
         if ($user->isVerified()) {
             // dd($user);
@@ -57,7 +59,7 @@ class HomeController extends AbstractController
             return $this->render('home/user_dashbord.html.twig', [
                 'pageName' => "Entreprises",
                 'utilisateur' => $user,
-                'entreprises' => $this->entrepriseRepository->findAll(),
+                'entreprises' => $entreprises,
                 'invites' => $this->inviteRepository->findAll(),
             ]);
         } else {

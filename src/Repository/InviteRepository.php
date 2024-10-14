@@ -28,7 +28,7 @@ class InviteRepository extends ServiceEntityRepository
             $page,
             5,
             [
-                'distinct' => true,
+                'distinct' => false,
                 'sortFieldAllowList' => [
                     'i.email',
                     'i.createdAt'

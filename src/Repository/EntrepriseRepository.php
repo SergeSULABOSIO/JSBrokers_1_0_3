@@ -3,8 +3,10 @@
 namespace App\Repository;
 
 use App\Entity\Entreprise;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
+use Knp\Component\Pager\Pagination\PaginationInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<Entreprise>
@@ -16,7 +18,10 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class EntrepriseRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(
+        ManagerRegistry $registry,
+        private PaginatorInterface $paginator
+        )
     {
         parent::__construct($registry, Entreprise::class);
     }
@@ -71,6 +76,23 @@ class EntrepriseRepository extends ServiceEntityRepository
                ->getQuery()
                ->getSingleScalarResult()
            ;
+       }
+
+       public function paginateInvites(int $page): PaginationInterface
+       {
+           return $this->paginator->paginate(
+               $this->createQueryBuilder("e")
+                   ->orderBy('e.id', 'DESC'),
+               $page,
+               3,
+            //    [
+            //        'distinct' => false,
+            //        'sortFieldAllowList' => [
+            //            'i.nom',
+            //            'i.createdAt'
+            //        ],
+            //    ]
+           );
        }
 
 //    public function findOneBySomeField($value): ?Entreprise
