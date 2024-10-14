@@ -20,9 +20,11 @@ class InviteRepository extends ServiceEntityRepository
         parent::__construct($registry, Invite::class);
     }
 
-    public function paginateInvites(int $page): PaginationInterface {
+    public function paginateInvites(int $page): PaginationInterface
+    {
         return $this->paginator->paginate(
-            $this->createQueryBuilder("i"),
+            $this->createQueryBuilder("i")
+                ->orderBy('i.id', 'DESC'),
             $page,
             5
         );
