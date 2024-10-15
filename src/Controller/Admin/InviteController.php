@@ -27,7 +27,7 @@ class InviteController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
     ) {}
-
+        
     #[Route(name: 'index')]
     public function index(Request $request)
     {
