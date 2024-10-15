@@ -31,8 +31,8 @@ class InviteController extends AbstractController
     #[Route(name: 'index')]
     public function index(Request $request)
     {
-        dd($this->inviteRepository->paginateInvitesWithCount());
-        
+        // dd($this->inviteRepository->paginateInvitesWithCount());
+
         $page = $request->query->getInt("page", 1);
         // $invites = $this->inviteRepository->findAll();
         $invites = $this->inviteRepository->paginateInvites($page);
@@ -40,6 +40,8 @@ class InviteController extends AbstractController
 
         /** @var Utilisateur $user */
         $user = $this->getUser();
+
+        // dd($invites);
 
         return $this->render('admin/invite/index.html.twig', [
             'pageName' => "Invités",

@@ -2,7 +2,9 @@
 
 namespace App\Repository;
 
+use App\DTO\ElementListeInviteDTO;
 use App\Entity\Invite;
+use App\Entity\Utilisateur;
 use Doctrine\Persistence\ManagerRegistry;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -32,6 +34,7 @@ class InviteRepository extends ServiceEntityRepository
             $this->createQueryBuilder("i")
                 ->where('i.utilisateur =:user')
                 ->setParameter('user', '' . $userId . '')
+                ->groupBy("i.id")
                 ->orderBy('i.id', 'DESC'),
             $page,
             5,
@@ -46,16 +49,25 @@ class InviteRepository extends ServiceEntityRepository
     }
 
 
-    public function paginateInvitesWithCount(): array
-    {
-        return $this->createQueryBuilder("i")
-            ->select("i as invite", "COUNT(i.id) as total")
-            ->leftJoin("i.entreprises", "e")
-            ->groupBy("i.id")
-            ->orderBy('i.id', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
+    /** 
+     * @return ElementListeInviteDTO[]
+     */
+    // public function paginateInvitesWithCount(): array
+    // {
+    //     /** @var Utilisateur $user */
+    //     $user = $this->security->getUser();
+
+    //     return $this->createQueryBuilder("i")
+    //         // ->select("i as invite", "COUNT(i.id) as total")
+    //         ->select("NEW App\\DTO\\ElementListeInviteDTO(i.id, i.email, i.createdAt, COUNT(i.id))")
+    //         ->where("i.utilisateur = :userId")
+    //         ->setParameter('userId', $user->getId())
+    //         ->leftJoin("i.entreprises", "e")
+    //         ->groupBy("i.id")
+    //         ->orderBy('i.id', 'DESC')
+    //         ->getQuery()
+    //         ->getResult();
+    // }
 
     //    /**
     //     * @return Invite[] Returns an array of Invite objects
