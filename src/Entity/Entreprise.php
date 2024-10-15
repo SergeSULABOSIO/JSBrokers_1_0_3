@@ -7,6 +7,7 @@ use App\Repository\EntrepriseRepository;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\HttpFoundation\File\File;
 use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Validator\Constraints as Assert;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
@@ -104,6 +105,16 @@ class Entreprise
         return $this;
     }
 
+    public function isInvited(?Utilisateur $user): bool
+    {
+        foreach ($this->getInvites() as $invite) {
+            if($invite->getEmail() == $user->getEmail()){
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function getTelephone(): ?string
     {
         return $this->telephone;
@@ -196,7 +207,7 @@ class Entreprise
 
     /**
      * Get the value of licence
-     */ 
+     */
     public function getLicence()
     {
         return $this->licence;
@@ -206,7 +217,7 @@ class Entreprise
      * Set the value of licence
      *
      * @return  self
-     */ 
+     */
     public function setLicence($licence)
     {
         $this->licence = $licence;
