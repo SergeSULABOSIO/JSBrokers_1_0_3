@@ -89,8 +89,10 @@ class EntrepriseRepository extends ServiceEntityRepository
 
         return $this->paginator->paginate(
             $this->createQueryBuilder("e")
-                ->where('e.utilisateur =:user')
-                ->setParameter('user', '' . $userId . '')
+                ->where('e.utilisateur = :userId')
+                // ->orWhere(':user = (e.invites)')
+                ->setParameter('userId', '' . $userId . '')
+                // ->setParameter('user', $user)
                 ->orderBy('e.id', 'DESC'),
             $page,
             3,
