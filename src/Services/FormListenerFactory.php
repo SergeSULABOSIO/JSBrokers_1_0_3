@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use DateTimeImmutable;
+use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\EntityRepository;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\Event\PostSubmitEvent;
 
@@ -43,6 +45,18 @@ class FormListenerFactory
         return function (PostSubmitEvent $event) {
             $data = $event->getData();
             $data->setUtilisateur($this->security->getUser());
+        };
+    }
+
+    public function setFiltreUtilisateur(): callable
+    {
+        return function (EntityRepository $er): QueryBuilder {
+            /** @var Utilisateur $user */
+            $user = $this->security->getUser();
+            return $er->createQueryBuilder('e')
+                ->where('e.utilisateur =:userId')
+                ->setParameter('userId', $user->getId())
+                ->orderBy('e.id', 'ASC');
         };
     }
 }

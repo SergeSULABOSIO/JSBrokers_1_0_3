@@ -54,14 +54,7 @@ class InviteType extends AbstractType
                 'expanded' => true,
                 'by_reference' => false,
                 //une requêt pour filtrer les elements de la liste d'options
-                'query_builder' => function (EntityRepository $er): QueryBuilder {
-                    /** @var Utilisateur $user */
-                    $user = $this->security->getUser();
-                    return $er->createQueryBuilder('e')
-                        ->where('e.utilisateur =:userId')
-                        ->setParameter('userId', $user->getId())
-                        ->orderBy('e.id', 'ASC');
-                },
+                'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
             //Le bouton d'enregistrement / soumission
