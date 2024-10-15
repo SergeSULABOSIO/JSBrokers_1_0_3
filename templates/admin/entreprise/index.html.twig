@@ -23,10 +23,10 @@
 {% block body %}
 	<div>
 		<caption>
-			{% if nbInvites == 0 %}
-				Aucun enregistrement trouvé.
+			{% if nbEntreprises == 0 %}
+				Aucune entreprise trouvée.
 			{% else %}
-				Entreprises : {{ nbEntreprises }} enregistrement(s).
+				Entreprises : {{ nbEntreprises }} element(s).
 			{% endif %}
 			<div class="d-flex gap-1">
 				{{ knp_pagination_render(entreprises) }}

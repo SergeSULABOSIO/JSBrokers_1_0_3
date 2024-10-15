@@ -25,10 +25,10 @@
 		<div class="d-flex">
 			<table class="table table-hover table-sm caption-top">
 				<caption>
-					{% if invites|length == 0 %}
-						Aucun enregistrement trouvé.
+					{% if nbInvites == 0 %}
+						Aucun invité trouvé.
 					{% else %}
-						Invités : {{ invites|length }} enregistrement(s).
+						Invités : {{ nbInvites }} element(s).
 					{% endif %}
 					<div class="d-flex gap-1">
 						{{ knp_pagination_render(invites) }}
