@@ -32,7 +32,7 @@ class InviteController extends AbstractController
     public function index(Request $request)
     {
         $page = $request->query->getInt("page", 1);
-        
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
@@ -70,8 +70,8 @@ class InviteController extends AbstractController
         return $this->render('admin/invite/create.html.twig', [
             'pageName' => 'Nouveau',
             'utilisateur' => $user,
-            'entreprises' => $this->entrepriseRepository->findAll(),
-            'invites' => $this->inviteRepository->findAll(),
+            'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
+            'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
             'form' => $form,
         ]);
     }
@@ -94,10 +94,10 @@ class InviteController extends AbstractController
         }
         return $this->render('admin/invite/edit.html.twig', [
             'pageName' => "Edition",
-            'invite' => $invite,
             'utilisateur' => $user,
-            'entreprises' => $this->entrepriseRepository->findAll(),
-            'invites' => $this->inviteRepository->findAll(),
+            'invite' => $invite,
+            'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
+            'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
             'form' => $form,
         ]);
     }
