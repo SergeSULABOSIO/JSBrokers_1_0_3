@@ -55,7 +55,7 @@
 							<em class="fst-italic text-body-tertiary">Créée le {{ entreprise.createdAt | date("d/m/Y") }}</em>
 						</li>
 					</ul>
-						<div class="d-flex justify-content-center">
+						<div class="d-flex justify-content-center pt-1">
 							{% if entreprise.isInvited(utilisateur) == true %}
 								<em class="fst-italic text-body-tertiary">Vous êtes invité par <strong>{{ entreprise.utilisateur.nom }}</strong></em>
 							{% else %}
