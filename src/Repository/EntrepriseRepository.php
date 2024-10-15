@@ -69,17 +69,6 @@ class EntrepriseRepository extends ServiceEntityRepository
     }
 
 
-    public function stat_get_nombres_enregistrements()
-    {
-        return $this->createQueryBuilder('a')
-            ->select('count(a.id) as nombre')
-            //    ->select('a.exampleField = :val')
-            //    ->setParameter('val', $value)
-            ->getQuery()
-            ->getSingleScalarResult()
-        ;
-    }
-
     public function getNBEntreprises(): int
     {
         /** @var Utilisateur $user */
@@ -103,8 +92,6 @@ class EntrepriseRepository extends ServiceEntityRepository
     {
         /** @var Utilisateur $user */
         $user = $this->security->getUser();
-        $userId = $user->getId();
-
         return count(
             $this->createQueryBuilder('e')
                 ->where('e.utilisateur =:userId')
@@ -117,7 +104,6 @@ class EntrepriseRepository extends ServiceEntityRepository
 
     public function paginateEntreprises(int $page): PaginationInterface
     {
-
         /** @var Utilisateur $user */
         $user = $this->security->getUser();
         $userId = $user->getId();
