@@ -24,6 +24,24 @@ class InviteRepository extends ServiceEntityRepository
         parent::__construct($registry, Invite::class);
     }
 
+    public function getNBInvites(): int
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+        $userId = $user->getId();
+
+        return count(
+            $this->createQueryBuilder("i")
+                ->select("count(i.id)")
+                ->where('i.utilisateur =:user')
+                ->setParameter('user', '' . $userId . '')
+                ->groupBy("i.id")
+                ->orderBy('i.id', 'DESC')
+                ->getQuery()
+                ->getResult()
+        );
+    }
+
     public function paginateInvites(int $page): PaginationInterface
     {
         /** @var Utilisateur $user */

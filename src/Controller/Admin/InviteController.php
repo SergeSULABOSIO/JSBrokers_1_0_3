@@ -27,7 +27,7 @@ class InviteController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
     ) {}
-        
+
     #[Route(name: 'index')]
     public function index(Request $request)
     {
@@ -41,8 +41,8 @@ class InviteController extends AbstractController
             'utilisateur' => $user,
             'invites' => $this->inviteRepository->paginateInvites($page),
             'page' => $page = $request->query->getInt("page", 1),
-            'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
-            'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
+            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
+            'nbInvites' => $this->inviteRepository->getNBInvites(),
         ]);
     }
 
@@ -70,8 +70,8 @@ class InviteController extends AbstractController
         return $this->render('admin/invite/create.html.twig', [
             'pageName' => 'Nouveau',
             'utilisateur' => $user,
-            'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
-            'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
+            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
+            'nbInvites' => $this->inviteRepository->getNBInvites(),
             'form' => $form,
         ]);
     }
@@ -96,8 +96,8 @@ class InviteController extends AbstractController
             'pageName' => "Edition",
             'utilisateur' => $user,
             'invite' => $invite,
-            'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
-            'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
+            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
+            'nbInvites' => $this->inviteRepository->getNBInvites(),
             'form' => $form,
         ]);
     }

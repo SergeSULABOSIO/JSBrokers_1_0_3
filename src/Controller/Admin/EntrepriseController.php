@@ -46,7 +46,7 @@ class EntrepriseController extends AbstractController
                 'entreprises' => $this->entrepriseRepository->paginateEntreprises($page),
                 'page' => $request->query->getInt("page", 1),
                 'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
-                'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
+                'nbInvites' => $this->inviteRepository->getNBInvites(),
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
@@ -74,8 +74,8 @@ class EntrepriseController extends AbstractController
         return $this->render('admin/entreprise/create.html.twig', [
             'pageName' => 'Nouveau',
             'utilisateur' => $user,
-            'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
-            'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
+            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
+            'nbInvites' => $this->inviteRepository->getNBInvites(),
             'form' => $form,
         ]);
     }
@@ -100,8 +100,8 @@ class EntrepriseController extends AbstractController
             'pageName' => "Edition",
             'utilisateur' => $user,
             'entreprise' => $entreprise,
-            'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
-            'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
+            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
+            'nbInvites' => $this->inviteRepository->getNBInvites(),
             'form' => $form,
         ]);
     }
