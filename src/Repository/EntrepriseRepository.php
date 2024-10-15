@@ -80,6 +80,26 @@ class EntrepriseRepository extends ServiceEntityRepository
         ;
     }
 
+    public function getNBEntreprises(): int
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+        $userId = $user->getId();
+
+        return count(
+            $this->createQueryBuilder("e")
+                ->select("count(e.id)")
+                ->leftJoin("e.invites", "i")
+                ->where('e.utilisateur = :userId')
+                ->orWhere("i.email = :userEmail")
+                ->setParameter('userId', '' . $userId . '')
+                ->setParameter('userEmail', '' . $user->getEmail() . '')
+                ->orderBy('e.id', 'DESC')
+                ->getQuery()
+                ->getResult()
+        );
+    }
+
     public function paginateEntreprises(int $page): PaginationInterface
     {
 

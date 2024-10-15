@@ -45,7 +45,7 @@ class EntrepriseController extends AbstractController
                 'utilisateur' => $user,
                 'entreprises' => $this->entrepriseRepository->paginateEntreprises($page),
                 'page' => $request->query->getInt("page", 1),
-                'nbEntreprises' => $this->entrepriseRepository->count(["utilisateur" => $user]),
+                'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
                 'nbInvites' => $this->inviteRepository->count(["utilisateur" => $user]),
             ]);
         } else {
