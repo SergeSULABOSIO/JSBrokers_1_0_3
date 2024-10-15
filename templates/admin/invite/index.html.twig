@@ -34,65 +34,67 @@
 						{{ knp_pagination_render(invites) }}
 					</div>
 				</caption>
-				<thead class="table-light">
-					<tr>
-						<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "Nom / E-mail", "i.email") }}</div></th>
-						<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "Date d'invitation", "i.createdAt") }}</div></th>
-						<th scope="col"><div class='d-flex justify-content-start'>Entreprises</div></th>
-						<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>Actions</div></th>
-					</tr>
-				</thead>
-				<tbody class="table-group-divider">
-					{# Boucler les donnees #}
-					{% for invite in invites %}
+				{% if nbInvites != 0 %}
+					<thead class="table-light">
 						<tr>
-							<td>
-								{{ invite.email }} <span class="fst-italic text-body-tertiary"> [Not a JSB user]</span>
-							</td>
-							<td>
-								{{ invite.createdAt|date('d/m/Y H:i') }}
-							</td>
-							<td class="justify-content-between">
-								{% if invite.entreprises|length == 1 %}
-									{{ invite.entreprises[0].nom }}
-									{# {{ invite.nomEntreprise }} #}
-								{% elseif invite.entreprises|length > 1 %}
-									{{ invite.entreprises[0].nom }} 
-									{# {{ invite.nomEntreprise }}  #}
-									<span class="text-body-tertiary">
-										(+{{invite.entreprises|length -1}})
-									</span>
-								{% else %}
-									Aucune
-								{% endif %}
-							</td>
-							<td>
-								<div class="d-flex gap-1 d-flex justify-content-end">
-									{# Les actions sur l element de la liste #}
-									<a class= "btn btn-outline-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
-										Modifier
-									</a>
-									<form action="{{ path('admin.invite.remove', {'id':invite.id })}}" method='POST'>
-										<input type='hidden' name='_method' value='DELETE'>
-										<button class='btn btn-outline-danger btn-sm' type='submit'>Supprimer</button>
-									</form>
-									<div class="dropdown">
-										<a class="btn btn-outline-secondary dropdown-toggle btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-											Autres
-										</a>
-										<ul class="dropdown-menu">
-											<li><a class="dropdown-item" href="#">Voir son rôle</a></li>
-											<li><a class="dropdown-item" href="#">Modifier son rôle</a></li>
-											<li><a class="dropdown-item" href="#">Envoyer l'email d'invitation</a></li>
-											<li><hr class="dropdown-divider"></li>
-											<li><a class="dropdown-item" href="#">Désactiver cet invité</a></li>
-										</ul>
-									</div>
-								</div>
-							</td>
+							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "Nom / E-mail", "i.email") }}</div></th>
+							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "Date d'invitation", "i.createdAt") }}</div></th>
+							<th scope="col"><div class='d-flex justify-content-start'>Entreprises</div></th>
+							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>Actions</div></th>
 						</tr>
-					{% endfor %}
-				</tbody>
+					</thead>
+					<tbody class="table-group-divider">
+						{# Boucler les donnees #}
+						{% for invite in invites %}
+							<tr>
+								<td>
+									{{ invite.email }} <span class="fst-italic text-body-tertiary"> [Not a JSB user]</span>
+								</td>
+								<td>
+									{{ invite.createdAt|date('d/m/Y H:i') }}
+								</td>
+								<td class="justify-content-between">
+									{% if invite.entreprises|length == 1 %}
+										{{ invite.entreprises[0].nom }}
+										{# {{ invite.nomEntreprise }} #}
+									{% elseif invite.entreprises|length > 1 %}
+										{{ invite.entreprises[0].nom }} 
+										{# {{ invite.nomEntreprise }}  #}
+										<span class="text-body-tertiary">
+											(+{{invite.entreprises|length -1}})
+										</span>
+									{% else %}
+										Aucune
+									{% endif %}
+								</td>
+								<td>
+									<div class="d-flex gap-1 d-flex justify-content-end">
+										{# Les actions sur l element de la liste #}
+										<a class= "btn btn-outline-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
+											Modifier
+										</a>
+										<form action="{{ path('admin.invite.remove', {'id':invite.id })}}" method='POST'>
+											<input type='hidden' name='_method' value='DELETE'>
+											<button class='btn btn-outline-danger btn-sm' type='submit'>Supprimer</button>
+										</form>
+										<div class="dropdown">
+											<a class="btn btn-outline-secondary dropdown-toggle btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+												Autres
+											</a>
+											<ul class="dropdown-menu">
+												<li><a class="dropdown-item" href="#">Voir son rôle</a></li>
+												<li><a class="dropdown-item" href="#">Modifier son rôle</a></li>
+												<li><a class="dropdown-item" href="#">Envoyer l'email d'invitation</a></li>
+												<li><hr class="dropdown-divider"></li>
+												<li><a class="dropdown-item" href="#">Désactiver cet invité</a></li>
+											</ul>
+										</div>
+									</div>
+								</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				{% endif %}
 			</table>
 		</div>
 	</div>
