@@ -50,6 +50,7 @@ class InviteController extends AbstractController
     #[Route('/create', name: 'create')]
     public function create(Request $request)
     {
+        // dd($this->entrepriseRepository->getNBMyProperEntreprises());
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
@@ -57,14 +58,20 @@ class InviteController extends AbstractController
         $invite = new Invite();
         $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($invite);
-            $this->manager->flush();
 
-            //Envoie de l'email de notification
-            $this->envoyerEmail($invite, $user);
+        if ($this->entrepriseRepository->getNBMyProperEntreprises() != 0) {
+            if ($form->isSubmitted() && $form->isValid()) {
+                $this->manager->persist($invite);
+                $this->manager->flush();
 
-            $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
+                //Envoie de l'email de notification
+                $this->envoyerEmail($invite, $user);
+
+                $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
+                return $this->redirectToRoute("admin.invite.index");
+            }
+        } else {
+            $this->addFlash("danger", "Désolé " . $user->getNom() . ", vous n'avez pas le droit d'inviter des utilisateurs. Vous ne pouvez inviter d'utilisateurs que pour une ou des entreprises que vous avez créées vous-mêmes, non pas pour une ou des entreprises où vous êtes invités.");
             return $this->redirectToRoute("admin.invite.index");
         }
         return $this->render('admin/invite/create.html.twig', [

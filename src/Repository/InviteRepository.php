@@ -29,10 +29,10 @@ class InviteRepository extends ServiceEntityRepository
         /** @var Utilisateur $user */
         $user = $this->security->getUser();
         $userId = $user->getId();
-
+        
         return count(
             $this->createQueryBuilder("i")
-                ->select("count(i.id)")
+                // ->select("count(i.id)")
                 ->where('i.utilisateur =:user')
                 ->setParameter('user', '' . $userId . '')
                 ->groupBy("i.id")

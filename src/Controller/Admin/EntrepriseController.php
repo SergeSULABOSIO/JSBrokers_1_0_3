@@ -34,6 +34,11 @@ class EntrepriseController extends AbstractController
     #[Route(name: 'index')]
     public function index(Request $request)
     {
+        // dd(
+        //     "Mine :" . $this->entrepriseRepository->getNBMyProperEntreprises(), 
+        //     "Mine + invitation :" . $this->entrepriseRepository->getNBEntreprises()
+        // );
+
         $page = $request->query->getInt("page", 1);
 
         /** @var Utilisateur $user */

@@ -88,13 +88,28 @@ class EntrepriseRepository extends ServiceEntityRepository
 
         return count(
             $this->createQueryBuilder("e")
-                ->select("count(e.id)")
                 ->leftJoin("e.invites", "i")
                 ->where('e.utilisateur = :userId')
                 ->orWhere("i.email = :userEmail")
                 ->setParameter('userId', '' . $userId . '')
                 ->setParameter('userEmail', '' . $user->getEmail() . '')
                 ->orderBy('e.id', 'DESC')
+                ->getQuery()
+                ->getResult()
+        );
+    }
+
+    public function getNBMyProperEntreprises(): int
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+        $userId = $user->getId();
+
+        return count(
+            $this->createQueryBuilder('e')
+                ->where('e.utilisateur =:userId')
+                ->setParameter('userId', $user->getId())
+                ->orderBy('e.id', 'ASC')
                 ->getQuery()
                 ->getResult()
         );
