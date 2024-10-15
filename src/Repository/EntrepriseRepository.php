@@ -94,13 +94,6 @@ class EntrepriseRepository extends ServiceEntityRepository
                 ->orderBy('e.id', 'DESC'),
             $page,
             3,
-            //    [
-            //        'distinct' => false,
-            //        'sortFieldAllowList' => [
-            //            'i.nom',
-            //            'i.createdAt'
-            //        ],
-            //    ]
         );
     }
 
