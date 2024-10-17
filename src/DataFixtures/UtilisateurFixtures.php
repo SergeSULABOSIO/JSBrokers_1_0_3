@@ -40,7 +40,7 @@ class UtilisateurFixtures extends Fixture
             ->setUpdatedAt(new DateTimeImmutable("now"))
             ->setVerified(true)
             ->setPassword($this->userPasswordHasher->hashPassword($autreUser, "user"))
-            ->setEmail("user@gmail.com");
+            ->setEmail("user@js-brokers.com");
         $manager->persist($autreUser);
         $this->addReference(self::AUTRE_USER, $autreUser);
 
