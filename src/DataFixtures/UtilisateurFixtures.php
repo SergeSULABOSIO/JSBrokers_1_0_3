@@ -17,16 +17,30 @@ class UtilisateurFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        /** @var Utilisateur $user */
-        $user = (new Utilisateur())
+        /** @var Utilisateur $admin */
+        $admin = (new Utilisateur())
             ->setNom("Serge SULA")
             ->setRoles(["ROLE_ADMIN"])
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"))
             ->setVerified(true)
-            ->setPassword($this->userPasswordHasher->hashPassword($user, "admin"))
-            ->setEmail("ssula@js-brokers.com");
-        $manager->persist($user);
+            ->setPassword($this->userPasswordHasher->hashPassword($admin, "admin"))
+            ->setEmail("admin@js-brokers.com");
+        $manager->persist($admin);
+        $this->addReference("admin", $admin);
+
+        /** @var Utilisateur $autreUser */
+        $autreUser = (new Utilisateur())
+            ->setNom("Jean DODO")
+            // ->setRoles(["ROLE_USER"]) //Ce rôle est déjà par défaut attribué à toutes les entités Utilisateurs
+            ->setCreatedAt(new DateTimeImmutable("now"))
+            ->setUpdatedAt(new DateTimeImmutable("now"))
+            ->setVerified(true)
+            ->setPassword($this->userPasswordHasher->hashPassword($autreUser, "user"))
+            ->setEmail("user@gmail.com");
+        $manager->persist($autreUser);
+        $this->addReference("autreUser", $autreUser);
+        
         $manager->flush();
     }
 }
