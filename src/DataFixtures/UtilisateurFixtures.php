@@ -20,9 +20,8 @@ class UtilisateurFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        /** @var Utilisateur $admin */
-        $admin = (new Utilisateur())
-            ->setNom("Serge SULA")
+        $admin = new Utilisateur();
+        $admin->setNom("Serge SULA")
             ->setRoles(["ROLE_ADMIN"])
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"))
@@ -32,9 +31,8 @@ class UtilisateurFixtures extends Fixture
         $manager->persist($admin);
         $this->addReference(self::ADMIN, $admin);
 
-        /** @var Utilisateur $autreUser */
-        $autreUser = (new Utilisateur())
-            ->setNom("Jean DODO")
+        $autreUser = new Utilisateur();
+        $autreUser->setNom("Jean DODO")
             // ->setRoles(["ROLE_USER"]) //Ce rôle est déjà par défaut attribué à toutes les entités Utilisateurs
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"))
