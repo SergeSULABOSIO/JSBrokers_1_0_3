@@ -27,7 +27,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
 
         //Création de l'entreprise
         $entreprise = (new Entreprise())
-            ->setNom($faker->company())
+            ->setNom("Sté. " . $faker->company())
             ->setLicence($faker->randomNumber(6))
             ->setRccm("RCCM-" . $faker->randomNumber(8))
             ->setIdnat("IDNAT-" . $faker->randomNumber(8))
@@ -42,7 +42,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         //Les 6 autres entreprises
         for ($i = 0; $i < 6; $i++) {
             $autreEntreprise = (new Entreprise())
-                ->setNom($faker->company())
+                ->setNom("Sté. " . $faker->company())
                 ->setLicence($faker->randomNumber(6))
                 ->setRccm("RCCM-" . $faker->randomNumber(8))
                 ->setIdnat("IDNAT-" . $faker->randomNumber(8))

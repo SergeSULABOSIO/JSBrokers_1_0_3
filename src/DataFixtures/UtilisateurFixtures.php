@@ -7,6 +7,8 @@ use App\Entity\Utilisateur;
 use Doctrine\Persistence\ObjectManager;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Faker\Factory;
+
 
 class UtilisateurFixtures extends Fixture
 {
@@ -20,6 +22,8 @@ class UtilisateurFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
+        $faker = Factory::create('fr_FR');
+
         $admin = new Utilisateur();
         $admin->setNom("Serge SULA")
             ->setRoles(["ROLE_ADMIN"])
@@ -32,7 +36,7 @@ class UtilisateurFixtures extends Fixture
         $this->addReference(self::ADMIN, $admin);
 
         $autreUser = new Utilisateur();
-        $autreUser->setNom("Jean DODO")
+        $autreUser->setNom($faker->name("Mr."))
             // ->setRoles(["ROLE_USER"]) //Ce rôle est déjà par défaut attribué à toutes les entités Utilisateurs
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"))
