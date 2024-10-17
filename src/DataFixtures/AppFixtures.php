@@ -13,18 +13,17 @@ use Faker\Factory;
 
 class AppFixtures extends Fixture implements DependentFixtureInterface
 {
-    public const ADMIN = "admin";
-    public const AUTRE_USER = "autreUser";
+    
 
     public function load(ObjectManager $manager): void
     {
         $faker = Factory::create('fr_FR');
 
         /** @var Utilisateur $admin */
-        $admin = $this->getReference(self::ADMIN);
+        $admin = $this->getReference(UtilisateurFixtures::ADMIN);
 
         /** @var Utilisateur $autreUser */
-        $autreUser = $this->getReference(self::AUTRE_USER);
+        $autreUser = $this->getReference(UtilisateurFixtures::AUTRE_USER);
 
         //Création de l'entreprise
         $entreprise = (new Entreprise())
