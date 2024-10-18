@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 use App\DTO\DemandeContactDTO;
 use App\Form\DemandeContactType;
 use Symfony\Component\Mime\Email;
+use App\Event\DemandeContactEvent;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,6 +16,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/demande_contact", name: 'admin.demande.contact.')]
@@ -29,28 +31,41 @@ class DemandeContactController extends AbstractController
     ) {}
 
     #[Route(name: 'index')]
-    public function index(Request $request, MailerInterface $mailer): Response
+    public function index(Request $request, EventDispatcherInterface $dispatcher): Response
     {
         /** @var DemandeContactDTO $data */
         $data = new DemandeContactDTO();
         $form = $this->createForm(DemandeContactType::class, $data);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
-            # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
-            $email = (new TemplatedEmail())
-                ->to('contact@demo.fr')
-                ->from($data->email)
-                //->cc('cc@example.com')
-                //->bcc('bcc@example.com')
-                //->replyTo('fabien@example.com')
-                ->priority(Email::PRIORITY_HIGH)
-                ->subject('Demande de contact')
-                // ->text($data->message)
-                // ->html('<p>' . $data->message . '</p>');
-                ->htmlTemplate("home/mail/message_demande_de_contact.html.twig")
-                ->context(["data" => $data]);
-            $mailer->send($email);
-            $this->addFlash("success", "L'email a bien été envoyé. Nous vous reviendrons au plus vite.");
+            try {
+                //Lancer un évènement
+                $dispatcher->dispatch(new DemandeContactEvent($data));
+                $this->addFlash("success", "L'email a bien été envoyé. Nous vous reviendrons au plus vite.");
+            } catch (\Throwable $th) {
+                //throw $th;
+                $this->addFlash("danger", "Echec d'envoie de l'email.");
+            }
+
+
+
+
+            // # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
+            // $email = (new TemplatedEmail())
+            //     ->to('contact@demo.fr')
+            //     ->from($data->email)
+            //     //->cc('cc@example.com')
+            //     //->bcc('bcc@example.com')
+            //     //->replyTo('fabien@example.com')
+            //     ->priority(Email::PRIORITY_HIGH)
+            //     ->subject('Demande de contact')
+            //     // ->text($data->message)
+            //     // ->html('<p>' . $data->message . '</p>');
+            //     ->htmlTemplate("home/mail/message_demande_de_contact.html.twig")
+            //     ->context(["data" => $data]);
+            // $mailer->send($email);
+            // $this->addFlash("success", "L'email a bien été envoyé. Nous vous reviendrons au plus vite.");
+
             return $this->redirectToRoute('admin.demande.contact.index');
             // return $this->redirectToRoute('app_contact');
         }
@@ -59,5 +74,4 @@ class DemandeContactController extends AbstractController
             'form' => $form,
         ]);
     }
-
 }
