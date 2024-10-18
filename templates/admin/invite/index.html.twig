@@ -48,7 +48,11 @@
 						{% for invite in invites %}
 							<tr>
 								<td>
-									{{ invite.email }} <span class="fst-italic text-body-tertiary"> [Not a JSB user]</span>
+									<turbo-frame id="invite_{{ invite.id }}">
+										<a href="{{ path('admin.invite.edit', {'id':invite.id })}}">
+											{{ invite.email }} <span class="fst-italic text-body-tertiary"> [Not a JSB user]</span>
+										</a>
+									</turbo-frame>
 								</td>
 								<td>
 									{{ invite.createdAt|date('d/m/Y H:i') }}

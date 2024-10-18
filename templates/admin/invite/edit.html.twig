@@ -29,7 +29,9 @@
                         <br><br>Si <strong>{{ invite.email }}</strong> n'a toujours pas encore de compte JS Broker, ne vous inquiètez pas car il peut en créer même après et son invitation restera toujours valide en moins que vous-même puissiez la désactiver intentionnellement.
                         <hr>
                     </p>
-					{{ form(form) }}
+					<turbo-frame id="invite_{{ invite.id }}">
+						{{ form(form, {action: path('admin.invite.edit', {id:invite.id})}) }}
+					</turbo-frame>
 					</div>
 				</div>
 			</div>
