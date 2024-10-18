@@ -123,6 +123,7 @@ class InviteController extends AbstractController
         $inviteId = $invite->getId();
         $this->manager->remove($invite);
         $this->manager->flush();
+        
         if($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT){
             $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
             return $this->render("admin/invite/delete.html.twig", [
