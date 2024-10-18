@@ -37,7 +37,7 @@ class UtilisateurFixtures extends Fixture
 
         $autreUser = new Utilisateur();
         $autreUser->setNom($faker->name("Mr."))
-            // ->setRoles(["ROLE_USER"]) //Ce rôle est déjà par défaut attribué à toutes les entités Utilisateurs
+            ->setRoles(["ROLE_ADMIN"])
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"))
             ->setVerified(true)

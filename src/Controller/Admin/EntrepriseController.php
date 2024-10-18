@@ -5,11 +5,9 @@ namespace App\Controller\Admin;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Form\EntrepriseType;
-use Symfony\Component\Mime\Email;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -38,7 +36,7 @@ class EntrepriseController extends AbstractController
 
         /** @var Utilisateur $user */
         $user = $this->getUser();
-
+        
         if ($user->isVerified()) {
             return $this->render('admin/entreprise/index.html.twig', [
                 'pageName' => "Entreprises",
