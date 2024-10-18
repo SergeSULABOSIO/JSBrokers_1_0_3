@@ -3,8 +3,9 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
-use App\Entity\Utilisateur;
 use App\Form\InviteType;
+use App\Entity\Utilisateur;
+use App\Event\InvitationEvent;
 use Symfony\Component\Mime\Email;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -15,6 +16,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/invite", name: 'admin.invite.')]
@@ -48,7 +50,7 @@ class InviteController extends AbstractController
 
 
     #[Route('/create', name: 'create')]
-    public function create(Request $request)
+    public function create(Request $request, EventDispatcherInterface $dispatcher)
     {
         // dd($this->entrepriseRepository->getNBMyProperEntreprises());
         /** @var Utilisateur $user */
@@ -63,11 +65,15 @@ class InviteController extends AbstractController
             if ($form->isSubmitted() && $form->isValid()) {
                 $this->manager->persist($invite);
                 $this->manager->flush();
-
-                //Envoie de l'email de notification
-                $this->envoyerEmail($invite, $user);
-
-                $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
+                try {
+                    //Envoie de l'email de notification
+                    //Lancer un évènement
+                    $dispatcher->dispatch(new InvitationEvent($invite));
+                    $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
+                } catch (\Throwable $th) {
+                    //throw $th;
+                    $this->addFlash("danger", "Echec d'envoie de l'email d'invitation.");
+                }
                 return $this->redirectToRoute("admin.invite.index");
             }
         } else {
@@ -117,26 +123,5 @@ class InviteController extends AbstractController
         $this->manager->flush();
         $this->addFlash("success", $invite->getEmail() . " a été supprimé avec succès.");
         return $this->redirectToRoute("admin.invite.index");
-    }
-
-    private function envoyerEmail(Invite $invite, Utilisateur $utilisateur)
-    {
-        # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
-        $email = (new TemplatedEmail())
-            ->to($invite->getEmail())
-            ->from("info@jsbrokers.com")
-            //->cc('cc@example.com')
-            //->bcc('bcc@example.com')
-            //->replyTo('fabien@example.com')
-            ->priority(Email::PRIORITY_HIGH)
-            ->subject('Invitation JS Brokers venant de ' . $utilisateur->getNom())
-            // ->text($data->message)
-            // ->html('<p>' . $data->message . '</p>');
-            ->htmlTemplate("home/mail/message_invitation.html.twig")
-            ->context([
-                "invite" => $invite,
-                "utilisateur" => $utilisateur,
-            ]);
-        $this->mailer->send($email);
     }
 }
