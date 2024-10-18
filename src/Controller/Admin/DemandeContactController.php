@@ -46,28 +46,7 @@ class DemandeContactController extends AbstractController
                 //throw $th;
                 $this->addFlash("danger", "Echec d'envoie de l'email.");
             }
-
-
-
-
-            // # C'est ici qu'on va gérer l'envoie de l'email de l'utilisateur
-            // $email = (new TemplatedEmail())
-            //     ->to('contact@demo.fr')
-            //     ->from($data->email)
-            //     //->cc('cc@example.com')
-            //     //->bcc('bcc@example.com')
-            //     //->replyTo('fabien@example.com')
-            //     ->priority(Email::PRIORITY_HIGH)
-            //     ->subject('Demande de contact')
-            //     // ->text($data->message)
-            //     // ->html('<p>' . $data->message . '</p>');
-            //     ->htmlTemplate("home/mail/message_demande_de_contact.html.twig")
-            //     ->context(["data" => $data]);
-            // $mailer->send($email);
-            // $this->addFlash("success", "L'email a bien été envoyé. Nous vous reviendrons au plus vite.");
-
             return $this->redirectToRoute('admin.demande.contact.index');
-            // return $this->redirectToRoute('app_contact');
         }
         return $this->render('admin/demande_contact/index.html.twig', [
             'pageName' => 'Formulaire de contact',
