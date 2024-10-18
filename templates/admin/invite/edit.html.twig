@@ -30,7 +30,9 @@
 						<hr>
 					</p>
 					<turbo-frame id="invite_{{ invite.id }}">
-					{{ form(form, {action: path('admin.invite.edit', {id:invite.id})}) }}
+						<div class = "m-2">
+							{{ form(form, {action: path('admin.invite.edit', {id:invite.id})}) }}
+						</div>
 					</turbo-frame>
 				</div>
 			</div>
