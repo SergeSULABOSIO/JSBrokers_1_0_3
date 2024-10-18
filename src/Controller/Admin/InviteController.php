@@ -18,6 +18,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\UX\Turbo\TurboBundle;
 
 #[Route("/admin/invite", name: 'admin.invite.')]
 #[IsGranted('ROLE_USER')]
@@ -117,10 +118,17 @@ class InviteController extends AbstractController
 
 
     #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove(Invite $invite)
+    public function remove(Request $request, Invite $invite)
     {
+        $inviteId = $invite->getId();
         $this->manager->remove($invite);
         $this->manager->flush();
+        if($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT){
+            $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+            return $this->render("admin/invite/delete.html.twig", [
+                'inviteId' => $inviteId,
+            ]);
+        }
         $this->addFlash("success", $invite->getEmail() . " a été supprimé avec succès.");
         return $this->redirectToRoute("admin.invite.index");
     }

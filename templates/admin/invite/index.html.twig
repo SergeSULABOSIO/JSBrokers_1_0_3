@@ -46,7 +46,7 @@
 					<tbody class="table-group-divider">
 						{# Boucler les donnees #}
 						{% for invite in invites %}
-							<tr>
+							<tr id="row_invite_{{ invite.id }}">
 								<td>
 									<turbo-frame id="invite_{{ invite.id }}">
 										<a href="{{ path('admin.invite.edit', {'id':invite.id })}}">
