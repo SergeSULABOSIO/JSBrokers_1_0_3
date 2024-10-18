@@ -1,2 +1,11 @@
 <turbo-frame action="remove" target="row_invite_{{ inviteId }}"></turbo-frame>
+<turbo-frame action="append" target="flash">
+    <template>
+        <div class="alert alert-{{type}} alert-dismissible fade show" role="alert">
+            <strong>Infos:</strong>
+            {{ messages | join(', ') }}
+        </div>
+    </template>
+</turbo-frame>
+
 
