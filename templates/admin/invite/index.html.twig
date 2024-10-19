@@ -74,23 +74,48 @@
 								<td>
 									<div class="d-flex gap-1 d-flex justify-content-end">
 										{# Les actions sur l element de la liste #}
-										<a class= "btn btn-outline-primary btn-sm" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
-											Modifier
+										<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
+											{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+											{# Modifier #}
 										</a>
 										<form action="{{ path('admin.invite.remove', {'id':invite.id })}}" method='POST'>
 											<input type='hidden' name='_method' value='DELETE'>
-											<button class='btn btn-outline-danger btn-sm' type='submit'>Supprimer</button>
+											<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+												{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
+												{# Supprimer #}
+											</button>
 										</form>
 										<div class="dropdown">
-											<a class="btn btn-outline-secondary dropdown-toggle btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-												Autres
+											<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+												{{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
+												{# Autres #}
 											</a>
 											<ul class="dropdown-menu">
-												<li><a class="dropdown-item" href="#">Voir son rôle</a></li>
-												<li><a class="dropdown-item" href="#">Modifier son rôle</a></li>
-												<li><a class="dropdown-item" href="#">Envoyer l'email d'invitation</a></li>
+												<li>
+													<a class="dropdown-item" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Voir son rôle
+													</a>
+												</li>
+												<li>
+													<a class="dropdown-item" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Modifier son rôle
+													</a>
+												</li>
+												<li>
+													<a class="dropdown-item" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Envoyer l'email d'invitation
+													</a>
+												</li>
 												<li><hr class="dropdown-divider"></li>
-												<li><a class="dropdown-item" href="#">Désactiver cet invité</a></li>
+												<li>
+													<a class="dropdown-item" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Désactiver cet invité
+													</a>
+												</li>
 											</ul>
 										</div>
 									</div>

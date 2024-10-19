@@ -47,12 +47,14 @@ class InviteType extends AbstractType
             // ->add('updatedAt', null, [
             //     'widget' => 'single_text',
             // ])
-            ->add('entreprises', EntityType::class, [
+            // ->add('entreprises', EntityType::class, [
+            ->add('entreprises', EntrepriseAutocompleteField::class, [
                 'class' => Entreprise::class,
                 'choice_label' => "nom",
                 'multiple' => true,
-                'expanded' => true,
+                'expanded' => false,
                 'by_reference' => false,
+                'autocomplete' => true,
                 //une requêt pour filtrer les elements de la liste d'options
                 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])

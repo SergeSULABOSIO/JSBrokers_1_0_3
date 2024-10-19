@@ -1,10 +1,22 @@
 <div>
     {% if app.current_route starts with 'admin.invite' %}
-        <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-primary">Ajouter un invité</a>
+        <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-primary">
+          {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+          Ajouter un invité
+        </a>
     {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
-		<a href="{{ path('admin.entreprise.create')}}" type="button" class="btn btn-primary">Créer une entreprise</a>
+      <a href="{{ path('admin.entreprise.create')}}" type="button" class="btn btn-primary">
+        {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+        Créer une entreprise
+      </a>
     {% endif %}
-    <a href="{{ path('app_logout')}}" type="button" class="btn btn-outline-danger">Déconnexion</a>
-    <a href="{{ path('app_register')}}" type="button" class="btn btn-outline-primary">Paramètres</a>
+    <a href="{{ path('app_logout')}}" type="button" class="btn border-0 btn-outline-danger">
+      {{ ux_icon('hugeicons:logout-04', {height: '18px', width: '18px'}) }}
+      Déconnexion
+    </a>
+    <a href="{{ path('app_register')}}" type="button" class="btn border-0 btn-outline-primary">
+      {{ ux_icon('material-symbols:settings', {height: '18px', width: '18px'}) }}
+      Paramètres
+    </a>
 </div>
