@@ -17,7 +17,7 @@
         </h2>
         <div id="panelsStayOpen-collapse1" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading1">
             <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                <a href="{{ path('admin.entreprise.monnaie', {'id': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Monnaies</span>
                     </div>
@@ -79,17 +79,17 @@
         </h2>
         <div id="panelsStayOpen-collapse2" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading2">
             <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.piste' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Pistes</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.tache'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Tâches</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.liste_comme'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Feedbacks</span>
                     </div>
@@ -106,22 +106,22 @@
         </h2>
         <div id="panelsStayOpen-collapse3" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading3">
             <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Victimes</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.intervenant'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Intervénants</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.sinistre'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Sinistres</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reglement'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Reglements</span>
                     </div>
@@ -138,52 +138,52 @@
         </h2>
         <div id="panelsStayOpen-collapse4" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading4">
             <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.client' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Clients</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.assureur'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Assureurs</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.contact'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Contacts</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.produit'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Produits</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.chargement'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Chargements</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.revenu'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Revenus</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.avenant'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Avenants</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reassureur'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Réassureurs</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.partenaire'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Partenaires</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.support'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Supports</span>
                     </div>
@@ -200,27 +200,27 @@
         </h2>
         <div id="panelsStayOpen-collapse4" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading4">
             <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.retrocommission' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Retro-commissions</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.production'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Production</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.sinistre'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Sinistres</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.cashflow'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Cashflow</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.renouvellement'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Renouvellements</span>
                     </div>
@@ -237,12 +237,12 @@
         </h2>
         <div id="panelsStayOpen-collapse6" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading6">
             <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.document' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Documents</span>
                     </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.classeur'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Classeurs</span>
                     </div>
