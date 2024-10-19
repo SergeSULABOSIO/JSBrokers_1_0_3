@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{% block section_utilisateur %}
+	{% include 'segments/boutons_entreprise_dashbord.html.twig' %}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	Aperçu global de la situation de {{ entreprise.nom }}. Tableau de bord avec indicateurs clés de gestion.
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div>
+		Ici je mettrai le tableau de bord de l'entreprise.
+	</div>
+{% endblock %}

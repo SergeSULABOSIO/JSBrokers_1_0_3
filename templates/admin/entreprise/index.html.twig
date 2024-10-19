@@ -45,7 +45,7 @@
 					<div class="card-body">
 						<figure class="text-center">
 							<blockquote class="blockquote">
-								<strong><a href="#" class="text-primary">{{ entreprise.nom }}</a></strong>
+								<strong><a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-primary">{{ entreprise.nom }}</a></strong>
 							</blockquote>
 							<figcaption class="blockquote-footer">
 								{{ ux_icon('mdi:address-marker-outline', {height: '18px', width: '18px'}) }}

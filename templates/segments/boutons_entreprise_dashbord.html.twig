@@ -1,0 +1,52 @@
+<div>
+    {% if app.current_route starts with 'admin.invite' %}
+        <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-primary">
+          {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+          Ajouter un invité
+        </a>
+    {% endif %}
+    {% if app.current_route starts with 'admin.entreprise' %}
+      <ul class="mb-2 mb-lg-0 btn btn-primary">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+            Ajouter
+          </a>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
+                {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+                Une Piste
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
+                {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+                Un Produit
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
+                {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+                Un Assureur
+              </a>
+            </li>
+             <li>
+              <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
+                {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+                Un Client
+              </a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    {% endif %}
+    <a href="{{ path('admin.entreprise.index')}}" type="button" class="btn border-0 btn-outline-danger">
+      {{ ux_icon('hugeicons:logout-04', {height: '18px', width: '18px'}) }}
+      Quitter l'entreprise
+    </a>
+    <a href="{{ path('app_register')}}" type="button" class="btn border-0 btn-outline-primary">
+      {{ ux_icon('material-symbols:settings', {height: '18px', width: '18px'}) }}
+      Paramètres
+    </a>
+</div>

@@ -1,0 +1,21 @@
+<h5 class="mb-1">Menu</h5>
+<div class="list-group">
+    <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'active' : '' }}">
+        <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">Tableau de bord</h6>
+            <small><span class="badge text-bg-warning rounded-pill"></span></small>
+        </div>
+    </a>
+    <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+        <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">Monnaie</h6>
+            <small><span class="badge text-bg-warning rounded-pill"></span></small>
+        </div>
+    </a>
+    <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+        <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">Comptes bancaires</h6>
+            <small><span class="badge text-bg-warning rounded-pill"></span></small>
+        </div>
+    </a>
+</div>
