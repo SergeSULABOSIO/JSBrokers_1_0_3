@@ -7,123 +7,246 @@
         </div>
     </a>
 </div>
-
 <div class="accordion" id="accordionPanelsStayOpenExample">
-    <div class="accordion-item">
+    <div class="accordion-item border-0">
         <h2 class="accordion-header" id="panelsStayOpen-heading1">
             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse1" aria-expanded="true" aria-controls="panelsStayOpen-collapse1">
-                Finances
+				{{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+                &nbsp;Finances
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse1" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading1">
-            <div class="accordion-body">
-                <span>Monnaies</span></br>
-                <span>Comptes bancaires</span></br>
-                <span>Taxes</span></br>
-                <span>Autorités</span></br>
-                <span>Fournisseurs</span></br>
-                <span>Assureurs</span></br>
-                <span>Revenus</span></br>
-                <span>Chargements</span></br>
-                <span>Factures</span></br>
-                <span>Paiements</span></br>
-
-
-                <div class="list-group">
-                    <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Monnaie</h6>
-                            <small><span class="badge text-bg-warning rounded-pill"></span></small>
-                        </div>
-                    </a>
-                    <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Comptes bancaires</h6>
-                            <small><span class="badge text-bg-warning rounded-pill"></span></small>
-                        </div>
-                    </a>
-                </div>
-
-
+        <div id="panelsStayOpen-collapse1" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading1">
+            <div class="accordion-body p-0">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Monnaies</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Comptes bancaires</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Taxes</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.autorite'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Autorités</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.fournisseur'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Fournisseurs</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.assureur'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Assureurs</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.revenu'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Revenus</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.chargement'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Chargements</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.facture'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Factures</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.paiement'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Paiements</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
-    <div class="accordion-item">
+    <div class="accordion-item border-0">
         <h2 class="accordion-header" id="panelsStayOpen-heading2">
             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse2" aria-expanded="true" aria-controls="panelsStayOpen-collapse2">
-                Marketing
+                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+                &nbsp;Marketing
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse2" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading2">
-            <div class="accordion-body">
-                <span>Pistes</span></br>
-                <span>Tâches</span></br>
-                <span>Feedbacks</span></br>
+        <div id="panelsStayOpen-collapse2" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading2">
+            <div class="accordion-body p-0">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Pistes</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Tâches</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Feedbacks</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
-    <div class="accordion-item">
+    <div class="accordion-item border-0">
         <h2 class="accordion-header" id="panelsStayOpen-heading3">
             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse3" aria-expanded="true" aria-controls="panelsStayOpen-collapse3">
-                Sinistres
+                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+                &nbsp;Sinistre
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse3" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading3">
-            <div class="accordion-body">
-                <span>Victimes</span></br>
-                <span>Intervénants</span></br>
-                <span>Sinistres</span></br>
-                <span>Reglements</span></br>
+        <div id="panelsStayOpen-collapse3" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading3">
+            <div class="accordion-body p-0">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Victimes</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Intervénants</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Sinistres</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Reglements</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
-    <div class="accordion-item">
+    <div class="accordion-item border-0">
         <h2 class="accordion-header" id="panelsStayOpen-heading4">
             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse4" aria-expanded="true" aria-controls="panelsStayOpen-collapse4">
-                Production
+                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+                &nbsp;Production
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse4" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading4">
-            <div class="accordion-body">
-                <span>Clients</span></br>
-                <span>Assureurs</span></br>
-                <span>Contacts</span></br>
-                <span>Produits</span></br>
-                <span>Chargements</span></br>
-                <span>Revenus</span></br>
-                <span>Avenants</span></br>
-                <span>Réassureurs</span></br>
-                <span>Partenaires</span></br>
-                <span>Supports</span></br>
+        <div id="panelsStayOpen-collapse4" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading4">
+            <div class="accordion-body p-0">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Clients</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Assureurs</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Contacts</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Produits</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Chargements</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Revenus</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Avenants</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Réassureurs</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Partenaires</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Supports</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="panelsStayOpen-heading5">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse5" aria-expanded="true" aria-controls="panelsStayOpen-collapse5">
-                Reporting
+    <div class="accordion-item border-0">
+        <h2 class="accordion-header" id="panelsStayOpen-heading4">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse4" aria-expanded="true" aria-controls="panelsStayOpen-collapse4">
+                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+                &nbsp;Reporting
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse5" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading5">
-            <div class="accordion-body">
-                <span>Retro-commissions</span></br>
-                <span>Production</span></br>
-                <span>Sinistres</span></br>
-                <span>Cashflow</span></br>
-                <span>Renouvellements</span></br>
+        <div id="panelsStayOpen-collapse4" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading4">
+            <div class="accordion-body p-0">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Retro-commissions</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Production</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Sinistres</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Cashflow</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Renouvellements</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
-    <div class="accordion-item">
+    <div class="accordion-item border-0">
         <h2 class="accordion-header" id="panelsStayOpen-heading6">
             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse6" aria-expanded="true" aria-controls="panelsStayOpen-collapse6">
-                Administration
+                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+                &nbsp;Administration
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse6" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading6">
-            <div class="accordion-body">
-                <span>Documents</span></br>
-                <span>Classeurs</span></br>
+        <div id="panelsStayOpen-collapse6" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading6">
+            <div class="accordion-body p-0">
+                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Documents</span>
+                    </div>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                    <div class="d-flex justify-content-between">
+                        <span class="mb-0">Classeurs</span>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
