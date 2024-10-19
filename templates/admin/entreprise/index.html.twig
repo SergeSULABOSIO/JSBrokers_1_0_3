@@ -17,21 +17,72 @@
 {% endblock %}
 
 {% block menuLateraleGauche %}
-	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+	{% include 'segments/menu_user_dashbord.html.twig' %}
 {% endblock %}
 
 {% block body %}
 	<div>
 		<caption>
 			<div class="d-flex gap-1">
-				{{ knp_pagination_render(monnaies) }}
+				{{ knp_pagination_render(entreprises) }}
 			</div>
 		</caption>
 		
 		<div class="d-flex">
 			{# Boucler les entreprises #}
-			{% for monnaie in monnaies %}
-				
+			{% for entreprise in entreprises %}
+				<div class="card m-2 p-2 shadow-sm bg-body" style="width: 18rem;">
+					{% if entreprise.thumbnail %}
+						<img class="rounded" src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 17rem; height: 10rem;">
+					{% else %}
+						<img class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" style="width: 17rem; height: 10rem;">
+					{% endif %}
+					<div class="card-body">
+						<figure class="text-center">
+							<blockquote class="blockquote">
+								<strong><a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-primary">{{ entreprise.nom }}</a></strong>
+							</blockquote>
+							<figcaption class="blockquote-footer">
+								{{ ux_icon('mdi:address-marker-outline', {height: '18px', width: '18px'}) }}
+								{{ entreprise.adresse }}
+							</figcaption>
+						</figure>
+					</div>
+					<ul class="list-group list-group-flush">
+						<li class="list-group-item d-flex justify-content-center">
+							<span class="fw-light text-body-tertiary">
+								{{ ux_icon('ic:outline-phone', {height: '18px', width: '18px'}) }}
+								{{ entreprise.telephone }} | 
+								{{ ux_icon('clarity:license-outline-badged', {height: '18px', width: '18px'}) }}
+								{{ entreprise.licence }} 
+							</span>
+						</li>
+						<li class="list-group-item d-flex justify-content-center">
+							<span class="text-body-tertiary">
+								{{ ux_icon('ic:twotone-date-range', {height: '18px', width: '18px'}) }}
+								Créée le {{ entreprise.createdAt | date("d/m/Y") }}
+							</span>
+						</li>
+					</ul>
+						<div class="d-flex justify-content-center pt-1">
+							{% if entreprise.isInvited(utilisateur) == true %}
+								<em class="fst-italic text-body-tertiary">Vous êtes invité par <strong>{{ entreprise.utilisateur.nom }}</strong></em>
+							{% else %}
+								<a href="#" class='btn btn-outline-primary border-0 btn-sm'>
+									{{ ux_icon('bi:share-fill', {height: '18px', width: '18px'}) }}
+								</a>
+								<a class='btn btn-outline-primary border-0 btn-sm' href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}">
+									{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+								</a>
+								<form action="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" method='POST'>
+									<input type='hidden' name='_method' value='DELETE'>
+									<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+										{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
+									</button>
+								</form>
+							{% endif %}
+						</div>
+				</div>
 			{% endfor %}
 		</div>
 	</div>

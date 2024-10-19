@@ -40,11 +40,11 @@ class EntrepriseMonnaieController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        return $this->render('admin/entreprise/index.html.twig', [
+        return $this->render('admin/monnaie/index.html.twig', [
             'pageName' => "Monnaies",
             'utilisateur' => $user,
             'entreprise' => $entreprise,
-            'monnaies' => $this->entrepriseRepository->paginateEntreprises($page),
+            // 'monnaies' => $this->entrepriseRepository->paginateEntreprises($page),
             'page' => $page = $request->query->getInt("page", 1),
         ]);
     }
