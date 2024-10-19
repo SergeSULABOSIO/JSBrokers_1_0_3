@@ -4,12 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
-use App\Form\EntrepriseType;
-use App\Repository\InviteRepository;
-use App\Repository\EntrepriseRepository;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -17,16 +12,12 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-#[Route("/admin/entreprise_dashord", name: 'admin.entreprise.')]
+#[Route("/admin/entreprise_dashbord", name: 'admin.entreprise.')]
 #[IsGranted('ROLE_USER')]
 class EntrepriseDashbordController extends AbstractController
 {
     public function __construct(
-        private UrlGeneratorInterface $urlGenerator,
-        // private MailerInterface $mailer,
-        // private EntityManagerInterface $manager,
-        // private EntrepriseRepository $entrepriseRepository,
-        // private InviteRepository $inviteRepository,
+        private UrlGeneratorInterface $urlGenerator
     ) {}
 
 
@@ -37,7 +28,7 @@ class EntrepriseDashbordController extends AbstractController
         $user = $this->getUser();
 
         // dd($entreprise, $user);
-        
+
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
                 'pageName' => "Tableau de bord",
