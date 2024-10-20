@@ -1,0 +1,108 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{% block section_utilisateur %}
+	{% include 'segments/boutons_user_dashbord.html.twig' %}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	Liste des monnaies et leurs taux de change respectifs par rapport à la monnaie locale.
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div>
+		<div class="d-flex">
+			<table class="table table-hover table-sm caption-top">
+				<caption>
+					{% if monnaies|length == 0 %}
+						Aucune monnaie trouvée.
+					{% else %}
+						Monnaie : {{ monnaies }} element(s).
+					{% endif %}
+					<div class="d-flex gap-1">
+						{{ knp_pagination_render(monnaies) }}
+					</div>
+				</caption>
+				{% if monnaies|length != 0 %}
+					<thead class="table-light">
+						<tr>
+							<th scope="col"><div class='d-flex justify-content-start'>Code</div></th>
+							<th scope="col"><div class='d-flex justify-content-start'>Nom</div></th>
+							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>Actions</div></th>
+						</tr>
+					</thead>
+					<tbody class="table-group-divider">
+						{# Boucler les donnees #}
+						{% for monnaie in monnaies %}
+							<tr id="row_monnaie_{{ monnaie.id }}">
+								<td>
+									<turbo-frame id="monnaie_{{ monnaie.id }}">
+										<a class="m-2" href="{{ path('admin.monnaie.edit', {'idMonnaie':monnaie.id, 'idEntreprise': entreprise.id})}}">
+											{{ monnaie.code }}
+										</a>
+									</turbo-frame>
+								</td>
+								<td>
+									{{ monnaie.nom }}
+								</td>
+								<td>
+									<div class="d-flex gap-1 d-flex justify-content-end">
+										{# Les actions sur l element de la liste #}
+										<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.monnaie.edit', {'idEntreprise': entreprise.id, 'idMonnaie':monnaie.id })}}" class="" mthod = 'POST'>
+											{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+											{# Modifier #}
+										</a>
+										<form action="{{ path('admin.monnaie.remove', {'idMonnaie':monnaie.id })}}" method='POST'>
+											<input type='hidden' name='_method' value='DELETE'>
+											<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+												{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
+												{# Supprimer #}
+											</button>
+										</form>
+										<div class="dropdown">
+											<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+												{{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
+												{# Autres #}
+											</a>
+											<ul class="dropdown-menu">
+												<li>
+													<a class="dropdown-item" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Définir comme monnaie d'affichage
+													</a>
+												</li>
+												<li>
+													<a class="dropdown-item" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Définir comme monnaie de saisie
+													</a>
+												</li>
+												<li>
+													<a class="dropdown-item" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Monaie de saisie et d'affichage
+													</a>
+												</li>
+											</ul>
+										</div>
+									</div>
+								</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				{% endif %}
+			</table>
+		</div>
+	</div>
+{% endblock %}

@@ -17,7 +17,7 @@
         </h2>
         <div id="panelsStayOpen-collapse1" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading1">
             <div class="accordion-body p-0">
-                <a href="{{ path('admin.entreprise.monnaie', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.monnaie' ? 'active' : '' }}">
+                <a href="{{ path('admin.monnaie.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.monnaie' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Monnaies</span>
                     </div>

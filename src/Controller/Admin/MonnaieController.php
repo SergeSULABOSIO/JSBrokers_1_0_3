@@ -7,11 +7,10 @@ use App\Entity\Invite;
 use App\Form\InviteType;
 use App\Entity\Utilisateur;
 use App\Event\InvitationEvent;
-use Symfony\Component\Mime\Email;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Repository\MonnaieRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,19 +20,20 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\UX\Turbo\TurboBundle;
 
-#[Route("/admin/entreprise", name: 'admin.entreprise.')]
+#[Route("/admin/monnaie", name: 'admin.monnaie.')]
 #[IsGranted('ROLE_USER')]
-class EntrepriseMonnaieController extends AbstractController
+class MonnaieController extends AbstractController
 {
     public function __construct(
         private MailerInterface $mailer,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
+        private MonnaieRepository $monnaieRepository,
     ) {}
 
-    #[Route('/{id}', name: 'monnaie', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index(Entreprise $entreprise, Request $request)
+    #[Route('/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index($idEntreprise, Request $request)
     {
         $page = $request->query->getInt("page", 1);
 
@@ -43,8 +43,8 @@ class EntrepriseMonnaieController extends AbstractController
         return $this->render('admin/monnaie/index.html.twig', [
             'pageName' => "Monnaies",
             'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            // 'monnaies' => $this->entrepriseRepository->paginateEntreprises($page),
+            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'monnaies' => $this->monnaieRepository->paginateMonnaie($idEntreprise, $page),
             'page' => $page = $request->query->getInt("page", 1),
         ]);
     }
