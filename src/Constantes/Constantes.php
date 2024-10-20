@@ -3,7 +3,6 @@ namespace App\Constantes;
 
 class Constantes
 {
-
     public const TAB_MONNAIE_MONNAIE_LOCALE = [
         'Non' => 0,
         'Oui' => 1
