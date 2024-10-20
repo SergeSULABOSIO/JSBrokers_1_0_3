@@ -70,9 +70,16 @@ class Entreprise
     #[ORM\ManyToOne(inversedBy: 'entreprises')]
     private ?Utilisateur $utilisateur = null;
 
+    /**
+     * @var Collection<int, Monnaie>
+     */
+    #[ORM\OneToMany(targetEntity: Monnaie::class, mappedBy: 'entreprise')]
+    private Collection $monnaies;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
+        $this->monnaies = new ArrayCollection();
     }
 
 
@@ -272,6 +279,36 @@ class Entreprise
     public function setUtilisateur(?Utilisateur $utilisateur): static
     {
         $this->utilisateur = $utilisateur;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Monnaie>
+     */
+    public function getMonnaies(): Collection
+    {
+        return $this->monnaies;
+    }
+
+    public function addMonnaie(Monnaie $monnaie): static
+    {
+        if (!$this->monnaies->contains($monnaie)) {
+            $this->monnaies->add($monnaie);
+            $monnaie->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeMonnaie(Monnaie $monnaie): static
+    {
+        if ($this->monnaies->removeElement($monnaie)) {
+            // set the owning side to null (unless already changed)
+            if ($monnaie->getEntreprise() === $this) {
+                $monnaie->setEntreprise(null);
+            }
+        }
 
         return $this;
     }

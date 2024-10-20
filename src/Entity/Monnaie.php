@@ -27,19 +27,13 @@ class Monnaie
     private ?string $tauxusd = null;
 
     #[ORM\Column]
-    private ?bool $islocale = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $updatedAt = null;
-
-    #[ORM\ManyToOne]
-    private ?Utilisateur $utilisateur = null;
-
-    #[ORM\Column]
     private ?int $fonction = null;
+
+    #[ORM\Column]
+    private ?bool $locale = null;
+
+    #[ORM\ManyToOne(inversedBy: 'monnaies')]
+    private ?Entreprise $entreprise = null;
 
     public function __construct()
     {
@@ -84,57 +78,9 @@ class Monnaie
         return $this;
     }
 
-    public function isIslocale(): ?bool
-    {
-        return $this->islocale;
-    }
-
-    public function setIslocale(bool $islocale): self
-    {
-        $this->islocale = $islocale;
-        
-        return $this;
-    }
-
     public function __toString()
     {
         return $this->code . " / " . $this->nom;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): self
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): self
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    public function getUtilisateur(): ?Utilisateur
-    {
-        return $this->utilisateur;
-    }
-
-    public function setUtilisateur(?Utilisateur $utilisateur): self
-    {
-        $this->utilisateur = $utilisateur;
-
-        return $this;
     }
 
     public function getFonction(): ?int
@@ -146,6 +92,30 @@ class Monnaie
     {
         $this->fonction = $fonction;
         
+        return $this;
+    }
+
+    public function isLocale(): ?bool
+    {
+        return $this->locale;
+    }
+
+    public function setLocale(bool $locale): static
+    {
+        $this->locale = $locale;
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
+
         return $this;
     }
 }
