@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Constantes\Constantes;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\MonnaieRepository;
@@ -86,6 +87,14 @@ class Monnaie
     public function getFonction(): ?int
     {
         return $this->fonction;
+    }
+
+    public function getFonctionS(): ?string
+    {
+        foreach (Constantes::TAB_MONNAIE_FONCTIONS as $nom => $indice) {
+            return $this->fonction == $indice ? $nom : "Fonction indéfinie.";
+        }
+        // return Constantes::TAB_MONNAIE_FONCTIONS[$this->fonction];
     }
 
     public function setFonction(int $fonction): self

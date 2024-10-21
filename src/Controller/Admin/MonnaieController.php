@@ -43,7 +43,8 @@ class MonnaieController extends AbstractController
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'monnaies' => $this->monnaieRepository->paginateMonnaie($idEntreprise, $page),
-            'page' => $page = $request->query->getInt("page", 1),
+            // 'nbMonnaies' => count($monaies->getItems()),
+            'page' => $page,
         ]);
     }
 

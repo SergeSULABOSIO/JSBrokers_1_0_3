@@ -2,8 +2,10 @@
 
 namespace App\DataFixtures;
 
+use App\Constantes\Constantes;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Monnaie;
 use App\Entity\Utilisateur;
 use DateTimeImmutable;
 use Doctrine\Persistence\ObjectManager;
@@ -13,7 +15,7 @@ use Faker\Factory;
 
 class AppFixtures extends Fixture implements DependentFixtureInterface
 {
-    
+
 
     public function load(ObjectManager $manager): void
     {
@@ -37,6 +39,8 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
             ->setUtilisateur($admin)
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"));
+        //On charge les monnaies par défauts
+        $this->setMonnaises($faker, $entreprise);
         $manager->persist($entreprise);
 
         //Les 6 autres entreprises
@@ -52,6 +56,8 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
                 ->setUtilisateur($admin)
                 ->setCreatedAt(new DateTimeImmutable("now"))
                 ->setUpdatedAt(new DateTimeImmutable("now"));
+            //On charge les monnaies par défauts
+            $this->setMonnaises($faker, $autreEntreprise);
             $manager->persist($autreEntreprise);
         }
 
@@ -72,5 +78,32 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         return [
             UtilisateurFixtures::class
         ];
+    }
+
+    private function setMonnaises($faker, ?Entreprise $entreprise)
+    {
+        $tabNomsMonnaies = [];
+        foreach (Constantes::TAB_MONNAIES as $nom => $code) {
+            $tabNomsMonnaies[] = $nom;
+        }
+        $monnaies = array_map(
+            fn(string $nom) => (new Monnaie())
+                ->setNom($nom),
+            $tabNomsMonnaies
+        );
+
+        foreach ($monnaies as $monnaie) {
+            $monnaie->setCode(Constantes::TAB_MONNAIES[$monnaie->getNom()]);
+            if ($monnaie->getCode() == 'USD') {
+                $monnaie->setFonction(0);
+                $monnaie->setLocale(true);
+                $monnaie->setTauxusd(1);
+            } else {
+                $monnaie->setFonction(Constantes::TAB_MONNAIE_FONCTIONS[Constantes::FONCTION_AUCUNE]);
+                $monnaie->setTauxusd($faker->randomFloat(2, 10));
+                $monnaie->setLocale(false);
+            }
+            $entreprise->addMonnaie($monnaie);
+        }
     }
 }

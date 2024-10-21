@@ -97,7 +97,7 @@ class MonnaieRepository extends ServiceEntityRepository
                 // ->setParameter('userEmail', '' . $user->getEmail() . '')
                 ->orderBy('m.id', 'DESC'),
             $page,
-            3,
+            20,
         );
     }
 

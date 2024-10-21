@@ -5,11 +5,11 @@
 {% endblock %}
 
 {% block section_utilisateur %}
-	{% include 'segments/boutons_user_dashbord.html.twig' %}
+	{% include 'segments/boutons_entreprise_dashbord.html.twig' %}
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ utilisateur.nom }}><strong>{{ pageName }}</strong>
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
 {% endblock %}
 
 {% block descriptionRubrique %}
@@ -28,7 +28,7 @@
 					{% if monnaies|length == 0 %}
 						Aucune monnaie trouvée.
 					{% else %}
-						Monnaie : {{ monnaies }} element(s).
+						Monnaie : {{ monnaies|length }} element(s).
 					{% endif %}
 					<div class="d-flex gap-1">
 						{{ knp_pagination_render(monnaies) }}
@@ -37,8 +37,8 @@
 				{% if monnaies|length != 0 %}
 					<thead class="table-light">
 						<tr>
-							<th scope="col"><div class='d-flex justify-content-start'>Code</div></th>
-							<th scope="col"><div class='d-flex justify-content-start'>Nom</div></th>
+							{# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
+							<th scope="col"><div class='d-flex justify-content-start'>Liste des monnaies</div></th>
 							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>Actions</div></th>
 						</tr>
 					</thead>
@@ -49,13 +49,14 @@
 								<td>
 									<turbo-frame id="monnaie_{{ monnaie.id }}">
 										<a class="m-2" href="{{ path('admin.monnaie.edit', {'idMonnaie':monnaie.id, 'idEntreprise': entreprise.id})}}">
-											{{ monnaie.code }}
+											{{ monnaie.nom }}
 										</a>
+										<small>{{ monnaie.getFonctionS }}</small>
 									</turbo-frame>
 								</td>
-								<td>
+								{# <td>
 									{{ monnaie.nom }}
-								</td>
+								</td> #}
 								<td>
 									<div class="d-flex gap-1 d-flex justify-content-end">
 										{# Les actions sur l element de la liste #}
@@ -63,7 +64,7 @@
 											{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
 											{# Modifier #}
 										</a>
-										<form action="{{ path('admin.monnaie.remove', {'idMonnaie':monnaie.id })}}" method='POST'>
+										<form action="{{ path('admin.monnaie.remove', {'idMonnaie':monnaie.id, 'idEntreprise': entreprise.id})}}" method='POST'>
 											<input type='hidden' name='_method' value='DELETE'>
 											<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
 												{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
