@@ -104,7 +104,7 @@ class MonnaieController extends AbstractController
     }
 
 
-    #[Route('/{idEntreprise}/{idMonnaie}', name: 'remove', requirements: ['idMonnaie' => Requirement::DIGITS], methods: ['DELETE'])]
+    #[Route('/{idEntreprise}/{idMonnaie}', name: 'remove', requirements: ['idMonnaie' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove($idEntreprise, $idMonnaie, Request $request)
     {
         /** @var Monnaie */
@@ -115,13 +115,13 @@ class MonnaieController extends AbstractController
 
         if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
             $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-            return $this->render("admin/invite/delete.html.twig", [
-                'monnaieId' => $monnaie,
+            return $this->render("admin/monnaie/delete.html.twig", [
+                'monnaieId' => $monnaie->getId(),
                 'messages' => $message,
                 'type' => "success",
             ]);
         }
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.invite.index");
+        return $this->redirectToRoute("admin.monnaie.index");
     }
 }
