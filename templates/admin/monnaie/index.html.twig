@@ -51,7 +51,15 @@
 										<a class="m-2" href="{{ path('admin.monnaie.edit', {'idMonnaie':monnaie.id, 'idEntreprise': entreprise.id})}}">
 											{{ monnaie.nom }}
 										</a>
-										<small>{{ monnaie.getFonctionS }}</small>
+										<span class="fst-italic text-body-tertiary">
+											<small>Taux en en USD: {{ monnaie.tauxusd }}</small>
+											| <small>Fonction: {{ monnaie.getFonctionS }}</small>
+											{% if monnaie.islocale == 1 %}
+												| <small>Monnaie locale</small>
+											{% else %}
+												| <small>Monnaie étrangère</small>
+											{% endif %}
+										</span>
 									</turbo-frame>
 								</td>
 								{# <td>
