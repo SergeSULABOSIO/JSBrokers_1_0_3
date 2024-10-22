@@ -3,9 +3,11 @@
 namespace App\Form;
 
 use App\Entity\Entreprise;
+use App\Entity\Monnaie;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Validator\Constraints\Image;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -17,11 +19,8 @@ class EntrepriseType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire
-    )
-    {
-        
-    }
-    
+    ) {}
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -71,7 +70,15 @@ class EntrepriseType extends AbstractType
                 'label' => "Photo de profile",
                 'required' => false,
             ])
-
+            ->add('monnaies', CollectionType::class, [
+                'entry_type' => MonnaieType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+            ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer"
