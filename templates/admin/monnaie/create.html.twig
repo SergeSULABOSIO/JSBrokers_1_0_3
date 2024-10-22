@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	En tant qu'application de gestion des finances, vous devez définir un ou plusieurs monnaies de transaction ainsi que leurs taux respectifs.
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		<p>
+			{# {{ form(form) }} #}
+			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+				<div class="card-body">
+					<p>
+						<strong>{{ utilisateur.nom }}</strong>, 
+                        <br>Vous êtes sur le point de créer une monnaie.
+                        <br><br>Assurez-vous d'abord que cette monnaie n'existe pas encore dans {{ entreprise.nom }}.
+                        <hr>
+                    </p>
+					{{ form(form) }}
+					</div>
+				</div>
+			</div>
+		</p>
+	</p>
+</div>{% endblock %}
