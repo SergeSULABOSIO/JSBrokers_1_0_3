@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Constantes\Constantes;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Monnaie;
@@ -61,8 +62,11 @@ class MonnaieController extends AbstractController
 
         /** @var Monnaie */
         $monnaie = new Monnaie();
+        //Paramètres par défaut
         $monnaie->setEntreprise($entreprise);
         $monnaie->setTauxusd(1);
+        $monnaie->setLocale(false);
+        $monnaie->setFonction(Constantes::TAB_MONNAIE_FONCTIONS[Constantes::FONCTION_AUCUNE]);
 
         $form = $this->createForm(MonnaieType::class, $monnaie);
         $form->handleRequest($request);
@@ -83,10 +87,9 @@ class MonnaieController extends AbstractController
     }
 
 
-    #[Route('/{idEntreprise}/{idMonnaie}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    #[Route('/edit/{idEntreprise}/{idMonnaie}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function edit($idEntreprise, $idMonnaie, Request $request)
     {
-        // dd($invite);
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
@@ -113,7 +116,7 @@ class MonnaieController extends AbstractController
     }
 
 
-    #[Route('/{idEntreprise}/{idMonnaie}', name: 'remove', requirements: ['idMonnaie' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    #[Route('/remove/{idEntreprise}/{idMonnaie}', name: 'remove', requirements: ['idMonnaie' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove($idEntreprise, $idMonnaie, Request $request)
     {
         /** @var Monnaie $monnaie */
