@@ -35,7 +35,7 @@ class MonnaieController extends AbstractController
         private MonnaieRepository $monnaieRepository,
     ) {}
 
-    #[Route('/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
         $page = $request->query->getInt("page", 1);
