@@ -80,7 +80,7 @@ class MonnaieController extends AbstractController
         }
         return $this->render('admin/monnaie/create.html.twig', [
             'pageName' => 'Nouveau',
-            'utilisateur' => $this->getUser(),
+            'utilisateur' => $user,
             'entreprise' => $entreprise,
             'form' => $form,
         ]);
