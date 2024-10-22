@@ -62,7 +62,8 @@ class MonnaieController extends AbstractController
         /** @var Monnaie */
         $monnaie = new Monnaie();
         $monnaie->setEntreprise($entreprise);
-        
+        $monnaie->setTauxusd(1);
+
         $form = $this->createForm(MonnaieType::class, $monnaie);
         $form->handleRequest($request);
 

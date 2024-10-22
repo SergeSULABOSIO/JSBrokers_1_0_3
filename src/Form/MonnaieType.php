@@ -36,16 +36,19 @@ class MonnaieType extends AbstractType
             ])
             ->add('tauxusd', NumberType::class, [
                 'label' => "Taux de change par rapport au dollars ($)",
+                'help' => "Si cette monnaie a le même taux que le dollar Américain (soit 1 unité de cette monnaie est égale à 1 $), alors tapez juste le chiffre '1' dans ce champ.",
                 'attr' => [
                     'placeholder' => "Taux en USD",
                 ],
             ])
             ->add('fonction', ChoiceType::class, [
                 'label' => "Fonction de la monnaie",
+                'expanded' => true,
                 'choices'  => Constantes::TAB_MONNAIE_FONCTIONS,
             ])
             ->add('locale', ChoiceType::class, [
                 'label' => "Est-elle une monnaie locale?",
+                'expanded' => true,
                 'choices'  => Constantes::TAB_MONNAIE_MONNAIE_LOCALE,
             ])
             // ->add('entreprise', EntityType::class, [
