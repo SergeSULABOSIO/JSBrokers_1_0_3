@@ -86,14 +86,15 @@ class MonnaieController extends AbstractController
         /** @var Monnaie */
         $monnaie = $this->monnaieRepository->find($idMonnaie);
 
-        $form = $this->createForm(InviteType::class, $monnaie);
+        $form = $this->createForm(MonnaieType::class, $monnaie);
         $form->handleRequest($request);
-
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($monnaie); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $monnaie->getCode() . " a été modifiée avec succès.");
-            return $this->redirectToRoute("admin.monnaie.index");
+            $this->addFlash("success", $monnaie->getNom() . " a été modifiée avec succès.");
+            return $this->redirectToRoute("admin.monnaie.index", [
+                'idEntreprise' => $idEntreprise,
+            ]);
         }
         return $this->render('admin/monnaie/edit.html.twig', [
             'pageName' => "Edition",
@@ -108,21 +109,26 @@ class MonnaieController extends AbstractController
     #[Route('/{idEntreprise}/{idMonnaie}', name: 'remove', requirements: ['idMonnaie' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove($idEntreprise, $idMonnaie, Request $request)
     {
-        /** @var Monnaie */
+        /** @var Monnaie $monnaie */
         $monnaie = $this->monnaieRepository->find($idMonnaie);
-        $message = $monnaie->getNom() . " a été supprimé avec succès.";
+        $monnaieId = $monnaie->getId();
+
+        $message = $monnaie->getNom() . " a été supprimée avec succès.";
+        
         $this->manager->remove($monnaie);
         $this->manager->flush();
 
         if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
             $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
             return $this->render("admin/monnaie/delete.html.twig", [
-                'monnaieId' => $monnaie->getId(),
+                'monnaieId' => $monnaieId,
                 'messages' => $message,
                 'type' => "success",
             ]);
         }
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.monnaie.index");
+        return $this->redirectToRoute("admin.monnaie.index", [
+            'idEntreprise' => $idEntreprise,
+        ]);
     }
 }
