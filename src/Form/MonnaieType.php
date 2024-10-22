@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Constantes\Constantes;
 use App\Entity\Monnaie;
 use App\Entity\Entreprise;
+use Doctrine\DBAL\Types\DecimalType;
 use Doctrine\DBAL\Types\FloatType;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -13,6 +14,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class MonnaieType extends AbstractType
@@ -32,7 +34,7 @@ class MonnaieType extends AbstractType
                     'placeholder' => "Code",
                 ],
             ])
-            ->add('tauxusd', FloatType::class, [
+            ->add('tauxusd', NumberType::class, [
                 'label' => "Taux de change par rapport au dollars ($)",
                 'attr' => [
                     'placeholder' => "Taux en USD",

@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Monnaie;
 use App\Form\InviteType;
@@ -49,14 +50,19 @@ class MonnaieController extends AbstractController
     }
 
 
-    #[Route('/{idEntreprise}', name: 'create')]
+    #[Route('/create/{idEntreprise}', name: 'create')]
     public function create($idEntreprise, Request $request)
     {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
         /** @var Monnaie */
         $monnaie = new Monnaie();
+        $monnaie->setEntreprise($entreprise);
+        
         $form = $this->createForm(MonnaieType::class, $monnaie);
         $form->handleRequest($request);
 
@@ -70,7 +76,7 @@ class MonnaieController extends AbstractController
         return $this->render('admin/monnaie/create.html.twig', [
             'pageName' => 'Nouveau',
             'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'entreprise' => $entreprise,
             'form' => $form,
         ]);
     }
