@@ -95,7 +95,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         foreach ($monnaies as $monnaie) {
             $monnaie->setCode(Constantes::TAB_MONNAIES[$monnaie->getNom()]);
             if ($monnaie->getCode() == 'USD') {
-                $monnaie->setFonction(0);
+                $monnaie->setFonction(Constantes::TAB_MONNAIE_FONCTIONS[Constantes::FONCTION_SAISIE_ET_AFFICHAGE]);
                 $monnaie->setLocale(true);
                 $monnaie->setTauxusd(1);
             } else {
