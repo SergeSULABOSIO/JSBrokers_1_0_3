@@ -100,6 +100,7 @@ class MonnaieController extends AbstractController
 
         $form = $this->createForm(MonnaieType::class, $monnaie);
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($monnaie); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
