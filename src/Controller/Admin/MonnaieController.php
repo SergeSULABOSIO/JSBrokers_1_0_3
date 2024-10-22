@@ -45,7 +45,6 @@ class MonnaieController extends AbstractController
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'monnaies' => $this->monnaieRepository->paginateMonnaie($idEntreprise, $page),
-            // 'nbMonnaies' => count($monaies->getItems()),
             'page' => $page,
         ]);
     }
@@ -90,6 +89,9 @@ class MonnaieController extends AbstractController
     #[Route('/edit/{idEntreprise}/{idMonnaie}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function edit($idEntreprise, $idMonnaie, Request $request)
     {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
@@ -107,10 +109,10 @@ class MonnaieController extends AbstractController
             ]);
         }
         return $this->render('admin/monnaie/edit.html.twig', [
-            'pageName' => "Edition",
+            'pageName' => "Edition de " . $monnaie->getNom(),
             'utilisateur' => $user,
             'monnaie' => $monnaie,
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'entreprise' => $entreprise,
             'form' => $form,
         ]);
     }
