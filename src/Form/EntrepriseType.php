@@ -78,6 +78,9 @@ class EntrepriseType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
+                'attr' => [
+                    'data-controller' => 'form-collection-monnaies',
+                ],
             ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
