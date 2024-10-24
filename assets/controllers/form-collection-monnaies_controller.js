@@ -1,6 +1,12 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
+
+    static values = {
+        addLabel: String,
+        deleteLabel: String
+    }
+
     connect() {
         this.index = this.element.childElementCount;
         // console.log("Nombre d'elements = " + this.index);
@@ -17,7 +23,6 @@ export default class extends Controller {
 
 
     /**
-     * 
      * @param {HTMLElement} item 
      */
     addDeleteButton = (item) => {
