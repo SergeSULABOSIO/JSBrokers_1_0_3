@@ -13,8 +13,14 @@ export default class extends Controller {
     }
 
 
+    
     addElement = (e) => {
         e.preventDefault();
         // console.log('On vient de cliquer sur le bouton "Ajouter un élement".' + e);
+        const element = document.createRange().createContextualFragment(
+            this.element.dataset['prototype'].replaceAll('__name__', this.index)
+        ).firstElementChild;
+        this.index++;
+        e.currentTarget.insertAdjacentElement("beforebegin", element);
     }
 }
