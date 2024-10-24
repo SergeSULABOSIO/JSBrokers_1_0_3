@@ -34,7 +34,7 @@ export default class extends Controller {
     }
 
     /**
-     * @param {MouseEvent} e 
+     * @param {MouseEvent} e
      */
     addElement = (e) => {
         e.preventDefault();
