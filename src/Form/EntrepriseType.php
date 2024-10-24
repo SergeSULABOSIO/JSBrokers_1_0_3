@@ -71,6 +71,7 @@ class EntrepriseType extends AbstractType
                 'required' => false,
             ])
             ->add('monnaies', CollectionType::class, [
+                'label' => "Liste des monnaies",
                 'entry_type' => MonnaieType::class,
                 'by_reference' => false,
                 'allow_add' => true,
