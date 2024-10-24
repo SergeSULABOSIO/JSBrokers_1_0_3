@@ -4,13 +4,15 @@ export default class extends Controller {
     connect() {
         this.index = this.element.childElementCount;
         // console.log("Nombre d'elements = " + this.index);
-        const btn = document.createElement("button");
-        btn.setAttribute('class', "btn btn-secondary");
-        btn.setAttribute('type', "button");
-        btn.innerText = "Ajouter un élement";
-        btn.addEventListener('click', this.addElement);
+
+        const btnAjouter = document.createElement("button");
+        btnAjouter.setAttribute('class', "btn btn-secondary");
+        btnAjouter.setAttribute('type', "button");
+        btnAjouter.innerText = "Ajouter un élement";
+
+        btnAjouter.addEventListener('click', this.addElement);
         this.element.childNodes.forEach(this.addDeleteButton);
-        this.element.append(btn);
+        this.element.append(btnAjouter);
     }
 
 
@@ -19,15 +21,16 @@ export default class extends Controller {
      * @param {HTMLElement} item 
      */
     addDeleteButton = (item) => {
-        const btn = document.createElement("button");
-        btn.setAttribute('class', "btn btn-danger");
-        btn.setAttribute('type', "button");
-        btn.innerText = "Supprimer";
-        btn.addEventListener('click', e => {
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.setAttribute('class', "btn btn-danger");
+        btnSupprimer.setAttribute('type', "button");
+        btnSupprimer.innerText = "Supprimer";
+        btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             item.remove();
         });
-        item.append(btn);
+        item.setAttribute('class', "border rounded border-secondary p-3 mb-2");
+        item.append(btnSupprimer);
     }
 
     /**
