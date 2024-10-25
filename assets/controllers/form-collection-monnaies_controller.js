@@ -18,7 +18,17 @@ export default class extends Controller {
         btnAjouter.addEventListener('click', this.addElement);
         
         this.element.childNodes.forEach(this.addDeleteButton);
-        this.element.childNodes.forEach(this.addAccordion);
+
+        //Accordeon
+        const accordion = document.createElement("div");
+        accordion.setAttribute('class', "accordion");
+        accordion.setAttribute('id', "accordionExample");
+        this.element.childNodes.forEach(element => {
+            this.addAccordion(accordion, element);
+        });
+
+
+        // this.element.childNodes.forEach(this.addAccordion);
         // this.element.childNodes.forEach(this.addDeleteButton);
         this.element.append(btnAjouter);
 
@@ -34,10 +44,7 @@ export default class extends Controller {
         
         const data = elementDeLaCollection.innerHTML;
         elementDeLaCollection.innerHTML = "";
-        //Accordeon
-        const accordion = document.createElement("div");
-        accordion.setAttribute('class', "accordion");
-        accordion.setAttribute('id', "accordionExample");
+        
         //Accordeon-item
         const accordionItem = document.createElement("div");
         accordionItem.setAttribute('class', "accordion-item");
