@@ -20,12 +20,16 @@ export default class extends Controller {
         this.element.childNodes.forEach(this.addDeleteButton);
 
         //Accordeon
-        const accordion = document.createElement("div");
-        accordion.setAttribute('class', "accordion");
-        accordion.setAttribute('id', "accordionExample");
-        this.element.childNodes.forEach(element => {
-            this.addAccordion(accordion, element);
-        });
+        // const accordion = document.createElement("div");
+        // accordion.setAttribute('class', "accordion");
+        // accordion.setAttribute('id', "accordionExample");
+        // const i = 1;
+        // this.element.childNodes.forEach(elementCollection => {
+        //     // this.addAccordion(i, accordion, elementCollection);
+        //     i++;
+        // });
+        // this.element.append(accordion);
+
 
 
         // this.element.childNodes.forEach(this.addAccordion);
@@ -38,12 +42,12 @@ export default class extends Controller {
     /**
      * @param {HTMLElement} elementDeLaCollection 
      */
-    addAccordion = (accordion, elementDeLaCollection) => {
+    addAccordion = (i, accordion, elementDeLaCollection) => {
         // elementDeLaCollection.setAttribute('class', "border rounded border-secondary p-3 mb-2");
         // this.addDeleteButton(elementDeLaCollection);
         
-        const data = elementDeLaCollection.innerHTML;
-        elementDeLaCollection.innerHTML = "";
+        // const data = elementDeLaCollection.innerHTML;
+        // elementDeLaCollection.innerHTML = "";
         
         //Accordeon-item
         const accordionItem = document.createElement("div");
@@ -68,8 +72,8 @@ export default class extends Controller {
         //Accordeon-body
         const accordionBody = document.createElement("div");
         accordionBody.setAttribute('class', "accordion-body");
-        // accordionBody.innerHTML = "<strong>Voici un petit exemple.</strong> Juste pour montrer que ça marche.";
-        accordionBody.innerHTML = data;
+        accordionBody.innerHTML = "<strong>Voici un petit exemple.</strong> Juste pour montrer que ça marche.";
+        // accordionBody.innerHTML = data;
 
         //Construction
         accordionCollapse.append(accordionBody);
@@ -81,7 +85,7 @@ export default class extends Controller {
         // this.element.append(accordion);
         
         // elementDeLaCollection.innerHTML = data;
-        elementDeLaCollection.append(accordion);
+        // elementDeLaCollection.append(accordion);
     }
 
 
