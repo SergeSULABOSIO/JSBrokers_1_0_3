@@ -81,6 +81,8 @@ class EntrepriseType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-monnaies',
+                    'data-form-collection-monnaies-add-label-value' => 'Ajouter Une Autre Monnaie',
+                    'data-form-collection-monnaies-delete-label-value' => 'Supprimer',
                 ],
             ])
             //Le bouton d'enregistrement / soumission
