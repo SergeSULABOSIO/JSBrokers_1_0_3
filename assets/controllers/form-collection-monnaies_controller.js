@@ -18,10 +18,11 @@ export default class extends Controller {
         
         //Pour chaque element de la collection
         this.element.childNodes.forEach(elementDeLaCollection => {
-            elementDeLaCollection.setAttribute('class', "border rounded border-secondary p-3 mb-2");
+            elementDeLaCollection.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
             this.addDeleteButton(elementDeLaCollection);
         });
         this.element.append(btnAjouter);
+        this.element.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-light");
     }
 
     
@@ -50,7 +51,7 @@ export default class extends Controller {
         const element = document.createRange().createContextualFragment(
             this.element.dataset['prototype'].replaceAll('__name__', this.index)
         ).firstElementChild;
-        element.setAttribute('class', "border rounded border-secondary p-3 mb-2");
+        element.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
         this.addDeleteButton(element);
         this.index++;
         e.currentTarget.insertAdjacentElement("beforebegin", element);

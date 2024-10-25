@@ -24,6 +24,7 @@ class Monnaie
     private ?string $code = null;
 
     #[Assert\NotBlank(message: "Le taux ne peut pas être vide.")]
+    #[Assert\Positive(message: "Le taux doit être une valeur positive.")]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $tauxusd = null;
 

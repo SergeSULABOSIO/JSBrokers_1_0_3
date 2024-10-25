@@ -74,6 +74,7 @@ class Entreprise
      * @var Collection<int, Monnaie>
      */
     #[ORM\OneToMany(targetEntity: Monnaie::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    #[Assert\Valid()]
     private Collection $monnaies;
 
     public function __construct()
