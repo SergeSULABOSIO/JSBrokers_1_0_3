@@ -24,7 +24,7 @@ final class EntreprisePDFMessageHandler
 
     public function __invoke(EntreprisePDFMessage $message): void
     {
-        // do something with your message
+        //Générer du code php avec Gotenberg
         $process = new Process([
             'curl',
             '--request',
@@ -41,6 +41,6 @@ final class EntreprisePDFMessageHandler
         if(!$process->isSuccessful()){
             throw new ProcessFailedException($process);
         }
-        // file_put_contents($this->path . '/' . $message->id . ".pdf", "");
+        // file_put_contents($this->path . '/' . $message->id . ".pdf", ""); //Généer du pdf avec du code php simplement
     }
 }
