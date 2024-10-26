@@ -124,6 +124,11 @@ class EntrepriseController extends AbstractController
         $messageBus->dispatch(new EntreprisePDFMessage($entreprise->getId()));
 
         $this->addFlash("success", "Salut " . $user->getNom() . ", le pdf vient d'être généré pour " . $entreprise->getNom() . ".");
-        return $this->redirectToRoute("admin.entreprise.index");
+        // return $this->redirectToRoute("admin.entreprise.index");
+        return $this->render('admin/entreprise/pdf/index.html.twig', [
+            'pageName' => "Visualisation du texte exemple pour la génération du PDF à travers un message Symfony.",
+            'utilisateur' => $user,
+            'entreprise' => $entreprise,
+        ]);
     }
 }

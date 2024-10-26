@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{pageName}}{% endblock %}
+
+{% block section_utilisateur %}{% endblock %}
+
+{%  block titreRubrique %}{{ utilisateur.nom }}><strong>{{ pageName }}</strong>{% endblock %}
+
+{% block descriptionRubrique %}{% endblock %}
+
+{% block menuLateraleGauche %}{% endblock %}
+
+{% block body %}
+	<div>
+		<p>
+			Bonjour {{ utilisateur.nom }},</br>
+			Vous êtes utilisateur dans l'entreprise {{ entreprise.nom }}.
+		</p>
+		<p>
+			Nous vous félicitons et profitons de cette oportunité pour vous souhaiter une très enrichissante expérience utilisateur sur notre système conçu par nous tous pour vous.
+		</p>
+	</div>
+{% endblock %}
