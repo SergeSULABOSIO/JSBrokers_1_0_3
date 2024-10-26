@@ -74,6 +74,9 @@
 								<a class='btn btn-outline-primary border-0 btn-sm' href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}">
 									{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
 								</a>
+								<a class='btn btn-outline-primary border-0 btn-sm' href="{{ path('admin.entreprise.pdf', {'id':entreprise.id })}}">
+									{{ ux_icon('bi:file-pdf-fill', {height: '18px', width: '18px'}) }}
+								</a>
 								<form action="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" method='POST'>
 									<input type='hidden' name='_method' value='DELETE'>
 									<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>

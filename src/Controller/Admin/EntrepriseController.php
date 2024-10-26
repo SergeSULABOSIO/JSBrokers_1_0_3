@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Form\EntrepriseType;
+use App\Message\EntreprisePDFMessage;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,6 +17,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[Route("/admin/entreprise", name: 'admin.entreprise.')]
 #[IsGranted('ROLE_USER')]
@@ -110,6 +112,18 @@ class EntrepriseController extends AbstractController
         $this->manager->remove($entreprise);
         $this->manager->flush();
         $this->addFlash("success", $entreprise->getNom() . " a été supprimée avec succès.");
+        return $this->redirectToRoute("admin.entreprise.index");
+    }
+
+    #[Route('/pdf/{id}', name: 'pdf', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function pdf(Entreprise $entreprise, MessageBusInterface $messageBus)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        $messageBus->dispatch(new EntreprisePDFMessage($entreprise->getId()));
+
+        $this->addFlash("success", "Salut " . $user->getNom() . ", le pdf vient d'être généré pour " . $entreprise->getNom() . ".");
         return $this->redirectToRoute("admin.entreprise.index");
     }
 }
