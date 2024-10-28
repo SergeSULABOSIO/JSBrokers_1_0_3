@@ -17,21 +17,21 @@ class DemandeContactType extends AbstractType
     {
         $builder
             ->add('name', TextType::class, [
-                'label' => t("ContactForm.name"),
+                'label' => "ContactForm.name",
                 'empty_data' => ''
             ])
             ->add('email', EmailType::class, [
-                'label' => t("ContactForm.email"),
+                'label' => "ContactForm.email",
                 'empty_data' => ''
             ])
             ->add('message', TextareaType::class, [
-                'label' => t("ContactForm.message"),
+                'label' => "ContactForm.message",
                 'empty_data' => ''
             ])
             
             //Le bouton d'enregistrement / soumission
             ->add('envoyer', SubmitType::class, [
-                'label' => t("ContactForm.send")
+                'label' => "ContactForm.send"
             ])
         ;
     }
