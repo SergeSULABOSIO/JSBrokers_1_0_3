@@ -12,9 +12,9 @@
 			<div class="card-body">
 				<p>
 					{% if user %}
-						{{ "contact_email_laisser_message" | trans({':userName': user.nom}) }}
+						{{ "contact_email_laisser_message" | trans({':userName': user.nom}) | raw }}
 					{% else %}
-						{{ "contact_email_laisser_message" | trans({':userName': 'visiteur'}) }}
+						{{ "contact_email_laisser_message" | trans({':userName': 'visiteur'}) | raw }}
 					{% endif %}
 				</p>
 				{{ form_start(form) }}
