@@ -59,6 +59,9 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Entreprise::class, mappedBy: 'utilisateur')]
     private Collection $entreprises;
 
+    #[ORM\Column(length: 255, options:['default' => "fr"])]
+    private string $locale = "fr";
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -244,6 +247,18 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
                 $entreprise->setUtilisateur(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getLocale(): ?string
+    {
+        return $this->locale;
+    }
+
+    public function setLocale(string $locale): static
+    {
+        $this->locale = $locale;
 
         return $this;
     }

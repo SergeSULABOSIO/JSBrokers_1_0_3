@@ -29,6 +29,7 @@ class UtilisateurFixtures extends Fixture
             ->setRoles(["ROLE_ADMIN"])
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"))
+            ->setLocale("fr")
             ->setVerified(true)
             ->setPassword($this->userPasswordHasher->hashPassword($admin, "admin"))
             ->setEmail("admin@js-brokers.com");
@@ -40,6 +41,7 @@ class UtilisateurFixtures extends Fixture
             ->setRoles(["ROLE_ADMIN"])
             ->setCreatedAt(new DateTimeImmutable("now"))
             ->setUpdatedAt(new DateTimeImmutable("now"))
+            ->setLocale("en")
             ->setVerified(true)
             ->setPassword($this->userPasswordHasher->hashPassword($autreUser, "user"))
             ->setEmail("user@js-brokers.com");
