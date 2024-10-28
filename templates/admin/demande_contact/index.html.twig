@@ -6,9 +6,12 @@
 
 {% block body %}
 	<div class="container">
-		<h1>{{ pageName }}</h1>
+		<h2>{{ pageName }}</h2>
 		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 			<div class="card-body">
+				<p>
+					{% trans %}contact_email_laisser_message{% endtrans %}
+				</p>
 				{{ form_start(form) }}
 				<div class='row'>
 					<div class='col-sm'>{{ form_row(form.name) }}</div>

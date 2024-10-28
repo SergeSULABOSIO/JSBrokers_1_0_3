@@ -18,11 +18,13 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route("/admin/demande_contact", name: 'admin.demande.contact.')]
 class DemandeContactController extends AbstractController
 {
     public function __construct(
+        private TranslatorInterface $translator,
         private UrlGeneratorInterface $urlGenerator,
         private MailerInterface $mailer,
         private EntityManagerInterface $manager,
@@ -41,15 +43,15 @@ class DemandeContactController extends AbstractController
             try {
                 //Lancer un évènement
                 $dispatcher->dispatch(new DemandeContactEvent($data));
-                $this->addFlash("success", "L'email a bien été envoyé. Nous vous reviendrons au plus vite.");
+                $this->addFlash("success", $this->translator->trans("contact_email_sent_ok"));
             } catch (\Throwable $th) {
                 //throw $th;
-                $this->addFlash("danger", "Echec d'envoie de l'email.");
+                $this->addFlash("danger", $this->translator->trans("contact_email_sent_error"));
             }
             return $this->redirectToRoute('admin.demande.contact.index');
         }
         return $this->render('admin/demande_contact/index.html.twig', [
-            'pageName' => 'Formulaire de contact',
+            'pageName' => $this->translator->trans("contact_email_title"),
             'form' => $form,
         ]);
     }
