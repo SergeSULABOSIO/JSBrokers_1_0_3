@@ -7,10 +7,15 @@
 {% block body %}
 	<div class="container">
 		<h2>{{ pageName }}</h2>
+		
 		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 			<div class="card-body">
 				<p>
-					{% trans %}contact_email_laisser_message{% endtrans %}
+					{% if user %}
+						{{ "contact_email_laisser_message" | trans({':userName': user.nom}) }}
+					{% else %}
+						{{ "contact_email_laisser_message" | trans({':userName': 'visiteur'}) }}
+					{% endif %}
 				</p>
 				{{ form_start(form) }}
 				<div class='row'>

@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 
 use App\DTO\DemandeContactDTO;
+use App\Entity\Utilisateur;
 use App\Form\DemandeContactType;
 use Symfony\Component\Mime\Email;
 use App\Event\DemandeContactEvent;
@@ -35,6 +36,9 @@ class DemandeContactController extends AbstractController
     #[Route(name: 'index')]
     public function index(Request $request, EventDispatcherInterface $dispatcher): Response
     {
+        /** @var Utilisateur */
+        $user = $this->getUser();
+
         /** @var DemandeContactDTO $data */
         $data = new DemandeContactDTO();
         $form = $this->createForm(DemandeContactType::class, $data);
@@ -52,6 +56,7 @@ class DemandeContactController extends AbstractController
         }
         return $this->render('admin/demande_contact/index.html.twig', [
             'pageName' => $this->translator->trans("contact_email_title"),
+            'user' => $user,
             'form' => $form,
         ]);
     }
