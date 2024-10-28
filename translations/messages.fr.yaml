@@ -1,9 +1,10 @@
-ContactForm:
-  name: Votre nom complet
-  email: Votre adresse mail
-  message: Votre message
-  send: Envoyer l'email
-contact_email_laisser_message: Cher visiteur, </br>Merci de nous laisser un message à travers ce formulaire et notre équipe vous reviendra dans le plus bref délai.
-contact_email_sent_ok: L'email a bien été envoyé. Nous vous reviendrons au plus vite.
-contact_email_sent_error: Echec d'envoie de l'email. Merci de réessyer ou vérifier si vous avez la connexion Internet.
-contact_email_title: Formulaire de contact.
+vich_uploader.form_label.delete_confirm: 'Supprimer?'
+vich_uploader.link.download: Télécharger
+ContactForm.name: 'Votre nom complet'
+ContactForm.email: 'Votre adresse mail'
+ContactForm.message: 'Votre message'
+ContactForm.send: "Envoyer l'email"
+contact_email_laisser_message: 'Cher visiteur, </br>Merci de nous laisser un message à travers ce formulaire et notre équipe vous reviendra dans le plus bref délai.'
+contact_email_sent_ok: "L'email a bien été envoyé. Nous vous reviendrons au plus vite."
+contact_email_sent_error: "Echec d'envoie de l'email. Merci de réessyer ou vérifier si vous avez la connexion Internet."
+contact_email_title: 'Formulaire de contact.'
