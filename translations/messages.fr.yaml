@@ -1,0 +1,5 @@
+ContactForm:
+  name: Votre nom complet
+  email: Votre adresse mail
+  message: Votre message
+  send: Envoyer le message
