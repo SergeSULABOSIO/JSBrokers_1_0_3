@@ -8,3 +8,5 @@ contact_email_laisser_message: "Cher <strong>:userName</strong>, </br>Merci de n
 contact_email_sent_ok: "L'email a bien été envoyé. Nous vous reviendrons au plus vite."
 contact_email_sent_error: "Echec d'envoie de l'email. Merci de réessyer ou vérifier si vous avez la connexion Internet."
 contact_email_title: "Formulaire de contact"
+base_welcome: 'Bienvenue!'
+base_tutoriels: 'Tutoriels'
