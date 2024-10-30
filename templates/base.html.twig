@@ -35,10 +35,10 @@
 							<a class="nav-link" href="#">{{ "base_tutoriels" | trans }}</a>
 						</li>
 						<li class="nav-item">
-							<a class="nav-link" href="#">Tarif</a>
+							<a class="nav-link" href="#">{{ "base_tarif" | trans }}</a>
 						</li>
 						<li class="nav-item">
-							<a class="nav-link" href="{{ path('admin.demande.contact.index')}}">Nous contacter</a>
+							<a class="nav-link" href="{{ path('admin.demande.contact.index')}}">{{ "base_nous_contacter" | trans }}</a>
 						</li>
 						<li class="nav-item dropdown">
 							<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -53,7 +53,7 @@
 										{% if app.user %}
 											Mon espace
 										{% else %}
-										 	Connexion
+										 	Connexion à l'espace
 										{% endif %}
 									</a>
 									{# <a class="dropdown-item" href="{{ path('app_user_login')}}">Se connecter à mon compte</a> #}
