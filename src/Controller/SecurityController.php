@@ -5,17 +5,26 @@ namespace App\Controller;
 use App\Entity\Utilisateur;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class SecurityController extends AbstractController
 {
+
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {}
+
     #[Route(path: '/', name: 'app_index')]
     public function index(): Response
     {
-        $this->addFlash("success", "Bienvenue chez JS Broker!");
+        // if (!$this->getUser()) {
+        //     $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
+        //     $this->addFlash("success", $welcome_message);
+        // }
         return $this->render('home/index.html.twig', [
-            'pageName' => 'Home',
+            'pageName' => $this->translator->trans("security_home"),
         ]);
     }
 
