@@ -45,8 +45,10 @@
 								<li>
 									<a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
 										{% if app.user %}
+											{{ ux_icon('material-symbols:settings', {height: '18px', width: '18px'}) }}
 											{{ "base_my_account_parameters" | trans }}
 										{% else %}
+											{{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
 											{{ "base_new_account" | trans }}
 										{% endif %}
 									</a>
@@ -54,20 +56,24 @@
 								<li>
 									<a class="dropdown-item" href="{{ path('app_login')}}">
 										{% if app.user %}
+											{{ ux_icon('streamline:store-computer', {height: '18px', width: '18px'}) }}
 											{{ "base_mon_espace" | trans }}
 										{% else %}
+											{{ ux_icon('simple-icons:simplelogin', {height: '18px', width: '18px'}) }}
 											{{ "base_connexion" | trans }}
 										{% endif %}
 									</a>
 								</li>
 								<li>
 									<a class="dropdown-item" href="#">
+										{{ ux_icon('clarity:license-solid', {height: '18px', width: '18px'}) }}
 										{{ "base_ma_licence" | trans }}
 									</a>
 								</li>
 								<li><hr class="dropdown-divider"></li>
 								<li>
 									<a class="dropdown-item" href="{{ path('admin.demande.contact.index')}}">
+										{{ ux_icon('grommet-icons:contact', {height: '18px', width: '18px'}) }}
 										{{ "base_nous_contacter" | trans }}
 									</a>
 								</li>
@@ -77,7 +83,10 @@
 				</div>
 				{% block section_utilisateur %}
 					{% if app.user %}
-						<strong class='m-2 text-secondary'> {{ app.user.nom }} </strong>
+						<span class="btn border-0 btn-outline-secondary">
+							{{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }}
+							<strong class='m-1'> {{ app.user.nom }} </strong>
+						</span>
 						{{ include('./segments/boutons_user_dashbord.html.twig') }}
 					{% endif %}				
 				{% endblock %}
