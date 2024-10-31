@@ -83,10 +83,6 @@
 				</div>
 				{% block section_utilisateur %}
 					{% if app.user %}
-						<span class="btn border-0 btn-outline-secondary">
-							{{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }}
-							<strong class='m-1'> {{ app.user.nom }} </strong>
-						</span>
 						{{ include('./segments/boutons_user_dashbord.html.twig') }}
 					{% endif %}				
 				{% endblock %}

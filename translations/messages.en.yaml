@@ -19,3 +19,7 @@ base_connexion: 'Login'
 base_ma_licence: 'User License'
 base_base_de_page: "JS Brokers. Your performance is our priority."
 base_my_account_parameters: "My Parameters"
+boutons_user_parametres: "My Parameters"
+boutons_user_logout: "Log out"
+boutons_user_new_company: "New Company"
+boutons_user_new_guest: "New Guest"
