@@ -37,8 +37,25 @@
       <div class="col-4">
         {# Marketing & CRM #}
         <p>
-          <h5 class=""><strong>{{ ux_icon('emojione-v1:key', {height: '20px', width: '20px'}) }} {{ "security_fitures_marketing_crm" | trans }}</strong></h5>
-          <h6 class="text-secondary">{{ "security_fitures_marketing_crm_description" | trans | raw}}</h6>
+          <h5 class="">
+            <strong>
+              {{ ux_icon('emojione-v1:key', {height: '20px', width: '20px'}) }} 
+              {{ "security_fitures_marketing_crm" | trans }}
+            </strong>
+          </h5>
+          <h6 class="text-secondary">
+            {{ "security_fitures_marketing_crm_description" | trans | raw}}
+          </h6>
+          <span class="text-secondary">
+            To achieve this we'll help you manage:
+            {# {{ "security_fitures_marketing_crm_description" | trans | raw}} #}
+            <ul>
+              <li>Tasks: actions that need to be taken</li>
+              <li>Feedbcks: minutes of interaction / action</li>
+              <li>Prospects: potential client or lead</li>
+              <li>Daily action plan: ordered tasks per user</li>
+            </ul>
+          </span>
         </p>
         {# Marketing & CRM #}
         <p>
