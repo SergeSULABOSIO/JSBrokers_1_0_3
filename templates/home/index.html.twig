@@ -13,15 +13,15 @@
   </p>
   <p class="text-center m-5">
       {% if app.user %}
-        <a href="{{ path('app_login')}}" type="button" class="btn btn-primary p-3">
+        <a href="{{ path('app_login')}}" type="button" class="btn btn-primary p-3 shadow">
           <strong>{{ "security_my_work_space" | trans }}</strong>
         </a>
       {% else %}
-        <a href="{{ path('app_register', {idUtilisateur:-1})}}" type="button" class="btn btn-primary p-3">
+        <a href="{{ path('app_register', {idUtilisateur:-1})}}" type="button" class="btn btn-primary p-3 shadow">
           <strong>{{ "security_new_account" | trans }}</strong>
         </a>
       {% endif %}
-      <a href="#" type="button" class="btn btn-outline-secondary p-3">
+      <a href="#" type="button" class="btn btn-outline-secondary p-3 shadow">
         {# {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }} #}
         <strong>{{ "security_tarif" | trans }}</strong>
       </a>
@@ -39,7 +39,7 @@
         <p>
           <h5 class="">
             <strong>
-              {{ ux_icon('emojione-v1:key', {height: '20px', width: '20px'}) }} 
+              {{ ux_icon('nimbus:marketing', {height: '20px', width: '20px'}) }} 
               {{ "security_fitures_marketing_crm" | trans }}
             </strong>
           </h5>
@@ -47,13 +47,12 @@
             {{ "security_fitures_marketing_crm_description" | trans | raw}}
           </h6>
           <span class="text-secondary">
-            To achieve this we'll help you manage:
-            {# {{ "security_fitures_marketing_crm_description" | trans | raw}} #}
+            {{ "security_fitures_to_achieve_this" | trans }}
             <ul>
-              <li>Tasks: actions that need to be taken</li>
-              <li>Feedbcks: minutes of interaction / action</li>
-              <li>Prospects: potential client or lead</li>
-              <li>Daily action plan: ordered tasks per user</li>
+              <li>{{ "security_fitures_crm_task" | trans }}</li>
+              <li>{{ "security_fitures_crm_feedback" | trans }}</li>
+              <li>{{ "security_fitures_crm_prospect" | trans }}</li>
+              <li>{{ "security_fitures_crm_action_plan" | trans }}</li>
             </ul>
           </span>
         </p>
