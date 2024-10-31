@@ -10,7 +10,7 @@ contact_email_sent_error: "Echec d'envoie de l'email. Merci de réessyer ou vér
 contact_email_title: "Formulaire de contact"
 base_welcome: 'Bienvenue!'
 base_tutoriels: 'Tutoriels'
-base_tarif: 'Tarif'
+base_tarif: 'Plan Tarifaire'
 base_nous_contacter: 'Nous contacter'
 base_actions: 'Actions'
 base_new_account: 'Créer un compte'

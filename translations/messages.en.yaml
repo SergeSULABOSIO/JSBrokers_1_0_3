@@ -10,7 +10,7 @@ contact_email_sent_error: 'Failed to send email. Please try again or check your 
 contact_email_title: 'Contact request form'
 base_welcome: 'Welcome!'
 base_tutoriels: 'Tutorials'
-base_tarif: 'Tarif'
+base_tarif: 'Pricing PLan'
 base_nous_contacter: 'Contact Us Now'
 base_actions: 'Actions'
 base_new_account: 'New Account'
