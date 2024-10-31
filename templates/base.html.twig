@@ -37,34 +37,40 @@
 						<li class="nav-item">
 							<a class="nav-link" href="#">{{ "base_tarif" | trans }}</a>
 						</li>
-						<li class="nav-item">
-							<a class="nav-link" href="{{ path('admin.demande.contact.index')}}">{{ "base_nous_contacter" | trans }}</a>
-						</li>
 						<li class="nav-item dropdown">
 							<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-								Que voulez-vous faire?
+								{{ "base_actions" | trans }}
 							</a>
 							<ul class="dropdown-menu">
 								<li>
-									<a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">Créer un compte</a>
+									<a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
+										{% if app.user %}
+											{{ "base_my_account_parameters" | trans }}
+										{% else %}
+											{{ "base_new_account" | trans }}
+										{% endif %}
+									</a>
 								</li>
 								<li>
 									<a class="dropdown-item" href="{{ path('app_login')}}">
 										{% if app.user %}
-											Mon espace
+											{{ "base_mon_espace" | trans }}
 										{% else %}
-										 	Connexion à l'espace
+											{{ "base_connexion" | trans }}
 										{% endif %}
 									</a>
-									{# <a class="dropdown-item" href="{{ path('app_user_login')}}">Se connecter à mon compte</a> #}
 								</li>
 								<li>
-									<a class="dropdown-item" href="#">Payer ma licence</a>
+									<a class="dropdown-item" href="#">
+										{{ "base_ma_licence" | trans }}
+									</a>
 								</li>
-								{# <li><hr class="dropdown-divider"></li> #}
-								{# <li>
-									<a class="dropdown-item" href="#">Devenir partenaire</a>
-								</li> #}
+								<li><hr class="dropdown-divider"></li>
+								<li>
+									<a class="dropdown-item" href="{{ path('admin.demande.contact.index')}}">
+										{{ "base_nous_contacter" | trans }}
+									</a>
+								</li>
 							</ul>
 						</li>
 					</ul>
@@ -113,7 +119,7 @@
 			{# bas de la page #}
 			<div class="row bottom p-3">
 				<div class="col text-center">
-					Bas de la page
+					{{ "base_base_de_page" | trans }}
 				</div>
 			</div>
 		{% endblock %}

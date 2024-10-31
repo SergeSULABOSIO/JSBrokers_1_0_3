@@ -10,3 +10,12 @@ contact_email_sent_error: 'Failed to send email. Please try again or check your 
 contact_email_title: 'Contact request form'
 base_welcome: 'Welcome!'
 base_tutoriels: 'Tutorials'
+base_tarif: 'Tarif'
+base_nous_contacter: 'Contact Us Now'
+base_actions: 'Actions'
+base_new_account: 'New Account'
+base_mon_espace: 'My Work Space'
+base_connexion: 'Login'
+base_ma_licence: 'User License'
+base_base_de_page: "JS Brokers. Your performance is our priority."
+base_my_account_parameters: "My Parameters"

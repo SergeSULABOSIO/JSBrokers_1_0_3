@@ -10,3 +10,12 @@ contact_email_sent_error: "Echec d'envoie de l'email. Merci de réessyer ou vér
 contact_email_title: "Formulaire de contact"
 base_welcome: 'Bienvenue!'
 base_tutoriels: 'Tutoriels'
+base_tarif: 'Tarif'
+base_nous_contacter: 'Nous contacter'
+base_actions: 'Actions'
+base_new_account: 'Créer un compte'
+base_mon_espace: 'Mon espace'
+base_connexion: 'Connexion'
+base_ma_licence: 'Licence'
+base_base_de_page: "JS Brokers. Votre performance est notre priorité."
+base_my_account_parameters: "Mes Paramètres"
