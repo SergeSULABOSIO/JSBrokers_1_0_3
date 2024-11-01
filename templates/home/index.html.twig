@@ -147,6 +147,7 @@
               <li>{{ "security_fitures_finance_bank_accounts" | trans }}</li>
               <li>{{ "security_fitures_finance_provider" | trans }}</li>
               <li>{{ "security_fitures_finance_brokerage_collection" | trans }}</li>
+              <li>{{ "security_fitures_finance_pops" | trans }}</li>
             </ul>
           </span>
         </p>
@@ -154,6 +155,40 @@
       </div>
       <div class="col-6">
 				<img class="rounded shadow" src="{{ asset('images/fitures/finances.jpg') }}" alt="" width="490px" height="430px">
+      </div>
+    </div>
+
+    {# Ligne 4 #}
+    <div class="row justify-content-md-center bg-white bg-gradient rounded m-3 p-3">
+      <div class="col-5">
+        {# Reporting & Dashboard #}
+        <p>
+          <h5 class="">
+            <strong>
+              {{ ux_icon('mdi:report-bar', {height: '20px', width: '20px'}) }} 
+              {{ "security_fitures_reporting" | trans }}
+            </strong>
+          </h5>
+          <h6 class="text-secondary">
+            {{ "security_fitures_reporting_description" | trans | raw}}
+          </h6>
+          <span class="text-secondary">
+            {{ "security_fitures_to_achieve_this" | trans }}
+            <ul>
+              <li>{{ "security_fitures_reporting_co_brokerage_revenue" | trans }}</li>
+              <li>{{ "security_fitures_reporting_own_revenue" | trans }}</li>
+              <li>{{ "security_fitures_reporting_portfolio" | trans }}</li>
+              <li>{{ "security_fitures_reporting_claims" | trans }}</li>
+              <li>{{ "security_fitures_reporting_renewals" | trans }}</li>
+              <li>{{ "security_fitures_reporting_marketing_crm" | trans }}</li>
+              <li>{{ "security_fitures_reporting_documents_management" | trans }}</li>
+            </ul>
+          </span>
+        </p>
+
+      </div>
+      <div class="col-6">
+				<img class="rounded shadow" src="{{ asset('images/fitures/reporting.jpg') }}" alt="" width="490px" height="330px">
       </div>
     </div>
 </div>
