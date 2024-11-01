@@ -13,11 +13,11 @@
   </p>
   <p class="text-center m-5">
       {% if app.user %}
-        <a href="{{ path('app_login')}}" type="button" class="btn btn-primary p-3 shadow">
+        <a href="{{ path('app_login')}}" type="button" class="btn btn-secondary p-3 shadow">
           <strong>{{ "security_my_work_space" | trans }}</strong>
         </a>
       {% else %}
-        <a href="{{ path('app_register', {idUtilisateur:-1})}}" type="button" class="btn btn-primary p-3 shadow">
+        <a href="{{ path('app_register', {idUtilisateur:-1})}}" type="button" class="btn btn-secondary p-3 shadow">
           <strong>{{ "security_new_account" | trans }}</strong>
         </a>
       {% endif %}
@@ -86,7 +86,7 @@
         </p>
       </div>
       <div class="col-6">
-				<img class="rounded shadow" src="{{ asset('images/fitures/marketing_crm.jpg') }}" alt="" width="490px" height="550px">
+				<img class="rounded shadow" src="{{ asset('images/fitures/marketing_crm.jpg') }}" alt="" width="490px" height="530px">
       </div>
     </div>
 
@@ -122,43 +122,21 @@
       </div>
     </div>
 
-    {# Ligne suivante #}
-    <div class="row justify-content-md-center">
+    {# Ligne 3 #}
+    <div class="row justify-content-md-center bg-secondary bg-gradient rounded m-3 p-3">
       <div class="col-5">
-        {# Claims #}
-        <p>
-          <h5 class="">
-            <strong>
-              {{ ux_icon('hugeicons:accident', {height: '20px', width: '20px'}) }} 
-              {{ "security_fitures_claims" | trans }}
-            </strong>
-          </h5>
-          <h6 class="text-secondary">
-            {{ "security_fitures_claims_description" | trans | raw}}
-          </h6>
-          <span class="text-secondary">
-            {{ "security_fitures_to_achieve_this" | trans }}
-            <ul>
-              <li>{{ "security_fitures_claims_victimes" | trans }}</li>
-              <li>{{ "security_fitures_claims_assessors" | trans }}</li>
-              <li>{{ "security_fitures_claims_settlements" | trans }}</li>
-              <li>{{ "security_fitures_claims_claims_registry" | trans }}</li>
-            </ul>
-          </span>
-        </p>
-
         {# Finance #}
         <p>
           <h5 class="">
-            <strong>
+            <strong class="text-light">
               {{ ux_icon('carbon:finance', {height: '20px', width: '20px'}) }} 
               {{ "security_fitures_finance" | trans }}
             </strong>
           </h5>
-          <h6 class="text-secondary">
+          <h6 class="text-light">
             {{ "security_fitures_finance_description" | trans | raw}}
           </h6>
-          <span class="text-secondary">
+          <span class="text-light">
             {{ "security_fitures_to_achieve_this" | trans }}
             <ul>
               <li>{{ "security_fitures_finance_currencies" | trans }}</li>
@@ -168,13 +146,14 @@
               <li>{{ "security_fitures_finance_paiments" | trans }}</li>
               <li>{{ "security_fitures_finance_bank_accounts" | trans }}</li>
               <li>{{ "security_fitures_finance_provider" | trans }}</li>
+              <li>{{ "security_fitures_finance_brokerage_collection" | trans }}</li>
             </ul>
           </span>
         </p>
-        
+      
       </div>
       <div class="col-6">
-				<img class="rounded shadow" src="{{ asset('images/fitures/claims.jpg') }}" alt="" width="480px" height="530px">
+				<img class="rounded shadow" src="{{ asset('images/fitures/finances.jpg') }}" alt="" width="490px" height="430px">
       </div>
     </div>
 </div>
