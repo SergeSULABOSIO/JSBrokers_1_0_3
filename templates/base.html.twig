@@ -35,9 +35,11 @@
 						<li class="nav-item">
 							<a class="nav-link" href="#">{{ "base_tutoriels" | trans }}</a>
 						</li>
-						<li class="nav-item">
-							<a class="nav-link" href="#">{{ "base_tarif" | trans }}</a>
-						</li>
+						{% if app.current_route starts with 'app_index' %}
+							<li class="nav-item">
+								<a class="nav-link" href="#pricing_plan">{{ "base_tarif" | trans }}</a>
+							</li>
+						{% endif %}
 						<li class="nav-item dropdown">
 							<a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 								{{ "base_actions" | trans }}

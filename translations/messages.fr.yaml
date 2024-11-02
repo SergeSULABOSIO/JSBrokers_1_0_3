@@ -78,3 +78,5 @@ security_fitures_reporting_marketing_crm: "Vos process et efforts marketings du 
 security_fitures_reporting_documents_management: "Vos documents."
 security_fitures_reporting_tax_amounts: "Vos taxes et frais de régulation."
 security_fitures_reporting_figures_for_market_authority: "Les statistiques à déclarer auprès de l'autorité de regulatoin (prudentiels)."
+security_pricing_plan: "Tarif"
+security_pricing_plan_description: "Pour commencer, JS Broker est <strong>gratuit</strong>, </br>mais si la version gratuite ne vous convient pas, </br>vous pouvez choisir le paquet payant qui vous convient le mieux."

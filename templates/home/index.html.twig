@@ -21,13 +21,14 @@
           <strong>{{ "security_new_account" | trans }}</strong>
         </a>
       {% endif %}
-      <a href="#" type="button" class="btn btn-outline-secondary p-3 shadow">
+      <a href="#pricing_plan" type="button" class="btn btn-outline-secondary p-3 shadow">
         {# {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }} #}
         <strong>{{ "security_tarif" | trans }}</strong>
       </a>
   </p>
   </br>
   </br>
+  {# Titre : Key features #}
   <p class="text-center m-5">
       <h1 class="text-center"><strong>{{ "security_some_key_fitures" | trans }}</strong></h1>
       <h4 class="text-center text-secondary">{{ "security_some_key_fitures_description" | trans | raw}}</h4>
@@ -196,7 +197,17 @@
 				<img class="rounded shadow" src="{{ asset('images/fitures/reporting.jpg') }}" alt="" width="490px" height="430px">
       </div>
     </div>
-</div>
+  </div>
+  </br>
+  </br>
+  </br>
+  {# Titre : Pricing Plan #}
+  <div class="">
+      <p class="text-center m-5" id="pricing_plan">
+        <h1 class="text-center"><strong>{{ "security_pricing_plan" | trans }}</strong></h1>
+        <h4 class="text-center text-secondary">{{ "security_pricing_plan_description" | trans | raw}}</h4>
+      </p>
+  </div>
 {% endblock %}
 
 
