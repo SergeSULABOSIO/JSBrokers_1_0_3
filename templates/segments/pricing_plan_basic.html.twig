@@ -1,15 +1,15 @@
 <div class="card h-100 shadow">
 {# <img src="..." class="card-img-top" alt="..."> #}
 <div class="card-header bg-secondary">
-    <h5 class="card-title text-center text-light">BASIC</h5>
+    <h5 class="card-title text-center text-light">{{ "security_pricing_basic" | trans }}</h5>
 </div>
 <div class="card-body">
-    <h1 class="card-title text-center">Gratuit</h1>
+    <h1 class="card-title text-center">{{ "security_pricing_basic_price" | trans }}</h1>
     <hr>
     <p class="card-text">
     <blockquote class="blockquote mb-0 text-center">
-        <p>Paquet pour débutant.</p>
-        <footer class="blockquote-footer">Vous êtes un individu, vous travaillez seul sans collaborateur et n'effectuez pas beaucoup d'opérations.</footer>
+        <p>{{ "security_pricing_basic_mode" | trans }}</p>
+        <footer class="blockquote-footer">{{ "security_pricing_basic_profil" | trans }}</footer>
     </blockquote>
     </p>
     <hr>
@@ -17,35 +17,44 @@
     <div class="list-group list-group-flush">
         <a class="list-group-item list-group-item-action text-danger">
             {{ ux_icon('healthicons:no', {height: '20px', width: '20px'}) }}
-            Pas d'assistance technique
+            {{ "security_pricing_basic_option_assistance" | trans }}
         </a>
         <a class="list-group-item list-group-item-action text-danger">
             {{ ux_icon('healthicons:no', {height: '20px', width: '20px'}) }}
-            Ne peut pas inviter d'utilisateurs
+            {{ "security_pricing_basic_option_invite" | trans }}
         </a>
         <a class="list-group-item list-group-item-action text-danger">
             {{ ux_icon('healthicons:no', {height: '20px', width: '20px'}) }}
-            Pas d'importation ou d'exportation
+            {{ "security_pricing_basic_option_donnees" | trans }}
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Volume des données <strong>[200 max]</strong>
+            {{ "security_pricing_basic_option_volume" | trans }}
+            <strong class="text-dark">
+                [{{ "security_pricing_basic_option_volume_value" | trans }}]
+            </strong>
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Nombre d'entreprises <strong class="text-dark">[Une seule]</strong>
+            {{ "security_pricing_basic_option_entreprise" | trans }}
+            <strong class="text-dark">
+                [{{ "security_pricing_basic_option_entreprise_value" | trans }}]
+            </strong>
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Accès au tableau de bord
+            {{ "security_pricing_basic_option_dashboard" | trans }}
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Envoie d'emails <strong class="text-dark">[Illimité]</strong>
+            {{ "security_pricing_basic_option_email" | trans }}
+            <strong class="text-dark">
+                [{{ "security_pricing_basic_option_email_value" | trans }}]
+            </strong>
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Accès à toutes les autres fonctions
+            {{ "security_pricing_basic_option_fonctions" | trans }}
         </a>
     </div>
     </p>
