@@ -202,14 +202,8 @@
   </br>
   </br>
   {# Titre : Pricing Plan #}
-  <div class="">
-      <p class="text-center m-5" id="pricing_plan">
-        <h1 class="text-center"><strong>{{ "security_pricing_plan" | trans }}</strong></h1>
-        <h4 class="text-center text-secondary">{{ "security_pricing_plan_description" | trans | raw}}</h4>
-      </p>
-  </div>
+  {% include 'segments/pricing_plan.html.twig' %}
 {% endblock %}
-
 
 {% block body %}
 {% endblock %}
