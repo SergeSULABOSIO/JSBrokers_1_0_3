@@ -1,15 +1,23 @@
 <div class="card h-100 shadow">
 {# <img src="..." class="card-img-top" alt="..."> #}
 <div class="card-header bg-secondary">
-    <h5 class="card-title text-center text-light">INTERMEDIARE</h5>
+    <h5 class="card-title text-center text-light">
+        {{ "security_pricing_intermediaire" | trans }}
+    </h5>
 </div>
 <div class="card-body">
-    <h1 class="card-title text-center">10$/Invité/Mois</h1>
+    <h1 class="card-title text-center">{{ "security_pricing_intermediaire_price" | trans }}</h1>
     <hr>
     <p class="card-text">
     <blockquote class="blockquote mb-0 text-center">
-        <p><span class="badge rounded-pill bg-warning text-dark">Payable chaque mois</span></p>
-        <footer class="blockquote-footer">Courtier, vous travaillez avec des collaborateurs mais ne voulez qu'un abonnement à court terme.</footer>
+        <p>
+            <span class="badge rounded-pill bg-warning text-dark">
+                {{ "security_pricing_intermediaire_mode" | trans }}
+            </span>
+        </p>
+        <footer class="blockquote-footer">
+            {{ "security_pricing_intermediaire_profil" | trans }}
+        </footer>
     </blockquote>
     </p>
     <hr>
@@ -17,35 +25,47 @@
     <div class="list-group list-group-flush">
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Assistance technique personnalisée
+            {{ "security_pricing_intermediaire_option_assistance" | trans }}
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Peut inviter d'utilisateurs <strong class="text-dark">[Illimité]</strong>
+            {{ "security_pricing_intermediaire_option_invite" | trans }}
+            <strong class="text-dark">
+                [{{ "security_pricing_intermediaire_option_invite_value" | trans }}]
+            </strong>
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Importer et d'exporter des données
+            {{ "security_pricing_intermediaire_option_donnees" | trans }}
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Volume des données <strong class="text-dark">[Illimité]</strong>
+            {{ "security_pricing_intermediaire_option_volume" | trans }}
+            <strong class="text-dark">
+                [{{ "security_pricing_intermediaire_option_volume_value" | trans }}]
+            </strong>
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Nombre d'entreprises <strong class="text-dark">[Illimité]</strong>
+            {{ "security_pricing_intermediaire_option_entreprise" | trans }}
+            <strong class="text-dark">
+                [{{ "security_pricing_intermediaire_option_entreprise_value" | trans }}]
+            </strong>
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Accès au tableau de bord
+            {{ "security_pricing_intermediaire_option_dashboard" | trans }}
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Envoie d'emails <strong class="text-dark">[Illimité]</strong>
+            {{ "security_pricing_intermediaire_option_email" | trans }}
+            <strong class="text-dark">
+                [{{ "security_pricing_intermediaire_option_email_value" | trans }}]
+            </strong>
         </a>
         <a class="list-group-item list-group-item-action text-muted">
             {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            Accès à toutes les autres fonctions
+            {{ "security_pricing_intermediaire_option_fonctions" | trans }}
         </a>
     </div>
     </p>
