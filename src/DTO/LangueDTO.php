@@ -4,7 +4,7 @@ namespace App\DTO;
 
 use Symfony\Component\Validator\Constraints as Assert;
 
-class DemandeContactDTO
+class LangueDTO
 {
     #[Assert\NotBlank]
     #[Assert\Length(min: 2)]

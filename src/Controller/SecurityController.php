@@ -2,7 +2,10 @@
 
 namespace App\Controller;
 
+use App\Constantes\Constantes;
+use App\DTO\LangueDTO;
 use App\Entity\Utilisateur;
+use App\Form\LangueType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,6 +24,16 @@ class SecurityController extends AbstractController
     #[Route(path: '/', name: 'app_index')]
     public function index(Request $request): Response
     {
+        /** @var LangueDTO */
+        $langue = new LangueDTO();
+        $langue->language = Constantes::TAB_LANGUES[Constantes::LANGUE_FRANCAIS];
+        $languageForm = $this->createForm(LangueType::class, $langue);
+        $languageForm->handleRequest($request);
+
+        if ($languageForm->isSubmitted() && $languageForm->isValid()) {
+            dd($languageForm);
+        }
+
         // dd($request->getLocale());
         $this->localeSwitcher->setLocale($request->getLocale());
         // if (!$this->getUser()) {
@@ -29,6 +42,7 @@ class SecurityController extends AbstractController
         // }
         return $this->render('home/index.html.twig', [
             'pageName' => $this->translator->trans("security_home"),
+            'languageForm' => $languageForm,
         ]);
     }
 

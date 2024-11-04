@@ -4,9 +4,12 @@ namespace App\Constantes;
 class Constantes
 {
     public const TAB_LANGUES = [
-        'English' => "en",
-        'Français' => "fr"
+        self::LANGUE_ANGLAIS => "en",
+        self::LANGUE_FRANCAIS => "fr"
     ];
+    public const LANGUE_FRANCAIS = "Français";
+    public const LANGUE_ANGLAIS = "English";
+
     
     public const TAB_MONNAIE_MONNAIE_LOCALE = [
         'Non' => 0,
