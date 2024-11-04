@@ -3,22 +3,26 @@
 namespace App\Controller;
 
 use App\Entity\Utilisateur;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class SecurityController extends AbstractController
 {
-
     public function __construct(
         private TranslatorInterface $translator,
+        private readonly LocaleSwitcher $localeSwitcher
     ) {}
 
     #[Route(path: '/', name: 'app_index')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        // dd($request->getLocale());
+        $this->localeSwitcher->setLocale($request->getLocale());
         // if (!$this->getUser()) {
         //     $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
         //     $this->addFlash("success", $welcome_message);
