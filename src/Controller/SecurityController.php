@@ -24,18 +24,6 @@ class SecurityController extends AbstractController
     #[Route(path: '/', name: 'app_index')]
     public function index(Request $request): Response
     {
-        // /** @var LangueDTO */
-        // $langue = new LangueDTO();
-        // $langue->language = Constantes::TAB_LANGUES[Constantes::LANGUE_FRANCAIS];
-        // $languageForm = $this->createForm(LangueType::class, $langue);
-        // $languageForm->handleRequest($request);
-
-        // if ($languageForm->isSubmitted() && $languageForm->isValid()) {
-        //     // dd($langue->language);
-        //     $this->localeSwitcher->setLocale($langue->language);
-        // }else{
-        // }
-        
         // dd($request->getLocale());
         if ($this->getUser()) {
             // $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
@@ -47,7 +35,7 @@ class SecurityController extends AbstractController
             $this->localeSwitcher->setLocale($request->getLocale());
         }
 
-        
+
         return $this->render('home/index.html.twig', [
             'pageName' => $this->translator->trans("security_home"),
             // 'languageForm' => $languageForm,
