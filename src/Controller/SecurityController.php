@@ -31,11 +31,13 @@ class SecurityController extends AbstractController
         $languageForm->handleRequest($request);
 
         if ($languageForm->isSubmitted() && $languageForm->isValid()) {
-            dd($languageForm);
+            // dd($langue->language);
+            $this->localeSwitcher->setLocale($langue->language);
+        }else{
+            $this->localeSwitcher->setLocale($request->getLocale());
         }
 
         // dd($request->getLocale());
-        $this->localeSwitcher->setLocale($request->getLocale());
         // if (!$this->getUser()) {
         //     $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
         //     $this->addFlash("success", $welcome_message);

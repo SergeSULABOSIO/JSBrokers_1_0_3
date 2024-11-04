@@ -20,11 +20,20 @@ class LangueType extends AbstractType
                 'label' => false,
                 'expanded' => false,
                 'choices'  => Constantes::TAB_LANGUES,
+                'row_attr' => [
+                    'class' => "input-group",
+                ],
             ])
             
             //Le bouton d'enregistrement / soumission
-            ->add('tranduire', SubmitType::class, [
-                'label' => "language.translate"
+            ->add('traduire', SubmitType::class, [
+                'label' => "language.translate",
+                'attr' => [
+                    'class' => "btn btn-outline-secondary",
+                ],
+                'row_attr' => [
+                    'class' => "input-group",
+                ],
             ])
         ;
     }
