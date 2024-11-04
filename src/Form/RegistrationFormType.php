@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Utilisateur;
+use App\Constantes\Constantes;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -12,6 +13,7 @@ use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -31,6 +33,11 @@ class RegistrationFormType extends AbstractType
             ])
             ->add('email', TextType::class, [
                 'label' => "Adresse mail"
+            ])
+            ->add('locale', ChoiceType::class, [
+                'label' => "Langue",
+                'expanded' => false,
+                'choices'  => Constantes::TAB_LANGUES,
             ])
             ->add('plainPassword', PasswordType::class, [
                 'label' => "Mot de passe",
