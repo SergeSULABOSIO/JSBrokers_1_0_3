@@ -1,0 +1,14 @@
+<div>
+  {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+    {% if app.user %}
+        <a href="#" type="button" class="btn btn-outline-secondary border-0">
+          {# {{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }} #}
+          Fr
+        </a>
+        <a href="#" type="button" class="btn btn-outline-secondary border-0">
+          {# {{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }} #}
+          Eng
+        </a>
+    {% endif %}
+     Complete_Url: {{ currentURL }}
+</div>

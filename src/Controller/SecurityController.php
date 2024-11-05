@@ -42,6 +42,27 @@ class SecurityController extends AbstractController
         ]);
     }
 
+    #[Route(path: '/translate/{locale}', name: 'app_translate')]
+    public function translateApp(Request $request): Response
+    {
+        // dd($request->getLocale());
+        if ($this->getUser()) {
+            // $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
+            // $this->addFlash("success", $welcome_message);
+            /** @var Utilisateur $user */
+            $user = $this->getUser();
+            $this->localeSwitcher->setLocale($user->getLocale());
+        }else{
+            $this->localeSwitcher->setLocale($request->getLocale());
+        }
+
+
+        return $this->render('home/index.html.twig', [
+            'pageName' => $this->translator->trans("security_home"),
+            // 'languageForm' => $languageForm,
+        ]);
+    }
+
     #[Route(path: '/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
