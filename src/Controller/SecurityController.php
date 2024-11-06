@@ -48,15 +48,9 @@ class SecurityController extends AbstractController
     #[Route(path: '/translate/{locale}/{currentURL}', name: 'app_translate', requirements: ['currentURL' => '.+'])]
     public function translateApp(Request $request, $locale, $currentURL): Response
     {
-        // dd("Locale: " . $locale, "Route: " . $route, "Params: " . $params);
-
         /** @var Utilisateur $user */
         $user = $this->getUser();
-
         if ($user) {
-            // $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
-            // $this->addFlash("success", $welcome_message);
-
             $user->setlocale($locale);
             $this->manager->persist($user);
             $this->manager->flush();
@@ -65,14 +59,7 @@ class SecurityController extends AbstractController
         } else {
             $this->localeSwitcher->setLocale($request->getLocale());
         }
-
         return $this->redirect($currentURL);
-        // return $this->redirectToRoute($route);
-
-        // return $this->render('home/index.html.twig', [
-        //     'pageName' => $this->translator->trans("security_home"),
-        //     'user' => $user,
-        // ]);
     }
 
     #[Route(path: '/login', name: 'app_login')]
