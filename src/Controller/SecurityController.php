@@ -37,7 +37,6 @@ class SecurityController extends AbstractController
 
         return $this->render('home/index.html.twig', [
             'pageName' => $this->translator->trans("security_home"),
-            'user' => $user,
         ]);
     }
 
