@@ -5,19 +5,20 @@ namespace App\Controller\Admin;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Form\EntrepriseType;
-use App\Message\EntreprisePDFMessage;
 use App\Repository\InviteRepository;
+use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[Route("/admin/entreprise", name: 'admin.entreprise.')]
 #[IsGranted('ROLE_USER')]
@@ -25,6 +26,7 @@ class EntrepriseController extends AbstractController
 {
     public function __construct(
         private UrlGeneratorInterface $urlGenerator,
+        private TranslatorInterface $translator,
         private MailerInterface $mailer,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
@@ -41,7 +43,7 @@ class EntrepriseController extends AbstractController
         
         if ($user->isVerified()) {
             return $this->render('admin/entreprise/index.html.twig', [
-                'pageName' => "Entreprises",
+                'pageName' => $this->translator->trans("entreprise_page_name_list"),
                 'utilisateur' => $user,
                 'entreprises' => $this->entrepriseRepository->paginateEntreprises($page),
                 'page' => $request->query->getInt("page", 1),
@@ -49,7 +51,11 @@ class EntrepriseController extends AbstractController
                 'nbInvites' => $this->inviteRepository->getNBInvites(),
             ]);
         } else {
-            $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
+            // $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
+            $this->addFlash("warning", $this->translator->trans("entreprise_your_email_is_not_verified", [
+                ':user' => $user->getNom(),
+                ':email' => $user->getEmail()
+            ]));
             return new RedirectResponse($this->urlGenerator->generate("app_login"));
         }
     }
@@ -68,11 +74,13 @@ class EntrepriseController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($entreprise);
             $this->manager->flush();
-            $this->addFlash("success", "" . $entreprise->getNom() . " est ajoutée avec succès.");
+            $this->addFlash("success", $this->translator->trans("entreprise_created_ok", [
+                ':company' => $entreprise->getNom(),
+            ]));
             return $this->redirectToRoute("admin.entreprise.index");
         }
         return $this->render('admin/entreprise/create.html.twig', [
-            'pageName' => 'Nouveau',
+            'pageName' => $this->translator->trans("entreprise_page_name_new"),
             'utilisateur' => $user,
             'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
             'nbInvites' => $this->inviteRepository->getNBInvites(),
@@ -93,11 +101,13 @@ class EntrepriseController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($entreprise); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $entreprise->getNom() . " a été modifiée avec succès.");
+            $this->addFlash("success", $this->translator->trans("entreprise_edited_ok", [
+                ':company' => $entreprise->getNom(),
+            ]));            
             return $this->redirectToRoute("admin.entreprise.index");
         }
         return $this->render('admin/entreprise/edit.html.twig', [
-            'pageName' => "Edition",
+            'pageName' => $this->translator->trans("entreprise_page_name_edition"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
@@ -111,7 +121,10 @@ class EntrepriseController extends AbstractController
     {
         $this->manager->remove($entreprise);
         $this->manager->flush();
-        $this->addFlash("success", $entreprise->getNom() . " a été supprimée avec succès.");
+        $this->addFlash("success", $this->translator->trans("entreprise_deleted_ok", [
+            ':company' => $entreprise->getNom(),
+        ]));
+
         return $this->redirectToRoute("admin.entreprise.index");
     }
 
@@ -123,10 +136,14 @@ class EntrepriseController extends AbstractController
 
         $messageBus->dispatch(new EntreprisePDFMessage($entreprise->getId()));
 
-        $this->addFlash("success", "Salut " . $user->getNom() . ", le pdf vient d'être généré pour " . $entreprise->getNom() . ".");
+        $this->addFlash("success", $this->translator->trans("entreprise_pdf_created_ok", [
+            ':user' => $user->getNom(),
+            ':company' => $entreprise->getNom(),
+        ]));
+        
         // return $this->redirectToRoute("admin.entreprise.index");
         return $this->render('admin/entreprise/pdf/index.html.twig', [
-            'pageName' => "Visualisation du texte exemple pour la génération du PDF à travers un message Symfony.",
+            'pageName' => $this->translator->trans("entreprise_page_name_pdf"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
         ]);
