@@ -45,8 +45,8 @@ class SecurityController extends AbstractController
         ]);
     }
 
-    #[Route(path: '/translate/{locale}/{route}/{params}', name: 'app_translate')]
-    public function translateApp(Request $request, $locale, $route, $params): Response
+    #[Route(path: '/translate/{locale}/{currentURL}', name: 'app_translate', requirements: ['currentURL' => '.+'])]
+    public function translateApp(Request $request, $locale, $currentURL): Response
     {
         // dd("Locale: " . $locale, "Route: " . $route, "Params: " . $params);
 
@@ -66,7 +66,8 @@ class SecurityController extends AbstractController
             $this->localeSwitcher->setLocale($request->getLocale());
         }
 
-        return $this->redirectToRoute($route);
+        return $this->redirect($currentURL);
+        // return $this->redirectToRoute($route);
 
         // return $this->render('home/index.html.twig', [
         //     'pageName' => $this->translator->trans("security_home"),
