@@ -2,11 +2,11 @@
   {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
   {% if user is defined %}
       {% if user.locale == 'fr'%}
-        <a href="{{ path('app_translate', {'locale': 'en', 'currentURL': currentURL })}}" type="button" class="btn btn-outline-secondary border-0" data-toggle="tooltip" data-placement="bottom" title="Définir le Français comme langue d'affichage">
+        <a href="{{ path('app_translate', {'locale': 'en', 'currentURL': currentURL })}}" type="button" class="btn btn-outline-secondary border-0" data-toggle="tooltip" data-placement="bottom" title="Définir l'Anglais comme langue d'affichage">
           {{ ux_icon('twemoji:flag-united-kingdom', {height: '20px', width: '20px'}) }}
         </a>
       {% else %}
-        <a href="{{ path('app_translate', {'locale': 'fr', 'currentURL': currentURL })}}" type="button" class="btn btn-outline-secondary border-0" data-toggle="tooltip" data-placement="bottom" title="Set Eglish as display language">
+        <a href="{{ path('app_translate', {'locale': 'fr', 'currentURL': currentURL })}}" type="button" class="btn btn-outline-secondary border-0" data-toggle="tooltip" data-placement="bottom" title="Set French as the display language">
           {{ ux_icon('twemoji:flag-france', {height: '20px', width: '20px'}) }}
         </a>
       {% endif %}
