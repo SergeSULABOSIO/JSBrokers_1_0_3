@@ -2,10 +2,11 @@
 
 namespace App\Controller;
 
-use App\Constantes\Constantes;
 use App\DTO\LangueDTO;
-use App\Entity\Utilisateur;
 use App\Form\LangueType;
+use App\Entity\Utilisateur;
+use App\Constantes\Constantes;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -17,6 +18,7 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 class SecurityController extends AbstractController
 {
     public function __construct(
+        private EntityManagerInterface $manager,
         private TranslatorInterface $translator,
         private readonly LocaleSwitcher $localeSwitcher
     ) {}
@@ -24,42 +26,50 @@ class SecurityController extends AbstractController
     #[Route(path: '/', name: 'app_index')]
     public function index(Request $request): Response
     {
-        // dd($request->getLocale());
-        if ($this->getUser()) {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        if ($user) {
             // $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
             // $this->addFlash("success", $welcome_message);
-            /** @var Utilisateur $user */
-            $user = $this->getUser();
+
             $this->localeSwitcher->setLocale($user->getLocale());
-        }else{
+        } else {
             $this->localeSwitcher->setLocale($request->getLocale());
         }
 
 
         return $this->render('home/index.html.twig', [
             'pageName' => $this->translator->trans("security_home"),
-            // 'languageForm' => $languageForm,
+            'user' => $user,
         ]);
     }
 
-    #[Route(path: '/translate/{locale}', name: 'app_translate')]
-    public function translateApp(Request $request): Response
+    #[Route(path: '/translate/{locale}/{route}/{params}', name: 'app_translate')]
+    public function translateApp(Request $request, $locale, $route, $params): Response
     {
-        // dd($request->getLocale());
-        if ($this->getUser()) {
+        dd("Locale: " . $locale, "Route: " . $route, "Params: " . $params);
+
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        if ($user) {
             // $welcome_message = $this->translator->trans("security_welcome_to_jsbrokers");
             // $this->addFlash("success", $welcome_message);
-            /** @var Utilisateur $user */
-            $user = $this->getUser();
+            
+            $user->setlocale($locale);
+            $this->manager->persist($user);
+            $this->manager->flush();
+
             $this->localeSwitcher->setLocale($user->getLocale());
-        }else{
+        } else {
             $this->localeSwitcher->setLocale($request->getLocale());
         }
 
 
         return $this->render('home/index.html.twig', [
             'pageName' => $this->translator->trans("security_home"),
-            // 'languageForm' => $languageForm,
+            'user' => $user,
         ]);
     }
 

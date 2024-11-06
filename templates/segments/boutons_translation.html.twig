@@ -1,14 +1,16 @@
 <div>
   {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-    {% if app.user %}
-        <a href="#" type="button" class="btn btn-outline-secondary border-0">
-          {# {{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }} #}
-          Fr
-        </a>
-        <a href="#" type="button" class="btn btn-outline-secondary border-0">
-          {# {{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }} #}
-          Eng
-        </a>
+  {% set parametres = app.request.attributes.get('_route_params')|join('oooo') %}
+    {% if user is defined %}
+        {% if user.locale == 'fr'%}
+          <a href="{{ path('app_translate', {'locale': 'en', 'route': app.current_route, 'params': 'test' })}}" type="button" class="btn btn-outline-secondary border-0">
+            {{ ux_icon('twemoji:flag-united-kingdom', {height: '18px', width: '18px'}) }}
+          </a>
+        {% else %}
+          <a href="{{ path('app_translate', {'locale': 'fr', 'route': app.current_route, 'params': 'test' })}}" type="button" class="btn btn-outline-secondary border-0">
+            {{ ux_icon('twemoji:flag-france', {height: '18px', width: '18px'}) }}
+          </a>
+        {% endif %}
     {% endif %}
-     Complete_Url: {{ currentURL }}
+     {# Complete_Url: {{ currentURL }} #}
 </div>
