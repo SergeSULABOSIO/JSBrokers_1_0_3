@@ -156,7 +156,7 @@ entreprise_bouton_user_settings: "My Settings"
 user_menu_companies: "My Companies"
 user_menu_guests: "My Guests"
 user_menu_memberships: "My Licenses"
-invite_description_rubrique: "List of your guests. It's composed of users to whom you've granted access and roles into your companys."
+invite_description_rubrique: "List of your guests. It's composed of users to whom you've granted access and roles into your companys. Invite users to enjoy the beauty of collaborative working."
 invite_page_name_list: "List of Guests"
 invite_create_ok: ":email is successfully created as a guest."
 invite_deletion_ok: "The guest :email is successfully deleted."
@@ -174,6 +174,7 @@ invite_liste_titre_actions_set_role: "Set roles"
 invite_liste_titre_actions_send_invite_email: "Send the invite eamil"
 invite_liste_titre_actions_desable_guest: "Desable this guest"
 invite_liste_titre_actions_enable_guest: "Enable this guest"
+invite_edition_description_message: "Dear <strong>:user</strong>, <br>You're editing the invitation of <strong>:email</strong>.<br><br>JS Broker will send him a notification email.<br><br>If <strong>:email</strong> still has no JS Brokers user account, don't worry as he can still create one later and his invitation will always be valid unless you desable it yourself.<hr>"
 
 
 

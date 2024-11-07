@@ -5,11 +5,11 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ utilisateur.nom }}>Invités><strong>{{ pageName }}</strong>
+	{{ utilisateur.nom }}>{{ "invite_page_name_list" | trans }}>{{ pageName }}><strong>{{ invite.email }}</strong>
 {% endblock %}
 
 {% block descriptionRubrique %}
-	JS Brokers est un outil de collaboration. Invitez des personnes (utilisateurs JS Brokers) à pouvoir accéder à votre entreprise afin d'y travailer.
+    {{ "invite_description_rubrique" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -23,11 +23,10 @@
 			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 				<div class="card-body">
 					<p>
-						<strong>{{ utilisateur.nom }}</strong>, 
-						<br>Vous êtes sur le point de modifier l'invitation de <strong>{{ invite.email }}</strong>.
-						<br><br>JS Broker lui enverra un email de notification.
-						<br><br>Si <strong>{{ invite.email }}</strong> n'a toujours pas encore de compte JS Broker, ne vous inquiètez pas car il peut en créer même après et son invitation restera toujours valide en moins que vous-même puissiez la désactiver intentionnellement.
-						<hr>
+    					{{ "invite_edition_description_message" | trans({
+							':user': utilisateur.nom,
+							':email': invite.email,
+						}) | raw }}
 					</p>
 					<turbo-frame id="invite_{{ invite.id }}">
 						<div class = "m-2">
