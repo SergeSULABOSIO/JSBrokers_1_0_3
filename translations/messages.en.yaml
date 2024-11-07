@@ -164,6 +164,8 @@ invite_email_sending_error: "Failled to send the invitation email to the guest."
 invite_sending_invite_not_granted: "Sorry :user, you are not allowed to invite users. You can only invite users to a company or companies that you have created yourself, not to a company or companies to which you are invited."
 invite_page_name_new: "New Guest."
 invite_page_name_edit: "Edit Guest."
+invite_filter_result_empty: "No guest found."
+invite_filter_result_elements: "Guests: :number element(s) found."
 
 
 

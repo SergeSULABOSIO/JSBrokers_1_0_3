@@ -164,5 +164,7 @@ invite_email_sending_error: "Echec d'envoie de l'email d'invitation."
 invite_sending_invite_not_granted: "Désolé :user , vous n'avez pas le droit d'inviter des utilisateurs. Vous ne pouvez inviter d'utilisateurs que pour une ou des entreprises que vous avez créées vous-mêmes, non pas pour une ou des entreprises où vous êtes invités."
 invite_page_name_new: "Nouvel Invité."
 invite_page_name_edit: "Modifier l'invité."
+invite_filter_result_empty: "Aucun invité trouvé."
+invite_filter_result_elements: "Invités: :number élement(s) trouvé(s)."
 
 
