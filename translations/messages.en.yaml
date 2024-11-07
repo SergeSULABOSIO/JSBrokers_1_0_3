@@ -166,6 +166,11 @@ invite_page_name_new: "New Guest."
 invite_page_name_edit: "Edit Guest."
 invite_filter_result_empty: "No guest found."
 invite_filter_result_elements: "Guests: :number item(s) found."
+invite_liste_titre_ids: "Guests Id"
+invite_liste_titre_invite_date: "Invitation date"
+invite_liste_titre_companies: "Companies"
+invite_liste_titre_actions: "Actions"
+
 
 
 

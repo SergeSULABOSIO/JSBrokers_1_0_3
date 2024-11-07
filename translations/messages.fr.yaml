@@ -166,5 +166,10 @@ invite_page_name_new: "Nouvel Invité."
 invite_page_name_edit: "Modifier l'invité."
 invite_filter_result_empty: "Aucun invité trouvé."
 invite_filter_result_elements: "Invités: :number élement(s) trouvé(s)."
+invite_liste_titre_ids: "Identifiants des Invités"
+invite_liste_titre_invite_date: "Date de l'invitation"
+invite_liste_titre_companies: "Entreprises"
+invite_liste_titre_actions: "Actions"
+
 
 

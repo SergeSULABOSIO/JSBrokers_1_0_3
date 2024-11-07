@@ -37,10 +37,10 @@
 				{% if nbInvites != 0 %}
 					<thead class="table-light">
 						<tr>
-							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "Email de l'invité", "i.email") }}</div></th>
-							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "Date d'invitation", "i.createdAt") }}</div></th>
-							<th scope="col"><div class='d-flex justify-content-start'>Entreprises</div></th>
-							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>Actions</div></th>
+							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_ids" | trans, "i.email") }}</div></th>
+							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_invite_date" | trans, "i.createdAt") }}</div></th>
+							<th scope="col"><div class='d-flex justify-content-start'>{{ "invite_liste_titre_companies" | trans }}</div></th>
+							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "invite_liste_titre_actions" | trans }}</div></th>
 						</tr>
 					</thead>
 					<tbody class="table-group-divider">
@@ -94,13 +94,7 @@
 												<li>
 													<a class="dropdown-item" href="#">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Voir son rôle
-													</a>
-												</li>
-												<li>
-													<a class="dropdown-item" href="#">
-														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Modifier son rôle
+														Définir son rôle
 													</a>
 												</li>
 												<li>
