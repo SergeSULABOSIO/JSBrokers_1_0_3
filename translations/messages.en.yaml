@@ -170,6 +170,11 @@ invite_liste_titre_ids: "Guests Id"
 invite_liste_titre_invite_date: "Invitation date"
 invite_liste_titre_companies: "Companies"
 invite_liste_titre_actions: "Actions"
+invite_liste_titre_actions_set_role: "Set roles"
+invite_liste_titre_actions_send_invite_email: "Send the invite eamil"
+invite_liste_titre_actions_desable_guest: "Desable this guest"
+invite_liste_titre_actions_enable_guest: "Enable this guest"
+
 
 
 

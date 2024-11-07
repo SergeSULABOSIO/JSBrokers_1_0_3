@@ -68,7 +68,8 @@
 											(+{{invite.entreprises|length -1}})
 										</span>
 									{% else %}
-										Aucune
+										{{ "invite_filter_result_empty" | trans }}
+										{# Aucune #}
 									{% endif %}
 								</td>
 								<td>
@@ -94,20 +95,26 @@
 												<li>
 													<a class="dropdown-item" href="#">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Définir son rôle
+														{{ "invite_liste_titre_actions_set_role" | trans }}
 													</a>
 												</li>
 												<li>
 													<a class="dropdown-item" href="#">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Envoyer l'email d'invitation
+														{{ "invite_liste_titre_actions_send_invite_email" | trans }}
 													</a>
 												</li>
 												<li><hr class="dropdown-divider"></li>
 												<li>
 													<a class="dropdown-item" href="#">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Désactiver cet invité
+														{{ "invite_liste_titre_actions_desable_guest" | trans }}
+													</a>
+												</li>
+												<li>
+													<a class="dropdown-item text-muted" href="#">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														{{ "invite_liste_titre_actions_enable_guest" | trans }}
 													</a>
 												</li>
 											</ul>

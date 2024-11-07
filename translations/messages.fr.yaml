@@ -170,6 +170,10 @@ invite_liste_titre_ids: "Identifiants des Invités"
 invite_liste_titre_invite_date: "Date de l'invitation"
 invite_liste_titre_companies: "Entreprises"
 invite_liste_titre_actions: "Actions"
+invite_liste_titre_actions_set_role: "Définir les rôles"
+invite_liste_titre_actions_send_invite_email: "Envoyer l'email d'invitation"
+invite_liste_titre_actions_desable_guest: "Désactiver cet invité"
+invite_liste_titre_actions_enable_guest: "Activer cet invité"
 
 
 
