@@ -1,18 +1,18 @@
 <div>
     {% if app.current_route starts with 'admin.invite' %}
-        <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-primary">
+        <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "entreprise_bouton_new_invite" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.monnaie' %}
-        <a href="{{ path('admin.monnaie.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-primary">
+        <a href="{{ path('admin.monnaie.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "entreprise_bouton_new_monnaie" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
-      <ul class="mb-2 mb-lg-0 btn btn-primary">
+      <ul class="mb-2 mb-lg-0 btn btn-secondary">
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
@@ -51,7 +51,7 @@
       {{ ux_icon('hugeicons:logout-04', {height: '18px', width: '18px'}) }}
       {{ "entreprise_bouton_exit" | trans }}
     </a>
-    <a href="{{ path('app_register')}}" type="button" class="btn border-0 btn-outline-primary">
+    <a href="{{ path('app_register')}}" type="button" class="btn border-0 btn-outline-secondary">
       {{ ux_icon('material-symbols:settings', {height: '18px', width: '18px'}) }}
       {{ "entreprise_bouton_user_settings" | trans }}
     </a>

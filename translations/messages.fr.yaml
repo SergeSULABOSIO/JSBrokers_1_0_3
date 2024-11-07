@@ -19,6 +19,10 @@ base_connexion: 'Connexion'
 base_ma_licence: 'Licence'
 base_base_de_page: "JS Brokers. Votre performance est notre priorité."
 base_my_account_parameters: "Mes Paramètres"
+boutons_user_parametres: "Mes Paramètres"
+boutons_user_logout: "Déconnexion"
+boutons_user_new_company: "Nouvelle Entreprise"
+boutons_user_new_guest: "Nouvel Invité"
 security_welcome_to_jsbrokers: "Bienvenue chez JSBrokers!"
 security_home: "Acceuil"
 security_Work_faster_and_efficiently: "Travaillez plus rapidement et efficacement avec votre outil professionnel"
@@ -149,5 +153,8 @@ entreprise_bouton_new_client: "Nouveau Client"
 entreprise_bouton_add: "Ajouter"
 entreprise_bouton_exit: "Quitter"
 entreprise_bouton_user_settings: "Mes Paramètres"
+user_menu_companies: "Mes Entreprises"
+user_menu_guests: "Mes invités"
+user_menu_memberships: "Mes abonnements"
 
 
