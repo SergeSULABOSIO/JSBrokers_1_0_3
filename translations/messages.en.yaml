@@ -165,7 +165,7 @@ invite_sending_invite_not_granted: "Sorry :user, you are not allowed to invite u
 invite_page_name_new: "New Guest."
 invite_page_name_edit: "Edit Guest."
 invite_filter_result_empty: "No guest found."
-invite_filter_result_elements: "Guests: :number element(s) found."
+invite_filter_result_elements: "Guests: :number item(s) found."
 
 
 
