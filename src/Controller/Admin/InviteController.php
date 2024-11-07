@@ -7,6 +7,7 @@ use App\Form\InviteType;
 use App\Entity\Utilisateur;
 use App\Event\InvitationEvent;
 use Symfony\Component\Mime\Email;
+use Symfony\UX\Turbo\TurboBundle;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,10 +16,10 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\UX\Turbo\TurboBundle;
 
 #[Route("/admin/invite", name: 'admin.invite.')]
 #[IsGranted('ROLE_USER')]
@@ -26,6 +27,7 @@ class InviteController extends AbstractController
 {
     public function __construct(
         private MailerInterface $mailer,
+        private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
@@ -40,7 +42,7 @@ class InviteController extends AbstractController
         $user = $this->getUser();
 
         return $this->render('admin/invite/index.html.twig', [
-            'pageName' => "Invités",
+            'pageName' => $this->translator->trans("invite_page_name_list"),
             'utilisateur' => $user,
             'invites' => $this->inviteRepository->paginateInvites($page),
             'page' => $page = $request->query->getInt("page", 1),

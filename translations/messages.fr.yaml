@@ -156,5 +156,7 @@ entreprise_bouton_user_settings: "Mes Paramètres"
 user_menu_companies: "Mes Entreprises"
 user_menu_guests: "Mes invités"
 user_menu_memberships: "Mes abonnements"
+invite_description_rubrique: "Liste des invités de vos entreprises. Elle reprend tous les utilisateurs à qui vous avez accordé quelques droits d'accès aux données de vos entreprises."
+invite_page_name_list: "Listes d'invités"
 
 
