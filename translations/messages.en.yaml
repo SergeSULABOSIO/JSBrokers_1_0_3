@@ -155,9 +155,15 @@ entreprise_bouton_exit: "Exit"
 entreprise_bouton_user_settings: "My Settings"
 user_menu_companies: "My Companies"
 user_menu_guests: "My Guests"
-user_menu_memberships: "My Memberships"
+user_menu_memberships: "My Licenses"
 invite_description_rubrique: "List of your guests. It's composed of users to whom you've granted access and roles into your companys."
 invite_page_name_list: "List of Guests"
+invite_create_ok: ":email is successfully created as a guest."
+invite_deletion_ok: "The guest :email is successfully deleted."
+invite_email_sending_error: "Failled to send the invitation email to the guest."
+invite_sending_invite_not_granted: "Sorry :user, you are not allowed to invite users. You can only invite users to a company or companies that you have created yourself, not to a company or companies to which you are invited."
+invite_page_name_new: "New Guest."
+invite_page_name_edit: "Edit Guest."
 
 
 

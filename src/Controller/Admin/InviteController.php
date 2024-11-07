@@ -72,19 +72,23 @@ class InviteController extends AbstractController
                     //Envoie de l'email de notification
                     //Lancer un évènement
                     $dispatcher->dispatch(new InvitationEvent($invite));
-                    $this->addFlash("success", $invite->getEmail() . " a été invité avec succès.");
+                    $this->addFlash("success", $this->translator->trans("invite_create_ok", [
+                        ':email' => $invite->getEmail()
+                    ]));
                 } catch (\Throwable $th) {
                     //throw $th;
-                    $this->addFlash("danger", "Echec d'envoie de l'email d'invitation.");
+                    $this->addFlash("danger", $this->translator->trans("invite_email_sending_error"));
                 }
                 return $this->redirectToRoute("admin.invite.index");
             }
         } else {
-            $this->addFlash("danger", "Désolé " . $user->getNom() . ", vous n'avez pas le droit d'inviter des utilisateurs. Vous ne pouvez inviter d'utilisateurs que pour une ou des entreprises que vous avez créées vous-mêmes, non pas pour une ou des entreprises où vous êtes invités.");
+            $this->addFlash("danger", $this->translator->trans("invite_sending_invite_not_granted", [
+                ':user' => $user->getNom()
+            ]));
             return $this->redirectToRoute("admin.invite.index");
         }
         return $this->render('admin/invite/create.html.twig', [
-            'pageName' => 'Nouveau',
+            'pageName' => $this->translator->trans("invite_page_name_new"),
             'utilisateur' => $user,
             'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
             'nbInvites' => $this->inviteRepository->getNBInvites(),
@@ -109,7 +113,7 @@ class InviteController extends AbstractController
             return $this->redirectToRoute("admin.invite.index");
         }
         return $this->render('admin/invite/edit.html.twig', [
-            'pageName' => "Edition",
+            'pageName' => $this->translator->trans("invite_page_name_edit"),
             'utilisateur' => $user,
             'invite' => $invite,
             'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
@@ -123,7 +127,9 @@ class InviteController extends AbstractController
     public function remove(Request $request, Invite $invite)
     {
         $inviteId = $invite->getId();
-        $message = $invite->getEmail() . " a été supprimé avec succès.";
+        $message = $this->translator->trans("invite_deletion_ok", [
+            ':email' => $invite->getEmail()
+        ]);
         $this->manager->remove($invite);
         $this->manager->flush();
 
