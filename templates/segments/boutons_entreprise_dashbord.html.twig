@@ -2,13 +2,13 @@
     {% if app.current_route starts with 'admin.invite' %}
         <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-primary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-          Ajouter un invité
+          {{ "entreprise_bouton_new_invite" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.monnaie' %}
         <a href="{{ path('admin.monnaie.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-primary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-          Ajouter une monnaie
+          {{ "entreprise_bouton_new_monnaie" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
@@ -16,31 +16,31 @@
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-            Ajouter
+            {{ "entreprise_bouton_add" | trans }}
           </a>
           <ul class="dropdown-menu">
             <li>
               <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
                 {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-                Une Piste
+                {{ "entreprise_bouton_new_lead" | trans }}
               </a>
             </li>
             <li>
               <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
                 {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-                Un Produit
+                {{ "entreprise_bouton_new_product" | trans }}
               </a>
             </li>
             <li>
               <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
                 {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-                Un Assureur
+                {{ "entreprise_bouton_new_insurer" | trans }}
               </a>
             </li>
              <li>
               <a class="dropdown-item" href="{{ path('app_register', {idUtilisateur:-1})}}">
                 {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-                Un Client
+                {{ "entreprise_bouton_new_client" | trans }}
               </a>
             </li>
           </ul>
@@ -49,10 +49,10 @@
     {% endif %}
     <a href="{{ path('admin.entreprise.index')}}" type="button" class="btn border-0 btn-outline-danger">
       {{ ux_icon('hugeicons:logout-04', {height: '18px', width: '18px'}) }}
-      Quitter l'entreprise
+      {{ "entreprise_bouton_exit" | trans }}
     </a>
     <a href="{{ path('app_register')}}" type="button" class="btn border-0 btn-outline-primary">
       {{ ux_icon('material-symbols:settings', {height: '18px', width: '18px'}) }}
-      Paramètres
+      {{ "entreprise_bouton_user_settings" | trans }}
     </a>
 </div>
