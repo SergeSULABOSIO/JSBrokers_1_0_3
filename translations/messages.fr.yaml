@@ -192,6 +192,8 @@ entreprise_form_label_license: "Numéro d'agrément"
 entreprise_form_label_license_placeholder: "Veuillez saisir l'agrément ici..."
 entreprise_form_label_phone_number: "Numéro de téléphone"
 entreprise_form_label_phone_number_placeholder: "Veuillez renseigner le numéro de téléphone ici..."
+entreprise_form_label_trade_register_number: "Numéro de Registre de Commercer"
+entreprise_form_label_trade_register_placeholder: "Veuillez saisir le RCCM ici..."
 
 
 

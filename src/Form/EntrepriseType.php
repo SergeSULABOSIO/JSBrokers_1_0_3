@@ -47,9 +47,9 @@ class EntrepriseType extends AbstractType
                 ],
             ])
             ->add('rccm', TextType::class, [
-                'label' => "Numéro de registre de commerce",
+                'label' => "entreprise_form_label_trade_register_number",
                 'attr' => [
-                    'placeholder' => "RCCM",
+                    'placeholder' => "entreprise_form_label_trade_register_placeholder",
                 ],
             ])
             ->add('idnat', TextType::class, [

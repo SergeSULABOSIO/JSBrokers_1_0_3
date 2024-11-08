@@ -192,9 +192,8 @@ entreprise_form_label_license: "Insurance License Number"
 entreprise_form_label_license_placeholder: "Please type the license here..."
 entreprise_form_label_phone_number: "Company main phone number"
 entreprise_form_label_phone_number_placeholder: "Please type the Company main phone number here..."
-
-
-
+entreprise_form_label_trade_register_number: "Company Trade Register Number"
+entreprise_form_label_trade_register_placeholder: "Please type the TRN here..."
 
 
 
