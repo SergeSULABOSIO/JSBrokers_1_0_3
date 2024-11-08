@@ -41,9 +41,9 @@ class EntrepriseType extends AbstractType
                 ],
             ])
             ->add('telephone', TextType::class, [
-                'label' => "Numéro de téléphone",
+                'label' => "entreprise_form_label_phone_number",
                 'attr' => [
-                    'placeholder' => "Numéro de téléphone",
+                    'placeholder' => "entreprise_form_label_phone_number_placeholder",
                 ],
             ])
             ->add('rccm', TextType::class, [

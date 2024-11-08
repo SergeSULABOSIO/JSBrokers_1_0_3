@@ -190,6 +190,8 @@ entreprise_form_label_location: "Physical location"
 entreprise_form_label_location_placeholder: "Please type the location here..."
 entreprise_form_label_license: "Insurance License Number"
 entreprise_form_label_license_placeholder: "Please type the license here..."
+entreprise_form_label_phone_number: "Company main phone number"
+entreprise_form_label_phone_number_placeholder: "Please type the Company main phone number here..."
 
 
 
