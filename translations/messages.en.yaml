@@ -179,8 +179,8 @@ invite_form_email: "Guest's email address"
 invite_form_email_placeholder: "Valid email address"
 invite_form_company: "Companies where the guest is invited to access"
 invite_form_company_placeholder: "Chose the companies here"
-invite_form_send_invite: "Create and send the invite via email"
-invite_creation_description_message: "Dear <strong>:user</strong>,<br>You are creating the invitation for the person whose email address will be provided in the form below.<br>JS Broker will send him a notification email so he can validate his email address by clicking onto the validaton link.<br><br>If the guest has not yet JS Broker account don't worry as he can still later and his invitation will still be available unless you decide to delete or desable it yourself.<hr>"
+invite_form_send_invite: "Save and send the invite via email"
+invite_creation_description_message: "Dear <strong>:user</strong>,<br>You are creating the invitation for the person whose email address will be provided in the form below.<br>JS Broker will send him a notification email so he can validate his email address by clicking onto the validaton link.<br><br>If the guest has not yet a JS Broker account don't worry as he can still later and his invitation will still be available unless you decide to delete or desable it yourself.<hr>"
 
 
 

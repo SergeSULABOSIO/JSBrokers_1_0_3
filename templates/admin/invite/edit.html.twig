@@ -18,23 +18,19 @@
 
 {% block body %}
 	<div class="container">
-		<p>
-			{# {{ form(form) }} #}
-			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-				<div class="card-body">
-					<p>
-    					{{ "invite_edition_description_message" | trans({
-							':user': utilisateur.nom,
-							':email': invite.email,
-						}) | raw }}
-					</p>
-					<turbo-frame id="invite_{{ invite.id }}">
-						<div class = "m-2">
-							{{ form(form, {action: path('admin.invite.edit', {id:invite.id})}) }}
-						</div>
-					</turbo-frame>
-				</div>
+		{# {{ form(form) }} #}
+		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+			<div class="card-body">
+				<p>
+					{{ "invite_edition_description_message" | trans({
+						':user': utilisateur.nom,
+						':email': invite.email,
+					}) | raw }}
+				</p>
+				<turbo-frame id="invite_{{ invite.id }}">
+					{{ form(form, {action: path('admin.invite.edit', {id:invite.id})}) }}
+				</turbo-frame>
 			</div>
-		</p>
+		</div>
 	</div>
 {% endblock %}

@@ -17,20 +17,17 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		<p>
-			{# {{ form(form) }} #}
-			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-				<div class="card-body">
-					<p>
-    					{{ "invite_creation_description_message" | trans({
-							':user': utilisateur.nom,
-						}) | raw }}
-					</p>
-					{{ form(form) }}
-					</div>
-				</div>
-			</div>
-		</p>
-	</p>
-</div>{% endblock %}
+<div class="container">
+	{# {{ form(form) }} #}
+	<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+		<div class="card-body">
+			<p>
+				{{ "invite_creation_description_message" | trans({
+					':user': utilisateur.nom,
+				}) | raw }}
+			</p>
+			{{ form(form) }}
+		</div>
+	</div>
+</div>
+{% endblock %}
