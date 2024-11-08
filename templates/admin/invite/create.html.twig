@@ -5,11 +5,11 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ utilisateur.nom }}>Invités><strong>{{ pageName }}</strong>
+	{{ utilisateur.nom }}>{{ "invite_page_name_list" | trans }}>{{ pageName }}
 {% endblock %}
 
 {% block descriptionRubrique %}
-	JS Brokers est un outil de collaboration. Invitez des personnes (utilisateurs JS Brokers) à pouvoir accéder à votre entreprise afin d'y travailer.
+    {{ "invite_description_rubrique" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
