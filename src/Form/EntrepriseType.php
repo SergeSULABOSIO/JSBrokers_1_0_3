@@ -3,13 +3,11 @@
 namespace App\Form;
 
 use App\Entity\Entreprise;
-use App\Entity\Monnaie;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Validator\Constraints\Image;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -25,21 +23,21 @@ class EntrepriseType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                'label' => "Nom complet",
+                'label' => "entreprise_form_label_nom",
                 'attr' => [
-                    'placeholder' => "Nom Complet de l'entreprise",
+                    'placeholder' => "entreprise_form_label_nom_placeholder",
                 ],
             ])
             ->add('adresse', TextType::class, [
-                'label' => "Adresse physique",
+                'label' => "entreprise_form_label_location",
                 'attr' => [
-                    'placeholder' => "Adresse complète",
+                    'placeholder' => "entreprise_form_label_location_placeholder",
                 ],
             ])
             ->add('licence', TextType::class, [
-                'label' => "Numéro d'agrément",
+                'label' => "entreprise_form_label_license",
                 'attr' => [
-                    'placeholder' => "Numéro d'agrément",
+                    'placeholder' => "entreprise_form_label_license_placeholder",
                 ],
             ])
             ->add('telephone', TextType::class, [

@@ -5,11 +5,11 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ utilisateur.nom }}>Entreprises><strong>{{ pageName }}</strong>
+	{{ utilisateur.nom }}>{{ "entreprise_page_name_list" | trans }}><strong>{{ pageName }}</strong>
 {% endblock %}
 
 {% block descriptionRubrique %}
-	Votre entreprise est l'espace de travail dans lequel vous effectuerez vos tâches quotidiennes.
+	{{ "entreprise_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -18,22 +18,20 @@
 
 {% block body %}
 	<div class="container">
-		<p>
-			{# {{ form(form) }} #}
-			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-				<div class="card-body">
-					<p>
-						<strong>{{ utilisateur.nom }}</strong>, 
-						<br>vous êtes sur le point de créer une entreprise. Merci de fournir vos informations dans le formulaire ci-dessous.
-						<hr>
-					</p>
-					<p class="d-flex justify-content-center">
-						<img class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" width="620px" height="300px">
-					</p>
-					<hr>
-					{{ form(form) }}
-				</div>
+		{# {{ form(form) }} #}
+		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+			<div class="card-body">
+				<p>
+					{{ "entreprise_creation_description_message" | trans({
+						':user': utilisateur.nom
+					}) | raw }}
+				</p>
+				<p class="d-flex justify-content-center">
+					<img class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" width="620px" height="300px">
+				</p>
+				<hr>
+				{{ form(form) }}
 			</div>
-		</p>
+		</div>
 	</div>
 {% endblock %}
