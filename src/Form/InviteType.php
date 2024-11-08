@@ -3,22 +3,15 @@
 namespace App\Form;
 
 use App\Entity\Invite;
-use DateTimeImmutable;
 use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
-use Doctrine\ORM\QueryBuilder;
-use Doctrine\ORM\EntityRepository;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
-use Symfony\Component\Form\Event\PostSubmitEvent;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class InviteType extends AbstractType
 {
