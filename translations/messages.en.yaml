@@ -174,7 +174,9 @@ invite_liste_titre_actions_set_role: "Set roles"
 invite_liste_titre_actions_send_invite_email: "Send the invite eamil"
 invite_liste_titre_actions_desable_guest: "Desable this guest"
 invite_liste_titre_actions_enable_guest: "Enable this guest"
-invite_edition_description_message: "Dear <strong>:user</strong>, <br>You're editing the invitation of <strong>:email</strong>.<br><br>JS Broker will send him a notification email.<br><br>If <strong>:email</strong> still has no JS Brokers user account, don't worry as he can still create one later and his invitation will always be valid unless you desable it yourself.<hr>"
+invite_edition_description_message: "Dear <strong>:user</strong>, <br>You're editing the invitation of <strong>:email</strong>.<br><br>JS Broker will send him a notification email.<br><br>If <strong>:email</strong> still has no JS Brokers user account, don't worry as he can still create one later and his invitation will always be valid unless you desable or delete it yourself.<hr>"
+
+
 
 
 

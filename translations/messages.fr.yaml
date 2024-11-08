@@ -177,3 +177,6 @@ invite_liste_titre_actions_enable_guest: "Activer cet invité"
 invite_edition_description_message: "<strong>:user</strong>, <br>Vous êtes sur le point de modifier l'invitation de <strong>:email</strong>.<br><br>JS Broker lui enverra un email de notification.<br><br>Si <strong>:email</strong> n'a toujours pas encore de compte JS Broker, ne vous inquiètez pas car il peut en créer même après et son invitation restera toujours valide en moins que vous-même puissiez la désactiver intentionnellement.<hr>"
 
 
+
+
+
