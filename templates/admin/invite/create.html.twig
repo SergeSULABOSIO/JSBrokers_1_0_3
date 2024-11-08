@@ -23,12 +23,10 @@
 			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 				<div class="card-body">
 					<p>
-						<strong>{{ utilisateur.nom }}</strong>, 
-                        <br>Vous êtes sur le point de créer une invitation à la personne dont vous fournirez l'adresse mail dans le formulaire ci-dessous.
-                        <br><br>JS Broker lui enverra un email automatiquement lui permettant de s'y connecter.
-                        <br><br>Si l'invité n'a pas encore de compte JS Broker, ne vous inquiètez pas car il peut en créer même après et son invitation restera toujours valide en moins que vous-même puissiez la désactiver intentionnellement.
-                        <hr>
-                    </p>
+    					{{ "invite_creation_description_message" | trans({
+							':user': utilisateur.nom,
+						}) | raw }}
+					</p>
 					{{ form(form) }}
 					</div>
 				</div>
