@@ -34,34 +34,34 @@ class InviteType extends AbstractType
 
         $builder
             ->add('email', EmailType::class, [
-                'label' => "L'addresse mail de l'invité",
+                'label' => "invite_form_email",
                 'empty_data' => '',
                 'required' => true,
                 'attr' => [
-                    'placeholder' => "Email",
+                    'placeholder' => "invite_form_email_placeholder",
                 ],
             ])
-            // ->add('createdAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('entreprises', EntityType::class, [
             ->add('entreprises', EntrepriseAutocompleteField::class, [
+                'label' => "invite_form_company",
                 'class' => Entreprise::class,
                 'choice_label' => "nom",
                 'multiple' => true,
                 'expanded' => false,
                 'by_reference' => false,
                 'autocomplete' => true,
+                'attr' => [
+                    'placeholder' => "invite_form_company_placeholder",
+                ],
                 //une requêt pour filtrer les elements de la liste d'options
                 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
-                'label' => "Envoyer l'invitation"
+                'label' => "invite_form_send_invite",
+                'attr' => [
+                    'class' => "btn btn-secondary",
+                ],
             ])
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
