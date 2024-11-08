@@ -181,6 +181,8 @@ invite_form_company: "Entreprises auxquelles l'invité peut accéder"
 invite_form_company_placeholder: "Veuillez séléctionner ici"
 invite_form_send_invite: "Enregistrer puis envoyer l'email d'invitation"
 invite_creation_description_message: "<strong>:user</strong>,<br>Vous êtes sur le point de créer l'invitation à la personne dont l'adresse mail sera fournie dans le formulaire ci-dessous.<br>JS Broker lui enverra un email de notification afin qu'elle puisse valider son email en cliquant sur le lien de validation.<br><br>Si l'invité n'a pas encore de compte JS Broker, ne vous inquiètez pas car il peut en créer même après et son invitation restera toujours valide en moins que vous-même puissiez la désactiver intentionnellement.<hr>"
+entreprise_list_item_datedat: "Créée le "
+entreprise_list_item_invited_by: "Vous êtes invité par "
 
 
 

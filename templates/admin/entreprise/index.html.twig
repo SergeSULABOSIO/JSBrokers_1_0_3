@@ -60,21 +60,21 @@
 						<li class="list-group-item d-flex justify-content-center">
 							<span class="text-body-tertiary">
 								{{ ux_icon('ic:twotone-date-range', {height: '18px', width: '18px'}) }}
-								Créée le {{ entreprise.createdAt | date("d/m/Y") }}
+								{{ "entreprise_list_item_datedat" | trans }} {{ entreprise.createdAt | date("d/m/Y") }}
 							</span>
 						</li>
 					</ul>
 						<div class="d-flex justify-content-center pt-1">
 							{% if entreprise.isInvited(utilisateur) == true %}
-								<em class="fst-italic text-body-tertiary">Vous êtes invité par <strong>{{ entreprise.utilisateur.nom }}</strong></em>
+								<em class="fst-italic text-body-tertiary">{{ "entreprise_list_item_invited_by" | trans }}<strong>{{ entreprise.utilisateur.nom }}</strong></em>
 							{% else %}
-								<a href="#" class='btn btn-outline-primary border-0 btn-sm'>
+								<a href="#" class='btn btn-outline-secondary border-0 btn-sm'>
 									{{ ux_icon('bi:share-fill', {height: '18px', width: '18px'}) }}
 								</a>
-								<a class='btn btn-outline-primary border-0 btn-sm' href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}">
+								<a class='btn btn-outline-secondary border-0 btn-sm' href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}">
 									{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
 								</a>
-								<a class='btn btn-outline-primary border-0 btn-sm' href="{{ path('admin.entreprise.pdf', {'id':entreprise.id })}}">
+								<a class='btn btn-outline-secondary border-0 btn-sm' href="{{ path('admin.entreprise.pdf', {'id':entreprise.id })}}">
 									{{ ux_icon('bi:file-pdf-fill', {height: '18px', width: '18px'}) }}
 								</a>
 								<form action="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" method='POST'>
