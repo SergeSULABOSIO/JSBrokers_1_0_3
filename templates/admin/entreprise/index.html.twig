@@ -31,7 +31,7 @@
 		<div class="d-flex">
 			{# Boucler les entreprises #}
 			{% for entreprise in entreprises %}
-				<div class="card m-2 p-2 shadow-sm bg-body" style="width: 18rem;">
+				<div class="card m-1 p-2 shadow-sm bg-body" style="width: 18rem;">
 					{% if entreprise.thumbnail %}
 						<img class="rounded" src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 17rem; height: 10rem;">
 					{% else %}
@@ -40,7 +40,7 @@
 					<div class="card-body">
 						<figure class="text-center">
 							<blockquote class="blockquote">
-								<strong><a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-primary">{{ entreprise.nom }}</a></strong>
+								<strong><a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-dark">{{ entreprise.nom }}</a></strong>
 							</blockquote>
 							<figcaption class="blockquote-footer">
 								{{ ux_icon('mdi:address-marker-outline', {height: '18px', width: '18px'}) }}
@@ -48,43 +48,41 @@
 							</figcaption>
 						</figure>
 					</div>
-					<ul class="list-group list-group-flush">
-						<li class="list-group-item d-flex justify-content-center">
-							<span class="fw-light text-body-tertiary">
-								{{ ux_icon('ic:outline-phone', {height: '18px', width: '18px'}) }}
-								{{ entreprise.telephone }} | 
-								{{ ux_icon('clarity:license-outline-badged', {height: '18px', width: '18px'}) }}
-								{{ entreprise.licence }} 
-							</span>
-						</li>
-						<li class="list-group-item d-flex justify-content-center">
-							<span class="text-body-tertiary">
-								{{ ux_icon('ic:twotone-date-range', {height: '18px', width: '18px'}) }}
-								{{ "entreprise_list_item_datedat" | trans }} {{ entreprise.createdAt | date("d/m/Y") }}
-							</span>
-						</li>
-					</ul>
-						<div class="d-flex justify-content-center pt-1">
-							{% if entreprise.isInvited(utilisateur) == true %}
-								<em class="fst-italic text-body-tertiary">{{ "entreprise_list_item_invited_by" | trans }}<strong>{{ entreprise.utilisateur.nom }}</strong></em>
-							{% else %}
-								<a href="#" class='btn btn-outline-secondary border-0 btn-sm'>
-									{{ ux_icon('bi:share-fill', {height: '18px', width: '18px'}) }}
-								</a>
-								<a class='btn btn-outline-secondary border-0 btn-sm' href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}">
-									{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-								</a>
-								<a class='btn btn-outline-secondary border-0 btn-sm' href="{{ path('admin.entreprise.pdf', {'id':entreprise.id })}}">
-									{{ ux_icon('bi:file-pdf-fill', {height: '18px', width: '18px'}) }}
-								</a>
-								<form action="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" method='POST'>
-									<input type='hidden' name='_method' value='DELETE'>
-									<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-										{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-									</button>
-								</form>
-							{% endif %}
-						</div>
+					<div class="list-group list-group-flush">
+						<a class="list-group-item list-group-item-action text-muted">
+							{{ ux_icon('ic:outline-phone', {height: '18px', width: '18px'}) }}
+							{{ "entreprise_list_item_phone" | trans }}<strong class="text-dark">{{ entreprise.telephone }}</strong>
+						</a>
+						<a class="list-group-item list-group-item-action text-muted">
+							{{ ux_icon('clarity:license-outline-badged', {height: '18px', width: '18px'}) }}
+							{{ "entreprise_list_item_license_number" | trans }}<strong class="text-dark">{{ entreprise.licence }}</strong>
+						</a>
+						<a class="list-group-item list-group-item-action text-muted">
+							{{ ux_icon('ic:twotone-date-range', {height: '18px', width: '18px'}) }}
+							{{ "entreprise_list_item_datedat" | trans }}<strong class="text-dark">{{ entreprise.createdAt | date("d/m/Y") }}</strong>
+						</a>
+					</div>
+					<div class="d-flex justify-content-center pt-1">
+						{% if entreprise.isInvited(utilisateur) == true %}
+							<em class="fst-italic text-body-tertiary">{{ "entreprise_list_item_invited_by" | trans }}<strong>{{ entreprise.utilisateur.nom }}</strong></em>
+						{% else %}
+							<a href="#" class='btn btn-outline-secondary border-0 btn-sm'>
+								{{ ux_icon('bi:share-fill', {height: '18px', width: '18px'}) }}
+							</a>
+							<a class='btn btn-outline-secondary border-0 btn-sm' href="{{ path('admin.entreprise.edit', {'id':entreprise.id })}}">
+								{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+							</a>
+							<a class='btn btn-outline-secondary border-0 btn-sm' href="{{ path('admin.entreprise.pdf', {'id':entreprise.id })}}">
+								{{ ux_icon('bi:file-pdf-fill', {height: '18px', width: '18px'}) }}
+							</a>
+							<form action="{{ path('admin.entreprise.remove', {'id':entreprise.id })}}" method='POST'>
+								<input type='hidden' name='_method' value='DELETE'>
+								<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+									{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
+								</button>
+							</form>
+						{% endif %}
+					</div>
 				</div>
 			{% endfor %}
 		</div>
