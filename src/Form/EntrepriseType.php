@@ -59,17 +59,18 @@ class EntrepriseType extends AbstractType
                 ],
             ])
             ->add('numimpot', TextType::class, [
-                'label' => "Num d'impôt (NIF)",
+                'label' => "entreprise_form_label_fin_id_number",
                 'attr' => [
-                    'placeholder' => "NIF",
+                    'placeholder' => "entreprise_form_label_fin_id_number_placeholder",
                 ],
             ])
             ->add('thumbnailFile', FileType::class, [
-                'label' => "Photo de profile",
+                'label' => "entreprise_form_label_profile",
                 'required' => false,
+                
             ])
             ->add('monnaies', CollectionType::class, [
-                'label' => "Liste des monnaies",
+                'label' => "entreprise_form_label_currencies",
                 'entry_type' => MonnaieType::class,
                 'by_reference' => false,
                 'allow_add' => true,

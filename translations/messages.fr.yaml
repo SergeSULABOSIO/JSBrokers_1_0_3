@@ -194,6 +194,13 @@ entreprise_form_label_phone_number: "Numéro de téléphone"
 entreprise_form_label_phone_number_placeholder: "Veuillez renseigner le numéro de téléphone ici..."
 entreprise_form_label_trade_register_number: "Numéro de Registre de Commercer"
 entreprise_form_label_trade_register_placeholder: "Veuillez saisir le RCCM ici..."
+entreprise_form_label_fin_id_number: "Numéro d'Indentification Financière (NIF)"
+entreprise_form_label_fin_id_number_placeholder: "Veuillez saisir votre NIF ici..."
+entreprise_form_label_profile: "Photo de Profile"
+entreprise_form_label_currencies: "Liste des monnaies de change"
+entreprise_form_label_currencies_add: "Ajouter une monnaie"
+entreprise_form_label_currencies_delete: "Supprimer cette monnaie"
+entreprise_form_button_save_company: "Enregistrer l'entreprise"
 
 
 

@@ -194,6 +194,13 @@ entreprise_form_label_phone_number: "Company main phone number"
 entreprise_form_label_phone_number_placeholder: "Please type the Company main phone number here..."
 entreprise_form_label_trade_register_number: "Company Trade Register Number"
 entreprise_form_label_trade_register_placeholder: "Please type the TRN here..."
+entreprise_form_label_fin_id_number: "Financial ID Number"
+entreprise_form_label_fin_id_number_placeholder: "Please type your FIN here..."
+entreprise_form_label_profile: "Profile Picture"
+entreprise_form_label_currencies: "List of Exchange Currencies"
+entreprise_form_label_currencies_add: "Add a Currency"
+entreprise_form_label_currencies_delete: "Delete this Currency"
+entreprise_form_button_save_company: "Save the Company"
 
 
 
