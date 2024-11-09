@@ -26,7 +26,7 @@ class MonnaieType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                'label' => "Intitulé de la monnaie",
+                'label' => "currency_form_label_name",
                 'attr' => [
                     'placeholder' => "Nom",
                 ],
