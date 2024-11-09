@@ -59,10 +59,10 @@
 						</a>
 						<a class="list-group-item list-group-item-action text-muted">
 							{{ ux_icon('ic:twotone-date-range', {height: '18px', width: '18px'}) }}
-							{{ "entreprise_list_item_datedat" | trans }}<strong class="text-dark">{{ entreprise.createdAt | date("d/m/Y") }}</strong>
+							{{ "entreprise_list_item_datedat" | trans }}<strong class="text-dark">{{ entreprise.createdAt | date("D d M Y") }}</strong>
 						</a>
 					</div>
-					<div class="d-flex justify-content-center pt-1">
+					<div class="d-flex justify-content-center pt-1 bg-light">
 						{% if entreprise.isInvited(utilisateur) == true %}
 							<em class="fst-italic text-body-tertiary">{{ "entreprise_list_item_invited_by" | trans }}<strong>{{ entreprise.utilisateur.nom }}</strong></em>
 						{% else %}
