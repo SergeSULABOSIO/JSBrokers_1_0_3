@@ -205,6 +205,13 @@ entreprise_form_label_currencies_add: "Ajouter une monnaie"
 entreprise_form_label_currencies_delete: "Supprimer cette monnaie"
 entreprise_form_button_save_company: "Enregistrer l'entreprise"
 entreprise_edition_description_message: "<strong>:user</strong>, <br>vous êtes sur le point de modifier <strong>:company</strong>. <br>Merci de modifier vos informations dans le formulaire ci-dessous.<hr>"
+currency_description: "Liste des monnaies et leurs taux de change respectifs par rapport à la monnaie locale."
+currency_page_name_list: "Lists des monnaies"
+currency_page_name_new: "Création"
+currency_page_name_update: "Modification de :currency"
+currency_edition_ok: ":currency est modifiée avec succès."
+currency_creation_ok: ":currency est créée avec succès."
+currency_deletion_ok: ":currency est supprimée avec succès."
 
 
 

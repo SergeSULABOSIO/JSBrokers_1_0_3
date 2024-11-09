@@ -2,26 +2,27 @@
 
 namespace App\Controller\Admin;
 
-use App\Constantes\Constantes;
-use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Monnaie;
 use App\Form\InviteType;
-use App\Entity\Utilisateur;
-use App\Event\InvitationEvent;
 use App\Form\MonnaieType;
+use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
+use App\Constantes\Constantes;
+use App\Event\InvitationEvent;
+use Symfony\UX\Turbo\TurboBundle;
 use App\Repository\InviteRepository;
-use App\Repository\EntrepriseRepository;
 use App\Repository\MonnaieRepository;
+use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\UX\Turbo\TurboBundle;
 
 #[Route("/admin/monnaie", name: 'admin.monnaie.')]
 #[IsGranted('ROLE_USER')]
@@ -29,6 +30,7 @@ class MonnaieController extends AbstractController
 {
     public function __construct(
         private MailerInterface $mailer,
+        private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
@@ -41,7 +43,7 @@ class MonnaieController extends AbstractController
         $page = $request->query->getInt("page", 1);
 
         return $this->render('admin/monnaie/index.html.twig', [
-            'pageName' => "Monnaies",
+            'pageName' => $this->translator->trans("currency_page_name_list"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'monnaies' => $this->monnaieRepository->paginateMonnaie($idEntreprise, $page),
@@ -73,12 +75,15 @@ class MonnaieController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($monnaie);
             $this->manager->flush();
+            $this->addFlash("success", $this->translator->trans("currency_creation_ok", [
+                ":currency" => $monnaie->getNom(),
+            ]));
             return $this->redirectToRoute("admin.monnaie.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
         return $this->render('admin/monnaie/create.html.twig', [
-            'pageName' => 'Nouveau',
+            'pageName' => $this->translator->trans("currency_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'form' => $form,
@@ -104,13 +109,17 @@ class MonnaieController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($monnaie); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $monnaie->getNom() . " a été modifiée avec succès.");
+            $this->addFlash("success", $this->translator->trans("currency_edition_ok", [
+                ":currency" => $monnaie->getNom(),
+            ]));
             return $this->redirectToRoute("admin.monnaie.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
         return $this->render('admin/monnaie/edit.html.twig', [
-            'pageName' => "Edition de " . $monnaie->getNom(),
+            'pageName' => $this->translator->trans("currency_page_name_update", [
+                ":currency" => $monnaie->getNom(),
+            ]),
             'utilisateur' => $user,
             'monnaie' => $monnaie,
             'entreprise' => $entreprise,
@@ -126,7 +135,9 @@ class MonnaieController extends AbstractController
         $monnaie = $this->monnaieRepository->find($idMonnaie);
         $monnaieId = $monnaie->getId();
 
-        $message = $monnaie->getNom() . " a été supprimée avec succès.";
+        $message = $this->translator->trans("currency_deletion_ok", [
+            ":currency" => $monnaie->getNom(),
+        ]);;
         
         $this->manager->remove($monnaie);
         $this->manager->flush();
