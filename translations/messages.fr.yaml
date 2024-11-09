@@ -231,4 +231,5 @@ constante_language_french: "Français"
 constante_language_english: "Anglais"
 constante_yes: "Oui"
 constante_no: "Non"
+currency_form_description: "<strong>:user</strong>, <br>Vous êtes sur le point de modifier la monnaie <strong>:currency</strong>.<hr>"
 

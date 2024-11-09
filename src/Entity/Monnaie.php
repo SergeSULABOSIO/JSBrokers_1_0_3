@@ -91,16 +91,6 @@ class Monnaie
         return $this->fonction;
     }
 
-    public function getFonctionS(): ?string
-    {
-        foreach (Constantes::TAB_MONNAIE_FONCTIONS as $nomFonction => $indice) {
-            if($this->fonction == $indice){
-                return $nomFonction;
-            }
-        }
-        return "Indéfinie";
-    }
-
     public function setFonction(int $fonction): self
     {
         $this->fonction = $fonction;
