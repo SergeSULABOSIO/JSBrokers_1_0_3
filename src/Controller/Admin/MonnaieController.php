@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Constantes\Constante;
 use App\Entity\Invite;
 use App\Entity\Monnaie;
 use App\Form\InviteType;
@@ -35,6 +36,7 @@ class MonnaieController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private MonnaieRepository $monnaieRepository,
+        private Constante $constante,
     ) {}
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -48,6 +50,7 @@ class MonnaieController extends AbstractController
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'monnaies' => $this->monnaieRepository->paginateMonnaie($idEntreprise, $page),
             'page' => $page,
+            'constante' => $this->constante,
         ]);
     }
 

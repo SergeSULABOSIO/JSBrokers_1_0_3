@@ -26,9 +26,11 @@
 			<table class="table table-hover table-sm caption-top">
 				<caption>
 					{% if monnaies|length == 0 %}
-						Aucune monnaie trouvée.
+						{{ "currency_filter_result_empty" | trans}}
 					{% else %}
-						Monnaie : {{ monnaies|length }} element(s).
+						{{ "currency_filter_result_elements" | trans({
+							':number': monnaies|length
+						})}}
 					{% endif %}
 					<div class="d-flex gap-1">
 						{{ knp_pagination_render(monnaies) }}
@@ -38,8 +40,8 @@
 					<thead class="table-light">
 						<tr>
 							{# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
-							<th scope="col"><div class='d-flex justify-content-start'>Liste des monnaies</div></th>
-							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>Actions</div></th>
+							<th scope="col"><div class='d-flex justify-content-start'>{{ "currency_list_title" | trans }}</div></th>
+							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "currency_list_actions" | trans }}</div></th>
 						</tr>
 					</thead>
 					<tbody class="table-group-divider">
@@ -47,20 +49,20 @@
 						{% for monnaie in monnaies %}
 							<tr id="row_monnaie_{{ monnaie.id }}">
 								<td>
-									<turbo-frame id="monnaie_{{ monnaie.id }}">
+									{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
 										<a class="m-2" href="{{ path('admin.monnaie.edit', {'idMonnaie':monnaie.id, 'idEntreprise': entreprise.id})}}">
 											{{ monnaie.nom }}
 										</a>
 										<span class="fst-italic text-body-tertiary">
-											<small>Taux en en USD: {{ monnaie.tauxusd }}</small>
-											| <small>Fonction: {{ monnaie.getFonctionS }}</small>
+											<small>{{ "currency_item_exchange_rate" | trans}}{{ monnaie.tauxusd }}</small>
+											| <small>{{ "currency_item_fonction" | trans}} {{ constante.getFonctionMonnaie(monnaie.getFonction) }}</small>
 											{% if monnaie.islocale == 1 %}
-												| <small>Monnaie locale</small>
+												| <small>{{ "currency_item_monnaie_locale" | trans}}</small>
 											{% else %}
-												| <small>Monnaie étrangère</small>
+												| <small>{{ "currency_item_monnaie_etrangere" | trans}}</small>
 											{% endif %}
 										</span>
-									</turbo-frame>
+									{# </turbo-frame> #}
 								</td>
 								<td>
 									<div class="d-flex gap-1 d-flex justify-content-end">
@@ -85,19 +87,19 @@
 												<li>
 													<a class="dropdown-item" href="#">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Définir comme monnaie d'affichage
+														{{ "currency_item_set_as_display_currency" | trans }}
 													</a>
 												</li>
 												<li>
 													<a class="dropdown-item" href="#">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Définir comme monnaie de saisie
+														{{ "currency_item_set_as_input_currency" | trans }}
 													</a>
 												</li>
 												<li>
 													<a class="dropdown-item" href="#">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Comme monaie de saisie et d'affichage
+														{{ "currency_item_set_as_display_and_input_currency" | trans }}
 													</a>
 												</li>
 											</ul>

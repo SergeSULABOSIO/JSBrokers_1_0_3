@@ -2,6 +2,7 @@
 
 namespace App\Form;
 
+use App\Constantes\Constante;
 use App\Constantes\Constantes;
 use App\Entity\Monnaie;
 use App\Entity\Entreprise;
@@ -19,6 +20,14 @@ use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class MonnaieType extends AbstractType
 {
+
+    public function __construct(
+        private Constante $constante
+    )
+    {
+        
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -44,12 +53,13 @@ class MonnaieType extends AbstractType
             ->add('fonction', ChoiceType::class, [
                 'label' => "Fonction de la monnaie",
                 'expanded' => true,
-                'choices'  => Constantes::TAB_MONNAIE_FONCTIONS,
+                // 'choices'  => Constantes::TAB_MONNAIE_FONCTIONS,
+                'choices'  => $this->constante->getTabIsMonnaieLocale(),
             ])
             ->add('locale', ChoiceType::class, [
                 'label' => "Est-elle une monnaie locale?",
                 'expanded' => true,
-                'choices'  => Constantes::TAB_MONNAIE_MONNAIE_LOCALE,
+                'choices'  => $this->constante->getTabIsMonnaieLocale(),
             ])
             // ->add('entreprise', EntityType::class, [
             //     'class' => Entreprise::class,

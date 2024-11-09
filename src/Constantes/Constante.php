@@ -1,19 +1,72 @@
 <?php
+
 namespace App\Constantes;
 
-class Constantes
-{
-    // public const TAB_LANGUES = [
-    //     self::LANGUE_ANGLAIS => "en",
-    //     self::LANGUE_FRANCAIS => "fr"
-    // ];
-    // public const LANGUE_FRANCAIS = "Français";
-    // public const LANGUE_ANGLAIS = "English";
+use Symfony\Contracts\Translation\TranslatorInterface;
 
-    // public const TAB_MONNAIE_MONNAIE_LOCALE = [
-    //     'Non' => 0,
-    //     'Oui' => 1
-    // ];
+class Constante
+{
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {}
+
+    public function getTabLangues(): array
+    {
+        return [
+            $this->translator->trans("constante_language_english") => "en",
+            $this->translator->trans("constante_language_french") => "fr",
+        ];
+    }
+
+    public function getTabFonctionsMonnaies(): array
+    {
+        return [
+            $this->translator->trans("currency_function_none") => -1,
+            $this->translator->trans("currency_function_display_and_intput_currency") => 0,
+            $this->translator->trans("currency_function_intput_currency") => 1,
+            $this->translator->trans("currency_function_display_currency") => 2,
+        ];
+    }
+
+    public function getTabIsMonnaieLocale():array
+    {
+        return [
+            $this->translator->trans("constante_no") => 0,
+            $this->translator->trans("constante_yes") => 1,
+        ];
+    }
+
+    public function getFonctionMonnaie($codeMonnaie)
+    {
+        foreach ($this->getTabFonctionsMonnaies() as $fonction => $code) {
+            if($codeMonnaie == $code){
+                return $fonction;
+            }
+        }
+        return "Null";
+    }
+
+
+
+
+
+
+
+
+
+
+    public const TAB_LANGUES = [
+        self::LANGUE_ANGLAIS => "en",
+        self::LANGUE_FRANCAIS => "fr"
+    ];
+    public const LANGUE_FRANCAIS = "Français";
+    public const LANGUE_ANGLAIS = "English";
+
+
+    public const TAB_MONNAIE_MONNAIE_LOCALE = [
+        'Non' => 0,
+        'Oui' => 1
+    ];
 
     public const FONCTION_SAISIE_ET_AFFICHAGE = "currency_function_display_and_intput_currency";
     public const FONCTION_SAISIE_UNIQUEMENT = "Saisie Uniquement";
@@ -77,8 +130,4 @@ class Constantes
         "ZMW - Zambian kwacha" => "ZMW",
         "ZWL - Zimbabwean dollar (fifth)[e]" => "ZWL"
     ];
-
-    public function __construct()
-    {
-    }
 }
