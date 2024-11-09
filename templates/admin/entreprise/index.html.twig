@@ -59,7 +59,11 @@
 						</a>
 						<a class="list-group-item list-group-item-action text-muted">
 							{{ ux_icon('ic:twotone-date-range', {height: '18px', width: '18px'}) }}
-							{{ "entreprise_list_item_datedat" | trans }}<strong class="text-dark">{{ entreprise.createdAt | date("D d M Y") }}</strong>
+							{{ "entreprise_list_item_createdat" | trans }}{{ entreprise.createdAt | format_datetime("full", "short", locale: app.user.locale) }}
+						</a>
+						<a class="list-group-item list-group-item-action text-muted">
+							{{ ux_icon('ic:twotone-date-range', {height: '18px', width: '18px'}) }}
+							{{ "entreprise_list_item_updatedat" | trans }}{{ entreprise.updatedAt | format_datetime("full", "short", locale: app.user.locale) }}
 						</a>
 					</div>
 					<div class="d-flex justify-content-center pt-1 bg-light">
