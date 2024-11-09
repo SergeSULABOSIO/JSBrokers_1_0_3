@@ -201,6 +201,7 @@ entreprise_form_label_currencies: "List of Exchange Currencies"
 entreprise_form_label_currencies_add: "Add a Currency"
 entreprise_form_label_currencies_delete: "Delete this Currency"
 entreprise_form_button_save_company: "Save the Company"
+entreprise_edition_description_message: "Dear <strong>:user</strong>, <br>You're updating :company.<br>Please update information on the form below and submit the details once done.<hr>"
 
 
 

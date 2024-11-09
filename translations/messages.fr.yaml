@@ -201,6 +201,7 @@ entreprise_form_label_currencies: "Liste des monnaies de change"
 entreprise_form_label_currencies_add: "Ajouter une monnaie"
 entreprise_form_label_currencies_delete: "Supprimer cette monnaie"
 entreprise_form_button_save_company: "Enregistrer l'entreprise"
+entreprise_edition_description_message: "<strong>:user</strong>, <br>vous êtes sur le point de modifier :company.Merci de modifier vos informations dans le formulaire ci-dessous.<hr>"
 
 
 
