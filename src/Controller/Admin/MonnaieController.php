@@ -70,7 +70,7 @@ class MonnaieController extends AbstractController
         $monnaie->setEntreprise($entreprise);
         $monnaie->setTauxusd(1);
         $monnaie->setLocale(false);
-        $monnaie->setFonction(Constantes::TAB_MONNAIE_FONCTIONS[Constantes::FONCTION_AUCUNE]);
+        $monnaie->setFonction(-1);
 
         $form = $this->createForm(MonnaieType::class, $monnaie);
         $form->handleRequest($request);

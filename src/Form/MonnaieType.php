@@ -3,15 +3,9 @@
 namespace App\Form;
 
 use App\Constantes\Constante;
-use App\Constantes\Constantes;
 use App\Entity\Monnaie;
-use App\Entity\Entreprise;
-use Doctrine\DBAL\Types\DecimalType;
-use Doctrine\DBAL\Types\FloatType;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -53,8 +47,7 @@ class MonnaieType extends AbstractType
             ->add('fonction', ChoiceType::class, [
                 'label' => "Fonction de la monnaie",
                 'expanded' => true,
-                // 'choices'  => Constantes::TAB_MONNAIE_FONCTIONS,
-                'choices'  => $this->constante->getTabIsMonnaieLocale(),
+                'choices'  => $this->constante->getTabFonctionsMonnaies(),
             ])
             ->add('locale', ChoiceType::class, [
                 'label' => "Est-elle une monnaie locale?",

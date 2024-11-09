@@ -28,7 +28,7 @@ class Constante
         ];
     }
 
-    public function getTabIsMonnaieLocale():array
+    public function getTabIsMonnaieLocale(): array
     {
         return [
             $this->translator->trans("constante_no") => 0,
@@ -36,10 +36,64 @@ class Constante
         ];
     }
 
+    public function getTabMonnaies(): array
+    {
+        return [
+            "XUA - ADB Unit of Account" => "XUA",
+            "DZD - Algerian dinar" => "DZD",
+            "AOA - Angolan kwanza" => "AOA",
+            "AMD - Armenian dram" => "AMD",
+            "AWG - Aruban florin" => "AWG",
+            "AUD - Australian dollar" => "AUD",
+            "AZN - Azerbaijani manat" => "AZN",
+            "BSD - Bahamian dollar" => "BSD",
+            "BHD - Bahraini dinar" => "BHD",
+            "BDT - Bangladeshi taka" => "BDT",
+            "BZD - Belize dollar" => "BZD",
+            "BWP - Botswana pula" => "BWP",
+            "BRL - Brazilian real" => "BRL",
+            "BND - Brunei dollar" => "BND",
+            "BGN - Bulgarian lev" => "BGN",
+            "BIF - Burundian franc" => "BIF",
+            "KHR - Cambodian riel" => "KHR",
+            "CAD - Canadian dollar" => "CAD",
+            "XOF - CFA franc BCEAO" => "XOF",
+            "XAF - CFA franc BEAC" => "XAF",
+            "XPF - CFP franc (franc Pacifique)" => "XPF",
+            "CDF - Congolese franc" => "CDF",
+            "DJF - Djiboutian franc" => "DJF",
+            "DOP - Dominican peso" => "DOP",
+            "EGP - Egyptian pound" => "EGP",
+            "ERN - Eritrean nakfa" => "ERN",
+            "ETB - Ethiopian birr" => "ETB",
+            "EUR - Euro" => "EUR",
+            "GEL - Georgian lari" => "GEL",
+            "GHS - Ghanaian cedi" => "GHS",
+            "GNF - Guinean franc" => "GNF",
+            "GYD - Guyanese dollar" => "GYD",
+            "HTG - Haitian gourde" => "HTG",
+            "HKD - Hong Kong dollar" => "HKD",
+            "HUF - Hungarian forint" => "HUF",
+            "ISK - Icelandic króna (plural: krónur)" => "ISK",
+            "INR - Indian rupee" => "INR",
+            "IDR - Indonesian rupiah" => "IDR",
+            "IRR - Iranian rial" => "IRR",
+            "IQD - Iraqi dinar" => "IQD",
+            "ILS - Israeli new shekel" => "ILS",
+            "JMD - Jamaican dollar" => "JMD",
+            "JPY - Japanese yen" => "JPY",
+            "CHF - Swiss franc" => "CHF",
+            "UGX - Ugandan shilling" => "UGX",
+            "USD - United States dollar" => "USD",
+            "ZMW - Zambian kwacha" => "ZMW",
+            "ZWL - Zimbabwean dollar (fifth)[e]" => "ZWL"
+        ];
+    }
+
     public function getFonctionMonnaie($codeMonnaie)
     {
         foreach ($this->getTabFonctionsMonnaies() as $fonction => $code) {
-            if($codeMonnaie == $code){
+            if ($codeMonnaie == $code) {
                 return $fonction;
             }
         }

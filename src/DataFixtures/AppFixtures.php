@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Constantes\Constante;
 use App\Constantes\Constantes;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -16,6 +17,12 @@ use Faker\Factory;
 class AppFixtures extends Fixture implements DependentFixtureInterface
 {
 
+    public function __construct(
+        private Constante $constante
+    )
+    {
+        
+    }
 
     public function load(ObjectManager $manager): void
     {
@@ -83,7 +90,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
     private function setMonnaises($faker, ?Entreprise $entreprise)
     {
         $tabNomsMonnaies = [];
-        foreach (Constantes::TAB_MONNAIES as $nom => $code) {
+        foreach ($this->constante->getTabMonnaies() as $nom => $code) {
             $tabNomsMonnaies[] = $nom;
         }
         $monnaies = array_map(
@@ -93,13 +100,13 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         );
 
         foreach ($monnaies as $monnaie) {
-            $monnaie->setCode(Constantes::TAB_MONNAIES[$monnaie->getNom()]);
+            $monnaie->setCode($this->constante->getTabMonnaies()[$monnaie->getNom()]);
             if ($monnaie->getCode() == 'USD') {
-                $monnaie->setFonction(Constantes::TAB_MONNAIE_FONCTIONS[Constantes::FONCTION_SAISIE_ET_AFFICHAGE]);
+                $monnaie->setFonction(0);   //Saisie et affichage
                 $monnaie->setLocale(true);
                 $monnaie->setTauxusd(1);
             } else {
-                $monnaie->setFonction(Constantes::TAB_MONNAIE_FONCTIONS[Constantes::FONCTION_AUCUNE]);
+                $monnaie->setFonction(1);   //Aucune
                 $monnaie->setTauxusd($faker->randomFloat(2, 10));
                 $monnaie->setLocale(false);
             }
