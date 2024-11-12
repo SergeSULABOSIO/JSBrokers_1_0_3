@@ -9,27 +9,27 @@
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.retrocommission' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Retro-commissions</span>
+                    <span class="mb-0">{{ "company_menu_retrocom" | trans }}</span>
                 </div>
             </a>
             <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.production'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Production</span>
+                    <span class="mb-0">{{ "company_menu_prouction" | trans }}</span>
                 </div>
             </a>
             <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.sinistre'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Sinistres</span>
+                    <span class="mb-0">{{ "company_menu_claims" | trans }}</span>
                 </div>
             </a>
             <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.cashflow'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Cashflow</span>
+                    <span class="mb-0">{{ "company_menu_cashflow" | trans }}</span>
                 </div>
             </a>
             <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.renouvellement'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Renouvellements</span>
+                    <span class="mb-0">{{ "company_menu_renewals" | trans }}</span>
                 </div>
             </a>
         </div>

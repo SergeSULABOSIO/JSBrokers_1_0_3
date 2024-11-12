@@ -266,8 +266,13 @@ company_menu_products: "Covers"
 company_menu_avenants: "Endorsements"
 company_menu_polices: "Policies"
 company_menu_partners: "Intermediaries"
-company_menu_ri_panel: "RI Support"
+company_menu_ri_panel: "Reinsurance Panel"
 company_menu_group_reporting: "Reporting"
+company_menu_retrocom: "Co-brokerages Report"
+company_menu_prouction: "Productions Report"
+company_menu_claims: "Claims Report"
+company_menu_cashflow: "Cash-flow Report"
+company_menu_renewals: "Renewals Report"
 
 
 
