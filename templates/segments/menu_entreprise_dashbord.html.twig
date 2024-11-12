@@ -2,78 +2,79 @@
 <div class="list-group">
     <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'active' : '' }}">
         <div class="d-flex w-100 justify-content-between">
-            <h6 class="mb-1">Tableau de bord</h6>
-            <small><span class="badge text-bg-warning rounded-pill"></span></small>
+            <h6 class="mb-1">{{ "company_menu_dashboard" | trans }}</h6>
+            <small><span class="badge text-bg-warning rounded-pill">Pro</span></small>
         </div>
     </a>
 </div>
-<div class="accordion" id="accordionPanelsStayOpenExample">
-    <div class="accordion-item border-0">
-        <h2 class="accordion-header border" id="panelsStayOpen-heading1">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse1" aria-expanded="true" aria-controls="panelsStayOpen-collapse1">
-				{{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                &nbsp;Finances
+
+<div class="accordion" id="accMenuEntreprise">
+    <div class="accordion-item">
+        <h2 class="accordion-header rounded" id="menuFinances">
+            <button class="accordion-button bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+                <strong>&nbsp;{{ "company_menu_group_finance" | trans }}</strong>
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse1" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading1">
-            <div class="accordion-body p-0">
+        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="menuFinances" data-bs-parent="#accMenuEntreprise">
+            <div class="list-group list-group-flush p-1 border-0 accordion-body">
                 <a href="{{ path('admin.monnaie.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.monnaie' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Monnaies</span>
+                        <span class="mb-0">{{ "company_menu_monnaies" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Comptes bancaires</span>
+                        <span class="mb-0">{{ "company_menu_bank_accounts" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Taxes</span>
+                        <span class="mb-0">{{ "company_menu_taxes" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.fournisseur'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Fournisseurs</span>
+                        <span class="mb-0">{{ "company_menu_fournisseurs" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.assureur'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Assureurs</span>
+                        <span class="mb-0">{{ "company_menu_insurers" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.revenu'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Revenus</span>
+                        <span class="mb-0">{{ "company_menu_revenus" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.chargement'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Chargements</span>
+                        <span class="mb-0">{{ "company_menu_chargements" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.facture'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Factures</span>
+                        <span class="mb-0">{{ "company_menu_invoices" | trans }}</span>
                     </div>
                 </a>
                 <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.paiement'? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
-                        <span class="mb-0">Paiements</span>
+                        <span class="mb-0">{{ "company_menu_payments" | trans }}</span>
                     </div>
                 </a>
             </div>
         </div>
     </div>
-    <div class="accordion-item border-0">
-        <h2 class="accordion-header border" id="panelsStayOpen-heading2">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse2" aria-expanded="true" aria-controls="panelsStayOpen-collapse2">
+    <div class="accordion-item">
+        <h2 class="accordion-header rounded" id="headingTwo">
+            <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
                 {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                &nbsp;Marketing
+                <strong>&nbsp;Marketing</strong>
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse2" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading2">
-            <div class="accordion-body p-0">
+        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accMenuEntreprise">
+            <div class="list-group list-group-flush p-1 border-0 accordion-body">
                 <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.piste' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Pistes</span>
@@ -92,15 +93,15 @@
             </div>
         </div>
     </div>
-    <div class="accordion-item border-0">
-        <h2 class="accordion-header border" id="panelsStayOpen-heading3">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse3" aria-expanded="true" aria-controls="panelsStayOpen-collapse3">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingThree">
+            <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
                 {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                &nbsp;Sinistre
+                <strong>&nbsp;Sinistre</strong>
             </button>
         </h2>
-        <div id="panelsStayOpen-collapse3" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading3">
-            <div class="accordion-body p-0">
+        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accMenuEntreprise">
+            <div class="list-group list-group-flush p-1 border-0 accordion-body">
                 <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
                     <div class="d-flex justify-content-between">
                         <span class="mb-0">Victimes</span>
@@ -124,125 +125,9 @@
             </div>
         </div>
     </div>
-    <div class="accordion-item border-0">
-        <h2 class="accordion-header border" id="panelsStayOpen-heading4">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse4" aria-expanded="true" aria-controls="panelsStayOpen-collapse4">
-                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                &nbsp;Production
-            </button>
-        </h2>
-        <div id="panelsStayOpen-collapse4" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading4">
-            <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.client' ? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Clients</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.assureur'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Assureurs</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.contact'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Contacts</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.produit'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Produits</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.chargement'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Chargements</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.revenu'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Revenus</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.avenant'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Avenants</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reassureur'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Réassureurs</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.partenaire'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Partenaires</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.support'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Supports</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="accordion-item border-0">
-        <h2 class="accordion-header border" id="panelsStayOpen-heading4">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse4" aria-expanded="true" aria-controls="panelsStayOpen-collapse4">
-                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                &nbsp;Reporting
-            </button>
-        </h2>
-        <div id="panelsStayOpen-collapse4" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading4">
-            <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.retrocommission' ? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Retro-commissions</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.production'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Production</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.sinistre'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Sinistres</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.cashflow'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Cashflow</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.renouvellement'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Renouvellements</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="accordion-item border-0">
-        <h2 class="accordion-header border" id="panelsStayOpen-heading6">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse6" aria-expanded="true" aria-controls="panelsStayOpen-collapse6">
-                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                &nbsp;Administration
-            </button>
-        </h2>
-        <div id="panelsStayOpen-collapse6" class="list-group accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading6">
-            <div class="accordion-body p-0">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.document' ? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Documents</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.classeur'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Classeurs</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
 </div>
+
+
+
+
+

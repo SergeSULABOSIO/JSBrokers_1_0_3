@@ -243,6 +243,16 @@ currency_form_fonction: "Fonction de la monnaie"
 currency_form_local: "Est-elle votre monnaie locale?"
 currency_form_save: "Enregistrer la monnaie"
 currency_creation_description_message: "<strong>:user</strong>,<br>Vous êtes sur le point de créer une monnaie.<br><br>Assurez-vous d'abord que cette monnaie n'existe pas encore dans <strong>:company</strong>."
-
+company_menu_dashboard: "Tableau de bord"
+company_menu_group_finance: "Finances"
+company_menu_monnaies: "Monnaies"
+company_menu_bank_accounts: "Comptes bancaires"
+company_menu_taxes: "Taxes"
+company_menu_fournisseurs: "Fournisseurs"
+company_menu_insurers: "Assureurs"
+company_menu_revenus: "Revenus"
+company_menu_chargements: "Chargements"
+company_menu_invoices: "Factures"
+company_menu_payments: "Paiements"
 
 

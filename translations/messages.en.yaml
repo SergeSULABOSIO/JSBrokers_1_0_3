@@ -243,7 +243,17 @@ currency_form_fonction: "Function or usage of the currency"
 currency_form_local: "Is it your country local currency"
 currency_form_save: "Save the currency"
 currency_creation_description_message: "Dear <strong>:user</strong>,<br>You are creating a currency.<br><br>Please make sure this currency doesn't already exist in <strong>:company</strong>."
-
+company_menu_dashboard: "Dashboard"
+company_menu_group_finance: "Finances"
+company_menu_monnaies: "Currencies"
+company_menu_bank_accounts: "Bank accounts"
+company_menu_taxes: "Taxes"
+company_menu_fournisseurs: "Providers"
+company_menu_insurers: "Insurers"
+company_menu_revenus: "Revenues"
+company_menu_chargements: "Loadings"
+company_menu_invoices: "Invoices"
+company_menu_payments: "Payments"
 
 
 
