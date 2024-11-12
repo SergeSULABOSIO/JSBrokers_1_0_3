@@ -278,6 +278,9 @@ company_menu_victims: "Victims"
 company_menu_intervenants: "Contributors"
 company_menu_declarations: "Notifications"
 company_menu_reglements: "Settlements"
+company_menu_group_admin: "Administration"
+company_menu_documents: "Documents"
+company_menu_classeurs: "Folders"
 
 
 
