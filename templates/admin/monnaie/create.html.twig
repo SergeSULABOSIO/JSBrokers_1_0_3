@@ -18,21 +18,19 @@
 
 {% block body %}
 	<div class="container">
-		<p>
-			{# {{ form(form) }} #}
-			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-				<div class="card-body">
-					<p>
-						{{ "currency_creation_description_message" | trans({
-							":user": utilisateur.nom, 
-							":company": entreprise.nom, 
-						}) | raw}}
-						<hr>
-                    </p>
-					{{ form(form) }}
-					</div>
+		{# {{ form(form) }} #}
+		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+			<div class="card-body">
+				<p>
+					{{ "currency_creation_description_message" | trans({
+						":user": utilisateur.nom, 
+						":company": entreprise.nom, 
+					}) | raw}}
+					<hr>
+				</p>
+				{{ form(form) }}
 				</div>
 			</div>
-		</p>
-	</p>
-</div>{% endblock %}
+		</div>	
+	</div>
+{% endblock %}
