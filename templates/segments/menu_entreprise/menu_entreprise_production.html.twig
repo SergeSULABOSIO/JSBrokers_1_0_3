@@ -1,0 +1,32 @@
+<div class="accordion-item">
+    <h2 class="accordion-header" id="menuProduction">
+        <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#menuProduction" aria-expanded="false" aria-controls="menuProduction">
+            {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+            <strong>&nbsp;Production</strong>
+        </button>
+    </h2>
+    <div id="menuProduction" class="accordion-collapse collapse" aria-labelledby="menuProduction" data-bs-parent="#accMenuEntreprise">
+        <div class="list-group list-group-flush p-1 border-0 accordion-body">
+            <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">Victimes</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.intervenant'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">Intervénants</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.sinistre'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">Sinistres</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reglement'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">Reglements</span>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>

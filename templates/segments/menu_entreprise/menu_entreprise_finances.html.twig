@@ -1,0 +1,57 @@
+<div class="accordion-item">
+    <h2 class="accordion-header rounded" id="menuFinances">
+        <button class="accordion-button bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuFinances" aria-expanded="true" aria-controls="collapsemenuFinances">
+            {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+            <strong>&nbsp;{{ "company_menu_group_finance" | trans }}</strong>
+        </button>
+    </h2>
+    <div id="collapsemenuFinances" class="accordion-collapse collapse show" aria-labelledby="menuFinances" data-bs-parent="#accMenuEntreprise">
+        <div class="list-group list-group-flush p-1 border-0 accordion-body">
+            <a href="{{ path('admin.monnaie.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.monnaie' ? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_monnaies" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_bank_accounts" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_taxes" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.fournisseur'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_fournisseurs" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.assureur'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_insurers" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.revenu'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_revenus" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.chargement'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_chargements" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.facture'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_invoices" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.paiement'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_payments" | trans }}</span>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>

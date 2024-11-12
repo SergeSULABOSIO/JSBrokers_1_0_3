@@ -9,122 +9,12 @@
 </div>
 
 <div class="accordion" id="accMenuEntreprise">
-    <div class="accordion-item">
-        <h2 class="accordion-header rounded" id="menuFinances">
-            <button class="accordion-button bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                <strong>&nbsp;{{ "company_menu_group_finance" | trans }}</strong>
-            </button>
-        </h2>
-        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="menuFinances" data-bs-parent="#accMenuEntreprise">
-            <div class="list-group list-group-flush p-1 border-0 accordion-body">
-                <a href="{{ path('admin.monnaie.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.monnaie' ? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_monnaies" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.compte'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_bank_accounts" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_taxes" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.fournisseur'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_fournisseurs" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.assureur'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_insurers" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.revenu'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_revenus" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.chargement'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_chargements" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.facture'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_invoices" | trans }}</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.paiement'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">{{ "company_menu_payments" | trans }}</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="accordion-item">
-        <h2 class="accordion-header rounded" id="headingTwo">
-            <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                <strong>&nbsp;Marketing</strong>
-            </button>
-        </h2>
-        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accMenuEntreprise">
-            <div class="list-group list-group-flush p-1 border-0 accordion-body">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.piste' ? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Pistes</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.tache'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Tâches</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.liste_comme'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Feedbacks</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="accordion-item">
-        <h2 class="accordion-header" id="headingThree">
-            <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-                <strong>&nbsp;Sinistre</strong>
-            </button>
-        </h2>
-        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accMenuEntreprise">
-            <div class="list-group list-group-flush p-1 border-0 accordion-body">
-                <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Victimes</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.intervenant'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Intervénants</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.sinistre'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Sinistres</span>
-                    </div>
-                </a>
-                <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reglement'? 'active' : '' }}">
-                    <div class="d-flex justify-content-between">
-                        <span class="mb-0">Reglements</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
+    {% include 'segments/menu_entreprise/menu_entreprise_finances.html.twig' %}
+    {% include 'segments/menu_entreprise/menu_entreprise_marketing.html.twig' %}
+    {% include 'segments/menu_entreprise/menu_entreprise_production.html.twig' %}
+    {% include 'segments/menu_entreprise/menu_entreprise_sinistres.html.twig' %}
+    {% include 'segments/menu_entreprise/menu_entreprise_reporting.html.twig' %}
+    {% include 'segments/menu_entreprise/menu_entreprise_administration.html.twig' %}
 </div>
 
 

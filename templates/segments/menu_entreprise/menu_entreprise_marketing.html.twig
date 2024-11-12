@@ -1,0 +1,27 @@
+<div class="accordion-item">
+    <h2 class="accordion-header rounded" id="menuMarketing">
+        <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuMarketing" aria-expanded="false" aria-controls="collapsemenuMarketing">
+            {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
+            <strong>&nbsp;Marketing</strong>
+        </button>
+    </h2>
+    <div id="collapsemenuMarketing" class="accordion-collapse collapse" aria-labelledby="menuMarketing" data-bs-parent="#accMenuEntreprise">
+        <div class="list-group list-group-flush p-1 border-0 accordion-body">
+            <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.piste' ? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">Pistes</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.tache'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">Tâches</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.liste_comme'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">Feedbacks</span>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
