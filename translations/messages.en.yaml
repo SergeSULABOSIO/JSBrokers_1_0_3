@@ -240,6 +240,8 @@ currency_form_rate: "Exchange rate compared to the USD ($)"
 currency_form_rate_help: "If this currency has the same rate as the US dollar (i.e. 1 unit of this currency is equal to $1), then just type the number '1' in this field."
 currency_form_rate_place_holder: "Type the rate in USD here..."
 currency_form_fonction: "Function or usage of the currency"
+currency_form_local: "Is it your country local currency"
+currency_form_save: "Save the currency"
 
 
 

@@ -50,17 +50,16 @@ class MonnaieType extends AbstractType
                 'choices'  => $this->constante->getTabFonctionsMonnaies(),
             ])
             ->add('locale', ChoiceType::class, [
-                'label' => "Est-elle une monnaie locale?",
+                'label' => "currency_form_local",
                 'expanded' => true,
                 'choices'  => $this->constante->getTabIsMonnaieLocale(),
             ])
-            // ->add('entreprise', EntityType::class, [
-            //     'class' => Entreprise::class,
-            //     'choice_label' => 'id',
-            // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer"
+                'label' => "currency_form_save",
+                'attr' => [
+                    'class' => "btn btn-secondary",
+                ],
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())

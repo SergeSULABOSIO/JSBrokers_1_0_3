@@ -240,6 +240,8 @@ currency_form_rate: "Taux de change par rapport au dollars ($)"
 currency_form_rate_help: "Si cette monnaie a le même taux que le dollar Américain (soit 1 unité de cette monnaie est égale à 1 $), alors tapez juste le chiffre '1' dans ce champ."
 currency_form_rate_place_holder: "Taux en USD ici..."
 currency_form_fonction: "Fonction de la monnaie"
+currency_form_local: "Est-elle votre monnaie locale?"
+currency_form_save: "Enregistrer la monnaie"
 
 
 
