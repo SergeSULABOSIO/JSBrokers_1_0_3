@@ -1,30 +1,60 @@
 <div class="accordion-item">
     <h2 class="accordion-header" id="menuProduction">
-        <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#menuProduction" aria-expanded="false" aria-controls="menuProduction">
+        <button class="accordion-button collapsed bg-secondary text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuProduction" aria-expanded="false" aria-controls="collapsemenuProduction">
             {{ ux_icon('gravity-ui:dots-9', {height: '16px', width: '16px'}) }}
-            <strong>&nbsp;Production</strong>
+            <strong>&nbsp;{{ "company_menu_group_production" | trans }}&nbsp;</strong>
         </button>
     </h2>
-    <div id="menuProduction" class="accordion-collapse collapse" aria-labelledby="menuProduction" data-bs-parent="#accMenuEntreprise">
+    <div id="collapsemenuProduction" class="accordion-collapse collapse" aria-labelledby="menuProduction" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
-            <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
+            <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.client' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Victimes</span>
+                    <span class="mb-0">{{ "company_menu_clients" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.intervenant'? 'active' : '' }}">
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.assureur'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Intervénants</span>
+                    <span class="mb-0">{{ "company_menu_insurers" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.sinistre'? 'active' : '' }}">
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.contact'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Sinistres</span>
+                    <span class="mb-0">{{ "company_menu_contacts" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reglement'? 'active' : '' }}">
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reassureur'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">Reglements</span>
+                    <span class="mb-0">{{ "company_menu_reinsurers" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.produit'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_products" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.revenu'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_revenus" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.avenant'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_avenants" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.police'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_polices" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.partenaire'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_partners" | trans }}</span>
+                </div>
+            </a>
+            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.support'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_ri_panel" | trans }}</span>
                 </div>
             </a>
         </div>
