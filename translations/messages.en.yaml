@@ -274,10 +274,10 @@ company_menu_claims: "Claims Report"
 company_menu_cashflow: "Cash-flow Report"
 company_menu_renewals: "Renewals Report"
 company_menu_group_claims: "Claims"
-company_menu_group_victims: "Victims"
-company_menu_group_intervenants: "Contributors"
-company_menu_group_declarations: "Notifications"
-company_menu_group_reglements: "Settlements"
+company_menu_victims: "Victims"
+company_menu_intervenants: "Contributors"
+company_menu_declarations: "Notifications"
+company_menu_reglements: "Settlements"
 
 
 
