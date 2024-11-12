@@ -242,6 +242,7 @@ currency_form_rate_place_holder: "Type the rate in USD here..."
 currency_form_fonction: "Function or usage of the currency"
 currency_form_local: "Is it your country local currency"
 currency_form_save: "Save the currency"
+currency_creation_description_message: "Dear <strong>:user</strong>,<br>You are creating a currency.<br><br>Please make sure this currency doesn't already exist in <strong>:company</strong>."
 
 
 

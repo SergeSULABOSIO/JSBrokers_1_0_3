@@ -242,6 +242,7 @@ currency_form_rate_place_holder: "Taux en USD ici..."
 currency_form_fonction: "Fonction de la monnaie"
 currency_form_local: "Est-elle votre monnaie locale?"
 currency_form_save: "Enregistrer la monnaie"
+currency_creation_description_message: "<strong>:user</strong>,<br>Vous êtes sur le point de créer une monnaie.<br><br>Assurez-vous d'abord que cette monnaie n'existe pas encore dans <strong>:company</strong>."
 
 
 

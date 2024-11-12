@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	En tant qu'application de gestion des finances, vous devez définir un ou plusieurs monnaies de transaction ainsi que leurs taux respectifs.
+	{{ "currency_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -23,10 +23,11 @@
 			<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 				<div class="card-body">
 					<p>
-						<strong>{{ utilisateur.nom }}</strong>, 
-                        <br>Vous êtes sur le point de créer une monnaie.
-                        <br><br>Assurez-vous d'abord que cette monnaie n'existe pas encore dans <strong>{{ entreprise.nom }}</strong>.
-                        <hr>
+						{{ "currency_creation_description_message" | trans({
+							":user": utilisateur.nom, 
+							":company": entreprise.nom, 
+						}) | raw}}
+						<hr>
                     </p>
 					{{ form(form) }}
 					</div>
