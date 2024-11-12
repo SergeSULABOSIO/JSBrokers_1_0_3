@@ -28,24 +28,24 @@ class MonnaieType extends AbstractType
             ->add('nom', TextType::class, [
                 'label' => "currency_form_label_name",
                 'attr' => [
-                    'placeholder' => "Nom",
+                    'placeholder' => "currency_form_label_name_placeholder",
                 ],
             ])
             ->add('code', TextType::class, [
-                'label' => "Code / insigne de la monnaie",
+                'label' => "currency_form_code",
                 'attr' => [
-                    'placeholder' => "Code",
+                    'placeholder' => "currency_form_code_placeholder",
                 ],
             ])
             ->add('tauxusd', NumberType::class, [
-                'label' => "Taux de change par rapport au dollars ($)",
-                'help' => "Si cette monnaie a le même taux que le dollar Américain (soit 1 unité de cette monnaie est égale à 1 $), alors tapez juste le chiffre '1' dans ce champ.",
+                'label' => "currency_form_rate",
+                'help' => "currency_form_rate_help",
                 'attr' => [
-                    'placeholder' => "Taux en USD",
+                    'placeholder' => "currency_form_rate_place_holder",
                 ],
             ])
             ->add('fonction', ChoiceType::class, [
-                'label' => "Fonction de la monnaie",
+                'label' => "currency_form_fonction",
                 'expanded' => true,
                 'choices'  => $this->constante->getTabFonctionsMonnaies(),
             ])
