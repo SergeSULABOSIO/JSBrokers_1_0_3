@@ -2,6 +2,7 @@
 
 namespace App\Form;
 
+use App\Constantes\Constante;
 use App\Entity\Utilisateur;
 use App\Constantes\Constantes;
 use App\Services\FormListenerFactory;
@@ -37,7 +38,7 @@ class RegistrationFormType extends AbstractType
             ->add('locale', ChoiceType::class, [
                 'label' => "Langue",
                 'expanded' => false,
-                'choices'  => Constantes::TAB_LANGUES,
+                'choices'  => Constante::TAB_LANGUES,
             ])
             ->add('plainPassword', PasswordType::class, [
                 'label' => "Mot de passe",

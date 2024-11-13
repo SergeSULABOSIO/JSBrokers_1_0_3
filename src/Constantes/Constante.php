@@ -100,15 +100,6 @@ class Constante
         return "Null";
     }
 
-
-
-
-
-
-
-
-
-
     public const TAB_LANGUES = [
         self::LANGUE_ANGLAIS => "en",
         self::LANGUE_FRANCAIS => "fr"
