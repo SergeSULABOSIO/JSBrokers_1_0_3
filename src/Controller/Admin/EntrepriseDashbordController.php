@@ -32,6 +32,7 @@ class EntrepriseDashbordController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
+        dd("Je lance la tableau de bord - entreprise", $entreprise);
         // dd($entreprise, $user);
 
         if ($user->isVerified()) {
