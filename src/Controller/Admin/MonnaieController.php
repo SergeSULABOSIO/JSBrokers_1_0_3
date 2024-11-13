@@ -10,6 +10,7 @@ use App\Form\MonnaieType;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Constantes\Constantes;
+use App\Constantes\MenuActivator;
 use App\Event\InvitationEvent;
 use Symfony\UX\Turbo\TurboBundle;
 use App\Repository\InviteRepository;
@@ -29,6 +30,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class MonnaieController extends AbstractController
 {
+    public MenuActivator $activator;
+
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -37,7 +40,9 @@ class MonnaieController extends AbstractController
         private InviteRepository $inviteRepository,
         private MonnaieRepository $monnaieRepository,
         private Constante $constante,
-    ) {}
+    ) {
+        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
+    }
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
@@ -51,6 +56,7 @@ class MonnaieController extends AbstractController
             'monnaies' => $this->monnaieRepository->paginateMonnaie($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'activator' => $this->activator,
         ]);
     }
 
@@ -89,6 +95,7 @@ class MonnaieController extends AbstractController
             'pageName' => $this->translator->trans("currency_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'activator' => $this->activator,
             'form' => $form,
         ]);
     }
@@ -126,6 +133,7 @@ class MonnaieController extends AbstractController
             'utilisateur' => $user,
             'monnaie' => $monnaie,
             'entreprise' => $entreprise,
+            'activator' => $this->activator,
             'form' => $form,
         ]);
     }

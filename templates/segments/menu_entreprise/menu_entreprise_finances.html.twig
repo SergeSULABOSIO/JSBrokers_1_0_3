@@ -1,11 +1,11 @@
 <div class="accordion-item">
     <h2 class="accordion-header rounded" id="menuFinances">
-        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuFinances" aria-expanded="true" aria-controls="collapsemenuFinances">
+        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuFinances" aria-expanded="{{ activator.canExpand(1) }}" aria-controls="collapsemenuFinances">
             {{ ux_icon('carbon:finance', {height: '16px', width: '16px'}) }}
             <strong>&nbsp;{{ "company_menu_group_finance" | trans }}&nbsp;</strong>
         </button>
     </h2>
-    <div id="collapsemenuFinances" class="accordion-collapse collapse show" aria-labelledby="menuFinances" data-bs-parent="#accMenuEntreprise">
+    <div id="collapsemenuFinances" class="accordion-collapse collapse {{ activator.canShow(1) }}" aria-labelledby="menuFinances" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="{{ path('admin.monnaie.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.monnaie' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">

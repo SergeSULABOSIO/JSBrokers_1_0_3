@@ -1,11 +1,11 @@
 <div class="accordion-item">
     <h2 class="accordion-header" id="menuAdministration">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuAdministration" aria-expanded="false" aria-controls="collapsemenuAdministration">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuAdministration" aria-expanded="{{ activator.canExpand(6) }}" aria-controls="collapsemenuAdministration">
             {{ ux_icon('wpf:books', {height: '16px', width: '16px'}) }}
             <strong>&nbsp;{{ "company_menu_group_admin" | trans }}&nbsp;</strong>
         </button>
     </h2>
-    <div id="collapsemenuAdministration" class="accordion-collapse collapse" aria-labelledby="menuAdministration" data-bs-parent="#accMenuEntreprise">
+    <div id="collapsemenuAdministration" class="accordion-collapse collapse {{ activator.canShow(6) }}" aria-labelledby="menuAdministration" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.document' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">

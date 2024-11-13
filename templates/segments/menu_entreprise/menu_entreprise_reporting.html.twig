@@ -1,11 +1,11 @@
 <div class="accordion-item">
     <h2 class="accordion-header" id="menuReporting">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuReporting" aria-expanded="false" aria-controls="collapsemenuReporting">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuReporting" aria-expanded="{{ activator.canExpand(5) }}" aria-controls="collapsemenuReporting">
             {{ ux_icon('mdi:report-bar', {height: '16px', width: '16px'}) }}
             <strong>&nbsp;{{ "company_menu_group_reporting" | trans }}&nbsp;</strong>
         </button>
     </h2>
-    <div id="collapsemenuReporting" class="accordion-collapse collapse" aria-labelledby="menuReporting" data-bs-parent="#accMenuEntreprise">
+    <div id="collapsemenuReporting" class="accordion-collapse collapse {{ activator.canShow(5) }}" aria-labelledby="menuReporting" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.retrocommission' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">

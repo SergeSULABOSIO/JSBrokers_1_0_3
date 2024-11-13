@@ -1,11 +1,11 @@
 <div class="accordion-item">
     <h2 class="accordion-header" id="menuSinistre">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuSinistre" aria-expanded="false" aria-controls="collapsemenuSinistre">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuSinistre" aria-expanded="{{ activator.canExpand(4) }}" aria-controls="collapsemenuSinistre">
             {{ ux_icon('hugeicons:accident', {height: '16px', width: '16px'}) }}
             <strong>&nbsp;{{ "company_menu_group_claims" | trans }}&nbsp;</strong>
         </button>
     </h2>
-    <div id="collapsemenuSinistre" class="accordion-collapse collapse" aria-labelledby="menuSinistre" data-bs-parent="#accMenuEntreprise">
+    <div id="collapsemenuSinistre" class="accordion-collapse collapse {{ activator.canShow(4) }}" aria-labelledby="menuSinistre" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">

@@ -1,11 +1,11 @@
 <div class="accordion-item">
     <h2 class="accordion-header" id="menuProduction">
-        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuProduction" aria-expanded="false" aria-controls="collapsemenuProduction">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuProduction" aria-expanded="{{ activator.canExpand(3) }}" aria-controls="collapsemenuProduction">
             {{ ux_icon('emojione-monotone:umbrella-with-rain-drops', {height: '16px', width: '16px'}) }}
             <strong>&nbsp;{{ "company_menu_group_production" | trans }}&nbsp;</strong>
         </button>
     </h2>
-    <div id="collapsemenuProduction" class="accordion-collapse collapse" aria-labelledby="menuProduction" data-bs-parent="#accMenuEntreprise">
+    <div id="collapsemenuProduction" class="accordion-collapse collapse {{ activator.canShow(3) }}" aria-labelledby="menuProduction" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.client' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
