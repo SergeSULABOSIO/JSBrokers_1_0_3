@@ -32,4 +32,13 @@ class MenuActivator
             return "false";
         }
     }
+
+    public function isCollapsed($groupe_menu):string
+    {
+        if($groupe_menu == $this->groupe_menu){
+            return "";
+        }else{
+            return "collapsed";
+        }
+    }
 }

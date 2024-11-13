@@ -1,6 +1,6 @@
 <div class="accordion-item">
-    <h2 class="accordion-header rounded" id="menuFinances">
-        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuFinances" aria-expanded="{{ activator.canExpand(1) }}" aria-controls="collapsemenuFinances">
+    <h2 class="accordion-header" id="menuFinances">
+        <button class="accordion-button {{ activator.isCollapsed(1) }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapsemenuFinances" aria-expanded="{{ activator.canExpand(1) }}" aria-controls="collapsemenuFinances">
             {{ ux_icon('carbon:finance', {height: '16px', width: '16px'}) }}
             <strong>&nbsp;{{ "company_menu_group_finance" | trans }}&nbsp;</strong>
         </button>

@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Constantes\MenuActivator;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,9 +17,13 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class EntrepriseDashbordController extends AbstractController
 {
+    private MenuActivator $activator;
+
     public function __construct(
         private UrlGeneratorInterface $urlGenerator
-    ) {}
+    ) {
+        $this->activator = new MenuActivator(-1);
+    }
 
 
     #[Route('/{id}', name: 'dashbord', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -34,6 +39,7 @@ class EntrepriseDashbordController extends AbstractController
                 'pageName' => "Tableau de bord",
                 'utilisateur' => $user,
                 'entreprise' => $entreprise,
+                'activator' => $this->activator,
                 'page' => $request->query->getInt("page", 1),
             ]);
         } else {
