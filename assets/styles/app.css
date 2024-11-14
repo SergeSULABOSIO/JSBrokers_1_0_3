@@ -2,7 +2,7 @@ body {
   background-color: #f3f3f3;
 }
 
-a:hover {
-  background-color: yellow;
+.sensible:hover {
+  background: yellow;
   /* font-size: 18px; */
 }
