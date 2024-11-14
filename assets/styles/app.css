@@ -3,6 +3,11 @@ body {
 }
 
 .sensible:hover {
-  background: yellow;
+  background-color: lightgrey;
+  /* font-size: 18px; */
+}
+
+.sensible {
+  background-color: white;
   /* font-size: 18px; */
 }
