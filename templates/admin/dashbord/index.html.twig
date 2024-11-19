@@ -23,6 +23,15 @@
 
 {% block body %}
 	<div class="container">
+		{# Ligne 0 #}
+		{# Section - contient des infos assez détailées #}
+		<div class="row">
+			{{ include('admin/dashbord/segments/filtres.html.twig', 
+				{
+					data: "RAS",
+				}) 
+			}}
+		</div>
 		{# Ligne 1 #}
 		<div class="row">
 			{# Brique #}
