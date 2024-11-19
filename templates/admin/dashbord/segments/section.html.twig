@@ -20,16 +20,16 @@
                     <button class="nav-link" id="nav-graphs-tab" data-bs-toggle="tab" data-bs-target="#nav-graphs" type="button" role="tab" aria-controls="nav-graphs" aria-selected="false">
                         Graphs
                     </button>
-                    <button class="nav-link" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact" type="button" role="tab" aria-controls="nav-contact" aria-selected="false">
+                    <button class="nav-link" id="nav-topclients-tab" data-bs-toggle="tab" data-bs-target="#nav-topclients" type="button" role="tab" aria-controls="nav-topclients" aria-selected="false">
                         Top 20 clients
                     </button>
-                    <button class="nav-link" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact" type="button" role="tab" aria-controls="nav-contact" aria-selected="false">
+                    <button class="nav-link" id="nav-tasks-tab" data-bs-toggle="tab" data-bs-target="#nav-tasks" type="button" role="tab" aria-controls="nav-tasks" aria-selected="false">
                         Tasks
                     </button>
-                    <button class="nav-link" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact" type="button" role="tab" aria-controls="nav-contact" aria-selected="false">
+                    <button class="nav-link" id="nav-renewals-tab" data-bs-toggle="tab" data-bs-target="#nav-renewals" type="button" role="tab" aria-controls="nav-renewals" aria-selected="false">
                         Renewals
                     </button>
-                    <button class="nav-link" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact" type="button" role="tab" aria-controls="nav-contact" aria-selected="false">
+                    <button class="nav-link" id="nav-claims-tab" data-bs-toggle="tab" data-bs-target="#nav-claims" type="button" role="tab" aria-controls="nav-claims" aria-selected="false">
                         Claims
                     </button>
                 </div>
@@ -37,13 +37,56 @@
             {# Contenu de chaque Onglet #}
             <div class="tab-content" id="nav-tabContent">
                 <div class="tab-pane fade show active" id="nav-production" role="tabpanel" aria-labelledby="nav-production-tab" tabindex="0">
-                    Contenu de production
+                    {# Tableau de production #}
+                    <table class="table table-hover table-sm mt-2">
+                        <caption>Quelques explications en bas du tableau ici.</caption>
+                        <thead class="table-secondary">
+                            <tr>
+                                <th scope="col">Labels</th>
+                                <th scope="col">GW Premiums</th>
+                                <th scope="col">Net Com.</th>
+                                <th scope="col">Taxes</th>
+                                <th scope="col">Gros Com.</th>
+                                <th scope="col">Com. Received</th>
+                                <th scope="col">Balance due</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Mark</td>
+                                <td>Otto</td>
+                                <td>@mdo</td>
+                                <td>@mdo</td>
+                                <td>@mdo</td>
+                                <td>@mdo</td>
+                                <td>@mdo</td>
+                            </tr>
+                            <tr>
+                                <td>Jacob</td>
+                                <td>Thornton</td>
+                                <td>@fat</td>
+                                <td>Jacob</td>
+                                <td>Thornton</td>
+                                <td>@fat</td>
+                                <td>@fat</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
                 <div class="tab-pane fade" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
                     {{ render_chart(chart, {'class': 'my-chart'}) }}
                 </div>
-                <div class="tab-pane fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab" tabindex="0">
-                    Contenu de Contact
+                <div class="tab-pane fade" id="nav-topclients" role="tabpanel" aria-labelledby="nav-topclients-tab" tabindex="0">
+                    Contenu de top 20 clients
+                </div>
+                <div class="tab-pane fade" id="nav-tasks" role="tabpanel" aria-labelledby="nav-tasks-tab" tabindex="0">
+                    Contenu de tasks
+                </div>
+                <div class="tab-pane fade" id="nav-renewals" role="tabpanel" aria-labelledby="nav-renewals-tab" tabindex="0">
+                    Contenu de renewals
+                </div>
+                <div class="tab-pane fade" id="nav-claims" role="tabpanel" aria-labelledby="nav-claims-tab" tabindex="0">
+                    Contenu de claims
                 </div>
             </div>
         </div>
