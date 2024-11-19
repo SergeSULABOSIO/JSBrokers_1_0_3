@@ -23,8 +23,95 @@
 
 {% block body %}
 	<div class="container">
-		<div
-			class="row">
+		{# Ligne 1 #}
+		<div class="row">
+			{# Brique #}
+			{{ include ('admin/dashbord/segments/brique.html.twig', 
+				{
+					titre: "Policies summary",
+					principal: {
+						rubrique: 'GW Prem.:',
+						valeur: '$100.000.000,45',
+					},
+					items: {
+						0: {
+							rubrique: 'Net Prem.:',
+							valeur: '$100.000.000,45',
+						},
+						1: {
+							rubrique: 'Arca:',
+							valeur: '$100.000.000,45',
+						},
+						2: {
+							rubrique: 'Fronting:',
+							valeur: '$100.000.000,45',
+						},
+						3: {
+							rubrique: 'Facility:',
+							valeur: '$100.000.000,45',
+						},
+					},
+				}) 
+			}}
+			{# Brique #}
+			{{ include ('admin/dashbord/segments/brique.html.twig', 
+				{
+					titre: "Commissions summary",
+					principal: {
+						rubrique: 'Gros Com.:',
+						valeur: '$100.000.000,45',
+					},
+					items: {
+						0: {
+							rubrique: 'Net Com.:',
+							valeur: '$100.000.000,45',
+						},
+						1: {
+							rubrique: 'Arca (2%):',
+							valeur: '$100.000.000,45',
+						},
+						2: {
+							rubrique: 'Vat (16%):',
+							valeur: '$100.000.000,45',
+						},
+						3: {
+							rubrique: 'Pure Com:',
+							valeur: '$100.000.000,45',
+						},
+					},
+				}) 
+			}}
+			{# Brique #}
+			{{ include ('admin/dashbord/segments/brique.html.twig',
+			{
+					titre: "Commission collection summary",
+					principal: {
+						rubrique: 'Com. due:',
+						valeur: '$100.000.000,45',
+					},
+					items: {
+						0: {
+							rubrique: 'Invoiced:',
+							valeur: '$100.000.000,45',
+						},
+						1: {
+							rubrique: 'Received:',
+							valeur: '$100.000.000,45',
+						},
+						2: {
+							rubrique: 'Balance:',
+							valeur: '$100.000.000,45',
+						},
+						3: {
+							rubrique: 'Not invoiced yet:',
+							valeur: '$100.000.000,45',
+						},
+					},
+				}) 
+			}}
+		</div>
+		{# Ligne 2 #}
+		<div class="row">
 			{# Brique #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
