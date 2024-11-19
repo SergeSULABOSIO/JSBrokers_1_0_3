@@ -115,7 +115,7 @@
 			{# Brique #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					titre: "Partners' Co-brokerage summary",
+					titre: "Co-brokerage summary",
 					principal: {
 						rubrique: 'Shares due:',
 						valeur: '$100.000.000,45',
@@ -143,7 +143,7 @@
 			{# Brique #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					titre: "Commissions summary",
+					titre: "Tax summary",
 					principal: {
 						rubrique: 'Gros Com.:',
 						valeur: '$100.000.000,45',
@@ -163,34 +163,6 @@
 						},
 						3: {
 							rubrique: 'Pure Com:',
-							valeur: '$100.000.000,45',
-						},
-					},
-				}) 
-			}}
-			{# Brique #}
-			{{ include ('admin/dashbord/segments/brique.html.twig',
-			{
-					titre: "Commission collection summary",
-					principal: {
-						rubrique: 'Com. due:',
-						valeur: '$100.000.000,45',
-					},
-					items: {
-						0: {
-							rubrique: 'Invoiced:',
-							valeur: '$100.000.000,45',
-						},
-						1: {
-							rubrique: 'Received:',
-							valeur: '$100.000.000,45',
-						},
-						2: {
-							rubrique: 'Balance:',
-							valeur: '$100.000.000,45',
-						},
-						3: {
-							rubrique: 'Not invoiced yet:',
 							valeur: '$100.000.000,45',
 						},
 					},
