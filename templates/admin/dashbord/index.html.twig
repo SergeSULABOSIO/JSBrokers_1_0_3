@@ -209,6 +209,14 @@
 				}) 
 			}}
 		</div>
+		{# Section - contient des infos assez détailées #}
+		<div class="row">
+			{{ include('admin/dashbord/segments/section.html.twig', 
+				{
+					data: "RAS",
+				}) 
+			}}
+		</div>
 	</div>
 	{{ render_chart(chart, {'class': 'my-chart'}) }}
 {% endblock %}
