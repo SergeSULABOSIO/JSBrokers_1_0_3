@@ -1,12 +1,12 @@
 {# Une brique est element html de la classe COL #}
 <div class="col-md border border-2 border-secondary rounded-3 m-1 p-2 shadow-sm mb-10 sensible">
-    <div class="card text-center">
-        <div class="card-header">
+    <div class="card">
+        <div class="card-header text-center">
             360° view of <strong>{{ entreprise.nom }}</strong> production over the given period of time
         </div>
         <div class="card-body">
             {# Texte introductif #}
-            <blockquote class="blockquote mb-0">
+            <blockquote class="blockquote mb-0 text-center">
                 <p>A well-known quote, contained in a blockquote element.</p>
                 <footer class="blockquote-footer">Someone famous in <cite title="Source Title">Source Title</cite></footer>
             </blockquote>
@@ -36,39 +36,129 @@
             </nav>
             {# Contenu de chaque Onglet #}
             <div class="tab-content" id="nav-tabContent">
-                <div class="tab-pane fade show active" id="nav-production" role="tabpanel" aria-labelledby="nav-production-tab" tabindex="0">
+                <div class="tab-pane fade show active table-responsive" id="nav-production" role="tabpanel" aria-labelledby="nav-production-tab" tabindex="0">
                     {# Tableau de production #}
                     <table class="table table-hover table-sm mt-2">
                         <caption>Quelques explications en bas du tableau ici.</caption>
                         <thead class="table-secondary">
                             <tr>
                                 <th scope="col">Labels</th>
-                                <th scope="col">GW Premiums</th>
-                                <th scope="col">Net Com.</th>
-                                <th scope="col">Taxes</th>
-                                <th scope="col">Gros Com.</th>
-                                <th scope="col">Com. Received</th>
-                                <th scope="col">Balance due</th>
+                                <th scope="col" class="text-end">GW Premiums</th>
+                                <th scope="col" class="text-end">Net Com.</th>
+                                <th scope="col" class="text-end">Taxes</th>
+                                <th scope="col" class="text-end">Gros Com.</th>
+                                <th scope="col" class="text-end">Com. Received</th>
+                                <th scope="col" class="text-end">Balance due</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td>Mark</td>
-                                <td>Otto</td>
-                                <td>@mdo</td>
-                                <td>@mdo</td>
-                                <td>@mdo</td>
-                                <td>@mdo</td>
-                                <td>@mdo</td>
+                                <td>JANUARY</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
                             </tr>
                             <tr>
-                                <td>Jacob</td>
-                                <td>Thornton</td>
-                                <td>@fat</td>
-                                <td>Jacob</td>
-                                <td>Thornton</td>
-                                <td>@fat</td>
-                                <td>@fat</td>
+                                <td>FEBRUARY</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>MARCH</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>APPRIL</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>MAY</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>JUNE</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>JULY</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>AUGUST</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>SEPTEMBRE</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>OCTOBER</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>NOVEMBER</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                            </tr>
+                            <tr>
+                                <td>DECEMBER</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
+                                <td class="text-end">3 676011,63</td>
                             </tr>
                         </tbody>
                     </table>
