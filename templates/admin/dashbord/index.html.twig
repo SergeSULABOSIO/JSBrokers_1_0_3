@@ -115,26 +115,26 @@
 			{# Brique #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					titre: "Summary of Co-brokerages due to partners or intermediaries",
+					titre: "Summary of Co-brokerages",
 					principal: {
-						rubrique: 'Balance due to partner:',
+						rubrique: 'Balance due:',
 						valeur: '$100.000.000,45',
 					},
 					items: {
 						0: {
-							rubrique: 'Net brokerage generated:',
+							rubrique: 'Net revenue:',
 							valeur: '$100.000.000,45',
 						},
 						1: {
-							rubrique: 'Partners share (co-brokerage):',
+							rubrique: 'Co-brokerage:',
 							valeur: '$100.000.000,45',
 						},
 						2: {
-							rubrique: 'Partner shares already paid:',
+							rubrique: 'Amounts paid:',
 							valeur: '$100.000.000,45',
 						},
 						3: {
-							rubrique: 'Balance due to partner:',
+							rubrique: 'Balance due:',
 							valeur: '$100.000.000,45',
 						},
 					},
@@ -145,20 +145,48 @@
 				{
 					titre: "Summary of tax",
 					principal: {
-						rubrique: 'Total tax payable:',
+						rubrique: 'Tax payable:',
 						valeur: '$100.000.000,45',
 					},
 					items: {
 						0: {
-							rubrique: 'Net revenue generated:',
+							rubrique: 'Net revenue:',
 							valeur: '$100.000.000,45',
 						},
 						1: {
-							rubrique: 'Total tax due:',
+							rubrique: 'Tax due:',
 							valeur: '$100.000.000,45',
 						},
 						2: {
-							rubrique: 'Total tax amounts paid:',
+							rubrique: 'Tax paid:',
+							valeur: '$100.000.000,45',
+						},
+						3: {
+							rubrique: 'Balance payable:',
+							valeur: '$100.000.000,45',
+						},
+					},
+				}) 
+			}}
+			{# Brique #}
+			{{ include ('admin/dashbord/segments/brique.html.twig', 
+				{
+					titre: "Summary of claims",
+					principal: {
+						rubrique: 'Balance payable:',
+						valeur: '$100.000.000,45',
+					},
+					items: {
+						0: {
+							rubrique: 'Total damage:',
+							valeur: '$100.000.000,45',
+						},
+						1: {
+							rubrique: 'Total due:',
+							valeur: '$100.000.000,45',
+						},
+						2: {
+							rubrique: 'Total settled:',
 							valeur: '$100.000.000,45',
 						},
 						3: {
