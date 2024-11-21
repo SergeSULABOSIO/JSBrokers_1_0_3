@@ -86,7 +86,7 @@ class EntrepriseDashbordController extends AbstractController
                 [
                     'label' => 'Revenue',
                     'backgroundColor' => "gray",//'rgb(255, 99, 132)',
-                    'borderColor' => 'black', //'rgb(255, 99, 132)',
+                    'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => [0, 10, 50, 2, 20, 90, 45, 25, 15, 60, 5, 90],
                 ],
             ],
@@ -109,9 +109,9 @@ class EntrepriseDashbordController extends AbstractController
         $chart = $chartBuilder->createChart(Chart::TYPE_PIE);
         $chart->setData([
             'labels' => [
-                'SFA Congo SA', 
-                'SUNU ASSURANCE IARD', 
-                'ACTIVA', 
+                'SFA Congo SA (10%)', 
+                'SUNU ASSURANCE IARD (50%)', 
+                'ACTIVA  (20%)', 
                 'RAWSUR', 
                 'MAYFAIRE'
             ],
@@ -125,7 +125,7 @@ class EntrepriseDashbordController extends AbstractController
                         'Grey',
                         'Orange'
                     ],//'rgb(255, 99, 132)',
-                    'borderColor' => 'Black', //'rgb(255, 99, 132)',
+                    'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => [1, 5, 2, 2, 9],
                     'hoverOffset' => 30,
                 ],
@@ -157,7 +157,7 @@ class EntrepriseDashbordController extends AbstractController
                         'Grey',
                         'Orange'
                     ],//'rgb(255, 99, 132)',
-                    'borderColor' => 'Black', //'rgb(255, 99, 132)',
+                    'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => [1, 5, 2, 2, 9],
                     'hoverOffset' => 30,
                 ],
@@ -195,7 +195,7 @@ class EntrepriseDashbordController extends AbstractController
                         'Magenta',
                         'Yellow',
                     ],//'rgb(255, 99, 132)',
-                    'borderColor' => 'Black', //'rgb(255, 99, 132)',
+                    'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => [1, 5, 2, 2, 9, 5, 8, 2],
                     'hoverOffset' => 30,
                 ],
@@ -233,7 +233,7 @@ class EntrepriseDashbordController extends AbstractController
                         'Magenta',
                         'Yellow',
                     ],//'rgb(255, 99, 132)',
-                    'borderColor' => 'Black', //'rgb(255, 99, 132)',
+                    'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => [1, 5, 2, 2, 9, 5, 8, 2],
                     'hoverOffset' => 30,
                 ],
