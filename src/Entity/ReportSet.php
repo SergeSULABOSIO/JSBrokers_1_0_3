@@ -13,7 +13,7 @@ class ReportSet
         public string $currency_code,
         public string $label,
         public float $gw_premium,
-        public float $net_premium,
+        public float $net_com,
         public float $taxes,
         public float $gros_commission,
         public float $commission_received,

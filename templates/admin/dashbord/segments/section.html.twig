@@ -60,23 +60,23 @@
                                     {% if reposertSet.type == 0 %}
                                         <tr>
                                             <td><small><strong>{{ reposertSet.label }}</strong></small></td>
-                                            <td class="text-end"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
-                                            <td class="text-end"><strong><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
-                                            <td class="text-end"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="background-color: #e3eeff;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="background-color: #e0f9ee;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="background-color: #fff2cb;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end"><strong><small>{{ reposertSet.gros_commission|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></strong></td>
                                             <td class="text-end"><strong><small>{{ reposertSet.commission_received|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
-                                            <td class="text-end"><strong><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end text-danger"><strong><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                         </tr>
                                     {% endif %}
                                     {% if reposertSet.type == 1 %}
                                         <tr>
                                             <td>&nbsp;&nbsp;&nbsp;&nbsp;<small>{{ reposertSet.label }}</small></td>
-                                            <td class="text-end"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end"><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="background-color: #e3eeff;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="background-color: #e0f9ee;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="background-color: #fff2cb;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td class="text-end"><small>{{ reposertSet.gros_commission|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></td>
                                             <td class="text-end"><small>{{ reposertSet.commission_received|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                         </tr>
                                     {% endif %}
                                 {% endfor %}
@@ -87,11 +87,11 @@
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
                                             <th scope="col" class="text-end"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
-                                            <th scope="col" class="text-end"><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                             <th scope="col" class="text-end"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                             <th scope="col" class="text-end"><small>{{ reposertSet.gros_commission|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></th>
                                             <th scope="col" class="text-end"><small>{{ reposertSet.commission_received|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
-                                            <th scope="col" class="text-end"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                         {% endif %}
                                     {% endfor %}
                                 </tr>
