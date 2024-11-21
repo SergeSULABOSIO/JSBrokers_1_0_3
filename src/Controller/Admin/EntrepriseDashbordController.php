@@ -7,10 +7,8 @@ use App\Entity\Utilisateur;
 use App\Constantes\MenuActivator;
 use App\Entity\ReportSet;
 use App\Services\JSBChartBuilder;
-use Symfony\UX\Chartjs\Model\Chart;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\UX\Chartjs\Builder\ChartBuilderInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -37,7 +35,7 @@ class EntrepriseDashbordController extends AbstractController
         $user = $this->getUser();
 
         $productionCharts = $JSBChartBuilder->getProductionCharts();
-        
+
         $tabAssureurs = [
             "SFA Congo",
             "SUNU Assurance IARD",
