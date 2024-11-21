@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Constantes\MenuActivator;
+use App\Entity\ReportSet;
 use App\Services\JSBChartBuilder;
 use Symfony\UX\Chartjs\Model\Chart;
 use Symfony\Component\HttpFoundation\Request;
@@ -36,6 +37,48 @@ class EntrepriseDashbordController extends AbstractController
         $user = $this->getUser();
 
         $productionCharts = $JSBChartBuilder->getProductionCharts();
+
+        $tabAssureurs = [
+            "SFA Congo",
+            "SUNU Assurance IARD",
+            "RAWSUR SA",
+            "ACTIVA",
+            "MAYFAIR",
+        ];
+        $tabReportSets = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
+            // echo $month . '<br>';
+            $datasetMois = new ReportSet(
+                ReportSet::TYPE_SUBTOTAL,
+                "$",
+                $month,
+                3676011.63,
+                3676011.63,
+                3676011.63,
+                3676011.63,
+                3676011.63,
+                3676011.63,
+                3676011.63,
+            );
+            $tabReportSets[] = $datasetMois;
+            foreach ($tabAssureurs as $assureur) {
+                $datasetAssureur = new ReportSet(
+                    ReportSet::TYPE_ELEMENT,
+                    "$",
+                    $assureur,
+                    676.63,
+                    676.63,
+                    676.63,
+                    676.63,
+                    676.63,
+                    676.63,
+                    676.63,
+                );
+                $tabReportSets[] = $datasetAssureur;
+            }
+        }
+        dd($tabReportSets);
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
