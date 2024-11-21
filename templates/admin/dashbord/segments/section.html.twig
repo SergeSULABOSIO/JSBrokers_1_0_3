@@ -612,62 +612,67 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
-                    <div class="card m-2">
-                        <div class="card-header text-center">
-                            Graphs per month
-                        </div>
-                        {{ render_chart(chart, {'class': 'my-chart'}) }}
-                        <div class="card-body">
-                            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
-                        </div>
-                    </div>
-                    <div class="card m-2">
-                        <div class="card-header text-center">
-                            Graphs per insurer
-                        </div>
-                        {{ render_chart(chart, {'class': 'my-chart'}) }}
-                        <div class="card-body">
-                            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                    <div class="row">
+                        <div class="col">
+                            <div class="card m-2">
+                                <div class="card-header text-center">
+                                    Graphs per month
+                                </div>
+                                {{ render_chart(chartPerMonth, {'class': 'my-chart'}) }}
+                                <div class="card-body text-center">
+                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="card m-2">
-                        <div class="card-header text-center">
-                            Graphs per line of business
+                    <div class="row g-0">
+                        <div class="col">
+                            <div class="card m-2">
+                                <div class="card-header text-center">
+                                    Graphs per insurer
+                                </div>
+                                {{ render_chart(chartPerInsurer, {'class': 'my-chart'}) }}
+                                <div class="card-body text-center">
+                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                </div>
+                            </div>
                         </div>
-                        {{ render_chart(chart, {'class': 'my-chart'}) }}
-                        {# <img src="..." class="card-img-top" alt="..."> #}
-                        <div class="card-body">
-                            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
-                        </div>
-                    </div>
-                    <div class="card m-2">
-                        <div class="card-header text-center">
-                            Graphs per renewal status
-                        </div>
-                        {{ render_chart(chart, {'class': 'my-chart'}) }}
-                        {# <img src="..." class="card-img-top" alt="..."> #}
-                        <div class="card-body">
-                            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
-                        </div>
-                    </div>
-                    <div class="card m-2">
-                        <div class="card-header text-center">
-                            Graphs per broker partner
-                        </div>
-                        {{ render_chart(chart, {'class': 'my-chart'}) }}
-                        {# <img src="..." class="card-img-top" alt="..."> #}
-                        <div class="card-body">
-                            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                         <div class="col">
+                            <div class="card m-2">
+                                <div class="card-header text-center">
+                                    Graphs per line of business
+                                </div>
+                                {{ render_chart(chartPerRisks, {'class': 'my-chart'}) }}
+                                {# <img src="..." class="card-img-top" alt="..."> #}
+                                <div class="card-body text-center">
+                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="card m-2">
-                        <div class="card-header text-center">
-                            Graphs per user
+                    <div class="row g-0">
+                        <div class="col">
+                            <div class="card m-2">
+                                <div class="card-header text-center">
+                                    Graphs per renewal status
+                                </div>
+                                {{ render_chart(chartPerRenewalStatus, {'class': 'my-chart'}) }}
+                                <div class="card-body text-center">
+                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                </div>
+                            </div>
                         </div>
-                        {{ render_chart(chart, {'class': 'my-chart'}) }}
-                        {# <img src="..." class="card-img-top" alt="..."> #}
-                        <div class="card-body">
-                            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                         <div class="col">
+                            <div class="card m-2">
+                                <div class="card-header text-center">
+                                    Graphs per partner
+                                </div>
+                                {{ render_chart(chartPerPartners, {'class': 'my-chart'}) }}
+                                {# <img src="..." class="card-img-top" alt="..."> #}
+                                <div class="card-body text-center">
+                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
