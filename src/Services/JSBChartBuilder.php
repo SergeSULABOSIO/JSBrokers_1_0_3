@@ -18,7 +18,7 @@ class JSBChartBuilder
         
     }
 
-    public function newChartPerMonth()
+    public function newChartProductionPerMonth()
     {
         //Construction de l'histogramme
         $chart = $this->chartBuilder->createChart(Chart::TYPE_BAR);
@@ -58,7 +58,7 @@ class JSBChartBuilder
         return $chart;
     }
 
-    public function newChartPerInsurer()
+    public function newChartProductionPerInsurer()
     {
         //Construction de l'histogramme
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
@@ -90,7 +90,7 @@ class JSBChartBuilder
         return $chart;
     }
 
-    public function newChartPerRenewalStatus()
+    public function newChartProductionPerRenewalStatus()
     {
         //Construction de l'histogramme
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
@@ -122,7 +122,7 @@ class JSBChartBuilder
         return $chart;
     }
 
-    public function newChartPerPartner()
+    public function newChartProductionPerPartner()
     {
         //Construction de l'histogramme
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
@@ -160,7 +160,7 @@ class JSBChartBuilder
         return $chart;
     }
 
-    public function newChartPerRisk()
+    public function newChartProductionPerRisk()
     {
         //Construction de l'histogramme
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
@@ -198,3 +198,4 @@ class JSBChartBuilder
         return $chart;
     }
 }
+

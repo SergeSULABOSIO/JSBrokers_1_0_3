@@ -35,11 +35,11 @@ class EntrepriseDashbordController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        $chartPerMonth = $JSBChartBuilder->newChartPerMonth();
-        $chartPerInsurer = $JSBChartBuilder->newChartPerInsurer();
-        $chartPerRenewalStatus = $JSBChartBuilder->newChartPerRenewalStatus();
-        $chartPerPartners = $JSBChartBuilder->newChartPerPartner();
-        $chartPerRisks = $JSBChartBuilder->newChartPerRisk();
+        $chartPerMonth = $JSBChartBuilder->newChartProductionPerMonth();
+        $chartPerInsurer = $JSBChartBuilder->newChartProductionPerInsurer();
+        $chartPerRenewalStatus = $JSBChartBuilder->newChartProductionPerRenewalStatus();
+        $chartPerPartners = $JSBChartBuilder->newChartProductionPerPartner();
+        $chartPerRisks = $JSBChartBuilder->newChartProductionPerRisk();
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
