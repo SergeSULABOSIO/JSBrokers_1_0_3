@@ -35,11 +35,7 @@ class EntrepriseDashbordController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        $chartPerMonth = $JSBChartBuilder->newChartProductionPerMonth();
-        $chartPerInsurer = $JSBChartBuilder->newChartProductionPerInsurer();
-        $chartPerRenewalStatus = $JSBChartBuilder->newChartProductionPerRenewalStatus();
-        $chartPerPartners = $JSBChartBuilder->newChartProductionPerPartner();
-        $chartPerRisks = $JSBChartBuilder->newChartProductionPerRisk();
+        $productionCharts = $JSBChartBuilder->getProductionCharts();
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
@@ -48,11 +44,7 @@ class EntrepriseDashbordController extends AbstractController
                 'entreprise' => $entreprise,
                 'activator' => $this->activator,
                 'page' => $request->query->getInt("page", 1),
-                'chartPerMonth' => $chartPerMonth,
-                'chartPerInsurer' => $chartPerInsurer,
-                'chartPerRenewalStatus' => $chartPerRenewalStatus,
-                'chartPerPartners' => $chartPerPartners,
-                'chartPerRisks' => $chartPerRisks,
+                'productionCharts' => $productionCharts,
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");

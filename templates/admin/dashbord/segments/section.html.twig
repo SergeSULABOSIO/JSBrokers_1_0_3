@@ -618,7 +618,7 @@
                                 <div class="card-header text-center">
                                     Graphs per month
                                 </div>
-                                {{ render_chart(chartPerMonth, {'class': 'my-chart'}) }}
+                                {{ render_chart(productionCharts['chartPerMonth'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
                                 </div>
@@ -631,7 +631,7 @@
                                 <div class="card-header text-center">
                                     Graphs per insurer
                                 </div>
-                                {{ render_chart(chartPerInsurer, {'class': 'my-chart'}) }}
+                                {{ render_chart(productionCharts['chartPerInsurer'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
                                 </div>
@@ -642,7 +642,7 @@
                                 <div class="card-header text-center">
                                     Graphs per risk / cover
                                 </div>
-                                {{ render_chart(chartPerRisks, {'class': 'my-chart'}) }}
+                                {{ render_chart(productionCharts['chartPerRisks'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
@@ -656,7 +656,7 @@
                                 <div class="card-header text-center">
                                     Graphs per renewal status
                                 </div>
-                                {{ render_chart(chartPerRenewalStatus, {'class': 'my-chart'}) }}
+                                {{ render_chart(productionCharts['chartPerRenewalStatus'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
                                 </div>
@@ -667,7 +667,7 @@
                                 <div class="card-header text-center">
                                     Graphs per partner
                                 </div>
-                                {{ render_chart(chartPerPartners, {'class': 'my-chart'}) }}
+                                {{ render_chart(productionCharts['chartPerPartners'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
