@@ -37,7 +37,7 @@ class EntrepriseDashbordController extends AbstractController
         $user = $this->getUser();
 
         $productionCharts = $JSBChartBuilder->getProductionCharts();
-
+        
         $tabAssureurs = [
             "SFA Congo",
             "SUNU Assurance IARD",
