@@ -78,7 +78,20 @@ class EntrepriseDashbordController extends AbstractController
                 $tabReportSets[] = $datasetAssureur;
             }
         }
-        dd($tabReportSets);
+        $datasetTotal = new ReportSet(
+            ReportSet::TYPE_TOTAL,
+            "$",
+            "TOTAL",
+            3676011.63,
+            3676011.63,
+            3676011.63,
+            3676011.63,
+            3676011.63,
+            3676011.63,
+            3676011.63,
+        );
+        $tabReportSets[] = $datasetTotal;
+        // dd($tabReportSets);
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
@@ -88,6 +101,7 @@ class EntrepriseDashbordController extends AbstractController
                 'activator' => $this->activator,
                 'page' => $request->query->getInt("page", 1),
                 'productionCharts' => $productionCharts,
+                'tabReportSets' => $tabReportSets,
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");

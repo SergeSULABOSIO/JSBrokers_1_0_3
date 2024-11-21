@@ -20,7 +20,9 @@ class ReportSet
         public float $balance_due,
     )
     {
-        
+        if($this->type == self::TYPE_SUBTOTAL){
+            $this->label = strtoupper($this->label);
+        }
     }
 
 }
