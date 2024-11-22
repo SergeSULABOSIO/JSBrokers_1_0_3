@@ -61,8 +61,16 @@
                             <tbody>
                                 {% for reposertSet in productionTabs['tabProductionPerInsurerPerMonth'] %}
                                     {% if reposertSet.type == 0 %}
-                                        <tr>
-                                            <td><small><strong>{{ reposertSet.label }}</strong></small></td>
+                                        <tr style="
+                                            border-style: solid;
+                                            border-top: 0px;
+                                            border-left: 0px;
+                                            border-right: 0px;
+                                            border-width: 1px;
+                                            border-color: black;
+                                            background: #f6f6f6;
+                                        ">
+                                            <td><small><strong>{{ ux_icon('mdi-light:plus-box', {height: '16px', width: '16px'}) }}&nbsp;{{ reposertSet.label }}</strong></small></td>
                                             <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end" style="color: #e29c1d;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
@@ -124,8 +132,16 @@
                             <tbody>
                                 {% for reposertSet in productionTabs['tabProductionPerPartnerPerMonth'] %}
                                     {% if reposertSet.type == 0 %}
-                                        <tr>
-                                            <td><small><strong>{{ reposertSet.label }}</strong></small></td>
+                                        <tr style="
+                                            border-style: solid;
+                                            border-top: 0px;
+                                            border-left: 0px;
+                                            border-right: 0px;
+                                            border-width: 1px;
+                                            border-color: black;
+                                            background: #f6f6f6;
+                                        ">
+                                            <td>{{ ux_icon('mdi-light:plus-box', {height: '16px', width: '16px'}) }}&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></td>
                                             <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end" style="color: #e29c1d;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
