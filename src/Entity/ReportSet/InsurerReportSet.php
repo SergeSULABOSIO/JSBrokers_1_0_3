@@ -1,6 +1,5 @@
 <?php
-
-namespace App\Entity;
+namespace App\Entity\ReportSet;
 
 class InsurerReportSet
 {

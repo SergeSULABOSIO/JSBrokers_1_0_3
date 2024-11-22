@@ -1,8 +1,7 @@
 <?php
+namespace App\Entity\ReportSet;
 
-namespace App\Entity;
-
-class PartnerReportSet
+class Top20ClientReportSet
 {
     public const TYPE_SUBTOTAL = 0;
     public const TYPE_ELEMENT = 1;
@@ -10,14 +9,10 @@ class PartnerReportSet
 
     public function __construct(
         public int $type,
-        public string $currency_code,
         public string $label,
+        public string $insurer,
         public float $gw_premium,
-        public float $net_com,
-        public float $taxes,
-        public float $co_brokerage,
-        public float $amount_paid,
-        public float $balance_due,
+        public float $g_commission,
     )
     {
         if($this->type == self::TYPE_SUBTOTAL){
