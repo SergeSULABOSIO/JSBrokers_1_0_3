@@ -14,14 +14,17 @@
             {# Barre de navigation #}
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
-                    <button class="nav-link active" id="nav-production-tab" data-bs-toggle="tab" data-bs-target="#nav-production" type="button" role="tab" aria-controls="nav-production" aria-selected="true">
-                        Production
-                    </button>
-                    <button class="nav-link" id="nav-graphs-tab" data-bs-toggle="tab" data-bs-target="#nav-graphs" type="button" role="tab" aria-controls="nav-graphs" aria-selected="false">
+                    <button class="nav-link active" id="nav-graphs-tab" data-bs-toggle="tab" data-bs-target="#nav-graphs" type="button" role="tab" aria-controls="nav-graphs" aria-selected="true">
                         Graphs
                     </button>
+                    <button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
+                        Per Insurer
+                    </button>
+                    <button class="nav-link" id="nav-production-partner-tab" data-bs-toggle="tab" data-bs-target="#nav-production-partner" type="button" role="tab" aria-controls="nav-production-partner" aria-selected="false">
+                        Per Partner
+                    </button>
                     <button class="nav-link" id="nav-topclients-tab" data-bs-toggle="tab" data-bs-target="#nav-topclients" type="button" role="tab" aria-controls="nav-topclients" aria-selected="false">
-                        Top 20 clients
+                        Top 20 Clients
                     </button>
                     <button class="nav-link" id="nav-tasks-tab" data-bs-toggle="tab" data-bs-target="#nav-tasks" type="button" role="tab" aria-controls="nav-tasks" aria-selected="false">
                         Tasks
@@ -36,12 +39,12 @@
             </nav>
             {# Contenu de chaque Onglet #}
             <div class="tab-content" id="nav-tabContent">
-                <div class="tab-pane fade show active table-responsive" id="nav-production" role="tabpanel" aria-labelledby="nav-production-tab" tabindex="0">
+                <div class="tab-pane fade table-responsive" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
                     <div class="card m-2">
                         <div class="card-header text-center">
                             Monthly Production per Insurer
                         </div>
-                        {# Tableau de production #}
+                        {# Tableau de production par assureur #}
                         <table class="table table-hover table-sm">
                             <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
                             <thead class="table-secondary">
@@ -56,7 +59,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in tabReportSets %}
+                                {% for reposertSet in productionTabs['tabProductionPerInsurerPerMonth'] %}
                                     {% if reposertSet.type == 0 %}
                                         <tr>
                                             <td><small><strong>{{ reposertSet.label }}</strong></small></td>
@@ -83,7 +86,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in tabReportSets %}
+                                    {% for reposertSet in productionTabs['tabProductionPerInsurerPerMonth'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
@@ -99,7 +102,70 @@
                         </table>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
+                <div class="tab-pane fade table-responsive" id="nav-production-partner" role="tabpanel" aria-labelledby="nav-production-partner-tab" tabindex="0">
+                    <div class="card m-2">
+                        <div class="card-header text-center">
+                            Monthly Production per broker partner
+                        </div>
+                        {# Tableau de production par partenaire #}
+                        <table class="table table-hover table-sm">
+                            <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th scope="col">MONTH & PARTNER</th>
+                                    <th scope="col" class="text-end">GW PREMIUMS</th>
+                                    <th scope="col" class="text-end">NET COM.</th>
+                                    <th scope="col" class="text-end">TAXES</th>
+                                    <th scope="col" class="text-end">CO-BROKERAGE</th>
+                                    <th scope="col" class="text-end">AMOUNT PAID</th>
+                                    <th scope="col" class="text-end">BALANCE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reposertSet in productionTabs['tabProductionPerPartnerPerMonth'] %}
+                                    {% if reposertSet.type == 0 %}
+                                        <tr>
+                                            <td><small><strong>{{ reposertSet.label }}</strong></small></td>
+                                            <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="color: #e29c1d;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end"><strong><small>{{ reposertSet.co_brokerage|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></strong></td>
+                                            <td class="text-end"><strong><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end text-danger"><strong><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if reposertSet.type == 1 %}
+                                        <tr>
+                                            <td>&nbsp;&nbsp;&nbsp;&nbsp;<small>{{ reposertSet.label }}</small></td>
+                                            <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end"><small>{{ reposertSet.co_brokerage|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></td>
+                                            <td class="text-end"><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                            <thead class="table-secondary">
+                                <tr>
+                                    {% for reposertSet in productionTabs['tabProductionPerPartnerPerMonth'] %}
+                                        {% if reposertSet.type == 2 %}
+                                            <th scope="col"><small>{{ reposertSet.label }}</small></th>
+                                            <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end"><small>{{ reposertSet.co_brokerage|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></th>
+                                            <th scope="col" class="text-end"><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+                <div class="tab-pane fade show active" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
                     <div class="row">
                         <div class="col">
                             <div class="card m-2">

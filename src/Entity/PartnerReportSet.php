@@ -2,7 +2,7 @@
 
 namespace App\Entity;
 
-class ReportSet
+class PartnerReportSet
 {
     public const TYPE_SUBTOTAL = 0;
     public const TYPE_ELEMENT = 1;
@@ -15,8 +15,8 @@ class ReportSet
         public float $gw_premium,
         public float $net_com,
         public float $taxes,
-        public float $gros_commission,
-        public float $commission_received,
+        public float $co_brokerage,
+        public float $amount_paid,
         public float $balance_due,
     )
     {

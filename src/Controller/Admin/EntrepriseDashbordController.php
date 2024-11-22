@@ -7,6 +7,7 @@ use App\Entity\Utilisateur;
 use App\Constantes\MenuActivator;
 use App\Entity\ReportSet;
 use App\Services\JSBChartBuilder;
+use App\Services\JSBTabBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -29,67 +30,13 @@ class EntrepriseDashbordController extends AbstractController
 
 
     #[Route('/{id}', name: 'dashbord', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function dashbord(Entreprise $entreprise, Request $request, JSBChartBuilder $JSBChartBuilder)
+    public function dashbord(Entreprise $entreprise, Request $request, JSBChartBuilder $JSBChartBuilder, JSBTabBuilder $jSBTabBuilder)
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
         $productionCharts = $JSBChartBuilder->getProductionCharts();
-
-        $tabAssureurs = [
-            "SFA Congo",
-            "SUNU Assurance IARD",
-            "RAWSUR SA",
-            "ACTIVA",
-            "MAYFAIR",
-        ];
-        $tabReportSets = [];
-        for ($m = 1; $m <= 12; $m++) {
-            $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
-            // echo $month . '<br>';
-            $datasetMois = new ReportSet(
-                ReportSet::TYPE_SUBTOTAL,
-                "$",
-                $month,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-            );
-            $tabReportSets[] = $datasetMois;
-            foreach ($tabAssureurs as $assureur) {
-                $datasetAssureur = new ReportSet(
-                    ReportSet::TYPE_ELEMENT,
-                    "$",
-                    $assureur,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                );
-                $tabReportSets[] = $datasetAssureur;
-            }
-        }
-        $datasetTotal = new ReportSet(
-            ReportSet::TYPE_TOTAL,
-            "$",
-            "TOTAL",
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-        );
-        $tabReportSets[] = $datasetTotal;
-        // dd($tabReportSets);
+        $productionTabs = $jSBTabBuilder->getProductionTabs();
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
@@ -99,7 +46,8 @@ class EntrepriseDashbordController extends AbstractController
                 'activator' => $this->activator,
                 'page' => $request->query->getInt("page", 1),
                 'productionCharts' => $productionCharts,
-                'tabReportSets' => $tabReportSets,
+                'productionTabs' => $productionTabs,
+                // 'tabReportSets' => $tabReportSets,
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
