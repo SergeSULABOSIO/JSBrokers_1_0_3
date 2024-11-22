@@ -18,7 +18,6 @@ class Top20ClientReportSet
         public Utilisateur $owner,
         public Utilisateur $excutor,
         public DateTimeImmutable $effect_date,
-        public DateTimeImmutable $expiry_date,
         public float $potential_premium,
         public float $potential_commission,
     )
