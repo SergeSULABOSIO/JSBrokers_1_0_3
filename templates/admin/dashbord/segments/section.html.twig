@@ -15,7 +15,7 @@
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
                     <button class="nav-link active" id="nav-graphs-tab" data-bs-toggle="tab" data-bs-target="#nav-graphs" type="button" role="tab" aria-controls="nav-graphs" aria-selected="true">
-                        Graphs
+                        Revenue Graphs
                     </button>
                     <button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
                         Per Insurer
@@ -170,7 +170,7 @@
                         <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Graphs per month
+                                    Revenue graphs per month
                                 </div>
                                 {{ render_chart(productionCharts['chartPerMonth'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
@@ -183,7 +183,7 @@
                         <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Graphs per insurer
+                                    Revenue graphs per insurer
                                 </div>
                                 {{ render_chart(productionCharts['chartPerInsurer'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
@@ -194,7 +194,7 @@
                          <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Graphs per risk / cover
+                                    Revenue graphs per risk or cover
                                 </div>
                                 {{ render_chart(productionCharts['chartPerRisks'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
@@ -208,7 +208,7 @@
                         <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Graphs per renewal status
+                                    Revenue graphs per renewal status
                                 </div>
                                 {{ render_chart(productionCharts['chartPerRenewalStatus'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
@@ -219,7 +219,7 @@
                          <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Graphs per partner
+                                    Revenue graphs per partner
                                 </div>
                                 {{ render_chart(productionCharts['chartPerPartners'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
