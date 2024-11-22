@@ -43,7 +43,7 @@
                         </div>
                         {# Tableau de production #}
                         <table class="table table-hover table-sm">
-                            <caption>Quelques explications en bas du tableau ici.</caption>
+                            <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
                             <thead class="table-secondary">
                                 <tr>
                                     <th scope="col">MONTH & INSURER</th>
@@ -62,7 +62,7 @@
                                             <td><small><strong>{{ reposertSet.label }}</strong></small></td>
                                             <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
-                                            <td class="text-end"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="color: #e29c1d;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end"><strong><small>{{ reposertSet.gros_commission|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></strong></td>
                                             <td class="text-end"><strong><small>{{ reposertSet.commission_received|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end text-danger"><strong><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
@@ -73,7 +73,7 @@
                                             <td>&nbsp;&nbsp;&nbsp;&nbsp;<small>{{ reposertSet.label }}</small></td>
                                             <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td class="text-end"><small>{{ reposertSet.gros_commission|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></td>
                                             <td class="text-end"><small>{{ reposertSet.commission_received|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
@@ -88,7 +88,7 @@
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                             <th scope="col" class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
-                                            <th scope="col" class="text-end"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                             <th scope="col" class="text-end"><small>{{ reposertSet.gros_commission|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></th>
                                             <th scope="col" class="text-end"><small>{{ reposertSet.commission_received|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                             <th scope="col" class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
