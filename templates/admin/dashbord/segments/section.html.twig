@@ -241,8 +241,9 @@
                             <thead class="table-secondary">
                                 <tr>
                                     <th scope="col">CLIENT OR INSURED</th>
-                                    <th scope="col">INSURER</th>
                                     <th scope="col" class="text-end">GW PREMIUM</th>
+                                    <th scope="col" class="text-end">OTHER LOADINGS</th>
+                                    <th scope="col" class="text-end">NET PREMIUM</th>
                                     <th scope="col" class="text-end">GROSS REVENUE</th>
                                 </tr>
                             </thead>
@@ -250,17 +251,19 @@
                                 {% for reposertSet in productionTabs['tabTop20Clients'] %}
                                     {% if reposertSet.type == 0 %}
                                         <tr>
-                                            <td><small><strong>{{ reposertSet.label }}</strong></small></td>
-                                            <td><strong><small>{{ reposertSet.insurer }}</small></strong></td>
+                                            <td>&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></td>
                                             <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.other_loadings|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                            <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                             <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                         </tr>
                                     {% endif %}
                                     {% if reposertSet.type == 1 %}
                                         <tr>
                                             <td>&nbsp;&nbsp;&nbsp;&nbsp;<small>{{ reposertSet.label }}</small></td>
-                                            <td><small>{{ reposertSet.insurer }}</small></td>
                                             <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.other_loadings|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td class="text-end" style="color: #198754;"><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                         </tr>
                                     {% endif %}
@@ -271,8 +274,9 @@
                                     {% for reposertSet in productionTabs['tabTop20Clients'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
-                                            <th scope="col"><small>{{ reposertSet.insurer }}</small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.other_loadings|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                            <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                             <th scope="col" class="text-end" style="color: #198754;"><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                         {% endif %}
                                     {% endfor %}

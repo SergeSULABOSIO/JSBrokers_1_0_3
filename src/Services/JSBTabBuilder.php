@@ -161,53 +161,28 @@ class JSBTabBuilder
             "STANDARD BANK",
             "HELIOS TOWERS",
         ];
-        $tabProducts = [
-            "CAR",
-            "MOTOR TPL",
-            "GIT",
-            "FAP",
-            "GL",
-            "CIT",
-            "PVT",
-            "PDBI",
-            "D&O",
-        ];
-        $tabAssureurs = [
-            "SFA Congo",
-            "SUNU Assurance IARD",
-            "RAWSUR SA",
-            "ACTIVA",
-            "MAYFAIR",
-        ];
         $tabReportSets = [];
+        $index = 1;
         foreach ($tabClients as $client) {
             $dataSet = new Top20ClientReportSet(
-                Top20ClientReportSet::TYPE_SUBTOTAL,
+                Top20ClientReportSet::TYPE_ELEMENT,
                 "$",
-                $client,
-                "...",
+                $index . ". " . $client,
+                3676011.63,
+                3676011.63,
                 3676011.63,
                 3676011.63
             );
             $tabReportSets[] = $dataSet;
-            foreach ($tabProducts as $product) {
-                $dataSet = new Top20ClientReportSet(
-                    Top20ClientReportSet::TYPE_ELEMENT,
-                    "$",
-                    $product,
-                    $tabAssureurs[(rand(0,count($tabAssureurs)-1))],
-                    3676011.63,
-                    3676011.63
-                );
-                $tabReportSets[] = $dataSet;
-            }
+            $index++;
         }
 
         $datasetTotal = new Top20ClientReportSet(
             Top20ClientReportSet::TYPE_TOTAL,
             "$",
             "TOTAL",
-            "",
+            3676011.63,
+            3676011.63,
             3676011.63,
             3676011.63
         );

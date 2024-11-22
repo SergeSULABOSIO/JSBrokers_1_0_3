@@ -11,8 +11,9 @@ class Top20ClientReportSet
         public int $type,
         public string $currency_code,
         public string $label,
-        public string $insurer,
         public float $gw_premium,
+        public float $other_loadings,
+        public float $net_premium,
         public float $g_commission,
     )
     {
