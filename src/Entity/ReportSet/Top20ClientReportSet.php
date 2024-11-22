@@ -9,6 +9,7 @@ class Top20ClientReportSet
 
     public function __construct(
         public int $type,
+        public string $currency_code,
         public string $label,
         public string $insurer,
         public float $gw_premium,

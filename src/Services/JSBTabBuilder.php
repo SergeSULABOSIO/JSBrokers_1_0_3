@@ -183,8 +183,9 @@ class JSBTabBuilder
         foreach ($tabClients as $client) {
             $dataSet = new Top20ClientReportSet(
                 Top20ClientReportSet::TYPE_SUBTOTAL,
+                "$",
                 $client,
-                "",
+                "...",
                 3676011.63,
                 3676011.63
             );
@@ -192,6 +193,7 @@ class JSBTabBuilder
             foreach ($tabProducts as $product) {
                 $dataSet = new Top20ClientReportSet(
                     Top20ClientReportSet::TYPE_ELEMENT,
+                    "$",
                     $product,
                     $tabAssureurs[(rand(0,count($tabAssureurs)-1))],
                     3676011.63,
@@ -203,6 +205,7 @@ class JSBTabBuilder
 
         $datasetTotal = new Top20ClientReportSet(
             Top20ClientReportSet::TYPE_TOTAL,
+            "$",
             "TOTAL",
             "",
             3676011.63,
