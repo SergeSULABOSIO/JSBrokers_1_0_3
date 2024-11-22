@@ -47,7 +47,6 @@ class EntrepriseDashbordController extends AbstractController
                 'page' => $request->query->getInt("page", 1),
                 'productionCharts' => $productionCharts,
                 'productionTabs' => $productionTabs,
-                // 'tabReportSets' => $tabReportSets,
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
