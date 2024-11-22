@@ -78,13 +78,13 @@ class JSBTabBuilder
     public function newTabProductionPerPartnerPerMonth(): array
     {
         $tabPartners = [
-            "MARSH",
-            "AFINBRO",
-            "AGL",
-            "O'NEILS",
-            "OLEA",
-            "MONT-BLANC",
-            "WP BROKERS",
+            "MARSH (35%)",
+            "AFINBRO (50%)",
+            "AGL (45%)",
+            "O'NEILS (50%)",
+            "OLEA (35%)",
+            "MONT-BLANC (50%)",
+            "WP BROKERS (35%)",
         ];
         $tabReportSets = [];
         for ($m = 1; $m <= 12; $m++) {
