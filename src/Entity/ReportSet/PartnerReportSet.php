@@ -8,7 +8,7 @@ class PartnerReportSet
     public const TYPE_ELEMENT = 1;
     public const TYPE_TOTAL = 2;
 
-    public int $type = self::TYPE_ELEMENT;
+    public int $type;
     public string $currency_code;
     public string $label;
     public float $gw_premium;
