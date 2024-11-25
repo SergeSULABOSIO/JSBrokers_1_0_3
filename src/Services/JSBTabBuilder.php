@@ -255,24 +255,44 @@ class JSBTabBuilder
         $tabReportSets = [];
         $index = 1;
         foreach ($tabClients as $client) {
-            $dataSet = new TaskReportSet(
-                TaskReportSet::TYPE_ELEMENT,
-                "$",
-                "<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks)-1)] . "</strong>",
-                $client,
-                [
-                    "Olivier MUTOMBO",
-                    "Olivier OBE",
-                    "Serge SULA",
-                    "Julien MVUMU",
-                ],
-                $tabUsersAM[rand(0, count($tabUsersAM)-1)],
-                $tabUsersASS[rand(0, count($tabUsersASS)-1)],
-                new DateTimeImmutable("now"),
-                rand(0, 1000000),
-                rand(0, 150),
-                rand(-3, 10)
-            );
+            $dataSet = (new TaskReportSet())
+                ->setType(TaskReportSet::TYPE_ELEMENT)
+                ->setCurrency_code("$")
+                ->setTask_description("<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks) - 1)] . "</strong>")
+                ->setClient($client)
+                ->setContacts(
+                    [
+                        "Olivier MUTOMBO",
+                        "Olivier OBE",
+                        "Serge SULA",
+                        "Julien MVUMU",
+                    ]
+                )
+                ->setOwner($tabUsersAM[rand(0, count($tabUsersAM)-1)])
+                ->setExcutor($tabUsersASS[rand(0, count($tabUsersASS)-1)])
+                ->setEffect_date(new DateTimeImmutable("now"))
+                ->setPotential_premium(rand(0, 1000000))
+                ->setPotential_commission(rand(0, 150))
+                ->setDays_passed(rand(-3, 10))
+
+
+                // TaskReportSet::TYPE_ELEMENT,
+                // "$",
+                // "<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks)-1)] . "</strong>",
+                // $client,
+                // [
+                //     "Olivier MUTOMBO",
+                //     "Olivier OBE",
+                //     "Serge SULA",
+                //     "Julien MVUMU",
+                // ],
+                // $tabUsersAM[rand(0, count($tabUsersAM)-1)],
+                // $tabUsersASS[rand(0, count($tabUsersASS)-1)],
+                // new DateTimeImmutable("now"),
+                // rand(0, 1000000),
+                // rand(0, 150),
+                // rand(-3, 10)
+            ;
 
             $tabReportSets[] = $dataSet;
             $index++;
@@ -293,7 +313,7 @@ class JSBTabBuilder
         );
 
         $tabReportSets[] = $datasetTotal;
-        // dd($tabReportSets);
+        dd($tabReportSets);
 
         return $tabReportSets;
     }
