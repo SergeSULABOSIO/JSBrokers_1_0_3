@@ -280,6 +280,7 @@ class JSBTabBuilder
         $tabReportSets[] = (new TaskReportSet())
             ->setType(TaskReportSet::TYPE_TOTAL)
             ->setCurrency_code("$")
+            ->setTask_description("TOTAL")
             ->setPotential_premium(rand(0, 1000000))
             ->setPotential_commission(rand(0, 150));
         // dd($tabReportSets);
