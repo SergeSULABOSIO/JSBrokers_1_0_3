@@ -93,47 +93,45 @@ class JSBTabBuilder
         for ($m = 1; $m <= 12; $m++) {
             $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
             // echo $month . '<br>';
-            $datasetMois = new PartnerReportSet(
-                PartnerReportSet::TYPE_SUBTOTAL,
-                "$",
-                $month,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-            );
+            $datasetMois = (new PartnerReportSet())
+                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
+                ->setCurrency_code("$")
+                ->setLabel($month)
+                ->setGw_premium(rand(1, 100000000))
+                ->setNet_com(rand(1, 100000000))
+                ->setTaxes(rand(1, 100000000))
+                ->setCo_brokerage(rand(1, 100000000))
+                ->setAmount_paid(rand(1, 100000000))
+                ->setBalance_due(rand(1, 100000000));
+
             $tabReportSets[] = $datasetMois;
             foreach ($tabPartners as $partner) {
-                $datasetAssureur = new PartnerReportSet(
-                    PartnerReportSet::TYPE_ELEMENT,
-                    "$",
-                    $partner,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                );
+                $datasetAssureur = (new PartnerReportSet())
+                    ->setType(PartnerReportSet::TYPE_ELEMENT)
+                    ->setCurrency_code("$")
+                    ->setLabel($partner)
+                    ->setGw_premium(rand(1, 100000000))
+                    ->setNet_com(rand(1, 100000000))
+                    ->setTaxes(rand(1, 100000000))
+                    ->setCo_brokerage(rand(1, 100000000))
+                    ->setAmount_paid(rand(1, 100000000))
+                    ->setBalance_due(rand(1, 100000000));
+
                 $tabReportSets[] = $datasetAssureur;
             }
         }
-        $datasetTotal = new PartnerReportSet(
-            PartnerReportSet::TYPE_TOTAL,
-            "$",
-            "TOTAL",
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-        );
+        $datasetTotal =
+            (new PartnerReportSet())
+            ->setType(PartnerReportSet::TYPE_TOTAL)
+            ->setCurrency_code("$")
+            ->setLabel("TOTAL")
+            ->setGw_premium(rand(1, 100000000))
+            ->setNet_com(rand(1, 100000000))
+            ->setTaxes(rand(1, 100000000))
+            ->setCo_brokerage(rand(1, 100000000))
+            ->setAmount_paid(rand(1, 100000000))
+            ->setBalance_due(rand(1, 100000000));
+
         $tabReportSets[] = $datasetTotal;
         // dd($tabReportSets);
 
