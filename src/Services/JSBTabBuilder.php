@@ -78,14 +78,25 @@ class JSBTabBuilder
     public function newTabProductionPerPartnerPerMonth(): array
     {
         $tabPartners = [
-            "MARSH (35%)",
-            "AFINBRO (50%)",
-            "AGL (45%)",
-            "O'NEILS (50%)",
-            "OLEA (35%)",
-            "MONT-BLANC (50%)",
-            "WP BROKERS (35%)",
+            "MARSH",
+            "AFINBRO",
+            "AGL",
+            "O'NEILS",
+            "OLEA",
+            "MONT-BLANC",
+            "WP BROKERS",
         ];
+
+        $tabPartnerRates = [
+            "MARSH" => 35,
+            "AFINBRO" => 50,
+            "AGL" => 45,
+            "O'NEILS" => 50,
+            "OLEA" => 35,
+            "MONT-BLANC" => 50,
+            "WP BROKERS" => 35,
+        ];
+
         $tabReportSets = [];
         for ($m = 1; $m <= 12; $m++) {
             $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
@@ -107,13 +118,14 @@ class JSBTabBuilder
                     ->setType(PartnerReportSet::TYPE_ELEMENT)
                     ->setCurrency_code("$")
                     ->setLabel($partner)
+                    // ->setPartner_rate(rand(0, count($tabPartnerRates) - 1))
+                    ->setPartner_rate($tabPartnerRates[$partner])
                     ->setGw_premium(rand(1, 100000000))
                     ->setNet_com(rand(1, 100000000))
                     ->setTaxes(rand(1, 100000000))
                     ->setCo_brokerage(rand(1, 100000000))
                     ->setAmount_paid(rand(1, 100000000))
                     ->setBalance_due(rand(1, 100000000));
-
                 $tabReportSets[] = $datasetAssureur;
             }
         }
