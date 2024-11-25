@@ -312,12 +312,11 @@
                             <thead class="table-secondary">
                                 <tr>
                                     <th scope="col">TASK TO BE EXECUTED</th>
-                                    <th scope="col">CLIENT CONCERNED</th>
-                                    {# <th scope="col">INSTRUCTOR</th> #}
+                                    <th scope="col">CLIENT</th>
                                     <th scope="col">EXCUTOR</th>
                                     <th scope="col">DATE PLANNED</th>
-                                    <th scope="col" class="text-end">POTENTIAL PREMIUM</th>
-                                    <th scope="col" class="text-end">POTENTIAL REVENUE</th>
+                                    <th scope="col" class="text-end">PREMIUM</th>
+                                    <th scope="col" class="text-end">REVENUE</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -383,7 +382,6 @@
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.task_description }}</strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
-                                            {# <th scope="col"><small><strong></strong></small></th> #}
                                             <th scope="col"><small><strong></strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.potential_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
