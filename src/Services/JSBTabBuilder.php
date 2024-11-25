@@ -120,8 +120,7 @@ class JSBTabBuilder
                 $tabReportSets[] = $datasetAssureur;
             }
         }
-        $datasetTotal =
-            (new PartnerReportSet())
+        $datasetTotal = (new PartnerReportSet())
             ->setType(PartnerReportSet::TYPE_TOTAL)
             ->setCurrency_code("$")
             ->setLabel("TOTAL")
