@@ -10,6 +10,8 @@ class TaskReportSet
     public const TYPE_ELEMENT = 1;
     public const TYPE_TOTAL = 2;
 
+    public int $typee;
+
     public function __construct(
         public int $type,
         public string $currency_code,
