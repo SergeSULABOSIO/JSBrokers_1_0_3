@@ -268,52 +268,24 @@ class JSBTabBuilder
                         "Julien MVUMU",
                     ]
                 )
-                ->setOwner($tabUsersAM[rand(0, count($tabUsersAM)-1)])
-                ->setExcutor($tabUsersASS[rand(0, count($tabUsersASS)-1)])
+                ->setOwner($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+                ->setExcutor($tabUsersASS[rand(0, count($tabUsersASS) - 1)])
                 ->setEffect_date(new DateTimeImmutable("now"))
                 ->setPotential_premium(rand(0, 1000000))
                 ->setPotential_commission(rand(0, 150))
-                ->setDays_passed(rand(-3, 10))
+                ->setDays_passed(rand(-3, 10));
 
-
-                // TaskReportSet::TYPE_ELEMENT,
-                // "$",
-                // "<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks)-1)] . "</strong>",
-                // $client,
-                // [
-                //     "Olivier MUTOMBO",
-                //     "Olivier OBE",
-                //     "Serge SULA",
-                //     "Julien MVUMU",
-                // ],
-                // $tabUsersAM[rand(0, count($tabUsersAM)-1)],
-                // $tabUsersASS[rand(0, count($tabUsersASS)-1)],
-                // new DateTimeImmutable("now"),
-                // rand(0, 1000000),
-                // rand(0, 150),
-                // rand(-3, 10)
-            ;
-
+            // dd($dataSet);
             $tabReportSets[] = $dataSet;
             $index++;
         }
 
-        $datasetTotal = new TaskReportSet(
-            TaskReportSet::TYPE_TOTAL,
-            "",
-            "TOTAL",
-            "",
-            [],
-            null,
-            null,
-            null,
-            1000000,
-            15000,
-            0
-        );
-
-        $tabReportSets[] = $datasetTotal;
-        dd($tabReportSets);
+        $tabReportSets[] = (new TaskReportSet())
+            ->setType(TaskReportSet::TYPE_TOTAL)
+            ->setCurrency_code("$")
+            ->setPotential_premium(rand(0, 1000000))
+            ->setPotential_commission(rand(0, 150));
+        // dd($tabReportSets);
 
         return $tabReportSets;
     }
