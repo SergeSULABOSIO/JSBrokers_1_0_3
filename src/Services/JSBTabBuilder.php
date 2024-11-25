@@ -9,7 +9,7 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Entity\Utilisateur;
 use DateTimeImmutable;
 use Symfony\Bundle\SecurityBundle\Security;
-
+use Symfony\Component\Validator\Constraints\Range;
 
 class JSBTabBuilder
 {
@@ -167,28 +167,28 @@ class JSBTabBuilder
         $tabReportSets = [];
         $index = 1;
         foreach ($tabClients as $client) {
-            $dataSet = new Top20ClientReportSet(
-                Top20ClientReportSet::TYPE_ELEMENT,
-                "$",
-                $index . ". " . $client,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63
-            );
+            $dataSet = (new Top20ClientReportSet())
+                ->setType(Top20ClientReportSet::TYPE_ELEMENT)
+                ->setCurrency_code("$")
+                ->setLabel($index . ". " . $client)
+                ->setGw_premium(rand(0, 1000000))
+                ->setOther_loadings(rand(0, 1000000))
+                ->setNet_premium(rand(0, 1000000))
+                ->setG_commission(rand(0, 1000000));
+
             $tabReportSets[] = $dataSet;
             $index++;
         }
 
-        $datasetTotal = new Top20ClientReportSet(
-            Top20ClientReportSet::TYPE_TOTAL,
-            "$",
-            "TOTAL",
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63
-        );
+        $datasetTotal = (new Top20ClientReportSet())
+            ->setType(Top20ClientReportSet::TYPE_TOTAL)
+            ->setCurrency_code("$")
+            ->setLabel("TOTAL")
+            ->setGw_premium(rand(0, 1000000))
+            ->setOther_loadings(rand(0, 1000000))
+            ->setNet_premium(rand(0, 1000000))
+            ->setG_commission(rand(0, 1000000));
+
         $tabReportSets[] = $datasetTotal;
         // dd($tabReportSets);
 
