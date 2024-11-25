@@ -39,10 +39,10 @@ class PartnerReportSet
      */ 
     public function setLabel($label)
     {
-        if ($this->type == self::TYPE_SUBTOTAL) {
-            $this->label = strtoupper($label);
-        }
         $this->label = $label;
+        if ($this->type == self::TYPE_SUBTOTAL) {
+            $this->label = strtoupper($this->label);
+        }
 
         return $this;
     }
