@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Entity\ReportSet\InsurerReportSet;
 use App\Entity\ReportSet\PartnerReportSet;
+use App\Entity\ReportSet\TaskReportSet;
 use App\Entity\ReportSet\Top20ClientReportSet;
+use App\Entity\Utilisateur;
+use DateTimeImmutable;
 use Symfony\Bundle\SecurityBundle\Security;
 
 
@@ -192,12 +195,116 @@ class JSBTabBuilder
         return $tabReportSets;
     }
 
+
+    public function newTabTasks(): array
+    {
+        $tabClients = [
+            "GLENCORE / KCC",
+            "GLENCORE / MUMI",
+            "IVANHOE / KAMOA",
+            "ERG / METALKOL",
+            "ERG / BOSS MINING",
+            "ERG / FRONTIER",
+            "ERG / COMIDE",
+            "TENKE FUNGURUME",
+            "CHEMAF / ETOILE",
+            "CHEMAF / MUTOSHI",
+            "RUASHI MINING",
+            "TRANS AIR CARGO",
+            "KIBALI GOLD MINES",
+            "CAA RDC SA",
+            "LEREXCOM",
+            "BGFIBANK",
+            "GSA",
+            "MALU AVIATION",
+            "STANDARD BANK",
+            "HELIOS TOWERS",
+        ];
+
+        $tabUsersAM = [
+            (new Utilisateur())
+                ->setNom("SERGE SULA")
+                ->setEmail("ssula@gmail.com"),
+            (new Utilisateur())
+                ->setNom("ANDY SAMBI")
+                ->setEmail("asambi@gmail.com"),
+            (new Utilisateur())
+                ->setNom("JULIEN MVUMU")
+                ->setEmail("jmpukuta@gmail.com"),
+        ];
+
+        $tabUsersASS = [
+            (new Utilisateur())
+                ->setNom("VICTOR ESAFE")
+                ->setEmail("vesafe@gmail.com"),
+            (new Utilisateur())
+                ->setNom("ARMANDE ISAMENE")
+                ->setEmail("isamene@gmail.com"),
+            (new Utilisateur())
+                ->setNom("TYCHIQUE LUNDA")
+                ->setEmail("tlunda@gmail.com"),
+        ];
+
+        $tabTasks = [
+            "Récupérer le formulaire de proposition rempli et produire la cotation",
+            "Collecter la prime",
+            "Relancer pour le renouvellement",
+            "Suivre le client pour avoir la binding instruction",
+        ];
+
+        $tabReportSets = [];
+        $index = 1;
+        foreach ($tabClients as $client) {
+            $dataSet = new TaskReportSet(
+                TaskReportSet::TYPE_ELEMENT,
+                "$",
+                "<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks)-1)] . "</strong>",
+                $client,
+                [
+                    "Olivier MUTOMBO",
+                    "Olivier OBE",
+                    "Serge SULA",
+                    "Julien MVUMU",
+                ],
+                $tabUsersAM[rand(0, count($tabUsersAM)-1)],
+                $tabUsersASS[rand(0, count($tabUsersASS)-1)],
+                new DateTimeImmutable("now"),
+                rand(0, 1000000),
+                rand(0, 150),
+                rand(-3, 10)
+            );
+
+            $tabReportSets[] = $dataSet;
+            $index++;
+        }
+
+        $datasetTotal = new TaskReportSet(
+            TaskReportSet::TYPE_TOTAL,
+            "",
+            "TOTAL",
+            "",
+            [],
+            null,
+            null,
+            null,
+            1000000,
+            15000,
+            0
+        );
+
+        $tabReportSets[] = $datasetTotal;
+        // dd($tabReportSets);
+
+        return $tabReportSets;
+    }
+
     public function getProductionTabs(): array
     {
         return [
             'tabProductionPerInsurerPerMonth' => $this->newTabProductionPerInsurerPerMonth(),
             'tabProductionPerPartnerPerMonth' => $this->newTabProductionPerPartnerPerMonth(),
             'tabTop20Clients' => $this->newTabTop20Clients(),
+            'tabTasks' => $this->newTabTasks(),
         ];
     }
 }

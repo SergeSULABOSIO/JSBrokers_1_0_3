@@ -4,7 +4,7 @@ namespace App\Entity\ReportSet;
 use App\Entity\Utilisateur;
 use DateTimeImmutable;
 
-class Top20ClientReportSet
+class TaskReportSet
 {
     public const TYPE_SUBTOTAL = 0;
     public const TYPE_ELEMENT = 1;
@@ -15,15 +15,17 @@ class Top20ClientReportSet
         public string $currency_code,
         public string $task_description,
         public string $client,
-        public Utilisateur $owner,
-        public Utilisateur $excutor,
-        public DateTimeImmutable $effect_date,
-        public float $potential_premium,
-        public float $potential_commission,
+        public array $contacts = [],
+        public ?Utilisateur $owner,
+        public ?Utilisateur $excutor,
+        public ?DateTimeImmutable $effect_date,
+        public float $potential_premium = 0,
+        public float $potential_commission = 0,
+        public float $days_passed = 0,
     )
     {
         if($this->type == self::TYPE_SUBTOTAL){
-            $this->label = strtoupper($this->label);
+            $this->task_description = strtoupper($this->task_description);
         }
     }
 
