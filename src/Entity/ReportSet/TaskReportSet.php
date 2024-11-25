@@ -15,6 +15,7 @@ class TaskReportSet
     public string $currency_code = "$";
     public string $task_description = "";
     public string $client = "";
+    public string $endorsement = "";
     public array $contacts = [];
     public ?Utilisateur $owner = null;
     public ?Utilisateur $excutor = null;
@@ -248,6 +249,26 @@ class TaskReportSet
     public function setDays_passed($days_passed)
     {
         $this->days_passed = $days_passed;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of endorsement
+     */ 
+    public function getEndorsement()
+    {
+        return $this->endorsement;
+    }
+
+    /**
+     * Set the value of endorsement
+     *
+     * @return  self
+     */ 
+    public function setEndorsement($endorsement)
+    {
+        $this->endorsement = $endorsement;
 
         return $this;
     }

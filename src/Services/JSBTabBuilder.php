@@ -31,47 +31,44 @@ class JSBTabBuilder
         for ($m = 1; $m <= 12; $m++) {
             $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
             // echo $month . '<br>';
-            $datasetMois = new InsurerReportSet(
-                InsurerReportSet::TYPE_SUBTOTAL,
-                "$",
-                $month,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-                3676011.63,
-            );
+            $datasetMois = (new InsurerReportSet())
+                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
+                ->setCurrency_code("$")
+                ->setLabel($month)
+                ->setGw_premium(rand(1, 100000000))
+                ->setNet_com(rand(1, 100000000))
+                ->setTaxes(rand(1, 100000000))
+                ->setGros_commission(rand(1, 100000000))
+                ->setCommission_received(rand(1, 100000000))
+                ->setBalance_due(rand(1, 100000000));
+
             $tabReportSets[] = $datasetMois;
             foreach ($tabAssureurs as $assureur) {
-                $datasetAssureur = new InsurerReportSet(
-                    InsurerReportSet::TYPE_ELEMENT,
-                    "$",
-                    $assureur,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                    676.63,
-                );
+                $datasetAssureur = (new InsurerReportSet())
+                    ->setType(PartnerReportSet::TYPE_ELEMENT)
+                    ->setCurrency_code("$")
+                    ->setLabel($assureur)
+                    ->setGw_premium(rand(1, 100000000))
+                    ->setNet_com(rand(1, 100000000))
+                    ->setTaxes(rand(1, 100000000))
+                    ->setGros_commission(rand(1, 100000000))
+                    ->setCommission_received(rand(1, 100000000))
+                    ->setBalance_due(rand(1, 100000000));
+
                 $tabReportSets[] = $datasetAssureur;
             }
         }
-        $datasetTotal = new InsurerReportSet(
-            InsurerReportSet::TYPE_TOTAL,
-            "$",
-            "TOTAL",
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-            3676011.63,
-        );
+        $datasetTotal = (new InsurerReportSet())
+            ->setType(PartnerReportSet::TYPE_TOTAL)
+            ->setCurrency_code("$")
+            ->setLabel("TOTAL")
+            ->setGw_premium(rand(1, 100000000))
+            ->setNet_com(rand(1, 100000000))
+            ->setTaxes(rand(1, 100000000))
+            ->setGros_commission(rand(1, 100000000))
+            ->setCommission_received(rand(1, 100000000))
+            ->setBalance_due(rand(1, 100000000));
+
         $tabReportSets[] = $datasetTotal;
         // dd($tabReportSets);
 
@@ -249,6 +246,15 @@ class JSBTabBuilder
             "Suivre le client pour avoir la binding instruction",
         ];
 
+        $tabEndrosements = [
+            "Incorporation",
+            "Prorogation",
+            "Annulation",
+            "Résiliation",
+            "Renouvellement",
+            "Autre modification"
+        ];
+
         $tabReportSets = [];
         $index = 1;
         foreach ($tabClients as $client) {
@@ -266,6 +272,7 @@ class JSBTabBuilder
                     ]
                 )
                 ->setOwner($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+                ->setEndorsement($tabEndrosements[rand(0, count($tabEndrosements) - 1)])
                 ->setExcutor($tabUsersASS[rand(0, count($tabUsersASS) - 1)])
                 ->setEffect_date(new DateTimeImmutable("now"))
                 ->setPotential_premium(rand(0, 1000000))
@@ -283,6 +290,7 @@ class JSBTabBuilder
             ->setTask_description("TOTAL")
             ->setPotential_premium(rand(0, 1000000))
             ->setPotential_commission(rand(0, 150));
+
         // dd($tabReportSets);
 
         return $tabReportSets;
