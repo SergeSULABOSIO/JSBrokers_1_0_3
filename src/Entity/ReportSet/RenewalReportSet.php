@@ -19,6 +19,7 @@ class RenewalReportSet
     public string $status;
     public string $endorsement;
     public string $cover;
+    public string $bg_color;
     public ?Utilisateur $account_manager;
     public float $gw_premium;
     public float $g_commission;
@@ -290,6 +291,26 @@ class RenewalReportSet
     public function setStatus($status)
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of bg_color
+     */ 
+    public function getBg_color()
+    {
+        return $this->bg_color;
+    }
+
+    /**
+     * Set the value of bg_color
+     *
+     * @return  self
+     */ 
+    public function setBg_color($bg_color)
+    {
+        $this->bg_color = $bg_color;
 
         return $this;
     }

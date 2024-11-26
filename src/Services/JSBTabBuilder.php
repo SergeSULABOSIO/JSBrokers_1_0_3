@@ -412,17 +412,16 @@ class JSBTabBuilder
                 ->setEffect_date(new DateTimeImmutable("now - " . ($i + 365) . " days"))
                 ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
 
-            // dd(
-            //     "now:" . $this->serviceDates->getTexteSimple(new DateTimeImmutable("now")),
-            //     "effect date:" . $this->serviceDates->getTexteSimple($dataSet->getEffect_date()),
-            //     "expiry date:" . $this->serviceDates->getTexteSimple($dataSet->getExpiry_date()),
-            //     $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getExpiry_date())
-            // );
-
-            if ($this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getExpiry_date()) == 0) {
+            $diff = $this->serviceDates->daysEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
+            if ($diff == 0) {
                 $dataSet->setStatus("Still Running");
             } else {
                 $dataSet->setStatus($tabStatus[rand(0, count($tabStatus)-1)]);
+            }
+            if($diff >= 0){
+                $dataSet->setBg_color("text-bg-success");
+            }else{
+                $dataSet->setBg_color("text-bg-danger");
             }
 
             $tabReportSets[] = $dataSet;

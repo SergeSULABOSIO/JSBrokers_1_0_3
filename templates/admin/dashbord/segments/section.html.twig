@@ -408,7 +408,7 @@
                                     <th scope="col">COVER</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PREMIUM</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;REVENUE</th>
-                                    <th scope="col" class="text-end">STATUS</th>
+                                    <th scope="col" class="text-center">STATUS</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -419,8 +419,8 @@
                                                 <small class="text-dark">
                                                     <strong>Policy reference: <a href="#" class="text-dark" style="text-decoration: none;">{{ reposertSet.label|raw }}</a></strong></br>
                                                     <span class="text-muted">
-                                                        Effect date: <a href="#" class="link-secondary">{{ reposertSet.effect_date|format_date("full", locale: app.user.locale) }}</a></br>
-                                                        Expiry date: <a href="#" class="link-secondary">{{ reposertSet.expiry_date|format_date("full", locale: app.user.locale) }}</a></br>
+                                                        Effect date: {{ reposertSet.effect_date|format_date("full", locale: app.user.locale) }}</br>
+                                                        <span class="badge {{ reposertSet.bg_color }}">Expiry date: {{ reposertSet.expiry_date|format_date("full", locale: app.user.locale) }}</span></br>
                                                         Insurer: <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></br>
                                                         Endorsement: <a href="#" class="text-secondary">{{ reposertSet.endorsement }}</a></br>
                                                         By: <a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a>
