@@ -423,7 +423,6 @@ class JSBTabBuilder
             }else{
                 $dataSet->setBg_color("text-bg-danger");
             }
-
             $tabReportSets[] = $dataSet;
         }
 
