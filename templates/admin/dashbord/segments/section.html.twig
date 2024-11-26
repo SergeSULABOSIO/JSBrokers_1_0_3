@@ -431,7 +431,12 @@
                                             <td><small>{{ reposertSet.cover }}</small></td>
                                             <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td class="text-end" style="color: #198754;"><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td><small>{{ reposertSet.status }}</small></td>
+                                            <td>
+                                                <small>
+                                                    {{ reposertSet.status }}</br>
+                                                    <strong>This cover will expire in {{ reposertSet.remaining_days }} days.</strong>
+                                                </small>
+                                            </td>
                                         </tr>
                                     {% endif %}
                                 {% endfor %}

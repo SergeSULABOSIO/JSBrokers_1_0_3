@@ -388,7 +388,7 @@ class JSBTabBuilder
         ];
 
         $tabStatus = [
-            "Ongoing...",
+            "Renewal Ongoing...",
             "Renewad",
             "Cancelled",
             "Once-off",
@@ -413,15 +413,17 @@ class JSBTabBuilder
                 ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
 
             $diff = $this->serviceDates->daysEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
+            $dataSet->setRemaining_days($diff);
+            
             if ($diff == 0) {
-                $dataSet->setStatus("Still Running");
-            } else {
                 $dataSet->setStatus($tabStatus[rand(0, count($tabStatus)-1)]);
+            } else {
+                $dataSet->setStatus("Still Running");
             }
-            if($diff >= 0){
-                $dataSet->setBg_color("text-bg-success");
-            }else{
+            if($diff == 0){
                 $dataSet->setBg_color("text-bg-danger");
+            }else{
+                $dataSet->setBg_color("text-bg-success");
             }
             $tabReportSets[] = $dataSet;
         }

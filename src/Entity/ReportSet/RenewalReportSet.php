@@ -21,6 +21,7 @@ class RenewalReportSet
     public string $cover;
     public string $bg_color;
     public ?Utilisateur $account_manager;
+    public int $remaining_days;
     public float $gw_premium;
     public float $g_commission;
     public ?DateTimeImmutable $effect_date;
@@ -311,6 +312,26 @@ class RenewalReportSet
     public function setBg_color($bg_color)
     {
         $this->bg_color = $bg_color;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of remaining_days
+     */ 
+    public function getRemaining_days()
+    {
+        return $this->remaining_days;
+    }
+
+    /**
+     * Set the value of remaining_days
+     *
+     * @return  self
+     */ 
+    public function setRemaining_days($remaining_days)
+    {
+        $this->remaining_days = $remaining_days;
 
         return $this;
     }
