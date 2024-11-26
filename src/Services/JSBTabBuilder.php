@@ -8,6 +8,7 @@ use App\Entity\ReportSet\RenewalReportSet;
 use App\Entity\ReportSet\TaskReportSet;
 use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Entity\Utilisateur;
+use DateInterval;
 use DateTimeImmutable;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Validator\Constraints\Range;
@@ -17,6 +18,7 @@ class JSBTabBuilder
 
     public function __construct(
         private Security $security,
+        private ServiceDates $serviceDates,
     ) {}
 
     public function newTabProductionPerInsurerPerMonth(): array
@@ -407,12 +409,22 @@ class JSBTabBuilder
                 ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
                 ->setGw_premium(rand(1000, 100000))
                 ->setG_commission(rand(100, 10000))
-                ->setEffect_date(new DateTimeImmutable("now - " . (($i) + 365) . " days"))
-                ->setExpiry_date(new DateTimeImmutable("now + " . (($i) + 365) . " days"));
+                ->setEffect_date(new DateTimeImmutable("now - " . ($i + 365) . " days"))
+                ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
 
-            if($dataSet ->getExpiry_date()){
+            // dd(
+            //     "now:" . $this->serviceDates->getTexteSimple(new DateTimeImmutable("now")),
+            //     "effect date:" . $this->serviceDates->getTexteSimple($dataSet->getEffect_date()),
+            //     "expiry date:" . $this->serviceDates->getTexteSimple($dataSet->getExpiry_date()),
+            //     $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getExpiry_date())
+            // );
 
+            if ($this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getExpiry_date()) == 0) {
+                $dataSet->setStatus("Still Running");
+            } else {
+                $dataSet->setStatus($tabStatus[rand(0, count($tabStatus)-1)]);
             }
+
             $tabReportSets[] = $dataSet;
         }
 

@@ -408,76 +408,44 @@
                                     <th scope="col">COVER</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PREMIUM</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;REVENUE</th>
-                                    <th scope="col">RENEWAL STATUS</th>
+                                    <th scope="col" class="text-end">STATUS</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabTasks'] %}
+                                {% for reposertSet in productionTabs['tabRenewals'] %}
                                     {% if reposertSet.type == 1 %}
                                         <tr>
                                             <td>
-                                                <small>
-                                                    <a href="#" class="text-dark" style="text-decoration: none;">{{ reposertSet.task_description|raw }}</a></br>
+                                                <small class="text-dark">
+                                                    <strong>Policy reference: <a href="#" class="text-dark" style="text-decoration: none;">{{ reposertSet.label|raw }}</a></strong></br>
                                                     <span class="text-muted">
-                                                        By <a href="#" class="link-secondary">{{ reposertSet.owner.nom }}</a></br>
-                                                        Lead: <a href="#" class="link-secondary">Police Motor TPL pour agents</a></br>
-                                                        Endorsement: <a href="#" class="text-secondary"> {{ reposertSet.endorsement }} </a>
+                                                        Effect date: <a href="#" class="link-secondary">{{ reposertSet.effect_date|format_date("full", locale: app.user.locale) }}</a></br>
+                                                        Expiry date: <a href="#" class="link-secondary">{{ reposertSet.expiry_date|format_date("full", locale: app.user.locale) }}</a></br>
+                                                        Insurer: <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></br>
+                                                        Endorsement: <a href="#" class="text-secondary">{{ reposertSet.endorsement }}</a></br>
+                                                        By: <a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a>
                                                     </span></br>
                                                 </small>
                                             </td>
-                                            <td>
-                                                <small>
-                                                    {{ reposertSet.client }}
-                                                    <span class="text-muted">
-                                                        Contacts:</br>
-                                                        <ul>
-                                                            {% for contact in reposertSet.contacts %}
-                                                                <li>{{ contact }}</li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </span>
-                                                </small>
-                                            </td>
-                                            {# <td><small>{{ reposertSet.owner.nom }}</small></td> #}
-                                            <td>
-                                                <small>
-                                                    {{ reposertSet.excutor.nom }}</br>
-                                                    <span class="text-muted">Feedbacks (10)</span>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <small>
-                                                    <strong>
-                                                        {{ reposertSet.effect_date|format_date("full", locale: app.user.locale) }}<br>
-                                                    </strong>
-                                                    {% set couleur = "text-dark" %}
-                                                    {% if reposertSet.days_passed == 0 %}
-                                                        <span class="badge text-bg-primary">Today.</span>
-                                                    {% endif %}
-                                                    {% if reposertSet.days_passed < 0 %}
-                                                        <span class="badge text-bg-success">In {{ reposertSet.days_passed * (-1) }} days.</span>
-                                                    {% endif %}
-                                                    {% if reposertSet.days_passed > 0 %}
-                                                        <span class="badge text-bg-danger">Since {{ reposertSet.days_passed }} days passed.</span>
-                                                    {% endif %}
-                                                </small>
-                                            </td>
-                                            <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.potential_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end" style="color: #198754;"><small>{{ reposertSet.potential_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td><small>{{ reposertSet.client }}</small></td>
+                                            <td><small>{{ reposertSet.cover }}</small></td>
+                                            <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #198754;"><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td><small>{{ reposertSet.status }}</small></td>
                                         </tr>
                                     {% endif %}
                                 {% endfor %}
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabTasks'] %}
+                                    {% for reposertSet in productionTabs['tabRenewals'] %}
                                         {% if reposertSet.type == 2 %}
-                                            <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.task_description }}</strong></small></th>
+                                            <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
+                                            <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
                                             <th scope="col"><small><strong></strong></small></th>
-                                            <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.potential_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
-                                            <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.potential_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
                                         {% endif %}
                                     {% endfor %}
                                 </tr>
