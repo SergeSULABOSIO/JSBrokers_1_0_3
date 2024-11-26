@@ -1,7 +1,9 @@
 <?php
 namespace App\Entity\ReportSet;
 
+use App\Entity\Utilisateur;
 use DateTime;
+use DateTimeImmutable;
 
 class RenewalReportSet
 {
@@ -12,10 +14,16 @@ class RenewalReportSet
     public int $type;
     public string $currency_code;
     public string $label;
+    public string $insurer;
+    public string $client;
+    public string $status;
+    public string $endorsement;
+    public string $cover;
+    public ?Utilisateur $account_manager;
     public float $gw_premium;
     public float $g_commission;
-    public ?DateTime $effect_date;
-    public ?DateTime $expiry_date;
+    public ?DateTimeImmutable $effect_date;
+    public ?DateTimeImmutable $expiry_date;
 
     public function __construct()
     {
@@ -122,6 +130,166 @@ class RenewalReportSet
     public function setG_commission($g_commission)
     {
         $this->g_commission = $g_commission;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of insurer
+     */ 
+    public function getInsurer()
+    {
+        return $this->insurer;
+    }
+
+    /**
+     * Set the value of insurer
+     *
+     * @return  self
+     */ 
+    public function setInsurer($insurer)
+    {
+        $this->insurer = $insurer;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of account_manager
+     */ 
+    public function getAccount_manager()
+    {
+        return $this->account_manager;
+    }
+
+    /**
+     * Set the value of account_manager
+     *
+     * @return  self
+     */ 
+    public function setAccount_manager($account_manager)
+    {
+        $this->account_manager = $account_manager;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of cover
+     */ 
+    public function getCover()
+    {
+        return $this->cover;
+    }
+
+    /**
+     * Set the value of cover
+     *
+     * @return  self
+     */ 
+    public function setCover($cover)
+    {
+        $this->cover = $cover;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of effect_date
+     */ 
+    public function getEffect_date()
+    {
+        return $this->effect_date;
+    }
+
+    /**
+     * Set the value of effect_date
+     *
+     * @return  self
+     */ 
+    public function setEffect_date($effect_date)
+    {
+        $this->effect_date = $effect_date;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of expiry_date
+     */ 
+    public function getExpiry_date()
+    {
+        return $this->expiry_date;
+    }
+
+    /**
+     * Set the value of expiry_date
+     *
+     * @return  self
+     */ 
+    public function setExpiry_date($expiry_date)
+    {
+        $this->expiry_date = $expiry_date;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of client
+     */ 
+    public function getClient()
+    {
+        return $this->client;
+    }
+
+    /**
+     * Set the value of client
+     *
+     * @return  self
+     */ 
+    public function setClient($client)
+    {
+        $this->client = $client;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of endorsement
+     */ 
+    public function getEndorsement()
+    {
+        return $this->endorsement;
+    }
+
+    /**
+     * Set the value of endorsement
+     *
+     * @return  self
+     */ 
+    public function setEndorsement($endorsement)
+    {
+        $this->endorsement = $endorsement;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of status
+     */ 
+    public function getStatus()
+    {
+        return $this->status;
+    }
+
+    /**
+     * Set the value of status
+     *
+     * @return  self
+     */ 
+    public function setStatus($status)
+    {
+        $this->status = $status;
 
         return $this;
     }

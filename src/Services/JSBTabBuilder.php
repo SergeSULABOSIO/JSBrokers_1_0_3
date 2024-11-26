@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Entity\ReportSet\InsurerReportSet;
 use App\Entity\ReportSet\PartnerReportSet;
+use App\Entity\ReportSet\RenewalReportSet;
 use App\Entity\ReportSet\TaskReportSet;
 use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Entity\Utilisateur;
@@ -308,13 +309,134 @@ class JSBTabBuilder
         return $tabReportSets;
     }
 
-    public function getProductionTabs(): array
+    public function newTabRenewals(): array
     {
+        $tabClients = [
+            "GLENCORE / KCC",
+            "GLENCORE / MUMI",
+            "IVANHOE / KAMOA",
+            "ERG / METALKOL",
+            "ERG / BOSS MINING",
+            "ERG / FRONTIER",
+            "ERG / COMIDE",
+            "TENKE FUNGURUME",
+            "CHEMAF / ETOILE",
+            "CHEMAF / MUTOSHI",
+            "RUASHI MINING",
+            "TRANS AIR CARGO",
+            "KIBALI GOLD MINES",
+            "CAA RDC SA",
+            "LEREXCOM",
+            "BGFIBANK",
+            "GSA",
+            "MALU AVIATION",
+            "STANDARD BANK",
+            "HELIOS TOWERS",
+        ];
+
+        $tabUsersAM = [
+            (new Utilisateur())
+                ->setNom("SERGE SULA")
+                ->setEmail("ssula@gmail.com"),
+            (new Utilisateur())
+                ->setNom("ANDY SAMBI")
+                ->setEmail("asambi@gmail.com"),
+            (new Utilisateur())
+                ->setNom("JULIEN MVUMU")
+                ->setEmail("jmpukuta@gmail.com"),
+        ];
+
+        $tabCovers = [
+            "Motor TPL",
+            "Motor Comp",
+            "GPA",
+            "PI",
+            "GL",
+            "BBB",
+            "PDBI",
+            "GIT"
+        ];
+
+        $tabInsurers = [
+            "SFA Congo",
+            "ACTIVA",
+            "SUNU",
+            "MAYFAIR",
+            "RAWSUR",
+            "GPA"
+        ];
+
+        $tabPolicies = [
+            "W12457878-200-2024",
+            "012457878-200-2024",
+            "012457555-200-2024",
+            "012457525-125-2024",
+            "012457556-222-2024",
+            "012457546-222-2024",
+            "012400000-222-2024"
+        ];
+
+        $tabEndrosements = [
+            "Incorporation",
+            "Prorogation",
+            "Annulation",
+            "Résiliation",
+            "Renouvellement",
+            "Autre modification"
+        ];
+
+        $tabStatus = [
+            "Ongoing...",
+            "Renewad",
+            "Cancelled",
+            "Once-off",
+            "Extended",
+            "Still running"
+        ];
+
+        $tabReportSets = [];
+        for ($i = 0; $i < 20; $i++) {
+            $dataSet = (new RenewalReportSet())
+                ->setType(RenewalReportSet::TYPE_ELEMENT)
+                ->setCurrency_code("$")
+                ->setLabel($tabPolicies[rand(0, count($tabPolicies) - 1)])
+                ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
+                ->setClient($tabClients[rand(0, count($tabClients) - 1)])
+                ->setEndorsement($tabEndrosements[rand(0, count($tabEndrosements) - 1)])
+                ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
+                ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+                ->setGw_premium(rand(1000, 100000))
+                ->setG_commission(rand(100, 10000))
+                ->setEffect_date(new DateTimeImmutable("now - " . (($i) + 365) . " days"))
+                ->setExpiry_date(new DateTimeImmutable("now + " . (($i) + 365) . " days"));
+
+            if($dataSet ->getExpiry_date()){
+
+            }
+            $tabReportSets[] = $dataSet;
+        }
+
+        //Ligne totale
+        $dataSet = (new RenewalReportSet())
+            ->setType(RenewalReportSet::TYPE_TOTAL)
+            ->setCurrency_code("$")
+            ->setLabel("TOTAL")
+            ->setGw_premium(rand(1000, 100000))
+            ->setG_commission(rand(100, 10000));
+        $tabReportSets[] = $dataSet;
+        // dd($tabReportSets);
+
+        return $tabReportSets;
+    }
+
+    public function getProductionTabs(): array
+    { //
         return [
             'tabProductionPerInsurerPerMonth' => $this->newTabProductionPerInsurerPerMonth(),
             'tabProductionPerPartnerPerMonth' => $this->newTabProductionPerPartnerPerMonth(),
             'tabTop20Clients' => $this->newTabTop20Clients(),
             'tabTasks' => $this->newTabTasks(),
+            'tabRenewals' => $this->newTabRenewals(),
         ];
     }
 }
