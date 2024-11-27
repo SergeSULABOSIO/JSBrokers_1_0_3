@@ -21,7 +21,8 @@ class RenewalReportSet
     public string $cover;
     public string $bg_color;
     public ?Utilisateur $account_manager;
-    public int $remaining_days;
+    public string $remaining_days;
+    public int $endorsement_id;
     public float $gw_premium;
     public float $g_commission;
     public ?DateTimeImmutable $effect_date;
@@ -332,6 +333,26 @@ class RenewalReportSet
     public function setRemaining_days($remaining_days)
     {
         $this->remaining_days = $remaining_days;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of endorsement_id
+     */ 
+    public function getEndorsement_id()
+    {
+        return $this->endorsement_id;
+    }
+
+    /**
+     * Set the value of endorsement_id
+     *
+     * @return  self
+     */ 
+    public function setEndorsement_id($endorsement_id)
+    {
+        $this->endorsement_id = $endorsement_id;
 
         return $this;
     }

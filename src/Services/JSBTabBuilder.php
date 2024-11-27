@@ -401,6 +401,7 @@ class JSBTabBuilder
             $dataSet = (new RenewalReportSet())
                 ->setType(RenewalReportSet::TYPE_ELEMENT)
                 ->setCurrency_code("$")
+                ->setEndorsement_id($i)
                 ->setLabel($tabPolicies[rand(0, count($tabPolicies) - 1)])
                 ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
                 ->setClient($tabClients[rand(0, count($tabClients) - 1)])
@@ -413,7 +414,8 @@ class JSBTabBuilder
                 ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
 
             $diff = $this->serviceDates->daysEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
-            $dataSet->setRemaining_days($diff);
+            
+            $dataSet->setRemaining_days($diff == 0 ? "today": "in " . $diff . " day(s).");
             
             if ($diff == 0) {
                 $dataSet->setStatus($tabStatus[rand(0, count($tabStatus)-1)]);

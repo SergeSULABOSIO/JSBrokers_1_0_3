@@ -403,12 +403,12 @@
                             <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
                             <thead class="table-secondary">
                                 <tr>
-                                    <th scope="col">DESCRIPTION</th>
+                                    <th scope="col" width="280">DESCRIPTION</th>
                                     <th scope="col">CLIENT</th>
                                     <th scope="col">COVER</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PREMIUM</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;REVENUE</th>
-                                    <th scope="col" class="text-center">STATUS</th>
+                                    <th scope="col" class="text-center" width="200">STATUS</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -417,24 +417,37 @@
                                         <tr>
                                             <td>
                                                 <small class="text-dark">
-                                                    <strong>Policy reference: <a href="#" class="text-dark" style="text-decoration: none;">{{ reposertSet.label|raw }}</a></strong></br>
+                                                    <strong>
+                                                        Policy ref.: 
+                                                        <a href="#" class="text-dark" style="text-decoration: none;">
+                                                            {{ reposertSet.label }}
+                                                        </a>
+                                                    </strong>
                                                     <span class="text-muted">
-                                                        Effect date: {{ reposertSet.effect_date|format_date("full", locale: app.user.locale) }}</br>
-                                                        <span class="badge {{ reposertSet.bg_color }}">Expiry date: {{ reposertSet.expiry_date|format_date("full", locale: app.user.locale) }}</span></br>
-                                                        Insurer: <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></br>
-                                                        Endorsement: <a href="#" class="text-secondary">{{ reposertSet.endorsement }}</a></br>
-                                                        By: <a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a>
-                                                    </span></br>
+                                                    <ul>
+                                                        <li>Effect date: <strong>{{ reposertSet.effect_date|date("d/m/Y") }}</strong></li>
+                                                        <li>Exp. date: <strong>{{ reposertSet.expiry_date|date("d/m/Y") }}</strong></li>
+                                                        <li>At <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
+                                                        <li>By <a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
+                                                    </ul>
+                                                    </span>
                                                 </small>
                                             </td>
                                             <td><small>{{ reposertSet.client }}</small></td>
-                                            <td><small>{{ reposertSet.cover }}</small></td>
+                                            <td>
+                                                <small>
+                                                    {{ reposertSet.cover }}</br>
+                                                    End. n°{{ reposertSet.endorsement_id }}: <a href="#" class="text-secondary">{{ reposertSet.endorsement }}</a></br>
+                                                </small>
+                                            </td>
                                             <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td class="text-end" style="color: #198754;"><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td>
                                                 <small>
-                                                    {{ reposertSet.status }}</br>
-                                                    <strong>This cover will expire in {{ reposertSet.remaining_days }} days.</strong>
+                                                <ul>
+                                                    <li>{{ reposertSet.status }}</li>
+                                                    <li><strong class="p-1 rounded {{ reposertSet.bg_color }}">Expiring {{ reposertSet.remaining_days }}</strong></li>
+                                                </ul>
                                                 </small>
                                             </td>
                                         </tr>
