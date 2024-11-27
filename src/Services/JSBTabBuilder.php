@@ -415,7 +415,7 @@ class JSBTabBuilder
 
             $diff = $this->serviceDates->daysEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
             
-            $dataSet->setRemaining_days($diff == 0 ? "today": "in " . $diff . " day(s).");
+            $dataSet->setRemaining_days($diff == 0 ? "Expired": "Expiring in " . $diff . " day(s).");
             
             if ($diff == 0) {
                 $dataSet->setStatus($tabStatus[rand(0, count($tabStatus)-1)]);

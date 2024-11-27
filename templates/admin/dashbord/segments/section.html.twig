@@ -425,8 +425,8 @@
                                                     </strong>
                                                     <span class="text-muted">
                                                     <ul>
-                                                        <li>Effect date: <strong>{{ reposertSet.effect_date|date("d/m/Y") }}</strong></li>
-                                                        <li>Exp. date: <strong>{{ reposertSet.expiry_date|date("d/m/Y") }}</strong></li>
+                                                        <li>Effect date: <strong>{{ reposertSet.effect_date|date("d/m/Y H:i") }}</strong></li>
+                                                        <li>Exp. date: <strong>{{ reposertSet.expiry_date|date("d/m/Y H:i") }}</strong></li>
                                                         <li>At <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
                                                         <li>By <a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
                                                     </ul>
@@ -450,7 +450,7 @@
                                                 <small>
                                                 <ul>
                                                     <li>{{ reposertSet.status }}</li>
-                                                    <li><strong class="p-1 rounded {{ reposertSet.bg_color }}">Expiring {{ reposertSet.remaining_days }}</strong></li>
+                                                    <li><strong class="p-1 rounded {{ reposertSet.bg_color }}">{{ reposertSet.remaining_days }}</strong></li>
                                                 </ul>
                                                 </small>
                                             </td>
