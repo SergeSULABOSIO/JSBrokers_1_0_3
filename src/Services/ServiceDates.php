@@ -75,6 +75,7 @@ class ServiceDates
         /** @var DateInterval */
         $interval = $dateA->diff($dateB);
         $days = $interval->format("%a");
+        // dd($interval);
         return $days;
     }
 }
