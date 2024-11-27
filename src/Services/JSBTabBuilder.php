@@ -401,7 +401,7 @@ class JSBTabBuilder
             $dataSet = (new RenewalReportSet())
                 ->setType(RenewalReportSet::TYPE_ELEMENT)
                 ->setCurrency_code("$")
-                ->setEndorsement_id($i)
+                ->setEndorsement_id(rand(0,15))
                 ->setLabel($tabPolicies[rand(0, count($tabPolicies) - 1)])
                 ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
                 ->setClient($tabClients[rand(0, count($tabClients) - 1)])

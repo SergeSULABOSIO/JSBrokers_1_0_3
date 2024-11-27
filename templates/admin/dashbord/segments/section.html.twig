@@ -404,8 +404,8 @@
                             <thead class="table-secondary">
                                 <tr>
                                     <th scope="col" width="280">DESCRIPTION</th>
-                                    <th scope="col">CLIENT</th>
-                                    <th scope="col">COVER</th>
+                                    <th scope="col">RISK</th>
+                                    {# <th scope="col">COVER</th> #}
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PREMIUM</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;REVENUE</th>
                                     <th scope="col" class="text-center" width="200">STATUS</th>
@@ -433,11 +433,15 @@
                                                     </span>
                                                 </small>
                                             </td>
-                                            <td><small>{{ reposertSet.client }}</small></td>
+                                            {# <td><small>{{ reposertSet.client }}</small></td> #}
                                             <td>
                                                 <small>
-                                                    {{ reposertSet.cover }}</br>
-                                                    End. n°{{ reposertSet.endorsement_id }}: <a href="#" class="text-secondary">{{ reposertSet.endorsement }}</a></br>
+                                                    <strong><a href="#" class="link-dark" style="text-decoration: none;">{{ reposertSet.client }}</a></strong></br>
+                                                    Cover: <a href="#" class="link-secondary">{{ reposertSet.cover }}</a>
+                                                    <ul>
+                                                        <li>{{ reposertSet.endorsement }}</li>
+                                                        <li>End. n°{{ reposertSet.endorsement_id }}</li>
+                                                    </ul>
                                                 </small>
                                             </td>
                                             <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
@@ -459,7 +463,7 @@
                                     {% for reposertSet in productionTabs['tabRenewals'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></th>
-                                            <th scope="col"><small><strong></strong></small></th>
+                                            {# <th scope="col"><small><strong></strong></small></th> #}
                                             <th scope="col"><small><strong></strong></small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
                                             <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
