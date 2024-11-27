@@ -75,7 +75,25 @@ class ServiceDates
         /** @var DateInterval */
         $interval = $dateA->diff($dateB);
         $days = $interval->format("%a");
-        // dd($interval);
+        // dd($interval->h);
         return $days;
+    }
+
+    public function hoursEntre(DateTimeImmutable $dateA, DateTimeImmutable $dateB):int
+    {
+        /** @var DateInterval */
+        $interval = $dateA->diff($dateB);
+        $hours = $interval->format("%h");
+        // dd($interval->h);
+        return $hours;
+    }
+
+    public function minutesEntre(DateTimeImmutable $dateA, DateTimeImmutable $dateB):int
+    {
+        /** @var DateInterval */
+        $interval = $dateA->diff($dateB);
+        $hours = $interval->format("%i");
+        // dd($interval->h);
+        return $hours;
     }
 }

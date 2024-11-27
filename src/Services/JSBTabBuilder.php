@@ -389,7 +389,7 @@ class JSBTabBuilder
 
         $tabStatus = [
             "Renewal Ongoing...",
-            "Renewad",
+            "Renewed",
             "Cancelled",
             "Once-off",
             "Extended",
@@ -414,8 +414,10 @@ class JSBTabBuilder
                 ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
 
             $diff = $this->serviceDates->daysEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
+            $hours = $this->serviceDates->hoursEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
+            $minutes = $this->serviceDates->minutesEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
             
-            $dataSet->setRemaining_days($diff == 0 ? "Expired": "Expiring in " . $diff . " day(s).");
+            $dataSet->setRemaining_days($diff == 0 ? "Expired in " . $hours . ":" . $minutes : "Expiring in " . $diff . " day(s).");
             
             if ($diff == 0) {
                 $dataSet->setStatus($tabStatus[rand(0, count($tabStatus)-1)]);
