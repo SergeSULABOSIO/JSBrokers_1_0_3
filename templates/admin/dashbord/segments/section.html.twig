@@ -311,10 +311,10 @@
                             <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
                             <thead class="table-secondary">
                                 <tr>
-                                    <th scope="col">TASK TO BE EXECUTED</th>
-                                    <th scope="col">CLIENT</th>
-                                    <th scope="col">EXCUTOR</th>
-                                    <th scope="col">DATE PLANNED</th>
+                                    <th scope="col" width="300">TASK TO BE EXECUTED</th>
+                                    <th scope="col" width="170">CLIENT</th>
+                                    <th scope="col" width="150">EXCUTOR</th>
+                                    <th scope="col" width="150">DATE PLANNED</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PREMIUM</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;REVENUE</th>
                                 </tr>
@@ -327,10 +327,12 @@
                                                 <small>
                                                     <a href="#" class="text-dark" style="text-decoration: none;">{{ reposertSet.task_description|raw }}</a></br>
                                                     <span class="text-muted">
-                                                        By <a href="#" class="link-secondary">{{ reposertSet.owner.nom }}</a></br>
-                                                        Lead: <a href="#" class="link-secondary">Police Motor TPL pour agents</a></br>
-                                                        Endorsement: <a href="#" class="text-secondary"> {{ reposertSet.endorsement }} </a>
-                                                    </span></br>
+                                                        <ul>
+                                                            <li>By <a href="#" class="link-secondary">{{ reposertSet.owner.nom }}</a></li>
+                                                            <li>Lead: <a href="#" class="link-secondary">Police Motor TPL pour agents</a></li>
+                                                            <li>End.: {{ reposertSet.endorsement }} </li>
+                                                        </ul>
+                                                    </span>
                                                 </small>
                                             </td>
                                             <td>
@@ -360,13 +362,13 @@
                                                     </strong>
                                                     {% set couleur = "text-dark" %}
                                                     {% if reposertSet.days_passed == 0 %}
-                                                        <span class="badge text-bg-primary">Today.</span>
+                                                        <span class="p-1 rounded text-bg-primary">Today.</span>
                                                     {% endif %}
                                                     {% if reposertSet.days_passed < 0 %}
-                                                        <span class="badge text-bg-success">In {{ reposertSet.days_passed * (-1) }} days.</span>
+                                                        <span class="p-1 rounded text-bg-success">In {{ reposertSet.days_passed * (-1) }} days.</span>
                                                     {% endif %}
                                                     {% if reposertSet.days_passed > 0 %}
-                                                        <span class="badge text-bg-danger">Since {{ reposertSet.days_passed }} days passed.</span>
+                                                        <span class="p-1 rounded text-bg-danger">Since {{ reposertSet.days_passed }} days.</span>
                                                     {% endif %}
                                                 </small>
                                             </td>
