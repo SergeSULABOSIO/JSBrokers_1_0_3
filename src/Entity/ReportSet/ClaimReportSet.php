@@ -13,22 +13,28 @@ class ClaimReportSet
 
     public int $type;
     public string $currency_code;
+    //Policy
     public string $policy_reference;
-    public string $claim_reference;
     public string $insurer;
     public string $client;
-    public string $victim;
-    public string $status;
-    public string $endorsement;
     public string $cover;
-    public string $bg_color;
-    public ?Utilisateur $account_manager;
-    public string $remaining_days;
     public float $gw_premium;
     public float $policy_limit;
     public float $policy_deductible;
     public ?DateTimeImmutable $effect_date;
     public ?DateTimeImmutable $expiry_date;
+    //Claim
+    public string $claim_reference;
+    public string $victim;
+    public string $claims_status;
+    public string $bg_color;
+    public ?Utilisateur $account_manager;
+    public float $damage_cost;
+    public float $compensation_paid;
+    public float $compensation_balance;
+    public string $compensation_speed;  //nb des jours entre la notification et l'indemnisation de la victime
+    public ?DateTimeImmutable $notification_date;
+    public ?DateTimeImmutable $settlement_date;
 
     public function __construct()
     {
@@ -217,45 +223,6 @@ class ClaimReportSet
         return $this;
     }
 
-    /**
-     * Get the value of endorsement
-     */ 
-    public function getEndorsement()
-    {
-        return $this->endorsement;
-    }
-
-    /**
-     * Set the value of endorsement
-     *
-     * @return  self
-     */ 
-    public function setEndorsement($endorsement)
-    {
-        $this->endorsement = $endorsement;
-
-        return $this;
-    }
-
-    /**
-     * Get the value of status
-     */ 
-    public function getStatus()
-    {
-        return $this->status;
-    }
-
-    /**
-     * Set the value of status
-     *
-     * @return  self
-     */ 
-    public function setStatus($status)
-    {
-        $this->status = $status;
-
-        return $this;
-    }
 
     /**
      * Get the value of bg_color
@@ -273,26 +240,6 @@ class ClaimReportSet
     public function setBg_color($bg_color)
     {
         $this->bg_color = $bg_color;
-
-        return $this;
-    }
-
-    /**
-     * Get the value of remaining_days
-     */ 
-    public function getRemaining_days()
-    {
-        return $this->remaining_days;
-    }
-
-    /**
-     * Set the value of remaining_days
-     *
-     * @return  self
-     */ 
-    public function setRemaining_days($remaining_days)
-    {
-        $this->remaining_days = $remaining_days;
 
         return $this;
     }
@@ -334,6 +281,207 @@ class ClaimReportSet
     public function setClaim_reference($claim_reference)
     {
         $this->claim_reference = $claim_reference;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of claims_status
+     */ 
+    public function getClaims_status()
+    {
+        return $this->claims_status;
+    }
+
+    /**
+     * Set the value of claims_status
+     *
+     * @return  self
+     */ 
+    public function setClaims_status($claims_status)
+    {
+        $this->claims_status = $claims_status;
+
+        return $this;
+    }
+
+
+    /**
+     * Get the value of damage_cost
+     */ 
+    public function getDamage_cost()
+    {
+        return $this->damage_cost;
+    }
+
+    /**
+     * Set the value of damage_cost
+     *
+     * @return  self
+     */ 
+    public function setDamage_cost($damage_cost)
+    {
+        $this->damage_cost = $damage_cost;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of compensation_speed
+     */ 
+    public function getCompensation_speed()
+    {
+        return $this->compensation_speed;
+    }
+
+    /**
+     * Set the value of compensation_speed
+     *
+     * @return  self
+     */ 
+    public function setCompensation_speed($compensation_speed)
+    {
+        $this->compensation_speed = $compensation_speed;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of policy_limit
+     */ 
+    public function getPolicy_limit()
+    {
+        return $this->policy_limit;
+    }
+
+    /**
+     * Set the value of policy_limit
+     *
+     * @return  self
+     */ 
+    public function setPolicy_limit($policy_limit)
+    {
+        $this->policy_limit = $policy_limit;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of policy_deductible
+     */ 
+    public function getPolicy_deductible()
+    {
+        return $this->policy_deductible;
+    }
+
+    /**
+     * Set the value of policy_deductible
+     *
+     * @return  self
+     */ 
+    public function setPolicy_deductible($policy_deductible)
+    {
+        $this->policy_deductible = $policy_deductible;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of victim
+     */ 
+    public function getVictim()
+    {
+        return $this->victim;
+    }
+
+    /**
+     * Set the value of victim
+     *
+     * @return  self
+     */ 
+    public function setVictim($victim)
+    {
+        $this->victim = $victim;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of compensation_paid
+     */ 
+    public function getCompensation_paid()
+    {
+        return $this->compensation_paid;
+    }
+
+    /**
+     * Set the value of compensation_paid
+     *
+     * @return  self
+     */ 
+    public function setCompensation_paid($compensation_paid)
+    {
+        $this->compensation_paid = $compensation_paid;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of compensation_balance
+     */ 
+    public function getCompensation_balance()
+    {
+        return $this->compensation_balance;
+    }
+
+    /**
+     * Set the value of compensation_balance
+     *
+     * @return  self
+     */ 
+    public function setCompensation_balance($compensation_balance)
+    {
+        $this->compensation_balance = $compensation_balance;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of notification_date
+     */ 
+    public function getNotification_date()
+    {
+        return $this->notification_date;
+    }
+
+    /**
+     * Set the value of notification_date
+     *
+     * @return  self
+     */ 
+    public function setNotification_date($notification_date)
+    {
+        $this->notification_date = $notification_date;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of settlement_date
+     */ 
+    public function getSettlement_date()
+    {
+        return $this->settlement_date;
+    }
+
+    /**
+     * Set the value of settlement_date
+     *
+     * @return  self
+     */ 
+    public function setSettlement_date($settlement_date)
+    {
+        $this->settlement_date = $settlement_date;
 
         return $this;
     }

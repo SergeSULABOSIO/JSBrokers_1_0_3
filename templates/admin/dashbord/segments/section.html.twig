@@ -35,6 +35,9 @@
                     <button class="nav-link" id="nav-claims-tab" data-bs-toggle="tab" data-bs-target="#nav-claims" type="button" role="tab" aria-controls="nav-claims" aria-selected="false">
                         <strong>{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Claims</strong>
                     </button>
+                    <button class="nav-link" id="nav-cash-tab" data-bs-toggle="tab" data-bs-target="#nav-cash" type="button" role="tab" aria-controls="nav-cash" aria-selected="false">
+                        <strong>{{ ux_icon('game-icons:receive-money', {height: '20px', width: '20px'}) }} Cash-flow</strong>
+                    </button>
                 </div>
             </nav>
             {# Contenu de chaque Onglet #}
@@ -476,6 +479,9 @@
                 </div>
                 <div class="tab-pane fade" id="nav-claims" role="tabpanel" aria-labelledby="nav-claims-tab" tabindex="0">
                     Contenu de claims
+                </div>
+                <div class="tab-pane fade" id="nav-cash" role="tabpanel" aria-labelledby="nav-cash-tab" tabindex="0">
+                    Contenu de cash-flow
                 </div>
             </div>
         </div>

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Entity\ReportSet\ClaimReportSet;
 use App\Entity\ReportSet\InsurerReportSet;
 use App\Entity\ReportSet\PartnerReportSet;
 use App\Entity\ReportSet\RenewalReportSet;
@@ -311,6 +312,7 @@ class JSBTabBuilder
         return $tabReportSets;
     }
 
+
     public function newTabRenewals(): array
     {
         $tabClients = [
@@ -457,6 +459,140 @@ class JSBTabBuilder
         return $tabReportSets;
     }
 
+
+    public function newTabClaims(): array
+    {
+        $tabInsurers = [
+            "SFA Congo",
+            "ACTIVA",
+            "SUNU",
+            "MAYFAIR",
+            "RAWSUR",
+            "GPA"
+        ];
+
+        $tabClients = [
+            "GLENCORE / KCC",
+            "GLENCORE / MUMI",
+            "IVANHOE / KAMOA",
+            "ERG / METALKOL",
+            "ERG / BOSS MINING",
+            "ERG / FRONTIER",
+            "ERG / COMIDE",
+            "TENKE FUNGURUME",
+            "CHEMAF / ETOILE",
+            "CHEMAF / MUTOSHI",
+            "RUASHI MINING",
+            "TRANS AIR CARGO",
+            "KIBALI GOLD MINES",
+            "CAA RDC SA",
+            "LEREXCOM",
+            "BGFIBANK",
+            "GSA",
+            "MALU AVIATION",
+            "STANDARD BANK",
+            "HELIOS TOWERS",
+        ];
+
+        $tabUsersAM = [
+            (new Utilisateur())
+                ->setNom("SERGE SULA")
+                ->setEmail("ssula@gmail.com"),
+            (new Utilisateur())
+                ->setNom("ANDY SAMBI")
+                ->setEmail("asambi@gmail.com"),
+            (new Utilisateur())
+                ->setNom("JULIEN MVUMU")
+                ->setEmail("jmpukuta@gmail.com"),
+        ];
+
+        $tabCovers = [
+            "Motor TPL",
+            "Motor Comp",
+            "GPA",
+            "PI",
+            "GL",
+            "BBB",
+            "PDBI",
+            "GIT"
+        ];
+
+        $tabClaims = [
+            "W12457878-CLM-2024",
+            "012457555-CLM-2024",
+            "012457525-CLM-2024",
+            "012457556-CLM-2024",
+            "012457546-CLM-2024",
+            "012400000-CLM-2024"
+        ];
+
+        $tabPolicies = [
+            "W12457878-200-2024",
+            "012457878-200-2024",
+            "012457555-200-2024",
+            "012457525-125-2024",
+            "012457556-222-2024",
+            "012457546-222-2024",
+            "012400000-222-2024"
+        ];
+
+        $tabStatus = [
+            "Processing...",
+            "Settled",
+            "Cancelled",
+            "Awaiting docs."
+        ];
+
+        $tabReportSets = [];
+        foreach ($tabClaims as $claim_reference) {
+            $dataSet = (new ClaimReportSet())
+                ->setType(ClaimReportSet::TYPE_ELEMENT)
+                ->setCurrency_code("$")
+                ->setPolicy_reference($tabPolicies[rand(0, count($tabPolicies) - 1)])
+                ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
+                ->setClient($tabClients[rand(0, count($tabClients) - 1)])
+                ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
+                ->setGw_premium(rand(1000, 100000))
+                ->setPolicy_limit(rand(1000, 100000))
+                ->setPolicy_deductible(rand(10, 1000))
+                ->setEffect_date(new DateTimeImmutable("now - 20 days"))
+                ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
+                ->setClaim_reference($claim_reference)
+                ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
+                ->setClaims_status($tabClaims[rand(0, count($tabClaims) - 1)])
+                ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+                ->setDamage_cost(rand(1000, 100000))
+                ->setCompensation_paid(rand(0, 100000))
+                ->setCompensation_balance(rand(0, 100000))
+                ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
+                ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"))
+            ;
+
+            $speed_sttelement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
+            $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));
+            
+            $dataSet->setCompensation_speed("Settled in " . $speed_sttelement_days . " days.");
+            
+            // $dataSet->setBg_color("text-bg-danger");
+            
+            $tabReportSets[] = $dataSet;
+        }
+
+        //Ligne totale
+        $dataSet = (new ClaimReportSet())
+            ->setType(ClaimReportSet::TYPE_TOTAL)
+            ->setCurrency_code("$")
+            ->setPolicy_reference("TOTAL")
+            ->setDamage_cost(rand(1000, 100000))
+            ->setCompensation_paid(rand(1000, 10000))
+            ->setCompensation_balance(rand(1000, 10000));
+            
+        $tabReportSets[] = $dataSet;
+        // dd($tabReportSets);
+
+        return $tabReportSets;
+    }
+
     public function getProductionTabs(): array
     { //
         return [
@@ -465,6 +601,7 @@ class JSBTabBuilder
             'tabTop20Clients' => $this->newTabTop20Clients(),
             'tabTasks' => $this->newTabTasks(),
             'tabRenewals' => $this->newTabRenewals(),
+            'tabClaims' => $this->newTabClaims(),
         ];
     }
 }
