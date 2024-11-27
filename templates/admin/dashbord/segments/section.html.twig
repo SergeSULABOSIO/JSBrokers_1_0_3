@@ -407,7 +407,6 @@
                                 <tr>
                                     <th scope="col" width="280">DESCRIPTION</th>
                                     <th scope="col">CLIENT & RISK DETAILS</th>
-                                    {# <th scope="col">COVER</th> #}
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PREMIUM</th>
                                     <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;REVENUE</th>
                                     <th scope="col" class="text-center" width="200">STATUS</th>
@@ -435,7 +434,6 @@
                                                     </span>
                                                 </small>
                                             </td>
-                                            {# <td><small>{{ reposertSet.client }}</small></td> #}
                                             <td>
                                                 <small>
                                                     <strong><a href="#" class="link-dark" style="text-decoration: none;">{{ reposertSet.client }}</a></strong></br>
@@ -465,7 +463,6 @@
                                     {% for reposertSet in productionTabs['tabRenewals'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></th>
-                                            {# <th scope="col"><small><strong></strong></small></th> #}
                                             <th scope="col"><small><strong></strong></small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
                                             <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
