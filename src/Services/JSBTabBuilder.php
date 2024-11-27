@@ -417,7 +417,19 @@ class JSBTabBuilder
             $hours = $this->serviceDates->hoursEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
             $minutes = $this->serviceDates->minutesEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
             
-            $dataSet->setRemaining_days($diff == 0 ? "Expired in " . $hours . ":" . $minutes : "Expiring in " . $diff . " day(s).");
+            $txt = "";
+            if($diff == 0){
+                if($hours == 0 && $minutes == 0){
+                    $txt = "Expired.";
+                }else{
+                    $txt = "Expiring in " . $hours . ":" . $minutes;
+                }
+            }else if($diff == 1){
+                $txt = "Expiring in " . $diff . " day.";
+            }else if($diff > 1){
+                $txt = "Expiring in " . $diff . " days.";
+            }
+            $dataSet->setRemaining_days($txt);
             
             if ($diff == 0) {
                 $dataSet->setStatus($tabStatus[rand(0, count($tabStatus)-1)]);
