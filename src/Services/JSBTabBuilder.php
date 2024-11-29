@@ -536,7 +536,7 @@ class JSBTabBuilder
             "012400000-222-2024"
         ];
 
-        $tabStatus = [
+        $tabClaimStatus = [
             "Processing...",
             "Settled",
             "Cancelled",
@@ -559,7 +559,7 @@ class JSBTabBuilder
                 ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
                 ->setClaim_reference($claim_reference)
                 ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
-                ->setClaims_status($tabClaims[rand(0, count($tabClaims) - 1)])
+                ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
                 ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
                 ->setDamage_cost(rand(1000, 100000))
                 ->setCompensation_paid(rand(0, 100000))
@@ -568,10 +568,11 @@ class JSBTabBuilder
                 ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"))
             ;
 
-            $speed_sttelement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
+            $speed_settlement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
             $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));
             
-            $dataSet->setCompensation_speed("Settled in " . $speed_sttelement_days . " days.");
+            $dataSet->setCompensation_speed("Settled in " . $speed_settlement_days . " days.");
+            $dataSet->setDays_passed($days_past . " days passed since the notification date.");
             
             // $dataSet->setBg_color("text-bg-danger");
             
@@ -586,7 +587,7 @@ class JSBTabBuilder
             ->setDamage_cost(rand(1000, 100000))
             ->setCompensation_paid(rand(1000, 10000))
             ->setCompensation_balance(rand(1000, 10000));
-            
+
         $tabReportSets[] = $dataSet;
         // dd($tabReportSets);
 

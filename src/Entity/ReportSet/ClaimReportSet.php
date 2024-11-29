@@ -33,6 +33,7 @@ class ClaimReportSet
     public float $compensation_paid;
     public float $compensation_balance;
     public string $compensation_speed;  //nb des jours entre la notification et l'indemnisation de la victime
+    public string $days_passed;  //nb des jours entre la notification et aujourd'hui.
     public ?DateTimeImmutable $notification_date;
     public ?DateTimeImmutable $settlement_date;
 
@@ -482,6 +483,26 @@ class ClaimReportSet
     public function setSettlement_date($settlement_date)
     {
         $this->settlement_date = $settlement_date;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of days_passed
+     */ 
+    public function getDays_passed()
+    {
+        return $this->days_passed;
+    }
+
+    /**
+     * Set the value of days_passed
+     *
+     * @return  self
+     */ 
+    public function setDays_passed($days_passed)
+    {
+        $this->days_passed = $days_passed;
 
         return $this;
     }
