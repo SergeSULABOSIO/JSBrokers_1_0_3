@@ -490,9 +490,9 @@
                                     <th scope="col" width="280">CLAIMS DETAILS</th>
                                     <th scope="col" width="280">RISK DETAILS</th>
                                     <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;DAMAGE</th>
-                                    <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;COMPENSATION</th>
+                                    <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;PAYMENT</th>
                                     <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;BALANCE</th>
-                                    <th scope="col" class="text-center" width="200">STATUS</th>
+                                    <th scope="col" class="text-center" width="230">STATUS</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -548,7 +548,7 @@
                                                 <ul>
                                                     <li><strong>{{ reposertSet.claims_status }}</strong></li>
                                                     {# <li><strong class="p-1 rounded {{ reposertSet.bg_color }}">{{ reposertSet.claims_status }}</strong></li> #}
-                                                    <li>{{ reposertSet.compensation_speed }}</li>
+                                                    <li><strong class="p-1 rounded {{ reposertSet.bg_color }} text-light">{{ reposertSet.compensation_speed }}</strong></li>
                                                     <li>{{ reposertSet.days_passed }}</li>
                                                 </ul>
                                                 </small>

@@ -576,8 +576,9 @@ class JSBTabBuilder
             $speed_settlement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
             $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));
             
-            $dataSet->setCompensation_speed("Settled in " . $speed_settlement_days . " days.");
+            $dataSet->setCompensation_speed("Done in " . $speed_settlement_days . " days.");
             $dataSet->setDays_passed($days_past . " days passed since the notification date.");
+            $dataSet->setBg_color("bg-secondary");
             
             // $dataSet->setBg_color("text-bg-danger");
             
