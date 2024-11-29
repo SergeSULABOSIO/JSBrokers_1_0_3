@@ -489,9 +489,9 @@
                                 <tr>
                                     <th scope="col" width="280">CLAIMS DETAILS</th>
                                     <th scope="col" width="280">RISK DETAILS</th>
-                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;DAMAGE</th>
-                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;COMPENSATION</th>
-                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;BALANCE</th>
+                                    <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;DAMAGE</th>
+                                    <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;COMPENSATION</th>
+                                    <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;BALANCE</th>
                                     <th scope="col" class="text-center" width="200">STATUS</th>
                                 </tr>
                             </thead>
@@ -539,9 +539,9 @@
                                                     </span>
                                                 </small>
                                             </td>
-                                            <td class="text-end"><small>{{ reposertSet.damage_cost|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end"><small>{{ reposertSet.compensation_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end"><small>{{ reposertSet.compensation_balance|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #ff0000;"><small>{{ reposertSet.damage_cost|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #ff0000;"><small>{{ reposertSet.compensation_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #ff0000;"><small>{{ reposertSet.compensation_balance|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                             <td>
                                                 <small>
                                                 <ul>
@@ -562,9 +562,9 @@
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.policy_reference }}</strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
-                                            <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.damage_cost|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
-                                            <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.compensation_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
-                                            <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.compensation_balance|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end" style="color: #ff0000;"><strong><small>{{ reposertSet.damage_cost|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end" style="color: #ff0000;"><strong><small>{{ reposertSet.compensation_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end" style="color: #ff0000;"><strong><small>{{ reposertSet.compensation_balance|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
                                             <th scope="col"><small><strong></strong></small></th>
                                         {% endif %}
                                     {% endfor %}
