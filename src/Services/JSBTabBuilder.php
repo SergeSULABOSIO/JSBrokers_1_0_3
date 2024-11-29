@@ -562,11 +562,14 @@ class JSBTabBuilder
                 ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
                 ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
                 ->setDamage_cost(rand(1000, 100000))
-                ->setCompensation_paid(rand(0, 100000))
-                ->setCompensation_balance(rand(0, 100000))
+                // ->setCompensation_paid(rand(0, 100000))
+                // ->setCompensation_balance(rand(0, 100000))
                 ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
                 ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"))
             ;
+
+            $dataSet->setCompensation_paid(rand(0, ($dataSet->getDamage_cost())));
+            $dataSet->setCompensation_balance($dataSet->getDamage_cost() - $dataSet->getCompensation_paid());
 
             $speed_settlement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
             $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));

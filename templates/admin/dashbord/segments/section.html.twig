@@ -18,10 +18,10 @@
                         {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Graphs
                     </button>
                     <button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Insurer
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Insurers
                     </button>
                     <button class="nav-link" id="nav-production-partner-tab" data-bs-toggle="tab" data-bs-target="#nav-production-partner" type="button" role="tab" aria-controls="nav-production-partner" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Partner
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Partners
                     </button>
                     <button class="nav-link" id="nav-topclients-tab" data-bs-toggle="tab" data-bs-target="#nav-topclients" type="button" role="tab" aria-controls="nav-topclients" aria-selected="false">
                         {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Clients
@@ -509,8 +509,8 @@
                                                     </strong>
                                                     <span class="text-muted">
                                                     <ul>
-                                                        <li>Notif. date: <strong>{{ reposertSet.notification_date|date("d/m/Y H:i") }}</strong></li>
-                                                        <li>Settl. date: <strong>{{ reposertSet.settlement_date|date("d/m/Y H:i") }}</strong></li>
+                                                        <li>Notif.: {{ reposertSet.notification_date|date("d/m/Y H:i") }}</li>
+                                                        <li>Settl.: {{ reposertSet.settlement_date|date("d/m/Y H:i") }}</li>
                                                         <li>From <a href="#" class="link-secondary">{{ reposertSet.client }}</a></li>
                                                         <li>By <a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
                                                         <li>Victim: <a href="#" class="text-secondary">{{ reposertSet.victim }}</a></li>
@@ -528,13 +528,13 @@
                                                     </strong>
                                                     <span class="text-muted">
                                                     <ul>
-                                                        <li>Effect date: {{ reposertSet.effect_date|date("d/m/Y H:i") }}</li>
-                                                        <li>Exp. date: {{ reposertSet.expiry_date|date("d/m/Y H:i") }}</li>
-                                                        <li>At <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
+                                                        <li>Effect: {{ reposertSet.effect_date|date("d/m/Y H:i") }}</li>
+                                                        <li>Exp.: {{ reposertSet.expiry_date|date("d/m/Y H:i") }}</li>
+                                                        <li>Insured by <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
                                                         <li>Cover: <a href="#" class="link-secondary">{{ reposertSet.cover }}</a></li>
                                                         <li>Premium: {{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
                                                         <li>Limit: {{ reposertSet.policy_limit|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
-                                                        <li>Deductible: {{ reposertSet.policy_deductible|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
+                                                        <li>Deduct.: {{ reposertSet.policy_deductible|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
                                                     </ul>
                                                     </span>
                                                 </small>
