@@ -12,6 +12,7 @@ class ClaimReportSet
     public const TYPE_TOTAL = 2;
 
     public int $type;
+    public int $number;
     public string $currency_code;
     //Policy
     public string $policy_reference;
@@ -503,6 +504,26 @@ class ClaimReportSet
     public function setDays_passed($days_passed)
     {
         $this->days_passed = $days_passed;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of number
+     */ 
+    public function getNumber()
+    {
+        return $this->number;
+    }
+
+    /**
+     * Set the value of number
+     *
+     * @return  self
+     */ 
+    public function setNumber($number)
+    {
+        $this->number = $number;
 
         return $this;
     }

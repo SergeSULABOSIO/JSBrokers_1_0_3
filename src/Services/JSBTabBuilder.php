@@ -544,10 +544,12 @@ class JSBTabBuilder
         ];
 
         $tabReportSets = [];
+        $number = 1;
         foreach ($tabClaims as $claim_reference) {
             $dataSet = (new ClaimReportSet())
                 ->setType(ClaimReportSet::TYPE_ELEMENT)
                 ->setCurrency_code("$")
+                ->setNumber($number)
                 ->setPolicy_reference($tabPolicies[rand(0, count($tabPolicies) - 1)])
                 ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
                 ->setClient($tabClients[rand(0, count($tabClients) - 1)])
@@ -580,6 +582,7 @@ class JSBTabBuilder
             // $dataSet->setBg_color("text-bg-danger");
             
             $tabReportSets[] = $dataSet;
+            $number++;
         }
 
         //Ligne totale
