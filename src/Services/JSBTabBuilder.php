@@ -653,8 +653,7 @@ class JSBTabBuilder
 
         $tabStatus = [
             "Awaiting for POP",
-            "Settled",
-            "Awaiting for signature..."
+            "Settled"
         ];
 
         $tabReportSets = [];
@@ -681,7 +680,7 @@ class JSBTabBuilder
             $dataSet->setAmount_paid(rand(0, $dataSet->getGross_due()));
             $dataSet->setBalance_due($dataSet->getGross_due() - $dataSet->getAmount_paid());
             $days = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getDate_submition());
-            $dataSet->setDays_passed("Since " . $days .  " days.");
+            $dataSet->setDays_passed("The invoice was submitted " . $days .  " days ago to " . $dataSet->getDebtor());
 
             $tabReportSets[] = $dataSet;
             $index++;
