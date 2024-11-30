@@ -37,31 +37,7 @@
 			{# Brique #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					icone: "emojione-monotone:umbrella-with-rain-drops",
-					icone_color: "text-primary",
-					titre: "Summary of policies placed",
-					principal: {
-						rubrique: 'GW Prem.:',
-						valeur: '$100.000.000,45',
-					},
-					items: {
-						0: {
-							rubrique: 'Net Prem.:',
-							valeur: '$100.000.000,45',
-						},
-						1: {
-							rubrique: 'Arca:',
-							valeur: '$100.000.000,45',
-						},
-						2: {
-							rubrique: 'Fronting:',
-							valeur: '$100.000.000,45',
-						},
-						3: {
-							rubrique: 'Facility:',
-							valeur: '$100.000.000,45',
-						},
-					},
+					data: productionSummaries,
 				}) 
 			}}
 			{# Brique #}

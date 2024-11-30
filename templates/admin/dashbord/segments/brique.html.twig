@@ -2,19 +2,19 @@
 <div class="col-md border border-2 border-secondary rounded-3 m-1 p-2 shadow-sm mb-10 sensible">
     <div class="row">
         <div class="col-md-12">
-            <p class="text-center text-secondary m-0 p-0"><small><strong>{{ titre }}</strong></small></p>
+            <p class="text-center text-secondary m-0 p-0"><small><strong>{{ data.titre }}</strong></small></p>
         </div>
     </div>
     <div class="row g-2">
-        <div class="col-md-2 rounded-4 m-2 mt-4 mb-4 {{icone_color}}">
-            {{ ux_icon(icone, {height: '50px', width: '50px'}) }} 
+        <div class="col-md-2 rounded-4 m-2 mt-4 mb-4 {{data.icone_color}}">
+            {{ ux_icon(data.icone, {height: '50px', width: '50px'}) }} 
         </div>
         <div class="col-md m-1">
             <div class="d-flex justify-content-between border border-top-0 border-end-0 border-start-0 border-secondary">
-                <strong>{{ principal['rubrique'] }}</strong>
-                <strong>{{ principal['valeur'] }}</strong>
+                <strong>{{ data.principal['rubrique'] }}</strong>
+                <strong>{{ data.principal['valeur'] }}</strong>
             </div>
-            {% for item in items %}
+            {% for item in data.items %}
                 <div class="d-flex justify-content-between text-secondary">
                     <small>{{ item['rubrique'] }}</small>
                     <small>{{ item['valeur'] }}</small>

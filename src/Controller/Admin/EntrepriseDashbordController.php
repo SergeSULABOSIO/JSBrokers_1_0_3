@@ -7,6 +7,7 @@ use App\Entity\Utilisateur;
 use App\Constantes\MenuActivator;
 use App\Entity\ReportSet;
 use App\Services\JSBChartBuilder;
+use App\Services\JSBSummaryBuilder;
 use App\Services\JSBTabBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -30,13 +31,14 @@ class EntrepriseDashbordController extends AbstractController
 
 
     #[Route('/{id}', name: 'dashbord', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function dashbord(Entreprise $entreprise, Request $request, JSBChartBuilder $JSBChartBuilder, JSBTabBuilder $jSBTabBuilder)
+    public function dashbord(Entreprise $entreprise, Request $request, JSBChartBuilder $JSBChartBuilder, JSBTabBuilder $jSBTabBuilder, JSBSummaryBuilder $jSBSummaryBuilder)
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
         $productionCharts = $JSBChartBuilder->getProductionCharts();
         $productionTabs = $jSBTabBuilder->getProductionTabs();
+        $productionSummaries = $jSBSummaryBuilder->getProductionSummaries();
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
@@ -47,6 +49,7 @@ class EntrepriseDashbordController extends AbstractController
                 'page' => $request->query->getInt("page", 1),
                 'productionCharts' => $productionCharts,
                 'productionTabs' => $productionTabs,
+                'productionSummaries' => $productionSummaries,
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
