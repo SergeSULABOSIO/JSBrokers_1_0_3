@@ -1,6 +1,7 @@
 <?php
 namespace App\Entity\ReportSet;
 
+use App\Entity\Utilisateur;
 use DateTimeImmutable;
 
 class CashflowReportSet
@@ -9,16 +10,20 @@ class CashflowReportSet
     public const TYPE_ELEMENT = 1;
     public const TYPE_TOTAL = 2;
 
-    public int $number;
+    public int $index;
+    public int $type;
+    public string $currency_code;
     public string $description;
     public string $debtor;
     public string $status;
+    public string $days_passed;
     public string $invoice_reference;
     public float $net_amount;
     public float $taxes;
     public float $gross_due;
     public float $amount_paid;
     public float $balance_due;
+    public Utilisateur $user;
     public DateTimeImmutable $date_submition;
     public DateTimeImmutable $date_payment;
 
@@ -26,26 +31,7 @@ class CashflowReportSet
     {
         
     }
-
-    /**
-     * Get the value of number
-     */ 
-    public function getNumber()
-    {
-        return $this->number;
-    }
-
-    /**
-     * Set the value of number
-     *
-     * @return  self
-     */ 
-    public function setNumber($number)
-    {
-        $this->number = $number;
-
-        return $this;
-    }
+    
 
     /**
      * Get the value of description
@@ -263,6 +249,106 @@ class CashflowReportSet
     public function setDate_payment($date_payment)
     {
         $this->date_payment = $date_payment;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of index
+     */ 
+    public function getIndex()
+    {
+        return $this->index;
+    }
+
+    /**
+     * Set the value of index
+     *
+     * @return  self
+     */ 
+    public function setIndex($index)
+    {
+        $this->index = $index;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of user
+     */ 
+    public function getUser()
+    {
+        return $this->user;
+    }
+
+    /**
+     * Set the value of user
+     *
+     * @return  self
+     */ 
+    public function setUser($user)
+    {
+        $this->user = $user;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of type
+     */ 
+    public function getType()
+    {
+        return $this->type;
+    }
+
+    /**
+     * Set the value of type
+     *
+     * @return  self
+     */ 
+    public function setType($type)
+    {
+        $this->type = $type;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of currency_code
+     */ 
+    public function getCurrency_code()
+    {
+        return $this->currency_code;
+    }
+
+    /**
+     * Set the value of currency_code
+     *
+     * @return  self
+     */ 
+    public function setCurrency_code($currency_code)
+    {
+        $this->currency_code = $currency_code;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of days_passed
+     */ 
+    public function getDays_passed()
+    {
+        return $this->days_passed;
+    }
+
+    /**
+     * Set the value of days_passed
+     *
+     * @return  self
+     */ 
+    public function setDays_passed($days_passed)
+    {
+        $this->days_passed = $days_passed;
 
         return $this;
     }

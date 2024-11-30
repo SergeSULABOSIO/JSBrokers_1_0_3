@@ -7,8 +7,8 @@
         <div class="card-body">
             {# Texte introductif #}
             <blockquote class="blockquote mb-0 text-center">
-                <p>A well-known quote, contained in a blockquote element.</p>
-                <footer class="blockquote-footer">Someone famous in <cite title="Source Title">Source Title</cite></footer>
+                <p>A set of tabs that enable you see your company's current health througth different angles of view without a single mouse clic.</p>
+                <footer class="blockquote-footer">Just browser over the tabs and enjoy <cite title="Source Title">JS Brokers!</cite></footer>
             </blockquote>
             {# Tableau d'onglets #}
             {# Barre de navigation #}
@@ -575,7 +575,83 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="nav-cash" role="tabpanel" aria-labelledby="nav-cash-tab" tabindex="0">
-                    Contenu de cash-flow
+                    <div class="card m-2">
+                        <div class="card-header text-center">
+                            Cashflow overview
+                        </div>
+                        {# Tableau de cashflow #}
+                        <table class="table table-hover table-sm">
+                            <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th scope="col" width="230">DESCRIPTION</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;NET DUE</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;TAXES</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;GROSS</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PAID</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;BALANCE</th>
+                                    <th scope="col" class="text-center">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reposertSet in productionTabs['tabCashflow'] %}
+                                    {% if reposertSet.type == 1 %}
+                                        <tr>
+                                            <td>
+                                                <small class="text-dark">
+                                                    <span>N°#{{ reposertSet.index }}</span></br>
+                                                    <strong>
+                                                        Ref. Invc: 
+                                                        <a href="#" class="text-dark" style="text-decoration: none;">
+                                                            {{ reposertSet.invoice_reference }}
+                                                        </a>
+                                                    </strong>
+                                                    <span class="text-muted">
+                                                    <ul>
+                                                        <li><strong>Desc.: {{ reposertSet.description }}</strong></li>
+                                                        <li><strong>Due by: {{ reposertSet.debtor }}</strong></li>
+                                                        <li>Sub.: {{ reposertSet.date_submition|date("d/m/Y H:i") }}</li>
+                                                        <li>Pymt.: {{ reposertSet.date_payment|date("d/m/Y H:i") }}</li>
+                                                        <li>By <a href="#" class="text-secondary">{{ reposertSet.user.nom }}</a></li>
+                                                    </ul>
+                                                    </span>
+                                                </small>
+                                            </td>
+                                            <td class="text-end"><small>{{ reposertSet.net_amount|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end"><small>{{ reposertSet.gross_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end"><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td>
+                                                <small>
+                                                <ul>
+                                                    <li><strong>{{ reposertSet.status }}</strong></li>
+                                                    <li><strong class="p-1 rounded bg-secondary text-light">{{ reposertSet.days_passed }}</strong></li>
+                                                    {# <li>{{ reposertSet.days_passed }}</li> #}
+                                                </ul>
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                            <thead class="table-secondary">
+                                <tr>
+                                    {% for reposertSet in productionTabs['tabCashflow'] %}
+                                        {% if reposertSet.type == 2 %}
+                                            <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.description }}</strong></small></th>
+                                            <th scope="col" class="text-end"><strong><small>{{ reposertSet.net_amount|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end"><strong><small>{{ reposertSet.gross_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end"><strong><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end"><strong><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col"><small><strong></strong></small></th>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
