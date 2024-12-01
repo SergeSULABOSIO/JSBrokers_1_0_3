@@ -40,6 +40,8 @@ class EntrepriseDashbordController extends AbstractController
         $productionTabs = $jSBTabBuilder->getProductionTabs();
         $productionSummaries = $jSBSummaryBuilder->getProductionSummaries();
 
+        // dd($productionSummaries);
+
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
                 'pageName' => "Tableau de bord",

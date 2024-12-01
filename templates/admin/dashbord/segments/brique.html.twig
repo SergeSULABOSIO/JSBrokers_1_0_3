@@ -12,12 +12,12 @@
         <div class="col-md m-1">
             <div class="d-flex justify-content-between border border-top-0 border-end-0 border-start-0 border-secondary">
                 <strong>{{ data.principal['rubrique'] }}</strong>
-                <strong>{{ data.principal['valeur'] }}</strong>
+                <strong>{{ data.principal['valeur'] | number_format(2, ',', ' ') ~ " " ~ data.currency_code }}</strong>
             </div>
             {% for item in data.items %}
                 <div class="d-flex justify-content-between text-secondary">
                     <small>{{ item['rubrique'] }}</small>
-                    <small>{{ item['valeur'] }}</small>
+                    <small>{{ item['valeur'] | number_format(2, ',', ' ') ~ " " ~ data.currency_code }}</small>
                 </div>
             {% endfor %}
         </div>

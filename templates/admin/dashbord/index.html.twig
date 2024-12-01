@@ -34,163 +34,43 @@
 		</div>
 		{# Ligne 1 #}
 		<div class="row">
-			{# Brique #}
+			{# Brique synthèse polices / primes #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					data: productionSummaries,
+					data: productionSummaries['policiesSummary'],
 				}) 
 			}}
-			{# Brique #}
+			{# Brique synthèse revenus / commissions #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					icone: "healthicons:money-bag",
-					icone_color: "text-success",
-					titre: "Summary of revenue generated",
-					principal: {
-						rubrique: 'Gros Com.:',
-						valeur: '$100.000.000,45',
-					},
-					items: {
-						0: {
-							rubrique: 'Net Com.:',
-							valeur: '$100.000.000,45',
-						},
-						1: {
-							rubrique: 'Arca (2%):',
-							valeur: '$100.000.000,45',
-						},
-						2: {
-							rubrique: 'Vat (16%):',
-							valeur: '$100.000.000,45',
-						},
-						3: {
-							rubrique: 'Pure Com:',
-							valeur: '$100.000.000,45',
-						},
-					},
+					data: productionSummaries['revenuesSummary'],
 				}) 
 			}}
-			{# Brique #}
+			{# Brique synthèse de la collecte des commissions #}
 			{{ include ('admin/dashbord/segments/brique.html.twig',
-			{
-					icone: "game-icons:receive-money",
-					icone_color: "text-black",
-					titre: "Summary of Commission collection",
-					principal: {
-						rubrique: 'Com. due:',
-						valeur: '$100.000.000,45',
-					},
-					items: {
-						0: {
-							rubrique: 'Invoiced:',
-							valeur: '$100.000.000,45',
-						},
-						1: {
-							rubrique: 'Received:',
-							valeur: '$100.000.000,45',
-						},
-						2: {
-							rubrique: 'Balance:',
-							valeur: '$100.000.000,45',
-						},
-						3: {
-							rubrique: 'Not invoiced yet:',
-							valeur: '$100.000.000,45',
-						},
-					},
+				{
+					data: productionSummaries['revenueCollectionsSummary'],
 				}) 
 			}}
 		</div>
 		{# Ligne 2 #}
 		<div class="row">
-			{# Brique #}
+			{# Brique synthèse de retro-commissions #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					icone: "carbon:partnership",
-					icone_color: "text-secondary",
-					titre: "Summary of Co-brokerages",
-					principal: {
-						rubrique: 'Balance due:',
-						valeur: '$100.000.000,45',
-					},
-					items: {
-						0: {
-							rubrique: 'Net revenue:',
-							valeur: '$100.000.000,45',
-						},
-						1: {
-							rubrique: 'Co-brokerage:',
-							valeur: '$100.000.000,45',
-						},
-						2: {
-							rubrique: 'Amounts paid:',
-							valeur: '$100.000.000,45',
-						},
-						3: {
-							rubrique: 'Balance due:',
-							valeur: '$100.000.000,45',
-						},
-					},
+					data: productionSummaries['coBrokerageSummary'],
+				}) 
+			}}
+			{# Brique synthèse des taxes #}
+			{{ include ('admin/dashbord/segments/brique.html.twig', 
+				{
+					data: productionSummaries['taxSummary'],
 				}) 
 			}}
 			{# Brique #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					icone: "carbon:finance",
-					icone_color: "text-warning",
-					titre: "Summary of tax",
-					principal: {
-						rubrique: 'Tax payable:',
-						valeur: '$100.000.000,45',
-					},
-					items: {
-						0: {
-							rubrique: 'Net revenue:',
-							valeur: '$100.000.000,45',
-						},
-						1: {
-							rubrique: 'Tax due:',
-							valeur: '$100.000.000,45',
-						},
-						2: {
-							rubrique: 'Tax paid:',
-							valeur: '$100.000.000,45',
-						},
-						3: {
-							rubrique: 'Balance payable:',
-							valeur: '$100.000.000,45',
-						},
-					},
-				}) 
-			}}
-			{# Brique #}
-			{{ include ('admin/dashbord/segments/brique.html.twig', 
-				{
-					icone: "hugeicons:accident",
-					icone_color: "text-danger",
-					titre: "Summary of claims",
-					principal: {
-						rubrique: 'Balance:',
-						valeur: '$100.000.000,45',
-					},
-					items: {
-						0: {
-							rubrique: 'Total damage:',
-							valeur: '$100.000.000,45',
-						},
-						1: {
-							rubrique: 'Total due:',
-							valeur: '$100.000.000,45',
-						},
-						2: {
-							rubrique: 'Total settled:',
-							valeur: '$100.000.000,45',
-						},
-						3: {
-							rubrique: 'Balance payable:',
-							valeur: '$100.000.000,45',
-						},
-					},
+					data: productionSummaries['claimsSummary'],
 				}) 
 			}}
 		</div>

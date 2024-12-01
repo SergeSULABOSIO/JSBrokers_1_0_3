@@ -13,6 +13,7 @@ class ReportSummary
     public string $icone;
     public string $icone_color;
     public string $titre;
+    public string $currency_code;
     public array $principal;
     public array $items;
 
@@ -118,6 +119,26 @@ class ReportSummary
     public function setItems($items)
     {
         $this->items = $items;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of currency_code
+     */ 
+    public function getCurrency_code()
+    {
+        return $this->currency_code;
+    }
+
+    /**
+     * Set the value of currency_code
+     *
+     * @return  self
+     */ 
+    public function setCurrency_code($currency_code)
+    {
+        $this->currency_code = $currency_code;
 
         return $this;
     }
