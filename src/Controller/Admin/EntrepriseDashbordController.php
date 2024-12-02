@@ -39,12 +39,6 @@ class EntrepriseDashbordController extends AbstractController
 
         $jSBTableauDeBordBuilder->build();
 
-        // $productionCharts = $JSBChartBuilder->getProductionCharts();
-        // $productionTabs = $jSBTabBuilder->getProductionTabs();
-        // $productionSummaries = $jSBSummaryBuilder->getProductionSummaries();
-
-        // dd($productionSummaries);
-
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
                 'pageName' => "Tableau de bord",
@@ -53,9 +47,6 @@ class EntrepriseDashbordController extends AbstractController
                 'activator' => $this->activator,
                 'page' => $request->query->getInt("page", 1),
                 'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
-                // 'productionCharts' => $productionCharts,
-                // 'productionTabs' => $productionTabs,
-                // 'productionSummaries' => $productionSummaries,
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
