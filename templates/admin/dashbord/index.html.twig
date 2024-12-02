@@ -37,19 +37,19 @@
 			{# Brique synthèse polices / primes #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					data: productionSummaries['policiesSummary'],
+					data: dashboard.productionSummaries['policiesSummary'],
 				}) 
 			}}
 			{# Brique synthèse revenus / commissions #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					data: productionSummaries['revenuesSummary'],
+					data: dashboard.productionSummaries['revenuesSummary'],
 				}) 
 			}}
 			{# Brique synthèse de la collecte des commissions #}
 			{{ include ('admin/dashbord/segments/brique.html.twig',
 				{
-					data: productionSummaries['revenueCollectionsSummary'],
+					data: dashboard.productionSummaries['revenueCollectionsSummary'],
 				}) 
 			}}
 		</div>
@@ -58,19 +58,19 @@
 			{# Brique synthèse de retro-commissions #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					data: productionSummaries['coBrokerageSummary'],
+					data: dashboard.productionSummaries['coBrokerageSummary'],
 				}) 
 			}}
 			{# Brique synthèse des taxes #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					data: productionSummaries['taxSummary'],
+					data: dashboard.productionSummaries['taxSummary'],
 				}) 
 			}}
 			{# Brique #}
 			{{ include ('admin/dashbord/segments/brique.html.twig', 
 				{
-					data: productionSummaries['claimsSummary'],
+					data: dashboard.productionSummaries['claimsSummary'],
 				}) 
 			}}
 		</div>

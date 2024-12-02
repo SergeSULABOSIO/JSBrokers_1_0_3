@@ -62,7 +62,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabProductionPerInsurerPerMonth'] %}
+                                {% for reposertSet in dashboard.productionTabs['tabProductionPerInsurerPerMonth'] %}
                                     {% if reposertSet.type == 0 %}
                                         <tr style="
                                             border-style: solid;
@@ -97,7 +97,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabProductionPerInsurerPerMonth'] %}
+                                    {% for reposertSet in dashboard.productionTabs['tabProductionPerInsurerPerMonth'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
@@ -133,7 +133,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabProductionPerPartnerPerMonth'] %}
+                                {% for reposertSet in dashboard.productionTabs['tabProductionPerPartnerPerMonth'] %}
                                     {% if reposertSet.type == 0 %}
                                         <tr style="
                                             border-style: solid;
@@ -168,7 +168,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabProductionPerPartnerPerMonth'] %}
+                                    {% for reposertSet in dashboard.productionTabs['tabProductionPerPartnerPerMonth'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
@@ -191,7 +191,7 @@
                                 <div class="card-header text-center">
                                     Revenue graphs per month
                                 </div>
-                                {{ render_chart(productionCharts['chartPerMonth'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerMonth'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
                                 </div>
@@ -204,7 +204,7 @@
                                 <div class="card-header text-center">
                                     Revenue graphs per insurer
                                 </div>
-                                {{ render_chart(productionCharts['chartPerInsurer'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerInsurer'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
                                 </div>
@@ -215,7 +215,7 @@
                                 <div class="card-header text-center">
                                     Revenue graphs per risk or cover
                                 </div>
-                                {{ render_chart(productionCharts['chartPerRisks'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerRisks'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
@@ -229,7 +229,7 @@
                                 <div class="card-header text-center">
                                     Revenue graphs per renewal status
                                 </div>
-                                {{ render_chart(productionCharts['chartPerRenewalStatus'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerRenewalStatus'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
                                 </div>
@@ -240,7 +240,7 @@
                                 <div class="card-header text-center">
                                     Revenue graphs per partner
                                 </div>
-                                {{ render_chart(productionCharts['chartPerPartners'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerPartners'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
                                 <div class="card-body text-center">
                                     <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
@@ -267,7 +267,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabTop20Clients'] %}
+                                {% for reposertSet in dashboard.productionTabs['tabTop20Clients'] %}
                                     {% if reposertSet.type == 0 %}
                                         <tr>
                                             <td>&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></td>
@@ -290,7 +290,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabTop20Clients'] %}
+                                    {% for reposertSet in dashboard.productionTabs['tabTop20Clients'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
@@ -323,7 +323,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabTasks'] %}
+                                {% for reposertSet in dashboard.productionTabs['tabTasks'] %}
                                     {% if reposertSet.type == 1 %}
                                         <tr>
                                             <td>
@@ -383,7 +383,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabTasks'] %}
+                                    {% for reposertSet in dashboard.productionTabs['tabTasks'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.task_description }}</strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
@@ -416,7 +416,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabRenewals'] %}
+                                {% for reposertSet in dashboard.productionTabs['tabRenewals'] %}
                                     {% if reposertSet.type == 1 %}
                                         <tr>
                                             <td>
@@ -463,7 +463,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabRenewals'] %}
+                                    {% for reposertSet in dashboard.productionTabs['tabRenewals'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
@@ -496,7 +496,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabClaims'] %}
+                                {% for reposertSet in dashboard.productionTabs['tabClaims'] %}
                                     {% if reposertSet.type == 1 %}
                                         <tr>
                                             <td>
@@ -559,7 +559,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabClaims'] %}
+                                    {% for reposertSet in dashboard.productionTabs['tabClaims'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.policy_reference }}</strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
@@ -594,7 +594,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in productionTabs['tabCashflow'] %}
+                                {% for reposertSet in dashboard.productionTabs['tabCashflow'] %}
                                     {% if reposertSet.type == 1 %}
                                         <tr>
                                             <td>
@@ -637,7 +637,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in productionTabs['tabCashflow'] %}
+                                    {% for reposertSet in dashboard.productionTabs['tabCashflow'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.description }}</strong></small></th>
                                             <th scope="col" class="text-end"><strong><small>{{ reposertSet.net_amount|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>

@@ -7,7 +7,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 class JSBTableauDeBordBuilder
 {
-    public $data = [];
+    private $dashboard = [];
 
     public function __construct(
         private Security $security,
@@ -21,7 +21,7 @@ class JSBTableauDeBordBuilder
     public function build(): self
     {
         //C'est ici que nous allons effectuer l'extraction de données de la base de données selon le filtre (le critère de selectioné fourni)
-        $this->data = [
+        $this->dashboard = [
             'productionCharts' => $this->JSBChartBuilder->getProductionCharts(),
             'productionTabs' => $this->jSBTabBuilder->getProductionTabs(),
             'productionSummaries' => $this->jSBSummaryBuilder->getProductionSummaries(),
@@ -30,5 +30,13 @@ class JSBTableauDeBordBuilder
         // $productionTabs = $this->jSBTabBuilder->getProductionTabs();
         // $productionSummaries = $this->jSBSummaryBuilder->getProductionSummaries();
         return $this;
+    }
+
+    /**
+     * Get the value of dashboard
+     */ 
+    public function getDashboard()
+    {
+        return $this->dashboard;
     }
 }
