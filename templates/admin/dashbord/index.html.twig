@@ -32,51 +32,55 @@
 				}) 
 			}}
 		</div>
-		{# Ligne 1 #}
-		<div class="row">
-			{# Brique synthèse polices / primes #}
-			{{ include ('admin/dashbord/segments/brique.html.twig', 
-				{
-					data: dashboard.productionSummaries['policiesSummary'],
-				}) 
-			}}
-			{# Brique synthèse revenus / commissions #}
-			{{ include ('admin/dashbord/segments/brique.html.twig', 
-				{
-					data: dashboard.productionSummaries['revenuesSummary'],
-				}) 
-			}}
-			{# Brique synthèse de la collecte des commissions #}
-			{{ include ('admin/dashbord/segments/brique.html.twig',
-				{
-					data: dashboard.productionSummaries['revenueCollectionsSummary'],
-				}) 
-			}}
-		</div>
-		{# Ligne 2 #}
-		<div class="row">
-			{# Brique synthèse de retro-commissions #}
-			{{ include ('admin/dashbord/segments/brique.html.twig', 
-				{
-					data: dashboard.productionSummaries['coBrokerageSummary'],
-				}) 
-			}}
-			{# Brique synthèse des taxes #}
-			{{ include ('admin/dashbord/segments/brique.html.twig', 
-				{
-					data: dashboard.productionSummaries['taxSummary'],
-				}) 
-			}}
-			{# Brique #}
-			{{ include ('admin/dashbord/segments/brique.html.twig', 
-				{
-					data: dashboard.productionSummaries['claimsSummary'],
-				}) 
-			}}
-		</div>
-		{# Section - contient des infos assez détailées #}
-		<div class="row">
-			{{ include('admin/dashbord/segments/section.html.twig') }}
-		</div>
+		{% if dashboard is empty == false %}
+			{# Ligne 1 #}
+			<div class="row">
+				{# Brique synthèse polices / primes #}
+				{{ include ('admin/dashbord/segments/brique.html.twig', 
+					{
+						data: dashboard.productionSummaries['policiesSummary'],
+					}) 
+				}}
+				{# Brique synthèse revenus / commissions #}
+				{{ include ('admin/dashbord/segments/brique.html.twig', 
+					{
+						data: dashboard.productionSummaries['revenuesSummary'],
+					}) 
+				}}
+				{# Brique synthèse de la collecte des commissions #}
+				{{ include ('admin/dashbord/segments/brique.html.twig',
+					{
+						data: dashboard.productionSummaries['revenueCollectionsSummary'],
+					}) 
+				}}
+			</div>
+			{# Ligne 2 #}
+			<div class="row">
+				{# Brique synthèse de retro-commissions #}
+				{{ include ('admin/dashbord/segments/brique.html.twig', 
+					{
+						data: dashboard.productionSummaries['coBrokerageSummary'],
+					}) 
+				}}
+				{# Brique synthèse des taxes #}
+				{{ include ('admin/dashbord/segments/brique.html.twig', 
+					{
+						data: dashboard.productionSummaries['taxSummary'],
+					}) 
+				}}
+				{# Brique #}
+				{{ include ('admin/dashbord/segments/brique.html.twig', 
+					{
+						data: dashboard.productionSummaries['claimsSummary'],
+					}) 
+				}}
+			</div>
+			{# Section - contient des infos assez détailées #}
+			<div class="row">
+				{{ include('admin/dashbord/segments/section.html.twig') }}
+			</div>
+		{% else %}
+			La tableau de bord est vide!
+		{% endif %}
 	</div>
 {% endblock %}
