@@ -38,7 +38,7 @@ class EntrepriseDashbordController extends AbstractController
         $user = $this->getUser();
 
         $jSBTableauDeBordBuilder->build();
-
+        
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
                 'pageName' => "Tableau de bord",
