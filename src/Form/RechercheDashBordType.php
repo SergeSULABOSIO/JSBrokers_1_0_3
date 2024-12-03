@@ -36,7 +36,7 @@ class RechercheDashBordType extends AbstractType
                 'autocomplete' => true,
                 'attr' => [
                     'placeholder' => "Tapez le nom du client ici.",
-                    'class' => "rounded",
+                    'class' => "rounded p-2",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
                 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
@@ -46,7 +46,7 @@ class RechercheDashBordType extends AbstractType
             ->add('chercher', SubmitType::class, [
                 'label' => "Filtrer",
                 'attr' => [
-                    'class' => "btn btn-secondary",
+                    'class' => "btn btn-secondary p-2",
                 ],
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
