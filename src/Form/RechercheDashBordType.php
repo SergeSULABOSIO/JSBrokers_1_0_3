@@ -36,9 +36,6 @@ class RechercheDashBordType extends AbstractType
                 'autocomplete' => true,
                 'attr' => [
                     'placeholder' => "Tapez le nom du client ici.",
-                    'class' => "form-control",
-                    'aria-label' => "Username",
-                    'aria-describedby' => "addon-wrapping",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
                 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
