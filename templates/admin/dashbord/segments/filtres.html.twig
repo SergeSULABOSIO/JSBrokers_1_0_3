@@ -1,8 +1,14 @@
 {# Une brique est element html de la classe COL #}
-<div class="col-md border border-2 border-secondary rounded-3 m-1 p-2 shadow-sm mb-10 sensible">
+<div class="col-md border border-2 border-secondary rounded-3 m-1 p-2 shadow-sm mb-10 bg-white">
     {# Le filtre sera ici {{ data }} #}
-    <div class="input-group flex-nowrap">
-        <span class="input-group-text" id="addon-wrapping">@</span>
-        <input type="text" class="form-control" placeholder="Tapez votre mot clé ici" aria-label="Username" aria-describedby="addon-wrapping">
+    {{ form_start(formulaire_recherche) }}
+        {{ form_row(formulaire_recherche.entreprises) }}
+        {{ form_row(formulaire_recherche.chercher) }}
+    {{ form_rest(formulaire_recherche) }}
+
+
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Recipient's username" aria-label="Recipient's username" aria-describedby="button-addon2">
+        <button class="btn btn-secondary" type="button" id="button-addon2">Filtrer</button>
     </div>
 </div>
