@@ -46,10 +46,10 @@ class CriteresRechercheDashBordDTO
         $this->dateFin = new DateTimeImmutable();
     }
 
-    public function isRechercheAvanceeActivated()
+    public function isRechercheAvanceeActivated():bool
     {
         // dd(count($this->getAssureurs()));
-        return count($this->getAssureurs());
+        return count($this->getAssureurs()) != 0;
     }
 
     /**

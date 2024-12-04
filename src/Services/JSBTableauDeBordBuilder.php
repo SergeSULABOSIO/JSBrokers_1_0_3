@@ -19,17 +19,19 @@ class JSBTableauDeBordBuilder
     ) {}
 
 
-    public function build(CriteresRechercheDashBordDTO $criteres): self
+    public function build(?CriteresRechercheDashBordDTO $criteres): self
     {
-        //C'est ici que nous allons effectuer l'extraction de données de la base de données selon le filtre (le critère de selectioné fourni)
-        $this->dashboard = [
-            'productionCharts' => $this->JSBChartBuilder->getProductionCharts(),
-            'productionTabs' => $this->jSBTabBuilder->getProductionTabs(),
-            'productionSummaries' => $this->jSBSummaryBuilder->getProductionSummaries(),
-        ];
-        // $productionCharts = $this->JSBChartBuilder->getProductionCharts();
-        // $productionTabs = $this->jSBTabBuilder->getProductionTabs();
-        // $productionSummaries = $this->jSBSummaryBuilder->getProductionSummaries();
+        if($criteres != null){
+            // dd($criteres);
+            //C'est ici que nous allons effectuer l'extraction de données de la base de données selon le filtre (le critère de selectioné fourni)
+            $this->dashboard = [
+                'productionCharts' => $this->JSBChartBuilder->getProductionCharts(),
+                'productionTabs' => $this->jSBTabBuilder->getProductionTabs(),
+                'productionSummaries' => $this->jSBSummaryBuilder->getProductionSummaries(),
+            ];
+        }else{
+            $this->dashboard = [];
+        }
         return $this;
     }
 

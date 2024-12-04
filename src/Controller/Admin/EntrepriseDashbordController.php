@@ -51,10 +51,12 @@ class EntrepriseDashbordController extends AbstractController
         $formulaire_recherche->handleRequest($request);
         
         // Pas important de vérifier si le formulaire est soumis
-        // if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
-        // }
-
-        $jSBTableauDeBordBuilder->build($criteres);
+        if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
+            // dd($criteres);
+            $jSBTableauDeBordBuilder->build($criteres);
+        }else{
+            $jSBTableauDeBordBuilder->build(null);
+        }
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
@@ -65,7 +67,6 @@ class EntrepriseDashbordController extends AbstractController
                 'page' => $request->query->getInt("page", 1),
                 'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
                 'formulaire_recherche' => $formulaire_recherche,
-                'recherche_avancee_activated' => $criteres->isRechercheAvanceeActivated(),
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
