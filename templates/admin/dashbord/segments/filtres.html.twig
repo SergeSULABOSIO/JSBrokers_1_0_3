@@ -1,25 +1,43 @@
 {# Une brique est element html de la classe COL #}
-<div class="col-md border border-0 border-secondary rounded-3 m-1 p-2 shadow-sm mb-10 bg-white">
+<div class="col-md border border-0 border-secondary rounded-3 shadow-sm bg-white">
     {# Le filtre sera ici {{ data }} #}
     {{ form_start(formulaire_recherche) }}
-        <div class="input-group p-2">
+        <div class="input-group input-group-lg mt-2">
             <span class="input-group-text" id="basic-addon1">{{ ux_icon('lucide:search', {height: '16px', width: '16px'}) }}</span>
             {{ form_widget(formulaire_recherche.entreprises) }}
             {{ form_widget(formulaire_recherche.chercher) }}
         </div>
-    {# Formulaire avancé #}
-    <div class="accordion accordion-flush" id="accordionFlushExample">
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="flush-headingOne">
-            <a href="#" style="text-decoration: none;" class="accordion-button collapsed text-secondary p-2 m-1 rounded" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
-                {{ ux_icon('rivet-icons:filter-solid', {height: '16px', width: '16px'}) }}&nbsp;&nbsp;Définir d'autres critères de filtrage plus avancés
-            </a>
-            </h2>
-            <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
-            <div class="accordion-body">
-                Placeholder content for this accordion, which is intended to demonstrate the <code>.accordion-flush</code> class. This is the first item's accordion body.</div>
+        {# Formulaire avancé #}
+        <div class="accordion accordion-flush m-0 mb-2" id="accordionFlushExample">
+            <div class="accordion-item">
+                <span class="accordion-header" id="flush-headingOne">
+                    <a href="#" style="text-decoration: none;" class="accordion-button collapsed text-secondary p-2 m-1 rounded" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+                        {{ ux_icon('rivet-icons:filter-solid', {height: '16px', width: '16px'}) }}&nbsp;&nbsp;Définir d'autres critères de filtrage plus avancés
+                    </a>
+                </span>
+                <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+                    <div class="accordion-body p-2">
+                        <div class="input-group input-group-sm m-1">
+                            <span class="input-group-text">Assureurs</span>
+                            <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm">
+                        </div>
+                        <div class="input-group input-group-sm m-1">
+                            <span class="input-group-text">Produits</span>
+                            <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm">
+                        </div>
+                        <div class="input-group input-group-sm m-1">
+                            <span class="input-group-text">Partners</span>
+                            <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm">
+                        </div>
+                        <div class="input-group input-group-sm m-1">
+                            <span class="input-group-text">From</span>
+                            <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm">
+                            <span class="input-group-text">To</span>
+                            <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
     {{ form_end(formulaire_recherche) }}
 </div>
