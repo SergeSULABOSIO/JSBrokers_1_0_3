@@ -6,13 +6,11 @@
             {{ form_widget(formulaire_recherche.entreprises) }}
             {{ form_widget(formulaire_recherche.chercher) }}
         </div>
-    {{ form_end(formulaire_recherche) }}
-
-
+    {# Formulaire avancé #}
     <div class="accordion accordion-flush" id="accordionFlushExample">
         <div class="accordion-item">
             <h2 class="accordion-header" id="flush-headingOne">
-            <a href="#" style="text-decoration: none;" class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+            <a href="#" style="text-decoration: none;" class="accordion-button collapsed text-secondary" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
                 Définir d'autres critères de recherche avancés
             </a>
             </h2>
@@ -22,4 +20,5 @@
             </div>
         </div>
     </div>
+    {{ form_end(formulaire_recherche) }}
 </div>
