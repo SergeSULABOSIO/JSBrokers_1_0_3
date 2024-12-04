@@ -43,27 +43,18 @@ class EntrepriseDashbordController extends AbstractController
 
         //Initialisation du formulaire de recherche
         /** @var CriteresRechercheDashBordDTO */
-        $data = (new CriteresRechercheDashBordDTO())
+        $criteres = (new CriteresRechercheDashBordDTO())
             ->setDateDebut(new DateTimeImmutable("1/1/" . date('Y') . " 00:00"))
             ->setDateFin(new DateTimeImmutable("12/31/" . date('Y') . " 23:59"));
 
-        $formulaire_recherche = $this->createForm(RechercheDashBordType::class, $data);
+        $formulaire_recherche = $this->createForm(RechercheDashBordType::class, $criteres);
         $formulaire_recherche->handleRequest($request);
-        if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
-            try {
-                // dd("La recherche est lancée!", $formulaire_recherche);
+        
+        // Pas important de vérifier si le formulaire est soumis
+        // if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
+        // }
 
-                //Lancer un évènement
-                // $dispatcher->dispatch(new DemandeContactEvent($data));
-                // $this->addFlash("success", $this->translator->trans("contact_email_sent_ok"));
-            } catch (\Throwable $th) {
-                //throw $th;
-                // $this->addFlash("danger", $this->translator->trans("contact_email_sent_error"));
-            }
-            // return $this->redirectToRoute('admin.demande.contact.index');
-        }
-
-        $jSBTableauDeBordBuilder->build();
+        $jSBTableauDeBordBuilder->build($criteres);
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
@@ -74,6 +65,7 @@ class EntrepriseDashbordController extends AbstractController
                 'page' => $request->query->getInt("page", 1),
                 'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
                 'formulaire_recherche' => $formulaire_recherche,
+                'recherche_avancee_activated' => $criteres->isRechercheAvanceeActivated(),
             ]);
         } else {
             $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");

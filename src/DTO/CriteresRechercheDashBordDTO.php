@@ -4,7 +4,10 @@ namespace App\DTO;
 
 use App\Entity\Entreprise;
 use DateTimeImmutable;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+
+use function PHPUnit\Framework\isEmpty;
 
 class CriteresRechercheDashBordDTO
 {
@@ -31,6 +34,23 @@ class CriteresRechercheDashBordDTO
     private DateTimeImmutable $dateDebut;
 
     private DateTimeImmutable $dateFin;
+
+
+    public function __construct()
+    {
+        $this->entreprises = new ArrayCollection();
+        $this->produits = new ArrayCollection();
+        $this->assureurs = new ArrayCollection();
+        $this->partenaires = new ArrayCollection();
+        $this->dateDebut = new DateTimeImmutable();
+        $this->dateFin = new DateTimeImmutable();
+    }
+
+    public function isRechercheAvanceeActivated()
+    {
+        // dd(count($this->getAssureurs()));
+        return count($this->getAssureurs());
+    }
 
     /**
      * Get the value of dateFin

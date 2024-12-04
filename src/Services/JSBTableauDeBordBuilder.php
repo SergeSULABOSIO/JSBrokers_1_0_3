@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DTO\CriteresRechercheDashBordDTO;
 use Symfony\Bundle\SecurityBundle\Security;
 
 
@@ -18,7 +19,7 @@ class JSBTableauDeBordBuilder
     ) {}
 
 
-    public function build(): self
+    public function build(CriteresRechercheDashBordDTO $criteres): self
     {
         //C'est ici que nous allons effectuer l'extraction de données de la base de données selon le filtre (le critère de selectioné fourni)
         $this->dashboard = [
