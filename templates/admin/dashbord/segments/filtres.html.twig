@@ -3,6 +3,7 @@
     {# Le filtre sera ici {{ data }} #}
     {{ form_start(formulaire_recherche) }}
         <div class="input-group p-2">
+            <span class="input-group-text" id="basic-addon1">{{ ux_icon('lucide:search', {height: '16px', width: '16px'}) }}</span>
             {{ form_widget(formulaire_recherche.entreprises) }}
             {{ form_widget(formulaire_recherche.chercher) }}
         </div>
@@ -11,7 +12,7 @@
         <div class="accordion-item">
             <h2 class="accordion-header" id="flush-headingOne">
             <a href="#" style="text-decoration: none;" class="accordion-button collapsed text-secondary p-2 m-1 rounded" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
-                {{ ux_icon('carbon:finance', {height: '16px', width: '16px'}) }}&nbsp;&nbsp;Définir d'autres critères de filtrage plus avancés
+                {{ ux_icon('rivet-icons:filter-solid', {height: '16px', width: '16px'}) }}&nbsp;&nbsp;Définir d'autres critères de filtrage plus avancés
             </a>
             </h2>
             <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">

@@ -36,7 +36,7 @@ class RechercheDashBordType extends AbstractType
                 'autocomplete' => true,
                 'attr' => [
                     'placeholder' => "Tapez le nom du client ici.",
-                    'class' => "rounded p-2 fs-6",
+                    'class' => "p-2 fs-6",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
                 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
