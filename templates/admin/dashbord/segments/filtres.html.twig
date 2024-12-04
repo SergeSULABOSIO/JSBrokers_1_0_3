@@ -18,6 +18,14 @@
                 <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
                     <div class="accordion-body p-2">
                         <div class="input-group input-group-sm m-1">
+                            <span class="input-group-text">From</span>
+                            {{ form_widget(formulaire_recherche.dateDebut) }}
+                            {# <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm"> #}
+                            <span class="input-group-text">To</span>
+                            {{ form_widget(formulaire_recherche.dateFin) }}
+                            {# <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm"> #}
+                        </div>
+                        <div class="input-group input-group-sm m-1">
                             <span class="input-group-text" id="inputGroup-sizing-a">Assureurs</span>
                             {{ form_widget(formulaire_recherche.assureurs) }}
                         </div>
@@ -28,14 +36,6 @@
                         <div class="input-group input-group-sm m-1">
                             <span class="input-group-text">Partners</span>
                             {{ form_widget(formulaire_recherche.partenaires) }}
-                        </div>
-                        <div class="input-group input-group-sm m-1">
-                            <span class="input-group-text">From</span>
-                            {{ form_widget(formulaire_recherche.dateDebut) }}
-                            {# <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm"> #}
-                            <span class="input-group-text">To</span>
-                            {{ form_widget(formulaire_recherche.dateFin) }}
-                            {# <input type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-sm"> #}
                         </div>
                     </div>
                 </div>

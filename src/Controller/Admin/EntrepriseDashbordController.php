@@ -12,6 +12,7 @@ use App\Services\JSBChartBuilder;
 use App\Services\JSBSummaryBuilder;
 use App\Services\JSBTabBuilder;
 use App\Services\JSBTableauDeBordBuilder;
+use DateTimeImmutable;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -19,6 +20,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Validator\Constraints\Date;
 
 #[Route("/admin/entreprise_dashbord", name: 'admin.entreprise.')]
 #[IsGranted('ROLE_USER')]
@@ -40,17 +42,16 @@ class EntrepriseDashbordController extends AbstractController
         $user = $this->getUser();
 
         //Initialisation du formulaire de recherche
-        
         /** @var CriteresRechercheDashBordDTO */
-        $data = new CriteresRechercheDashBordDTO();
-        
-
+        $data = (new CriteresRechercheDashBordDTO())
+            ->setDateDebut(new DateTimeImmutable("1/1/" . date('Y') . " 00:00"))
+            ->setDateFin(new DateTimeImmutable("12/31/" . date('Y') . " 23:59"));
 
         $formulaire_recherche = $this->createForm(RechercheDashBordType::class, $data);
         $formulaire_recherche->handleRequest($request);
         if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
             try {
-                dd("La recherche est lancée!", $formulaire_recherche);
+                // dd("La recherche est lancée!", $formulaire_recherche);
 
                 //Lancer un évènement
                 // $dispatcher->dispatch(new DemandeContactEvent($data));

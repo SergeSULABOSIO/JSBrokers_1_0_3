@@ -11,6 +11,7 @@ use Symfony\Component\Form\AbstractType;
 use App\DTO\CriteresRechercheDashBordDTO;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Polyfill\Intl\Icu\IntlDateFormatter;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
@@ -29,6 +30,7 @@ class RechercheDashBordType extends AbstractType
 
         $builder
             ->add('entreprises', EntrepriseAutocompleteField::class, [
+                'required' => false,
                 'label' => false,
                 'class' => Entreprise::class,
                 'choice_label' => "nom",
@@ -45,6 +47,7 @@ class RechercheDashBordType extends AbstractType
             ])
 
             ->add('assureurs', EntrepriseAutocompleteField::class, [
+                'required' => false,
                 'label' => false,
                 'class' => Entreprise::class,
                 'choice_label' => "nom",
@@ -61,6 +64,7 @@ class RechercheDashBordType extends AbstractType
             ])
 
             ->add('produits', EntrepriseAutocompleteField::class, [
+                'required' => false,
                 'label' => false,
                 'class' => Entreprise::class,
                 'choice_label' => "nom",
@@ -77,6 +81,7 @@ class RechercheDashBordType extends AbstractType
             ])
 
             ->add('partenaires', EntrepriseAutocompleteField::class, [
+                'required' => false,
                 'label' => false,
                 'class' => Entreprise::class,
                 'choice_label' => "nom",
