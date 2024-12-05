@@ -39,7 +39,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "Tapez le nom du client ici.",
+                    'placeholder' => "company_dashboard_search_form_clients",
                     'class' => "form-control p-2 fs-6",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -56,7 +56,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "Assureurs ici.",
+                    'placeholder' => "company_dashboard_search_form_assureurs",
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -73,7 +73,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "Produits ici.",
+                    'placeholder' => "company_dashboard_search_form_produits",
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -90,7 +90,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "Partenaires ici.",
+                    'placeholder' => "company_dashboard_search_form_partenaires",
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -98,7 +98,7 @@ class RechercheDashBordType extends AbstractType
             ])
 
             ->add('dateDebut', DateTimeType::class, [
-                'date_label' => false,
+                'date_label' =>  "company_dashboard_search_form_date_from",
             ])
 
             ->add('dateFin', DateTimeType::class, [
