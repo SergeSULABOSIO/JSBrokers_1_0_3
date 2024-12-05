@@ -13,11 +13,11 @@
                 <span class="accordion-header" id="flush-headingOne">
                     <a href="#" style="text-decoration: none;" class="accordion-button collapsed text-secondary p-2 m-1 rounded" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
                         {{ ux_icon('rivet-icons:filter-solid', {height: '16px', width: '16px'}) }}
-                        &nbsp;&nbsp;Définir d'autres critères de filtrage plus avancés 
+                        &nbsp;&nbsp;{{ "company_dashboard_search_advanced_filter_link" | trans() | raw }}
                         {% if nbFiltresAvancesActif != 0 %}
                             &nbsp;&nbsp;
                             <span class="badge rounded-pill position-relative text-bg-secondary">
-                                Filtrage avancé actif
+                                {{ "company_dashboard_search_advanced_filter_activated" | trans() | raw }}
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning">
                                     {{ nbFiltresAvancesActif }}
                                 </span>
@@ -34,15 +34,21 @@
                             {{ form_widget(formulaire_recherche.dateFin) }}
                         </div>
                         <div class="input-group input-group-sm m-1">
-                            <span class="input-group-text" id="inputGroup-sizing-a">Assureurs</span>
+                            <span class="input-group-text" id="inputGroup-sizing-a">
+                                {{ "company_dashboard_search_form_assureurs" | trans() | raw }}
+                            </span>
                             {{ form_widget(formulaire_recherche.assureurs) }}
                         </div>
                         <div class="input-group input-group-sm m-1">
-                            <span class="input-group-text">Produits</span>
+                            <span class="input-group-text">
+                                {{ "company_dashboard_search_form_produits" | trans() | raw }}
+                            </span>
                             {{ form_widget(formulaire_recherche.produits) }}
                         </div>
                         <div class="input-group input-group-sm m-1">
-                            <span class="input-group-text">Partners</span>
+                            <span class="input-group-text">
+                                {{ "company_dashboard_search_form_partenaires" | trans() | raw }}
+                            </span>
                             {{ form_widget(formulaire_recherche.partenaires) }}
                         </div>
                     </div>

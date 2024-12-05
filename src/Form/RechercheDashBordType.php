@@ -39,7 +39,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "company_dashboard_search_form_clients",
+                    'placeholder' => "company_dashboard_search_form_clients_placeholder",
                     'class' => "form-control p-2 fs-6",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -56,7 +56,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "company_dashboard_search_form_assureurs",
+                    'placeholder' => "company_dashboard_search_form_assureurs_placeholder",
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -73,7 +73,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "company_dashboard_search_form_produits",
+                    'placeholder' => "company_dashboard_search_form_produits_placeholder",
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -90,7 +90,7 @@ class RechercheDashBordType extends AbstractType
                 'by_reference' => false,
                 'autocomplete' => true,
                 'attr' => [
-                    'placeholder' => "company_dashboard_search_form_partenaires",
+                    'placeholder' => "company_dashboard_search_form_partenaires_placeholder",
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
@@ -107,7 +107,7 @@ class RechercheDashBordType extends AbstractType
 
             //Le bouton d'enregistrement / soumission
             ->add('chercher', SubmitType::class, [
-                'label' => "Filtrer",
+                'label' => "company_dashboard_search_button_filter",
                 'attr' => [
                     'class' => "btn btn-secondary p-2 fs-6",
                 ],
