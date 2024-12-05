@@ -52,10 +52,11 @@ class EntrepriseDashbordController extends AbstractController
         
         // Pas important de vérifier si le formulaire est soumis
         if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
-            // dd($criteres);
             $jSBTableauDeBordBuilder->build($criteres);
+            // dd($criteres);
+            return new RedirectResponse($this->urlGenerator->generate("app_login"));
         }else{
-            $jSBTableauDeBordBuilder->build(null);
+            $jSBTableauDeBordBuilder->build($criteres);
         }
 
         if ($user->isVerified()) {
