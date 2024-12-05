@@ -48,25 +48,28 @@ class EntrepriseDashbordController extends AbstractController
             ->setDateFin(new DateTimeImmutable("12/31/" . date('Y') . " 23:59"));
 
         $formulaire_recherche = $this->createForm(RechercheDashBordType::class, $criteres);
-        
+
         $formulaire_recherche->handleRequest($request);
-        
+
         // Pas important de vérifier si le formulaire est soumis
         if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
             $jSBTableauDeBordBuilder->build($criteres);
             // dd($formulaire_recherche->getData("entreprises")->getData());
             // dd($formulaire_recherche->getData() == $criteres);
             // return new RedirectResponse($this->urlGenerator->generate("app_login"));
-            return $this->render('admin/dashbord/index.html.twig', [
-                'pageName' => "Tableau de bord",
-                'utilisateur' => $user,
-                'entreprise' => $entreprise,
-                'activator' => $this->activator,
-                'page' => $request->query->getInt("page", 1),
-                'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
-                'formulaire_recherche' => $formulaire_recherche,
+            // return $this->render('admin/dashbord/index.html.twig', [
+            //     'pageName' => "Tableau de bord",
+            //     'utilisateur' => $user,
+            //     'entreprise' => $entreprise,
+            //     'activator' => $this->activator,
+            //     'page' => $request->query->getInt("page", 1),
+            //     'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
+            //     'formulaire_recherche' => $formulaire_recherche,
+            // ]);
+            return $this->redirectToRoute('admin.entreprise.dashbord', [
+                'id' => $entreprise->getId(),
             ]);
-        }else{
+        } else {
             $jSBTableauDeBordBuilder->build($criteres);
         }
 
