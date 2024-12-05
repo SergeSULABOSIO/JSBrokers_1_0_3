@@ -54,10 +54,6 @@ class EntrepriseDashbordController extends AbstractController
         // Pas important de vérifier si le formulaire est soumis
         if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
             $jSBTableauDeBordBuilder->build($formulaire_recherche->getData());
-            // dd($formulaire_recherche->getData("entreprises")->getData());
-            // dd($formulaire_recherche->getData() == $criteres);
-            // return new RedirectResponse($this->urlGenerator->generate("app_login"));
-            $nbActif = $criteres->nbFiltresAvancesActif();
             return $this->render('admin/dashbord/index.html.twig', [
                 'pageName' => "Tableau de bord",
                 'utilisateur' => $user,
@@ -66,7 +62,7 @@ class EntrepriseDashbordController extends AbstractController
                 'page' => $request->query->getInt("page", 1),
                 'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
                 'formulaire_recherche' => $formulaire_recherche,
-                'nbFiltresAvancesActif' => $nbActif,
+                'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
             ]);
             // return $this->redirectToRoute('admin.entreprise.dashbord', [
             //     'id' => $entreprise->getId(),
