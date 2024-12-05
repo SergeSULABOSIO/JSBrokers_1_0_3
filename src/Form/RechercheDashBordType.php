@@ -98,11 +98,11 @@ class RechercheDashBordType extends AbstractType
             ])
 
             ->add('dateDebut', DateTimeType::class, [
-                'date_label' =>  "company_dashboard_search_form_date_from",
+                'label' => false,
             ])
 
             ->add('dateFin', DateTimeType::class, [
-                'date_label' => "Date finale",
+                'label' => false,
             ])
 
             //Le bouton d'enregistrement / soumission

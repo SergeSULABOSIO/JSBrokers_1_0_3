@@ -288,7 +288,8 @@ company_dashboard_search_form_clients: "Clients here."
 company_dashboard_search_form_assureurs: "Insurers here."
 company_dashboard_search_form_produits: "Products here."
 company_dashboard_search_form_partenaires: "Partners here."
-company_dashboard_search_form_date_from: "From"
+company_dashboard_search_form_date_from: "From (initial date)"
+company_dashboard_search_form_date_to: "To (end date)"
 
 
 

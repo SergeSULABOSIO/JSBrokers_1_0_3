@@ -288,5 +288,6 @@ company_dashboard_search_form_clients: "Clients ici."
 company_dashboard_search_form_assureurs: "Assureurs ici."
 company_dashboard_search_form_produits: "Couvertures ici."
 company_dashboard_search_form_partenaires: "Partenaires ici."
-company_dashboard_search_form_date_from: "De"
+company_dashboard_search_form_date_from: "Du (date initiale)"
+company_dashboard_search_form_date_to: "Au (date limite)"
 
