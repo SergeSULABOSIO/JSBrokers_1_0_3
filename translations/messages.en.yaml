@@ -283,6 +283,7 @@ company_menu_documents: "Documents"
 company_menu_classeurs: "Folders"
 company_dashboard_page_name: "Dashboard"
 company_dashboard_page_description: "Overview of <strong>:companyName</strong>'s situation. Dashboard with key management indicators."
+company_dashboard_search_result_empty: "The dashboard is empty!"
 
 
 

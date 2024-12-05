@@ -79,7 +79,7 @@
 				{{ include('admin/dashbord/segments/section.html.twig') }}
 			</div>
 		{% else %}
-			La tableau de bord est vide!
+			{{ "company_dashboard_search_result_empty" | trans() | raw }}
 		{% endif %}
 	</div>
 {% endblock %}
