@@ -281,6 +281,8 @@ company_menu_reglements: "Settlements"
 company_menu_group_admin: "Administration"
 company_menu_documents: "Documents"
 company_menu_classeurs: "Folders"
+company_dashboard_page_name: "Dashboard"
+company_dashboard_page_description: "Overview of <strong>:companyName</strong>'s situation. Dashboard with key management indicators."
 
 
 

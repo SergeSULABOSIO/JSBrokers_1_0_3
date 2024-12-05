@@ -13,8 +13,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	Aperçu global de la situation de
-	{{ entreprise.nom }}. Tableau de bord avec indicateurs clés de gestion.
+	{{ "company_dashboard_page_description" | trans({':companyName': entreprise.nom}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}

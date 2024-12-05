@@ -2,25 +2,26 @@
 
 namespace App\Controller\Admin;
 
+use DateTimeImmutable;
+use App\Entity\ReportSet;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
-use App\Constantes\MenuActivator;
-use App\DTO\CriteresRechercheDashBordDTO;
-use App\Entity\ReportSet;
-use App\Form\RechercheDashBordType;
-use App\Services\JSBChartBuilder;
-use App\Services\JSBSummaryBuilder;
 use App\Services\JSBTabBuilder;
+use App\Constantes\MenuActivator;
+use App\Services\JSBChartBuilder;
+use App\Form\RechercheDashBordType;
+use App\Services\JSBSummaryBuilder;
+use App\DTO\CriteresRechercheDashBordDTO;
 use App\Services\JSBTableauDeBordBuilder;
-use DateTimeImmutable;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Constraints\Date;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Validator\Constraints\Date;
 
 #[Route("/admin/entreprise_dashbord", name: 'admin.entreprise.')]
 #[IsGranted('ROLE_USER')]
@@ -29,7 +30,9 @@ class EntrepriseDashbordController extends AbstractController
     private MenuActivator $activator;
 
     public function __construct(
-        private UrlGeneratorInterface $urlGenerator
+        private UrlGeneratorInterface $urlGenerator,
+        private TranslatorInterface $translator,
+
     ) {
         $this->activator = new MenuActivator(-1);
     }
@@ -55,7 +58,7 @@ class EntrepriseDashbordController extends AbstractController
         if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
             $jSBTableauDeBordBuilder->build($formulaire_recherche->getData());
             return $this->render('admin/dashbord/index.html.twig', [
-                'pageName' => "Tableau de bord",
+                'pageName' => $this->translator->trans("company_dashboard_page_name"),
                 'utilisateur' => $user,
                 'entreprise' => $entreprise,
                 'activator' => $this->activator,
@@ -70,7 +73,7 @@ class EntrepriseDashbordController extends AbstractController
 
         if ($user->isVerified()) {
             return $this->render('admin/dashbord/index.html.twig', [
-                'pageName' => "Tableau de bord",
+                'pageName' => $this->translator->trans("company_dashboard_page_name"),
                 'utilisateur' => $user,
                 'entreprise' => $entreprise,
                 'activator' => $this->activator,
@@ -80,7 +83,10 @@ class EntrepriseDashbordController extends AbstractController
                 'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
             ]);
         } else {
-            $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
+            $this->addFlash("warning", $this->translator->trans("entreprise_your_email_is_not_verified", [
+                ':user' => $user->getNom(),
+                ':email' => $user->getEmail()
+            ]));
             return new RedirectResponse($this->urlGenerator->generate("app_login"));
         }
     }

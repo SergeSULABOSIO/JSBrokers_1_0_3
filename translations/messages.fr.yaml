@@ -281,3 +281,6 @@ company_menu_reglements: "Reglements"
 company_menu_group_admin: "Administration"
 company_menu_documents: "Documents"
 company_menu_classeurs: "Classeurs"
+company_dashboard_page_name: "Tableau de bord"
+company_dashboard_page_description: "Aperçu global de la situation de <strong>:companyName</strong>. Tableau de bord avec indicateurs clés de gestion."
+
