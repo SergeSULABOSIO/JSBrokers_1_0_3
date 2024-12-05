@@ -297,4 +297,8 @@ company_dashboard_search_form_partenaires: "Partenaires"
 company_dashboard_search_advanced_filter_activated: "Filtrage avancé actif"
 company_dashboard_search_advanced_filter_link: "Définir d'autres critères de filtrage plus avancés "
 company_dashboard_search_button_filter: "Charger les données"
+company_dashboard_summary_policies_net_prem: "Prime nette:"
+company_dashboard_summary_policies_gross_prem: "Prime TTC:"
+company_dashboard_summary_policies_titre: "Synthèse des polices en générées"
+
 

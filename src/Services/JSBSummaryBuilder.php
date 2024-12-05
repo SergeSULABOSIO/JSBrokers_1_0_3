@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Entity\ReportSet\ReportSummary;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class JSBSummaryBuilder
 {
     public function __construct(
         private Security $security,
         private ServiceDates $serviceDates,
+        private TranslatorInterface $translator,
     ) {}
 
     /**
@@ -21,7 +23,7 @@ class JSBSummaryBuilder
     {
         $items = [];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Net Prem.:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_net_prem"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
@@ -41,9 +43,9 @@ class JSBSummaryBuilder
             ->setIcone("emojione-monotone:umbrella-with-rain-drops")
             ->setIcone_color("text-primary")
             ->setCurrency_code("$")
-            ->setTitre("Summary of policies placed")
+            ->setTitre($this->translator->trans("company_dashboard_summary_policies_titre"))
             ->setPrincipal([
-                ReportSummary::RUBRIQUE => 'GW Prem.:',
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"),
                 ReportSummary::VALEUR => 100000000.45,
             ])
             ->setItems($items);

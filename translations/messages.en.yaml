@@ -297,6 +297,11 @@ company_dashboard_search_form_partenaires: "Partners"
 company_dashboard_search_advanced_filter_activated: "Advanced filter is enabled"
 company_dashboard_search_advanced_filter_link: "Set more advanced filter criteria "
 company_dashboard_search_button_filter: "Load Data"
+company_dashboard_summary_policies_net_prem: "Net Prem.:"
+company_dashboard_summary_policies_gross_prem: "GW Prem.:"
+company_dashboard_summary_policies_titre: "Summary of policies placed"
+
+
 
 
 
