@@ -293,9 +293,6 @@
     "symfony/ux-toggle-password": {
         "version": "v2.20.0"
     },
-    "symfony/ux-turbo": {
-        "version": "v2.19.3"
-    },
     "symfony/validator": {
         "version": "7.1",
         "recipe": {

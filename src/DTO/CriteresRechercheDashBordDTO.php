@@ -46,10 +46,23 @@ class CriteresRechercheDashBordDTO
         $this->dateFin = new DateTimeImmutable();
     }
 
-    public function isRechercheAvanceeActivated():bool
+    public function nbFiltresAvancesActif():int
     {
         // dd(count($this->getAssureurs()));
-        return count($this->getAssureurs()) != 0;
+        $nbFiltreActifs = 0;
+        if (count($this->getAssureurs()) != 0) {
+            $nbFiltreActifs++;
+        }
+        if (count($this->getProduits()) != 0) {
+            $nbFiltreActifs++;
+        }
+        if (count($this->getPartenaires()) != 0) {
+            $nbFiltreActifs++;
+        }
+        
+        // dd(count($this->getAssureurs()), count($this->getProduits()), count($this->getPartenaires()));
+        // dd($nbFiltreActifs);
+        return $nbFiltreActifs;
     }
 
     /**

@@ -14,6 +14,24 @@
                     <a href="#" style="text-decoration: none;" class="accordion-button collapsed text-secondary p-2 m-1 rounded" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
                         {{ ux_icon('rivet-icons:filter-solid', {height: '16px', width: '16px'}) }}
                         &nbsp;&nbsp;Définir d'autres critères de filtrage plus avancés 
+                        {% if nbFiltresAvancesActif != 0 %}
+                            &nbsp;&nbsp;
+                            <span class="badge rounded-pill bg-secondary position-relative">
+                                (Le filtre avancé est actif)
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ nbFiltresAvancesActif }}
+                                </span>
+                            </span>
+                            &nbsp;
+                        {% endif %}
+                        
+                        {# <button type="button" class="btn btn-primary position-relative">
+                            Inbox
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                99+
+                                <span class="visually-hidden">unread messages</span>
+                            </span>
+                        </button> #}
                     </a>
                 </span>
                 <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
