@@ -64,9 +64,6 @@ class EntrepriseDashbordController extends AbstractController
                 'formulaire_recherche' => $formulaire_recherche,
                 'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
             ]);
-            // return $this->redirectToRoute('admin.entreprise.dashbord', [
-            //     'id' => $entreprise->getId(),
-            // ]);
         } else {
             $jSBTableauDeBordBuilder->build($criteres);
         }
