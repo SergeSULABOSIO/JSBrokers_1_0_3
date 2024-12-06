@@ -144,19 +144,19 @@ class JSBSummaryBuilder
     {
         $items = [];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Net revenue:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_revenu_assiette"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Co-brokerage:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due_partenaire"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Amounts paid:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_payee"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Balance:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due"),
             ReportSummary::VALEUR => 100000000.45,
         ];
 
@@ -164,9 +164,9 @@ class JSBSummaryBuilder
             ->setIcone("carbon:partnership")
             ->setIcone_color("text-secondary")
             ->setCurrency_code("$")
-            ->setTitre("Summary of Co-brokerages")
+            ->setTitre($this->translator->trans("company_dashboard_summary_retrocom_titre"))
             ->setPrincipal([
-                ReportSummary::RUBRIQUE => 'Balance:',
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due"),
                 ReportSummary::VALEUR => 100000000.45,
             ])
             ->setItems($items);

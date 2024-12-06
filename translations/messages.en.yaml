@@ -310,7 +310,11 @@ company_dashboard_summary_collecte_revenues_received: "Received:"
 company_dashboard_summary_collecte_revenues_balance: "Balance::"
 company_dashboard_summary_collecte_revenues_due: "Com. due:"
 company_dashboard_summary_collecte_revenues_not_invoiced: "Not invoiced yet:"
-
+company_dashboard_summary_retrocom_titre: "Summary of co-brokerages"
+company_dashboard_summary_retrocom_revenu_assiette: "Net sherable:"
+company_dashboard_summary_retrocom_due_partenaire: "Co-brokerage:"
+company_dashboard_summary_retrocom_payee: "Amnt Paid:"
+company_dashboard_summary_retrocom_due: "Balance:"
 
 
 
