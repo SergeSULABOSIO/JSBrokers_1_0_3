@@ -330,6 +330,8 @@ company_dashboard_section_principale_description: "A set of tabs that enable you
 company_dashboard_section_principale_description_footer: "Just browser over the tabs and enjoy "
 company_dashboard_section_principale_graphs_titre: "Graphs"
 company_dashboard_section_principale_insurers_titre: "Insurers"
+company_dashboard_section_principale_tasks_header: "Monthly Production per Insurer"
+company_dashboard_section_principale_tasks_caption: ""
 company_dashboard_section_principale_partners_titre: "Partners"
 company_dashboard_section_principale_clients_titre: "Clients"
 company_dashboard_section_principale_tasks_titre: "Tasks"

@@ -330,6 +330,8 @@ company_dashboard_section_principale_description: "Une série d'onglets qui vous
 company_dashboard_section_principale_description_footer: "Naviguez simplement sur les onglets et profitez-en avec "
 company_dashboard_section_principale_graphs_titre: "Graphics"
 company_dashboard_section_principale_insurers_titre: "Assur."
+company_dashboard_section_principale_tasks_header: "Production mensuelle par assureur"
+company_dashboard_section_principale_tasks_caption: ""
 company_dashboard_section_principale_partners_titre: "Parten."
 company_dashboard_section_principale_clients_titre: "Clients"
 company_dashboard_section_principale_tasks_titre: "Tâches"
