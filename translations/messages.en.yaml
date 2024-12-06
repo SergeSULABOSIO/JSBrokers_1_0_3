@@ -315,7 +315,11 @@ company_dashboard_summary_retrocom_revenu_assiette: "Net sherable:"
 company_dashboard_summary_retrocom_due_partenaire: "Co-brokerage:"
 company_dashboard_summary_retrocom_payee: "Amnt Paid:"
 company_dashboard_summary_retrocom_due: "Balance:"
-
+company_dashboard_summary_tax_titre: "Summary of taxes"
+company_dashboard_summary_tax_revenu_net: "Net rev.:"
+company_dashboard_summary_tax_payable: "Tax due:"
+company_dashboard_summary_tax_payee: "Paid:"
+company_dashboard_summary_tax_due: "Balance due:"
 
 
 

@@ -184,19 +184,19 @@ class JSBSummaryBuilder
     {
         $items = [];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Net revenue:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_revenu_net"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Tax due:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_payable"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Tax paid:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_payee"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Balance payable:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_due"),
             ReportSummary::VALEUR => 100000000.45,
         ];
 
@@ -204,9 +204,9 @@ class JSBSummaryBuilder
             ->setIcone("carbon:finance")
             ->setIcone_color("text-warning")
             ->setCurrency_code("$")
-            ->setTitre("Summary of tax")
+            ->setTitre($this->translator->trans("company_dashboard_summary_tax_titre"))
             ->setPrincipal([
-                ReportSummary::RUBRIQUE => 'Tax payable:',
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_due"),
                 ReportSummary::VALEUR => 100000000.45,
             ])
             ->setItems($items);
