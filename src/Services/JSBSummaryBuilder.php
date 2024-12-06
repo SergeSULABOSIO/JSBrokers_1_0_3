@@ -26,6 +26,7 @@ class JSBSummaryBuilder
             ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_net_prem"),
             ReportSummary::VALEUR => 100000000.45,
         ];
+        //Ici ces valeurs seront chargées automatiquement ce sont des chargements des factures client
         $items[] = [
             ReportSummary::RUBRIQUE => 'Arca:',
             ReportSummary::VALEUR => 100000000.45,
@@ -63,7 +64,7 @@ class JSBSummaryBuilder
     {
         $items = [];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Net Com.:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_revenues_net"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
@@ -75,7 +76,7 @@ class JSBSummaryBuilder
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Pure Com:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_revenues_pur"),
             ReportSummary::VALEUR => 100000000.45,
         ];
 
@@ -83,9 +84,9 @@ class JSBSummaryBuilder
             ->setIcone("healthicons:money-bag")
             ->setIcone_color("text-success")
             ->setCurrency_code("$")
-            ->setTitre("Summary of revenue generated")
+            ->setTitre($this->translator->trans("company_dashboard_summary_revenues_titre"))
             ->setPrincipal([
-                ReportSummary::RUBRIQUE => 'Gros Com.:',
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_revenues_ttc"),
                 ReportSummary::VALEUR => 100000000.45,
             ])
             ->setItems($items);
@@ -103,19 +104,19 @@ class JSBSummaryBuilder
     {
         $items = [];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Invoiced:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_invoiced"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Received:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_received"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Balance:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_balance"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Not invoiced yet:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_not_invoiced"),
             ReportSummary::VALEUR => 100000000.45,
         ];
 
@@ -123,9 +124,9 @@ class JSBSummaryBuilder
             ->setIcone("game-icons:receive-money")
             ->setIcone_color("text-black")
             ->setCurrency_code("$")
-            ->setTitre("Summary of Commission collection")
+            ->setTitre($this->translator->trans("company_dashboard_summary_collecte_revenues_titre"))
             ->setPrincipal([
-                ReportSummary::RUBRIQUE => 'Com. due:',
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_due"),
                 ReportSummary::VALEUR => 100000000.45,
             ])
             ->setItems($items);

@@ -300,6 +300,16 @@ company_dashboard_search_button_filter: "Load Data"
 company_dashboard_summary_policies_net_prem: "Net Prem.:"
 company_dashboard_summary_policies_gross_prem: "GW Prem.:"
 company_dashboard_summary_policies_titre: "Summary of policies placed"
+company_dashboard_summary_revenues_titre: "Summary of revenues"
+company_dashboard_summary_revenues_net: "Net rev.:"
+company_dashboard_summary_revenues_pur: "Pure rev.:"
+company_dashboard_summary_revenues_ttc: "Gross rev.:"
+company_dashboard_summary_collecte_revenues_titre: "Summary of commission collection"
+company_dashboard_summary_collecte_revenues_invoiced: "Invoiced:"
+company_dashboard_summary_collecte_revenues_received: "Received:"
+company_dashboard_summary_collecte_revenues_balance: "Balance::"
+company_dashboard_summary_collecte_revenues_due: "Com. due:"
+company_dashboard_summary_collecte_revenues_not_invoiced: "Not invoiced yet:"
 
 
 
