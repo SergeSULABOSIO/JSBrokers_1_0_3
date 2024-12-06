@@ -224,29 +224,29 @@ class JSBSummaryBuilder
     {
         $items = [];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Total damage:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_domage"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Total due:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_compensation"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Total settled:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_paye"),
             ReportSummary::VALEUR => 100000000.45,
         ];
         $items[] = [
-            ReportSummary::RUBRIQUE => 'Balance payable:',
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_due"),
             ReportSummary::VALEUR => 100000000.45,
         ];
 
         $summary = (new ReportSummary())
             ->setIcone("hugeicons:accident")
             ->setIcone_color("text-danger")
-            ->setTitre("Summary of claims")
+            ->setTitre($this->translator->trans("company_dashboard_summary_claims_titre"))
             ->setCurrency_code("$")
             ->setPrincipal([
-                ReportSummary::RUBRIQUE => 'Balance:',
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_due"),
                 ReportSummary::VALEUR => 100000000.45,
             ])
             ->setItems($items);
