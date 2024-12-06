@@ -2,41 +2,49 @@
 <div class="col-md border border-2 border-secondary rounded-3 m-1 p-2 shadow-sm mb-10 sensible">
     <div class="card">
         <div class="card-header text-center">
-            360° view of <strong>{{ entreprise.nom }}</strong> production over the given period of time
+            {{ "company_dashboard_section_principale_title" | trans({':companyName': entreprise.nom}) | raw }}
         </div>
         <div class="card-body">
             {# Texte introductif #}
             <blockquote class="blockquote mb-0 text-center">
-                <p>A set of tabs that enable you see your company's current health througth different angles of view without a single mouse clic.</p>
-                <footer class="blockquote-footer">Just browser over the tabs and enjoy <cite title="Source Title">JS Brokers!</cite></footer>
+                <p>{{ "company_dashboard_section_principale_description" | trans({':companyName': entreprise.nom}) | raw }}</p>
+                <footer class="blockquote-footer">{{ "company_dashboard_section_principale_description_footer" | trans({':companyName': entreprise.nom}) | raw }}<cite title="Source Title">JS Brokers!</cite></footer>
             </blockquote>
             {# Tableau d'onglets #}
             {# Barre de navigation #}
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
                     <button class="nav-link active" id="nav-graphs-tab" data-bs-toggle="tab" data-bs-target="#nav-graphs" type="button" role="tab" aria-controls="nav-graphs" aria-selected="true">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Graphs
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_graphs_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Insurers
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_insurers_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-production-partner-tab" data-bs-toggle="tab" data-bs-target="#nav-production-partner" type="button" role="tab" aria-controls="nav-production-partner" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Partners
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_partners_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-topclients-tab" data-bs-toggle="tab" data-bs-target="#nav-topclients" type="button" role="tab" aria-controls="nav-topclients" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Clients
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_clients_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-tasks-tab" data-bs-toggle="tab" data-bs-target="#nav-tasks" type="button" role="tab" aria-controls="nav-tasks" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Tasks
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_tasks_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-renewals-tab" data-bs-toggle="tab" data-bs-target="#nav-renewals" type="button" role="tab" aria-controls="nav-renewals" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Renewals
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_renewals_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-claims-tab" data-bs-toggle="tab" data-bs-target="#nav-claims" type="button" role="tab" aria-controls="nav-claims" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Claims
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_claims_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-cash-tab" data-bs-toggle="tab" data-bs-target="#nav-cash" type="button" role="tab" aria-controls="nav-cash" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }} Cash-flow
+                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ "company_dashboard_section_principale_cashflow_titre" | trans() | raw }}
                     </button>
                 </div>
             </nav>
