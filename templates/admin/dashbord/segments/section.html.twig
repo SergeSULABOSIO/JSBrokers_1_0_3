@@ -265,18 +265,20 @@
                 <div class="tab-pane fade" id="nav-topclients" role="tabpanel" aria-labelledby="nav-topclients-tab" tabindex="0">
                     <div class="card m-2">
                         <div class="card-header text-center">
-                            Top 20 Biggest clients in the portfolio
+                            {{ "company_dashboard_section_principale_clients_header" | trans() | raw}}
                         </div>
                         {# Tableau de production par assureur #}
                         <table class="table table-hover table-sm">
-                            <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
+                            <caption class="text-center">
+                                {{ "company_dashboard_section_principale_clients_caption" | trans() | raw}}
+                            </caption>
                             <thead class="table-secondary">
                                 <tr>
-                                    <th scope="col">CLIENT</th>
-                                    <th scope="col" class="text-end">GW PREMIUM</th>
-                                    <th scope="col" class="text-end">OTHER LOADINGS</th>
-                                    <th scope="col" class="text-end">NET PREMIUM</th>
-                                    <th scope="col" class="text-end">GROSS REVENUE</th>
+                                    <th scope="col">{{ "company_dashboard_section_principale_clients_colonne_client" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_clients_colonne_prime" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_clients_colonne_other_laodings" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_clients_colonne_prime_nette" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_clients_colonne_revenu_ttc" | trans() | raw}} </th>
                                 </tr>
                             </thead>
                             <tbody>
