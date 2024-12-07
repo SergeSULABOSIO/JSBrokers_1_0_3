@@ -127,22 +127,22 @@
                 <div class="tab-pane fade table-responsive" id="nav-production-partner" role="tabpanel" aria-labelledby="nav-production-partner-tab" tabindex="0">
                     <div class="card m-2">
                         <div class="card-header text-center">
-                            Monthly Production per broker partner
+                            {{ "company_dashboard_section_principale_partners_header" | trans() | raw}}
                         </div>
                         {# Tableau de production par partenaire #}
                         <table class="table table-hover table-sm">
                             <caption class="text-center">
-                                TAXES = TVA (16%) + ARCA (2%). NET COM is exclusive of all taxes
+                                {{ "company_dashboard_section_principale_partners_caption" | trans() | raw }}
                             </caption>
                             <thead class="table-secondary">
                                 <tr>
-                                    <th scope="col">PARTNER</th>
-                                    <th scope="col" class="text-end">GW PREMIUMS</th>
-                                    <th scope="col" class="text-end">NET COM.</th>
-                                    <th scope="col" class="text-end">TAXES</th>
-                                    <th scope="col" class="text-end">CO-BROKERAGE</th>
-                                    <th scope="col" class="text-end">AMOUNT PAID</th>
-                                    <th scope="col" class="text-end">BALANCE</th>
+                                    <th scope="col">{{ "company_dashboard_section_principale_partners_colonne_partenaire" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_prime" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end"> {{ "company_dashboard_section_principale_partners_colonne_com_nette" | trans() | raw}}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_taxes" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end"> {{ "company_dashboard_section_principale_partners_colonne_retro_com" | trans() | raw}}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_payee" | trans() | raw}} </th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_solde" | trans() | raw}} </th>
                                 </tr>
                             </thead>
                             <tbody>
