@@ -54,22 +54,22 @@
                     <div class="card m-2">
                         <div class="card-header text-center">
                             {# Monthly Production per Insurer #}
-                            {{ "company_dashboard_section_principale_tasks_header" | trans() | raw }}
+                            {{ "company_dashboard_section_principale_insurers_header" | trans() | raw }}
                         </div>
                         {# Tableau de production par assureur #}
                         <table class="table table-hover table-sm">
                             <caption class="text-center">
-                                {{ "company_dashboard_section_principale_tasks_caption" | trans() | raw }}
+                                {{ "company_dashboard_section_principale_insurers_caption" | trans() | raw }}
                             </caption>
                             <thead class="table-secondary">
                                 <tr>
-                                    <th scope="col">INSURER</th>
-                                    <th scope="col" class="text-end">GW PREMIUMS</th>
-                                    <th scope="col" class="text-end">NET COM.</th>
-                                    <th scope="col" class="text-end">TAXES</th>
-                                    <th scope="col" class="text-end">GROSS COM.</th>
-                                    <th scope="col" class="text-end">RECEIVED</th>
-                                    <th scope="col" class="text-end">BALANCE</th>
+                                    <th scope="col">{{ "company_dashboard_section_principale_insurers_colonne_assureur" | trans() | raw }}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_insurers_colonne_prime" | trans() | raw }}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_insurers_colonne_net_com" | trans() | raw }}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_insurers_colonne_taxes" | trans() | raw }}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_insurers_colonne_gross_com" | trans() | raw }}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_insurers_colonne_received" | trans() | raw }}</th>
+                                    <th scope="col" class="text-end">{{ "company_dashboard_section_principale_insurers_colonne_balance" | trans() | raw }}</th>
                                 </tr>
                             </thead>
                             <tbody>
