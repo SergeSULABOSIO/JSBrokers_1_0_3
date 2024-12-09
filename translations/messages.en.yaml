@@ -382,6 +382,13 @@ company_dashboard_section_principale_renewals_colonne_client_risk_details: "CLIE
 company_dashboard_section_principale_renewals_colonne_premium: "PREMIUM"
 company_dashboard_section_principale_renewals_colonne_revenue: "REVENUE"
 company_dashboard_section_principale_renewals_colonne_status: "STATUS"
+company_dashboard_section_principale_renewals_policy_ref: "Policy Ref.: "
+company_dashboard_section_principale_renewals_policy_effect: "Effect: "
+company_dashboard_section_principale_renewals_policy_expiry: "Expiry: "
+company_dashboard_section_principale_renewals_policy_at: "At "
+company_dashboard_section_principale_renewals_policy_by: "By "
+company_dashboard_section_principale_renewals_policy_name: "Cover: "
+company_dashboard_section_principale_renewals_policy_endorsement_number: "Endors. N°.: "
 company_dashboard_section_principale_claims_titre: "Claims"
 company_dashboard_section_principale_cashflow_titre: "Cash-flow"
 

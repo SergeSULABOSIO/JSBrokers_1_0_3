@@ -441,17 +441,17 @@
                                             <td>
                                                 <small class="text-dark">
                                                     <strong>
-                                                        Policy ref.: 
+                                                        {{ "company_dashboard_section_principale_renewals_policy_ref" | trans() | raw }}
                                                         <a href="#" class="text-dark" style="text-decoration: none;">
                                                             {{ reposertSet.label }}
                                                         </a>
                                                     </strong>
                                                     <span class="text-muted">
                                                     <ul>
-                                                        <li>Effect date: <strong>{{ reposertSet.effect_date|date("d/m/Y H:i") }}</strong></li>
-                                                        <li>Exp. date: <strong>{{ reposertSet.expiry_date|date("d/m/Y H:i") }}</strong></li>
-                                                        <li>At <a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
-                                                        <li>By <a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
+                                                        <li>{{ "company_dashboard_section_principale_renewals_policy_effect" | trans() | raw }}<strong>{{ reposertSet.effect_date|date("d/m/Y H:i") }}</strong></li>
+                                                        <li>{{ "company_dashboard_section_principale_renewals_policy_expiry" | trans() | raw }}<strong>{{ reposertSet.expiry_date|date("d/m/Y H:i") }}</strong></li>
+                                                        <li>{{ "company_dashboard_section_principale_renewals_policy_at" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
+                                                        <li>{{ "company_dashboard_section_principale_renewals_policy_by" | trans() | raw }}<a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
                                                     </ul>
                                                     </span>
                                                 </small>
@@ -459,10 +459,10 @@
                                             <td>
                                                 <small>
                                                     <strong><a href="#" class="link-dark" style="text-decoration: none;">{{ reposertSet.client }}</a></strong></br>
-                                                    Cover: <a href="#" class="link-secondary">{{ reposertSet.cover }}</a>
+                                                    {{ "company_dashboard_section_principale_renewals_policy_name" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.cover }}</a>
                                                     <ul>
                                                         <li>{{ reposertSet.endorsement }}</li>
-                                                        <li>End. n°{{ reposertSet.endorsement_id }}</li>
+                                                        <li>{{ "company_dashboard_section_principale_renewals_policy_endorsement_number" | trans() | raw }}{{ reposertSet.endorsement_id }}</li>
                                                     </ul>
                                                 </small>
                                             </td>
