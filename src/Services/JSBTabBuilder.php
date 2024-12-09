@@ -14,6 +14,7 @@ use DateInterval;
 use DateTimeImmutable;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Validator\Constraints\Range;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class JSBTabBuilder
 {
@@ -21,6 +22,7 @@ class JSBTabBuilder
     public function __construct(
         private Security $security,
         private ServiceDates $serviceDates,
+        private TranslatorInterface $translatorInterface,
     ) {}
 
     public function newTabProductionPerInsurerPerMonth(): array
@@ -297,6 +299,15 @@ class JSBTabBuilder
                 ->setPotential_commission(rand(0, 150))
                 ->setDays_passed(rand(-3, 10));
 
+            if ($dataSet->getDays_passed() == 0) {
+                $dataSet->setEffect_date_comment($this->translatorInterface->trans("company_dashboard_section_principale_tasks_today"));
+            }
+            if ($dataSet->getDays_passed() < 0) {
+                $dataSet->setEffect_date_comment($this->translatorInterface->trans("company_dashboard_section_principale_tasks_in") . ($dataSet->getDays_passed() * (-1)) . $this->translatorInterface->trans("company_dashboard_section_principale_tasks_days"));
+            }
+            if ($dataSet->getDays_passed() > 0) {
+                $dataSet->setEffect_date_comment($this->translatorInterface->trans("company_dashboard_section_principale_tasks_since") . ($dataSet->getDays_passed()) . $this->translatorInterface->trans("company_dashboard_section_principale_tasks_days"));
+            }
             // dd($dataSet);
             $tabReportSets[] = $dataSet;
             $index++;

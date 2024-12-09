@@ -21,6 +21,7 @@ class TaskReportSet
     public ?Utilisateur $owner = null;
     public ?Utilisateur $excutor = null;
     public ?DateTimeImmutable $effect_date = null;
+    public ?string $effect_date_comment = "";
     public float $potential_premium = 0;
     public float $potential_commission = 0;
     public float $days_passed = 0;
@@ -290,6 +291,26 @@ class TaskReportSet
     public function setLead($lead)
     {
         $this->lead = $lead;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of effect_date_comment
+     */ 
+    public function getEffect_date_comment()
+    {
+        return $this->effect_date_comment;
+    }
+
+    /**
+     * Set the value of effect_date_comment
+     *
+     * @return  self
+     */ 
+    public function setEffect_date_comment($effect_date_comment)
+    {
+        $this->effect_date_comment = $effect_date_comment;
 
         return $this;
     }

@@ -359,7 +359,7 @@
                                                 <small>
                                                     {{ reposertSet.client }}
                                                     <span class="text-muted">
-                                                        Contacts:</br>
+                                                        {{ "company_dashboard_section_principale_tasks_contacts" | trans() | raw }} </br>
                                                         <ul>
                                                             {% for contact in reposertSet.contacts %}
                                                                 <li>{{ contact }}</li>
@@ -382,13 +382,13 @@
                                                     </strong>
                                                     {% set couleur = "text-dark" %}
                                                     {% if reposertSet.days_passed == 0 %}
-                                                        <span class="p-1 rounded text-bg-primary">Today.</span>
+                                                        <span class="p-1 rounded text-bg-primary">{{ reposertSet.effect_date_comment }}</span>
                                                     {% endif %}
                                                     {% if reposertSet.days_passed < 0 %}
-                                                        <span class="p-1 rounded text-bg-success">In {{ reposertSet.days_passed * (-1) }} days.</span>
+                                                        <span class="p-1 rounded text-bg-success">{{ reposertSet.effect_date_comment }}</span>
                                                     {% endif %}
                                                     {% if reposertSet.days_passed > 0 %}
-                                                        <span class="p-1 rounded text-bg-danger">Since {{ reposertSet.days_passed }} days.</span>
+                                                        <span class="p-1 rounded text-bg-danger">{{ reposertSet.effect_date_comment }}</span>
                                                     {% endif %}
                                                 </small>
                                             </td>
