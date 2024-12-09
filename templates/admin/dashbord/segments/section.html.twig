@@ -418,18 +418,20 @@
                 <div class="tab-pane fade" id="nav-renewals" role="tabpanel" aria-labelledby="nav-renewals-tab" tabindex="0">
                     <div class="card m-2">
                         <div class="card-header text-center">
-                            Renewal list
+                            {{ "company_dashboard_section_principale_renewals_header" | trans() | raw}}
                         </div>
                         {# Tableau de taches par utilisateur #}
                         <table class="table table-hover table-sm">
-                            <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
+                            <caption class="text-center">
+                                {{ "company_dashboard_section_principale_renewals_caption" | trans() | raw}}
+                            </caption>
                             <thead class="table-secondary">
                                 <tr>
-                                    <th scope="col" width="280">DESCRIPTION</th>
-                                    <th scope="col">CLIENT & RISK DETAILS</th>
-                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PREMIUM</th>
-                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;REVENUE</th>
-                                    <th scope="col" class="text-center" width="200">STATUS</th>
+                                    <th scope="col" width="280">{{ "company_dashboard_section_principale_renewals_colonne_description" | trans() | raw}}</th>
+                                    <th scope="col">{{ "company_dashboard_section_principale_renewals_colonne_client_risk_details" | trans() | raw}}</th>
+                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_renewals_colonne_premium" | trans() | raw}}</th>
+                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_renewals_colonne_revenue" | trans() | raw}}</th>
+                                    <th scope="col" class="text-center" width="200">{{ "company_dashboard_section_principale_renewals_colonne_status" | trans() | raw}}</th>
                                 </tr>
                             </thead>
                             <tbody>
