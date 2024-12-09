@@ -600,20 +600,22 @@
                 <div class="tab-pane fade" id="nav-cash" role="tabpanel" aria-labelledby="nav-cash-tab" tabindex="0">
                     <div class="card m-2">
                         <div class="card-header text-center">
-                            Cashflow overview
+                            {{ "company_dashboard_section_principale_cashflow_header" | trans() | raw}}
                         </div>
                         {# Tableau de cashflow #}
                         <table class="table table-hover table-sm">
-                            <caption class="text-center">Quelques explications en bas du tableau ici.</caption>
+                            <caption class="text-center">
+                                {{ "company_dashboard_section_principale_cashflow_caption" | trans() | raw}}
+                            </caption>
                             <thead class="table-secondary">
                                 <tr>
-                                    <th scope="col" width="230">DESCRIPTION</th>
-                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;NET DUE</th>
-                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;TAXES</th>
-                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;GROSS</th>
-                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;PAID</th>
-                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;BALANCE</th>
-                                    <th scope="col" class="text-center">STATUS</th>
+                                    <th scope="col" width="230">{{ "company_dashboard_section_principale_cashflow_colonne_description" | trans() | raw}}</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_net_due" | trans() | raw}}</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_taxes" | trans() | raw}}</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_gross" | trans() | raw}}</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_paid" | trans() | raw}}</th>
+                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_balance" | trans() | raw}}</th>
+                                    <th scope="col" class="text-center">{{ "company_dashboard_section_principale_cashflow_colonne_status" | trans() | raw}}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -624,18 +626,18 @@
                                                 <small class="text-dark">
                                                     <span>N°#{{ reposertSet.index }}</span></br>
                                                     <strong>
-                                                        Ref. Invc: 
+                                                        {{ "company_dashboard_section_principale_cashflow_invoice_ref" | trans() | raw}}
                                                         <a href="#" class="text-dark" style="text-decoration: none;">
                                                             {{ reposertSet.invoice_reference }}
                                                         </a>
                                                     </strong>
                                                     <span class="text-muted">
                                                     <ul>
-                                                        <li><strong>Desc.: {{ reposertSet.description }}</strong></li>
-                                                        <li><strong>Due by: {{ reposertSet.debtor }}</strong></li>
-                                                        <li>Sub.: {{ reposertSet.date_submition|date("d/m/Y H:i") }}</li>
-                                                        <li>Pymt.: {{ reposertSet.date_payment|date("d/m/Y H:i") }}</li>
-                                                        <li>By <a href="#" class="text-secondary">{{ reposertSet.user.nom }}</a></li>
+                                                        <li><strong>{{ "company_dashboard_section_principale_cashflow_description" | trans() | raw}}{{ reposertSet.description }}</strong></li>
+                                                        <li><strong>{{ "company_dashboard_section_principale_cashflow_due_by" | trans() | raw}}{{ reposertSet.debtor }}</strong></li>
+                                                        <li>{{ "company_dashboard_section_principale_cashflow_submition_date" | trans() | raw}}{{ reposertSet.date_submition|date("d/m/Y") }}</li>
+                                                        <li>{{ "company_dashboard_section_principale_cashflow_payment_date" | trans() | raw}}{{ reposertSet.date_payment|date("d/m/Y") }}</li>
+                                                        <li>{{ "company_dashboard_section_principale_cashflow_user_name_by" | trans() | raw}}<a href="#" class="text-secondary">{{ reposertSet.user.nom }}</a></li>
                                                     </ul>
                                                     </span>
                                                 </small>
@@ -679,7 +681,7 @@
             </div>
         </div>
         <div class="card-footer text-muted text-center">
-            2 days ago
+            Footer
         </div>
     </div>
 </div>
