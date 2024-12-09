@@ -278,6 +278,7 @@ class JSBTabBuilder
             $dataSet = (new TaskReportSet())
                 ->setType(TaskReportSet::TYPE_ELEMENT)
                 ->setCurrency_code("$")
+                ->setLead("Piste RC Auto pour agents")
                 ->setTask_description("<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks) - 1)] . "</strong>")
                 ->setClient($client)
                 ->setContacts(

@@ -16,6 +16,7 @@ class TaskReportSet
     public string $task_description = "";
     public string $client = "";
     public string $endorsement = "";
+    public string $lead = "";
     public array $contacts = [];
     public ?Utilisateur $owner = null;
     public ?Utilisateur $excutor = null;
@@ -269,6 +270,26 @@ class TaskReportSet
     public function setEndorsement($endorsement)
     {
         $this->endorsement = $endorsement;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of lead
+     */ 
+    public function getLead()
+    {
+        return $this->lead;
+    }
+
+    /**
+     * Set the value of lead
+     *
+     * @return  self
+     */ 
+    public function setLead($lead)
+    {
+        $this->lead = $lead;
 
         return $this;
     }
