@@ -17,10 +17,6 @@ class Taxe
 
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
     #[ORM\Column(length: 255)]
-    private ?string $nom = null;
-
-    #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
-    #[ORM\Column(length: 255)]
     private ?string $description = null;
 
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
@@ -36,13 +32,24 @@ class Taxe
     private ?string $organisation = null;
 
     #[ORM\Column]
-    private ?bool $payableparcourtier = null;
-
-    #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
+
+    #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
+    #[ORM\Column(length: 5)]
+    private ?string $code = null;
+
+    #[ORM\Column]
+    private ?int $redevable = null;
+
+    public const REDEVABLE_COURTIER_ET_CLIENT = 0;
+    public const REDEVABLE_COURTIER = 1;
+    public const REDEVABLE_CLIENT = 2;
+
+    #[ORM\ManyToOne(inversedBy: 'taxes')]
+    private ?Entreprise $entreprise = null;
 
     public function __construct()
     {
@@ -52,18 +59,6 @@ class Taxe
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getNom(): ?string
-    {
-        return $this->nom;
-    }
-
-    public function setNom(string $nom): self
-    {
-        $this->nom = $nom;
-        
-        return $this;
     }
 
     public function getDescription(): ?string
@@ -93,23 +88,12 @@ class Taxe
 
     public function __toString()
     {
-        $txt = " (" . $this->tauxIARD * 100 . "%@IARD & " . $this->tauxVIE * 100 . "%@VIE)";
-        if ($this->tauxIARD == $this->tauxVIE) {
-            $txt = " (" . $this->tauxIARD * 100 . "%)";
-        }
-        return $this->nom . $txt;
-    }
-
-    public function isPayableparcourtier(): ?bool
-    {
-        return $this->payableparcourtier;
-    }
-
-    public function setPayableparcourtier(bool $payableparcourtier): self
-    {
-        $this->payableparcourtier = $payableparcourtier;
-        
-        return $this;
+        // $txt = " (" . $this->tauxIARD * 100 . "%@IARD & " . $this->tauxVIE * 100 . "%@VIE)";
+        // if ($this->tauxIARD == $this->tauxVIE) {
+        //     $txt = " (" . $this->tauxIARD * 100 . "%)";
+        // }
+        // return $this->code . $txt;
+        return $this->code;
     }
 
     public function getCreatedAt(): ?\DateTimeImmutable
@@ -176,6 +160,42 @@ class Taxe
         
         $this->tauxVIE = $tauxVIE;
         
+        return $this;
+    }
+
+    public function getCode(): ?string
+    {
+        return $this->code;
+    }
+
+    public function setCode(string $code): static
+    {
+        $this->code = $code;
+
+        return $this;
+    }
+
+    public function getRedevable(): ?int
+    {
+        return $this->redevable;
+    }
+
+    public function setRedevable(int $redevable): static
+    {
+        $this->redevable = $redevable;
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
+
         return $this;
     }
 }

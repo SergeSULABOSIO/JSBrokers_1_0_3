@@ -77,10 +77,17 @@ class Entreprise
     #[Assert\Valid()]
     private Collection $monnaies;
 
+    /**
+     * @var Collection<int, Taxe>
+     */
+    #[ORM\OneToMany(targetEntity: Taxe::class, mappedBy: 'entreprise')]
+    private Collection $taxes;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
         $this->monnaies = new ArrayCollection();
+        $this->taxes = new ArrayCollection();
     }
 
 
@@ -308,6 +315,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($monnaie->getEntreprise() === $this) {
                 $monnaie->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Taxe>
+     */
+    public function getTaxes(): Collection
+    {
+        return $this->taxes;
+    }
+
+    public function addTax(Taxe $tax): static
+    {
+        if (!$this->taxes->contains($tax)) {
+            $this->taxes->add($tax);
+            $tax->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTax(Taxe $tax): static
+    {
+        if ($this->taxes->removeElement($tax)) {
+            // set the owning side to null (unless already changed)
+            if ($tax->getEntreprise() === $this) {
+                $tax->setEntreprise(null);
             }
         }
 
