@@ -133,14 +133,14 @@ class InviteController extends AbstractController
         $this->manager->remove($invite);
         $this->manager->flush();
 
-        if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
-            $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-            return $this->render("admin/invite/delete.html.twig", [
-                'inviteId' => $inviteId,
-                'messages' => $message,
-                'type' => "success",
-            ]);
-        }
+        // if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
+        //     $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        //     return $this->render("admin/invite/delete.html.twig", [
+        //         'inviteId' => $inviteId,
+        //         'messages' => $message,
+        //         'type' => "success",
+        //     ]);
+        // }
         $this->addFlash("success", $message);
         return $this->redirectToRoute("admin.invite.index");
     }
