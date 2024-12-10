@@ -2,8 +2,11 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Taxe;
+use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Form\TaxeType;
 use App\Repository\TaxeRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -43,13 +46,56 @@ class TaxeController extends AbstractController
         $page = $request->query->getInt("page", 1);
 
         return $this->render('admin/taxe/index.html.twig', [
-            'pageName' => "Taxes",
+            'pageName' => $this->translator->trans("taxe_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'taxes' => $this->taxeRepository->paginateTaxe($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+        ]);
+    }
+
+
+    #[Route('/create/{idEntreprise}', name: 'create')]
+    public function create($idEntreprise, Request $request)
+    {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Taxe */
+        $taxe = new Taxe();
+        //Paramètres par défaut
+        $taxe->setEntreprise($entreprise);
+        $taxe->setCode("");
+        $taxe->setDescription("");
+        $taxe->setOrganisation("");
+        $taxe->setRedevable(Taxe::REDEVABLE_COURTIER);
+        $taxe->setTauxIARD(0);
+        $taxe->setTauxVIE(0);
+
+        $form = $this->createForm(TaxeType::class, $taxe);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->manager->persist($taxe);
+            $this->manager->flush();
+            $this->addFlash("success", $this->translator->trans("taxe_creation_ok", [
+                ":tax" => $taxe->getCode(),
+            ]));
+            return $this->redirectToRoute("admin.taxe.index", [
+                'idEntreprise' => $idEntreprise,
+            ]);
+        }
+        return $this->render('admin/taxe/create.html.twig', [
+            'pageName' => $this->translator->trans("taxe_page_name_new"),
+            'utilisateur' => $user,
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
+            'form' => $form,
         ]);
     }
 }
