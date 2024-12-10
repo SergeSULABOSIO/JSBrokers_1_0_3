@@ -17,7 +17,7 @@
                     <span class="mb-0">{{ "company_menu_bank_accounts" | trans }}</span>
                 </div>
             </a>
-            <a href="{{ path('admin.taxe.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.taxe'? 'active' : '' }}">
+            <a href="{{ path('admin.taxe.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.taxe'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_taxes" | trans }}</span>
                 </div>
