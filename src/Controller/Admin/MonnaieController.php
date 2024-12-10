@@ -3,16 +3,11 @@
 namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
-use App\Entity\Invite;
 use App\Entity\Monnaie;
-use App\Form\InviteType;
 use App\Form\MonnaieType;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
-use App\Constantes\Constantes;
 use App\Constantes\MenuActivator;
-use App\Event\InvitationEvent;
-use Symfony\UX\Turbo\TurboBundle;
 use App\Repository\InviteRepository;
 use App\Repository\MonnaieRepository;
 use App\Repository\EntrepriseRepository;
@@ -23,7 +18,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/monnaie", name: 'admin.monnaie.')]
@@ -153,14 +147,14 @@ class MonnaieController extends AbstractController
         $this->manager->remove($monnaie);
         $this->manager->flush();
 
-        if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
-            $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-            return $this->render("admin/monnaie/delete.html.twig", [
-                'monnaieId' => $monnaieId,
-                'messages' => $message,
-                'type' => "success",
-            ]);
-        }
+        // if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
+        //     $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        //     return $this->render("admin/monnaie/delete.html.twig", [
+        //         'monnaieId' => $monnaieId,
+        //         'messages' => $message,
+        //         'type' => "success",
+        //     ]);
+        // }
         $this->addFlash("success", $message);
         return $this->redirectToRoute("admin.monnaie.index", [
             'idEntreprise' => $idEntreprise,
