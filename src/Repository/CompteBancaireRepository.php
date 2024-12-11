@@ -3,8 +3,9 @@ namespace App\Repository;
 
 
 use App\Entity\CompteBancaire;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\Pagination\PaginationInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<CompteBancaire>
@@ -63,4 +64,22 @@ class CompteBancaireRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+
+public function paginate(int $idEntreprise, int $page): PaginationInterface
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("m")
+                // ->leftJoin("e.invites", "i")
+                ->where('m.entreprise = :entrepriseId')
+                // ->orWhere("i.email = :userEmail")
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                // ->setParameter('userEmail', '' . $user->getEmail() . '')
+                ->orderBy('m.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }
