@@ -39,6 +39,7 @@ class RevenuType extends AbstractType
                 ],
             ])
             ->add('shared', ChoiceType::class, [
+                'help' => "Le montant partage (l'assiette) équivaut au montant après déduction des toutes les taxes.",
                 'label' => "Est-il partageable avec un partenaire?",
                 'expanded' => true,
                 'choices'  => [
