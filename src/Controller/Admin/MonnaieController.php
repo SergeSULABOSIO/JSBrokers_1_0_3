@@ -146,14 +146,6 @@ class MonnaieController extends AbstractController
         $this->manager->remove($monnaie);
         $this->manager->flush();
 
-        // if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
-        //     $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-        //     return $this->render("admin/monnaie/delete.html.twig", [
-        //         'monnaieId' => $monnaieId,
-        //         'messages' => $message,
-        //         'type' => "success",
-        //     ]);
-        // }
         $this->addFlash("success", $message);
         return $this->redirectToRoute("admin.monnaie.index", [
             'idEntreprise' => $idEntreprise,

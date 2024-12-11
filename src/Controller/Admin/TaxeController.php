@@ -13,7 +13,6 @@ use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -150,14 +149,6 @@ class TaxeController extends AbstractController
         $this->manager->remove($taxe);
         $this->manager->flush();
 
-        // if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
-        //     $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-        //     return $this->render("admin/monnaie/delete.html.twig", [
-        //         'monnaieId' => $monnaieId,
-        //         'messages' => $message,
-        //         'type' => "success",
-        //     ]);
-        // }
         $this->addFlash("success", $message);
         return $this->redirectToRoute("admin.taxe.index", [
             'idEntreprise' => $idEntreprise,
