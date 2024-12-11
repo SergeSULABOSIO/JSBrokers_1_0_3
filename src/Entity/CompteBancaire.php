@@ -28,16 +28,6 @@ class CompteBancaire
     #[ORM\ManyToOne(inversedBy: 'compteBancaires')]
     private ?Entreprise $entreprise = null;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $updatedAt = null;
-
-    #[ORM\Column(length: 255)]
-    private ?string $codeMonnaie = null;
-
-
     public function __construct()
     {
     }
@@ -95,56 +85,21 @@ class CompteBancaire
         return $this;
     }
 
+
+    public function __toString()
+    {
+        return $this->intitule . " - " . $this->banque . " - " . $this->numero;
+    }
+
     public function getEntreprise(): ?Entreprise
     {
         return $this->entreprise;
     }
 
-    public function setEntreprise(?Entreprise $entreprise): self
+    public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
 
-        return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): self
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): self
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    public function __toString()
-    {
-        return $this->banque . " - " . $this->numero . " / " . $this->codeMonnaie;
-    }
-
-    public function getCodeMonnaie(): ?string
-    {
-        return $this->codeMonnaie;
-    }
-
-    public function setCodeMonnaie(string $codeMonnaie): self
-    {
-        $this->codeMonnaie = $codeMonnaie;
-        
         return $this;
     }
 }

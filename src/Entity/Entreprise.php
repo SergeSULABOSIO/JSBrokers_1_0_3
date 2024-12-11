@@ -83,11 +83,18 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Taxe::class, mappedBy: 'entreprise')]
     private Collection $taxes;
 
+    /**
+     * @var Collection<int, CompteBancaire>
+     */
+    #[ORM\OneToMany(targetEntity: CompteBancaire::class, mappedBy: 'entreprise')]
+    private Collection $compteBancaires;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
         $this->monnaies = new ArrayCollection();
         $this->taxes = new ArrayCollection();
+        $this->compteBancaires = new ArrayCollection();
     }
 
 
@@ -345,6 +352,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($tax->getEntreprise() === $this) {
                 $tax->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CompteBancaire>
+     */
+    public function getCompteBancaires(): Collection
+    {
+        return $this->compteBancaires;
+    }
+
+    public function addCompteBancaire(CompteBancaire $compteBancaire): static
+    {
+        if (!$this->compteBancaires->contains($compteBancaire)) {
+            $this->compteBancaires->add($compteBancaire);
+            $compteBancaire->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCompteBancaire(CompteBancaire $compteBancaire): static
+    {
+        if ($this->compteBancaires->removeElement($compteBancaire)) {
+            // set the owning side to null (unless already changed)
+            if ($compteBancaire->getEntreprise() === $this) {
+                $compteBancaire->setEntreprise(null);
             }
         }
 
