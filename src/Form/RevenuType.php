@@ -32,6 +32,12 @@ class RevenuType extends AbstractType
                     "Un pourcentage de la prime totale" => Revenu::FORMULE_POURCENTAGE_PRIME_TOTALE,
                 ],
             ])
+            ->add('pourcentage', PercentType::class, [
+                'label' => "Taux / Pourcentage",
+                'attr' => [
+                    'placeholder' => "Pourcentage",
+                ],
+            ])
             ->add('montantflat', FloatType::class, [
                 'label' => "Montant fixe",
                 'attr' => [
@@ -48,7 +54,7 @@ class RevenuType extends AbstractType
                 ],
             ])
             ->add('multipayments', ChoiceType::class, [
-                'label' => "Son paiement peut-il être échelonnée?",
+                'label' => "Son paiement peut-il être échélonné?",
                 'expanded' => true,
                 'choices'  => [
                     "Oui, il peut être payé en plusieurs tranches" => true,
@@ -56,7 +62,7 @@ class RevenuType extends AbstractType
                 ],
             ])
             ->add('redevable', ChoiceType::class, [
-                'label' => "Qui sont-ils redevable?",
+                'label' => "Qui est redevable?",
                 'expanded' => true,
                 'choices'  => [
                     "L'assureur" => Revenu::REDEVABLE_ASSUREUR,
@@ -65,12 +71,7 @@ class RevenuType extends AbstractType
                     "Le réassureur" => Revenu::REDEVABLE_REASSURER,
                 ],
             ])
-            ->add('pourcentage', PercentType::class, [
-                'label' => "Taux / Pourcentage",
-                'attr' => [
-                    'placeholder' => "Pourcentage",
-                ],
-            ])
+            
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
