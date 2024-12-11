@@ -142,7 +142,6 @@ class TaxeController extends AbstractController
     {
         /** @var Taxe $taxe */
         $taxe = $this->taxeRepository->find($idTaxe);
-        $taxeId = $taxe->getId();
 
         $message = $this->translator->trans("taxe_deletion_ok", [
             ":tax" => $taxe->getCode(),

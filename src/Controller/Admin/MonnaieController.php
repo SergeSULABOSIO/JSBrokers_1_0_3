@@ -138,7 +138,6 @@ class MonnaieController extends AbstractController
     {
         /** @var Monnaie $monnaie */
         $monnaie = $this->monnaieRepository->find($idMonnaie);
-        $monnaieId = $monnaie->getId();
 
         $message = $this->translator->trans("currency_deletion_ok", [
             ":currency" => $monnaie->getNom(),
