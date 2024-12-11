@@ -98,4 +98,70 @@ class TaxeController extends AbstractController
             'form' => $form,
         ]);
     }
+
+
+    #[Route('/edit/{idEntreprise}/{idTaxe}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idTaxe, Request $request)
+    {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Taxe */
+        $taxe = $this->taxeRepository->find($idTaxe);
+
+        $form = $this->createForm(TaxeType::class, $taxe);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->manager->persist($taxe); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->flush();
+            $this->addFlash("success", $this->translator->trans("taxe_edition_ok", [
+                ":tax" => $taxe->getCode(),
+            ]));
+            return $this->redirectToRoute("admin.taxe.index", [
+                'idEntreprise' => $idEntreprise,
+            ]);
+        }
+        return $this->render('admin/taxe/edit.html.twig', [
+            'pageName' => $this->translator->trans("taxe_page_name_update", [
+                ":tax" => $taxe->getCode(),
+            ]),
+            'utilisateur' => $user,
+            'taxe' => $taxe,
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
+            'form' => $form,
+        ]);
+    }
+
+    #[Route('/remove/{idEntreprise}/{idTaxe}', name: 'remove', requirements: ['idTaxe' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function remove($idEntreprise, $idTaxe, Request $request)
+    {
+        /** @var Taxe $taxe */
+        $taxe = $this->taxeRepository->find($idTaxe);
+        $taxeId = $taxe->getId();
+
+        $message = $this->translator->trans("taxe_deletion_ok", [
+            ":tax" => $taxe->getCode(),
+        ]);;
+        
+        $this->manager->remove($taxe);
+        $this->manager->flush();
+
+        // if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
+        //     $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
+        //     return $this->render("admin/monnaie/delete.html.twig", [
+        //         'monnaieId' => $monnaieId,
+        //         'messages' => $message,
+        //         'type' => "success",
+        //     ]);
+        // }
+        $this->addFlash("success", $message);
+        return $this->redirectToRoute("admin.taxe.index", [
+            'idEntreprise' => $idEntreprise,
+        ]);
+    }
 }
