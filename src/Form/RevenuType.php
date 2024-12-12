@@ -33,7 +33,7 @@ class RevenuType extends AbstractType
                 ],
             ])
             ->add('pourcentage', PercentType::class, [
-                'label' => "Taux / Pourcentage",
+                'label' => "Pourcentage",
                 'attr' => [
                     'placeholder' => "Pourcentage",
                 ],
@@ -45,11 +45,11 @@ class RevenuType extends AbstractType
                 ],
             ])
             ->add('shared', ChoiceType::class, [
-                'help' => "Le montant partage (l'assiette) équivaut au montant après déduction des toutes les taxes.",
+                'help' => "Le montant partageable (càd l'assiette) équivaut au montant après déduction de toutes les taxes.",
                 'label' => "Est-il partageable avec un partenaire?",
                 'expanded' => true,
                 'choices'  => [
-                    "Oui, il peut être payé en plusieurs tranches." => true,
+                    "Oui, si celui-ci existe." => true,
                     "Non, pas du tout." => false,
                 ],
             ])
@@ -57,12 +57,12 @@ class RevenuType extends AbstractType
                 'label' => "Son paiement peut-il être échélonné?",
                 'expanded' => true,
                 'choices'  => [
-                    "Oui, il peut être payé en plusieurs tranches" => true,
-                    "Non, pas du tout" => false,
+                    "Oui, il peut être payé en plusieurs tranches." => true,
+                    "Non, pas du tout." => false,
                 ],
             ])
             ->add('redevable', ChoiceType::class, [
-                'label' => "Qui est redevable?",
+                'label' => "Qui est débiteur?",
                 'expanded' => true,
                 'choices'  => [
                     "L'assureur" => Revenu::REDEVABLE_ASSUREUR,
