@@ -29,6 +29,12 @@
           {{ "entreprise_bouton_new_revenu" | trans }}
         </a>
     {% endif %}
+    {% if app.current_route starts with 'admin.risque' %}
+        <a href="{{ path('admin.risque.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
+          {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+          {{ "entreprise_bouton_new_risque" | trans }}
+        </a>
+    {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
       <ul class="mb-2 mb-lg-0 btn btn-secondary">
         <li class="nav-item dropdown">

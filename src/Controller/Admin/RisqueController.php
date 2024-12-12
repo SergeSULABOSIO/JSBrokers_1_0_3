@@ -25,7 +25,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/risque", name: 'admin.risque.')]
 #[IsGranted('ROLE_USER')]
-class RevenuController extends AbstractController
+class RisqueController extends AbstractController
 {
     public MenuActivator $activator;
 
