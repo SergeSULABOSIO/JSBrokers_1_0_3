@@ -46,6 +46,9 @@ class Revenu
     #[ORM\ManyToOne(inversedBy: 'revenus')]
     private ?Entreprise $entreprise = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $appliquerPourcentageDuRisque = null;
+
 
     public function getId(): ?int
     {
@@ -144,6 +147,18 @@ class Revenu
     public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
+
+        return $this;
+    }
+
+    public function isAppliquerPourcentageDuRisque(): ?bool
+    {
+        return $this->appliquerPourcentageDuRisque;
+    }
+
+    public function setAppliquerPourcentageDuRisque(?bool $appliquerPourcentageDuRisque): static
+    {
+        $this->appliquerPourcentageDuRisque = $appliquerPourcentageDuRisque;
 
         return $this;
     }

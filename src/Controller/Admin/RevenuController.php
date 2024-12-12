@@ -74,7 +74,8 @@ class RevenuController extends AbstractController
         $revenu->setNom("REVENUE" . (rand(2000, 3000)));
         $revenu->setEntreprise($entreprise);
         $revenu->setFormule(Revenu::FORMULE_POURCENTAGE_PRIME_NETTE);
-        $revenu->setPourcentage(10);
+        $revenu->setPourcentage(0.1);
+        $revenu->setAppliquerPourcentageDuRisque(true);
         $revenu->setMontantflat(0);
         $revenu->setMultipayments(true);
         $revenu->setRedevable(Revenu::REDEVABLE_ASSUREUR);

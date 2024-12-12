@@ -9,6 +9,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 
@@ -38,7 +39,16 @@ class RevenuType extends AbstractType
                     'placeholder' => "Pourcentage",
                 ],
             ])
-            ->add('montantflat', FloatType::class, [
+            ->add('appliquerPourcentageDuRisque', ChoiceType::class, [
+                'help' => "Si vous cochez 'OUI', càd qu'en cas de déifférence, c'est le pourcentage commission spécifique au risque qui sera appliqué.",
+                'label' => "Privilégier le taux de commission (pourcentage) spécifique au risque?",
+                'expanded' => true,
+                'choices'  => [
+                    "Oui, si celui-ci existe et qu'il est différent du pourcentage de ce revenu." => true,
+                    "Non, pas du tout." => false,
+                ],
+            ])
+            ->add('montantflat', NumberType::class, [
                 'label' => "Montant fixe",
                 'attr' => [
                     'placeholder' => "Montant fixe",

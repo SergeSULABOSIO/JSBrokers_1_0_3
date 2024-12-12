@@ -22,6 +22,11 @@
                     <span class="mb-0">{{ "company_menu_taxes" | trans }}</span>
                 </div>
             </a>
+            <a href="{{ path('admin.revenu.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.revenu'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_revenus" | trans }}</span>
+                </div>
+            </a>
             <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.fournisseur'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_fournisseurs" | trans }}</span>
