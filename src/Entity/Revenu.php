@@ -43,6 +43,9 @@ class Revenu
     #[ORM\Column(nullable: true)]
     private ?float $pourcentage = null;
 
+    #[ORM\ManyToOne(inversedBy: 'revenus')]
+    private ?Entreprise $entreprise = null;
+
 
     public function getId(): ?int
     {
@@ -129,6 +132,18 @@ class Revenu
     public function setPourcentage(?float $pourcentage): static
     {
         $this->pourcentage = $pourcentage;
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
 
         return $this;
     }
