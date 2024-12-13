@@ -113,6 +113,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Classeur::class, mappedBy: 'entreprise')]
     private Collection $classeurs;
 
+    /**
+     * @var Collection<int, Assureur>
+     */
+    #[ORM\OneToMany(targetEntity: Assureur::class, mappedBy: 'entreprise')]
+    private Collection $assureurs;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -123,6 +129,7 @@ class Entreprise
         $this->risques = new ArrayCollection();
         $this->chargements = new ArrayCollection();
         $this->classeurs = new ArrayCollection();
+        $this->assureurs = new ArrayCollection();
     }
 
 
@@ -530,6 +537,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($classeur->getEntreprise() === $this) {
                 $classeur->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Assureur>
+     */
+    public function getAssureurs(): Collection
+    {
+        return $this->assureurs;
+    }
+
+    public function addAssureur(Assureur $assureur): static
+    {
+        if (!$this->assureurs->contains($assureur)) {
+            $this->assureurs->add($assureur);
+            $assureur->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAssureur(Assureur $assureur): static
+    {
+        if ($this->assureurs->removeElement($assureur)) {
+            // set the owning side to null (unless already changed)
+            if ($assureur->getEntreprise() === $this) {
+                $assureur->setEntreprise(null);
             }
         }
 
