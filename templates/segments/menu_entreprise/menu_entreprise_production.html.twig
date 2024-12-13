@@ -7,7 +7,7 @@
     </h2>
     <div id="collapsemenuProduction" class="accordion-collapse collapse {{ activator.canShow(3) }}" aria-labelledby="menuProduction" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
-            <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.client' ? 'active' : '' }}">
+            <a href="{{ path('admin.client.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.client' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_clients" | trans }}</span>
                 </div>

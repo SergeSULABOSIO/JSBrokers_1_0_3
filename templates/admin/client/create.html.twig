@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	{{ "client_description" | trans }}
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		{# {{ form(form) }} #}
+		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
+			<div class="card-body">
+				<p>
+					{{ "client_creation_description_message" | trans({
+						":user": utilisateur.nom, 
+						":company": entreprise.nom, 
+					}) | raw}}
+					<hr>
+				</p>
+				{{ form(form) }}
+				</div>
+			</div>
+		</div>	
+	</div>
+{% endblock %}
