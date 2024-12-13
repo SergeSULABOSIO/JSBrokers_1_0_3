@@ -107,6 +107,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Chargement::class, mappedBy: 'entreprise')]
     private Collection $chargements;
 
+    /**
+     * @var Collection<int, Classeur>
+     */
+    #[ORM\OneToMany(targetEntity: Classeur::class, mappedBy: 'entreprise')]
+    private Collection $classeurs;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -116,6 +122,7 @@ class Entreprise
         $this->revenus = new ArrayCollection();
         $this->risques = new ArrayCollection();
         $this->chargements = new ArrayCollection();
+        $this->classeurs = new ArrayCollection();
     }
 
 
@@ -493,6 +500,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($chargement->getEntreprise() === $this) {
                 $chargement->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Classeur>
+     */
+    public function getClasseurs(): Collection
+    {
+        return $this->classeurs;
+    }
+
+    public function addClasseur(Classeur $classeur): static
+    {
+        if (!$this->classeurs->contains($classeur)) {
+            $this->classeurs->add($classeur);
+            $classeur->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeClasseur(Classeur $classeur): static
+    {
+        if ($this->classeurs->removeElement($classeur)) {
+            // set the owning side to null (unless already changed)
+            if ($classeur->getEntreprise() === $this) {
+                $classeur->setEntreprise(null);
             }
         }
 

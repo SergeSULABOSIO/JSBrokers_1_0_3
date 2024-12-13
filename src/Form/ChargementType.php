@@ -54,7 +54,7 @@ class ChargementType extends AbstractType
                     "Non" => false,
                 ],
             ])
-             //Le bouton d'enregistrement / soumission
+            //Le bouton d'enregistrement / soumission
              ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
                 'attr' => [
