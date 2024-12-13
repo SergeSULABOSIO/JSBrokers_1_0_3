@@ -37,7 +37,7 @@
                     <span class="mb-0">{{ "company_menu_insurers" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.chargement'? 'active' : '' }}">
+            <a href="{{ path('admin.chargement.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.chargement'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_chargements" | trans }}</span>
                 </div>
