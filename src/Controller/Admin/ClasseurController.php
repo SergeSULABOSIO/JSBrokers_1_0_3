@@ -8,6 +8,7 @@ use App\Constantes\MenuActivator;
 use App\Entity\Chargement;
 use App\Entity\Classeur;
 use App\Form\ChargementType;
+use App\Form\ClasseurType;
 use App\Repository\ChargementRepository;
 use App\Repository\ClasseurRepository;
 use App\Repository\InviteRepository;
@@ -75,7 +76,7 @@ class ClasseurController extends AbstractController
         $classeur->setNom("");
         $classeur->setEntreprise($entreprise);
 
-        $form = $this->createForm(ChargementType::class, $classeur);
+        $form = $this->createForm(ClasseurType::class, $classeur);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -110,7 +111,7 @@ class ClasseurController extends AbstractController
         /** @var Classeur $classeur */
         $classeur = $this->classeurRepository->find($idClasseur);
 
-        $form = $this->createForm(ChargementType::class, $classeur);
+        $form = $this->createForm(ClasseurType::class, $classeur);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
