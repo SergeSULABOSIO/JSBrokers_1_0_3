@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "chargement_description" | trans }}
+	{{ "classeur_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -19,24 +19,18 @@
 {% block body %}
 	<div class="container">
 		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
+		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 			<div class="card-body">
 				<p>
-					{{ "chargement_form_description" | trans({
+					{{ "classeur_creation_description_message" | trans({
 						":user": utilisateur.nom, 
-						":chargement": chargement.nom, 
-					}) | raw }}
+						":company": entreprise.nom, 
+					}) | raw}}
+					<hr>
 				</p>
-				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
-					<div class = "m-2">
-						{{ form(form, {action: path('admin.chargement.edit', {
-							idEntreprise:entreprise.id,
-							idChargement:chargement.id
-							})}) 
-						}}
-					</div>
-				{# </turbo-frame> #}
+				{{ form(form) }}
+				</div>
 			</div>
-		</div>
+		</div>	
 	</div>
 {% endblock %}

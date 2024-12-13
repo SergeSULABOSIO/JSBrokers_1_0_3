@@ -12,7 +12,7 @@
                     <span class="mb-0">{{ "company_menu_documents" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.classeur'? 'active' : '' }}">
+            <a href="{{ path('admin.classeur.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.classeur'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_classeurs" | trans }}</span>
                 </div>

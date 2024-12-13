@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "chargement_description" | trans }}
+	{{ "classeur_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -22,16 +22,16 @@
 		<div class="card shadow-sm bg-body" style="width: 40rem;">
 			<div class="card-body">
 				<p>
-					{{ "chargement_form_description" | trans({
+					{{ "classeur_form_description" | trans({
 						":user": utilisateur.nom, 
-						":chargement": chargement.nom, 
+						":classeur": classeur.nom, 
 					}) | raw }}
 				</p>
 				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
 					<div class = "m-2">
-						{{ form(form, {action: path('admin.chargement.edit', {
+						{{ form(form, {action: path('admin.classeur.edit', {
 							idEntreprise:entreprise.id,
-							idChargement:chargement.id
+							idClasseur:classeur.id
 							})}) 
 						}}
 					</div>
