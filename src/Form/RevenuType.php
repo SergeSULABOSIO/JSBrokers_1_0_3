@@ -35,6 +35,7 @@ class RevenuType extends AbstractType
             ])
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
+                'scale' => 3,
                 'attr' => [
                     'placeholder' => "Pourcentage",
                 ],
