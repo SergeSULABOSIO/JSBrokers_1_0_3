@@ -101,6 +101,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Risque::class, mappedBy: 'entreprise')]
     private Collection $risques;
 
+    /**
+     * @var Collection<int, Chargement>
+     */
+    #[ORM\OneToMany(targetEntity: Chargement::class, mappedBy: 'entreprise')]
+    private Collection $chargements;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -109,6 +115,7 @@ class Entreprise
         $this->compteBancaires = new ArrayCollection();
         $this->revenus = new ArrayCollection();
         $this->risques = new ArrayCollection();
+        $this->chargements = new ArrayCollection();
     }
 
 
@@ -456,6 +463,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($risque->getEntreprise() === $this) {
                 $risque->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Chargement>
+     */
+    public function getChargements(): Collection
+    {
+        return $this->chargements;
+    }
+
+    public function addChargement(Chargement $chargement): static
+    {
+        if (!$this->chargements->contains($chargement)) {
+            $this->chargements->add($chargement);
+            $chargement->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeChargement(Chargement $chargement): static
+    {
+        if ($this->chargements->removeElement($chargement)) {
+            // set the owning side to null (unless already changed)
+            if ($chargement->getEntreprise() === $this) {
+                $chargement->setEntreprise(null);
             }
         }
 
