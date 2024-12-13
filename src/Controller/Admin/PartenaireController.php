@@ -45,11 +45,11 @@ class PartenaireController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
-        return $this->render('admin/assureur/index.html.twig', [
-            'pageName' => $this->translator->trans("assureur_page_name_new"),
+        return $this->render('admin/partenaire/index.html.twig', [
+            'pageName' => $this->translator->trans("partenaire_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'assureurs' => $this->assureurRepository->paginate($idEntreprise, $page),
+            'partenaires' => $this->partenaireRepository->paginate($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
