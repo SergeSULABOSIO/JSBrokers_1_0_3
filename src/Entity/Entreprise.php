@@ -125,6 +125,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'entreprise')]
     private Collection $clients;
 
+    /**
+     * @var Collection<int, Partenaire>
+     */
+    #[ORM\OneToMany(targetEntity: Partenaire::class, mappedBy: 'entreprise')]
+    private Collection $partenaires;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -137,6 +143,7 @@ class Entreprise
         $this->classeurs = new ArrayCollection();
         $this->assureurs = new ArrayCollection();
         $this->clients = new ArrayCollection();
+        $this->partenaires = new ArrayCollection();
     }
 
 
@@ -604,6 +611,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($client->getEntreprise() === $this) {
                 $client->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Partenaire>
+     */
+    public function getPartenaires(): Collection
+    {
+        return $this->partenaires;
+    }
+
+    public function addPartenaire(Partenaire $partenaire): static
+    {
+        if (!$this->partenaires->contains($partenaire)) {
+            $this->partenaires->add($partenaire);
+            $partenaire->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removePartenaire(Partenaire $partenaire): static
+    {
+        if ($this->partenaires->removeElement($partenaire)) {
+            // set the owning side to null (unless already changed)
+            if ($partenaire->getEntreprise() === $this) {
+                $partenaire->setEntreprise(null);
             }
         }
 
