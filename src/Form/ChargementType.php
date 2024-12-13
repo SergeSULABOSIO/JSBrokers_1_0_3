@@ -11,6 +11,7 @@ use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class ChargementType extends AbstractType
 {
@@ -23,7 +24,7 @@ class ChargementType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
-            ->add('description', TextType::class, [
+            ->add('description', TextareaType::class, [
                 'label' => "Description",
                 'attr' => [
                     'placeholder' => "Description",
@@ -31,12 +32,15 @@ class ChargementType extends AbstractType
             ])
             ->add('montantflat', MoneyType::class, [
                 'label' => "Montant Flat",
+                'currency' => "USD",
+                'grouping' => true,
                 'attr' => [
                     'placeholder' => "Code",
                 ],
             ])
             ->add('tauxSurPrimeNette', PercentType::class, [
                 'label' => "Taux par rapport à la prime nette",
+                'scale' => 3,
                 'attr' => [
                     'placeholder' => "Taux",
                 ],
