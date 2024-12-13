@@ -7,9 +7,11 @@ use App\Entity\Entreprise;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\UrlType;
 
 class AssureurType extends AbstractType
 {
@@ -22,13 +24,13 @@ class AssureurType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
-            ->add('email', TextType::class, [
+            ->add('email', EmailType::class, [
                 'label' => "Email",
                 'attr' => [
                     'placeholder' => "Email",
                 ],
             ])
-            ->add('url', TextType::class, [
+            ->add('url', UrlType::class, [
                 'label' => "Site Internet",
                 'attr' => [
                     'placeholder' => "Site Internet",
