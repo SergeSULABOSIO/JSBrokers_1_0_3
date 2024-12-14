@@ -42,6 +42,9 @@ class Tache
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    #[ORM\ManyToOne(inversedBy: 'taches')]
+    private ?Cotation $cotation = null;
+
     public function __construct()
     {
         $this->feedbacks = new ArrayCollection();
@@ -162,6 +165,18 @@ class Tache
     public function setPiste(?Piste $piste): static
     {
         $this->piste = $piste;
+
+        return $this;
+    }
+
+    public function getCotation(): ?Cotation
+    {
+        return $this->cotation;
+    }
+
+    public function setCotation(?Cotation $cotation): static
+    {
+        $this->cotation = $cotation;
 
         return $this;
     }

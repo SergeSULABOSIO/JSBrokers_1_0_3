@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\AssureurRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AssureurRepository::class)]
@@ -27,6 +29,17 @@ class Assureur
 
     #[ORM\ManyToOne(inversedBy: 'assureurs')]
     private ?Entreprise $entreprise = null;
+
+    /**
+     * @var Collection<int, Cotation>
+     */
+    #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'assureur')]
+    private Collection $cotations;
+
+    public function __construct()
+    {
+        $this->cotations = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -96,5 +109,35 @@ class Assureur
     public function __toString(): string
     {
         return $this->nom;
+    }
+
+    /**
+     * @return Collection<int, Cotation>
+     */
+    public function getCotations(): Collection
+    {
+        return $this->cotations;
+    }
+
+    public function addCotation(Cotation $cotation): static
+    {
+        if (!$this->cotations->contains($cotation)) {
+            $this->cotations->add($cotation);
+            $cotation->setAssureur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCotation(Cotation $cotation): static
+    {
+        if ($this->cotations->removeElement($cotation)) {
+            // set the owning side to null (unless already changed)
+            if ($cotation->getAssureur() === $this) {
+                $cotation->setAssureur(null);
+            }
+        }
+
+        return $this;
     }
 }

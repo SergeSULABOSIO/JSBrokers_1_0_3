@@ -34,6 +34,9 @@ class Tranche
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    #[ORM\ManyToOne(inversedBy: 'tranches')]
+    private ?Cotation $cotation = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -119,6 +122,18 @@ class Tranche
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+    public function getCotation(): ?Cotation
+    {
+        return $this->cotation;
+    }
+
+    public function setCotation(?Cotation $cotation): static
+    {
+        $this->cotation = $cotation;
 
         return $this;
     }

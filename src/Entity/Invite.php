@@ -71,6 +71,12 @@ class Invite
     #[ORM\OneToMany(targetEntity: Avenant::class, mappedBy: 'invite')]
     private Collection $avenants;
 
+    /**
+     * @var Collection<int, Cotation>
+     */
+    #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'invite')]
+    private Collection $cotations;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -80,6 +86,7 @@ class Invite
         $this->documents = new ArrayCollection();
         $this->tranches = new ArrayCollection();
         $this->avenants = new ArrayCollection();
+        $this->cotations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -338,6 +345,36 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($avenant->getInvite() === $this) {
                 $avenant->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Cotation>
+     */
+    public function getCotations(): Collection
+    {
+        return $this->cotations;
+    }
+
+    public function addCotation(Cotation $cotation): static
+    {
+        if (!$this->cotations->contains($cotation)) {
+            $this->cotations->add($cotation);
+            $cotation->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCotation(Cotation $cotation): static
+    {
+        if ($this->cotations->removeElement($cotation)) {
+            // set the owning side to null (unless already changed)
+            if ($cotation->getInvite() === $this) {
+                $cotation->setInvite(null);
             }
         }
 

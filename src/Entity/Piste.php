@@ -51,6 +51,9 @@ class Piste
     #[ORM\Column]
     private ?int $typeAvenant = null;
 
+    #[ORM\Column(length: 255)]
+    private ?string $descriptionDuRisque = null;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
@@ -213,6 +216,18 @@ class Piste
     public function setTypeAvenant(int $typeAvenant): static
     {
         $this->typeAvenant = $typeAvenant;
+
+        return $this;
+    }
+
+    public function getDescriptionDuRisque(): ?string
+    {
+        return $this->descriptionDuRisque;
+    }
+
+    public function setDescriptionDuRisque(string $descriptionDuRisque): static
+    {
+        $this->descriptionDuRisque = $descriptionDuRisque;
 
         return $this;
     }
