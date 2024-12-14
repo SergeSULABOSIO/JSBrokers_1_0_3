@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "535a032998f63f817a0803f81db2fe0c",
+    "content-hash": "2bcfe52d534c705abf8acb76bff2e362",
     "packages": [
         {
             "name": "composer/semver",
@@ -7064,16 +7064,16 @@
         },
         {
             "name": "symfony/ux-autocomplete",
-            "version": "v2.20.0",
+            "version": "v2.22.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/ux-autocomplete.git",
-                "reference": "0bb3e7e3299fc8437f957eb5162303317043a7a8"
+                "reference": "12a298a06dfee5f447ff4a53edb868ac6de214f9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/ux-autocomplete/zipball/0bb3e7e3299fc8437f957eb5162303317043a7a8",
-                "reference": "0bb3e7e3299fc8437f957eb5162303317043a7a8",
+                "url": "https://api.github.com/repos/symfony/ux-autocomplete/zipball/12a298a06dfee5f447ff4a53edb868ac6de214f9",
+                "reference": "12a298a06dfee5f447ff4a53edb868ac6de214f9",
                 "shasum": ""
             },
             "require": {
@@ -7082,8 +7082,7 @@
                 "symfony/deprecation-contracts": "^2.5|^3",
                 "symfony/http-foundation": "^6.3|^7.0",
                 "symfony/http-kernel": "^6.3|^7.0",
-                "symfony/property-access": "^6.3|^7.0",
-                "symfony/string": "^6.3|^7.0"
+                "symfony/property-access": "^6.3|^7.0"
             },
             "conflict": {
                 "doctrine/orm": "2.9.0 || 2.9.1"
@@ -7101,7 +7100,6 @@
                 "symfony/phpunit-bridge": "^6.3|^7.0",
                 "symfony/process": "^6.3|^7.0",
                 "symfony/security-bundle": "^6.3|^7.0",
-                "symfony/security-csrf": "^6.3|^7.0",
                 "symfony/twig-bundle": "^6.3|^7.0",
                 "symfony/uid": "^6.3|^7.0",
                 "twig/twig": "^2.14.7|^3.0.4",
@@ -7111,8 +7109,8 @@
             "type": "symfony-bundle",
             "extra": {
                 "thanks": {
-                    "name": "symfony/ux",
-                    "url": "https://github.com/symfony/ux"
+                    "url": "https://github.com/symfony/ux",
+                    "name": "symfony/ux"
                 }
             },
             "autoload": {
@@ -7136,7 +7134,7 @@
                 "symfony-ux"
             ],
             "support": {
-                "source": "https://github.com/symfony/ux-autocomplete/tree/v2.20.0"
+                "source": "https://github.com/symfony/ux-autocomplete/tree/v2.22.1"
             },
             "funding": [
                 {
@@ -7152,7 +7150,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-09-06T17:27:37+00:00"
+            "time": "2024-12-05T14:25:02+00:00"
         },
         {
             "name": "symfony/ux-chartjs",
