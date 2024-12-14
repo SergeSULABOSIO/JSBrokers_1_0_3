@@ -57,6 +57,9 @@ class Cotation
     #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'cotation')]
     private Collection $tranches;
 
+    #[ORM\ManyToOne(inversedBy: 'cotations')]
+    private ?Piste $piste = null;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
@@ -258,6 +261,18 @@ class Cotation
                 $tranch->setCotation(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getPiste(): ?Piste
+    {
+        return $this->piste;
+    }
+
+    public function setPiste(?Piste $piste): static
+    {
+        $this->piste = $piste;
 
         return $this;
     }

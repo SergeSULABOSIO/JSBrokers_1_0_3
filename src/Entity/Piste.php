@@ -54,9 +54,16 @@ class Piste
     #[ORM\Column(length: 255)]
     private ?string $descriptionDuRisque = null;
 
+    /**
+     * @var Collection<int, Cotation>
+     */
+    #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'piste')]
+    private Collection $cotations;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
+        $this->cotations = new ArrayCollection();
     }
 
 
@@ -228,6 +235,36 @@ class Piste
     public function setDescriptionDuRisque(string $descriptionDuRisque): static
     {
         $this->descriptionDuRisque = $descriptionDuRisque;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Cotation>
+     */
+    public function getCotations(): Collection
+    {
+        return $this->cotations;
+    }
+
+    public function addCotation(Cotation $cotation): static
+    {
+        if (!$this->cotations->contains($cotation)) {
+            $this->cotations->add($cotation);
+            $cotation->setPiste($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCotation(Cotation $cotation): static
+    {
+        if ($this->cotations->removeElement($cotation)) {
+            // set the owning side to null (unless already changed)
+            if ($cotation->getPiste() === $this) {
+                $cotation->setPiste(null);
+            }
+        }
 
         return $this;
     }
