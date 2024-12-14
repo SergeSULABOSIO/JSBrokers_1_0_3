@@ -62,6 +62,9 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, options:['default' => "fr"])]
     private string $locale = "fr";
 
+    #[ORM\ManyToOne(inversedBy: 'connectedUsers')]
+    private ?Entreprise $connectedTo = null;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -266,5 +269,17 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function __toString(): string
     {
         return $this->nom;
+    }
+
+    public function getConnectedTo(): ?Entreprise
+    {
+        return $this->connectedTo;
+    }
+
+    public function setConnectedTo(?Entreprise $connectedTo): static
+    {
+        $this->connectedTo = $connectedTo;
+
+        return $this;
     }
 }

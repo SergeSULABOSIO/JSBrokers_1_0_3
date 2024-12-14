@@ -137,6 +137,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'entreprise')]
     private Collection $contacts;
 
+    /**
+     * @var Collection<int, Utilisateur>
+     */
+    #[ORM\OneToMany(targetEntity: Utilisateur::class, mappedBy: 'connectedTo')]
+    private Collection $connectedUsers;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -151,6 +157,7 @@ class Entreprise
         $this->clients = new ArrayCollection();
         $this->partenaires = new ArrayCollection();
         $this->contacts = new ArrayCollection();
+        $this->connectedUsers = new ArrayCollection();
     }
 
 
@@ -678,6 +685,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($contact->getEntreprise() === $this) {
                 $contact->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Utilisateur>
+     */
+    public function getConnectedUsers(): Collection
+    {
+        return $this->connectedUsers;
+    }
+
+    public function addConnectedUser(Utilisateur $connectedUser): static
+    {
+        if (!$this->connectedUsers->contains($connectedUser)) {
+            $this->connectedUsers->add($connectedUser);
+            $connectedUser->setConnectedTo($this);
+        }
+
+        return $this;
+    }
+
+    public function removeConnectedUser(Utilisateur $connectedUser): static
+    {
+        if ($this->connectedUsers->removeElement($connectedUser)) {
+            // set the owning side to null (unless already changed)
+            if ($connectedUser->getConnectedTo() === $this) {
+                $connectedUser->setConnectedTo(null);
             }
         }
 
