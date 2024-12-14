@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\ClientRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
@@ -30,6 +32,17 @@ class Client
 
     #[ORM\ManyToOne(inversedBy: 'clients')]
     private ?Entreprise $entreprise = null;
+
+    /**
+     * @var Collection<int, Contact>
+     */
+    #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'client')]
+    private Collection $contacts;
+
+    public function __construct()
+    {
+        $this->contacts = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -104,6 +117,36 @@ class Client
     public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Contact>
+     */
+    public function getContacts(): Collection
+    {
+        return $this->contacts;
+    }
+
+    public function addContact(Contact $contact): static
+    {
+        if (!$this->contacts->contains($contact)) {
+            $this->contacts->add($contact);
+            $contact->setClient($this);
+        }
+
+        return $this;
+    }
+
+    public function removeContact(Contact $contact): static
+    {
+        if ($this->contacts->removeElement($contact)) {
+            // set the owning side to null (unless already changed)
+            if ($contact->getClient() === $this) {
+                $contact->setClient(null);
+            }
+        }
 
         return $this;
     }
