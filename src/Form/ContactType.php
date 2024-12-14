@@ -42,12 +42,22 @@ class ContactType extends AbstractType
                 ],
             ])
             ->add('client', EntityType::class, [
+                'label' => "Client",
                 'class' => Client::class,
-                'choice_label' => 'id',
+                'choice_label' => 'nom',
+                'autocomplete' => true,
+                // 'multiple' => false,
+                // 'expanded' => false,
+                // 'by_reference' => false,
+                // 'autocomplete' => true,
+                'attr' => [
+                    'placeholder' => "Client",
+                    // 'class' => "form-control p-2 fs-6",
+                ],
             ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
-                'label' => "entreprise_form_button_save_company",
+                'label' => "Enregistrer",
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],

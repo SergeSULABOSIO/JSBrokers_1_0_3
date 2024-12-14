@@ -2,6 +2,7 @@
 
 namespace App\DTO;
 
+use App\Entity\Assureur;
 use App\Entity\Entreprise;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -17,7 +18,7 @@ class CriteresRechercheDashBordDTO
     private Collection $entreprises;
 
     /**
-     * @var Collection<int, Entreprise>
+     * @var Collection<int, Assureur>
      */
     private Collection $assureurs;
 
@@ -153,20 +154,16 @@ class CriteresRechercheDashBordDTO
         return $this;
     }
 
-    /**
-     * Get entreprise>
-     *
-     * @return  Collection<int,
-     */ 
+    
     public function getAssureurs()
     {
         return $this->assureurs;
     }
 
     /**
-     * Set entreprise>
+     * Set assureur>
      *
-     * @param  Collection<int,  $assureurs  Entreprise>
+     * @param  Collection<int,  $assureurs  Assureur>
      *
      * @return  self
      */ 

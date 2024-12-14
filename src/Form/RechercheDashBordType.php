@@ -9,6 +9,7 @@ use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use App\DTO\CriteresRechercheDashBordDTO;
+use App\Entity\Assureur;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Polyfill\Intl\Icu\IntlDateFormatter;
@@ -20,6 +21,8 @@ use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 class RechercheDashBordType extends AbstractType
 {
 
+    private ?Entreprise $entreprise = null;
+    
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
         private Security $security
@@ -46,10 +49,10 @@ class RechercheDashBordType extends AbstractType
                 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
-            ->add('assureurs', EntrepriseAutocompleteField::class, [
+            ->add('assureurs', AssureurAutocompleteField::class, [
                 'required' => false,
                 'label' => false,
-                'class' => Entreprise::class,
+                'class' => Assureur::class,
                 'choice_label' => "nom",
                 'multiple' => true,
                 'expanded' => false,
@@ -60,7 +63,7 @@ class RechercheDashBordType extends AbstractType
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
-                'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
+                // 'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise($this->entreprise),
             ])
 
             ->add('produits', EntrepriseAutocompleteField::class, [
@@ -122,5 +125,25 @@ class RechercheDashBordType extends AbstractType
         $resolver->setDefaults([
             'data_class' => CriteresRechercheDashBordDTO::class,
         ]);
+    }
+
+    /**
+     * Get the value of entreprise
+     */ 
+    public function getEntreprise()
+    {
+        return $this->entreprise;
+    }
+
+    /**
+     * Set the value of entreprise
+     *
+     * @return  self
+     */ 
+    public function setEntreprise($entreprise)
+    {
+        $this->entreprise = $entreprise;
+
+        return $this;
     }
 }

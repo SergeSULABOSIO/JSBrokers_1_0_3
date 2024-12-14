@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Entity\Entreprise;
 use DateTimeImmutable;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityRepository;
