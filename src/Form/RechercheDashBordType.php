@@ -48,8 +48,6 @@ class RechercheDashBordType extends AbstractType
                     'placeholder' => "company_dashboard_search_form_clients_placeholder",
                     'class' => "form-control p-2 fs-6",
                 ],
-                //une requêt pour filtrer les elements de la liste d'options
-                // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
             ->add('assureurs', AssureurAutocompleteField::class, [
@@ -65,8 +63,6 @@ class RechercheDashBordType extends AbstractType
                     'placeholder' => "company_dashboard_search_form_assureurs_placeholder",
                     'class' => "form-control",
                 ],
-                //une requêt pour filtrer les elements de la liste d'options
-                // 'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise($this->entreprise),
             ])
 
             ->add('produits', RisqueAutocompleteField::class, [
@@ -82,8 +78,6 @@ class RechercheDashBordType extends AbstractType
                     'placeholder' => "company_dashboard_search_form_produits_placeholder",
                     'class' => "form-control",
                 ],
-                //une requêt pour filtrer les elements de la liste d'options
-                // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
             ->add('partenaires', PartenaireAutocompleteField::class, [
@@ -99,8 +93,6 @@ class RechercheDashBordType extends AbstractType
                     'placeholder' => "company_dashboard_search_form_partenaires_placeholder",
                     'class' => "form-control",
                 ],
-                //une requêt pour filtrer les elements de la liste d'options
-                // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
             ->add('dateDebut', DateTimeType::class, [

@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Risque;
+use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
@@ -11,11 +12,17 @@ use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
 #[AsEntityAutocompleteField]
 class RisqueAutocompleteField extends AbstractType
 {
+    public function __construct(
+        private FormListenerFactory $ecouteurFormulaire,
+    ) {}
+    
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'class' => Risque::class,
             'placeholder' => 'Choose a Risque',
+            'choice_label' => 'nom',
+            'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             // 'choice_label' => 'name',
 
             // choose which fields to use in the search

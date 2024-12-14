@@ -9,6 +9,7 @@ use App\Constantes\MenuActivator;
 use App\Form\RechercheDashBordType;
 use App\DTO\CriteresRechercheDashBordDTO;
 use App\Services\JSBTableauDeBordBuilder;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -27,6 +28,7 @@ class EntrepriseDashbordController extends AbstractController
     public function __construct(
         private UrlGeneratorInterface $urlGenerator,
         private TranslatorInterface $translator,
+        private EntityManagerInterface $manager
 
     ) {
         $this->activator = new MenuActivator(-1);
@@ -38,6 +40,13 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+
+        //on signale que le user s'est connecté à cette entreprise
+        $user->setConnectedTo($entreprise);
+        $this->manager->persist($user);
+        $this->manager->flush();
+
+        // dd($user);
 
         //Initialisation du formulaire de recherche
         /** @var CriteresRechercheDashBordDTO */

@@ -60,4 +60,22 @@ class FormListenerFactory
                 ->orderBy('e.id', 'ASC');
         };
     }
+
+    public function setFiltreEntreprise(): callable
+    {
+        return function (EntityRepository $er): QueryBuilder {
+            /** @var Utilisateur $user */
+            $user = $this->security->getUser();
+
+            /** @var Entreprise $entreprise */
+            $entreprise = $user->getConnectedTo();
+
+            // dd($entreprise->getNom());
+
+            return $er->createQueryBuilder('e')
+                ->where('e.entreprise =:eseId')
+                ->setParameter('eseId', $entreprise->getId())
+                ->orderBy('e.id', 'ASC');
+        };
+    }
 }
