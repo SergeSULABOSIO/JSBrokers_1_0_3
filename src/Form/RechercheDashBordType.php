@@ -49,7 +49,7 @@ class RechercheDashBordType extends AbstractType
                 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
-            ->add('assureurs', AssureurAutocompleteField::class, [
+            ->add('assureurs', EntrepriseAutocompleteField::class, [
                 'required' => false,
                 'label' => false,
                 'class' => Assureur::class,
