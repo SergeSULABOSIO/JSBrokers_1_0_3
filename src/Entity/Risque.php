@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\RisqueRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: RisqueRepository::class)]
@@ -35,6 +37,18 @@ class Risque
 
     #[ORM\Column]
     private ?bool $imposable = null;
+
+    /**
+     * @var Collection<int, Piste>
+     */
+    #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'risque')]
+    private Collection $pistes;
+
+
+    public function __construct()
+    {
+        $this->pistes = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -121,6 +135,36 @@ class Risque
     public function setImposable(bool $imposable): static
     {
         $this->imposable = $imposable;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Piste>
+     */
+    public function getPistes(): Collection
+    {
+        return $this->pistes;
+    }
+
+    public function addPiste(Piste $piste): static
+    {
+        if (!$this->pistes->contains($piste)) {
+            $this->pistes->add($piste);
+            $piste->setRisque($this);
+        }
+
+        return $this;
+    }
+
+    public function removePiste(Piste $piste): static
+    {
+        if ($this->pistes->removeElement($piste)) {
+            // set the owning side to null (unless already changed)
+            if ($piste->getRisque() === $this) {
+                $piste->setRisque(null);
+            }
+        }
 
         return $this;
     }

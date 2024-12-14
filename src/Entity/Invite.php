@@ -35,9 +35,16 @@ class Invite
     #[ORM\ManyToOne(inversedBy: 'invites')]
     private ?Utilisateur $utilisateur = null;
 
+    /**
+     * @var Collection<int, Piste>
+     */
+    #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'invite')]
+    private Collection $pistes;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
+        $this->pistes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -113,6 +120,36 @@ class Invite
     public function setUtilisateur(?Utilisateur $utilisateur): static
     {
         $this->utilisateur = $utilisateur;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Piste>
+     */
+    public function getPistes(): Collection
+    {
+        return $this->pistes;
+    }
+
+    public function addPiste(Piste $piste): static
+    {
+        if (!$this->pistes->contains($piste)) {
+            $this->pistes->add($piste);
+            $piste->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removePiste(Piste $piste): static
+    {
+        if ($this->pistes->removeElement($piste)) {
+            // set the owning side to null (unless already changed)
+            if ($piste->getInvite() === $this) {
+                $piste->setInvite(null);
+            }
+        }
 
         return $this;
     }
