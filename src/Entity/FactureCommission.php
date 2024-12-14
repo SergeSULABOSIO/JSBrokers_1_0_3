@@ -42,9 +42,16 @@ class FactureCommission
     #[ORM\Column(length: 255)]
     private ?string $debiteur = null;
 
+    /**
+     * @var Collection<int, Bordereau>
+     */
+    #[ORM\OneToMany(targetEntity: Bordereau::class, mappedBy: 'factureCommission')]
+    private Collection $bordereaux;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
+        $this->bordereaux = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -162,6 +169,36 @@ class FactureCommission
     public function setDebiteur(string $debiteur): static
     {
         $this->debiteur = $debiteur;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Bordereau>
+     */
+    public function getBordereaux(): Collection
+    {
+        return $this->bordereaux;
+    }
+
+    public function addBordereaux(Bordereau $bordereaux): static
+    {
+        if (!$this->bordereaux->contains($bordereaux)) {
+            $this->bordereaux->add($bordereaux);
+            $bordereaux->setFactureCommission($this);
+        }
+
+        return $this;
+    }
+
+    public function removeBordereaux(Bordereau $bordereaux): static
+    {
+        if ($this->bordereaux->removeElement($bordereaux)) {
+            // set the owning side to null (unless already changed)
+            if ($bordereaux->getFactureCommission() === $this) {
+                $bordereaux->setFactureCommission(null);
+            }
+        }
 
         return $this;
     }

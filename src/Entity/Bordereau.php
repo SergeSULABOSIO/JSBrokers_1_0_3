@@ -34,6 +34,9 @@ class Bordereau
     #[ORM\ManyToOne(inversedBy: 'bordereaus')]
     private ?Invite $invite = null;
 
+    #[ORM\ManyToOne(inversedBy: 'bordereaux')]
+    private ?FactureCommission $factureCommission = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -119,6 +122,18 @@ class Bordereau
     public function setInvite(?Invite $invite): static
     {
         $this->invite = $invite;
+
+        return $this;
+    }
+
+    public function getFactureCommission(): ?FactureCommission
+    {
+        return $this->factureCommission;
+    }
+
+    public function setFactureCommission(?FactureCommission $factureCommission): static
+    {
+        $this->factureCommission = $factureCommission;
 
         return $this;
     }
