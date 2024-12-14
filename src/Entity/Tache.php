@@ -18,12 +18,6 @@ class Tache
     #[ORM\Column(length: 255)]
     private ?string $description = null;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $updatedAt = null;
-
     #[ORM\ManyToOne(inversedBy: 'taches')]
     private ?Invite $invite = null;
 
@@ -41,6 +35,12 @@ class Tache
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
     private ?Piste $piste = null;
+
+    #[ORM\Column]
+    private ?\DateTimeImmutable $createdAt = null;
+
+    #[ORM\Column]
+    private ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct()
     {
