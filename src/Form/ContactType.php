@@ -46,6 +46,7 @@ class ContactType extends AbstractType
                 'class' => Client::class,
                 'choice_label' => 'nom',
                 'autocomplete' => true,
+                'required' => false,
                 // 'multiple' => false,
                 // 'expanded' => false,
                 // 'by_reference' => false,
