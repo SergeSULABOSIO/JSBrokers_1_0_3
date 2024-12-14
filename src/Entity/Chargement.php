@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\ChargementRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ChargementRepository::class)]
@@ -30,6 +32,17 @@ class Chargement
     
     #[ORM\ManyToOne(inversedBy: 'chargements')]
     private ?Entreprise $entreprise = null;
+
+    /**
+     * @var Collection<int, ChargementPourPrime>
+     */
+    #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'type')]
+    private Collection $chargementPourPrimes;
+
+    public function __construct()
+    {
+        $this->chargementPourPrimes = new ArrayCollection();
+    }
 
 
     public function getId(): ?int
@@ -112,5 +125,35 @@ class Chargement
     public function __toString(): string
     {
         return $this->nom;
+    }
+
+    /**
+     * @return Collection<int, ChargementPourPrime>
+     */
+    public function getChargementPourPrimes(): Collection
+    {
+        return $this->chargementPourPrimes;
+    }
+
+    public function addChargementPourPrime(ChargementPourPrime $chargementPourPrime): static
+    {
+        if (!$this->chargementPourPrimes->contains($chargementPourPrime)) {
+            $this->chargementPourPrimes->add($chargementPourPrime);
+            $chargementPourPrime->setType($this);
+        }
+
+        return $this;
+    }
+
+    public function removeChargementPourPrime(ChargementPourPrime $chargementPourPrime): static
+    {
+        if ($this->chargementPourPrimes->removeElement($chargementPourPrime)) {
+            // set the owning side to null (unless already changed)
+            if ($chargementPourPrime->getType() === $this) {
+                $chargementPourPrime->setType(null);
+            }
+        }
+
+        return $this;
     }
 }

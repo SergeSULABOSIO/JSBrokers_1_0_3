@@ -48,6 +48,9 @@ class Piste
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste')]
     private Collection $taches;
 
+    #[ORM\Column]
+    private ?int $typeAvenant = null;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
@@ -198,6 +201,18 @@ class Piste
                 $tach->setPiste(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getTypeAvenant(): ?int
+    {
+        return $this->typeAvenant;
+    }
+
+    public function setTypeAvenant(int $typeAvenant): static
+    {
+        $this->typeAvenant = $typeAvenant;
 
         return $this;
     }

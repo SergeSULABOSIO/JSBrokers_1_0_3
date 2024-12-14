@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\RevenuRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: RevenuRepository::class)]
@@ -48,6 +50,17 @@ class Revenu
 
     #[ORM\Column(nullable: true)]
     private ?bool $appliquerPourcentageDuRisque = null;
+
+    /**
+     * @var Collection<int, RevenuPourCourtier>
+     */
+    #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'type')]
+    private Collection $revenuPourCourtiers;
+
+    public function __construct()
+    {
+        $this->revenuPourCourtiers = new ArrayCollection();
+    }
 
 
     public function getId(): ?int
@@ -166,5 +179,35 @@ class Revenu
     public function __toString(): string
     {
         return $this->nom;
+    }
+
+    /**
+     * @return Collection<int, RevenuPourCourtier>
+     */
+    public function getRevenuPourCourtiers(): Collection
+    {
+        return $this->revenuPourCourtiers;
+    }
+
+    public function addRevenuPourCourtier(RevenuPourCourtier $revenuPourCourtier): static
+    {
+        if (!$this->revenuPourCourtiers->contains($revenuPourCourtier)) {
+            $this->revenuPourCourtiers->add($revenuPourCourtier);
+            $revenuPourCourtier->setType($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRevenuPourCourtier(RevenuPourCourtier $revenuPourCourtier): static
+    {
+        if ($this->revenuPourCourtiers->removeElement($revenuPourCourtier)) {
+            // set the owning side to null (unless already changed)
+            if ($revenuPourCourtier->getType() === $this) {
+                $revenuPourCourtier->setType(null);
+            }
+        }
+
+        return $this;
     }
 }
