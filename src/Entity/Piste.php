@@ -15,6 +15,18 @@ class Piste
 
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
+    
+    #[ORM\ManyToOne(inversedBy: 'pistes')]
+    private ?Risque $risque = null;
+
+    #[ORM\ManyToOne(inversedBy: 'pistes')]
+    private ?Invite $invite = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $referencePolice = null;
+
+    #[ORM\ManyToOne(inversedBy: 'pistes')]
+    private ?Client $client = null;
 
     #[ORM\Column(nullable: true)]
     private ?float $primePotentielle = null;
@@ -28,11 +40,6 @@ class Piste
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'pistes')]
-    private ?Risque $risque = null;
-
-    #[ORM\ManyToOne(inversedBy: 'pistes')]
-    private ?Invite $invite = null;
 
     public function getId(): ?int
     {
@@ -126,5 +133,29 @@ class Piste
     public function __toString(): string
     {
         return $this->nom;
+    }
+
+    public function getReferencePolice(): ?string
+    {
+        return $this->referencePolice;
+    }
+
+    public function setReferencePolice(?string $referencePolice): static
+    {
+        $this->referencePolice = $referencePolice;
+
+        return $this;
+    }
+
+    public function getClient(): ?Client
+    {
+        return $this->client;
+    }
+
+    public function setClient(?Client $client): static
+    {
+        $this->client = $client;
+
+        return $this;
     }
 }

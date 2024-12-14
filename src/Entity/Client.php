@@ -42,9 +42,16 @@ class Client
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'client')]
     private Collection $contacts;
 
+    /**
+     * @var Collection<int, Piste>
+     */
+    #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'client')]
+    private Collection $pistes;
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
+        $this->pistes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -157,5 +164,35 @@ class Client
     public function __toString(): string
     {
         return $this->nom;
+    }
+
+    /**
+     * @return Collection<int, Piste>
+     */
+    public function getPistes(): Collection
+    {
+        return $this->pistes;
+    }
+
+    public function addPiste(Piste $piste): static
+    {
+        if (!$this->pistes->contains($piste)) {
+            $this->pistes->add($piste);
+            $piste->setClient($this);
+        }
+
+        return $this;
+    }
+
+    public function removePiste(Piste $piste): static
+    {
+        if ($this->pistes->removeElement($piste)) {
+            // set the owning side to null (unless already changed)
+            if ($piste->getClient() === $this) {
+                $piste->setClient(null);
+            }
+        }
+
+        return $this;
     }
 }
