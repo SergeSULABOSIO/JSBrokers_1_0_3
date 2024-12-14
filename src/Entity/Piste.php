@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\PisteRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PisteRepository::class)]
@@ -20,13 +22,13 @@ class Piste
     private ?Risque $risque = null;
 
     #[ORM\ManyToOne(inversedBy: 'pistes')]
+    private ?Client $client = null;
+
+    #[ORM\ManyToOne(inversedBy: 'pistes')]
     private ?Invite $invite = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $referencePolice = null;
-
-    #[ORM\ManyToOne(inversedBy: 'pistes')]
-    private ?Client $client = null;
 
     #[ORM\Column(nullable: true)]
     private ?float $primePotentielle = null;
@@ -39,6 +41,17 @@ class Piste
 
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
+
+    /**
+     * @var Collection<int, Tache>
+     */
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste')]
+    private Collection $taches;
+
+    public function __construct()
+    {
+        $this->taches = new ArrayCollection();
+    }
 
 
     public function getId(): ?int
@@ -155,6 +168,36 @@ class Piste
     public function setClient(?Client $client): static
     {
         $this->client = $client;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Tache>
+     */
+    public function getTaches(): Collection
+    {
+        return $this->taches;
+    }
+
+    public function addTach(Tache $tach): static
+    {
+        if (!$this->taches->contains($tach)) {
+            $this->taches->add($tach);
+            $tach->setPiste($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTach(Tache $tach): static
+    {
+        if ($this->taches->removeElement($tach)) {
+            // set the owning side to null (unless already changed)
+            if ($tach->getPiste() === $this) {
+                $tach->setPiste(null);
+            }
+        }
 
         return $this;
     }
