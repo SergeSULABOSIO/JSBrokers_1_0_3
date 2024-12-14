@@ -3,19 +3,18 @@
 namespace App\DTO;
 
 use App\Entity\Assureur;
-use App\Entity\Entreprise;
+use App\Entity\Client;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
-use function PHPUnit\Framework\isEmpty;
 
 class CriteresRechercheDashBordDTO
 {
     /**
-     * @var Collection<int, Entreprise>
+     * @var Collection<int, Client>
      */
-    private Collection $entreprises;
+    private Collection $clients;
 
     /**
      * @var Collection<int, Assureur>
@@ -23,12 +22,12 @@ class CriteresRechercheDashBordDTO
     private Collection $assureurs;
 
     /**
-     * @var Collection<int, Entreprise>
+     * @var Collection<int, Produit>
      */
     private Collection $produits;
 
     /**
-     * @var Collection<int, Entreprise>
+     * @var Collection<int, Partenaire>
      */
     private Collection $partenaires;
 
@@ -39,7 +38,7 @@ class CriteresRechercheDashBordDTO
 
     public function __construct()
     {
-        $this->entreprises = new ArrayCollection();
+        $this->clients = new ArrayCollection();
         $this->produits = new ArrayCollection();
         $this->assureurs = new ArrayCollection();
         $this->partenaires = new ArrayCollection();
@@ -119,7 +118,7 @@ class CriteresRechercheDashBordDTO
     /**
      * Set entreprise>
      *
-     * @param  Collection<int,  $partenaires  Entreprise>
+     * @param  Collection<int,  $partenaires  Partenaire>
      *
      * @return  self
      */ 
@@ -141,9 +140,9 @@ class CriteresRechercheDashBordDTO
     }
 
     /**
-     * Set entreprise>
+     * Set produit>
      *
-     * @param  Collection<int,  $produits  Entreprise>
+     * @param  Collection<int,  $produits  Produit>
      *
      * @return  self
      */ 
@@ -175,25 +174,25 @@ class CriteresRechercheDashBordDTO
     }
 
     /**
-     * Get entreprise>
+     * Get client>
      *
      * @return  Collection<int,
      */ 
-    public function getEntreprises()
+    public function getClients()
     {
-        return $this->entreprises;
+        return $this->clients;
     }
 
     /**
-     * Set entreprise>
+     * Set client>
      *
-     * @param  Collection<int,  $entreprises  Entreprise>
+     * @param  Collection<int,  $client  Client>
      *
      * @return  self
      */ 
-    public function setEntreprises(Collection $entreprises)
+    public function setClients(Collection $clients)
     {
-        $this->entreprises = $entreprises;
+        $this->clients = $clients;
 
         return $this;
     }

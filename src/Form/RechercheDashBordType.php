@@ -10,6 +10,9 @@ use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use App\DTO\CriteresRechercheDashBordDTO;
 use App\Entity\Assureur;
+use App\Entity\Client;
+use App\Entity\Partenaire;
+use App\Entity\Risque;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Polyfill\Intl\Icu\IntlDateFormatter;
@@ -32,10 +35,10 @@ class RechercheDashBordType extends AbstractType
     {
 
         $builder
-            ->add('entreprises', EntrepriseAutocompleteField::class, [
+            ->add('clients', ClientAutocompleteField::class, [
                 'required' => false,
                 'label' => false,
-                'class' => Entreprise::class,
+                'class' => Client::class,
                 'choice_label' => "nom",
                 'multiple' => true,
                 'expanded' => false,
@@ -46,10 +49,10 @@ class RechercheDashBordType extends AbstractType
                     'class' => "form-control p-2 fs-6",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
-                'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
+                // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
-            ->add('assureurs', EntrepriseAutocompleteField::class, [
+            ->add('assureurs', AssureurAutocompleteField::class, [
                 'required' => false,
                 'label' => false,
                 'class' => Assureur::class,
@@ -66,11 +69,11 @@ class RechercheDashBordType extends AbstractType
                 // 'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise($this->entreprise),
             ])
 
-            ->add('produits', EntrepriseAutocompleteField::class, [
+            ->add('produits', RisqueAutocompleteField::class, [
                 'required' => false,
                 'label' => false,
-                'class' => Entreprise::class,
-                'choice_label' => "nom",
+                'class' => Risque::class,
+                'choice_label' => "nomComplet",
                 'multiple' => true,
                 'expanded' => false,
                 'by_reference' => false,
@@ -80,13 +83,13 @@ class RechercheDashBordType extends AbstractType
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
-                'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
+                // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
-            ->add('partenaires', EntrepriseAutocompleteField::class, [
+            ->add('partenaires', PartenaireAutocompleteField::class, [
                 'required' => false,
                 'label' => false,
-                'class' => Entreprise::class,
+                'class' => Partenaire::class,
                 'choice_label' => "nom",
                 'multiple' => true,
                 'expanded' => false,
@@ -97,7 +100,7 @@ class RechercheDashBordType extends AbstractType
                     'class' => "form-control",
                 ],
                 //une requêt pour filtrer les elements de la liste d'options
-                'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
+                // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
             ])
 
             ->add('dateDebut', DateTimeType::class, [

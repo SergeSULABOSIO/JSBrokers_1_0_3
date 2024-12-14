@@ -41,18 +41,18 @@ class ContactType extends AbstractType
                     'placeholder' => "Fonction",
                 ],
             ])
-            ->add('entreprise', EntrepriseAutocompleteField::class)
-            ->add('client', ClientAutocompleteField::class)
-            // ->add('client', EntityType::class, [
-            //     'label' => "Client",
-            //     'class' => Client::class,
-            //     'choice_label' => 'nom',
-            //     'autocomplete' => true,
-            //     'required' => false,
-            //     'attr' => [
-            //         'placeholder' => "Client",
-            //     ],
-            // ])
+            // ->add('entreprise', EntrepriseAutocompleteField::class)
+            // ->add('client', ClientAutocompleteField::class)
+            ->add('client', ClientAutocompleteField::class, [
+                'label' => "Client",
+                'class' => Client::class,
+                'choice_label' => 'nom',
+                // 'autocomplete' => true,
+                'required' => false,
+                'attr' => [
+                    'placeholder' => "Client",
+                ],
+            ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
