@@ -47,13 +47,8 @@ class ContactType extends AbstractType
                 'choice_label' => 'nom',
                 'autocomplete' => true,
                 'required' => false,
-                // 'multiple' => false,
-                // 'expanded' => false,
-                // 'by_reference' => false,
-                // 'autocomplete' => true,
                 'attr' => [
                     'placeholder' => "Client",
-                    // 'class' => "form-control p-2 fs-6",
                 ],
             ])
             //Le bouton d'enregistrement / soumission
