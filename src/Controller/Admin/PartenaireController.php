@@ -6,7 +6,9 @@ use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\Assureur;
+use App\Entity\Partenaire;
 use App\Form\AssureurType;
+use App\Form\PartenaireType;
 use App\Repository\AssureurRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -66,26 +68,27 @@ class PartenaireController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Assureur $assureur */
-        $assureur = new Assureur();
+        /** @var Partenaire $partenaire */
+        $partenaire = new Partenaire();
         //Paramètres par défaut
-        $assureur->setEntreprise($entreprise);
+        $partenaire->setPart(0.10);
+        $partenaire->setEntreprise($entreprise);
 
-        $form = $this->createForm(AssureurType::class, $assureur);
+        $form = $this->createForm(PartenaireType::class, $partenaire);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($assureur);
+            $this->manager->persist($partenaire);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("assureur_creation_ok", [
-                ":assureur" => $assureur->getNom(),
+            $this->addFlash("success", $this->translator->trans("partenaire_creation_ok", [
+                ":partenaire" => $partenaire->getNom(),
             ]));
-            return $this->redirectToRoute("admin.assureur.index", [
+            return $this->redirectToRoute("admin.partenaire.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/assureur/create.html.twig', [
-            'pageName' => $this->translator->trans("assureur_page_name_new"),
+        return $this->render('admin/partenaire/create.html.twig', [
+            'pageName' => $this->translator->trans("partenaire_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
@@ -94,8 +97,8 @@ class PartenaireController extends AbstractController
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idAssureur}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idAssureur, Request $request)
+    #[Route('/edit/{idEntreprise}/{idPartenaire}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idPartenaire, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -103,49 +106,49 @@ class PartenaireController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Assureur $assureur */
-        $assureur = $this->assureurRepository->find($idAssureur);
+        /** @var Partenaire $partenaire */
+        $partenaire = $this->partenaireRepository->find($idPartenaire);
 
-        $form = $this->createForm(AssureurType::class, $assureur);
+        $form = $this->createForm(PartenaireType::class, $partenaire);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($assureur); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->persist($partenaire); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("assureur_edition_ok", [
-                ":assureur" => $assureur->getNom(),
+            $this->addFlash("success", $this->translator->trans("partenaire_edition_ok", [
+                ":partenaire" => $partenaire->getNom(),
             ]));
-            return $this->redirectToRoute("admin.assureur.index", [
+            return $this->redirectToRoute("admin.partenaire.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/assureur/edit.html.twig', [
-            'pageName' => $this->translator->trans("assureur_page_name_update", [
-                ":assureur" => $assureur->getNom(),
+        return $this->render('admin/partenaire/edit.html.twig', [
+            'pageName' => $this->translator->trans("partenaire_page_name_update", [
+                ":partenaire" => $partenaire->getNom(),
             ]),
             'utilisateur' => $user,
-            'assureur' => $assureur,
+            'partenaire' => $partenaire,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
         ]);
     }
 
-    #[Route('/remove/{idEntreprise}/{idAssureur}', name: 'remove', requirements: ['idAssureur' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idAssureur, Request $request)
+    #[Route('/remove/{idEntreprise}/{idPartenaire}', name: 'remove', requirements: ['idPartenaire' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function remove($idEntreprise, $idPartenaire, Request $request)
     {
-        /** @var Assureur $assureur */
-        $assureur = $this->assureurRepository->find($idAssureur);
+        /** @var Partenaire $partenaire */
+        $partenaire = $this->partenaireRepository->find($idPartenaire);
 
-        $message = $this->translator->trans("assureur_deletion_ok", [
-            ":assureur" => $assureur->getNom(),
+        $message = $this->translator->trans("partenaire_deletion_ok", [
+            ":partenaire" => $partenaire->getNom(),
         ]);;
         
-        $this->manager->remove($assureur);
+        $this->manager->remove($partenaire);
         $this->manager->flush();
 
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.assureur.index", [
+        return $this->redirectToRoute("admin.partenaire.index", [
             'idEntreprise' => $idEntreprise,
         ]);
     }

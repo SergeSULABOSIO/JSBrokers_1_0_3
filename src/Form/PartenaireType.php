@@ -44,7 +44,7 @@ class PartenaireType extends AbstractType
             ])
             ->add('part', PercentType::class, [
                 'label' => "Part du partenaire",
-                'help' => "Ce pourcentage ne s'appliquera que sur la commission hors taxes (l'assiette partageable).",
+                'help' => "Ce pourcentage ne s'appliquera que sur les commissions hors taxes (l'assiette partageable).",
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Part",
