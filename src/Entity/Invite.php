@@ -77,6 +77,18 @@ class Invite
     #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'invite')]
     private Collection $cotations;
 
+    /**
+     * @var Collection<int, Bordereau>
+     */
+    #[ORM\OneToMany(targetEntity: Bordereau::class, mappedBy: 'invite')]
+    private Collection $bordereaus;
+
+    /**
+     * @var Collection<int, FactureCommission>
+     */
+    #[ORM\OneToMany(targetEntity: FactureCommission::class, mappedBy: 'invite')]
+    private Collection $factureCommissions;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -87,6 +99,8 @@ class Invite
         $this->tranches = new ArrayCollection();
         $this->avenants = new ArrayCollection();
         $this->cotations = new ArrayCollection();
+        $this->bordereaus = new ArrayCollection();
+        $this->factureCommissions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -375,6 +389,66 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($cotation->getInvite() === $this) {
                 $cotation->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Bordereau>
+     */
+    public function getBordereaus(): Collection
+    {
+        return $this->bordereaus;
+    }
+
+    public function addBordereau(Bordereau $bordereau): static
+    {
+        if (!$this->bordereaus->contains($bordereau)) {
+            $this->bordereaus->add($bordereau);
+            $bordereau->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeBordereau(Bordereau $bordereau): static
+    {
+        if ($this->bordereaus->removeElement($bordereau)) {
+            // set the owning side to null (unless already changed)
+            if ($bordereau->getInvite() === $this) {
+                $bordereau->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, FactureCommission>
+     */
+    public function getFactureCommissions(): Collection
+    {
+        return $this->factureCommissions;
+    }
+
+    public function addFactureCommission(FactureCommission $factureCommission): static
+    {
+        if (!$this->factureCommissions->contains($factureCommission)) {
+            $this->factureCommissions->add($factureCommission);
+            $factureCommission->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFactureCommission(FactureCommission $factureCommission): static
+    {
+        if ($this->factureCommissions->removeElement($factureCommission)) {
+            // set the owning side to null (unless already changed)
+            if ($factureCommission->getInvite() === $this) {
+                $factureCommission->setInvite(null);
             }
         }
 

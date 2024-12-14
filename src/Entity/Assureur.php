@@ -36,9 +36,16 @@ class Assureur
     #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'assureur')]
     private Collection $cotations;
 
+    /**
+     * @var Collection<int, Bordereau>
+     */
+    #[ORM\OneToMany(targetEntity: Bordereau::class, mappedBy: 'assureur')]
+    private Collection $bordereaus;
+
     public function __construct()
     {
         $this->cotations = new ArrayCollection();
+        $this->bordereaus = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -135,6 +142,36 @@ class Assureur
             // set the owning side to null (unless already changed)
             if ($cotation->getAssureur() === $this) {
                 $cotation->setAssureur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Bordereau>
+     */
+    public function getBordereaus(): Collection
+    {
+        return $this->bordereaus;
+    }
+
+    public function addBordereau(Bordereau $bordereau): static
+    {
+        if (!$this->bordereaus->contains($bordereau)) {
+            $this->bordereaus->add($bordereau);
+            $bordereau->setAssureur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeBordereau(Bordereau $bordereau): static
+    {
+        if ($this->bordereaus->removeElement($bordereau)) {
+            // set the owning side to null (unless already changed)
+            if ($bordereau->getAssureur() === $this) {
+                $bordereau->setAssureur(null);
             }
         }
 

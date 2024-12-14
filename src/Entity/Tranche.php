@@ -37,6 +37,9 @@ class Tranche
     #[ORM\ManyToOne(inversedBy: 'tranches')]
     private ?Cotation $cotation = null;
 
+    #[ORM\ManyToOne(inversedBy: 'articles')]
+    private ?FactureCommission $factureCommission = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -134,6 +137,18 @@ class Tranche
     public function setCotation(?Cotation $cotation): static
     {
         $this->cotation = $cotation;
+
+        return $this;
+    }
+
+    public function getFactureCommission(): ?FactureCommission
+    {
+        return $this->factureCommission;
+    }
+
+    public function setFactureCommission(?FactureCommission $factureCommission): static
+    {
+        $this->factureCommission = $factureCommission;
 
         return $this;
     }
