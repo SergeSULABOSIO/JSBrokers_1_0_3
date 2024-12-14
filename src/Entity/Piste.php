@@ -15,6 +15,9 @@ class Piste
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $referencePolice = null;
+
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
     
@@ -26,9 +29,6 @@ class Piste
 
     #[ORM\ManyToOne(inversedBy: 'pistes')]
     private ?Invite $invite = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $referencePolice = null;
 
     #[ORM\Column(nullable: true)]
     private ?float $primePotentielle = null;
