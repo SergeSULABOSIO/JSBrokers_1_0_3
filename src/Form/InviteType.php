@@ -12,6 +12,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 
 class InviteType extends AbstractType
 {
@@ -34,6 +35,17 @@ class InviteType extends AbstractType
                     'placeholder' => "invite_form_email_placeholder",
                 ],
             ])
+            ->add('nom', TextType::class, [
+                'label' => "invite_form_nom",
+                'empty_data' => '',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => "invite_form_nom_placeholder",
+                ],
+            ])
+            ->add('assistants', TextType::class)
+            ->add('superviseurs', TextType::class)
+
             ->add('entreprises', EntrepriseAutocompleteField::class, [
                 'label' => "invite_form_company",
                 'class' => Entreprise::class,
