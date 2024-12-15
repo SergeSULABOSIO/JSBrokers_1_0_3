@@ -48,10 +48,17 @@ class FactureCommission
     #[ORM\OneToMany(targetEntity: Bordereau::class, mappedBy: 'factureCommission')]
     private Collection $bordereaux;
 
+    /**
+     * @var Collection<int, Paiement>
+     */
+    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'factureCommission')]
+    private Collection $paiements;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
         $this->bordereaux = new ArrayCollection();
+        $this->paiements = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -197,6 +204,36 @@ class FactureCommission
             // set the owning side to null (unless already changed)
             if ($bordereaux->getFactureCommission() === $this) {
                 $bordereaux->setFactureCommission(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Paiement>
+     */
+    public function getPaiements(): Collection
+    {
+        return $this->paiements;
+    }
+
+    public function addPaiement(Paiement $paiement): static
+    {
+        if (!$this->paiements->contains($paiement)) {
+            $this->paiements->add($paiement);
+            $paiement->setFactureCommission($this);
+        }
+
+        return $this;
+    }
+
+    public function removePaiement(Paiement $paiement): static
+    {
+        if ($this->paiements->removeElement($paiement)) {
+            // set the owning side to null (unless already changed)
+            if ($paiement->getFactureCommission() === $this) {
+                $paiement->setFactureCommission(null);
             }
         }
 

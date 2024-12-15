@@ -89,6 +89,12 @@ class Invite
     #[ORM\OneToMany(targetEntity: FactureCommission::class, mappedBy: 'invite')]
     private Collection $factureCommissions;
 
+    /**
+     * @var Collection<int, Paiement>
+     */
+    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'invite')]
+    private Collection $paiements;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -101,6 +107,7 @@ class Invite
         $this->cotations = new ArrayCollection();
         $this->bordereaus = new ArrayCollection();
         $this->factureCommissions = new ArrayCollection();
+        $this->paiements = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -449,6 +456,36 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($factureCommission->getInvite() === $this) {
                 $factureCommission->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Paiement>
+     */
+    public function getPaiements(): Collection
+    {
+        return $this->paiements;
+    }
+
+    public function addPaiement(Paiement $paiement): static
+    {
+        if (!$this->paiements->contains($paiement)) {
+            $this->paiements->add($paiement);
+            $paiement->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removePaiement(Paiement $paiement): static
+    {
+        if ($this->paiements->removeElement($paiement)) {
+            // set the owning side to null (unless already changed)
+            if ($paiement->getInvite() === $this) {
+                $paiement->setInvite(null);
             }
         }
 
