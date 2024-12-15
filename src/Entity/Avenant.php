@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\AvenantRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AvenantRepository::class)]
@@ -36,6 +38,17 @@ class Avenant
 
     #[ORM\ManyToOne(inversedBy: 'avenants')]
     private ?Invite $invite = null;
+
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'avenant')]
+    private Collection $documents;
+
+    public function __construct()
+    {
+        $this->documents = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -110,6 +123,36 @@ class Avenant
     public function setInvite(?Invite $invite): static
     {
         $this->invite = $invite;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setAvenant($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getAvenant() === $this) {
+                $document->setAvenant(null);
+            }
+        }
 
         return $this;
     }

@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\PaiementRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PaiementRepository::class)]
@@ -36,6 +38,20 @@ class Paiement
 
     #[ORM\ManyToOne(inversedBy: 'paiements')]
     private ?FactureCommission $factureCommission = null;
+
+    #[ORM\ManyToOne(inversedBy: 'paiements')]
+    private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
+
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'paiement')]
+    private Collection $preuves;
+
+    public function __construct()
+    {
+        $this->preuves = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -134,6 +150,48 @@ class Paiement
     public function setFactureCommission(?FactureCommission $factureCommission): static
     {
         $this->factureCommission = $factureCommission;
+
+        return $this;
+    }
+
+    public function getOffreIndemnisationSinistre(): ?OffreIndemnisationSinistre
+    {
+        return $this->offreIndemnisationSinistre;
+    }
+
+    public function setOffreIndemnisationSinistre(?OffreIndemnisationSinistre $offreIndemnisationSinistre): static
+    {
+        $this->offreIndemnisationSinistre = $offreIndemnisationSinistre;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getPreuves(): Collection
+    {
+        return $this->preuves;
+    }
+
+    public function addPreufe(Document $preufe): static
+    {
+        if (!$this->preuves->contains($preufe)) {
+            $this->preuves->add($preufe);
+            $preufe->setPaiement($this);
+        }
+
+        return $this;
+    }
+
+    public function removePreufe(Document $preufe): static
+    {
+        if ($this->preuves->removeElement($preufe)) {
+            // set the owning side to null (unless already changed)
+            if ($preufe->getPaiement() === $this) {
+                $preufe->setPaiement(null);
+            }
+        }
 
         return $this;
     }

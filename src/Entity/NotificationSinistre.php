@@ -60,10 +60,17 @@ class NotificationSinistre
     #[ORM\Column(nullable: true)]
     private ?float $dommage = null;
 
+    /**
+     * @var Collection<int, OffreIndemnisationSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'notification')]
+    private Collection $offreIndemnisationSinistres;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();
         $this->contacts = new ArrayCollection();
+        $this->offreIndemnisationSinistres = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -259,6 +266,36 @@ class NotificationSinistre
     public function setDommage(?float $dommage): static
     {
         $this->dommage = $dommage;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, OffreIndemnisationSinistre>
+     */
+    public function getOffreIndemnisationSinistres(): Collection
+    {
+        return $this->offreIndemnisationSinistres;
+    }
+
+    public function addOffreIndemnisationSinistre(OffreIndemnisationSinistre $offreIndemnisationSinistre): static
+    {
+        if (!$this->offreIndemnisationSinistres->contains($offreIndemnisationSinistre)) {
+            $this->offreIndemnisationSinistres->add($offreIndemnisationSinistre);
+            $offreIndemnisationSinistre->setNotification($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOffreIndemnisationSinistre(OffreIndemnisationSinistre $offreIndemnisationSinistre): static
+    {
+        if ($this->offreIndemnisationSinistres->removeElement($offreIndemnisationSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($offreIndemnisationSinistre->getNotification() === $this) {
+                $offreIndemnisationSinistre->setNotification(null);
+            }
+        }
 
         return $this;
     }

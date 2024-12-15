@@ -107,6 +107,12 @@ class Invite
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'invite')]
     private Collection $notificationSinistres;
 
+    /**
+     * @var Collection<int, OffreIndemnisationSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'invite')]
+    private Collection $offreIndemnisationSinistres;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -122,6 +128,7 @@ class Invite
         $this->paiements = new ArrayCollection();
         $this->pieceSinistres = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
+        $this->offreIndemnisationSinistres = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -560,6 +567,36 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($notificationSinistre->getInvite() === $this) {
                 $notificationSinistre->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, OffreIndemnisationSinistre>
+     */
+    public function getOffreIndemnisationSinistres(): Collection
+    {
+        return $this->offreIndemnisationSinistres;
+    }
+
+    public function addOffreIndemnisationSinistre(OffreIndemnisationSinistre $offreIndemnisationSinistre): static
+    {
+        if (!$this->offreIndemnisationSinistres->contains($offreIndemnisationSinistre)) {
+            $this->offreIndemnisationSinistres->add($offreIndemnisationSinistre);
+            $offreIndemnisationSinistre->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOffreIndemnisationSinistre(OffreIndemnisationSinistre $offreIndemnisationSinistre): static
+    {
+        if ($this->offreIndemnisationSinistres->removeElement($offreIndemnisationSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($offreIndemnisationSinistre->getInvite() === $this) {
+                $offreIndemnisationSinistre->setInvite(null);
             }
         }
 

@@ -31,6 +31,18 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?PieceSinistre $pieceSinistre = null;
 
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
+
+    #[ORM\ManyToOne(inversedBy: 'preuves')]
+    private ?Paiement $paiement = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Cotation $cotation = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Avenant $avenant = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -104,6 +116,54 @@ class Document
     public function setPieceSinistre(?PieceSinistre $pieceSinistre): static
     {
         $this->pieceSinistre = $pieceSinistre;
+
+        return $this;
+    }
+
+    public function getOffreIndemnisationSinistre(): ?OffreIndemnisationSinistre
+    {
+        return $this->offreIndemnisationSinistre;
+    }
+
+    public function setOffreIndemnisationSinistre(?OffreIndemnisationSinistre $offreIndemnisationSinistre): static
+    {
+        $this->offreIndemnisationSinistre = $offreIndemnisationSinistre;
+
+        return $this;
+    }
+
+    public function getPaiement(): ?Paiement
+    {
+        return $this->paiement;
+    }
+
+    public function setPaiement(?Paiement $paiement): static
+    {
+        $this->paiement = $paiement;
+
+        return $this;
+    }
+
+    public function getCotation(): ?Cotation
+    {
+        return $this->cotation;
+    }
+
+    public function setCotation(?Cotation $cotation): static
+    {
+        $this->cotation = $cotation;
+
+        return $this;
+    }
+
+    public function getAvenant(): ?Avenant
+    {
+        return $this->avenant;
+    }
+
+    public function setAvenant(?Avenant $avenant): static
+    {
+        $this->avenant = $avenant;
 
         return $this;
     }

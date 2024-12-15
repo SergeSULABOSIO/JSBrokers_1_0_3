@@ -60,12 +60,19 @@ class Cotation
     #[ORM\ManyToOne(inversedBy: 'cotations')]
     private ?Piste $piste = null;
 
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'cotation')]
+    private Collection $documents;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
         $this->chargements = new ArrayCollection();
         $this->revenus = new ArrayCollection();
         $this->tranches = new ArrayCollection();
+        $this->documents = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -273,6 +280,36 @@ class Cotation
     public function setPiste(?Piste $piste): static
     {
         $this->piste = $piste;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setCotation($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getCotation() === $this) {
+                $document->setCotation(null);
+            }
+        }
 
         return $this;
     }
