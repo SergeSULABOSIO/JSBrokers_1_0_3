@@ -10,6 +10,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class ContactType extends AbstractType
@@ -35,6 +36,17 @@ class ContactType extends AbstractType
                     'placeholder' => "Email",
                 ],
             ])
+            ->add('type', ChoiceType::class, [
+                'label' => "Type",
+                'help' => "Dans quelle catégorie voudriez-vous classer ce contact?",
+                'expanded' => true,
+                'choices'  => [
+                    "Dans l'administration" => Contact::TYPE_CONTACT_ADMINISTRATION,
+                    "Dans la production" => Contact::TYPE_CONTACT_PRODUCTION,
+                    "Dans le sinistre" => Contact::TYPE_CONTACT_SINISTRE,
+                    "Autres" => Contact::TYPE_CONTACT_AUTRES,
+                ],
+            ])
             ->add('fonction', TextType::class, [
                 'label' => "Fonction ou Rôle",
                 'attr' => [
@@ -47,7 +59,6 @@ class ContactType extends AbstractType
                 'label' => "Client",
                 'class' => Client::class,
                 'choice_label' => 'nom',
-                // 'autocomplete' => true,
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Client",
