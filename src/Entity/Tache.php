@@ -51,6 +51,9 @@ class Tache
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'tache')]
     private Collection $documents;
 
+    #[ORM\Column]
+    private ?bool $closed = null;
+
     public function __construct()
     {
         $this->feedbacks = new ArrayCollection();
@@ -214,6 +217,18 @@ class Tache
                 $document->setTache(null);
             }
         }
+
+        return $this;
+    }
+
+    public function isClosed(): ?bool
+    {
+        return $this->closed;
+    }
+
+    public function setClosed(bool $closed): static
+    {
+        $this->closed = $closed;
 
         return $this;
     }

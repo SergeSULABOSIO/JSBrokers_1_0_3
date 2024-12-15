@@ -61,6 +61,12 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Entreprise $entreprise = null;
 
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Piste $piste = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Partenaire $partenaire = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -254,6 +260,30 @@ class Document
     public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
+
+        return $this;
+    }
+
+    public function getPiste(): ?Piste
+    {
+        return $this->piste;
+    }
+
+    public function setPiste(?Piste $piste): static
+    {
+        $this->piste = $piste;
+
+        return $this;
+    }
+
+    public function getPartenaire(): ?Partenaire
+    {
+        return $this->partenaire;
+    }
+
+    public function setPartenaire(?Partenaire $partenaire): static
+    {
+        $this->partenaire = $partenaire;
 
         return $this;
     }

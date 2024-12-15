@@ -60,10 +60,17 @@ class Piste
     #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'piste')]
     private Collection $cotations;
 
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'piste')]
+    private Collection $documents;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
         $this->cotations = new ArrayCollection();
+        $this->documents = new ArrayCollection();
     }
 
 
@@ -263,6 +270,36 @@ class Piste
             // set the owning side to null (unless already changed)
             if ($cotation->getPiste() === $this) {
                 $cotation->setPiste(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setPiste($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getPiste() === $this) {
+                $document->setPiste(null);
             }
         }
 
