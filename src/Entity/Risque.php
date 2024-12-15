@@ -44,10 +44,17 @@ class Risque
     #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'risque')]
     private Collection $pistes;
 
+    /**
+     * @var Collection<int, NotificationSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'risque')]
+    private Collection $notificationSinistres;
+
 
     public function __construct()
     {
         $this->pistes = new ArrayCollection();
+        $this->notificationSinistres = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -172,5 +179,35 @@ class Risque
     public function __toString(): string
     {
         return $this->nomComplet;
+    }
+
+    /**
+     * @return Collection<int, NotificationSinistre>
+     */
+    public function getNotificationSinistres(): Collection
+    {
+        return $this->notificationSinistres;
+    }
+
+    public function addNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if (!$this->notificationSinistres->contains($notificationSinistre)) {
+            $this->notificationSinistres->add($notificationSinistre);
+            $notificationSinistre->setRisque($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if ($this->notificationSinistres->removeElement($notificationSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($notificationSinistre->getRisque() === $this) {
+                $notificationSinistre->setRisque(null);
+            }
+        }
+
+        return $this;
     }
 }

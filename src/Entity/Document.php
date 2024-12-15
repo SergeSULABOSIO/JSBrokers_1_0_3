@@ -28,6 +28,9 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Classeur $classeur = null;
 
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?PieceSinistre $pieceSinistre = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -89,6 +92,18 @@ class Document
     public function setClasseur(?Classeur $classeur): static
     {
         $this->classeur = $classeur;
+
+        return $this;
+    }
+
+    public function getPieceSinistre(): ?PieceSinistre
+    {
+        return $this->pieceSinistre;
+    }
+
+    public function setPieceSinistre(?PieceSinistre $pieceSinistre): static
+    {
+        $this->pieceSinistre = $pieceSinistre;
 
         return $this;
     }

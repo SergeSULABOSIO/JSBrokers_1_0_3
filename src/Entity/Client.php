@@ -48,10 +48,17 @@ class Client
     #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'client')]
     private Collection $pistes;
 
+    /**
+     * @var Collection<int, NotificationSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'assure')]
+    private Collection $notificationSinistres;
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
         $this->pistes = new ArrayCollection();
+        $this->notificationSinistres = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -190,6 +197,36 @@ class Client
             // set the owning side to null (unless already changed)
             if ($piste->getClient() === $this) {
                 $piste->setClient(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, NotificationSinistre>
+     */
+    public function getNotificationSinistres(): Collection
+    {
+        return $this->notificationSinistres;
+    }
+
+    public function addNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if (!$this->notificationSinistres->contains($notificationSinistre)) {
+            $this->notificationSinistres->add($notificationSinistre);
+            $notificationSinistre->setAssure($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if ($this->notificationSinistres->removeElement($notificationSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($notificationSinistre->getAssure() === $this) {
+                $notificationSinistre->setAssure(null);
             }
         }
 

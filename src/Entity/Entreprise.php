@@ -143,6 +143,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Utilisateur::class, mappedBy: 'connectedTo')]
     private Collection $connectedUsers;
 
+    /**
+     * @var Collection<int, ModelePieceSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: ModelePieceSinistre::class, mappedBy: 'entreprise')]
+    private Collection $modelePieceSinistres;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -158,6 +164,7 @@ class Entreprise
         $this->partenaires = new ArrayCollection();
         $this->contacts = new ArrayCollection();
         $this->connectedUsers = new ArrayCollection();
+        $this->modelePieceSinistres = new ArrayCollection();
     }
 
 
@@ -715,6 +722,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($connectedUser->getConnectedTo() === $this) {
                 $connectedUser->setConnectedTo(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ModelePieceSinistre>
+     */
+    public function getModelePieceSinistres(): Collection
+    {
+        return $this->modelePieceSinistres;
+    }
+
+    public function addModelePieceSinistre(ModelePieceSinistre $modelePieceSinistre): static
+    {
+        if (!$this->modelePieceSinistres->contains($modelePieceSinistre)) {
+            $this->modelePieceSinistres->add($modelePieceSinistre);
+            $modelePieceSinistre->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeModelePieceSinistre(ModelePieceSinistre $modelePieceSinistre): static
+    {
+        if ($this->modelePieceSinistres->removeElement($modelePieceSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($modelePieceSinistre->getEntreprise() === $this) {
+                $modelePieceSinistre->setEntreprise(null);
             }
         }
 

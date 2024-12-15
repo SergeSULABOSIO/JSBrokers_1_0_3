@@ -95,6 +95,18 @@ class Invite
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'invite')]
     private Collection $paiements;
 
+    /**
+     * @var Collection<int, PieceSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'invite')]
+    private Collection $pieceSinistres;
+
+    /**
+     * @var Collection<int, NotificationSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'invite')]
+    private Collection $notificationSinistres;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -108,6 +120,8 @@ class Invite
         $this->bordereaus = new ArrayCollection();
         $this->factureCommissions = new ArrayCollection();
         $this->paiements = new ArrayCollection();
+        $this->pieceSinistres = new ArrayCollection();
+        $this->notificationSinistres = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -486,6 +500,66 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($paiement->getInvite() === $this) {
                 $paiement->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, PieceSinistre>
+     */
+    public function getPieceSinistres(): Collection
+    {
+        return $this->pieceSinistres;
+    }
+
+    public function addPieceSinistre(PieceSinistre $pieceSinistre): static
+    {
+        if (!$this->pieceSinistres->contains($pieceSinistre)) {
+            $this->pieceSinistres->add($pieceSinistre);
+            $pieceSinistre->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removePieceSinistre(PieceSinistre $pieceSinistre): static
+    {
+        if ($this->pieceSinistres->removeElement($pieceSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($pieceSinistre->getInvite() === $this) {
+                $pieceSinistre->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, NotificationSinistre>
+     */
+    public function getNotificationSinistres(): Collection
+    {
+        return $this->notificationSinistres;
+    }
+
+    public function addNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if (!$this->notificationSinistres->contains($notificationSinistre)) {
+            $this->notificationSinistres->add($notificationSinistre);
+            $notificationSinistre->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if ($this->notificationSinistres->removeElement($notificationSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($notificationSinistre->getInvite() === $this) {
+                $notificationSinistre->setInvite(null);
             }
         }
 

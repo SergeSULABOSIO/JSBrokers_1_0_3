@@ -31,6 +31,17 @@ class Contact
     #[ORM\ManyToOne(inversedBy: 'contacts')]
     private ?Client $client = null;
 
+    #[ORM\ManyToOne(inversedBy: 'contacts')]
+    private ?NotificationSinistre $notificationSinistre = null;
+
+    #[ORM\Column]
+    private ?int $type = null;
+    public const TYPE_CONTACT_PRODUCTION = 0;
+    public const TYPE_CONTACT_SINISTRE = 1;
+    public const TYPE_CONTACT_ADMINISTRATION = 2;
+    public const TYPE_CONTACT_AUTRES = 3;
+
+
     public function getId(): ?int
     {
         return $this->id;
@@ -111,5 +122,29 @@ class Contact
     public function __toString(): string
     {
         return $this->nom;
+    }
+
+    public function getNotificationSinistre(): ?NotificationSinistre
+    {
+        return $this->notificationSinistre;
+    }
+
+    public function setNotificationSinistre(?NotificationSinistre $notificationSinistre): static
+    {
+        $this->notificationSinistre = $notificationSinistre;
+
+        return $this;
+    }
+
+    public function getType(): ?int
+    {
+        return $this->type;
+    }
+
+    public function setType(int $type): static
+    {
+        $this->type = $type;
+
+        return $this;
     }
 }
