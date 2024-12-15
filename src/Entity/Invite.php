@@ -113,6 +113,24 @@ class Invite
     #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'invite')]
     private Collection $offreIndemnisationSinistres;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $nom = null;
+
+    #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'assistants')]
+    private ?self $invite = null;
+
+    /**
+     * @var Collection<int, self>
+     */
+    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'invite')]
+    private Collection $assistants;
+
+    /**
+     * @var Collection<int, self>
+     */
+    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'invite')]
+    private Collection $superviseurs;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -129,6 +147,8 @@ class Invite
         $this->pieceSinistres = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
         $this->offreIndemnisationSinistres = new ArrayCollection();
+        $this->assistants = new ArrayCollection();
+        $this->superviseurs = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -597,6 +617,90 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($offreIndemnisationSinistre->getInvite() === $this) {
                 $offreIndemnisationSinistre->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
+
+    public function setNom(?string $nom): static
+    {
+        $this->nom = $nom;
+
+        return $this;
+    }
+
+    public function getInvite(): ?self
+    {
+        return $this->invite;
+    }
+
+    public function setInvite(?self $invite): static
+    {
+        $this->invite = $invite;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, self>
+     */
+    public function getAssistants(): Collection
+    {
+        return $this->assistants;
+    }
+
+    public function addAssistant(self $assistant): static
+    {
+        if (!$this->assistants->contains($assistant)) {
+            $this->assistants->add($assistant);
+            $assistant->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAssistant(self $assistant): static
+    {
+        if ($this->assistants->removeElement($assistant)) {
+            // set the owning side to null (unless already changed)
+            if ($assistant->getInvite() === $this) {
+                $assistant->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, self>
+     */
+    public function getSuperviseurs(): Collection
+    {
+        return $this->superviseurs;
+    }
+
+    public function addSuperviseur(self $superviseur): static
+    {
+        if (!$this->superviseurs->contains($superviseur)) {
+            $this->superviseurs->add($superviseur);
+            $superviseur->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSuperviseur(self $superviseur): static
+    {
+        if ($this->superviseurs->removeElement($superviseur)) {
+            // set the owning side to null (unless already changed)
+            if ($superviseur->getInvite() === $this) {
+                $superviseur->setInvite(null);
             }
         }
 
