@@ -22,9 +22,6 @@ class Paiement
     #[ORM\Column(length: 255)]
     private ?string $reference = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $debiteur = null;
-
     #[ORM\Column]
     private ?\DateTimeImmutable $paidAt = null;
 
@@ -77,18 +74,6 @@ class Paiement
     public function setReference(string $reference): static
     {
         $this->reference = $reference;
-
-        return $this;
-    }
-
-    public function getDebiteur(): ?string
-    {
-        return $this->debiteur;
-    }
-
-    public function setDebiteur(string $debiteur): static
-    {
-        $this->debiteur = $debiteur;
 
         return $this;
     }
