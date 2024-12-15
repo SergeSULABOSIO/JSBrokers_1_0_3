@@ -69,7 +69,7 @@ class RechercheDashBordType extends AbstractType
                 'required' => false,
                 'label' => false,
                 'class' => Risque::class,
-                'choice_label' => "nomComplet",
+                // 'choice_label' => "nomComplet",
                 'multiple' => true,
                 'expanded' => false,
                 'by_reference' => false,

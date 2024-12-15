@@ -21,9 +21,8 @@ class RisqueAutocompleteField extends AbstractType
         $resolver->setDefaults([
             'class' => Risque::class,
             'placeholder' => 'Choose a Risque',
-            'choice_label' => 'nom',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-            // 'choice_label' => 'name',
+            'choice_label' => 'nomComplet',
 
             // choose which fields to use in the search
             // if not passed, *all* fields are used
