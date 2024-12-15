@@ -43,6 +43,12 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Avenant $avenant = null;
 
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Tache $tache = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Feedback $feedback = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -164,6 +170,30 @@ class Document
     public function setAvenant(?Avenant $avenant): static
     {
         $this->avenant = $avenant;
+
+        return $this;
+    }
+
+    public function getTache(): ?Tache
+    {
+        return $this->tache;
+    }
+
+    public function setTache(?Tache $tache): static
+    {
+        $this->tache = $tache;
+
+        return $this;
+    }
+
+    public function getFeedback(): ?Feedback
+    {
+        return $this->feedback;
+    }
+
+    public function setFeedback(?Feedback $feedback): static
+    {
+        $this->feedback = $feedback;
 
         return $this;
     }

@@ -45,9 +45,16 @@ class Tache
     #[ORM\ManyToOne(inversedBy: 'taches')]
     private ?Cotation $cotation = null;
 
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'tache')]
+    private Collection $documents;
+
     public function __construct()
     {
         $this->feedbacks = new ArrayCollection();
+        $this->documents = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -177,6 +184,36 @@ class Tache
     public function setCotation(?Cotation $cotation): static
     {
         $this->cotation = $cotation;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setTache($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getTache() === $this) {
+                $document->setTache(null);
+            }
+        }
 
         return $this;
     }
