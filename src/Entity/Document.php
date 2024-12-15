@@ -49,6 +49,18 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Feedback $feedback = null;
 
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Client $client = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Bordereau $bordereau = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?CompteBancaire $compteBancaire = null;
+
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Entreprise $entreprise = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -194,6 +206,54 @@ class Document
     public function setFeedback(?Feedback $feedback): static
     {
         $this->feedback = $feedback;
+
+        return $this;
+    }
+
+    public function getClient(): ?Client
+    {
+        return $this->client;
+    }
+
+    public function setClient(?Client $client): static
+    {
+        $this->client = $client;
+
+        return $this;
+    }
+
+    public function getBordereau(): ?Bordereau
+    {
+        return $this->bordereau;
+    }
+
+    public function setBordereau(?Bordereau $bordereau): static
+    {
+        $this->bordereau = $bordereau;
+
+        return $this;
+    }
+
+    public function getCompteBancaire(): ?CompteBancaire
+    {
+        return $this->compteBancaire;
+    }
+
+    public function setCompteBancaire(?CompteBancaire $compteBancaire): static
+    {
+        $this->compteBancaire = $compteBancaire;
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
 
         return $this;
     }

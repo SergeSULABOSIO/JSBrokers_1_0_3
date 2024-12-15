@@ -149,6 +149,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: ModelePieceSinistre::class, mappedBy: 'entreprise')]
     private Collection $modelePieceSinistres;
 
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'entreprise')]
+    private Collection $documents;
+
     public function __construct()
     {
         $this->invites = new ArrayCollection();
@@ -165,6 +171,7 @@ class Entreprise
         $this->contacts = new ArrayCollection();
         $this->connectedUsers = new ArrayCollection();
         $this->modelePieceSinistres = new ArrayCollection();
+        $this->documents = new ArrayCollection();
     }
 
 
@@ -752,6 +759,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($modelePieceSinistre->getEntreprise() === $this) {
                 $modelePieceSinistre->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getEntreprise() === $this) {
+                $document->setEntreprise(null);
             }
         }
 

@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\BordereauRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: BordereauRepository::class)]
@@ -36,6 +38,17 @@ class Bordereau
 
     #[ORM\ManyToOne(inversedBy: 'bordereaux')]
     private ?FactureCommission $factureCommission = null;
+
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'bordereau')]
+    private Collection $documents;
+
+    public function __construct()
+    {
+        $this->documents = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -134,6 +147,36 @@ class Bordereau
     public function setFactureCommission(?FactureCommission $factureCommission): static
     {
         $this->factureCommission = $factureCommission;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setBordereau($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getBordereau() === $this) {
+                $document->setBordereau(null);
+            }
+        }
 
         return $this;
     }

@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\CompteBancaireRepository;
 
@@ -28,8 +30,15 @@ class CompteBancaire
     #[ORM\ManyToOne(inversedBy: 'compteBancaires')]
     private ?Entreprise $entreprise = null;
 
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'compteBancaire')]
+    private Collection $documents;
+
     public function __construct()
     {
+        $this->documents = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -99,6 +108,36 @@ class CompteBancaire
     public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setCompteBancaire($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getCompteBancaire() === $this) {
+                $document->setCompteBancaire(null);
+            }
+        }
 
         return $this;
     }

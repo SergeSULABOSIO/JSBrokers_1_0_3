@@ -54,11 +54,18 @@ class Client
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'assure')]
     private Collection $notificationSinistres;
 
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'client')]
+    private Collection $documents;
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
         $this->pistes = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
+        $this->documents = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -227,6 +234,36 @@ class Client
             // set the owning side to null (unless already changed)
             if ($notificationSinistre->getAssure() === $this) {
                 $notificationSinistre->setAssure(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Document>
+     */
+    public function getDocuments(): Collection
+    {
+        return $this->documents;
+    }
+
+    public function addDocument(Document $document): static
+    {
+        if (!$this->documents->contains($document)) {
+            $this->documents->add($document);
+            $document->setClient($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDocument(Document $document): static
+    {
+        if ($this->documents->removeElement($document)) {
+            // set the owning side to null (unless already changed)
+            if ($document->getClient() === $this) {
+                $document->setClient(null);
             }
         }
 
