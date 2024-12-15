@@ -260,7 +260,7 @@ class Invite
 
     public function __toString(): string
     {
-        return $this->email;
+        return $this->nom . " (" . $this->email . ")";
     }
 
     /**
