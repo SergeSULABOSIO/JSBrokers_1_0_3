@@ -43,8 +43,20 @@ class InviteType extends AbstractType
                     'placeholder' => "invite_form_nom_placeholder",
                 ],
             ])
-            ->add('assistants', TextType::class)
-            ->add('superviseurs', TextType::class)
+            ->add('assistants', InviteAutocompleteField::class, [
+                'label' => "invite_form_assistants",
+                'help' => "invite_form_assistants_help",
+                'multiple' => true,
+                'expanded' => false,
+                'by_reference' => false,
+            ])
+            ->add('superviseurs', InviteAutocompleteField::class, [
+                'label' => "invite_form_superviseurs",
+                'help' => "invite_form_superviseurs_help",
+                'multiple' => true,
+                'expanded' => false,
+                'by_reference' => false,
+            ])
 
             ->add('entreprises', EntrepriseAutocompleteField::class, [
                 'label' => "invite_form_company",
