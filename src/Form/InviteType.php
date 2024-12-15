@@ -48,12 +48,14 @@ class InviteType extends AbstractType
                 'help' => "invite_form_assistants_help",
                 'multiple' => true,
                 'expanded' => false,
+                'required' => false,
                 'by_reference' => false,
             ])
             ->add('superviseurs', InviteAutocompleteField::class, [
                 'label' => "invite_form_superviseurs",
                 'help' => "invite_form_superviseurs_help",
                 'multiple' => true,
+                'required' => false,
                 'expanded' => false,
                 'by_reference' => false,
             ])
