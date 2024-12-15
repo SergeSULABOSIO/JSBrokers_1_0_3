@@ -51,14 +51,6 @@ class InviteType extends AbstractType
                 'required' => false,
                 'by_reference' => false,
             ])
-            ->add('superviseurs', InviteAutocompleteField::class, [
-                'label' => "invite_form_superviseurs",
-                'help' => "invite_form_superviseurs_help",
-                'multiple' => true,
-                'required' => false,
-                'expanded' => false,
-                'by_reference' => false,
-            ])
 
             ->add('entreprises', EntrepriseAutocompleteField::class, [
                 'label' => "invite_form_company",

@@ -125,12 +125,6 @@ class Invite
     #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'invite')]
     private Collection $assistants;
 
-    /**
-     * @var Collection<int, self>
-     */
-    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'invite')]
-    private Collection $superviseurs;
-
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -148,7 +142,6 @@ class Invite
         $this->notificationSinistres = new ArrayCollection();
         $this->offreIndemnisationSinistres = new ArrayCollection();
         $this->assistants = new ArrayCollection();
-        $this->superviseurs = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -671,36 +664,6 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($assistant->getInvite() === $this) {
                 $assistant->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, self>
-     */
-    public function getSuperviseurs(): Collection
-    {
-        return $this->superviseurs;
-    }
-
-    public function addSuperviseur(self $superviseur): static
-    {
-        if (!$this->superviseurs->contains($superviseur)) {
-            $this->superviseurs->add($superviseur);
-            $superviseur->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removeSuperviseur(self $superviseur): static
-    {
-        if ($this->superviseurs->removeElement($superviseur)) {
-            // set the owning side to null (unless already changed)
-            if ($superviseur->getInvite() === $this) {
-                $superviseur->setInvite(null);
             }
         }
 
