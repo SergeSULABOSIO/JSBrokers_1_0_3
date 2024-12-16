@@ -12,11 +12,13 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class EntrepriseType extends AbstractType
 {
     public function __construct(
-        private FormListenerFactory $ecouteurFormulaire
+        private FormListenerFactory $ecouteurFormulaire,
+        private TranslatorInterface $translatorInterface
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -81,8 +83,8 @@ class EntrepriseType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-monnaies',
-                    'data-form-collection-monnaies-add-label-value' => 'Ajouter',
-                    'data-form-collection-monnaies-delete-label-value' => 'Supprimer',
+                    'data-form-collection-monnaies-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
+                    'data-form-collection-monnaies-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
                 ],
             ])
             //Le bouton d'enregistrement / soumission

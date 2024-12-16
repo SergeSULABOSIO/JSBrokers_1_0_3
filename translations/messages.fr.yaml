@@ -424,4 +424,6 @@ company_dashboard_section_principale_cashflow_due_by: "Dû par: "
 company_dashboard_section_principale_cashflow_submition_date: "Soum.: "
 company_dashboard_section_principale_cashflow_payment_date: "Paiemt.: "
 company_dashboard_section_principale_cashflow_user_name_by: "Par "
+commom_add: "Ajouter"
+commom_delete: "Supprimer"
 

@@ -13,7 +13,7 @@ export default class extends Controller {
         const btnAjouter = document.createElement("button");
         btnAjouter.setAttribute('class', "btn btn-secondary");
         btnAjouter.setAttribute('type', "button");
-        btnAjouter.innerText = this.addLabelValue || "Ajouter un élement";
+        btnAjouter.innerHTML = this.addLabelValue || "Add";
         btnAjouter.addEventListener('click', this.addElement);
         
         //Pour chaque element de la collection
@@ -34,7 +34,7 @@ export default class extends Controller {
         const btnSupprimer = document.createElement("button");
         btnSupprimer.setAttribute('class', "btn btn-danger mt-2");
         btnSupprimer.setAttribute('type', "button");
-        btnSupprimer.innerText = this.deleteLabelValue || "Supprimer";
+        btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();

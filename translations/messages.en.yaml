@@ -424,6 +424,8 @@ company_dashboard_section_principale_cashflow_due_by: "Due by: "
 company_dashboard_section_principale_cashflow_submition_date: "Sub.: "
 company_dashboard_section_principale_cashflow_payment_date: "Pymt.: "
 company_dashboard_section_principale_cashflow_user_name_by: "By "
+commom_add: "Add"
+commom_delete: "Delete"
 
 
 
