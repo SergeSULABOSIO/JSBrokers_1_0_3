@@ -48,12 +48,12 @@ export default class extends Controller {
     addElement = (e) => {
         e.preventDefault();
         // console.log('On vient de cliquer sur le bouton "Ajouter un élement".' + e);
-        const element = document.createRange().createContextualFragment(
+        const elementPrototype = document.createRange().createContextualFragment(
             this.element.dataset['prototype'].replaceAll('__name__', this.index)
         ).firstElementChild;
-        element.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
-        this.addDeleteButton(element);
+        elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
+        this.addDeleteButton(elementPrototype);
         this.index++;
-        e.currentTarget.insertAdjacentElement("beforebegin", element);
+        e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);
     }
 }

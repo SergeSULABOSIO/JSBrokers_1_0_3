@@ -69,6 +69,7 @@ class EntrepriseType extends AbstractType
                 'required' => false,
                 
             ])
+            //les collections des paramètres de l'entreprise. Paramètres que tous les utlisateurs utilisent
             ->add('monnaies', CollectionType::class, [
                 'label' => "entreprise_form_label_currencies",
                 'entry_type' => MonnaieType::class,
@@ -80,7 +81,7 @@ class EntrepriseType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-monnaies',
-                    'data-form-collection-monnaies-add-label-value' => 'Ajouter Une Autre Monnaie',
+                    'data-form-collection-monnaies-add-label-value' => 'Ajouter',
                     'data-form-collection-monnaies-delete-label-value' => 'Supprimer',
                 ],
             ])
