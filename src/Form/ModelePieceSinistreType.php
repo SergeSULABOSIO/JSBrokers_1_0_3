@@ -9,6 +9,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
@@ -27,6 +28,15 @@ class ModelePieceSinistreType extends AbstractType
                 'label' => "model_piece_sinistre_form_label_description",
                 'attr' => [
                     'placeholder' => "model_piece_sinistre_form_label_description_placeholder",
+                ],
+            ])
+            ->add('obligatoire', ChoiceType::class, [
+                'label' => "Est-elle une pièce obligatoire?",
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Oui" => true,
+                    "Non" => false,
                 ],
             ])
             ->add('enregistrer', SubmitType::class, [

@@ -30,6 +30,9 @@ class ModelePieceSinistre
     #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'type')]
     private Collection $pieceSinistres;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $obligatoire = null;
+
     public function __construct()
     {
         $this->pieceSinistres = new ArrayCollection();
@@ -102,6 +105,18 @@ class ModelePieceSinistre
                 $pieceSinistre->setType(null);
             }
         }
+
+        return $this;
+    }
+
+    public function isObligatoire(): ?bool
+    {
+        return $this->obligatoire;
+    }
+
+    public function setObligatoire(?bool $obligatoire): static
+    {
+        $this->obligatoire = $obligatoire;
 
         return $this;
     }
