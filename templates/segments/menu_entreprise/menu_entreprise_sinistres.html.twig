@@ -7,6 +7,11 @@
     </h2>
     <div id="collapsemenuSinistre" class="accordion-collapse collapse {{ activator.canShow(4) }}" aria-labelledby="menuSinistre" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
+            <a href="{{ path('admin.modelepiecesinistre.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.modelepiecesinistre'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_modelepiecesinistre" | trans }}</span>
+                </div>
+            </a>
             <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_victims" | trans }}</span>
