@@ -18,11 +18,11 @@ export default class extends Controller {
         
         //Pour chaque element de la collection
         this.element.childNodes.forEach(elementDeLaCollection => {
-            elementDeLaCollection.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
+            elementDeLaCollection.setAttribute('class', "border shadow rounded border-secondary p-3 mb-2 bg-white");
             this.addDeleteButton(elementDeLaCollection);
         });
         this.element.append(btnAjouter);
-        this.element.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-light");
+        this.element.setAttribute('class', "border border-0 rounded p-3 mb-2 bg-light");
     }
 
     

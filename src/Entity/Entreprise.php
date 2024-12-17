@@ -86,7 +86,7 @@ class Entreprise
     /**
      * @var Collection<int, CompteBancaire>
      */
-    #[ORM\OneToMany(targetEntity: CompteBancaire::class, mappedBy: 'entreprise')]
+    #[ORM\OneToMany(targetEntity: CompteBancaire::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
     private Collection $compteBancaires;
 
     /**

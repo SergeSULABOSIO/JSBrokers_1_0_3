@@ -2,6 +2,7 @@
 
 namespace App\Form;
 
+use App\Entity\CompteBancaire;
 use App\Entity\Entreprise;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
@@ -82,9 +83,24 @@ class EntrepriseType extends AbstractType
                     'label' => false,
                 ],
                 'attr' => [
-                    'data-controller' => 'form-collection-monnaies',
-                    'data-form-collection-monnaies-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
-                    'data-form-collection-monnaies-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
+            ->add('compteBancaires', CollectionType::class, [
+                'label' => "entreprise_form_label_comptes",
+                'entry_type' => CompteBancaireType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
                 ],
             ])
             //Le bouton d'enregistrement / soumission
