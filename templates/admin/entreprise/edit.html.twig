@@ -34,8 +34,6 @@
 					{% endif %}
 				</p>
 				<hr>
-				
-				************************
 				{# Tableau d'onglets #}
 				{# Barre de navigation #}
 				{{ form_start(form) }}
@@ -56,8 +54,8 @@
 					</div>
 				</nav>
 				{# Contenu de chaque Onglet #}
-				<div class="tab-content mb-3 " id="nav-tabContent">
-					<div class="tab-pane p-2 fade table-responsive  show active" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab" tabindex="0">
+				<div class="tab-content mb-3 p-2" id="nav-tabContent">
+					<div class="tab-pane fade show active" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab" tabindex="0">
 						<div class="row">
 							<div class="col">
 								{{ form_row(form.nom) }}
@@ -69,40 +67,39 @@
 							</div>
 						</div>
 						<div class="row">
-							<div class="col">
+							<div class="col-md">
 								{{ form_row(form.adresse) }}
 							</div>
-							<div class="col" id="some-custom-id">
+							<div class="col-md">
 								{{ form_row(form.telephone) }}
 							</div>
 						</div>
 						<div class="row">
-							<div class="col">
+							<div class="col-md">
 								{{ form_row(form.licence) }}
 							</div>
-							<div class="col" id="some-custom-id">
+							<div class="col-md">
 								{{ form_row(form.rccm) }}
 							</div>
 						</div>
 						<div class="row">
-							<div class="col">
+							<div class="col-md">
 								{{ form_row(form.idnat) }}
 							</div>
-							<div class="col" id="some-custom-id">
+							<div class="col-md">
 								{{ form_row(form.numimpot) }}
 							</div>
 						</div>
 					</div>
-					<div class="tab-pane p-2 fade table-responsive" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
+					<div class="tab-pane fade table-responsive" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
 						{{ form_widget(form.monnaies) }}
 					</div>
-					<div class="tab-pane p-2 fade table-responsive" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
+					<div class="tab-pane fade table-responsive" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
 						Contenu Comptes
 					</div>
 				</div>
 				{{ form_widget(form.enregistrer) }}
 				{{ form_end(form) }}
-				************************
 			</div>
 		</div>
 	</div>
