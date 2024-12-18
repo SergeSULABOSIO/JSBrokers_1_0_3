@@ -47,9 +47,13 @@
 							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
 							Monnaies
 						</button>
-						<button class="nav-link" id="nav-graphs-tab" data-bs-toggle="tab" data-bs-target="#nav-graphs" type="button" role="tab" aria-controls="nav-graphs" aria-selected="true">
+						<button class="nav-link" id="nav-comptes-tab" data-bs-toggle="tab" data-bs-target="#nav-comptes" type="button" role="tab" aria-controls="nav-comptes" aria-selected="true">
 							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
 							Comptes
+						</button>
+						<button class="nav-link" id="nav-modelePieceSinistres-tab" data-bs-toggle="tab" data-bs-target="#nav-modelePieceSinistres" type="button" role="tab" aria-controls="nav-modelePieceSinistres" aria-selected="true">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Pièces
 						</button>
 					</div>
 				</nav>
@@ -94,8 +98,11 @@
 					<div class="tab-pane fade" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
 						{{ form_widget(form.monnaies) }}
 					</div>
-					<div class="tab-pane fade" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
+					<div class="tab-pane fade" id="nav-comptes" role="tabpanel" aria-labelledby="nav-comptes-tab" tabindex="0">
 						{{ form_widget(form.compteBancaires) }}
+					</div>
+					<div class="tab-pane fade" id="nav-modelePieceSinistres" role="tabpanel" aria-labelledby="nav-modelePieceSinistres-tab" tabindex="0">
+						{{ form_widget(form.modelePieceSinistres) }}
 					</div>
 				</div>
 				{{ form_widget(form.enregistrer) }}
