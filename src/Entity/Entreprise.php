@@ -7,7 +7,6 @@ use App\Repository\EntrepriseRepository;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\HttpFoundation\File\File;
 use Doctrine\Common\Collections\ArrayCollection;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Validator\Constraints as Assert;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
@@ -24,11 +23,9 @@ class Entreprise
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
-
     #[Assert\NotBlank()]
     #[ORM\Column(length: 255)]
     private ?string $licence = null;
-
 
     #[Assert\NotBlank()]
     #[ORM\Column(length: 255)]
@@ -53,12 +50,6 @@ class Entreprise
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
-    /**
-     * @var Collection<int, Invite>
-     */
-    #[ORM\ManyToMany(targetEntity: Invite::class, mappedBy: 'entreprises')]
-    private Collection $invites;
-
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $thumbnail = null;
 
@@ -71,6 +62,25 @@ class Entreprise
     private ?Utilisateur $utilisateur = null;
 
     /**
+     * @var Collection<int, Utilisateur>
+     */
+    #[ORM\OneToMany(targetEntity: Utilisateur::class, mappedBy: 'connectedTo')]
+    private Collection $connectedUsers;
+    
+
+
+    //************************************************** */
+    //************************************************** */
+    //********** LES PARAMETRES DE L'ENTREPRISE ******** */
+    //************************************************** */
+    //************************************************** */
+    /**
+     * @var Collection<int, CompteBancaire>
+     */
+    #[ORM\OneToMany(targetEntity: CompteBancaire::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $compteBancaires;
+    
+    /**
      * @var Collection<int, Monnaie>
      */
     #[ORM\OneToMany(targetEntity: Monnaie::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
@@ -78,82 +88,71 @@ class Entreprise
     private Collection $monnaies;
 
     /**
-     * @var Collection<int, Taxe>
+     * @var Collection<int, ModelePieceSinistre>
      */
-    #[ORM\OneToMany(targetEntity: Taxe::class, mappedBy: 'entreprise')]
-    private Collection $taxes;
-
-    /**
-     * @var Collection<int, CompteBancaire>
-     */
-    #[ORM\OneToMany(targetEntity: CompteBancaire::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
-    private Collection $compteBancaires;
-
-    /**
-     * @var Collection<int, Revenu>
-     */
-    #[ORM\OneToMany(targetEntity: Revenu::class, mappedBy: 'entreprise')]
-    private Collection $revenus;
-
-    /**
-     * @var Collection<int, Risque>
-     */
-    #[ORM\OneToMany(targetEntity: Risque::class, mappedBy: 'entreprise')]
-    private Collection $risques;
-
-    /**
-     * @var Collection<int, Chargement>
-     */
-    #[ORM\OneToMany(targetEntity: Chargement::class, mappedBy: 'entreprise')]
-    private Collection $chargements;
-
-    /**
-     * @var Collection<int, Classeur>
-     */
-    #[ORM\OneToMany(targetEntity: Classeur::class, mappedBy: 'entreprise')]
-    private Collection $classeurs;
-
-    /**
-     * @var Collection<int, Assureur>
-     */
-    #[ORM\OneToMany(targetEntity: Assureur::class, mappedBy: 'entreprise')]
-    private Collection $assureurs;
-
-    /**
-     * @var Collection<int, Client>
-     */
-    #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'entreprise')]
-    private Collection $clients;
+    #[ORM\OneToMany(targetEntity: ModelePieceSinistre::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $modelePieceSinistres;
 
     /**
      * @var Collection<int, Partenaire>
      */
-    #[ORM\OneToMany(targetEntity: Partenaire::class, mappedBy: 'entreprise')]
+    #[ORM\OneToMany(targetEntity: Partenaire::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
     private Collection $partenaires;
-
-    /**
-     * @var Collection<int, Contact>
-     */
-    #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'entreprise')]
-    private Collection $contacts;
-
-    /**
-     * @var Collection<int, Utilisateur>
-     */
-    #[ORM\OneToMany(targetEntity: Utilisateur::class, mappedBy: 'connectedTo')]
-    private Collection $connectedUsers;
-
-    /**
-     * @var Collection<int, ModelePieceSinistre>
-     */
-    #[ORM\OneToMany(targetEntity: ModelePieceSinistre::class, mappedBy: 'entreprise')]
-    private Collection $modelePieceSinistres;
 
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'entreprise')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
     private Collection $documents;
+
+    /**
+     * @var Collection<int, Assureur>
+     */
+    #[ORM\OneToMany(targetEntity: Assureur::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $assureurs;
+
+     /**
+     * @var Collection<int, Classeur>
+     */
+    #[ORM\OneToMany(targetEntity: Classeur::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $classeurs;
+
+    /**
+     * @var Collection<int, Chargement>
+     */
+    #[ORM\OneToMany(targetEntity: Chargement::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $chargements;
+
+    /**
+     * @var Collection<int, Risque>
+     */
+    #[ORM\OneToMany(targetEntity: Risque::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $risques;
+
+    /**
+     * @var Collection<int, Revenu>
+     */
+    #[ORM\OneToMany(targetEntity: Revenu::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $revenus;
+
+    /**
+     * @var Collection<int, Taxe>
+     */
+    #[ORM\OneToMany(targetEntity: Taxe::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $taxes;
+
+    /**
+     * @var Collection<int, Invite>
+     */
+    #[ORM\ManyToMany(targetEntity: Invite::class, mappedBy: 'entreprises', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $invites;
+
+    /**
+     * @var Collection<int, Client>
+     */
+    #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $clients;
+
 
     public function __construct()
     {
@@ -168,7 +167,6 @@ class Entreprise
         $this->assureurs = new ArrayCollection();
         $this->clients = new ArrayCollection();
         $this->partenaires = new ArrayCollection();
-        $this->contacts = new ArrayCollection();
         $this->connectedUsers = new ArrayCollection();
         $this->modelePieceSinistres = new ArrayCollection();
         $this->documents = new ArrayCollection();
@@ -669,36 +667,6 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($partenaire->getEntreprise() === $this) {
                 $partenaire->setEntreprise(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Contact>
-     */
-    public function getContacts(): Collection
-    {
-        return $this->contacts;
-    }
-
-    public function addContact(Contact $contact): static
-    {
-        if (!$this->contacts->contains($contact)) {
-            $this->contacts->add($contact);
-            $contact->setEntreprise($this);
-        }
-
-        return $this;
-    }
-
-    public function removeContact(Contact $contact): static
-    {
-        if ($this->contacts->removeElement($contact)) {
-            // set the owning side to null (unless already changed)
-            if ($contact->getEntreprise() === $this) {
-                $contact->setEntreprise(null);
             }
         }
 

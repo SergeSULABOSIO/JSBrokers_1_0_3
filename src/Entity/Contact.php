@@ -26,9 +26,6 @@ class Contact
     private ?string $fonction = null;
 
     #[ORM\ManyToOne(inversedBy: 'contacts')]
-    private ?Entreprise $entreprise = null;
-
-    #[ORM\ManyToOne(inversedBy: 'contacts')]
     private ?Client $client = null;
 
     #[ORM\ManyToOne(inversedBy: 'contacts')]
@@ -91,18 +88,6 @@ class Contact
     public function setFonction(?string $fonction): static
     {
         $this->fonction = $fonction;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }
