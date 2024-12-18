@@ -104,7 +104,8 @@ class EntrepriseController extends AbstractController
             $this->addFlash("success", $this->translator->trans("entreprise_edited_ok", [
                 ':company' => $entreprise->getNom(),
             ]));            
-            return $this->redirectToRoute("admin.entreprise.index");
+            // return $this->redirectToRoute("admin.entreprise.index");
+            //Après modification, il faut revenir sur la page d'edition
         }
         return $this->render('admin/entreprise/edit.html.twig', [
             'pageName' => $this->translator->trans("entreprise_page_name_edition"),

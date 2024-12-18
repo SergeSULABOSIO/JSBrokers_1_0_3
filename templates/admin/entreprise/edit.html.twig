@@ -55,6 +55,10 @@
 							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
 							Pièces
 						</button>
+						<button class="nav-link" id="nav-partenaires-tab" data-bs-toggle="tab" data-bs-target="#nav-partenaires" type="button" role="tab" aria-controls="nav-partenaires" aria-selected="true">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Partenaires
+						</button>
 					</div>
 				</nav>
 				{# Contenu de chaque Onglet #}
@@ -103,6 +107,9 @@
 					</div>
 					<div class="tab-pane fade" id="nav-modelePieceSinistres" role="tabpanel" aria-labelledby="nav-modelePieceSinistres-tab" tabindex="0">
 						{{ form_widget(form.modelePieceSinistres) }}
+					</div>
+					<div class="tab-pane fade" id="nav-partenaires" role="tabpanel" aria-labelledby="nav-partenaires-tab" tabindex="0">
+						{{ form_widget(form.partenaires) }}
 					</div>
 				</div>
 				{{ form_widget(form.enregistrer) }}

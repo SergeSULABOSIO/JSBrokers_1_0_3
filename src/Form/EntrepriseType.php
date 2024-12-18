@@ -118,6 +118,21 @@ class EntrepriseType extends AbstractType
                     'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
                 ],
             ])
+            ->add('partenaires', CollectionType::class, [
+                'label' => "entreprise_form_label_partenaires",
+                'entry_type' => PartenaireType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "entreprise_form_button_save_company",
