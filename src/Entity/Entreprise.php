@@ -74,11 +74,6 @@ class Entreprise
     //********** LES PARAMETRES DE L'ENTREPRISE ******** */
     //************************************************** */
     //************************************************** */
-    /**
-     * @var Collection<int, CompteBancaire>
-     */
-    #[ORM\OneToMany(targetEntity: CompteBancaire::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
-    private Collection $compteBancaires;
     
     /**
      * @var Collection<int, Monnaie>
@@ -86,6 +81,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Monnaie::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
     #[Assert\Valid()]
     private Collection $monnaies;
+
+    /**
+     * @var Collection<int, CompteBancaire>
+     */
+    #[ORM\OneToMany(targetEntity: CompteBancaire::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $compteBancaires;
 
     /**
      * @var Collection<int, ModelePieceSinistre>
