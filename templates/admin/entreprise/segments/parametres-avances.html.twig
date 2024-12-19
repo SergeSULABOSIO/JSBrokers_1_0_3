@@ -1,10 +1,10 @@
 <nav>
     <div class="nav nav-tabs" id="nav-tab" role="tablist">
-        <button class="nav-link active" id="nav-classeurs-tab" data-bs-toggle="tab" data-bs-target="#nav-classeurs" type="button" role="tab" aria-controls="nav-classeurs" aria-selected="false">
+        <button class="nav-link active" id="nav-assureurs-tab" data-bs-toggle="tab" data-bs-target="#nav-assureurs" type="button" role="tab" aria-controls="nav-assureurs" aria-selected="false">
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-            Classeurs
+            Assureurs
         </button>
-        <button class="nav-link" id="nav-assureurs-tab" data-bs-toggle="tab" data-bs-target="#nav-assureurs" type="button" role="tab" aria-controls="nav-assureurs" aria-selected="false">
+        <button class="nav-link" id="nav-classeurs-tab" data-bs-toggle="tab" data-bs-target="#nav-classeurs" type="button" role="tab" aria-controls="nav-classeurs" aria-selected="false">
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
             Assureurs
         </button>
@@ -28,11 +28,11 @@
 </nav>
 {# Contenu de chaque Onglet #}
 <div class="tab-content p-2" id="nav-tabContent">
-    <div class="tab-pane fade show active" id="nav-classeurs" role="tabpanel" aria-labelledby="nav-classeurs-tab" tabindex="0">
-        {# {{ form_widget(form.classeurs) }} #}
+    <div class="tab-pane fade show active" id="nav-assureurs" role="tabpanel" aria-labelledby="nav-assureurs-tab" tabindex="0">
+        {{ form_widget(form.assureurs) }}
     </div>
-    <div class="tab-pane fade" id="nav-assureurs" role="tabpanel" aria-labelledby="nav-assureurs-tab" tabindex="0">
-        {# {{ form_widget(form.assureurs) }} #}
+    <div class="tab-pane fade" id="nav-classeurs" role="tabpanel" aria-labelledby="nav-classeurs-tab" tabindex="0">
+        {# {{ form_widget(form.classeurs) }} #}
     </div>
     <div class="tab-pane fade" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
         {# {{ form_widget(form.monnaies) }} #}

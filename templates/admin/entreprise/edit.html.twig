@@ -78,27 +78,29 @@
 				<p>
 				Autres paramètres indispensables pour le bon fonctionnement de l'espace de travail <strong>{{ entreprise.nom }}</strong>.
 				</p>
-				<nav>
-					<div class="nav nav-tabs" id="nav-tab" role="tablist">
-						<button class="nav-link active" id="nav-base-tab" data-bs-toggle="tab" data-bs-target="#nav-base" type="button" role="tab" aria-controls="nav-base" aria-selected="true">
-							{{ ux_icon('material-symbols:settings', {height: '20px', width: '20px'}) }}
-							Paramètres de base
-						</button>
-						<button class="nav-link" id="nav-avances-tab" data-bs-toggle="tab" data-bs-target="#nav-avances" type="button" role="tab" aria-controls="nav-avances" aria-selected="true">
-							{{ ux_icon('material-symbols:settings', {height: '20px', width: '20px'}) }}
-							Paramètres avancés
-						</button>
+				<small>
+					<nav>
+						<div class="nav nav-tabs" id="nav-tab" role="tablist">
+							<button class="nav-link active" id="nav-base-tab" data-bs-toggle="tab" data-bs-target="#nav-base" type="button" role="tab" aria-controls="nav-base" aria-selected="true">
+								{{ ux_icon('material-symbols:settings', {height: '20px', width: '20px'}) }}
+								Paramètres de base
+							</button>
+							<button class="nav-link" id="nav-avances-tab" data-bs-toggle="tab" data-bs-target="#nav-avances" type="button" role="tab" aria-controls="nav-avances" aria-selected="true">
+								{{ ux_icon('material-symbols:settings', {height: '20px', width: '20px'}) }}
+								Paramètres avancés
+							</button>
+						</div>
+					</nav>
+					{# Contenu de chaque Onglet #}
+					<div class="tab-content p-2" id="nav-tabContent">
+						<div class="tab-pane fade show active" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab" tabindex="0">
+							{% include 'admin/entreprise/segments/parametres-de-base.html.twig' %}
+						</div>
+						<div class="tab-pane fade" id="nav-avances" role="tabpanel" aria-labelledby="nav-avances-tab" tabindex="0">
+							{% include 'admin/entreprise/segments/parametres-avances.html.twig' %}
+						</div>
 					</div>
-				</nav>
-				{# Contenu de chaque Onglet #}
-				<div class="tab-content p-2" id="nav-tabContent">
-					<div class="tab-pane fade show active" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab" tabindex="0">
-						{% include 'admin/entreprise/segments/parametres-de-base.html.twig' %}
-					</div>
-					<div class="tab-pane fade" id="nav-avances" role="tabpanel" aria-labelledby="nav-avances-tab" tabindex="0">
-						{% include 'admin/entreprise/segments/parametres-avances.html.twig' %}
-					</div>
-				</div>
+				</small>
 				{{ form_widget(form.enregistrer) }}
 				{{ form_end(form) }}
 			</div>
