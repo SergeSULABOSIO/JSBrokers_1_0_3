@@ -37,33 +37,8 @@
 				{# Tableau d'onglets #}
 				{# Barre de navigation #}
 				{{ form_start(form) }}
-				<nav>
-					<div class="nav nav-tabs" id="nav-tab" role="tablist">
-						<button class="nav-link active" id="nav-base-tab" data-bs-toggle="tab" data-bs-target="#nav-base" type="button" role="tab" aria-controls="nav-base" aria-selected="false">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Base
-						</button>
-						<button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Monnaies
-						</button>
-						<button class="nav-link" id="nav-comptes-tab" data-bs-toggle="tab" data-bs-target="#nav-comptes" type="button" role="tab" aria-controls="nav-comptes" aria-selected="true">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Comptes
-						</button>
-						<button class="nav-link" id="nav-modelePieceSinistres-tab" data-bs-toggle="tab" data-bs-target="#nav-modelePieceSinistres" type="button" role="tab" aria-controls="nav-modelePieceSinistres" aria-selected="true">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Pièces
-						</button>
-						<button class="nav-link" id="nav-partenaires-tab" data-bs-toggle="tab" data-bs-target="#nav-partenaires" type="button" role="tab" aria-controls="nav-partenaires" aria-selected="true">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Partenaires
-						</button>
-					</div>
-				</nav>
-				{# Contenu de chaque Onglet #}
-				<div class="tab-content p-2" id="nav-tabContent">
-					<div class="tab-pane fade show active" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab" tabindex="0">
+				<p class = "m-2">
+					<div>
 						<div class="row">
 							<div class="col">
 								{{ form_row(form.nom) }}
@@ -98,6 +73,46 @@
 								{{ form_row(form.numimpot) }}
 							</div>
 						</div>
+					</div>
+				</p>
+				<p>
+				Autres paramètres indispensables pour le bon fonctionnement de l'espace de travail <strong>{{ entreprise.nom }}</strong>.
+				</p>
+				<nav>
+					<div class="nav nav-tabs" id="nav-tab" role="tablist">
+						<button class="nav-link active" id="nav-classeurs-tab" data-bs-toggle="tab" data-bs-target="#nav-classeurs" type="button" role="tab" aria-controls="nav-classeurs" aria-selected="false">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Classeurs
+						</button>
+						<button class="nav-link" id="nav-assureurs-tab" data-bs-toggle="tab" data-bs-target="#nav-assureurs" type="button" role="tab" aria-controls="nav-assureurs" aria-selected="false">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Assureurs
+						</button>
+						<button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Monnaies
+						</button>
+						<button class="nav-link" id="nav-comptes-tab" data-bs-toggle="tab" data-bs-target="#nav-comptes" type="button" role="tab" aria-controls="nav-comptes" aria-selected="true">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Comptes
+						</button>
+						<button class="nav-link" id="nav-modelePieceSinistres-tab" data-bs-toggle="tab" data-bs-target="#nav-modelePieceSinistres" type="button" role="tab" aria-controls="nav-modelePieceSinistres" aria-selected="true">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Pièces
+						</button>
+						<button class="nav-link" id="nav-partenaires-tab" data-bs-toggle="tab" data-bs-target="#nav-partenaires" type="button" role="tab" aria-controls="nav-partenaires" aria-selected="true">
+							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+							Partenaires
+						</button>
+					</div>
+				</nav>
+				{# Contenu de chaque Onglet #}
+				<div class="tab-content p-2" id="nav-tabContent">
+					<div class="tab-pane fade show active" id="nav-classeurs" role="tabpanel" aria-labelledby="nav-classeurs-tab" tabindex="0">
+						{{ form_widget(form.classeurs) }}
+					</div>
+					<div class="tab-pane fade" id="nav-assureurs" role="tabpanel" aria-labelledby="nav-assureurs-tab" tabindex="0">
+						{{ form_widget(form.assureurs) }}
 					</div>
 					<div class="tab-pane fade" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
 						{{ form_widget(form.monnaies) }}

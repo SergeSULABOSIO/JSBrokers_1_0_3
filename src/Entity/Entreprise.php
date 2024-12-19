@@ -66,6 +66,12 @@ class Entreprise
      */
     #[ORM\OneToMany(targetEntity: Utilisateur::class, mappedBy: 'connectedTo')]
     private Collection $connectedUsers;
+
+     /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
+    private Collection $documents;
     
 
 
@@ -74,7 +80,7 @@ class Entreprise
     //********** LES PARAMETRES DE L'ENTREPRISE ******** */
     //************************************************** */
     //************************************************** */
-    
+
     /**
      * @var Collection<int, Monnaie>
      */
@@ -99,12 +105,6 @@ class Entreprise
      */
     #[ORM\OneToMany(targetEntity: Partenaire::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
     private Collection $partenaires;
-
-    /**
-     * @var Collection<int, Document>
-     */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'entreprise', cascade:['persist', 'remove'], orphanRemoval:true)]
-    private Collection $documents;
 
     /**
      * @var Collection<int, Assureur>

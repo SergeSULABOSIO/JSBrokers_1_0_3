@@ -133,6 +133,51 @@ class EntrepriseType extends AbstractType
                     'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
                 ],
             ])
+            // ->add('documents', CollectionType::class, [
+            //     'label' => "entreprise_form_label_documents",
+            //     'entry_type' => DocumentType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => true,
+            //     'allow_delete' => true,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            //     'attr' => [
+            //         'data-controller' => 'form-collection-entites',
+            //         'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
+            //         'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+            //     ],
+            // ])
+            ->add('assureurs', CollectionType::class, [
+                'label' => "entreprise_form_label_assureurs",
+                'entry_type' => AssureurType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
+            ->add('classeurs', CollectionType::class, [
+                'label' => "entreprise_form_label_classeurs",
+                'entry_type' => ClasseurType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"),//'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "entreprise_form_button_save_company",
