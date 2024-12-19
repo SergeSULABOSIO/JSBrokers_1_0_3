@@ -80,51 +80,23 @@
 				</p>
 				<nav>
 					<div class="nav nav-tabs" id="nav-tab" role="tablist">
-						<button class="nav-link active" id="nav-classeurs-tab" data-bs-toggle="tab" data-bs-target="#nav-classeurs" type="button" role="tab" aria-controls="nav-classeurs" aria-selected="false">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Classeurs
+						<button class="nav-link active" id="nav-base-tab" data-bs-toggle="tab" data-bs-target="#nav-base" type="button" role="tab" aria-controls="nav-base" aria-selected="true">
+							{{ ux_icon('material-symbols:settings', {height: '20px', width: '20px'}) }}
+							Paramètres de base
 						</button>
-						<button class="nav-link" id="nav-assureurs-tab" data-bs-toggle="tab" data-bs-target="#nav-assureurs" type="button" role="tab" aria-controls="nav-assureurs" aria-selected="false">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Assureurs
-						</button>
-						<button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Monnaies
-						</button>
-						<button class="nav-link" id="nav-comptes-tab" data-bs-toggle="tab" data-bs-target="#nav-comptes" type="button" role="tab" aria-controls="nav-comptes" aria-selected="true">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Comptes
-						</button>
-						<button class="nav-link" id="nav-modelePieceSinistres-tab" data-bs-toggle="tab" data-bs-target="#nav-modelePieceSinistres" type="button" role="tab" aria-controls="nav-modelePieceSinistres" aria-selected="true">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Pièces
-						</button>
-						<button class="nav-link" id="nav-partenaires-tab" data-bs-toggle="tab" data-bs-target="#nav-partenaires" type="button" role="tab" aria-controls="nav-partenaires" aria-selected="true">
-							{{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-							Partenaires
+						<button class="nav-link" id="nav-avances-tab" data-bs-toggle="tab" data-bs-target="#nav-avances" type="button" role="tab" aria-controls="nav-avances" aria-selected="true">
+							{{ ux_icon('material-symbols:settings', {height: '20px', width: '20px'}) }}
+							Paramètres avancés
 						</button>
 					</div>
 				</nav>
 				{# Contenu de chaque Onglet #}
 				<div class="tab-content p-2" id="nav-tabContent">
-					<div class="tab-pane fade show active" id="nav-classeurs" role="tabpanel" aria-labelledby="nav-classeurs-tab" tabindex="0">
-						{{ form_widget(form.classeurs) }}
+					<div class="tab-pane fade show active" id="nav-base" role="tabpanel" aria-labelledby="nav-base-tab" tabindex="0">
+						{% include 'admin/entreprise/segments/parametres-de-base.html.twig' %}
 					</div>
-					<div class="tab-pane fade" id="nav-assureurs" role="tabpanel" aria-labelledby="nav-assureurs-tab" tabindex="0">
-						{{ form_widget(form.assureurs) }}
-					</div>
-					<div class="tab-pane fade" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
-						{{ form_widget(form.monnaies) }}
-					</div>
-					<div class="tab-pane fade" id="nav-comptes" role="tabpanel" aria-labelledby="nav-comptes-tab" tabindex="0">
-						{{ form_widget(form.compteBancaires) }}
-					</div>
-					<div class="tab-pane fade" id="nav-modelePieceSinistres" role="tabpanel" aria-labelledby="nav-modelePieceSinistres-tab" tabindex="0">
-						{{ form_widget(form.modelePieceSinistres) }}
-					</div>
-					<div class="tab-pane fade" id="nav-partenaires" role="tabpanel" aria-labelledby="nav-partenaires-tab" tabindex="0">
-						{{ form_widget(form.partenaires) }}
+					<div class="tab-pane fade" id="nav-avances" role="tabpanel" aria-labelledby="nav-avances-tab" tabindex="0">
+						{% include 'admin/entreprise/segments/parametres-avances.html.twig' %}
 					</div>
 				</div>
 				{{ form_widget(form.enregistrer) }}
