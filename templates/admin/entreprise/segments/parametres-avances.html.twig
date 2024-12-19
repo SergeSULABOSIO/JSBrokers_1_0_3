@@ -4,25 +4,21 @@
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
             Assureurs
         </button>
-        <button class="nav-link" id="nav-classeurs-tab" data-bs-toggle="tab" data-bs-target="#nav-classeurs" type="button" role="tab" aria-controls="nav-classeurs" aria-selected="false">
+        <button class="nav-link" id="nav-risques-tab" data-bs-toggle="tab" data-bs-target="#nav-risques" type="button" role="tab" aria-controls="nav-risques" aria-selected="false">
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-            Assureurs
+            Risques
         </button>
-        <button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
+        <button class="nav-link" id="nav-clients-tab" data-bs-toggle="tab" data-bs-target="#nav-clients" type="button" role="tab" aria-controls="nav-clients" aria-selected="false">
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-            Monnaies
+            Clients
         </button>
-        <button class="nav-link" id="nav-comptes-tab" data-bs-toggle="tab" data-bs-target="#nav-comptes" type="button" role="tab" aria-controls="nav-comptes" aria-selected="true">
+        <button class="nav-link" id="nav-revenus-tab" data-bs-toggle="tab" data-bs-target="#nav-revenus" type="button" role="tab" aria-controls="nav-revenus" aria-selected="true">
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-            Comptes
+            Revenus
         </button>
-        <button class="nav-link" id="nav-modelePieceSinistres-tab" data-bs-toggle="tab" data-bs-target="#nav-modelePieceSinistres" type="button" role="tab" aria-controls="nav-modelePieceSinistres" aria-selected="true">
+        <button class="nav-link" id="nav-chargements-tab" data-bs-toggle="tab" data-bs-target="#nav-chargements" type="button" role="tab" aria-controls="nav-chargements" aria-selected="true">
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-            Pièces
-        </button>
-        <button class="nav-link" id="nav-partenaires-tab" data-bs-toggle="tab" data-bs-target="#nav-partenaires" type="button" role="tab" aria-controls="nav-partenaires" aria-selected="true">
-            {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
-            Partenaires
+            Chargements
         </button>
     </div>
 </nav>
@@ -31,19 +27,16 @@
     <div class="tab-pane fade show active" id="nav-assureurs" role="tabpanel" aria-labelledby="nav-assureurs-tab" tabindex="0">
         {{ form_widget(form.assureurs) }}
     </div>
-    <div class="tab-pane fade" id="nav-classeurs" role="tabpanel" aria-labelledby="nav-classeurs-tab" tabindex="0">
-        {# {{ form_widget(form.classeurs) }} #}
+    <div class="tab-pane fade" id="nav-risques" role="tabpanel" aria-labelledby="nav-risques-tab" tabindex="0">
+        {{ form_widget(form.risques) }}
     </div>
-    <div class="tab-pane fade" id="nav-production-insurer" role="tabpanel" aria-labelledby="nav-production-insurer-tab" tabindex="0">
-        {# {{ form_widget(form.monnaies) }} #}
+    <div class="tab-pane fade" id="nav-clients" role="tabpanel" aria-labelledby="nav-clients-tab" tabindex="0">
+        {{ form_widget(form.clients) }}
     </div>
-    <div class="tab-pane fade" id="nav-comptes" role="tabpanel" aria-labelledby="nav-comptes-tab" tabindex="0">
-        {# {{ form_widget(form.compteBancaires) }} #}
+    <div class="tab-pane fade" id="nav-revenus" role="tabpanel" aria-labelledby="nav-revenus-tab" tabindex="0">
+        {{ form_widget(form.revenus) }}
     </div>
-    <div class="tab-pane fade" id="nav-modelePieceSinistres" role="tabpanel" aria-labelledby="nav-modelePieceSinistres-tab" tabindex="0">
-        {# {{ form_widget(form.modelePieceSinistres) }} #}
-    </div>
-    <div class="tab-pane fade" id="nav-partenaires" role="tabpanel" aria-labelledby="nav-partenaires-tab" tabindex="0">
-        {# {{ form_widget(form.partenaires) }} #}
+    <div class="tab-pane fade" id="nav-chargements" role="tabpanel" aria-labelledby="nav-chargements-tab" tabindex="0">
+        {{ form_widget(form.chargements) }}
     </div>
 </div>

@@ -163,10 +163,70 @@ class EntrepriseType extends AbstractType
                     'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
                 ],
             ])
-            
+            //Paramètres avancés
             ->add('assureurs', CollectionType::class, [
                 'label' => "entreprise_form_label_assureurs",
                 'entry_type' => AssureurType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
+            ->add('risques', CollectionType::class, [
+                'label' => "entreprise_form_label_risques",
+                'entry_type' => RisqueType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
+            ->add('clients', CollectionType::class, [
+                'label' => "entreprise_form_label_clients",
+                'entry_type' => ClientType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
+            ->add('revenus', CollectionType::class, [
+                'label' => "entreprise_form_label_revenus",
+                'entry_type' => RevenuType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                ],
+            ])
+            ->add('chargements', CollectionType::class, [
+                'label' => "entreprise_form_label_chargements",
+                'entry_type' => ChargementType::class,
                 'by_reference' => false,
                 'allow_add' => true,
                 'allow_delete' => true,
