@@ -28,13 +28,12 @@ export default class extends Controller {
             var idElementCollection = elementDeLaCollection.firstElementChild.getAttribute("id");
             console.log(" - Bloc cible: id = " + idElementCollection);
             var cibleACacher = document.getElementById(idElementCollection);
-            // cibleACacher.setAttribute("class", "cacherComposant");
+            cibleACacher.setAttribute("class", "cacherComposant");
             console.log(" - Bloc cible: id = " + idElementCollection + " | class = " + cibleACacher.getAttribute("class"));
 
             //Fin d'analyse
         });
         this.element.append(btnAjouter);
-        // this.element.setAttribute('class', "border border-0 rounded p-3 mb-2 bg-light");
     }
 
     
