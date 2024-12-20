@@ -25,11 +25,12 @@ export default class extends Controller {
             this.addDeleteButton(elementDeLaCollection);
 
             //Analyses
-            console.log(" - Element de la collection = " + elementDeLaCollection.getAttribute("type"));
-            
+
+            console.log(" - Bloc cible: id = " + elementDeLaCollection.firstElementChild.getAttribute("id"));
+            //Fin d'analyse
         });
         this.element.append(btnAjouter);
-        this.element.setAttribute('class', "border border-0 rounded p-3 mb-2 bg-light");
+        // this.element.setAttribute('class', "border border-0 rounded p-3 mb-2 bg-light");
     }
 
     
