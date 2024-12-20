@@ -24,3 +24,7 @@ input[type=text], input[type=password], input[type=number], input[type=email], i
   border-bottom: 2px solid gray;
   font-weight: bold;
 }
+
+.cacherComposant {
+  display: none;
+}

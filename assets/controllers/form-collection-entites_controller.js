@@ -27,6 +27,10 @@ export default class extends Controller {
             //Analyses
             var idElementCollection = elementDeLaCollection.firstElementChild.getAttribute("id");
             console.log(" - Bloc cible: id = " + idElementCollection);
+            var cibleACacher = document.getElementById(idElementCollection);
+            // cibleACacher.setAttribute("class", "cacherComposant");
+            console.log(" - Bloc cible: id = " + idElementCollection + " | class = " + cibleACacher.getAttribute("class"));
+
             //Fin d'analyse
         });
         this.element.append(btnAjouter);
@@ -40,7 +44,7 @@ export default class extends Controller {
      */
     addDeleteButton = (elementDeLaCollection) => {
         const btnSupprimer = document.createElement("button");
-        btnSupprimer.setAttribute('class', "btn btn-danger mt-2");
+        btnSupprimer.setAttribute('class', "btn btn-danger");
         btnSupprimer.setAttribute('type', "button");
         btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
         btnSupprimer.addEventListener('click', e => {
