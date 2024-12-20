@@ -22,7 +22,8 @@ export default class extends Controller {
         //On ajoute le bouton SUPPRIMER sur chaque element de la collection
         this.element.childNodes.forEach(elementDeLaCollection => {
             elementDeLaCollection.setAttribute('class', "border shadow rounded border-secondary p-3 mb-2 bg-white");
-            this.addDeleteButton(elementDeLaCollection);
+            // this.addDeleteButton(elementDeLaCollection);
+            this.addViewPanel(elementDeLaCollection);
 
             //Analyses
             var idElementCollection = elementDeLaCollection.firstElementChild.getAttribute("id");
@@ -36,6 +37,58 @@ export default class extends Controller {
         this.element.append(btnAjouter);
     }
 
+
+    /**
+     * 
+     * @param {HTMLElement} elementDeLaCollection 
+     */
+    addViewPanel = (elementDeLaCollection) => {
+        //creation du div
+        const divElement = document.createElement("nav");
+        divElement.setAttribute("class", "navbar");
+        //creation du span
+        const spanElement = document.createElement("span");
+        spanElement.setAttribute("class", "");
+        spanElement.innerHTML = "Texte représentant l'element de la collection";
+        //creation du bouton edit
+        const btnEdit = document.createElement("button");
+        btnEdit.setAttribute('class', "btn border-0 btn-outline-secondary");
+        btnEdit.setAttribute('type', "button");
+        btnEdit.innerHTML = "Edit";
+        btnEdit.addEventListener('click', e => {
+            e.preventDefault();
+            // elementDeLaCollection.remove();
+            var formulaire = document.getElementById(elementDeLaCollection.firstElementChild.getAttribute("id"));
+            if(formulaire.hasAttribute("class", "cacherComposant")){
+                formulaire.removeAttribute("class", "cacherComposant");
+                btnEdit.innerHTML = "Close";
+            }else{
+                formulaire.setAttribute("class", "cacherComposant");
+                btnEdit.innerHTML = "Edit";
+            }
+        });
+        //creation du bouton supprimer
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
+        btnSupprimer.setAttribute('type', "button");
+        btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
+        btnSupprimer.addEventListener('click', e => {
+            e.preventDefault();
+            elementDeLaCollection.remove();
+        });
+
+        //Ajout du span dans le div
+        divElement.innerHTML = "";
+        //Ajout des elements de viesualisation au div
+        divElement.append(spanElement);
+        const div = document.createElement("div");
+        div.append(btnSupprimer);
+        div.append(btnEdit);
+        divElement.append(div);
+        // divElement.append(btnSupprimer);
+        // divElement.append(btnEdit);
+        elementDeLaCollection.append(divElement);
+    }
     
 
     /**
