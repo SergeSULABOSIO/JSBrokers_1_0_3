@@ -8,10 +8,11 @@ export default class extends Controller {
     }
 
     connect() {
+        //this.element contient la collection elle-même
         this.index = this.element.childElementCount;
         console.log("Nombre d'elements = " + this.index);
 
-        //Construction de l'élement Bouton pour la supression
+        //Construction de l'élement Bouton pour la supression de l'element de la collection
         const btnAjouter = document.createElement("button");
         btnAjouter.setAttribute('class', "btn btn-secondary");
         btnAjouter.setAttribute('type', "button");
@@ -24,7 +25,7 @@ export default class extends Controller {
             this.addDeleteButton(elementDeLaCollection);
 
             //Analyses
-            console.log("fieldSet class = " + elementDeLaCollection.getAttribute("type"));
+            console.log(" - Element de la collection = " + elementDeLaCollection.getAttribute("type"));
             
         });
         this.element.append(btnAjouter);
