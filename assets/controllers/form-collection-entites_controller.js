@@ -25,8 +25,8 @@ export default class extends Controller {
             this.addDeleteButton(elementDeLaCollection);
 
             //Analyses
-
-            console.log(" - Bloc cible: id = " + elementDeLaCollection.firstElementChild.getAttribute("id"));
+            var idElementCollection = elementDeLaCollection.firstElementChild.getAttribute("id");
+            console.log(" - Bloc cible: id = " + idElementCollection);
             //Fin d'analyse
         });
         this.element.append(btnAjouter);
