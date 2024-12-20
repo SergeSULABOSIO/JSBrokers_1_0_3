@@ -4,7 +4,11 @@ export default class extends Controller {
 
     static values = {
         addLabel: String,
-        deleteLabel: String
+        deleteLabel: String,
+        editLabel: String,
+        closeLabel: String,
+        newElementLabel: String,
+        viewField: String
     }
 
     connect() {
@@ -19,20 +23,11 @@ export default class extends Controller {
         btnAjouter.innerHTML = this.addLabelValue || "Add";
         btnAjouter.addEventListener('click', this.addElement);
         
-        //On ajoute le bouton SUPPRIMER sur chaque element de la collection
+        //On ajoute le bouton SUPPRIMER et EDITER sur chaque element de la collection
         this.element.childNodes.forEach(elementDeLaCollection => {
             elementDeLaCollection.setAttribute('class', "border shadow rounded border-secondary p-3 mb-2 bg-white");
             // this.addDeleteButton(elementDeLaCollection);
             this.addViewPanel(elementDeLaCollection);
-
-            //Analyses
-            var idElementCollection = elementDeLaCollection.firstElementChild.getAttribute("id");
-            console.log(" - Bloc cible: id = " + idElementCollection);
-            var cibleACacher = document.getElementById(idElementCollection);
-            cibleACacher.setAttribute("class", "cacherComposant");
-            console.log(" - Bloc cible: id = " + idElementCollection + " | class = " + cibleACacher.getAttribute("class"));
-
-            //Fin d'analyse
         });
         this.element.append(btnAjouter);
     }
@@ -43,28 +38,40 @@ export default class extends Controller {
      * @param {HTMLElement} elementDeLaCollection 
      */
     addViewPanel = (elementDeLaCollection) => {
+        //Analyses
+        var label = "Inconnu";
+        var idForm = elementDeLaCollection.firstElementChild.getAttribute("id");
+        var idChampDeVisualisation = idForm + "_" + this.viewFieldValue;
+        var formulaire = document.getElementById(idForm);
+        formulaire.setAttribute("class", "cacherComposant");
+        console.log(" - Bloc cible: id = " + idChampDeVisualisation);
+        if(document.getElementById(idChampDeVisualisation) != null){
+            // console.log("J'ai trouvé '" + document.getElementById(idChampDeVisualisation).getAttribute("value") + "'.");
+            label = document.getElementById(idChampDeVisualisation).getAttribute("value");
+        }
+
         //creation du div
         const divElement = document.createElement("nav");
-        divElement.setAttribute("class", "navbar");
+        divElement.setAttribute("class", "navbar sensible rounded p-2");
         //creation du span
         const spanElement = document.createElement("span");
-        spanElement.setAttribute("class", "");
-        spanElement.innerHTML = "Texte représentant l'element de la collection";
+        spanElement.setAttribute("class", "gras");
+        spanElement.innerHTML = label;
         //creation du bouton edit
         const btnEdit = document.createElement("button");
         btnEdit.setAttribute('class', "btn border-0 btn-outline-secondary");
         btnEdit.setAttribute('type', "button");
-        btnEdit.innerHTML = "Edit";
+        btnEdit.innerHTML = this.editLabelValue || "Edit"; //"Edit";
         btnEdit.addEventListener('click', e => {
             e.preventDefault();
             // elementDeLaCollection.remove();
-            var formulaire = document.getElementById(elementDeLaCollection.firstElementChild.getAttribute("id"));
+           
             if(formulaire.hasAttribute("class", "cacherComposant")){
                 formulaire.removeAttribute("class", "cacherComposant");
-                btnEdit.innerHTML = "Close";
+                btnEdit.innerHTML = this.closeLabelValue || "Close"; //"Close";
             }else{
                 formulaire.setAttribute("class", "cacherComposant");
-                btnEdit.innerHTML = "Edit";
+                btnEdit.innerHTML = this.editLabelValue || "Edit"; //"Edit";
             }
         });
         //creation du bouton supprimer
@@ -85,8 +92,6 @@ export default class extends Controller {
         div.append(btnSupprimer);
         div.append(btnEdit);
         divElement.append(div);
-        // divElement.append(btnSupprimer);
-        // divElement.append(btnEdit);
         elementDeLaCollection.append(divElement);
     }
     
@@ -95,15 +100,31 @@ export default class extends Controller {
      * @param {HTMLElement} elementDeLaCollection 
      */
     addDeleteButton = (elementDeLaCollection) => {
+        //creation du span
+        const spanElement = document.createElement("span");
+        spanElement.setAttribute("class", "gras");
+        spanElement.innerHTML = this.newElementLabelValue || "Add"; //"New collection element";
+        //creation du div
+        const divElement = document.createElement("nav");
+        divElement.setAttribute("class", "navbar sensible rounded p-2");
+        //creation du bouton supprimer
         const btnSupprimer = document.createElement("button");
-        btnSupprimer.setAttribute('class', "btn btn-danger");
+        btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
         btnSupprimer.setAttribute('type', "button");
         btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
         });
-        elementDeLaCollection.append(btnSupprimer);
+        //Ajout du span dans le div
+        divElement.innerHTML = "";
+        //Ajout des elements de viesualisation au div
+        divElement.append(spanElement);
+        const div = document.createElement("div");
+        div.append(btnSupprimer);
+        // div.append(btnEdit);
+        divElement.append(div);
+        elementDeLaCollection.append(divElement);
     }
 
     /**

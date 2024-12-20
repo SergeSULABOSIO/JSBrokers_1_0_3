@@ -28,3 +28,7 @@ input[type=text], input[type=password], input[type=number], input[type=email], i
 .cacherComposant {
   display: none;
 }
+
+.gras {
+  font-weight: bold;
+}

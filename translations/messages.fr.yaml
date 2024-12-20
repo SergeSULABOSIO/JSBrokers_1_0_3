@@ -426,4 +426,7 @@ company_dashboard_section_principale_cashflow_payment_date: "Paiemt.: "
 company_dashboard_section_principale_cashflow_user_name_by: "Par "
 commom_add: "Ajouter"
 commom_delete: "Supprimer"
+commom_edit: "Editer"
+commom_close: "Fermer"
+commom_new_element: "Nouvel article de la collection"
 
