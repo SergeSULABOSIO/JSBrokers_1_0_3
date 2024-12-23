@@ -2,9 +2,10 @@
 
 namespace App\Form;
 
+use App\Entity\Invite;
+use DateTimeImmutable;
+use App\Entity\Avenant;
 use App\Entity\Cotation;
-use App\Entity\Chargement;
-use App\Entity\ChargementPourPrime;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -13,11 +14,10 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\Form\Extension\Core\Type\PercentType;
 
-class ChargementPourPrimeType extends AbstractType
+class AvenantType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
@@ -27,26 +27,31 @@ class ChargementPourPrimeType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom', TextType::class, [
-                'label' => "Nom",
+            ->add('description', TextType::class, [
+                'label' => "Description",
                 'attr' => [
-                    'placeholder' => "Nom",
+                    'placeholder' => "Description",
                 ],
             ])
-            ->add('montantFlatExceptionel', MoneyType::class, [
-                'label' => "Montant fixe (exceptionnel)",
-                'currency' => "USD",
-                'grouping' => true,
-                'attr' => [
-                    'placeholder' => "Montant fixe",
+            ->add('type', ChoiceType::class, [
+                'label' => "Type d'Avenant",
+                'expanded' => true,
+                'choices'  => [
+                    "SOUSCRIPTION"      => Avenant::AVENANT_SOUSCRIPTION,
+                    "INCORPORATION"     => Avenant::AVENANT_INCORPORATION,
+                    "PROROGATION"       => Avenant::AVENANT_PROROGATION,
+                    "ANNULATION"        => Avenant::AVENANT_ANNULATION,
+                    "RENOUVELLEMENT"    => Avenant::AVENANT_RENOUVELLEMENT,
+                    "RESILIATION"       => Avenant::AVENANT_RESILIATION,
                 ],
             ])
-            ->add('tauxExceptionel', PercentType::class, [
-                'label' => "Taux exceptionnel",
-                'scale' => 3,
-                'attr' => [
-                    'placeholder' => "Taux",
-                ],
+            ->add('startingAt', DateTimeImmutable::class, [
+                'label' => "Date début",
+                'widget' => 'single_text',
+            ])
+            ->add('endingAt', DateTimeImmutable::class, [
+                'label' => "Echéance",
+                'widget' => 'single_text',
             ])
             // ->add('createdAt', null, [
             //     'widget' => 'single_text',
@@ -54,11 +59,11 @@ class ChargementPourPrimeType extends AbstractType
             // ->add('updatedAt', null, [
             //     'widget' => 'single_text',
             // ])
-            ->add('type', EntityType::class, [
-                'label' => "Type de chargement",
-                'class' => Chargement::class,
-                'choice_label' => 'nom',
-            ])
+
+            // ->add('invite', EntityType::class, [
+            //     'class' => Invite::class,
+            //     'choice_label' => 'id',
+            // ])
             // ->add('cotation', EntityType::class, [
             //     'class' => Cotation::class,
             //     'choice_label' => 'id',
@@ -72,14 +77,14 @@ class ChargementPourPrimeType extends AbstractType
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
-
+       
         ;
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => ChargementPourPrime::class,
+            'data_class' => Avenant::class,
         ]);
     }
 }

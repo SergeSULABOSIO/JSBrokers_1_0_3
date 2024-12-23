@@ -45,6 +45,12 @@ class Avenant
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'avenant')]
     private Collection $documents;
 
+    #[ORM\ManyToOne(inversedBy: 'avenant')]
+    private ?Cotation $cotation = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $description = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -153,6 +159,30 @@ class Avenant
                 $document->setAvenant(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getCotation(): ?Cotation
+    {
+        return $this->cotation;
+    }
+
+    public function setCotation(?Cotation $cotation): static
+    {
+        $this->cotation = $cotation;
+
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(string $description): static
+    {
+        $this->description = $description;
 
         return $this;
     }
