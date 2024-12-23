@@ -111,4 +111,14 @@ class InviteRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+       public function findOneByEmail($email): ?Invite
+       {
+           return $this->createQueryBuilder('i')
+               ->andWhere('i.email = :email')
+               ->setParameter('email', $email)
+               ->getQuery()
+               ->getOneOrNullResult()
+           ;
+       }
 }
