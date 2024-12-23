@@ -55,15 +55,15 @@ class ContactType extends AbstractType
             ])
             // ->add('entreprise', EntrepriseAutocompleteField::class)
             // ->add('client', ClientAutocompleteField::class)
-            ->add('client', ClientAutocompleteField::class, [
-                'label' => "Client",
-                'class' => Client::class,
-                'choice_label' => 'nom',
-                'required' => false,
-                'attr' => [
-                    'placeholder' => "Client",
-                ],
-            ])
+            // ->add('client', ClientAutocompleteField::class, [
+            //     'label' => "Client",
+            //     'class' => Client::class,
+            //     'choice_label' => 'nom',
+            //     'required' => false,
+            //     'attr' => [
+            //         'placeholder' => "Client",
+            //     ],
+            // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",

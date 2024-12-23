@@ -39,7 +39,7 @@ class Client
     /**
      * @var Collection<int, Contact>
      */
-    #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'client')]
+    #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $contacts;
 
     /**
@@ -57,7 +57,7 @@ class Client
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'client')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
     public function __construct()
