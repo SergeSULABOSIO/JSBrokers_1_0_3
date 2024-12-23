@@ -138,10 +138,10 @@ class DocumentController extends AbstractController
     {
         /** @var Document $document */
         $document = $this->documentRepository->find($idDocument);
-
+        
         $message = $this->translator->trans("document_deletion_ok", [
             ":document" => $document->getNom(),
-        ]);;
+        ]);
         
         $this->manager->remove($document);
         $this->manager->flush();
