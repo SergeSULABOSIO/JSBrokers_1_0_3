@@ -13,6 +13,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 
@@ -27,6 +28,17 @@ class FeedbackType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('type', ChoiceType::class, [
+                'label' => "feedback_form_type",
+                'expanded' => true,
+                'choices'  => [
+                    "Rencontre physique" => Feedback::TYPE_PHYSICAL_MEETING,
+                    "Appel" => Feedback::TYPE_CALL,
+                    "E-mail" => Feedback::TYPE_EMAIL,
+                    "SMS" => Feedback::TYPE_SMS,
+                    "Non défini" => Feedback::TYPE_UNDEFINED,
+                ],
+            ])
             ->add('description', TextType::class, [
                 'label' => "Description",
                 'attr' => [

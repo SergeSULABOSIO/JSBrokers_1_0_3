@@ -160,6 +160,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'entreprise')]
     private Collection $taches;
 
+    /**
+     * @var Collection<int, Feedback>
+     */
+    #[ORM\OneToMany(targetEntity: Feedback::class, mappedBy: 'entreprise')]
+    private Collection $feedback;
+
 
     public function __construct()
     {
@@ -178,6 +184,7 @@ class Entreprise
         $this->modelePieceSinistres = new ArrayCollection();
         $this->documents = new ArrayCollection();
         $this->taches = new ArrayCollection();
+        $this->feedback = new ArrayCollection();
     }
 
 
@@ -795,6 +802,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($tach->getEntreprise() === $this) {
                 $tach->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Feedback>
+     */
+    public function getFeedback(): Collection
+    {
+        return $this->feedback;
+    }
+
+    public function addFeedback(Feedback $feedback): static
+    {
+        if (!$this->feedback->contains($feedback)) {
+            $this->feedback->add($feedback);
+            $feedback->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFeedback(Feedback $feedback): static
+    {
+        if ($this->feedback->removeElement($feedback)) {
+            // set the owning side to null (unless already changed)
+            if ($feedback->getEntreprise() === $this) {
+                $feedback->setEntreprise(null);
             }
         }
 
