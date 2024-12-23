@@ -56,9 +56,9 @@ class ContactRepository extends ServiceEntityRepository
         return $this->paginator->paginate(
             $this->createQueryBuilder("m")
                 // ->leftJoin("e.invites", "i")
-                ->where('m.entreprise = :entrepriseId')
+                // ->where('m.entreprise = :entrepriseId')
                 // ->orWhere("i.email = :userEmail")
-                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                // ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 // ->setParameter('userEmail', '' . $user->getEmail() . '')
                 ->orderBy('m.id', 'DESC'),
             $page,

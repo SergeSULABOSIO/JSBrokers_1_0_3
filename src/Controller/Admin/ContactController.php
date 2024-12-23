@@ -71,7 +71,7 @@ class ContactController extends AbstractController
         /** @var Contact $contact */
         $contact = new Contact();
         //Paramètres par défaut
-        $contact->setEntreprise($entreprise);
+        // $contact->setEntreprise($entreprise);
 
         $form = $this->createForm(ContactType::class, $contact);
         $form->handleRequest($request);

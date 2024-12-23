@@ -22,11 +22,11 @@
                     <span class="mb-0">{{ "company_menu_contacts" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reassureur'? 'active' : '' }}">
+            {# <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reassureur'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_reinsurers" | trans }}</span>
                 </div>
-            </a>
+            </a> #}
             <a href="{{ path('admin.risque.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.risque'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_products" | trans }}</span>
@@ -37,21 +37,21 @@
                     <span class="mb-0">{{ "company_menu_avenants" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.police'? 'active' : '' }}">
+            {# <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.police'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_polices" | trans }}</span>
                 </div>
-            </a>
+            </a> #}
             <a href="{{ path('admin.partenaire.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.partenaire'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_partners" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.support'? 'active' : '' }}">
+            {# <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.support'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_ri_panel" | trans }}</span>
                 </div>
-            </a>
+            </a> #}
         </div>
     </div>
 </div>
