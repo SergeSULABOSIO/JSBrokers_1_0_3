@@ -31,6 +31,9 @@ class RevenuPourCourtier
     #[ORM\ManyToOne(inversedBy: 'revenus')]
     private ?Cotation $cotation = null;
 
+    #[ORM\Column(length: 255)]
+    private ?string $nom = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -104,6 +107,18 @@ class RevenuPourCourtier
     public function setCotation(?Cotation $cotation): static
     {
         $this->cotation = $cotation;
+
+        return $this;
+    }
+
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
+
+    public function setNom(string $nom): static
+    {
+        $this->nom = $nom;
 
         return $this;
     }
