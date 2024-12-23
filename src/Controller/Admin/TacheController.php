@@ -75,6 +75,7 @@ class TacheController extends AbstractController
         /** @var Tache */
         $tache = new Tache();
         //Paramètres par défaut
+        $tache->setEntreprise($idEntreprise);
         $tache->setClosed(false);
         $tache->setInvite($invite);
 
