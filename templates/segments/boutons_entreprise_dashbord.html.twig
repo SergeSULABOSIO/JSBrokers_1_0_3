@@ -83,6 +83,12 @@
           {{ "entreprise_bouton_new_tache" | trans }}
         </a>
     {% endif %}
+    {% if app.current_route starts with 'admin.document' %}
+        <a href="{{ path('admin.document.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
+          {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+          {{ "entreprise_bouton_new_document" | trans }}
+        </a>
+    {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
       <ul class="mb-2 mb-lg-0 btn btn-secondary">
         <li class="nav-item dropdown">
