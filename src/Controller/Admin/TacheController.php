@@ -39,7 +39,7 @@ class TacheController extends AbstractController
         private TacheRepository $tacheRepository,
         private Constante $constante,
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
+        $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
     }
 
 
