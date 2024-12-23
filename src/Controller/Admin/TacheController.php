@@ -52,7 +52,7 @@ class TacheController extends AbstractController
             'pageName' => $this->translator->trans("tache_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'taches' => $this->tacheRepository->paginate($page),
+            'taches' => $this->tacheRepository->paginate($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

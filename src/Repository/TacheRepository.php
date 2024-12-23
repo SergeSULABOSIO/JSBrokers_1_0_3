@@ -48,10 +48,10 @@ class TacheRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function paginate(int $page): PaginationInterface
+    public function paginate(int $idEntreprise, int $page): PaginationInterface
     {
         /** @var Utilisateur $user */
-        // $user = $this->security->getUser();
+        $user = $this->security->getUser();
 
         return $this->paginator->paginate(
             $this->createQueryBuilder("m")
@@ -59,6 +59,8 @@ class TacheRepository extends ServiceEntityRepository
                 ->leftJoin("m.executor", "e")
                 ->Where("i.email = :userEmail")
                 ->orWhere("e.email = :userEmail")
+                ->where('m.entreprise = :entrepriseId')
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->setParameter('userEmail', '' . $user->getEmail() . '')
                 ->orderBy('m.id', 'DESC'),
             $page,
