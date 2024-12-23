@@ -2,18 +2,17 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Taxe;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
-use App\Entity\Invite;
-use App\Entity\Tache;
-use App\Form\TacheType;
-use App\Form\TaxeType;
-use App\Repository\TaxeRepository;
+use App\Entity\Document;
+use App\Entity\Risque;
+use App\Form\DocumentType;
+use App\Form\RisqueType;
+use App\Repository\DocumentRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\TacheRepository;
+use App\Repository\RisqueRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -24,9 +23,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 
-#[Route("/admin/tache", name: 'admin.tache.')]
+#[Route("/admin/document", name: 'admin.document.')]
 #[IsGranted('ROLE_USER')]
-class TacheController extends AbstractController
+class DocumentController extends AbstractController
 {
     public MenuActivator $activator;
 
@@ -36,10 +35,10 @@ class TacheController extends AbstractController
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private TacheRepository $tacheRepository,
+        private DocumentRepository $documentRepository,
         private Constante $constante,
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
+        $this->activator = new MenuActivator(MenuActivator::GROUPE_ADMINISTRATION);
     }
 
 
@@ -48,11 +47,11 @@ class TacheController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
-        return $this->render('admin/tache/index.html.twig', [
-            'pageName' => $this->translator->trans("tache_page_name_new"),
+        return $this->render('admin/document/index.html.twig', [
+            'pageName' => $this->translator->trans("document_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'taches' => $this->tacheRepository->paginate($idEntreprise, $page),
+            'documents' => $this->documentRepository->paginate($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
@@ -69,31 +68,26 @@ class TacheController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Tache */
-        $tache = new Tache();
+        /** @var Document $document */
+        $document = new Document();
         //Paramètres par défaut
-        $tache->setEntreprise($entreprise);
-        $tache->setClosed(false);
-        $tache->setInvite($invite);
+        $document->setEntreprise($entreprise);
 
-        $form = $this->createForm(TacheType::class, $tache);
+        $form = $this->createForm(DocumentType::class, $document);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($tache);
+            $this->manager->persist($document);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("tache_creation_ok", [
-                ":tache" => $tache->getDescription(),
+            $this->addFlash("success", $this->translator->trans("document_creation_ok", [
+                ":document" => $document->getNom(),
             ]));
-            return $this->redirectToRoute("admin.tache.index", [
+            return $this->redirectToRoute("admin.document.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/tache/create.html.twig', [
-            'pageName' => $this->translator->trans("tache_page_name_new"),
+        return $this->render('admin/document/create.html.twig', [
+            'pageName' => $this->translator->trans("document_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
@@ -102,8 +96,8 @@ class TacheController extends AbstractController
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idTache}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idTache, Request $request)
+    #[Route('/edit/{idEntreprise}/{idDocument}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idDocument, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -111,49 +105,49 @@ class TacheController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Tache */
-        $tache = $this->tacheRepository->find($idTache);
+        /** @var Document $document */
+        $document = $this->documentRepository->find($idDocument);
 
-        $form = $this->createForm(TacheType::class, $tache);
+        $form = $this->createForm(DocumentType::class, $document);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($tache); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->persist($document); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("tache_edition_ok", [
-                ":tache" => $tache->getDescription(),
+            $this->addFlash("success", $this->translator->trans("document_edition_ok", [
+                ":document" => $document->getNom(),
             ]));
-            return $this->redirectToRoute("admin.tache.index", [
+            return $this->redirectToRoute("admin.document.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/tache/edit.html.twig', [
-            'pageName' => $this->translator->trans("tache_page_name_update", [
-                ":tache" => $tache->getDescription(),
+        return $this->render('admin/document/edit.html.twig', [
+            'pageName' => $this->translator->trans("document_page_name_update", [
+                ":document" => $document->getNom(),
             ]),
             'utilisateur' => $user,
-            'tache' => $tache,
+            'document' => $document,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
         ]);
     }
 
-    #[Route('/remove/{idEntreprise}/{idTache}', name: 'remove', requirements: ['idTache' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idTache, Request $request)
+    #[Route('/remove/{idEntreprise}/{idDocument}', name: 'remove', requirements: ['idDocument' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function remove($idEntreprise, $idDocument, Request $request)
     {
-        /** @var Tache $tache */
-        $tache = $this->tacheRepository->find($idTache);
+        /** @var Document $document */
+        $document = $this->documentRepository->find($idDocument);
 
-        $message = $this->translator->trans("tache_deletion_ok", [
-            ":tache" => $tache->getDescription(),
+        $message = $this->translator->trans("document_deletion_ok", [
+            ":document" => $document->getNom(),
         ]);;
         
-        $this->manager->remove($tache);
+        $this->manager->remove($document);
         $this->manager->flush();
 
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.tache.index", [
+        return $this->redirectToRoute("admin.document.index", [
             'idEntreprise' => $idEntreprise,
         ]);
     }
