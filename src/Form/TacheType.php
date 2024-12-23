@@ -65,21 +65,22 @@ class TacheType extends AbstractType
             // ])
             ->add('executor', EntityType::class, [
                 'label' => "Executeur",
+                'required' => false,
                 'class' => Invite::class,
-                'choice_label' => 'id',
+                'choice_label' => 'nom',
             ])
-            ->add('piste', EntityType::class, [
-                'label' => "Piste",
-                'class' => Piste::class,
-                'choice_label' => 'id',
-            ])
-            ->add('cotation', EntityType::class, [
-                'label' => "Cotation",
-                'class' => Cotation::class,
-                'choice_label' => 'id',
-            ])
+            // ->add('piste', EntityType::class, [
+            //     'label' => "Piste",
+            //     'class' => Piste::class,
+            //     'choice_label' => 'id',
+            // ])
+            // ->add('cotation', EntityType::class, [
+            //     'label' => "Cotation",
+            //     'class' => Cotation::class,
+            //     'choice_label' => 'id',
+            // ])
             ->add('feedbacks', CollectionType::class, [
-                'label' => "tache_form_label_feedback",
+                'label' => "tache_form_label_feedbacks",
                 'entry_type' => FeedbackType::class,
                 'by_reference' => false,
                 'allow_add' => true,

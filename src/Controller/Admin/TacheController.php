@@ -24,7 +24,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 
-#[Route("/admin/taxe", name: 'admin.taxe.')]
+#[Route("/admin/taxe", name: 'admin.tache.')]
 #[IsGranted('ROLE_USER')]
 class TacheController extends AbstractController
 {
@@ -75,7 +75,7 @@ class TacheController extends AbstractController
         /** @var Tache */
         $tache = new Tache();
         //Paramètres par défaut
-        $tache->setEntreprise($idEntreprise);
+        $tache->setEntreprise($entreprise);
         $tache->setClosed(false);
         $tache->setInvite($invite);
 

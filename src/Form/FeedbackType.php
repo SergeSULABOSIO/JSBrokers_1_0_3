@@ -48,16 +48,16 @@ class FeedbackType extends AbstractType
             // ->add('updatedAt', DateTimeType::class, [
             //     'widget' => 'single_text',
             // ])
-            ->add('invite', EntityType::class, [
-                'label' => "Invité",
-                'class' => Invite::class,
-                'choice_label' => 'id',
-            ])
-            ->add('tache', EntityType::class, [
-                'label' => "Tâche",
-                'class' => Tache::class,
-                'choice_label' => 'id',
-            ])
+            // ->add('invite', EntityType::class, [
+            //     'label' => "Invité",
+            //     'class' => Invite::class,
+            //     'choice_label' => 'id',
+            // ])
+            // ->add('tache', EntityType::class, [
+            //     'label' => "Tâche",
+            //     'class' => Tache::class,
+            //     'choice_label' => 'id',
+            // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
