@@ -2,12 +2,8 @@
 
 namespace App\Form;
 
-use App\Entity\Piste;
-use App\Entity\Invite;
 use App\Entity\Assureur;
-use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
-use App\Entity\RevenuPourCourtier;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -16,7 +12,6 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;

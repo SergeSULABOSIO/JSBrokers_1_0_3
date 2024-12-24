@@ -87,10 +87,10 @@ class PisteType extends AbstractType
                 'class' => Risque::class,
                 'choice_label' => 'nom',
             ])
-            ->add('client', EntityType::class, [
-                'class' => Client::class,
-                'choice_label' => 'nom',
-            ])
+            // ->add('client', EntityType::class, [
+            //     'class' => Client::class,
+            //     'choice_label' => 'nom',
+            // ])
             // ->add('invite', EntityType::class, [
             //     'class' => Invite::class,
             //     'choice_label' => 'id',
