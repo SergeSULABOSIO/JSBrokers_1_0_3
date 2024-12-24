@@ -31,16 +31,16 @@ class PisteType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('referencePolice', TextType::class, [
-                'label' => "Référence de la police",
-                'attr' => [
-                    'placeholder' => "Référence de la police",
-                ],
-            ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
                 'attr' => [
                     'placeholder' => "Nom de la piste",
+                ],
+            ])
+            ->add('referencePolice', TextType::class, [
+                'label' => "Référence de la police",
+                'attr' => [
+                    'placeholder' => "Référence de la police",
                 ],
             ])
             ->add('typeAvenant', ChoiceType::class, [
