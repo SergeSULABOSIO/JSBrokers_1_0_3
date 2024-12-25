@@ -120,6 +120,9 @@ class Invite
     #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'invite')]
     private Collection $assistants;
 
+    #[ORM\ManyToOne(inversedBy: 'invites')]
+    private ?Entreprise $entreprise = null;
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
@@ -637,6 +640,18 @@ class Invite
                 $assistant->setInvite(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
 
         return $this;
     }

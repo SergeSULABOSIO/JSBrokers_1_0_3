@@ -143,12 +143,6 @@ class Entreprise
     private Collection $taxes;
 
     /**
-     * @var Collection<int, Invite>
-     */
-    #[ORM\ManyToMany(targetEntity: Invite::class, mappedBy: 'entreprises', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    private Collection $invites;
-
-    /**
      * @var Collection<int, Client>
      */
     #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -166,10 +160,15 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Feedback::class, mappedBy: 'entreprise')]
     private Collection $feedback;
 
+    /**
+     * @var Collection<int, Invite>
+     */
+    #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $invites;
+
 
     public function __construct()
     {
-        $this->invites = new ArrayCollection();
         $this->monnaies = new ArrayCollection();
         $this->taxes = new ArrayCollection();
         $this->compteBancaires = new ArrayCollection();
@@ -185,6 +184,7 @@ class Entreprise
         $this->documents = new ArrayCollection();
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
+        $this->invites = new ArrayCollection();
     }
 
 
@@ -335,14 +335,6 @@ class Entreprise
         $this->licence = $licence;
 
         return $this;
-    }
-
-    /**
-     * @return Collection<int, Invite>
-     */
-    public function getInvites(): Collection
-    {
-        return $this->invites;
     }
 
     public function getThumbnail(): ?string
@@ -813,6 +805,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($feedback->getEntreprise() === $this) {
                 $feedback->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Invite>
+     */
+    public function getInvites(): Collection
+    {
+        return $this->invites;
+    }
+
+    public function addInvite(Invite $invite): static
+    {
+        if (!$this->invites->contains($invite)) {
+            $this->invites->add($invite);
+            $invite->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeInvite(Invite $invite): static
+    {
+        if ($this->invites->removeElement($invite)) {
+            // set the owning side to null (unless already changed)
+            if ($invite->getEntreprise() === $this) {
+                $invite->setEntreprise(null);
             }
         }
 
