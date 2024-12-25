@@ -3,11 +3,8 @@
 namespace App\Form;
 
 use App\Entity\Piste;
-use App\Entity\Client;
-use App\Entity\Invite;
 use App\Entity\Risque;
 use App\Entity\Avenant;
-use App\Entity\Cotation;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
