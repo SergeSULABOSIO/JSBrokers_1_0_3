@@ -93,7 +93,6 @@ class EntrepriseController extends AbstractController
             $this->addFlash("success", $this->translator->trans("entreprise_created_ok", [
                 ':company' => $entreprise->getNom(),
             ]));
-            
 
             return $this->redirectToRoute("admin.entreprise.index");
         }
