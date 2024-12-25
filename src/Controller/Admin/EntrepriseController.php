@@ -3,11 +3,13 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use App\Form\EntrepriseType;
 use App\Repository\InviteRepository;
 use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -73,10 +75,26 @@ class EntrepriseController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($entreprise);
+
+            //On cree aussi l'invité proprietaire de l'entreprise
+            /** @var Invite $proprietaire */
+            $proprietaire = new Invite();
+            $proprietaire->setNom("Administrateur");
+            $proprietaire->setEmail($user->getEmail());
+            $proprietaire->setEntreprise($entreprise);
+            $proprietaire->setUtilisateur($user);
+            $proprietaire->setProprietaire(true);
+            $proprietaire->setCreatedAt(new DateTimeImmutable("now"));
+            $proprietaire->setUpdatedAt(new DateTimeImmutable("now"));
+            $this->manager->persist($proprietaire);
+
             $this->manager->flush();
+
             $this->addFlash("success", $this->translator->trans("entreprise_created_ok", [
                 ':company' => $entreprise->getNom(),
             ]));
+            
+
             return $this->redirectToRoute("admin.entreprise.index");
         }
         return $this->render('admin/entreprise/create.html.twig', [
