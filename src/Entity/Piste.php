@@ -39,12 +39,6 @@ class Piste
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
-    /**
-     * @var Collection<int, Tache>
-     */
-    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    private Collection $taches;
-
     #[ORM\Column]
     private ?int $typeAvenant = null;
 
@@ -62,6 +56,12 @@ class Piste
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
+
+    /**
+     * @var Collection<int, Tache>
+     */
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $taches;
 
     public function __construct()
     {
