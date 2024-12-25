@@ -19,9 +19,6 @@ class OffreIndemnisationSinistre
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
-    private ?Invite $invite = null;
-
-    #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
     private ?NotificationSinistre $notification = null;
 
     #[ORM\Column(nullable: true)]
@@ -50,6 +47,9 @@ class OffreIndemnisationSinistre
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'offreIndemnisationSinistre')]
     private Collection $paiements;
+
+    #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
+    private ?Invite $invite = null;
 
     public function __construct()
     {
