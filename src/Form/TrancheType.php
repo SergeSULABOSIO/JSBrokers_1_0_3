@@ -3,7 +3,6 @@
 namespace App\Form;
 
 use App\Entity\Invite;
-use DateTimeImmutable;
 use App\Entity\Tranche;
 use App\Entity\Cotation;
 use App\Entity\FactureCommission;
@@ -12,6 +11,7 @@ use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -50,7 +50,7 @@ class TrancheType extends AbstractType
                     'placeholder' => "Portion",
                 ],
             ])
-            ->add('payableAt', DateTimeImmutable::class, [
+            ->add('payableAt', DateTimeType::class, [
                 'label' => "Date d'effet",
                 'widget' => 'single_text',
             ])
