@@ -26,11 +26,11 @@ class Invite
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
-    /**
-     * @var Collection<int, Entreprise>
-     */
-    #[ORM\ManyToMany(targetEntity: Entreprise::class, inversedBy: 'invites')]
-    private Collection $entreprises;
+    // /**
+    //  * @var Collection<int, Entreprise>
+    //  */
+    // #[ORM\ManyToMany(targetEntity: Entreprise::class, inversedBy: 'invites')]
+    // private Collection $entreprises;
 
     #[ORM\ManyToOne(inversedBy: 'invites')]
     private ?Utilisateur $utilisateur = null;
@@ -127,7 +127,7 @@ class Invite
 
     public function __construct()
     {
-        $this->entreprises = new ArrayCollection();
+        // $this->entreprises = new ArrayCollection();
         $this->pistes = new ArrayCollection();
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
@@ -185,29 +185,29 @@ class Invite
         return $this;
     }
 
-    /**
-     * @return Collection<int, Entreprise>
-     */
-    public function getEntreprises(): Collection
-    {
-        return $this->entreprises;
-    }
+    // /**
+    //  * @return Collection<int, Entreprise>
+    //  */
+    // public function getEntreprises(): Collection
+    // {
+    //     return $this->entreprises;
+    // }
 
-    public function addEntreprise(Entreprise $entreprise): static
-    {
-        if (!$this->entreprises->contains($entreprise)) {
-            $this->entreprises->add($entreprise);
-        }
+    // public function addEntreprise(Entreprise $entreprise): static
+    // {
+    //     if (!$this->entreprises->contains($entreprise)) {
+    //         $this->entreprises->add($entreprise);
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
-    public function removeEntreprise(Entreprise $entreprise): static
-    {
-        $this->entreprises->removeElement($entreprise);
+    // public function removeEntreprise(Entreprise $entreprise): static
+    // {
+    //     $this->entreprises->removeElement($entreprise);
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getUtilisateur(): ?Utilisateur
     {

@@ -345,24 +345,24 @@ class Entreprise
         return $this->invites;
     }
 
-    public function addInvite(Invite $invite): static
-    {
-        if (!$this->invites->contains($invite)) {
-            $this->invites->add($invite);
-            $invite->addEntreprise($this);
-        }
+    // public function addInvite(Invite $invite): static
+    // {
+    //     if (!$this->invites->contains($invite)) {
+    //         $this->invites->add($invite);
+    //         $invite->addEntreprise($this);
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
-    public function removeInvite(Invite $invite): static
-    {
-        if ($this->invites->removeElement($invite)) {
-            $invite->removeEntreprise($this);
-        }
+    // public function removeInvite(Invite $invite): static
+    // {
+    //     if ($this->invites->removeElement($invite)) {
+    //         $invite->removeEntreprise($this);
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getThumbnail(): ?string
     {
