@@ -47,7 +47,7 @@ class PisteRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
-    
+
     public function paginate(int $idEntreprise, int $page): PaginationInterface
     {
         /** @var Utilisateur $user */
@@ -55,7 +55,6 @@ class PisteRepository extends ServiceEntityRepository
         return $this->paginator->paginate(
             $this->createQueryBuilder("p")
                 ->leftJoin("p.invite", "i")
-                // ->where('i.entreprises = :entrepriseId')
                 ->where(':entrepriseId MEMBER OF i.entreprises') //expression SQL qui permet de fouiller une entité dans une collection d'entités
                 // ->orWhere("i.email = :userEmail")
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
