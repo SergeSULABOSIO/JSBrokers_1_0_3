@@ -25,7 +25,7 @@ class Cotation
     private ?Invite $invite = null;
 
     #[ORM\Column]
-    private ?\DateTimeImmutable $createAt = null;
+    private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
@@ -36,25 +36,25 @@ class Cotation
     /**
      * @var Collection<int, Tache>
      */
-    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'cotation')]
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $taches;
 
     /**
      * @var Collection<int, ChargementPourPrime>
      */
-    #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'cotation')]
+    #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $chargements;
 
     /**
      * @var Collection<int, RevenuPourCourtier>
      */
-    #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'cotation')]
+    #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $revenus;
 
     /**
      * @var Collection<int, Tranche>
      */
-    #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'cotation')]
+    #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $tranches;
 
     #[ORM\ManyToOne(inversedBy: 'cotations')]
@@ -63,13 +63,13 @@ class Cotation
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'cotation')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
     /**
      * @var Collection<int, Avenant>
      */
-    #[ORM\OneToMany(targetEntity: Avenant::class, mappedBy: 'cotation')]
+    #[ORM\OneToMany(targetEntity: Avenant::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $avenants;
 
     public function __construct()
@@ -123,14 +123,14 @@ class Cotation
         return $this;
     }
 
-    public function getCreateAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
-        return $this->createAt;
+        return $this->createdAt;
     }
 
-    public function setCreateAt(\DateTimeImmutable $createAt): static
+    public function setCreatedAt(\DateTimeImmutable $createAt): static
     {
-        $this->createAt = $createAt;
+        $this->createdAt = $createAt;
 
         return $this;
     }

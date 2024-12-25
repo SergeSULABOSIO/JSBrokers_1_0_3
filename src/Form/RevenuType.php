@@ -34,6 +34,7 @@ class RevenuType extends AbstractType
             ])
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
+                'required' => false,
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Pourcentage",
@@ -41,6 +42,7 @@ class RevenuType extends AbstractType
             ])
             ->add('appliquerPourcentageDuRisque', ChoiceType::class, [
                 'help' => "Si vous cochez 'OUI', càd qu'en cas de déifférence, c'est le pourcentage commission spécifique au risque qui sera appliqué.",
+                'required' => false,
                 'label' => "Privilégier le taux de commission (pourcentage) spécifique au risque?",
                 'expanded' => true,
                 'choices'  => [
@@ -50,6 +52,7 @@ class RevenuType extends AbstractType
             ])
             ->add('montantflat', NumberType::class, [
                 'label' => "Montant fixe",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Montant fixe",
                 ],

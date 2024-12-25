@@ -37,6 +37,7 @@ class TrancheType extends AbstractType
             ])
             ->add('montantFlat', MoneyType::class, [
                 'label' => "Montant fixe",
+                'required' => false,
                 'currency' => "USD",
                 'grouping' => true,
                 'attr' => [
@@ -45,6 +46,7 @@ class TrancheType extends AbstractType
             ])
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
+                'required' => false,
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Portion",

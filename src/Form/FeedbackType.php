@@ -46,12 +46,14 @@ class FeedbackType extends AbstractType
                 ],
             ])
             ->add('nextAction', TextType::class, [
+                'required' => false,
                 'label' => "Prochaine Action",
                 'attr' => [
                     'placeholder' => "Description",
                 ],
             ])
             ->add('nextActionAt', DateTimeType::class, [
+                'required' => false,
                 'widget' => 'single_text',
             ])
             // ->add('createdAt', DateTimeType::class, [

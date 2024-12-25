@@ -15,9 +15,6 @@ class Piste
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $referencePolice = null;
-
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
     
@@ -166,18 +163,6 @@ class Piste
     public function __toString(): string
     {
         return $this->nom;
-    }
-
-    public function getReferencePolice(): ?string
-    {
-        return $this->referencePolice;
-    }
-
-    public function setReferencePolice(?string $referencePolice): static
-    {
-        $this->referencePolice = $referencePolice;
-
-        return $this;
     }
 
     public function getClient(): ?Client

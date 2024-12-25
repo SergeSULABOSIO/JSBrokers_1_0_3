@@ -133,9 +133,10 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ])
-            ->add('avenants', CollectionType::class, [
-                'label' => "Avenants",
-                'entry_type' => AvenantType::class,
+            
+            ->add('taches', CollectionType::class, [
+                'label' => "Tâches",
+                'entry_type' => TacheType::class,
                 'by_reference' => false,
                 'allow_add' => true,
                 'allow_delete' => true,
@@ -152,9 +153,10 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "description",
                 ],
             ])
-            ->add('taches', CollectionType::class, [
-                'label' => "Tâches",
-                'entry_type' => TacheType::class,
+
+            ->add('avenants', CollectionType::class, [
+                'label' => "Avenants",
+                'entry_type' => AvenantType::class,
                 'by_reference' => false,
                 'allow_add' => true,
                 'allow_delete' => true,

@@ -27,6 +27,11 @@ class RevenuPourCourtierType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('type', EntityType::class, [
+                'label' => "Type de revenu",
+                'class' => Revenu::class,
+                'choice_label' => 'nom',
+            ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
                 'attr' => [
@@ -35,6 +40,7 @@ class RevenuPourCourtierType extends AbstractType
             ])
             ->add('montantFlatExceptionel', MoneyType::class, [
                 'label' => "Montant fixe (exceptionnel)",
+                'required' => false,
                 'currency' => "USD",
                 'grouping' => true,
                 'attr' => [
@@ -43,6 +49,7 @@ class RevenuPourCourtierType extends AbstractType
             ])
             ->add('tauxExceptionel', PercentType::class, [
                 'label' => "Taux exceptionnel",
+                'required' => false,
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Taux",
@@ -54,10 +61,7 @@ class RevenuPourCourtierType extends AbstractType
             // ->add('updatedAt', null, [
             //     'widget' => 'single_text',
             // ])
-            ->add('type', EntityType::class, [
-                'class' => Revenu::class,
-                'choice_label' => 'nom',
-            ])
+
             // ->add('cotation', EntityType::class, [
             //     'class' => Cotation::class,
             //     'choice_label' => 'id',

@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Piste;
+use App\Entity\Client;
 use App\Entity\Risque;
 use App\Entity\Avenant;
 use App\Services\FormListenerFactory;
@@ -28,19 +29,19 @@ class PisteType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('client', EntityType::class, [
+                'label' => "Client / Assurée ou Prospect",
+                'required' => true,
+                'class' => Client::class,
+                'choice_label' => 'nom',
+            ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
                 'attr' => [
                     'placeholder' => "Nom de la piste",
                 ],
             ])
-            ->add('referencePolice', TextType::class, [
-                'required' => false,
-                'label' => "Référence de la police",
-                'attr' => [
-                    'placeholder' => "Référence de la police",
-                ],
-            ])
+
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",
                 'expanded' => true,
@@ -87,10 +88,7 @@ class PisteType extends AbstractType
                 'required' => false,
                 'choice_label' => 'nomComplet',
             ])
-            // ->add('client', EntityType::class, [
-            //     'class' => Client::class,
-            //     'choice_label' => 'nom',
-            // ])
+
             // ->add('invite', EntityType::class, [
             //     'class' => Invite::class,
             //     'choice_label' => 'id',

@@ -28,7 +28,15 @@ class AvenantType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('referencePolice', TextType::class, [
+                'required' => true,
+                'label' => "Référence de la police",
+                'attr' => [
+                    'placeholder' => "Référence de la police",
+                ],
+            ])
             ->add('description', TextType::class, [
+                'required' => false,
                 'label' => "Description",
                 'attr' => [
                     'placeholder' => "Description",
@@ -78,7 +86,7 @@ class AvenantType extends AbstractType
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
-       
+
         ;
     }
 

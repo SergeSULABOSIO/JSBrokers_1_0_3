@@ -33,12 +33,14 @@ class ChargementType extends AbstractType
             ->add('montantflat', MoneyType::class, [
                 'label' => "Montant Flat",
                 'currency' => "USD",
+                'required' => false,
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Code",
                 ],
             ])
             ->add('tauxSurPrimeNette', PercentType::class, [
+                'required' => false,
                 'label' => "Taux par rapport à la prime nette",
                 'scale' => 3,
                 'attr' => [
