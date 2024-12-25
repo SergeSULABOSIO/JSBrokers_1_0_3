@@ -51,7 +51,6 @@ class PisteRepository extends ServiceEntityRepository
     {
         /** @var Utilisateur $user */
         // $user = $this->security->getUser();
-
         return $this->paginator->paginate(
             $this->createQueryBuilder("p")
                 ->leftJoin("p.invite", "i")
