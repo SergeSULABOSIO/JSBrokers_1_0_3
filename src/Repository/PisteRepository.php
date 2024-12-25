@@ -53,13 +53,13 @@ class PisteRepository extends ServiceEntityRepository
         // $user = $this->security->getUser();
 
         return $this->paginator->paginate(
-            $this->createQueryBuilder("m")
-                // ->leftJoin("e.invites", "i")
-                ->where('m.entreprise = :entrepriseId')
+            $this->createQueryBuilder("p")
+                ->leftJoin("p.invite", "i")
+                ->where('i.entreprise = :entrepriseId')
                 // ->orWhere("i.email = :userEmail")
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 // ->setParameter('userEmail', '' . $user->getEmail() . '')
-                ->orderBy('m.id', 'DESC'),
+                ->orderBy('p.id', 'DESC'),
             $page,
             20,
         );
