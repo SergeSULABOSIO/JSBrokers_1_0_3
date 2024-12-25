@@ -59,9 +59,6 @@ class Document
     private ?CompteBancaire $compteBancaire = null;
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
-    private ?Entreprise $entreprise = null;
-
-    #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Piste $piste = null;
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
@@ -248,18 +245,6 @@ class Document
     public function setCompteBancaire(?CompteBancaire $compteBancaire): static
     {
         $this->compteBancaire = $compteBancaire;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

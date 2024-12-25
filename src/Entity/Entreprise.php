@@ -67,14 +67,6 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Utilisateur::class, mappedBy: 'connectedTo')]
     private Collection $connectedUsers;
 
-    /**
-     * @var Collection<int, Document>
-     */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    private Collection $documents;
-
-
-
     //************************************************** */
     //************************************************** */
     //********** LES PARAMETRES DE L'ENTREPRISE ******** */
@@ -181,7 +173,7 @@ class Entreprise
         $this->partenaires = new ArrayCollection();
         $this->connectedUsers = new ArrayCollection();
         $this->modelePieceSinistres = new ArrayCollection();
-        $this->documents = new ArrayCollection();
+        // $this->documents = new ArrayCollection();
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
         $this->invites = new ArrayCollection();
@@ -715,36 +707,6 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($modelePieceSinistre->getEntreprise() === $this) {
                 $modelePieceSinistre->setEntreprise(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Document>
-     */
-    public function getDocuments(): Collection
-    {
-        return $this->documents;
-    }
-
-    public function addDocument(Document $document): static
-    {
-        if (!$this->documents->contains($document)) {
-            $this->documents->add($document);
-            $document->setEntreprise($this);
-        }
-
-        return $this;
-    }
-
-    public function removeDocument(Document $document): static
-    {
-        if ($this->documents->removeElement($document)) {
-            // set the owning side to null (unless already changed)
-            if ($document->getEntreprise() === $this) {
-                $document->setEntreprise(null);
             }
         }
 
