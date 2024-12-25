@@ -39,7 +39,7 @@
 						<tr>
 							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_ids" | trans, "i.email") }}</div></th>
 							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_invite_date" | trans, "i.createdAt") }}</div></th>
-							<th scope="col"><div class='d-flex justify-content-start'>{{ "invite_liste_titre_companies" | trans }}</div></th>
+							{# <th scope="col"><div class='d-flex justify-content-start'>{{ "invite_liste_titre_companies" | trans }}</div></th> #}
 							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "invite_liste_titre_actions" | trans }}</div></th>
 						</tr>
 					</thead>
@@ -51,27 +51,20 @@
 									<turbo-frame id="invite_{{ invite.id }}">
 										<a class="m-2" href="{{ path('admin.invite.edit', {'id':invite.id })}}">
 											{{ invite.nom }} ({{ invite.email }})
+											{% if invite.isproprietaire == true %}
+												(Propriétaire)
+											{% endif %}
 										</a>
 									</turbo-frame>
 								</td>
 								<td>
 									{{ invite.createdAt|date('d/m/Y H:i') }}
 								</td>
-								<td class="justify-content-between">
-									{% if invite.entreprises|length == 1 %}
-										{{ invite.entreprises[0].nom }}
-										{# {{ invite.nomEntreprise }} #}
-									{% elseif invite.entreprises|length > 1 %}
-										{{ invite.entreprises[0].nom }} 
-										{# {{ invite.nomEntreprise }}  #}
-										<span class="text-body-tertiary">
-											(+{{invite.entreprises|length -1}})
-										</span>
-									{% else %}
-										{{ "invite_filter_result_empty" | trans }}
-										{# Aucune #}
+								{# <td class="justify-content-between">
+									{% if invite.entreprise != null %}
+										{{ invite.entreprise.nom }}
 									{% endif %}
-								</td>
+								</td> #}
 								<td>
 									<div class="d-flex gap-1 d-flex justify-content-end">
 										{# Les actions sur l element de la liste #}
