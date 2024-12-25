@@ -45,14 +45,14 @@ class FeedbackType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            ->add('nextActionAt', DateTimeType::class, [
-                'widget' => 'single_text',
-            ])
             ->add('nextAction', TextType::class, [
                 'label' => "Prochaine Action",
                 'attr' => [
                     'placeholder' => "Description",
                 ],
+            ])
+            ->add('nextActionAt', DateTimeType::class, [
+                'widget' => 'single_text',
             ])
             // ->add('createdAt', DateTimeType::class, [
             //     'widget' => 'single_text',
@@ -77,7 +77,7 @@ class FeedbackType extends AbstractType
                     'class' => "btn btn-secondary",
                 ],
             ])
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
+            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }

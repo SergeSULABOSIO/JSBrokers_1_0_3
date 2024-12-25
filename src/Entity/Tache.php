@@ -30,7 +30,7 @@ class Tache
     /**
      * @var Collection<int, Feedback>
      */
-    #[ORM\OneToMany(targetEntity: Feedback::class, mappedBy: 'tache')]
+    #[ORM\OneToMany(targetEntity: Feedback::class, mappedBy: 'tache', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $feedbacks;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
@@ -48,7 +48,7 @@ class Tache
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'tache')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'tache', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
     #[ORM\Column]

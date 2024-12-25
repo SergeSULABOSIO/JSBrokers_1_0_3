@@ -70,7 +70,7 @@ class Cotation
      * @var Collection<int, Avenant>
      */
     #[ORM\OneToMany(targetEntity: Avenant::class, mappedBy: 'cotation')]
-    private Collection $avenant;
+    private Collection $avenants;
 
     public function __construct()
     {
@@ -79,7 +79,7 @@ class Cotation
         $this->revenus = new ArrayCollection();
         $this->tranches = new ArrayCollection();
         $this->documents = new ArrayCollection();
-        $this->avenant = new ArrayCollection();
+        $this->avenants = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -324,15 +324,15 @@ class Cotation
     /**
      * @return Collection<int, Avenant>
      */
-    public function getAvenant(): Collection
+    public function getAvenants(): Collection
     {
-        return $this->avenant;
+        return $this->avenants;
     }
 
     public function addAvenant(Avenant $avenant): static
     {
-        if (!$this->avenant->contains($avenant)) {
-            $this->avenant->add($avenant);
+        if (!$this->avenants->contains($avenant)) {
+            $this->avenants->add($avenant);
             $avenant->setCotation($this);
         }
 
@@ -341,7 +341,7 @@ class Cotation
 
     public function removeAvenant(Avenant $avenant): static
     {
-        if ($this->avenant->removeElement($avenant)) {
+        if ($this->avenants->removeElement($avenant)) {
             // set the owning side to null (unless already changed)
             if ($avenant->getCotation() === $this) {
                 $avenant->setCotation(null);

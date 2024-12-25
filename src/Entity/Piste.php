@@ -45,7 +45,7 @@ class Piste
     /**
      * @var Collection<int, Tache>
      */
-    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste')]
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $taches;
 
     #[ORM\Column]
@@ -57,13 +57,13 @@ class Piste
     /**
      * @var Collection<int, Cotation>
      */
-    #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'piste')]
+    #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $cotations;
 
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'piste')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
     public function __construct()

@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Entity\Avenant;
 use App\Entity\Invite;
 use App\Entity\Piste;
 use App\Entity\Tache;
@@ -75,6 +76,7 @@ class PisteController extends AbstractController
         /** @var Piste $piste */
         $piste = new Piste();
         //Paramètres par défaut
+        $piste->setTypeAvenant(Avenant::AVENANT_SOUSCRIPTION);
         $piste->setInvite($invite);
 
         $form = $this->createForm(PisteType::class, $piste);
@@ -121,9 +123,11 @@ class PisteController extends AbstractController
             $this->addFlash("success", $this->translator->trans("piste_edition_ok", [
                 ":piste" => $piste->getNom(),
             ]));
-            return $this->redirectToRoute("admin.piste.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+
+            //On doit rester sur la page d'édition
+            // return $this->redirectToRoute("admin.piste.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
         }
         return $this->render('admin/piste/edit.html.twig', [
             'pageName' => $this->translator->trans("piste_page_name_update", [
@@ -149,7 +153,7 @@ class PisteController extends AbstractController
         
         $this->manager->remove($piste);
         $this->manager->flush();
-        
+
         $this->addFlash("success", $message);
         return $this->redirectToRoute("admin.piste.index", [
             'idEntreprise' => $idEntreprise,

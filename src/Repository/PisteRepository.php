@@ -55,9 +55,9 @@ class PisteRepository extends ServiceEntityRepository
         return $this->paginator->paginate(
             $this->createQueryBuilder("p")
                 ->leftJoin("p.invite", "i")
-                ->where(':entrepriseId MEMBER OF i.entreprises') //expression SQL qui permet de fouiller une entité dans une collection d'entités
+                // ->where(':entrepriseId MEMBER OF i.entreprises') //expression SQL qui permet de fouiller une entité dans une collection d'entités
                 // ->orWhere("i.email = :userEmail")
-                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                // ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 // ->setParameter('userEmail', '' . $user->getEmail() . '')
                 ->orderBy('p.id', 'DESC'),
             $page,

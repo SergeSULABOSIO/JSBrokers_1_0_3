@@ -35,6 +35,7 @@ class PisteType extends AbstractType
                 ],
             ])
             ->add('referencePolice', TextType::class, [
+                'required' => false,
                 'label' => "Référence de la police",
                 'attr' => [
                     'placeholder' => "Référence de la police",
@@ -81,8 +82,10 @@ class PisteType extends AbstractType
                 ],
             ])
             ->add('risque', EntityType::class, [
+                'label' => "Couverture d'assurance",
                 'class' => Risque::class,
-                'choice_label' => 'nom',
+                'required' => false,
+                'choice_label' => 'nomComplet',
             ])
             // ->add('client', EntityType::class, [
             //     'class' => Client::class,
@@ -151,7 +154,7 @@ class PisteType extends AbstractType
             ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
-                'label' => "entreprise_form_button_save_company",
+                'label' => "Enregistrer",
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],

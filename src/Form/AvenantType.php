@@ -15,6 +15,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class AvenantType extends AbstractType
@@ -45,11 +46,11 @@ class AvenantType extends AbstractType
                     "RESILIATION"       => Avenant::AVENANT_RESILIATION,
                 ],
             ])
-            ->add('startingAt', DateTimeImmutable::class, [
+            ->add('startingAt', DateTimeType::class, [
                 'label' => "Date début",
                 'widget' => 'single_text',
             ])
-            ->add('endingAt', DateTimeImmutable::class, [
+            ->add('endingAt', DateTimeType::class, [
                 'label' => "Echéance",
                 'widget' => 'single_text',
             ])

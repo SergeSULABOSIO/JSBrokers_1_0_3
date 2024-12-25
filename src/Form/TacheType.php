@@ -105,7 +105,7 @@ class TacheType extends AbstractType
                     'class' => "btn btn-secondary",
                 ],
             ])
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
+            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
