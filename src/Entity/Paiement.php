@@ -27,9 +27,6 @@ class Paiement
     #[ORM\Column]
     private ?\DateTimeImmutable $paidAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'paiements')]
-    private ?Invite $invite = null;
-
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -47,6 +44,9 @@ class Paiement
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'paiement')]
     private Collection $preuves;
+    
+    #[ORM\ManyToOne(inversedBy: 'paiements')]
+    private ?Invite $invite = null;
 
     public function __construct()
     {
