@@ -33,9 +33,6 @@ class FactureCommission
     #[ORM\Column(length: 255)]
     private ?string $reference = null;
 
-    #[ORM\ManyToOne(inversedBy: 'factureCommissions')]
-    private ?Invite $invite = null;
-
     #[ORM\Column]
     private ?float $montantDu = null;
 
@@ -53,6 +50,9 @@ class FactureCommission
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'factureCommission')]
     private Collection $paiements;
+
+    #[ORM\ManyToOne(inversedBy: 'factureCommissions')]
+    private ?Invite $invite = null;
 
     public function __construct()
     {
