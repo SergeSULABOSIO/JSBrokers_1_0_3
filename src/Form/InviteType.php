@@ -52,24 +52,24 @@ class InviteType extends AbstractType
                 'by_reference' => false,
             ])
 
-            ->add('entreprises', EntrepriseAutocompleteField::class, [
-                'label' => "invite_form_company",
-                'class' => Entreprise::class,
-                'choice_label' => "nom",
-                'multiple' => true,
-                'expanded' => false,
-                'by_reference' => false,
-                'autocomplete' => true,
-                'attr' => [
-                    'placeholder' => "invite_form_company_placeholder",
-                ],
-                //une requêt pour filtrer les elements de la liste d'options
-                'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
-            ])
+            // ->add('entreprises', EntrepriseAutocompleteField::class, [
+            //     'label' => "invite_form_company",
+            //     'class' => Entreprise::class,
+            //     'choice_label' => "nom",
+            //     'multiple' => true,
+            //     'expanded' => false,
+            //     'by_reference' => false,
+            //     'autocomplete' => true,
+            //     'attr' => [
+            //         'placeholder' => "invite_form_company_placeholder",
+            //     ],
+            //     //une requêt pour filtrer les elements de la liste d'options
+            //     'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
+            // ])
 
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
-                'label' => "invite_form_send_invite",
+                'label' => "Enregistrer",
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],

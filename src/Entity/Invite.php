@@ -123,6 +123,9 @@ class Invite
     #[ORM\ManyToOne(inversedBy: 'invites')]
     private ?Entreprise $entreprise = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $proprietaire = null;
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
@@ -652,6 +655,18 @@ class Invite
     public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
+
+        return $this;
+    }
+
+    public function isProprietaire(): ?bool
+    {
+        return $this->proprietaire;
+    }
+
+    public function setProprietaire(?bool $proprietaire): static
+    {
+        $this->proprietaire = $proprietaire;
 
         return $this;
     }

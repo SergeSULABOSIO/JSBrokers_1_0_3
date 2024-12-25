@@ -20,6 +20,10 @@
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
             Chargements
         </button>
+        <button class="nav-link" id="nav-invites-tab" data-bs-toggle="tab" data-bs-target="#nav-invites" type="button" role="tab" aria-controls="nav-invites" aria-selected="true">
+            {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+            invités
+        </button>
     </div>
 </nav>
 {# Contenu de chaque Onglet #}
@@ -38,5 +42,8 @@
     </div>
     <div class="tab-pane fade" id="nav-chargements" role="tabpanel" aria-labelledby="nav-chargements-tab" tabindex="0">
         {{ form_widget(form.chargements) }}
+    </div>
+    <div class="tab-pane fade" id="nav-invites" role="tabpanel" aria-labelledby="nav-invites-tab" tabindex="0">
+        {{ form_widget(form.invites) }}
     </div>
 </div>
