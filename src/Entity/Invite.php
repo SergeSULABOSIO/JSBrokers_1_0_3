@@ -26,11 +26,6 @@ class Invite
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
-    // /**
-    //  * @var Collection<int, Entreprise>
-    //  */
-    // #[ORM\ManyToMany(targetEntity: Entreprise::class, inversedBy: 'invites')]
-    // private Collection $entreprises;
 
     #[ORM\ManyToOne(inversedBy: 'invites')]
     private ?Utilisateur $utilisateur = null;
@@ -184,30 +179,6 @@ class Invite
 
         return $this;
     }
-
-    // /**
-    //  * @return Collection<int, Entreprise>
-    //  */
-    // public function getEntreprises(): Collection
-    // {
-    //     return $this->entreprises;
-    // }
-
-    // public function addEntreprise(Entreprise $entreprise): static
-    // {
-    //     if (!$this->entreprises->contains($entreprise)) {
-    //         $this->entreprises->add($entreprise);
-    //     }
-
-    //     return $this;
-    // }
-
-    // public function removeEntreprise(Entreprise $entreprise): static
-    // {
-    //     $this->entreprises->removeElement($entreprise);
-
-    //     return $this;
-    // }
 
     public function getUtilisateur(): ?Utilisateur
     {
