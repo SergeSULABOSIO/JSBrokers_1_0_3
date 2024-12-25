@@ -48,12 +48,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $updatedAt = null;
 
     /**
-     * @var Collection<int, Invite>
-     */
-    #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'utilisateur')]
-    private Collection $invites;
-
-    /**
      * @var Collection<int, Entreprise>
      */
     #[ORM\OneToMany(targetEntity: Entreprise::class, mappedBy: 'utilisateur')]
@@ -67,7 +61,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function __construct()
     {
-        $this->invites = new ArrayCollection();
         $this->entreprises = new ArrayCollection();
     }
 
@@ -190,36 +183,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function setUpdatedAt(?\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Invite>
-     */
-    public function getInvites(): Collection
-    {
-        return $this->invites;
-    }
-
-    public function addInvite(Invite $invite): static
-    {
-        if (!$this->invites->contains($invite)) {
-            $this->invites->add($invite);
-            $invite->setUtilisateur($this);
-        }
-
-        return $this;
-    }
-
-    public function removeInvite(Invite $invite): static
-    {
-        if ($this->invites->removeElement($invite)) {
-            // set the owning side to null (unless already changed)
-            if ($invite->getUtilisateur() === $this) {
-                $invite->setUtilisateur(null);
-            }
-        }
 
         return $this;
     }

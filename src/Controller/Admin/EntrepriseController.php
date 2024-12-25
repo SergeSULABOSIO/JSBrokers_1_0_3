@@ -82,7 +82,6 @@ class EntrepriseController extends AbstractController
             $proprietaire->setNom("Administrateur");
             $proprietaire->setEmail($user->getEmail());
             $proprietaire->setEntreprise($entreprise);
-            $proprietaire->setUtilisateur($user);
             $proprietaire->setProprietaire(true);
             $proprietaire->setCreatedAt(new DateTimeImmutable("now"));
             $proprietaire->setUpdatedAt(new DateTimeImmutable("now"));

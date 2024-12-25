@@ -26,10 +26,6 @@ class Invite
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
-
-    #[ORM\ManyToOne(inversedBy: 'invites')]
-    private ?Utilisateur $utilisateur = null;
-
     /**
      * @var Collection<int, Piste>
      */
@@ -182,18 +178,6 @@ class Invite
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    public function getUtilisateur(): ?Utilisateur
-    {
-        return $this->utilisateur;
-    }
-
-    public function setUtilisateur(?Utilisateur $utilisateur): static
-    {
-        $this->utilisateur = $utilisateur;
 
         return $this;
     }
