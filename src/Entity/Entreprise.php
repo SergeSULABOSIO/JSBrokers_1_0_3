@@ -751,28 +751,6 @@ class Entreprise
         return $this->feedback;
     }
 
-    public function addFeedback(Feedback $feedback): static
-    {
-        if (!$this->feedback->contains($feedback)) {
-            $this->feedback->add($feedback);
-            $feedback->setEntreprise($this);
-        }
-
-        return $this;
-    }
-
-    public function removeFeedback(Feedback $feedback): static
-    {
-        if ($this->feedback->removeElement($feedback)) {
-            // set the owning side to null (unless already changed)
-            if ($feedback->getEntreprise() === $this) {
-                $feedback->setEntreprise(null);
-            }
-        }
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, Invite>
      */
