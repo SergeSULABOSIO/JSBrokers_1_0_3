@@ -18,9 +18,6 @@ class Feedback
     #[ORM\Column(length: 255)]
     private ?string $description = null;
 
-    #[ORM\ManyToOne(inversedBy: 'feedback')]
-    private ?Invite $invite = null;
-
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $nextActionAt = null;
 
@@ -42,9 +39,6 @@ class Feedback
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'feedback')]
     private Collection $documents;
 
-    #[ORM\ManyToOne(inversedBy: 'feedback')]
-    private ?Entreprise $entreprise = null;
-
     #[ORM\Column]
     private ?int $type = null;
     public const TYPE_PHYSICAL_MEETING = 0;
@@ -52,6 +46,9 @@ class Feedback
     public const TYPE_EMAIL = 2;
     public const TYPE_SMS = 3;
     public const TYPE_UNDEFINED = 4;
+    
+    #[ORM\ManyToOne(inversedBy: 'feedback')]
+    private ?Invite $invite = null;
 
 
     public function __construct()
@@ -174,18 +171,6 @@ class Feedback
                 $document->setFeedback(null);
             }
         }
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }
