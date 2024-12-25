@@ -7,12 +7,12 @@
     </h2>
     <div id="collapsemenuMarketing" class="accordion-collapse collapse {{ activator.canShow(2) }}" aria-labelledby="menuMarketing" data-bs-parent="#accMenuEntreprise">
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
-            <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.piste' ? 'active' : '' }}">
+            <a href="{{ path('admin.piste.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.piste' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_piste" | trans }}</span>
                 </div>
             </a>
-            <a href="{{ path('admin.tache.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.tache'? 'active' : '' }}">
+            <a href="{{ path('admin.tache.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.tache' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_task" | trans }}</span>
                 </div>

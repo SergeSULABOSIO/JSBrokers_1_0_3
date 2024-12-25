@@ -149,7 +149,7 @@ class PisteController extends AbstractController
         
         $this->manager->remove($piste);
         $this->manager->flush();
-
+        
         $this->addFlash("success", $message);
         return $this->redirectToRoute("admin.piste.index", [
             'idEntreprise' => $idEntreprise,
