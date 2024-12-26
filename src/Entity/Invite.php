@@ -45,18 +45,6 @@ class Invite
     private Collection $feedback;
 
     /**
-     * @var Collection<int, Tranche>
-     */
-    #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'invite')]
-    private Collection $tranches;
-
-    /**
-     * @var Collection<int, Avenant>
-     */
-    #[ORM\OneToMany(targetEntity: Avenant::class, mappedBy: 'invite')]
-    private Collection $avenants;
-
-    /**
      * @var Collection<int, Bordereau>
      */
     #[ORM\OneToMany(targetEntity: Bordereau::class, mappedBy: 'invite')]
@@ -116,8 +104,6 @@ class Invite
         $this->pistes = new ArrayCollection();
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
-        $this->tranches = new ArrayCollection();
-        $this->avenants = new ArrayCollection();
         $this->bordereaus = new ArrayCollection();
         $this->factureCommissions = new ArrayCollection();
         $this->paiements = new ArrayCollection();
@@ -235,67 +221,6 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($feedback->getInvite() === $this) {
                 $feedback->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
-
-
-    /**
-     * @return Collection<int, Tranche>
-     */
-    public function getTranches(): Collection
-    {
-        return $this->tranches;
-    }
-
-    public function addTranch(Tranche $tranch): static
-    {
-        if (!$this->tranches->contains($tranch)) {
-            $this->tranches->add($tranch);
-            $tranch->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removeTranch(Tranche $tranch): static
-    {
-        if ($this->tranches->removeElement($tranch)) {
-            // set the owning side to null (unless already changed)
-            if ($tranch->getInvite() === $this) {
-                $tranch->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Avenant>
-     */
-    public function getAvenants(): Collection
-    {
-        return $this->avenants;
-    }
-
-    public function addAvenant(Avenant $avenant): static
-    {
-        if (!$this->avenants->contains($avenant)) {
-            $this->avenants->add($avenant);
-            $avenant->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removeAvenant(Avenant $avenant): static
-    {
-        if ($this->avenants->removeElement($avenant)) {
-            // set the owning side to null (unless already changed)
-            if ($avenant->getInvite() === $this) {
-                $avenant->setInvite(null);
             }
         }
 

@@ -16,9 +16,6 @@ class Tranche
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
-    #[ORM\ManyToOne(inversedBy: 'tranches')]
-    private ?Invite $invite = null;
-
     #[ORM\Column(nullable: true)]
     private ?float $montantFlat = null;
 
@@ -53,18 +50,6 @@ class Tranche
     public function setNom(string $nom): static
     {
         $this->nom = $nom;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

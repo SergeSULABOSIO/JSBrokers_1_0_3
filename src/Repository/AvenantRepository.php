@@ -3,15 +3,22 @@
 namespace App\Repository;
 
 use App\Entity\Avenant;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Knp\Component\Pager\Pagination\PaginationInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<Avenant>
  */
 class AvenantRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(
+        ManagerRegistry $registry,
+        private PaginatorInterface $paginator,
+        private Security $security
+    )
     {
         parent::__construct($registry, Avenant::class);
     }
@@ -40,4 +47,18 @@ class AvenantRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder('a')
+                ->leftJoin("a.cotation", "c")
+                ->leftJoin("c.piste", "p")
+                ->leftJoin("p.invite", "i")
+                ->where('i.entreprise = :entrepriseId')
+                ->setParameter('entrepriseId', ''.$idEntreprise.'')
+                ->orderBy('a.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }
