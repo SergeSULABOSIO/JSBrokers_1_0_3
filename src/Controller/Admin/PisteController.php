@@ -53,7 +53,7 @@ class PisteController extends AbstractController
             'pageName' => $this->translator->trans("piste_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'pistes' => $this->pisteRepository->paginate($idEntreprise, $page),
+            'pistes' => $this->pisteRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

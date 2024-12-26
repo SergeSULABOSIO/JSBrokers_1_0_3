@@ -6,16 +6,10 @@ use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\Chargement;
-use App\Entity\Revenu;
-use App\Entity\Risque;
 use App\Form\ChargementType;
-use App\Form\RevenuType;
-use App\Form\RisqueType;
 use App\Repository\ChargementRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\RevenuRepository;
-use App\Repository\RisqueRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -54,7 +48,7 @@ class ChargementController extends AbstractController
             'pageName' => $this->translator->trans("chargement_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'chargements' => $this->chargementRepository->paginate($idEntreprise, $page),
+            'chargements' => $this->chargementRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

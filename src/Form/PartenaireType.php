@@ -26,18 +26,21 @@ class PartenaireType extends AbstractType
             ])
             ->add('adressePhysique', TextType::class, [
                 'label' => "Adresse Physique",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Adresse",
                 ],
             ])
             ->add('telephone', TextType::class, [
                 'label' => "Téléphone",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Téléphone",
                 ],
             ])
             ->add('email', EmailType::class, [
                 'label' => "Email",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Email",
                 ],
@@ -45,6 +48,7 @@ class PartenaireType extends AbstractType
             ->add('part', PercentType::class, [
                 'label' => "Part du partenaire",
                 'help' => "Ce pourcentage ne s'appliquera que sur les commissions hors taxes (l'assiette partageable).",
+                'required' => true,
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Part",

@@ -138,6 +138,12 @@ class EntrepriseController extends AbstractController
     #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove(Entreprise $entreprise)
     {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        $entreprise->removeConnectedUser($user);
+        $this->manager->persist($entreprise);
+
         $this->manager->remove($entreprise);
         $this->manager->flush();
         $this->addFlash("success", $this->translator->trans("entreprise_deleted_ok", [

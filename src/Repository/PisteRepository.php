@@ -64,8 +64,8 @@ class PisteRepository extends ServiceEntityRepository
     {
         return $this->paginator->paginate(
             $this->createQueryBuilder("p")
-                ->leftJoin("p.invite", "in")
-                ->where("in.entreprise = :entrepriseId")
+                ->leftJoin("p.invite", "i")
+                ->where("i.entreprise = :entrepriseId")
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('p.id', 'DESC'),
             $page,
