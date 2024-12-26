@@ -1,7 +1,7 @@
 <div>
     {% if app.current_route starts with 'app_index' and app.user %}
         <a href="#" type="button" class="btn btn-outline-secondary border-0">
-          {{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }}
+          {# {{ ux_icon('si:user-duotone', {height: '18px', width: '18px'}) }} #}
           {{ app.user.nom }}
         </a>
     {% endif %}

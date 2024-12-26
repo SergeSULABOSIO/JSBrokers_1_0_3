@@ -48,7 +48,7 @@ class TaxeController extends AbstractController
             'pageName' => $this->translator->trans("taxe_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'taxes' => $this->taxeRepository->paginateTaxe($idEntreprise, $page),
+            'taxes' => $this->taxeRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

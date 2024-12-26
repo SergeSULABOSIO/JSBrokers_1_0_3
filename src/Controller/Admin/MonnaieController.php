@@ -47,7 +47,7 @@ class MonnaieController extends AbstractController
             'pageName' => $this->translator->trans("currency_page_name_list"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'monnaies' => $this->monnaieRepository->paginateMonnaie($idEntreprise, $page),
+            'monnaies' => $this->monnaieRepository->paginateforEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

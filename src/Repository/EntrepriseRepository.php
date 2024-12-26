@@ -102,19 +102,12 @@ class EntrepriseRepository extends ServiceEntityRepository
         );
     }
 
-    public function paginateEntreprises(int $page): PaginationInterface
+    public function paginateUtilisateur(int $idUtilisateur, int $page): PaginationInterface
     {
-        /** @var Utilisateur $user */
-        $user = $this->security->getUser();
-        $userId = $user->getId();
-
         return $this->paginator->paginate(
             $this->createQueryBuilder("e")
-                ->leftJoin("e.invites", "i")
-                ->where('e.utilisateur = :userId')
-                ->orWhere("i.email = :userEmail")
-                ->setParameter('userId', '' . $userId . '')
-                ->setParameter('userEmail', '' . $user->getEmail() . '')
+                ->where('e.utilisateur = :utilisateurId')
+                ->setParameter('utilisateurId', '' . $idUtilisateur . '')
                 ->orderBy('e.id', 'DESC'),
             $page,
             3,

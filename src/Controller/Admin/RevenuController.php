@@ -51,7 +51,7 @@ class RevenuController extends AbstractController
             'pageName' => $this->translator->trans("revenu_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'revenus' => $this->revenuRepository->paginate($idEntreprise, $page),
+            'revenus' => $this->revenuRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
