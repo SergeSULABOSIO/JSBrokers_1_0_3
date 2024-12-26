@@ -48,19 +48,14 @@ class ContactRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function paginate(int $idEntreprise, int $page): PaginationInterface
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
-        /** @var Utilisateur $user */
-        // $user = $this->security->getUser();
-
         return $this->paginator->paginate(
-            $this->createQueryBuilder("m")
-                // ->leftJoin("e.invites", "i")
-                // ->where('m.entreprise = :entrepriseId')
-                // ->orWhere("i.email = :userEmail")
-                // ->setParameter('entrepriseId', '' . $idEntreprise . '')
-                // ->setParameter('userEmail', '' . $user->getEmail() . '')
-                ->orderBy('m.id', 'DESC'),
+            $this->createQueryBuilder("co")
+                ->leftJoin("co.client", "cl")
+                ->where('cl.entreprise = :entrepriseId')
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                ->orderBy('co.id', 'DESC'),
             $page,
             20,
         );

@@ -83,7 +83,7 @@ class MonnaieRepository extends ServiceEntityRepository
     }
 
 
-    public function paginateMonnaie(int $idEntreprise, int $page): PaginationInterface
+    public function paginateforEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         /** @var Utilisateur $user */
         $user = $this->security->getUser();

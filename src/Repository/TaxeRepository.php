@@ -77,10 +77,10 @@ class TaxeRepository extends ServiceEntityRepository
         ;
     }
 
-    public function paginateTaxe(int $idEntreprise, int $page): PaginationInterface
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         /** @var Utilisateur $user */
-        $user = $this->security->getUser();
+        // $user = $this->security->getUser();
 
         return $this->paginator->paginate(
             $this->createQueryBuilder("m")

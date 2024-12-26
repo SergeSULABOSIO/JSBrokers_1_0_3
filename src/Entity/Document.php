@@ -23,9 +23,6 @@ class Document
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
-    private ?Invite $invite = null;
-
-    #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Classeur $classeur = null;
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
@@ -101,18 +98,6 @@ class Document
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

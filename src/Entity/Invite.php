@@ -45,12 +45,6 @@ class Invite
     private Collection $feedback;
 
     /**
-     * @var Collection<int, Document>
-     */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'invite')]
-    private Collection $documents;
-
-    /**
      * @var Collection<int, Tranche>
      */
     #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'invite')]
@@ -122,7 +116,6 @@ class Invite
         $this->pistes = new ArrayCollection();
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
-        $this->documents = new ArrayCollection();
         $this->tranches = new ArrayCollection();
         $this->avenants = new ArrayCollection();
         $this->bordereaus = new ArrayCollection();
@@ -270,35 +263,6 @@ class Invite
         return $this;
     }
 
-    /**
-     * @return Collection<int, Document>
-     */
-    public function getDocuments(): Collection
-    {
-        return $this->documents;
-    }
-
-    public function addDocument(Document $document): static
-    {
-        if (!$this->documents->contains($document)) {
-            $this->documents->add($document);
-            $document->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removeDocument(Document $document): static
-    {
-        if ($this->documents->removeElement($document)) {
-            // set the owning side to null (unless already changed)
-            if ($document->getInvite() === $this) {
-                $document->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
 
     /**
      * @return Collection<int, Tranche>

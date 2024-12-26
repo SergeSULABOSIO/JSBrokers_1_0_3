@@ -29,7 +29,7 @@ class InviteRepository extends ServiceEntityRepository
         /** @var Utilisateur $user */
         $user = $this->security->getUser();
         $userId = $user->getId();
-        
+
         return count(
             $this->createQueryBuilder("i")
                 // ->select("count(i.id)")
@@ -112,13 +112,25 @@ class InviteRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-       public function findOneByEmail($email): ?Invite
-       {
-           return $this->createQueryBuilder('i')
-               ->andWhere('i.email = :email')
-               ->setParameter('email', $email)
-               ->getQuery()
-               ->getOneOrNullResult()
-           ;
-       }
+    public function findOneByEmail($email): ?Invite
+    {
+        return $this->createQueryBuilder('i')
+            ->andWhere('i.email = :email')
+            ->setParameter('email', $email)
+            ->getQuery()
+            ->getOneOrNullResult()
+        ;
+    }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("m")
+                ->where('m.entreprise = :entrepriseId')
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                ->orderBy('m.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }

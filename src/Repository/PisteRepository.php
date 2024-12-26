@@ -48,17 +48,12 @@ class PisteRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function paginate(int $idEntreprise, int $page): PaginationInterface
+    public function paginateForInvite(int $idInvite, int $page): PaginationInterface
     {
-        /** @var Utilisateur $user */
-        // $user = $this->security->getUser();
         return $this->paginator->paginate(
             $this->createQueryBuilder("p")
-                ->leftJoin("p.invite", "i")
-                // ->where(':entrepriseId MEMBER OF i.entreprises') //expression SQL qui permet de fouiller une entité dans une collection d'entités
-                // ->orWhere("i.email = :userEmail")
-                // ->setParameter('entrepriseId', '' . $idEntreprise . '')
-                // ->setParameter('userEmail', '' . $user->getEmail() . '')
+                ->where("p.invite = :inviteId")
+                ->setParameter('inviteId', '' . $idInvite . '')
                 ->orderBy('p.id', 'DESC'),
             $page,
             20,

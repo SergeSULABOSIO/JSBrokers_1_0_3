@@ -3,15 +3,22 @@
 namespace App\Repository;
 
 use App\Entity\Cotation;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Knp\Component\Pager\Pagination\PaginationInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<Cotation>
  */
 class CotationRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(
+        ManagerRegistry $registry,
+        private PaginatorInterface $paginator,
+        private Security $security
+    )
     {
         parent::__construct($registry, Cotation::class);
     }
@@ -40,4 +47,17 @@ class CotationRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function paginateForInvite(int $idInvite, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("co")
+                ->leftJoin("co.piste", "pi")
+                ->where('pi.invite = :inviteId')
+                ->setParameter('inviteId', '' . $idInvite . '')
+                ->orderBy('co.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }

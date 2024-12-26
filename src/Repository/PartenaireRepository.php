@@ -47,7 +47,7 @@ class PartenaireRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
-    public function paginate(int $idEntreprise, int $page): PaginationInterface
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         /* @var Utilisateur $user */
         // $user = $this->security->getUser();
