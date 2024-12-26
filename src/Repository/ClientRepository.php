@@ -50,9 +50,6 @@ class ClientRepository extends ServiceEntityRepository
 
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
-        /* @var Utilisateur $user */
-        // $user = $this->security->getUser();
-
         return $this->paginator->paginate(
             $this->createQueryBuilder('m')
                 // ->leftJoin("e.invites", "i")
