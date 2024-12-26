@@ -48,23 +48,19 @@ class TacheRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function paginateForInvite(int $page): PaginationInterface
+    public function paginateForInvite(int $idInvite, int $page): PaginationInterface
     {
-        /** @var Utilisateur $user */
-        $user = $this->security->getUser();
-
         return $this->paginator->paginate(
-            $this->createQueryBuilder("t")
+            $this->createQueryBuilder("i")
                 //Jointures
-                // ->leftJoin("t.invite", "i")
-                // ->leftJoin("t.executor", "e")
+                ->leftJoin("i.piste", "p")
                 //Conditions
-                // ->Where("i.email = :userEmail")
+                ->Where("p.invite = :inviteId")
                 // ->orWhere("e.email = :userEmail")
                 //Paramètres
-                // ->setParameter('userEmail', '' . $user->getEmail() . '')
+                ->setParameter('inviteId', '' . $idInvite . '')
                 //Organisation
-                ->orderBy('t.id', 'DESC'),
+                ->orderBy('i.id', 'DESC'),
             $page,
             20,
         );

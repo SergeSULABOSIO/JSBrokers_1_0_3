@@ -211,28 +211,6 @@ class Invite
         return $this->taches;
     }
 
-    public function addTach(Tache $tach): static
-    {
-        if (!$this->taches->contains($tach)) {
-            $this->taches->add($tach);
-            $tach->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removeTach(Tache $tach): static
-    {
-        if ($this->taches->removeElement($tach)) {
-            // set the owning side to null (unless already changed)
-            if ($tach->getInvite() === $this) {
-                $tach->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, Feedback>
      */

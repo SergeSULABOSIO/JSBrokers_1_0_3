@@ -19,9 +19,6 @@ class Tache
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
-    private ?Invite $invite = null;
-
-    #[ORM\ManyToOne(inversedBy: 'taches')]
     private ?Invite $executor = null;
 
     #[ORM\Column]
@@ -97,18 +94,6 @@ class Tache
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }
