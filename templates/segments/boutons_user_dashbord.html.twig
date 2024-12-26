@@ -5,12 +5,12 @@
           {{ app.user.nom }}
         </a>
     {% endif %}
-    {% if app.current_route starts with 'admin.invite' %}
+    {# {% if app.current_route starts with 'admin.invite' %}
         <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "boutons_user_new_guest" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {% if app.current_route starts with 'admin.entreprise' %}
       <a href="{{ path('admin.entreprise.create')}}" type="button" class="btn btn-secondary">
         {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}

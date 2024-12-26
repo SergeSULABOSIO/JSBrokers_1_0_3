@@ -77,11 +77,11 @@ class EntrepriseRepository extends ServiceEntityRepository
 
         return count(
             $this->createQueryBuilder("e")
-                ->leftJoin("e.invites", "i")
+                // ->leftJoin("e.invites", "i")
                 ->where('e.utilisateur = :userId')
-                ->orWhere("i.email = :userEmail")
+                // ->orWhere("i.email = :userEmail")
                 ->setParameter('userId', '' . $userId . '')
-                ->setParameter('userEmail', '' . $user->getEmail() . '')
+                // ->setParameter('userEmail', '' . $user->getEmail() . '')
                 ->orderBy('e.id', 'DESC')
                 ->getQuery()
                 ->getResult()

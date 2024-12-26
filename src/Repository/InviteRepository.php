@@ -33,8 +33,8 @@ class InviteRepository extends ServiceEntityRepository
         return count(
             $this->createQueryBuilder("i")
                 // ->select("count(i.id)")
-                ->where('i.utilisateur =:user')
-                ->setParameter('user', '' . $userId . '')
+                // ->where('i.utilisateur =:user')
+                // ->setParameter('user', '' . $userId . '')
                 ->groupBy("i.id")
                 ->orderBy('i.id', 'DESC')
                 ->getQuery()
@@ -50,8 +50,8 @@ class InviteRepository extends ServiceEntityRepository
 
         return $this->paginator->paginate(
             $this->createQueryBuilder("i")
-                ->where('i.utilisateur =:user')
-                ->setParameter('user', '' . $userId . '')
+                // ->where('i.utilisateur =:user')
+                // ->setParameter('user', '' . $userId . '')
                 ->groupBy("i.id")
                 ->orderBy('i.id', 'DESC'),
             $page,

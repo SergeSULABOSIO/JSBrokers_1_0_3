@@ -22,7 +22,7 @@ class InviteAutocompleteField extends AbstractType
             'class' => Invite::class,
             'placeholder' => 'Ajouter un invité',
             'choice_label' => 'nom',
-            'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
+            // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
 
             // choose which fields to use in the search
             // if not passed, *all* fields are used

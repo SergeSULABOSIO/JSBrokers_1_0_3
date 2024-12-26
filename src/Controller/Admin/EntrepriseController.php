@@ -51,7 +51,7 @@ class EntrepriseController extends AbstractController
                 'entreprises' => $this->entrepriseRepository->paginateUtilisateur($user->getId(), $page),
                 'page' => $request->query->getInt("page", 1),
                 'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
-                'nbInvites' => $this->inviteRepository->getNBInvites(),
+                // 'nbInvites' => $this->inviteRepository->getNBInvites(),
             ]);
         } else {
             // $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
@@ -72,6 +72,7 @@ class EntrepriseController extends AbstractController
 
         /** @var Entreprise $entreprise */
         $entreprise = new Entreprise();
+        // dd("Ici");
         $form = $this->createForm(EntrepriseType::class, $entreprise);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
