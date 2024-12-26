@@ -44,9 +44,6 @@ class Paiement
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'paiement')]
     private Collection $preuves;
-    
-    #[ORM\ManyToOne(inversedBy: 'paiements')]
-    private ?Invite $invite = null;
 
     public function __construct()
     {
@@ -102,18 +99,6 @@ class Paiement
     public function setPaidAt(\DateTimeImmutable $paidAt): static
     {
         $this->paidAt = $paidAt;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

@@ -61,4 +61,18 @@ class AvenantRepository extends ServiceEntityRepository
             20,
         );
     }
+
+    public function paginateForInvite(int $idInvite, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder('a')
+                ->leftJoin("a.cotation", "c")
+                ->leftJoin("c.piste", "p")
+                ->where('p.invite = :inviteId')
+                ->setParameter('inviteId', ''.$idInvite.'')
+                ->orderBy('a.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }

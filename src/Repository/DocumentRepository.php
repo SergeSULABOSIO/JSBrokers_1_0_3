@@ -61,4 +61,18 @@ class DocumentRepository extends ServiceEntityRepository
             20,
         );
     }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("do")
+                ->leftJoin("do.piste", "pi")
+                ->leftJoin('pi.invite', "in")
+                ->where('in.entreprise = :entrepriseId')
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                ->orderBy('do.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }

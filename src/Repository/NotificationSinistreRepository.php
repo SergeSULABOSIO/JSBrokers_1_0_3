@@ -3,15 +3,22 @@
 namespace App\Repository;
 
 use App\Entity\NotificationSinistre;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Knp\Component\Pager\Pagination\PaginationInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<NotificationSinistre>
  */
 class NotificationSinistreRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(
+        ManagerRegistry $registry,
+        private PaginatorInterface $paginator,
+        private Security $security
+    )
     {
         parent::__construct($registry, NotificationSinistre::class);
     }
@@ -40,4 +47,65 @@ class NotificationSinistreRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("n")
+                ->leftJoin("n.invite", "n")
+                ->where("n.entreprise = :entrepriseId")
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                ->orderBy('p.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
+
+    public function paginateForInvite(int $idInvite, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("n")
+                ->where("n.invite = :inviteId")
+                ->setParameter('inviteId', '' . $idInvite . '')
+                ->orderBy('n.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
+
+    public function paginateForClient(int $idClient, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("n")
+                ->where("n.client = :clientId")
+                ->setParameter('clientId', '' . $idClient . '')
+                ->orderBy('n.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
+
+    public function paginateForReferencePolice(string $referencePolice, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("n")
+                ->where("n.referencePolice like '%:policeReference%'")
+                ->setParameter('policeReference', '' . $referencePolice . '')
+                ->orderBy('n.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
+
+    public function paginateForReferenceSinistre(string $referenceSinistre, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("n")
+                ->where("n.referenceSinistre like '%:claimReference%'")
+                ->setParameter('claimReference', '' . $referenceSinistre . '')
+                ->orderBy('n.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }

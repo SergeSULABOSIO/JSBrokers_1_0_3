@@ -49,7 +49,7 @@ class OffreIndemnisationSinistre
     private Collection $paiements;
 
     #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
-    private ?Invite $invite = null;
+    private ?NotificationSinistre $notificationSinistre = null;
 
     public function __construct()
     {
@@ -70,18 +70,6 @@ class OffreIndemnisationSinistre
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }
@@ -214,6 +202,18 @@ class OffreIndemnisationSinistre
                 $paiement->setOffreIndemnisationSinistre(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getNotificationSinistre(): ?NotificationSinistre
+    {
+        return $this->notificationSinistre;
+    }
+
+    public function setNotificationSinistre(?NotificationSinistre $notificationSinistre): static
+    {
+        $this->notificationSinistre = $notificationSinistre;
 
         return $this;
     }

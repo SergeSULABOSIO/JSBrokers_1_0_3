@@ -57,12 +57,6 @@ class Invite
     private Collection $factureCommissions;
 
     /**
-     * @var Collection<int, Paiement>
-     */
-    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'invite')]
-    private Collection $paiements;
-
-    /**
      * @var Collection<int, PieceSinistre>
      */
     #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'invite')]
@@ -73,12 +67,6 @@ class Invite
      */
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'invite')]
     private Collection $notificationSinistres;
-
-    /**
-     * @var Collection<int, OffreIndemnisationSinistre>
-     */
-    #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'invite')]
-    private Collection $offreIndemnisationSinistres;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $nom = null;
@@ -106,10 +94,8 @@ class Invite
         $this->feedback = new ArrayCollection();
         $this->bordereaus = new ArrayCollection();
         $this->factureCommissions = new ArrayCollection();
-        $this->paiements = new ArrayCollection();
         $this->pieceSinistres = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
-        $this->offreIndemnisationSinistres = new ArrayCollection();
         $this->assistants = new ArrayCollection();
     }
 
@@ -287,35 +273,6 @@ class Invite
         return $this;
     }
 
-    /**
-     * @return Collection<int, Paiement>
-     */
-    public function getPaiements(): Collection
-    {
-        return $this->paiements;
-    }
-
-    public function addPaiement(Paiement $paiement): static
-    {
-        if (!$this->paiements->contains($paiement)) {
-            $this->paiements->add($paiement);
-            $paiement->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removePaiement(Paiement $paiement): static
-    {
-        if ($this->paiements->removeElement($paiement)) {
-            // set the owning side to null (unless already changed)
-            if ($paiement->getInvite() === $this) {
-                $paiement->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
 
     /**
      * @return Collection<int, PieceSinistre>
@@ -371,36 +328,6 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($notificationSinistre->getInvite() === $this) {
                 $notificationSinistre->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, OffreIndemnisationSinistre>
-     */
-    public function getOffreIndemnisationSinistres(): Collection
-    {
-        return $this->offreIndemnisationSinistres;
-    }
-
-    public function addOffreIndemnisationSinistre(OffreIndemnisationSinistre $offreIndemnisationSinistre): static
-    {
-        if (!$this->offreIndemnisationSinistres->contains($offreIndemnisationSinistre)) {
-            $this->offreIndemnisationSinistres->add($offreIndemnisationSinistre);
-            $offreIndemnisationSinistre->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removeOffreIndemnisationSinistre(OffreIndemnisationSinistre $offreIndemnisationSinistre): static
-    {
-        if ($this->offreIndemnisationSinistres->removeElement($offreIndemnisationSinistre)) {
-            // set the owning side to null (unless already changed)
-            if ($offreIndemnisationSinistre->getInvite() === $this) {
-                $offreIndemnisationSinistre->setInvite(null);
             }
         }
 

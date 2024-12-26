@@ -63,7 +63,7 @@ class NotificationSinistre
     /**
      * @var Collection<int, OffreIndemnisationSinistre>
      */
-    #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'notification')]
+    #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'notificationSinistre')]
     private Collection $offreIndemnisationSinistres;
 
     public function __construct()
@@ -282,7 +282,7 @@ class NotificationSinistre
     {
         if (!$this->offreIndemnisationSinistres->contains($offreIndemnisationSinistre)) {
             $this->offreIndemnisationSinistres->add($offreIndemnisationSinistre);
-            $offreIndemnisationSinistre->setNotification($this);
+            $offreIndemnisationSinistre->setNotificationSinistre($this);
         }
 
         return $this;
@@ -292,8 +292,8 @@ class NotificationSinistre
     {
         if ($this->offreIndemnisationSinistres->removeElement($offreIndemnisationSinistre)) {
             // set the owning side to null (unless already changed)
-            if ($offreIndemnisationSinistre->getNotification() === $this) {
-                $offreIndemnisationSinistre->setNotification(null);
+            if ($offreIndemnisationSinistre->getNotificationSinistre() === $this) {
+                $offreIndemnisationSinistre->setNotificationSinistre(null);
             }
         }
 

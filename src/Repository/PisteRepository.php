@@ -59,4 +59,17 @@ class PisteRepository extends ServiceEntityRepository
             20,
         );
     }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("p")
+                ->leftJoin("p.invite", "in")
+                ->where("in.entreprise = :entrepriseId")
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                ->orderBy('p.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }
