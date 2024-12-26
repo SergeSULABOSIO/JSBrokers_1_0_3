@@ -48,23 +48,6 @@ class DocumentRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function paginate(int $idEntreprise, int $page): PaginationInterface
-    {
-        /* @var Utilisateur $user */
-        // $user = $this->security->getUser();
-
-        return $this->paginator->paginate(
-            $this->createQueryBuilder('m')
-                // ->leftJoin("e.invites", "i")
-                // ->where('m.entreprise = :entrepriseId')
-                // ->orWhere("i.email = :userEmail")
-                // ->setParameter('entrepriseId', ''.$idEntreprise.'')
-                // ->setParameter('userEmail', '' . $user->getEmail() . '')
-                ->orderBy('m.id', 'DESC'),
-            $page,
-            20,
-        );
-    }
 
     public function paginateForInvite(int $idInvite, int $page): PaginationInterface
     {
