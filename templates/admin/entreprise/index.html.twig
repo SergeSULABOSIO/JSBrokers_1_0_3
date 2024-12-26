@@ -40,7 +40,11 @@
 					<div class="card-body">
 						<figure class="text-center">
 							<blockquote class="blockquote">
-								<strong><a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-dark">{{ entreprise.nom }}</a></strong>
+								<strong>
+									<a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-dark">
+										{{ entreprise.nom }}
+									</a>
+								</strong>
 							</blockquote>
 							<figcaption class="blockquote-footer">
 								{{ ux_icon('mdi:address-marker-outline', {height: '18px', width: '18px'}) }}
@@ -67,7 +71,7 @@
 						</a>
 					</div>
 					<div class="d-flex justify-content-center pt-1 bg-light">
-						{% if entreprise.isInvited(utilisateur) == true %}
+						{% if entreprise.isInvited(utilisateur) == true and entreprise.utilisateur != utilisateur%}
 							<em class="fst-italic text-body-tertiary">{{ "entreprise_list_item_invited_by" | trans }}<strong>{{ entreprise.utilisateur.nom }}</strong></em>
 						{% else %}
 							<a href="#" class='btn btn-outline-secondary border-0 btn-sm'>

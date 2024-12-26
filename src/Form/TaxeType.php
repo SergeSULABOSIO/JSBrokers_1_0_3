@@ -18,10 +18,22 @@ class TaxeType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('code', TextType::class, [
+                'label' => "Code de la taxe",
+                'attr' => [
+                    'placeholder' => "Code",
+                ],
+            ])
             ->add('description', TextareaType::class, [
                 'label' => "Description",
                 'attr' => [
                     'placeholder' => "Description ici",
+                ],
+            ])
+            ->add('organisation', TextType::class, [
+                'label' => "Organisation",
+                'attr' => [
+                    'placeholder' => "Organisation",
                 ],
             ])
             ->add('tauxIARD', PercentType::class, [
@@ -34,18 +46,6 @@ class TaxeType extends AbstractType
                 'label' => "Taux (VIE)",
                 'attr' => [
                     'placeholder' => "Taux",
-                ],
-            ])
-            ->add('organisation', TextType::class, [
-                'label' => "Organisation",
-                'attr' => [
-                    'placeholder' => "Organisation",
-                ],
-            ])
-            ->add('code', TextType::class, [
-                'label' => "Code de la taxe",
-                'attr' => [
-                    'placeholder' => "Code",
                 ],
             ])
             ->add('redevable', ChoiceType::class, [
