@@ -21,9 +21,6 @@ class Cotation
     #[ORM\Column]
     private ?int $duree = null;
 
-    #[ORM\ManyToOne(inversedBy: 'cotations')]
-    private ?Invite $invite = null;
-
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -107,18 +104,6 @@ class Cotation
     public function setDuree(int $duree): static
     {
         $this->duree = $duree;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }
