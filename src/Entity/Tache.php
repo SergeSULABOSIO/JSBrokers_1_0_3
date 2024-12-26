@@ -54,9 +54,6 @@ class Tache
     #[ORM\Column]
     private ?bool $closed = null;
 
-    #[ORM\ManyToOne(inversedBy: 'taches')]
-    private ?Entreprise $entreprise = null;
-
     public function __construct()
     {
         $this->feedbacks = new ArrayCollection();
@@ -232,18 +229,6 @@ class Tache
     public function setClosed(bool $closed): static
     {
         $this->closed = $closed;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }
