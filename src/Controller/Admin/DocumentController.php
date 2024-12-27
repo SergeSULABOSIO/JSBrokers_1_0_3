@@ -6,13 +6,10 @@ use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\Document;
-use App\Entity\Risque;
 use App\Form\DocumentType;
-use App\Form\RisqueType;
 use App\Repository\DocumentRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\RisqueRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -51,7 +48,7 @@ class DocumentController extends AbstractController
             'pageName' => $this->translator->trans("document_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'documents' => $this->documentRepository->paginate($idEntreprise, $page),
+            'documents' => $this->documentRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
@@ -71,7 +68,7 @@ class DocumentController extends AbstractController
         /** @var Document $document */
         $document = new Document();
         //Paramètres par défaut
-        $document->setEntreprise($entreprise);
+        // $document->setEntreprise($entreprise);
 
         $form = $this->createForm(DocumentType::class, $document);
         $form->handleRequest($request);
