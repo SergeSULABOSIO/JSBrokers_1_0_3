@@ -70,7 +70,6 @@ class InviteController extends AbstractController
         $invite->setEntreprise($entreprise);
         $invite->setProprietaire(false);
 
-
         $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
 
