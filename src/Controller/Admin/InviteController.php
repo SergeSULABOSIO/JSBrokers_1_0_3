@@ -85,6 +85,7 @@ class InviteController extends AbstractController
                         ':email' => $invite->getEmail()
                     ]));
                 } catch (\Throwable $th) {
+                    dd($th);
                     //throw $th;
                     $this->addFlash("danger", $this->translator->trans("invite_email_sending_error"));
                 }
