@@ -18,8 +18,7 @@ class DocumentRepository extends ServiceEntityRepository
         ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
-    )
-    {
+    ) {
         parent::__construct($registry, Document::class);
     }
 
@@ -66,11 +65,11 @@ class DocumentRepository extends ServiceEntityRepository
     {
         return $this->paginator->paginate(
             $this->createQueryBuilder("document")
+                //Les dcuments attachés à la cotation
                 ->leftJoin("document.cotation", "cotation")
                 ->leftJoin("cotation.piste", "piste")
                 ->leftJoin("piste.invite", "invite")
-                // ->leftJoin("invite.entreprise", "entreprise")
-                // ->leftJoin('pi.invite', "in")
+                //Condition Où
                 ->where('invite.entreprise = :entrepriseId')
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('document.id', 'DESC'),
