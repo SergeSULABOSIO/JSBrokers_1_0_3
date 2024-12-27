@@ -5,7 +5,7 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ utilisateur.nom }}>{{ "invite_page_name_list" | trans }}>{{ pageName }}><strong>{{ invite.email }}</strong>
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
 {% endblock %}
 
 {% block descriptionRubrique %}
@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block menuLateraleGauche %}
-	{% include 'segments/menu_user_dashbord.html.twig' %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
 {% endblock %}
 
 {% block body %}
@@ -27,9 +27,16 @@
 						':email': invite.email,
 					}) | raw }}
 				</p>
-				<turbo-frame id="invite_{{ invite.id }}">
-					{{ form(form, {action: path('admin.invite.edit', {id:invite.id})}) }}
-				</turbo-frame>
+				{# <turbo-frame id="invite_{{ invite.id }}"> #}
+					<div class = "m-2">
+						{{ form(form, {action: path('admin.invite.edit', {
+							idEntreprise:entreprise.id,
+							idInvite:invite.id
+							})}) 
+						}}
+					</div>
+					{# {{ form(form, {action: path('admin.invite.edit', {id:invite.id})}) }} #}
+				{# </turbo-frame> #}
 			</div>
 		</div>
 	</div>

@@ -106,33 +106,49 @@ class InviteController extends AbstractController
     }
 
 
-    #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit(Invite $invite, Request $request)
+    // #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    #[Route('/edit/{idEntreprise}/{idInvite}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idInvite, Request $request)
     {
-        // dd($invite);
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->find($idInvite);
+
         $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
+
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($invite); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $invite->getEmail() . " a été modifié avec succès.");
-            return $this->redirectToRoute("admin.invite.index");
+            $this->addFlash("success", $this->translator->trans("invite_edition_ok", [
+                ":invite" => $invite->getNom(),
+            ]));
+            // $this->addFlash("success", $invite->getEmail() . " a été modifié avec succès.");
+            return $this->redirectToRoute("admin.invite.index", [
+                'idEntreprise' => $idEntreprise,
+            ]);
         }
         return $this->render('admin/invite/edit.html.twig', [
-            'pageName' => $this->translator->trans("invite_page_name_edit"),
+            'pageName' => $this->translator->trans("invite_page_name_update", [
+                ":invite" => $invite->getNom(),
+            ]),
+            // 'pageName' => $this->translator->trans("invite_page_name_edit"),
             'utilisateur' => $user,
             'invite' => $invite,
-            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
-            'nbInvites' => $this->inviteRepository->getNBInvites(),
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
             'form' => $form,
         ]);
     }
 
 
-    #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
+    // #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
+    #[Route('/remove/{idEntreprise}/{idInvite}', name: 'remove', requirements: ['idInvite' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove(Request $request, Invite $invite)
     {
         $inviteId = $invite->getId();
