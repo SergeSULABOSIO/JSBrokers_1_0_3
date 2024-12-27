@@ -65,12 +65,15 @@ class DocumentRepository extends ServiceEntityRepository
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
-            $this->createQueryBuilder("d")
-                // ->leftJoin("do.piste", "pi")
+            $this->createQueryBuilder("document")
+                ->leftJoin("document.cotation", "cotation")
+                ->leftJoin("cotation.piste", "piste")
+                ->leftJoin("piste.invite", "invite")
+                // ->leftJoin("invite.entreprise", "entreprise")
                 // ->leftJoin('pi.invite', "in")
-                // ->where('in.entreprise = :entrepriseId')
-                // ->setParameter('entrepriseId', '' . $idEntreprise . '')
-                ->orderBy('d.id', 'DESC'),
+                ->where('invite.entreprise = :entrepriseId')
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                ->orderBy('document.id', 'DESC'),
             $page,
             20,
         );
