@@ -75,13 +75,15 @@
 										{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
 										{# Modifier #}
 									</a>
-									<form action="{{ path('admin.invite.remove', {'idInvite':invite.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-										<input type='hidden' name='_method' value='DELETE'>
-										<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-											{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-											{# Supprimer #}
-										</button>
-									</form>
+									{% if invite.isProprietaire == false %}
+										<form action="{{ path('admin.invite.remove', {'idInvite':invite.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+											<input type='hidden' name='_method' value='DELETE'>
+											<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+												{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
+												{# Supprimer #}
+											</button>
+										</form>
+									{% endif %}
 									<div class="dropdown">
 										<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 											{{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}

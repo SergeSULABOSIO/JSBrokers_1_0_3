@@ -8,7 +8,6 @@ use Symfony\Component\Mime\Email;
 use App\Event\DemandeContactEvent;
 use App\Event\InvitationEvent;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -44,11 +43,11 @@ class MailingSubscriber implements EventSubscriberInterface
             'contact@jsbrokers.com',
             $invite->getEmail(),
             Email::PRIORITY_HIGH,
-            'Invitation JS Brokers venant de ' . $invite->getUtilisateur()->getNom(),
+            'Invitation JS Brokers venant de ' . $invite->getEntreprise()->getNom() . " via JS Brokers",
             "home/mail/message_invitation.html.twig",
             [
                 "invite" => $invite,
-                "utilisateur" => $invite->getUtilisateur(),
+                "entreprise" => $invite->getEntreprise(),
             ]
         );
     }
