@@ -1,10 +1,10 @@
 <div>
-    {% if app.current_route starts with 'admin.invite' %}
+    {# {% if app.current_route starts with 'admin.invite' %}
         <a href="{{ path('admin.invite.create')}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "entreprise_bouton_new_invite" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {% if app.current_route starts with 'admin.monnaie' %}
         <a href="{{ path('admin.monnaie.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}

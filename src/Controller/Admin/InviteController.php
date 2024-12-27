@@ -8,6 +8,7 @@ use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Event\InvitationEvent;
 use App\Constantes\MenuActivator;
+use App\Entity\Entreprise;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -54,15 +55,22 @@ class InviteController extends AbstractController
     }
 
 
-    #[Route('/create', name: 'create')]
-    public function create(Request $request, EventDispatcherInterface $dispatcher)
+    #[Route('/create/{idEntreprise}', name: 'create')]
+    public function create($idEntreprise, Request $request, EventDispatcherInterface $dispatcher)
     {
-        // dd($this->entrepriseRepository->getNBMyProperEntreprises());
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
         /** @var Invite */
         $invite = new Invite();
+        //Paramètres par défaut
+        $invite->setEntreprise($entreprise);
+        $invite->setProprietaire(false);
+
+
         $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
 
