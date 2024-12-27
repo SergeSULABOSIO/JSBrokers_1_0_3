@@ -51,7 +51,7 @@ class RisqueController extends AbstractController
             'pageName' => $this->translator->trans("risque_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'risques' => $this->risqueRepository->paginate($idEntreprise, $page),
+            'risques' => $this->risqueRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

@@ -51,7 +51,7 @@ class ClientController extends AbstractController
             'pageName' => $this->translator->trans("client_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'clients' => $this->clientRepository->paginate($idEntreprise, $page),
+            'clients' => $this->clientRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
