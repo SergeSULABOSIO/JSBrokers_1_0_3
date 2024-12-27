@@ -51,7 +51,7 @@ class PartenaireController extends AbstractController
             'pageName' => $this->translator->trans("partenaire_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'partenaires' => $this->partenaireRepository->paginate($idEntreprise, $page),
+            'partenaires' => $this->partenaireRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

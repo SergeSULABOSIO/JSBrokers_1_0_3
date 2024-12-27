@@ -49,7 +49,7 @@
                         <tr id="row_taxe_{{ taxe.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.taxe.edit', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ taxe.code }}
+                                    {{ taxe.code }} (IARD: {{ taxe.tauxIARD * 100 }}%, VIE: {{ taxe.tauxVIE * 100 }}%)
                                 </a>
                             </td>
                             <td>
