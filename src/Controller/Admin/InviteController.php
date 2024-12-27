@@ -110,7 +110,6 @@ class InviteController extends AbstractController
     }
 
 
-    // #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     #[Route('/edit/{idEntreprise}/{idInvite}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function edit($idEntreprise, $idInvite, Request $request)
     {
@@ -151,14 +150,16 @@ class InviteController extends AbstractController
     }
 
 
-    // #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
     #[Route('/remove/{idEntreprise}/{idInvite}', name: 'remove', requirements: ['idInvite' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove(Request $request, Invite $invite)
+    public function remove($idEntreprise, $idInvite, Request $request)
     {
-        $inviteId = $invite->getId();
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->find($idInvite);
+
         $message = $this->translator->trans("invite_deletion_ok", [
             ':email' => $invite->getEmail()
         ]);
+
         $this->manager->remove($invite);
         $this->manager->flush();
 
@@ -171,6 +172,8 @@ class InviteController extends AbstractController
         //     ]);
         // }
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.invite.index");
+        return $this->redirectToRoute("admin.invite.index", [
+            'idEntreprise' => $idEntreprise,
+        ]);
     }
 }
