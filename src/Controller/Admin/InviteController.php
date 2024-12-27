@@ -5,13 +5,12 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use App\Form\InviteType;
 use App\Entity\Utilisateur;
+use App\Constantes\Constante;
 use App\Event\InvitationEvent;
-use Symfony\Component\Mime\Email;
-use Symfony\UX\Turbo\TurboBundle;
+use App\Constantes\MenuActivator;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -25,29 +24,32 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class InviteController extends AbstractController
 {
+    public MenuActivator $activator;
+
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-    ) {}
+        private Constante $constante,
+    ) {
+        $this->activator = new MenuActivator(MenuActivator::GROUPE_ADMINISTRATION);
+    }
 
-    #[Route(name: 'index')]
-    public function index(Request $request)
+    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index($idEntreprise, Request $request)
     {
         $page = $request->query->getInt("page", 1);
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
         return $this->render('admin/invite/index.html.twig', [
             'pageName' => $this->translator->trans("invite_page_name_list"),
-            'utilisateur' => $user,
-            'invites' => $this->inviteRepository->paginateInvites($page),
-            'page' => $page = $request->query->getInt("page", 1),
-            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
-            'nbInvites' => $this->inviteRepository->getNBInvites(),
+            'utilisateur' => $this->getUser(),
+            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'invites' => $this->inviteRepository->paginateForEntreprise($idEntreprise, $page),
+            'page' => $page,
+            'constante' => $this->constante,
+            'activator' => $this->activator,
         ]);
     }
 

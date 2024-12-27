@@ -17,6 +17,11 @@
                     <span class="mb-0">{{ "company_menu_classeurs" | trans }}</span>
                 </div>
             </a>
+            <a href="{{ path('admin.invite.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.invite'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "user_menu_guests" | trans }}</span>
+                </div>
+            </a>
         </div>
     </div>
 </div>

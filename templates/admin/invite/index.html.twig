@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block section_utilisateur %}
+	{# {% include 'segments/boutons_entreprise_dashbord.html.twig' %} #}
 	{% include 'segments/boutons_user_dashbord.html.twig' %}
 {% endblock %}
 
@@ -17,108 +18,119 @@
 {% endblock %}
 
 {% block menuLateraleGauche %}
-	{% include 'segments/menu_user_dashbord.html.twig' %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+	{# {% include 'segments/menu_user_dashbord.html.twig' %} #}
 {% endblock %}
 
 {% block body %}
-	<div>
-		<div class="d-flex">
-			<table class="table table-hover table-sm caption-top">
+	<div class="d-flex">
+		<table class="table table-hover table-sm caption-top">
 				<caption>
-					{% if nbInvites == 0 %}
-						{{ "invite_filter_result_empty" | trans }}
-					{% else %}
-						{{ "invite_filter_result_elements" | trans({':number': nbInvites}) }}
-					{% endif %}
-					<div class="d-flex gap-1">
-						{{ knp_pagination_render(invites) }}
-					</div>
-				</caption>
-				{% if nbInvites != 0 %}
-					<thead class="table-light">
-						<tr>
-							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_ids" | trans, "i.email") }}</div></th>
-							<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_invite_date" | trans, "i.createdAt") }}</div></th>
-							{# <th scope="col"><div class='d-flex justify-content-start'>{{ "invite_liste_titre_companies" | trans }}</div></th> #}
-							<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "invite_liste_titre_actions" | trans }}</div></th>
-						</tr>
-					</thead>
-					<tbody class="table-group-divider">
-						{# Boucler les donnees #}
-						{% for invite in invites %}
-							<tr id="row_invite_{{ invite.id }}">
-								<td>
-									<turbo-frame id="invite_{{ invite.id }}">
-										<a class="m-2" href="{{ path('admin.invite.edit', {'id':invite.id })}}">
-											{{ invite.nom }} ({{ invite.email }})
-											{% if invite.isproprietaire == true %}
-												(Propriétaire)
-											{% endif %}
-										</a>
-									</turbo-frame>
-								</td>
-								<td>
-									{{ invite.createdAt|date('d/m/Y H:i') }}
-								</td>
-								{# <td class="justify-content-between">
-									{% if invite.entreprise != null %}
-										{{ invite.entreprise.nom }}
-									{% endif %}
-								</td> #}
-								<td>
-									<div class="d-flex gap-1 d-flex justify-content-end">
-										{# Les actions sur l element de la liste #}
-										<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
-											{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-											{# Modifier #}
-										</a>
-										<form action="{{ path('admin.invite.remove', {'id':invite.id })}}" method='POST'>
-											<input type='hidden' name='_method' value='DELETE'>
-											<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-												{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-												{# Supprimer #}
-											</button>
-										</form>
-										<div class="dropdown">
-											<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-												{{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-												{# Autres #}
-											</a>
-											<ul class="dropdown-menu">
-												<li>
-													<a class="dropdown-item" href="#">
-														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														{{ "invite_liste_titre_actions_set_role" | trans }}
-													</a>
-												</li>
-												<li>
-													<a class="dropdown-item" href="#">
-														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														{{ "invite_liste_titre_actions_send_invite_email" | trans }}
-													</a>
-												</li>
-												<li><hr class="dropdown-divider"></li>
-												<li>
-													<a class="dropdown-item" href="#">
-														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														{{ "invite_liste_titre_actions_desable_guest" | trans }}
-													</a>
-												</li>
-												<li>
-													<a class="dropdown-item text-muted" href="#">
-														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														{{ "invite_liste_titre_actions_enable_guest" | trans }}
-													</a>
-												</li>
-											</ul>
-										</div>
-									</div>
-								</td>
-							</tr>
-						{% endfor %}
-					</tbody>
+				{% if invites|length == 0 %}
+					{{ "invite_filter_result_empty" | trans}}
+				{% else %}
+					{{ "invite_filter_result_elements" | trans({
+						':number': invites|length
+					})}}
 				{% endif %}
-			</table>
-		</div>
+				<div class="d-flex gap-1">
+					{{ knp_pagination_render(invites) }}
+				</div>
+			</caption>
+			{# <caption>
+				{% if nbInvites == 0 %}
+					{{ "invite_filter_result_empty" | trans }}
+				{% else %}
+					{{ "invite_filter_result_elements" | trans({':number': nbInvites}) }}
+				{% endif %}
+				<div class="d-flex gap-1">
+					{{ knp_pagination_render(invites) }}
+				</div>
+			</caption> #}
+			{% if invites|length != 0 %}
+				<thead class="table-light">
+					<tr>
+						<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_ids" | trans, "i.email") }}</div></th>
+						<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_invite_date" | trans, "i.createdAt") }}</div></th>
+						{# <th scope="col"><div class='d-flex justify-content-start'>{{ "invite_liste_titre_companies" | trans }}</div></th> #}
+						<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "invite_liste_titre_actions" | trans }}</div></th>
+					</tr>
+				</thead>
+				<tbody class="table-group-divider">
+					{# Boucler les donnees #}
+					{% for invite in invites %}
+						<tr id="row_invite_{{ invite.id }}">
+							<td>
+								<turbo-frame id="invite_{{ invite.id }}">
+									<a class="m-2" href="{{ path('admin.invite.edit', {'id':invite.id })}}">
+										{{ invite.nom }} ({{ invite.email }})
+										{% if invite.isproprietaire == true %}
+											(Propriétaire)
+										{% endif %}
+									</a>
+								</turbo-frame>
+							</td>
+							<td>
+								{{ invite.createdAt|date('d/m/Y H:i') }}
+							</td>
+							{# <td class="justify-content-between">
+								{% if invite.entreprise != null %}
+									{{ invite.entreprise.nom }}
+								{% endif %}
+							</td> #}
+							<td>
+								<div class="d-flex gap-1 d-flex justify-content-end">
+									{# Les actions sur l element de la liste #}
+									<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.invite.edit', {'idUtilisateur': utilisateur.id, 'id':invite.id })}}" class="" mthod = 'POST'>
+										{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+										{# Modifier #}
+									</a>
+									<form action="{{ path('admin.invite.remove', {'id':invite.id })}}" method='POST'>
+										<input type='hidden' name='_method' value='DELETE'>
+										<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+											{{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
+											{# Supprimer #}
+										</button>
+									</form>
+									<div class="dropdown">
+										<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+											{{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
+											{# Autres #}
+										</a>
+										<ul class="dropdown-menu">
+											<li>
+												<a class="dropdown-item" href="#">
+													{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+													{{ "invite_liste_titre_actions_set_role" | trans }}
+												</a>
+											</li>
+											<li>
+												<a class="dropdown-item" href="#">
+													{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+													{{ "invite_liste_titre_actions_send_invite_email" | trans }}
+												</a>
+											</li>
+											<li><hr class="dropdown-divider"></li>
+											<li>
+												<a class="dropdown-item" href="#">
+													{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+													{{ "invite_liste_titre_actions_desable_guest" | trans }}
+												</a>
+											</li>
+											<li>
+												<a class="dropdown-item text-muted" href="#">
+													{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+													{{ "invite_liste_titre_actions_enable_guest" | trans }}
+												</a>
+											</li>
+										</ul>
+									</div>
+								</div>
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			{% endif %}
+		</table>
 	</div>
 {% endblock %}
