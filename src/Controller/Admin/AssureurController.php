@@ -48,7 +48,7 @@ class AssureurController extends AbstractController
             'pageName' => $this->translator->trans("assureur_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'assureurs' => $this->assureurRepository->paginate($idEntreprise, $page),
+            'assureurs' => $this->assureurRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
