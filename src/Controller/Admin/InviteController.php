@@ -88,19 +88,23 @@ class InviteController extends AbstractController
                     //throw $th;
                     $this->addFlash("danger", $this->translator->trans("invite_email_sending_error"));
                 }
-                return $this->redirectToRoute("admin.invite.index");
+                return $this->redirectToRoute("admin.invite.index", [
+                    'idEntreprise' => $idEntreprise,
+                ]);
             }
         } else {
             $this->addFlash("danger", $this->translator->trans("invite_sending_invite_not_granted", [
                 ':user' => $user->getNom()
             ]));
-            return $this->redirectToRoute("admin.invite.index");
+            return $this->redirectToRoute("admin.invite.index", [
+                'idEntreprise' => $idEntreprise,
+            ]);
         }
         return $this->render('admin/invite/create.html.twig', [
             'pageName' => $this->translator->trans("invite_page_name_new"),
             'utilisateur' => $user,
-            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
-            'nbInvites' => $this->inviteRepository->getNBInvites(),
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
             'form' => $form,
         ]);
     }

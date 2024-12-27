@@ -5,7 +5,8 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ utilisateur.nom }}>{{ "invite_page_name_list" | trans }}><strong>{{ pageName }}</strong>
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
+	{# {{ utilisateur.nom }}>{{ "invite_page_name_list" | trans }}><strong>{{ pageName }}</strong> #}
 {% endblock %}
 
 {% block descriptionRubrique %}
@@ -13,7 +14,7 @@
 {% endblock %}
 
 {% block menuLateraleGauche %}
-	{% include 'segments/menu_user_dashbord.html.twig' %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
 {% endblock %}
 
 {% block body %}
@@ -22,9 +23,14 @@
 	<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 		<div class="card-body">
 			<p>
-				{{ "invite_creation_description_message" | trans({
+				{# {{ "invite_creation_description_message" | trans({
 					':user': utilisateur.nom,
-				}) | raw }}
+				}) | raw }} #}
+				{{ "invite_creation_description_message" | trans({
+					":user": utilisateur.nom, 
+					":company": entreprise.nom, 
+				}) | raw}}
+				<hr>
 			</p>
 			{{ form(form) }}
 		</div>
