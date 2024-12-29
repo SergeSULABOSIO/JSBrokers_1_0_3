@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-    {{ "invite_description_rubrique" | trans }}
+	{{ "invite_description_rubrique" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -25,7 +25,7 @@
 {% block body %}
 	<div class="d-flex">
 		<table class="table table-hover table-sm caption-top">
-				<caption>
+			<caption>
 				{% if invites|length == 0 %}
 					{{ "invite_filter_result_empty" | trans}}
 				{% else %}
@@ -40,22 +40,36 @@
 			{% if invites|length != 0 %}
 				<thead class="table-light">
 					<tr>
-						<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_ids" | trans, "i.email") }}</div></th>
-						<th scope="col"><div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_invite_date" | trans, "i.createdAt") }}</div></th>
+						<th scope="col">
+							<div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_ids" | trans, "i.email") }}</div>
+						</th>
+						<th scope="col">
+							<div class='d-flex justify-content-start'>{{ knp_pagination_sortable(invites, "invite_liste_titre_invite_date" | trans, "i.createdAt") }}</div>
+						</th>
 						{# <th scope="col"><div class='d-flex justify-content-start'>{{ "invite_liste_titre_companies" | trans }}</div></th> #}
-						<th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "invite_liste_titre_actions" | trans }}</div></th>
+						<th scope="col" style="width:100px">
+							<div class='d-flex justify-content-end'>{{ "invite_liste_titre_actions" | trans }}</div>
+						</th>
 					</tr>
 				</thead>
-				<tbody class="table-group-divider">
+				<tbody
+					class="table-group-divider">
 					{# Boucler les donnees #}
 					{% for invite in invites %}
 						<tr id="row_invite_{{ invite.id }}">
 							<td>
 								<turbo-frame id="invite_{{ invite.id }}">
 									<a class="m-2" href="{{ path('admin.invite.edit', {'idInvite':invite.id, 'idEntreprise': entreprise.id})}}">
-										{{ invite.nom }}, {{ invite.email }}
+										{{ invite.nom }}, 
 										{% if invite.isproprietaire == true %}
-											(Propriétaire)
+											<span class="badge rounded-pill position-relative text-bg-secondary">
+												{{ invite.email }}
+												<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning">
+													Propriétaire
+												</span>
+											</span>
+										{% else %}
+											{{ invite.email }}
 										{% endif %}
 									</a>
 								</turbo-frame>
@@ -63,15 +77,11 @@
 							<td>
 								{{ invite.createdAt|date('d/m/Y H:i') }}
 							</td>
-							{# <td class="justify-content-between">
-								{% if invite.entreprise != null %}
-									{{ invite.entreprise.nom }}
-								{% endif %}
-							</td> #}
 							<td>
-								<div class="d-flex gap-1 d-flex justify-content-end">
+								<div
+									class="d-flex gap-1 d-flex justify-content-end">
 									{# Les actions sur l element de la liste #}
-									<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.invite.edit', {'idInvite':invite.id, 'idEntreprise': entreprise.id})}}" class="" mthod = 'POST'>
+									<a class="btn btn-outline-primary btn-sm border-0" href="{{ path('admin.invite.edit', {'idInvite':invite.id, 'idEntreprise': entreprise.id})}}" class="" mthod='POST'>
 										{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
 										{# Modifier #}
 									</a>
