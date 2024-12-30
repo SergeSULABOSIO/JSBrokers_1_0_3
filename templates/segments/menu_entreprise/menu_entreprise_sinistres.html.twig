@@ -22,7 +22,7 @@
                     <span class="mb-0">{{ "company_menu_intervenants" | trans }}</span>
                 </div>
             </a> #}
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.declaration'? 'active' : '' }}">
+            <a href="{{ path('admin.notificationsinistre.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.notificationsinistre'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_declarations" | trans }}</span>
                 </div>
