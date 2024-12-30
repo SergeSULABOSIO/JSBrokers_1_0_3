@@ -33,19 +33,6 @@ class NotificationSinistre
     #[ORM\Column(length: 255)]
     private ?string $lieu = null;
 
-    /**
-     * @var Collection<int, PieceSinistre>
-     */
-    #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'notificationSinistre')]
-    private Collection $pieces;
-
-    /**
-     * @var Collection<int, Contact>
-     */
-    #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'notificationSinistre')]
-    private Collection $contacts;
-
-
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Risque $risque = null;
 
@@ -64,8 +51,20 @@ class NotificationSinistre
     /**
      * @var Collection<int, OffreIndemnisationSinistre>
      */
-    #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'notificationSinistre')]
+    #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $offreIndemnisationSinistres;
+    
+    /**
+     * @var Collection<int, PieceSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $pieces;
+
+    /**
+     * @var Collection<int, Contact>
+     */
+    #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $contacts;
 
     public function __construct()
     {

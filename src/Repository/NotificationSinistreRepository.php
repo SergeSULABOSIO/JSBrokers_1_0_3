@@ -51,11 +51,11 @@ class NotificationSinistreRepository extends ServiceEntityRepository
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
-            $this->createQueryBuilder("n")
-                ->leftJoin("n.invite", "n")
-                ->where("n.entreprise = :entrepriseId")
+            $this->createQueryBuilder("notification")
+                ->leftJoin("notification.invite", "invite")
+                ->where("invite.entreprise = :entrepriseId")
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
-                ->orderBy('p.id', 'DESC'),
+                ->orderBy('notification.id', 'DESC'),
             $page,
             20,
         );
