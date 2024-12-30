@@ -14,9 +14,18 @@ class NotificationSinistre
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
+    
+    #[ORM\Column(length: 255)]
+    private ?string $referencePolice = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $referenceSinistre = null;
 
     #[ORM\Column(length: 255)]
     private ?string $descriptionDeFait = null;
+    
+    #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
+    private ?Client $assure = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $occuredAt = null;
@@ -36,14 +45,6 @@ class NotificationSinistre
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'notificationSinistre')]
     private Collection $contacts;
 
-    #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
-    private ?Client $assure = null;
-
-    #[ORM\Column(length: 255)]
-    private ?string $referencePolice = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $referenceSinistre = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Risque $risque = null;
