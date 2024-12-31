@@ -15,11 +15,8 @@ class OffreIndemnisationSinistre
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
-    private ?NotificationSinistre $notification = null;
+    // #[ORM\Column]
+    // private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(nullable: true)]
     private ?float $franchiseAppliquee = null;
@@ -27,8 +24,8 @@ class OffreIndemnisationSinistre
     #[ORM\Column]
     private ?float $montantPayable = null;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $updatedAt = null;
+    // #[ORM\Column]
+    // private ?\DateTimeImmutable $updatedAt = null;
 
     /**
      * @var Collection<int, Document>
@@ -62,29 +59,29 @@ class OffreIndemnisationSinistre
         return $this->id;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
+    // public function getCreatedAt(): ?\DateTimeImmutable
+    // {
+    //     return $this->createdAt;
+    // }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
+    // public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    // {
+    //     $this->createdAt = $createdAt;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
-    public function getNotification(): ?NotificationSinistre
-    {
-        return $this->notification;
-    }
+    // public function getNotification(): ?NotificationSinistre
+    // {
+    //     return $this->notification;
+    // }
 
-    public function setNotification(?NotificationSinistre $notification): static
-    {
-        $this->notification = $notification;
+    // public function setNotification(?NotificationSinistre $notification): static
+    // {
+    //     $this->notification = $notification;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getFranchiseAppliquee(): ?float
     {
@@ -110,17 +107,17 @@ class OffreIndemnisationSinistre
         return $this;
     }
 
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
+    // public function getUpdatedAt(): ?\DateTimeImmutable
+    // {
+    //     return $this->updatedAt;
+    // }
 
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
+    // public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
+    // {
+    //     $this->updatedAt = $updatedAt;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     /**
      * @return Collection<int, Document>
