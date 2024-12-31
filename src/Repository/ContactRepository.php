@@ -54,12 +54,18 @@ class ContactRepository extends ServiceEntityRepository
             $this->createQueryBuilder("contact")
                 //via le client
                 ->leftJoin("contact.client", "client")
-                //via la notification sinistre
+                //via la notification sinistre, invite
                 ->leftJoin("contact.notificationSinistre", "notificationsinistre")
                 ->leftJoin("notificationsinistre.invite", "invite")
+                //via la notification sinistre, client/assuré
+                ->leftJoin("notificationsinistre.assure", "assure")
+                //condition
                 ->where('client.entreprise = :entrepriseId')
                 ->orwhere('invite.entreprise = :entrepriseId')
+                ->orwhere('assure.entreprise = :entrepriseId')
+                //paramètres
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                //ordre de données
                 ->orderBy('contact.id', 'DESC'),
             $page,
             20,

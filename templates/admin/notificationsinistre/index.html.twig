@@ -49,7 +49,16 @@
                             <td>
                                 <a class="m-2" href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}">
                                     {{ notificationsinistre.descriptionDeFait }}
-                                </a>, survenu le {{ notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }} | {{ notificationsinistre.assure.nom }} | Police: {{ notificationsinistre.referencePolice }}
+                                </a>, survenu le {{ notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }}
+                                {% if notificationsinistre.assure != null %}
+                                     | {{ notificationsinistre.assure.nom }}
+                                {% endif %}
+                                {% if notificationsinistre.referencePolice != null %}
+                                     | Police: {{ notificationsinistre.referencePolice }}
+                                {% endif %}
+                                {% if notificationsinistre.referenceSinistre != null %}
+                                     | Sinistre: {{ notificationsinistre.referenceSinistre }}
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
