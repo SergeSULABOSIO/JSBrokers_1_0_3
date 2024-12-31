@@ -49,7 +49,13 @@
                         <tr id="row_contact_{{ contact.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.contact.edit', {'idContact':contact.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ contact.nom }}, {{ contact.fonction }} chez {{ contact.client.nom }}
+                                    {{ contact.nom }}, {{ contact.fonction }} 
+                                    {% if contact.client != null %}
+                                        | client: {{ contact.client.nom }}
+                                    {% endif %}
+                                    {% if contact.notificationSinistre != null %}
+                                        | Sinistre: {{ contact.notificationSinistre.referenceSinistre }}
+                                    {% endif %}
                                 </a>
                             </td>
                             <td>

@@ -10,6 +10,7 @@ use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Doctrine\DBAL\Types\DateTimeImmutableType;
+use Doctrine\DBAL\Types\DateTimeType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -19,6 +20,7 @@ use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
 
 class NotificationSinistreType extends AbstractType
 {
@@ -31,6 +33,7 @@ class NotificationSinistreType extends AbstractType
     {
         $builder
             ->add('referencePolice', TextType::class, [
+                'help' => "Vous devez fournir la référence de la police d'assurance",
                 'label' => "Référence de la police",
                 'required' => true,
                 'attr' => [
@@ -39,6 +42,7 @@ class NotificationSinistreType extends AbstractType
             ])
             ->add('referenceSinistre', TextType::class, [
                 'label' => "Référence du sinistre",
+                'help' => "Si vous n'avez pas encore de numéro sinistre, veuillez sauter ce champ.",
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Réf. Sinistre",
@@ -51,7 +55,8 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            ->add('occuredAt', DateTimeImmutableType::class, [
+            ->add('occuredAt', DateType::class, [
+                'label' => "Date de la survénance",
                 'required' => true,
                 'widget' => 'single_text',
             ])
@@ -70,6 +75,7 @@ class NotificationSinistreType extends AbstractType
             // ])
             ->add('dommage', MoneyType::class, [
                 'label' => "Valeur de la perte",
+                'help' => "Il s'agit d'une estimation chiffrée du coût de reparation des dégats causés et/ou subis lors de l'évènement survenu.",
                 'currency' => "USD",
                 'grouping' => true,
                 'attr' => [
@@ -77,12 +83,18 @@ class NotificationSinistreType extends AbstractType
                 ],
             ])
             ->add('assure', EntityType::class, [
+                'label' => "Assuré(e) ou Client(e)",
+                'autocomplete' => true,
+                'required' => false,
                 'class' => Client::class,
                 'choice_label' => 'nom',
             ])
             ->add('risque', EntityType::class, [
+                'label' => "Couverture d'assurance concernée",
+                'autocomplete' => true,
+                'required' => false,
                 'class' => Risque::class,
-                'choice_label' => 'nom',
+                'choice_label' => 'nomComplet',
             ])
             // ->add('invite', EntityType::class, [
             //     'class' => Invite::class,
@@ -90,6 +102,7 @@ class NotificationSinistreType extends AbstractType
             // ])
             ->add('contacts', CollectionType::class, [
                 'label' => "Contacts",
+                'label' => "Liste des personnes clées, à contacter pour tout ce qui concerne cette reclamation.",
                 'entry_type' => ContactType::class,
                 'by_reference' => false,
                 'allow_add' => true,

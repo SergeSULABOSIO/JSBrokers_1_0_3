@@ -51,7 +51,7 @@ class ContactController extends AbstractController
             'pageName' => $this->translator->trans("contact_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'contacts' => $this->contactRepository->paginate($idEntreprise, $page),
+            'contacts' => $this->contactRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,

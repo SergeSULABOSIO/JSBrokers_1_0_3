@@ -51,11 +51,16 @@ class ContactRepository extends ServiceEntityRepository
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
-            $this->createQueryBuilder("co")
-                ->leftJoin("co.client", "cl")
-                ->where('cl.entreprise = :entrepriseId')
+            $this->createQueryBuilder("contact")
+                //via le client
+                ->leftJoin("contact.client", "client")
+                //via la notification sinistre
+                ->leftJoin("contact.notificationSinistre", "notificationsinistre")
+                ->leftJoin("notificationsinistre.invite", "invite")
+                ->where('client.entreprise = :entrepriseId')
+                ->orwhere('invite.entreprise = :entrepriseId')
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
-                ->orderBy('co.id', 'DESC'),
+                ->orderBy('contact.id', 'DESC'),
             $page,
             20,
         );

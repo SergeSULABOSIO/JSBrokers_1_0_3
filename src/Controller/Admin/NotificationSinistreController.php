@@ -11,6 +11,7 @@ use App\Form\PartenaireType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\NotificationSinistre;
+use App\Entity\Utilisateur;
 use App\Form\NotificationSinistreType;
 use App\Repository\InviteRepository;
 use App\Repository\AssureurRepository;
@@ -21,6 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\NotificationSinistreRepository;
+use DateTimeImmutable;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -51,9 +53,12 @@ class NotificationSinistreController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
+        /** @var Utilisateur $utilisateur */
+        $utilisateur = $this->getUser();
+
         return $this->render('admin/notificationsinistre/index.html.twig', [
             'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
-            'utilisateur' => $this->getUser(),
+            'utilisateur' => $utilisateur,
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'notificationsinistres' => $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
@@ -78,6 +83,7 @@ class NotificationSinistreController extends AbstractController
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = new NotificationSinistre();
         //Paramètres par défaut
+        $notificationsinistre->setOccuredAt(new DateTimeImmutable("now"));
         $notificationsinistre->setInvite($invite);
 
         $form = $this->createForm(NotificationSinistreType::class, $notificationsinistre);
