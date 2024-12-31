@@ -101,7 +101,6 @@ class NotificationSinistreType extends AbstractType
             //     'choice_label' => 'id',
             // ])
             ->add('contacts', CollectionType::class, [
-                'label' => "Contacts",
                 'label' => "Liste des personnes clées, à contacter pour tout ce qui concerne cette reclamation.",
                 'entry_type' => ContactType::class,
                 'by_reference' => false,
@@ -121,7 +120,6 @@ class NotificationSinistreType extends AbstractType
                 ],
             ])
             ->add('pieces', CollectionType::class, [
-                'label' => "Pièces ou documents",
                 'label' => "Liste des documents relatifs au sinistre reclamé.",
                 'entry_type' => PieceSinistreType::class,
                 'by_reference' => false,
@@ -138,6 +136,25 @@ class NotificationSinistreType extends AbstractType
                     'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
                     'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
                     'data-form-collection-entites-view-field-value' => "description",
+                ],
+            ])
+            ->add('offreIndemnisationSinistres', CollectionType::class, [
+                'label' => "Liste d'offres d'indemnisations.",
+                'entry_type' => offreIndemnisationSinistreType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "beneficiaire",
                 ],
             ])
             //Le bouton d'enregistrement / soumission
