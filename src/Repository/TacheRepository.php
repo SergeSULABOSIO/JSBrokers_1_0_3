@@ -65,5 +65,27 @@ class TacheRepository extends ServiceEntityRepository
             20,
         );
     }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("tache")
+                //via la piste
+                ->leftJoin("tache.piste", "piste")
+                ->leftJoin("piste.invite", "invitePiste")
+                //via la notification sinistre
+                ->leftJoin("tache.notificationSinistre", "notification")
+                ->leftJoin("notification.invite", "inviteClaim")
+                //Conditions
+                ->Where("invitePiste.entreprise = :entrepriseId")
+                ->orWhere("inviteClaim.entreprise = :entrepriseId")
+                //Paramètres
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                //Organisation
+                ->orderBy('i.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
     
 }
