@@ -107,6 +107,26 @@ class OffreIndemnisationSinistreType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "description",
                 ],
             ])
+            ->add('taches', CollectionType::class, [
+                'label' => "Liste des taches",
+                'help' => "Tâches ou actions à exécuter par les utilisateurs dans le cadre de cette notification.",
+                'entry_type' => TacheType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "description",
+                ],
+            ])
             // ->add('notification', EntityType::class, [
             //     'class' => NotificationSinistre::class,
             //     'choice_label' => 'id',

@@ -45,10 +45,17 @@ class OffreIndemnisationSinistre
     #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
     private ?NotificationSinistre $notificationSinistre = null;
 
+    /**
+     * @var Collection<int, Tache>
+     */
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'offreIndemnisationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $taches;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
         $this->paiements = new ArrayCollection();
+        $this->taches = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -220,6 +227,36 @@ class OffreIndemnisationSinistre
     public function setNom(?string $nom): static
     {
         $this->nom = $nom;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Tache>
+     */
+    public function getTaches(): Collection
+    {
+        return $this->taches;
+    }
+
+    public function addTach(Tache $tach): static
+    {
+        if (!$this->taches->contains($tach)) {
+            $this->taches->add($tach);
+            $tach->setOffreIndemnisationSinistre($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTach(Tache $tach): static
+    {
+        if ($this->taches->removeElement($tach)) {
+            // set the owning side to null (unless already changed)
+            if ($tach->getOffreIndemnisationSinistre() === $this) {
+                $tach->setOffreIndemnisationSinistre(null);
+            }
+        }
 
         return $this;
     }

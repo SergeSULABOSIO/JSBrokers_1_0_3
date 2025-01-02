@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "piste_description" | trans }}
+	{{ "offreindemnisation_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -24,41 +24,41 @@
 	<div class="d-flex">
         <table class="table table-hover table-sm caption-top">
             <caption>
-                {% if pistes|length == 0 %}
-                    {{ "piste_filter_result_empty" | trans}}
+                {% if offreindemnisations|length == 0 %}
+                    {{ "offreindemnisation_filter_result_empty" | trans}}
                 {% else %}
-                    {{ "piste_filter_result_elements" | trans({
-                        ':number': pistes|length
+                    {{ "offreindemnisation_filter_result_elements" | trans({
+                        ':number': offreindemnisations|length
                     })}}
                 {% endif %}
                 <div class="d-flex gap-1">
-                    {{ knp_pagination_render(pistes) }}
+                    {{ knp_pagination_render(offreindemnisations) }}
                 </div>
             </caption>
-            {% if pistes|length != 0 %}
+            {% if offreindemnisations|length != 0 %}
                 <thead class="table-light">
                     <tr>
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "piste_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "piste_list_actions" | trans }}</div></th>
+                        <th scope="col"><div class='d-flex justify-content-start'>{{ "offreindemnisation_list_title" | trans }}</div></th>
+                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "offreindemnisation_list_actions" | trans }}</div></th>
                     </tr>
                 </thead>
                 <tbody class="table-group-divider">
                     {# Boucler les donnees #}
-                    {% for piste in pistes %}
-                        <tr id="row_piste_{{ piste.id }}">
+                    {% for offreindemnisation in offreindemnisations %}
+                        <tr id="row_offreindemnisation_{{ offreindemnisation.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.piste.edit', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ piste.nom }}
+                                <a class="m-2" href="{{ path('admin.offreindemnisation.edit', {'idOffreindemnisation':offreindemnisation.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ offreindemnisation.nom }}
                                 </a>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
                                     {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.piste.edit', {'idEntreprise': entreprise.id, 'idPiste':piste.id })}}" class="" mthod = 'POST'>
+                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.offreindemnisation.edit', {'idEntreprise': entreprise.id, 'idOffreindemnisation':offreindemnisation.id })}}" class="" mthod = 'POST'>
                                         {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
                                         {# Modifier #}
                                     </a>
-                                    <form action="{{ path('admin.piste.remove', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                    <form action="{{ path('admin.offreindemnisation.remove', {'idOffreindemnisation':offreindemnisation.id, 'idEntreprise': entreprise.id})}}" method='POST'>
                                         <input type='hidden' name='_method' value='DELETE'>
                                         <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
                                             {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
@@ -74,19 +74,19 @@
                                             <li>
                                                 <a class="dropdown-item" href="#">
                                                     {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "piste_item_set_as_display_piste" | trans }}
+                                                    {{ "offreindemnisation_item_set_as_display_offreindemnisation" | trans }}
                                                 </a>
                                             </li>
                                             <li>
                                                 <a class="dropdown-item" href="#">
                                                     {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "piste_item_set_as_input_piste" | trans }}
+                                                    {{ "offreindemnisation_item_set_as_input_offreindemnisation" | trans }}
                                                 </a>
                                             </li>
                                             <li>
                                                 <a class="dropdown-item" href="#">
                                                     {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "piste_item_set_as_display_and_input_piste" | trans }}
+                                                    {{ "offreindemnisation_item_set_as_display_and_input_offreindemnisation" | trans }}
                                                 </a>
                                             </li>
                                         </ul>

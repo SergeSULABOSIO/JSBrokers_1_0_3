@@ -54,6 +54,9 @@ class Tache
     #[ORM\ManyToOne(inversedBy: 'taches')]
     private ?NotificationSinistre $notificationSinistre = null;
 
+    #[ORM\ManyToOne(inversedBy: 'taches')]
+    private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
+
     public function __construct()
     {
         $this->feedbacks = new ArrayCollection();
@@ -229,6 +232,18 @@ class Tache
     public function setNotificationSinistre(?NotificationSinistre $notificationSinistre): static
     {
         $this->notificationSinistre = $notificationSinistre;
+
+        return $this;
+    }
+
+    public function getOffreIndemnisationSinistre(): ?OffreIndemnisationSinistre
+    {
+        return $this->offreIndemnisationSinistre;
+    }
+
+    public function setOffreIndemnisationSinistre(?OffreIndemnisationSinistre $offreIndemnisationSinistre): static
+    {
+        $this->offreIndemnisationSinistre = $offreIndemnisationSinistre;
 
         return $this;
     }

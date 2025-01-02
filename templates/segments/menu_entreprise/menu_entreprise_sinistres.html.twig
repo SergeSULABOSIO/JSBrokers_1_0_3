@@ -27,11 +27,11 @@
                     <span class="mb-0">{{ "company_menu_declarations" | trans }}</span>
                 </div>
             </a>
-            {# <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.reglement'? 'active' : '' }}">
+            <a href="{{ path('admin.offreindemnisation.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.offreindemnisation'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_reglements" | trans }}</span>
                 </div>
-            </a> #}
+            </a>
         </div>
     </div>
 </div>
