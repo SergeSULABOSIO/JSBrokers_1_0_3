@@ -69,7 +69,7 @@ class NotificationSinistre
     /**
      * @var Collection<int, Tache>
      */
-    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'notificationSinistre')]
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $taches;
 
     public function __construct()
