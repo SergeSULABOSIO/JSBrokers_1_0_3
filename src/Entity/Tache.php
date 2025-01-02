@@ -51,6 +51,9 @@ class Tache
     #[ORM\Column]
     private ?bool $closed = null;
 
+    #[ORM\ManyToOne(inversedBy: 'taches')]
+    private ?NotificationSinistre $notificationSinistre = null;
+
     public function __construct()
     {
         $this->feedbacks = new ArrayCollection();
@@ -214,6 +217,18 @@ class Tache
     public function setClosed(bool $closed): static
     {
         $this->closed = $closed;
+
+        return $this;
+    }
+
+    public function getNotificationSinistre(): ?NotificationSinistre
+    {
+        return $this->notificationSinistre;
+    }
+
+    public function setNotificationSinistre(?NotificationSinistre $notificationSinistre): static
+    {
+        $this->notificationSinistre = $notificationSinistre;
 
         return $this;
     }

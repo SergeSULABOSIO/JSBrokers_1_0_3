@@ -66,11 +66,18 @@ class NotificationSinistre
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $contacts;
 
+    /**
+     * @var Collection<int, Tache>
+     */
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'notificationSinistre')]
+    private Collection $taches;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();
         $this->contacts = new ArrayCollection();
         $this->offreIndemnisationSinistres = new ArrayCollection();
+        $this->taches = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -294,6 +301,36 @@ class NotificationSinistre
             // set the owning side to null (unless already changed)
             if ($offreIndemnisationSinistre->getNotificationSinistre() === $this) {
                 $offreIndemnisationSinistre->setNotificationSinistre(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Tache>
+     */
+    public function getTaches(): Collection
+    {
+        return $this->taches;
+    }
+
+    public function addTach(Tache $tach): static
+    {
+        if (!$this->taches->contains($tach)) {
+            $this->taches->add($tach);
+            $tach->setNotificationSinistre($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTach(Tache $tach): static
+    {
+        if ($this->taches->removeElement($tach)) {
+            // set the owning side to null (unless already changed)
+            if ($tach->getNotificationSinistre() === $this) {
+                $tach->setNotificationSinistre(null);
             }
         }
 
