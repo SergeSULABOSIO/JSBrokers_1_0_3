@@ -82,7 +82,7 @@ class TacheRepository extends ServiceEntityRepository
                 //Paramètres
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 //Organisation
-                ->orderBy('i.id', 'DESC'),
+                ->orderBy('tache.id', 'DESC'),
             $page,
             20,
         );
