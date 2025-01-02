@@ -42,12 +42,13 @@ class Paiement
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'paiement')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'paiement', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $preuves;
+
 
     public function __construct()
     {
-        $this->preuves = new ArrayCollection();
+        // $this->preuves = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -159,7 +160,7 @@ class Paiement
         return $this->preuves;
     }
 
-    public function addPreufe(Document $preufe): static
+    public function addPreuve(Document $preufe): static
     {
         if (!$this->preuves->contains($preufe)) {
             $this->preuves->add($preufe);
@@ -169,7 +170,7 @@ class Paiement
         return $this;
     }
 
-    public function removePreufe(Document $preufe): static
+    public function removePreuve(Document $preufe): static
     {
         if ($this->preuves->removeElement($preufe)) {
             // set the owning side to null (unless already changed)

@@ -16,6 +16,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class PaiementType extends AbstractType
 {
@@ -49,6 +50,25 @@ class PaiementType extends AbstractType
             ])
             ->add('paidAt', DateTimeType::class, [
                 'widget' => 'single_text',
+            ])
+            ->add('preuves', CollectionType::class, [
+                'label' => "Preuve de paiement",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "nom",
+                ],
             ])
             // ->add('createdAt', null, [
             //     'widget' => 'single_text',

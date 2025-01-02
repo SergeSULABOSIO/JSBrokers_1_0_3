@@ -31,8 +31,8 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
 
-    #[ORM\ManyToOne(inversedBy: 'preuves')]
-    private ?Paiement $paiement = null;
+    // #[ORM\ManyToOne(inversedBy: 'preuves')]
+    // private ?Paiement $paiement = null;
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Cotation $cotation = null;
@@ -60,6 +60,9 @@ class Document
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Partenaire $partenaire = null;
+
+    #[ORM\ManyToOne(inversedBy: 'preuves')]
+    private ?Paiement $paiement = null;
 
     public function getId(): ?int
     {
@@ -138,17 +141,17 @@ class Document
         return $this;
     }
 
-    public function getPaiement(): ?Paiement
-    {
-        return $this->paiement;
-    }
+    // public function getPaiement(): ?Paiement
+    // {
+    //     return $this->paiement;
+    // }
 
-    public function setPaiement(?Paiement $paiement): static
-    {
-        $this->paiement = $paiement;
+    // public function setPaiement(?Paiement $paiement): static
+    // {
+    //     $this->paiement = $paiement;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getCotation(): ?Cotation
     {
@@ -254,6 +257,18 @@ class Document
     public function setPartenaire(?Partenaire $partenaire): static
     {
         $this->partenaire = $partenaire;
+
+        return $this;
+    }
+
+    public function getPaiement(): ?Paiement
+    {
+        return $this->paiement;
+    }
+
+    public function setPaiement(?Paiement $paiement): static
+    {
+        $this->paiement = $paiement;
 
         return $this;
     }
