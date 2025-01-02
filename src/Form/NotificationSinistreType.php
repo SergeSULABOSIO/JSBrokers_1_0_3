@@ -140,7 +140,7 @@ class NotificationSinistreType extends AbstractType
             ])
             ->add('offreIndemnisationSinistres', CollectionType::class, [
                 'label' => "Liste d'offres d'indemnisations.",
-                'entry_type' => offreIndemnisationSinistreType::class,
+                'entry_type' => OffreIndemnisationSinistreType::class,
                 'by_reference' => false,
                 'allow_add' => true,
                 'allow_delete' => true,
@@ -154,7 +154,7 @@ class NotificationSinistreType extends AbstractType
                     'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
                     'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
                     'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "beneficiaire",
+                    'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ])
             //Le bouton d'enregistrement / soumission

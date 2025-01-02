@@ -113,12 +113,12 @@ class DocumentType extends AbstractType
             // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
-                'label' => "entreprise_form_button_save_document",
+                'label' => "Enregistrer",
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],
             ])
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
+            // ->addE.ventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }

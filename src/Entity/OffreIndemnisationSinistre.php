@@ -2,10 +2,10 @@
 
 namespace App\Entity;
 
-use App\Repository\OffreIndemnisationSinistreRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
+use App\Repository\OffreIndemnisationSinistreRepository;
 
 #[ORM\Entity(repositoryClass: OffreIndemnisationSinistreRepository::class)]
 class OffreIndemnisationSinistre
@@ -14,24 +14,15 @@ class OffreIndemnisationSinistre
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
-
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $createdAt = null;
+    
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $nom = null;
 
     #[ORM\Column(nullable: true)]
     private ?float $franchiseAppliquee = null;
 
     #[ORM\Column]
     private ?float $montantPayable = null;
-
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $updatedAt = null;
-
-    /**
-     * @var Collection<int, Document>
-     */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'offreIndemnisationSinistre')]
-    private Collection $documents;
 
     #[ORM\Column(length: 255)]
     private ?string $beneficiaire = null;
@@ -42,8 +33,14 @@ class OffreIndemnisationSinistre
     /**
      * @var Collection<int, Paiement>
      */
-    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'offreIndemnisationSinistre')]
+    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'offreIndemnisationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $paiements;
+
+    /**
+     * @var Collection<int, Document>
+     */
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'offreIndemnisationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $documents;
 
     #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
     private ?NotificationSinistre $notificationSinistre = null;
@@ -211,6 +208,18 @@ class OffreIndemnisationSinistre
     public function setNotificationSinistre(?NotificationSinistre $notificationSinistre): static
     {
         $this->notificationSinistre = $notificationSinistre;
+
+        return $this;
+    }
+
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
+
+    public function setNom(?string $nom): static
+    {
+        $this->nom = $nom;
 
         return $this;
     }
