@@ -47,4 +47,38 @@ class FeedbackRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("feedback")
+                //via la piste
+                ->leftJoin("feedback.tache", "tache")
+                ->leftJoin("tache.piste", "piste")
+                ->leftJoin("piste.invite", "invite")
+                //via cotation
+                ->leftJoin("tache.cotation", "cotation")
+                ->leftJoin("cotation.piste", "pisteb")
+                ->leftJoin("pisteb.invite", "inviteb")
+                //via notification sinistre
+                ->leftJoin("tache.notificationSinistre", "notification")
+                ->leftJoin("notification.invite", "invitec")
+                //via offre d'indemnisation sinistre
+                ->leftJoin("tache.offreIndemnisationSinistre", "offre")
+                ->leftJoin("offre.notificationSinistre", "notificationb")
+                ->leftJoin("notificationb.invite", "invited")
+                
+                //Conditions
+                ->Where("invite.entreprise = :entrepriseId")
+                ->orWhere("inviteb.entreprise = :entrepriseId")
+                ->orWhere("invitec.entreprise = :entrepriseId")
+                ->orWhere("invited.entreprise = :entrepriseId")
+                //Paramètres
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                //Organisation
+                ->orderBy('tache.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }
