@@ -103,8 +103,6 @@ class DocumentRepository extends ServiceEntityRepository
                 //via compte bancaire
                 ->leftJoin("document.compteBancaire", "comptebancaire")
 
-
-
                 //Condition Où
                 ->where('invite.entreprise = :entrepriseId')
                 ->orWhere('inviteb.entreprise = :entrepriseId')
