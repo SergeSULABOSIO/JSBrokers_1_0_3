@@ -95,7 +95,6 @@ class DocumentRepository extends ServiceEntityRepository
                 ->leftJoin("notification.invite", "inviteg")
 
 
-
                 //Condition Où
                 ->where('invite.entreprise = :entrepriseId')
                 ->orWhere('inviteb.entreprise = :entrepriseId')
