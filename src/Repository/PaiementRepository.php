@@ -63,7 +63,7 @@ class PaiementRepository extends ServiceEntityRepository
                 ->where("invite.entreprise = :entrepriseId")
                 ->orWhere("inviteb.entreprise = :entrepriseId")
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
-                ->orderBy('o.id', 'DESC'),
+                ->orderBy('paiement.id', 'DESC'),
             $page,
             20,
         );

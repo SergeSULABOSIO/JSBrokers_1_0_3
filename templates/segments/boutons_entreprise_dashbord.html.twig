@@ -119,6 +119,12 @@
           {{ "entreprise_bouton_new_feedback" | trans }}
         </a>
     {% endif %}
+    {% if app.current_route starts with 'admin.paiement' %}
+        <a href="{{ path('admin.paiement.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
+          {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+          {{ "paiement_bouton_new_paiement" | trans }}
+        </a>
+    {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
       <ul class="mb-2 mb-lg-0 btn btn-secondary">
         <li class="nav-item dropdown">

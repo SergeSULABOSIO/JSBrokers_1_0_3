@@ -93,6 +93,13 @@ class DocumentRepository extends ServiceEntityRepository
                 ->leftJoin("document.offreIndemnisationSinistre", "offre")
                 ->leftJoin("offre.notificationSinistre", "notification")
                 ->leftJoin("notification.invite", "inviteg")
+                //via paiement
+                ->leftJoin("document.paiement", "paiement")
+                ->leftJoin("paiement.offreIndemnisationSinistre", "offreb")
+                ->leftJoin("offreb.notificationSinistre", "notificationb")
+                ->leftJoin("notificationb.invite", "inviteh")
+                //via partenaire
+                ->leftJoin("document.partenaire", "partenaire")
 
 
                 //Condition Où
@@ -104,6 +111,9 @@ class DocumentRepository extends ServiceEntityRepository
                 ->orWhere('invitee.entreprise = :entrepriseId')
                 ->orWhere('invitef.entreprise = :entrepriseId')
                 ->orWhere('inviteg.entreprise = :entrepriseId')
+                ->orWhere('inviteh.entreprise = :entrepriseId')
+                ->orWhere('partenaire.entreprise = :entrepriseId')
+
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('document.id', 'DESC'),
             $page,

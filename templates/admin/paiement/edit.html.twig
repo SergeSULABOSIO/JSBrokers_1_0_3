@@ -1,0 +1,40 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	{{ "paiement_description" | trans }}
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		{# {{ form(form) }} #}
+		<div class="card shadow-sm bg-body" style="width: 55rem;">
+			<div class="card-body">
+				<p>
+					{{ "paiement_form_description" | trans({
+						":user": utilisateur.nom, 
+						":paiement": paiement.description, 
+					}) | raw }}
+				</p>
+				<div class = "m-2">
+					{{ form(form, {action: path('admin.paiement.edit', {
+						idEntreprise:entreprise.id,
+						idPaiement:paiement.id
+						})}) 
+					}}
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
