@@ -115,7 +115,7 @@ class FeedbackController extends AbstractController
         /** @var Feedback $feedback */
         $feedback = $this->feedbackRepository->find($idFeedback);
 
-        $form = $this->createForm(PisteType::class, $feedback);
+        $form = $this->createForm(FeedbackType::class, $feedback);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

@@ -39,7 +39,7 @@ class Avenant
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'avenant')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'avenant', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
     #[ORM\ManyToOne(inversedBy: 'avenant')]

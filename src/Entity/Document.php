@@ -31,9 +31,6 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
 
-    // #[ORM\ManyToOne(inversedBy: 'preuves')]
-    // private ?Paiement $paiement = null;
-
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Cotation $cotation = null;
 

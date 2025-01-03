@@ -15,8 +15,9 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class AvenantType extends AbstractType
 {
@@ -61,6 +62,25 @@ class AvenantType extends AbstractType
             ->add('endingAt', DateTimeType::class, [
                 'label' => "Echéance",
                 'widget' => 'single_text',
+            ])
+            ->add('documents', CollectionType::class, [
+                'label' => "Documents",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "nom",
+                ],
             ])
             // ->add('createdAt', null, [
             //     'widget' => 'single_text',

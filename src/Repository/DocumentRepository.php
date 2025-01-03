@@ -65,12 +65,46 @@ class DocumentRepository extends ServiceEntityRepository
     {
         return $this->paginator->paginate(
             $this->createQueryBuilder("document")
-                //Les dcuments attachés à la cotation
+                //via cotation
                 ->leftJoin("document.cotation", "cotation")
                 ->leftJoin("cotation.piste", "piste")
                 ->leftJoin("piste.invite", "invite")
+                //via avenant
+                ->leftJoin("document.avenant", "avenant")
+                ->leftJoin("avenant.cotation", "cotationb")
+                ->leftJoin("cotationb.piste", "pisteb")
+                ->leftJoin("pisteb.invite", "inviteb")
+                //via tache
+                ->leftJoin("document.tache", "avenantb")
+                ->leftJoin("avenantb.piste", "pistec")
+                ->leftJoin("pistec.invite", "invitec")
+                //via feedback
+                ->leftJoin("document.feedback", "feedback")
+                ->leftJoin("feedback.tache", "avenantc")
+                ->leftJoin("avenantc.piste", "pisted")
+                ->leftJoin("pisted.invite", "invited")
+                //via piste
+                ->leftJoin("document.piste", "pistee")
+                ->leftJoin("pistee.invite", "invitee")
+                //via pieces sinistre
+                ->leftJoin("document.pieceSinistre", "piece")
+                ->leftJoin("piece.invite", "invitef")
+                //via offre indemnisation
+                ->leftJoin("document.offreIndemnisationSinistre", "offre")
+                ->leftJoin("offre.notificationSinistre", "notification")
+                ->leftJoin("notification.invite", "inviteg")
+
+
+
                 //Condition Où
                 ->where('invite.entreprise = :entrepriseId')
+                ->orWhere('inviteb.entreprise = :entrepriseId')
+                ->orWhere('inviteb.entreprise = :entrepriseId')
+                ->orWhere('invitec.entreprise = :entrepriseId')
+                ->orWhere('invited.entreprise = :entrepriseId')
+                ->orWhere('invitee.entreprise = :entrepriseId')
+                ->orWhere('invitef.entreprise = :entrepriseId')
+                ->orWhere('inviteg.entreprise = :entrepriseId')
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('document.id', 'DESC'),
             $page,
