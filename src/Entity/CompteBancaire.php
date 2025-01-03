@@ -33,7 +33,7 @@ class CompteBancaire
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'compteBancaire')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'compteBancaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
     public function __construct()
