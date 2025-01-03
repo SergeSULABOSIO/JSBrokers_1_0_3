@@ -15,7 +15,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 class PaiementRepository extends ServiceEntityRepository
 {
     public function __construct(
-        ManagerRegistry $registry,
+        private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
     )
@@ -51,11 +51,17 @@ class PaiementRepository extends ServiceEntityRepository
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
-            $this->createQueryBuilder("o")
-                ->leftJoin("o.offreIndemnisationSinistre", "oi")
-                ->leftJoin("oi.notificationSinistre", "ns")
-                ->leftJoin("ns.invite", "in")
-                ->where("in.entreprise = :entrepriseId")
+            $this->createQueryBuilder("paiement")
+                //via offre d'indemnisation
+                ->leftJoin("paiement.offreIndemnisationSinistre", "offre")
+                ->leftJoin("offre.notificationSinistre", "notification")
+                ->leftJoin("notification.invite", "invite")
+                //via facture
+                ->leftJoin("paiement.factureCommission", "facture")
+                ->leftJoin("facture.invite", "inviteb")
+                //condition
+                ->where("invite.entreprise = :entrepriseId")
+                ->orWhere("inviteb.entreprise = :entrepriseId")
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('o.id', 'DESC'),
             $page,
