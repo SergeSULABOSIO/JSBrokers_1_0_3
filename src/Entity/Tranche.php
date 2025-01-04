@@ -37,6 +37,9 @@ class Tranche
     #[ORM\ManyToOne(inversedBy: 'articles')]
     private ?FactureCommission $factureCommission = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $echeanceAt = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -134,6 +137,18 @@ class Tranche
     public function setFactureCommission(?FactureCommission $factureCommission): static
     {
         $this->factureCommission = $factureCommission;
+
+        return $this;
+    }
+
+    public function getEcheanceAt(): ?\DateTimeImmutable
+    {
+        return $this->echeanceAt;
+    }
+
+    public function setEcheanceAt(?\DateTimeImmutable $echeanceAt): static
+    {
+        $this->echeanceAt = $echeanceAt;
 
         return $this;
     }

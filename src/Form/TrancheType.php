@@ -55,6 +55,10 @@ class TrancheType extends AbstractType
             ->add('payableAt', DateTimeType::class, [
                 'label' => "Date d'effet",
                 'widget' => 'single_text',
+            ])//
+            ->add('echeanceAt', DateTimeType::class, [
+                'label' => "Echéance",
+                'widget' => 'single_text',
             ])
             // ->add('createdAt', DateTimeImmutable::class, [
             //     'widget' => 'single_text',
