@@ -49,7 +49,7 @@
                         <tr id="row_client_{{ client.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.client.edit', {'idClient':client.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ client.nom }}
+                                    {{ client.nom }}{% if client.groupe != null %} | Membre du Groupe {{ client.groupe.nom }}{% endif %}
                                 </a>
                             </td>
                             <td>

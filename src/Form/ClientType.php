@@ -37,6 +37,7 @@ class ClientType extends AbstractType
             ->add('groupe', EntityType::class, [
                 'help' => "Le groupe ou la famille ou encore conglomérat auquel apprtient cette entité.",
                 'label' => "Groupe",
+                'autocomplete' => true,
                 'class' => Groupe::class,
                 'required' => false,
                 'choice_label' => 'nom',

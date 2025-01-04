@@ -161,7 +161,7 @@ class Entreprise
     /**
      * @var Collection<int, Groupe>
      */
-    #[ORM\OneToMany(targetEntity: Groupe::class, mappedBy: 'entreprise')]
+    #[ORM\OneToMany(targetEntity: Groupe::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $groupes;
 
 
