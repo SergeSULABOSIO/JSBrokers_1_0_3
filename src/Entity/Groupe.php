@@ -27,7 +27,7 @@ class Groupe
     /**
      * @var Collection<int, Client>
      */
-    #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'groupe')]
+    #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'groupe', cascade: ['persist'], orphanRemoval: true)]
     private Collection $clients;
 
     public function __construct()

@@ -43,7 +43,7 @@ class GroupeController extends AbstractController
         private GroupeRepository $groupeRepository,
         private Constante $constante,
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
+        $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
 
 
@@ -85,6 +85,12 @@ class GroupeController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            //on défini le groupe et l'entreprise au cas où ils ne sont pas défini par l'utilisateur dans le formulaire
+            foreach ($groupe->getClients() as $client) {
+                $client->setGroupe($groupe);
+                $client->setEntreprise($entreprise);
+            }
+
             $this->manager->persist($groupe);
             $this->manager->flush();
             $this->addFlash("success", $this->translator->trans("groupe_creation_ok", [
@@ -120,6 +126,11 @@ class GroupeController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            //on défini le groupe et l'entreprise au cas où ils ne sont pas défini par l'utilisateur dans le formulaire
+            foreach ($groupe->getClients() as $client) {
+                $client->setGroupe($groupe);
+                $client->setEntreprise($entreprise);
+            }
             $this->manager->persist($groupe);
             $this->manager->flush();
             $this->addFlash("success", $this->translator->trans("groupe_edition_ok", [
@@ -152,7 +163,7 @@ class GroupeController extends AbstractController
         $message = $this->translator->trans("groupe_deletion_ok", [
             ":groupe" => $groupe->getNom(),
         ]);;
-        
+
         $this->manager->remove($groupe);
         $this->manager->flush();
 
