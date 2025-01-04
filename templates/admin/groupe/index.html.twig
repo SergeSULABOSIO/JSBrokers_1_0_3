@@ -48,7 +48,7 @@
                         <tr id="row_groupe_{{ groupe.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.groupe.edit', {'idGroupe':groupe.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ groupe.nom }} | {{ groupe.description }}
+                                    {{ groupe.nom }} | {{ groupe.clients|length }} clients | {{ groupe.description }}
                                 </a>
                             </td>
                             <td>
