@@ -158,6 +158,12 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $invites;
 
+    /**
+     * @var Collection<int, Groupe>
+     */
+    #[ORM\OneToMany(targetEntity: Groupe::class, mappedBy: 'entreprise')]
+    private Collection $groupes;
+
 
     public function __construct()
     {
@@ -173,10 +179,10 @@ class Entreprise
         $this->partenaires = new ArrayCollection();
         $this->connectedUsers = new ArrayCollection();
         $this->modelePieceSinistres = new ArrayCollection();
-        // $this->documents = new ArrayCollection();
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
         $this->invites = new ArrayCollection();
+        $this->groupes = new ArrayCollection();
     }
 
 
@@ -753,6 +759,36 @@ class Entreprise
             // set the owning side to null (unless already changed)
             if ($invite->getEntreprise() === $this) {
                 $invite->setEntreprise(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Groupe>
+     */
+    public function getGroupes(): Collection
+    {
+        return $this->groupes;
+    }
+
+    public function addGroupe(Groupe $groupe): static
+    {
+        if (!$this->groupes->contains($groupe)) {
+            $this->groupes->add($groupe);
+            $groupe->setEntreprise($this);
+        }
+
+        return $this;
+    }
+
+    public function removeGroupe(Groupe $groupe): static
+    {
+        if ($this->groupes->removeElement($groupe)) {
+            // set the owning side to null (unless already changed)
+            if ($groupe->getEntreprise() === $this) {
+                $groupe->setEntreprise(null);
             }
         }
 

@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Client;
 use App\Entity\Entreprise;
+use App\Entity\Groupe;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -32,6 +33,13 @@ class ClientType extends AbstractType
                 'attr' => [
                     'placeholder' => "Nom",
                 ],
+            ])
+            ->add('groupe', EntityType::class, [
+                'help' => "Le groupe ou la famille ou encore conglomérat auquel apprtient cette entité.",
+                'label' => "Groupe",
+                'class' => Groupe::class,
+                'required' => false,
+                'choice_label' => 'nom',
             ])
             ->add('adresse', TextType::class, [
                 'label' => "Adresse physique",

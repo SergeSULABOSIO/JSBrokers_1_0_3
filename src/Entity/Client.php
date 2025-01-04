@@ -60,6 +60,9 @@ class Client
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
+    #[ORM\ManyToOne(inversedBy: 'clients')]
+    private ?Groupe $groupe = null;
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
@@ -266,6 +269,18 @@ class Client
                 $document->setClient(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getGroupe(): ?Groupe
+    {
+        return $this->groupe;
+    }
+
+    public function setGroupe(?Groupe $groupe): static
+    {
+        $this->groupe = $groupe;
 
         return $this;
     }
