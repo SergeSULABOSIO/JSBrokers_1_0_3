@@ -15,6 +15,10 @@ class Bordereau
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column]
+    private ?int $type = null;
+    public const TYPE_BOREDERAU_PRODUCTION = 0;
+
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
@@ -42,8 +46,10 @@ class Bordereau
     /**
      * @var Collection<int, Document>
      */
-    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'bordereau')]
+    #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'bordereau', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
+
+   
 
     public function __construct()
     {
@@ -177,6 +183,18 @@ class Bordereau
                 $document->setBordereau(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getType(): ?int
+    {
+        return $this->type;
+    }
+
+    public function setType(int $type): static
+    {
+        $this->type = $type;
 
         return $this;
     }
