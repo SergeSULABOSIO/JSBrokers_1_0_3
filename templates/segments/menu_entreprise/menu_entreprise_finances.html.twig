@@ -47,6 +47,11 @@
                     <span class="mb-0">{{ "company_menu_payments" | trans }}</span>
                 </div>
             </a>
+            <a href="{{ path('admin.bordereau.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.bordereau'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_bordereaux" | trans }}</span>
+                </div>
+            </a>
         </div>
     </div>
 </div>

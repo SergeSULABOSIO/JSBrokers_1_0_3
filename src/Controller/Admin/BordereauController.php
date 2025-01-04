@@ -18,6 +18,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\PisteRepository;
 use App\Repository\TacheRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -81,6 +82,7 @@ class BordereauController extends AbstractController
         //Paramètres par défaut
         $bordereau->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION);
         $bordereau->setInvite($invite);
+        $bordereau->setReceivedAt(new DateTimeImmutable("now"));
 
         $form = $this->createForm(BordereauType::class, $bordereau);
         $form->handleRequest($request);

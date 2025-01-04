@@ -131,6 +131,12 @@
           {{ "paiement_bouton_new_groupe" | trans }}
         </a>
     {% endif %}
+    {% if app.current_route starts with 'admin.bordereau' %}
+        <a href="{{ path('admin.bordereau.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
+          {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+          {{ "bordereau_bouton_new_bordereau" | trans }}
+        </a>
+    {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
       <ul class="mb-2 mb-lg-0 btn btn-secondary">
         <li class="nav-item dropdown">
