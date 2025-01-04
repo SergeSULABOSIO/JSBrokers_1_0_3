@@ -102,6 +102,9 @@ class DocumentRepository extends ServiceEntityRepository
                 ->leftJoin("document.partenaire", "partenaire")
                 //via compte bancaire
                 ->leftJoin("document.compteBancaire", "comptebancaire")
+                //via client
+                ->leftJoin("document.client", "client")
+
 
                 //Condition Où
                 ->where('invite.entreprise = :entrepriseId')
@@ -115,6 +118,7 @@ class DocumentRepository extends ServiceEntityRepository
                 ->orWhere('inviteh.entreprise = :entrepriseId')
                 ->orWhere('partenaire.entreprise = :entrepriseId')
                 ->orWhere('comptebancaire.entreprise = :entrepriseId')
+                ->orWhere('client.entreprise = :entrepriseId')
 
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('document.id', 'DESC'),
