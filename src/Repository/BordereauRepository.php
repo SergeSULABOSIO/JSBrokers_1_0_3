@@ -3,8 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\Bordereau;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Knp\Component\Pager\Pagination\PaginationInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<Bordereau>
@@ -40,4 +41,21 @@ class BordereauRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("bordereau")
+                //via le client
+                ->leftJoin("bordereau.invite", "invite")
+                //condition
+                ->where('invite.entreprise = :entrepriseId')
+                //paramètres
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                //ordre de données
+                ->orderBy('bordereau.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
 }
