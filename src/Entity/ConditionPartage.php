@@ -22,6 +22,7 @@ class ConditionPartage
     private ?int $formule = null;
     public const FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL = 0;
     public const FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL = 1;
+    public const FORMULE_NE_SAPPLIQUE_PAS_SEUIL = 2;
 
     #[ORM\Column]
     private ?float $seuil = null;

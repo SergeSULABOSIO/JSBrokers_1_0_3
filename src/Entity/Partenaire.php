@@ -42,7 +42,7 @@ class Partenaire
     /**
      * @var Collection<int, ConditionPartage>
      */
-    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'partenaire')]
+    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'partenaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $conditionPartages;
 
     public function __construct()
