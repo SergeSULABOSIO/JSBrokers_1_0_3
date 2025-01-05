@@ -84,7 +84,7 @@ class ConditionPartageType extends AbstractType
             ])
             ->add('unite', ChoiceType::class, [
                 'label' => "Unité de mésure",
-                'help' => "Pour quelle mésure appliquer cette condition?",
+                'help' => "Par quelle mésure appliquer cette condition?",
                 'expanded' => true,
                 'choices'  => [
                    "Par client et par couverture" => ConditionPartage::UNITE_PAR_CLIENT_ET_PAR_COUVERTURES,
