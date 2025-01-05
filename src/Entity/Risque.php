@@ -50,6 +50,9 @@ class Risque
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'risque')]
     private Collection $notificationSinistres;
 
+    #[ORM\ManyToOne(inversedBy: 'produits')]
+    private ?ConditionPartage $conditionPartage = null;
+
 
     public function __construct()
     {
@@ -207,6 +210,18 @@ class Risque
                 $notificationSinistre->setRisque(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getConditionPartage(): ?ConditionPartage
+    {
+        return $this->conditionPartage;
+    }
+
+    public function setConditionPartage(?ConditionPartage $conditionPartage): static
+    {
+        $this->conditionPartage = $conditionPartage;
 
         return $this;
     }

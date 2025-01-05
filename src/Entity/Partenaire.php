@@ -39,9 +39,16 @@ class Partenaire
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'partenaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
+    /**
+     * @var Collection<int, ConditionPartage>
+     */
+    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'partenaire')]
+    private Collection $conditionPartages;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        $this->conditionPartages = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -150,6 +157,36 @@ class Partenaire
             // set the owning side to null (unless already changed)
             if ($document->getPartenaire() === $this) {
                 $document->setPartenaire(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ConditionPartage>
+     */
+    public function getConditionPartages(): Collection
+    {
+        return $this->conditionPartages;
+    }
+
+    public function addConditionPartage(ConditionPartage $conditionPartage): static
+    {
+        if (!$this->conditionPartages->contains($conditionPartage)) {
+            $this->conditionPartages->add($conditionPartage);
+            $conditionPartage->setPartenaire($this);
+        }
+
+        return $this;
+    }
+
+    public function removeConditionPartage(ConditionPartage $conditionPartage): static
+    {
+        if ($this->conditionPartages->removeElement($conditionPartage)) {
+            // set the owning side to null (unless already changed)
+            if ($conditionPartage->getPartenaire() === $this) {
+                $conditionPartage->setPartenaire(null);
             }
         }
 
