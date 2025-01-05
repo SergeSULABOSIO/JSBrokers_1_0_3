@@ -67,6 +67,7 @@ class ConditionPartageType extends AbstractType
                    "Cette condition inclue les risques figurante sur cette liste" => ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,
                 ],
             ])
+            
             ->add('produits', ClientAutocompleteField::class, [
                 'required' => false,
                 'label' => "Risques concernés",
@@ -79,6 +80,16 @@ class ConditionPartageType extends AbstractType
                 'attr' => [
                     'placeholder' => "Risques concernés",
                     'class' => "form-control p-2 fs-6",
+                ],
+            ])
+            ->add('unite', ChoiceType::class, [
+                'label' => "Unité de mésure",
+                'help' => "Pour quelle mésure appliquer cette condition?",
+                'expanded' => true,
+                'choices'  => [
+                   "Par client et par couverture" => ConditionPartage::UNITE_PAR_CLIENT_ET_PAR_COUVERTURES,
+                   "Par client uniquement" => ConditionPartage::UNITE_PAR_CLIENT,
+                   "Par couverture uniquement" => ConditionPartage::UNITE_PAR_COUVERTURE,
                 ],
             ])
             // ->add('partenaire', EntityType::class, [

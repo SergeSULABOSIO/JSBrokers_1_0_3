@@ -44,6 +44,13 @@ class ConditionPartage
     public const CRITERE_EXCLURE_TOUS_CES_RISQUES = 0;
     public const CRITERE_INCLURE_TOUS_CES_RISQUES = 1;
 
+    #[ORM\Column]
+    private ?int $unite = null;
+    public const UNITE_PAR_CLIENT_ET_PAR_COUVERTURES = 0;
+    public const UNITE_PAR_CLIENT = 1;
+    public const UNITE_PAR_COUVERTURE = 2;
+    
+
     public function __construct()
     {
         $this->produits = new ArrayCollection();
@@ -152,6 +159,18 @@ class ConditionPartage
     public function setCritereRisque(int $critereRisque): static
     {
         $this->critereRisque = $critereRisque;
+
+        return $this;
+    }
+
+    public function getUnite(): ?int
+    {
+        return $this->unite;
+    }
+
+    public function setUnite(int $unite): static
+    {
+        $this->unite = $unite;
 
         return $this;
     }
