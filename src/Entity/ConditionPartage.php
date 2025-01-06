@@ -43,6 +43,7 @@ class ConditionPartage
     private ?int $critereRisque = null;
     public const CRITERE_EXCLURE_TOUS_CES_RISQUES = 0;
     public const CRITERE_INCLURE_TOUS_CES_RISQUES = 1;
+    public const CRITERE_PAS_RISQUES_CIBLES = 2;
 
     #[ORM\Column]
     private ?int $unite = null;
