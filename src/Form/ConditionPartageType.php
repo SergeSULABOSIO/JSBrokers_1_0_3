@@ -11,6 +11,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
@@ -40,11 +41,12 @@ class ConditionPartageType extends AbstractType
                    "Ne pas appliquer le seuil" => ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL,
                 ],
             ])
-            ->add('seuil', NumberType::class, [
+            ->add('seuil', MoneyType::class, [
                 'label' => "Seuil applicable",
                 'help' => "Le seuil à appliquer dans la condition de partage.",
                 'currency' => "USD",
                 'grouping' => true,
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Seuil",
                 ],
@@ -63,12 +65,12 @@ class ConditionPartageType extends AbstractType
                 'help' => "Comment s'applique cette condition par rapport au risque.",
                 'expanded' => true,
                 'choices'  => [
-                   "Cette condition exclue les risques figurante sur cette liste" => ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,
-                   "Cette condition inclue les risques figurante sur cette liste" => ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,
+                   "Cette condition ne concerne pas les risques figurant sur cette liste" => ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,
+                   "Cette condition concerne les risques figurant sur cette liste" => ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES,
                 ],
             ])
             
-            ->add('produits', ClientAutocompleteField::class, [
+            ->add('produits', RisqueAutocompleteField::class, [
                 'required' => false,
                 'label' => "Risques ciblés",
                 'class' => Risque::class,
@@ -86,7 +88,7 @@ class ConditionPartageType extends AbstractType
                 'help' => "Par quelle mésure appliquer cette condition?",
                 'expanded' => true,
                 'choices'  => [
-                   "Toutes les couvertures de tous les clients confondus" => ConditionPartage::UNITE_PAR_CLIENT_ET_PAR_COUVERTURES,
+                   "Par client et par couverture" => ConditionPartage::UNITE_PAR_CLIENT_ET_PAR_COUVERTURES,
                    "Par client uniquement" => ConditionPartage::UNITE_PAR_CLIENT,
                    "Par couverture uniquement" => ConditionPartage::UNITE_PAR_COUVERTURE,
                 ],
