@@ -65,14 +65,15 @@ class ConditionPartageType extends AbstractType
                 'help' => "Comment s'applique cette condition par rapport au risque.",
                 'expanded' => true,
                 'choices'  => [
-                   "Cette condition ne concerne pas les risques figurant sur cette liste" => ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,
-                   "Cette condition concerne les risques figurant sur cette liste" => ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES,
+                   "On ne partage pas quand il s'agit de risques ciblés" => ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,
+                   "On ne partage que quand il s'agit de risques ciblés" => ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES,
                 ],
             ])
             
             ->add('produits', RisqueAutocompleteField::class, [
                 'required' => false,
                 'label' => "Risques ciblés",
+                'help' => "Il s'agit ici des risques concernés ou pas par le partage avec le partenaire.",
                 'class' => Risque::class,
                 'choice_label' => "nomComplet",
                 'multiple' => true,
