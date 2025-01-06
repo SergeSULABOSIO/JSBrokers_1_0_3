@@ -62,6 +62,25 @@ class PartenaireType extends AbstractType
                     'placeholder' => "Part",
                 ],
             ])
+            ->add('conditionPartages', CollectionType::class, [
+                'label' => "Conditions spéciales de partage",
+                'entry_type' => ConditionPartageType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "nom",
+                ],
+            ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
                 'entry_type' => DocumentType::class,
