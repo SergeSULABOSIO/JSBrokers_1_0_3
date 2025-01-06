@@ -15,11 +15,10 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 class CotationRepository extends ServiceEntityRepository
 {
     public function __construct(
-        ManagerRegistry $registry,
+        private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
-    )
-    {
+    ) {
         parent::__construct($registry, Cotation::class);
     }
 
@@ -56,6 +55,20 @@ class CotationRepository extends ServiceEntityRepository
                 ->where('pi.invite = :inviteId')
                 ->setParameter('inviteId', '' . $idInvite . '')
                 ->orderBy('co.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
+
+    public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder("cotation")
+                ->leftJoin("cotation.piste", "piste")
+                ->leftJoin("piste.invite", "invite")
+                ->where('invite.entreprise = :entrepriseId')
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
+                ->orderBy('cotation.id', 'DESC'),
             $page,
             20,
         );
