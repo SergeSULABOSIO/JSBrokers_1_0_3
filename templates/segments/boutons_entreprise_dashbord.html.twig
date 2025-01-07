@@ -122,31 +122,31 @@
     {% if app.current_route starts with 'admin.paiement' %}
         <a href="{{ path('admin.paiement.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-          {{ "paiement_bouton_new_paiement" | trans }}
+          {{ "entreprise_bouton_new_paiement" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.groupe' %}
         <a href="{{ path('admin.groupe.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-          {{ "paiement_bouton_new_groupe" | trans }}
+          {{ "entreprise_bouton_new_groupe" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.bordereau' %}
         <a href="{{ path('admin.bordereau.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-          {{ "bordereau_bouton_new_bordereau" | trans }}
+          {{ "entreprise_bouton_new_bordereau" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.cotation' %}
         <a href="{{ path('admin.cotation.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-          {{ "bordereau_bouton_new_cotation" | trans }}
+          {{ "entreprise_bouton_new_cotation" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.revenucourtier' %}
         <a href="{{ path('admin.revenucourtier.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
-          {{ "bordereau_bouton_new_revenucourtier" | trans }}
+          {{ "entreprise_bouton_new_revenucourtier" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}
