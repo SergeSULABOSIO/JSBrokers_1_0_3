@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "revenu_description" | trans }}
+	{{ "revenucourtier_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -24,42 +24,48 @@
 	<div class="d-flex">
         <table class="table table-hover table-sm caption-top">
             <caption>
-                {% if revenus|length == 0 %}
-                    {{ "revenu_filter_result_empty" | trans }}
+                {% if revenucourtiers|length == 0 %}
+                    {{ "revenucourtier_filter_result_empty" | trans }}
                 {% else %}
-                    {{ "revenu_filter_result_elements" | trans({
-                        ':number': revenus|length
+                    {{ "revenucourtier_filter_result_elements" | trans({
+                        ':number': revenucourtiers|length
                     })}}
                 {% endif %}
                 <div class="d-flex gap-1">
-                    {{ knp_pagination_render(revenus) }}
+                    {{ knp_pagination_render(revenucourtiers) }}
                 </div>
             </caption>
-            {% if revenus|length != 0 %}
+            {% if revenucourtiers|length != 0 %}
                 <thead class="table-light">
                     <tr>
                         {# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "revenu_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "revenu_list_actions" | trans }}</div></th>
+                        <th scope="col"><div class='d-flex justify-content-start'>{{ "revenucourtier_list_title" | trans }}</div></th>
+                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "revenucourtier_list_actions" | trans }}</div></th>
                     </tr>
                 </thead>
                 <tbody class="table-group-divider">
                     {# Boucler les donnees #}
-                    {% for revenu in revenus %}
-                        <tr id="row_revenu_{{ revenu.id }}">
+                    {% for revenucourtier in revenucourtiers %}
+                        <tr id="row_revenucourtier_{{ revenucourtier.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.revenu.edit', {'idRevenu':revenu.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ revenu.nom }}
+                                <a class="m-2" href="{{ path('admin.revenucourtier.edit', {'idRevenucourtier':revenucourtier.id, 'idEntreprise': entreprise.id})}}">
+                                    XXX $ | {{ revenucourtier.nom }}
+                                    {% if revenucourtier.cotation != null %}
+                                        | {{revenucourtier.cotation.nom}}
+                                    {% endif %}
+                                    {% if revenucourtier.cotation.piste != null %}
+                                        | {{revenucourtier.cotation.piste.nom}}
+                                    {% endif %}
                                 </a>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
                                     {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.revenu.edit', {'idEntreprise': entreprise.id, 'idRevenu':revenu.id })}}" class="" mthod = 'POST'>
+                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.revenucourtier.edit', {'idEntreprise': entreprise.id, 'idRevenucourtier':revenucourtier.id })}}" class="" mthod = 'POST'>
                                         {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
                                         {# Modifier #}
                                     </a>
-                                    <form action="{{ path('admin.revenu.remove', {'idRevenu':revenu.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                    <form action="{{ path('admin.revenucourtier.remove', {'idRevenucourtier':revenucourtier.id, 'idEntreprise': entreprise.id})}}" method='POST'>
                                         <input type='hidden' name='_method' value='DELETE'>
                                         <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
                                             {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
@@ -75,19 +81,19 @@
                                             <li>
                                                 <a class="dropdown-item" href="#">
                                                     {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "revenu_item_set_as_display_revenu" | trans }}
+                                                    {{ "revenucourtier_item_set_as_display_revenucourtier" | trans }}
                                                 </a>
                                             </li>
                                             <li>
                                                 <a class="dropdown-item" href="#">
                                                     {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "revenu_item_set_as_input_revenu" | trans }}
+                                                    {{ "revenucourtier_item_set_as_input_revenucourtier" | trans }}
                                                 </a>
                                             </li>
                                             <li>
                                                 <a class="dropdown-item" href="#">
                                                     {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "revenu_item_set_as_display_and_input_revenu" | trans }}
+                                                    {{ "revenucourtier_item_set_as_display_and_input_revenucourtier" | trans }}
                                                 </a>
                                             </li>
                                         </ul>

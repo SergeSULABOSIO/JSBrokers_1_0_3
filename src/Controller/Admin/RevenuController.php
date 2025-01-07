@@ -23,7 +23,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 
-#[Route("/admin/revenu", name: 'admin.revenu.')]
+#[Route("/admin/typerevenu", name: 'admin.typerevenu.')]
 #[IsGranted('ROLE_USER')]
 class RevenuController extends AbstractController
 {
@@ -47,7 +47,7 @@ class RevenuController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
-        return $this->render('admin/revenu/index.html.twig', [
+        return $this->render('admin/typerevenu/index.html.twig', [
             'pageName' => $this->translator->trans("revenu_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
@@ -95,7 +95,7 @@ class RevenuController extends AbstractController
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/revenu/create.html.twig', [
+        return $this->render('admin/typerevenu/create.html.twig', [
             'pageName' => $this->translator->trans("revenu_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
@@ -130,7 +130,7 @@ class RevenuController extends AbstractController
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/revenu/edit.html.twig', [
+        return $this->render('admin/typerevenu/edit.html.twig', [
             'pageName' => $this->translator->trans("revenu_page_name_update", [
                 ":revenu" => $revenu->getNom(),
             ]),
@@ -156,7 +156,7 @@ class RevenuController extends AbstractController
         $this->manager->flush();
 
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.revenu.index", [
+        return $this->redirectToRoute("admin.typerevenu.index", [
             'idEntreprise' => $idEntreprise,
         ]);
     }

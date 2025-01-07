@@ -23,8 +23,8 @@
           {{ "entreprise_bouton_new_comptebancaire" | trans }}
         </a>
     {% endif %}
-    {% if app.current_route starts with 'admin.revenu' %}
-        <a href="{{ path('admin.revenu.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
+    {% if app.current_route starts with 'admin.typerevenu' %}
+        <a href="{{ path('admin.typerevenu.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "entreprise_bouton_new_revenu" | trans }}
         </a>
@@ -141,6 +141,12 @@
         <a href="{{ path('admin.cotation.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "bordereau_bouton_new_cotation" | trans }}
+        </a>
+    {% endif %}
+    {% if app.current_route starts with 'admin.revenucourtier' %}
+        <a href="{{ path('admin.revenucourtier.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
+          {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
+          {{ "bordereau_bouton_new_revenucourtier" | trans }}
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.entreprise' %}

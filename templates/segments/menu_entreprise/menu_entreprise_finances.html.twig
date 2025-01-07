@@ -22,7 +22,7 @@
                     <span class="mb-0">{{ "company_menu_taxes" | trans }}</span>
                 </div>
             </a>
-            <a href="{{ path('admin.revenu.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.revenu'? 'active' : '' }}">
+            <a href="{{ path('admin.typerevenu.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.typerevenu'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_revenus" | trans }}</span>
                 </div>
@@ -50,6 +50,11 @@
             <a href="{{ path('admin.bordereau.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.bordereau'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_bordereaux" | trans }}</span>
+                </div>
+            </a>
+            <a href="{{ path('admin.revenucourtier.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.revenucourtier'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_revenucourtier" | trans }}</span>
                 </div>
             </a>
         </div>
