@@ -53,6 +53,9 @@
                                     {% if cotation.piste != null %}
                                        | Piste: {{ cotation.piste }}
                                     {% endif %}
+                                    {% if cotation.piste.avenants|length != 0 %}
+                                        | Avénant ({{cotation.piste.avenants|length}})
+                                    {% endif %}
                                 </a>
                             </td>
                             <td>
