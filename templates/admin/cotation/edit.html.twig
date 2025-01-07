@@ -1,0 +1,42 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	{{pageName}}
+{% endblock %}
+
+{%  block titreRubrique %}
+	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
+{% endblock %}
+
+{% block descriptionRubrique %}
+	{{ "cotation_description" | trans }}
+{% endblock %}
+
+{% block menuLateraleGauche %}
+	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
+{% endblock %}
+
+{% block body %}
+	<div class="container">
+		{# {{ form(form) }} #}
+		<div class="card shadow-sm bg-body" style="width: 40rem;">
+			<div class="card-body">
+				<p>
+					{{ "risque_form_description" | trans({
+						":user": utilisateur.nom, 
+						":cotation": cotation.nom, 
+					}) | raw }}
+				</p>
+				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
+					<div class = "m-2">
+						{{ form(form, {action: path('admin.cotation.edit', {
+							idEntreprise:entreprise.id,
+							idCotation:cotation.id
+							})}) 
+						}}
+					</div>
+				{# </turbo-frame> #}
+			</div>
+		</div>
+	</div>
+{% endblock %}

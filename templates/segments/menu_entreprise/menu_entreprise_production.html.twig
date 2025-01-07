@@ -52,6 +52,11 @@
                     <span class="mb-0">{{ "company_menu_partners" | trans }}</span>
                 </div>
             </a>
+            <a href="{{ path('admin.cotation.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.cotation'? 'active' : '' }}">
+                <div class="d-flex justify-content-between">
+                    <span class="mb-0">{{ "company_menu_cotation" | trans }}</span>
+                </div>
+            </a>
             {# <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.support'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_ri_panel" | trans }}</span>
