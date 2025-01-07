@@ -141,7 +141,7 @@ class CotationController extends AbstractController
     {
         /** @var Cotation $cotation */
         $cotation = $this->cotationRepository->find($idCotation);
-
+        
         $message = $this->translator->trans("cotation_deletion_ok", [
             ":cotation" => $cotation->getNom(),
         ]);
