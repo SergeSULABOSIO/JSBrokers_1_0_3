@@ -7,8 +7,10 @@ use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\Assureur;
 use App\Entity\Contact;
+use App\Entity\Cotation;
 use App\Form\AssureurType;
 use App\Form\ContactType;
+use App\Form\CotationType;
 use App\Repository\AssureurRepository;
 use App\Repository\ContactRepository;
 use App\Repository\CotationRepository;
@@ -69,26 +71,26 @@ class CotationController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Contact $contact */
-        $contact = new Contact();
+        /** @var Cotation $cotation */
+        $cotation = new Cotation();
         //Paramètres par défaut
         // $contact->setEntreprise($entreprise);
 
-        $form = $this->createForm(ContactType::class, $contact);
+        $form = $this->createForm(CotationType::class, $cotation);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($contact);
+            $this->manager->persist($cotation);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("contact_creation_ok", [
-                ":contact" => $contact->getNom(),
+            $this->addFlash("success", $this->translator->trans("cotation_creation_ok", [
+                ":cotation" => $cotation->getNom(),
             ]));
-            return $this->redirectToRoute("admin.contact.index", [
+            return $this->redirectToRoute("admin.cotation.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/contact/create.html.twig', [
-            'pageName' => $this->translator->trans("contact_page_name_new"),
+        return $this->render('admin/cotation/create.html.twig', [
+            'pageName' => $this->translator->trans("cotation_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
@@ -97,8 +99,8 @@ class CotationController extends AbstractController
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idContact}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idContact, Request $request)
+    #[Route('/edit/{idEntreprise}/{idCotation}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idCotation, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -106,49 +108,49 @@ class CotationController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Contact $contact */
-        $contact = $this->contactRepository->find($idContact);
+        /** @var Cotation $cotation */
+        $cotation = $this->cotationRepository->find($idCotation);
 
-        $form = $this->createForm(ContactType::class, $contact);
+        $form = $this->createForm(CotationType::class, $cotation);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($contact); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->persist($cotation); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("contact_edition_ok", [
-                ":contact" => $contact->getNom(),
+            $this->addFlash("success", $this->translator->trans("cotation_edition_ok", [
+                ":cotation" => $cotation->getNom(),
             ]));
-            return $this->redirectToRoute("admin.contact.index", [
+            return $this->redirectToRoute("admin.cotation.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-        return $this->render('admin/contact/edit.html.twig', [
-            'pageName' => $this->translator->trans("contact_page_name_update", [
-                ":contact" => $contact->getNom(),
+        return $this->render('admin/cotation/edit.html.twig', [
+            'pageName' => $this->translator->trans("cotation_page_name_update", [
+                ":cotation" => $cotation->getNom(),
             ]),
             'utilisateur' => $user,
-            'contact' => $contact,
+            'cotation' => $cotation,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
         ]);
     }
 
-    #[Route('/remove/{idEntreprise}/{idContact}', name: 'remove', requirements: ['idContact' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idContact, Request $request)
+    #[Route('/remove/{idEntreprise}/{idCotation}', name: 'remove', requirements: ['idCotation' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function remove($idEntreprise, $idCotation, Request $request)
     {
-        /** @var Contact $contact */
-        $contact = $this->contactRepository->find($idContact);
+        /** @var Cotation $cotation */
+        $cotation = $this->cotationRepository->find($idCotation);
 
-        $message = $this->translator->trans("contact_deletion_ok", [
-            ":contact" => $contact->getNom(),
-        ]);;
+        $message = $this->translator->trans("cotation_deletion_ok", [
+            ":cotation" => $cotation->getNom(),
+        ]);
         
-        $this->manager->remove($contact);
+        $this->manager->remove($cotation);
         $this->manager->flush();
 
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.contact.index", [
+        return $this->redirectToRoute("admin.cotation.index", [
             'idEntreprise' => $idEntreprise,
         ]);
     }
