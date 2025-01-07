@@ -432,6 +432,7 @@ commom_new_element: "New collection element"
 company_menu_modelepiecesinistre: "Document type"
 company_menu_groupes: "Group"
 company_menu_bordereaux: "Statements"
+company_menu_cotation: "Quote"
 
 
 

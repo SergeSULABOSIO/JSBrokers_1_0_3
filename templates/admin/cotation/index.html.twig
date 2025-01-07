@@ -49,7 +49,10 @@
                         <tr id="row_cotation_{{ cotation.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.cotation.edit', {'idCotation':cotation.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ cotation.nom }}
+                                    {{ cotation.nom }} 
+                                    {% if cotation.piste != null %}
+                                       | Piste: {{ cotation.piste }}
+                                    {% endif %}
                                 </a>
                             </td>
                             <td>
