@@ -80,12 +80,16 @@ class TacheRepository extends ServiceEntityRepository
                 ->leftJoin("tache.offreIndemnisationSinistre", "tacheoffre")
                 ->leftJoin("tacheoffre.notificationSinistre", "tacheoffrenotification")
                 ->leftJoin("tacheoffrenotification.invite", "tacheoffrenotificationinvite")
-
-
+                //via cotation
+                ->leftJoin("tache.cotation", "cotation")
+                ->leftJoin("cotation.piste", "pisteCotation")
+                ->leftJoin("pisteCotation.invite", "invitePisteCotation")
+                
                 //Conditions
                 ->Where("invitePiste.entreprise = :entrepriseId")
                 ->orWhere("inviteClaim.entreprise = :entrepriseId")
                 ->orWhere("tacheoffrenotificationinvite.entreprise = :entrepriseId")
+                ->orWhere("invitePisteCotation.entreprise = :entrepriseId")
                 //Paramètres
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 //Organisation
