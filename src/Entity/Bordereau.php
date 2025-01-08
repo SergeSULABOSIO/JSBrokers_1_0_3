@@ -41,7 +41,7 @@ class Bordereau
     private ?Invite $invite = null;
 
     #[ORM\ManyToOne(inversedBy: 'bordereaux')]
-    private ?FactureCommission $factureCommission = null;
+    private ?Facture $facture = null;
 
     /**
      * @var Collection<int, Document>
@@ -145,14 +145,14 @@ class Bordereau
         return $this;
     }
 
-    public function getFactureCommission(): ?FactureCommission
+    public function getFacture(): ?Facture
     {
-        return $this->factureCommission;
+        return $this->facture;
     }
 
-    public function setFactureCommission(?FactureCommission $factureCommission): static
+    public function setFacture(?Facture $facture): static
     {
-        $this->factureCommission = $factureCommission;
+        $this->facture = $facture;
 
         return $this;
     }

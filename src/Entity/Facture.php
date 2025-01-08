@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: FactureCommissionRepository::class)]
-class FactureCommission
+class Facture
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -90,7 +90,7 @@ class FactureCommission
     {
         if (!$this->articles->contains($article)) {
             $this->articles->add($article);
-            $article->setFactureCommission($this);
+            $article->setFacture($this);
         }
 
         return $this;
@@ -100,8 +100,8 @@ class FactureCommission
     {
         if ($this->articles->removeElement($article)) {
             // set the owning side to null (unless already changed)
-            if ($article->getFactureCommission() === $this) {
-                $article->setFactureCommission(null);
+            if ($article->getFacture() === $this) {
+                $article->setFacture(null);
             }
         }
 
@@ -192,7 +192,7 @@ class FactureCommission
     {
         if (!$this->bordereaux->contains($bordereaux)) {
             $this->bordereaux->add($bordereaux);
-            $bordereaux->setFactureCommission($this);
+            $bordereaux->setFacture($this);
         }
 
         return $this;
@@ -202,8 +202,8 @@ class FactureCommission
     {
         if ($this->bordereaux->removeElement($bordereaux)) {
             // set the owning side to null (unless already changed)
-            if ($bordereaux->getFactureCommission() === $this) {
-                $bordereaux->setFactureCommission(null);
+            if ($bordereaux->getFacture() === $this) {
+                $bordereaux->setFacture(null);
             }
         }
 
@@ -222,7 +222,7 @@ class FactureCommission
     {
         if (!$this->paiements->contains($paiement)) {
             $this->paiements->add($paiement);
-            $paiement->setFactureCommission($this);
+            $paiement->setFacture($this);
         }
 
         return $this;
@@ -232,8 +232,8 @@ class FactureCommission
     {
         if ($this->paiements->removeElement($paiement)) {
             // set the owning side to null (unless already changed)
-            if ($paiement->getFactureCommission() === $this) {
-                $paiement->setFactureCommission(null);
+            if ($paiement->getFacture() === $this) {
+                $paiement->setFacture(null);
             }
         }
 
