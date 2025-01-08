@@ -53,8 +53,8 @@ class Invite
     /**
      * @var Collection<int, FactureCommission>
      */
-    #[ORM\OneToMany(targetEntity: FactureCommission::class, mappedBy: 'invite')]
-    private Collection $factureCommissions;
+    #[ORM\OneToMany(targetEntity: Facture::class, mappedBy: 'invite')]
+    private Collection $factures;
 
     /**
      * @var Collection<int, PieceSinistre>
@@ -93,7 +93,7 @@ class Invite
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
         $this->bordereaus = new ArrayCollection();
-        $this->factureCommissions = new ArrayCollection();
+        $this->factures = new ArrayCollection();
         $this->pieceSinistres = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
         $this->assistants = new ArrayCollection();
@@ -246,27 +246,27 @@ class Invite
     /**
      * @return Collection<int, FactureCommission>
      */
-    public function getFactureCommissions(): Collection
+    public function getFactures(): Collection
     {
-        return $this->factureCommissions;
+        return $this->factures;
     }
 
-    public function addFactureCommission(FactureCommission $factureCommission): static
+    public function addFacture(Facture $facture): static
     {
-        if (!$this->factureCommissions->contains($factureCommission)) {
-            $this->factureCommissions->add($factureCommission);
-            $factureCommission->setInvite($this);
+        if (!$this->factures->contains($facture)) {
+            $this->factures->add($facture);
+            $facture->setInvite($this);
         }
 
         return $this;
     }
 
-    public function removeFactureCommission(FactureCommission $factureCommission): static
+    public function removeFacture(Facture $facture): static
     {
-        if ($this->factureCommissions->removeElement($factureCommission)) {
+        if ($this->factures->removeElement($facture)) {
             // set the owning side to null (unless already changed)
-            if ($factureCommission->getInvite() === $this) {
-                $factureCommission->setInvite(null);
+            if ($facture->getInvite() === $this) {
+                $facture->setInvite(null);
             }
         }
 
