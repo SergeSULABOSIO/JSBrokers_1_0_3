@@ -2,12 +2,12 @@
 
 namespace App\Entity;
 
-use App\Repository\FactureCommissionRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\FactureRepository;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 
-#[ORM\Entity(repositoryClass: FactureCommissionRepository::class)]
+#[ORM\Entity(repositoryClass: FactureRepository::class)]
 class Facture
 {
     #[ORM\Id]
@@ -21,7 +21,7 @@ class Facture
     /**
      * @var Collection<int, Tranche>
      */
-    #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'factureCommission')]
+    #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'facture')]
     private Collection $articles;
 
     #[ORM\Column]

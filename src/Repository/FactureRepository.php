@@ -2,18 +2,18 @@
 
 namespace App\Repository;
 
-use App\Entity\FactureCommission;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use App\Entity\Facture;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<FactureCommission>
  */
-class FactureCommissionRepository extends ServiceEntityRepository
+class FactureRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, FactureCommission::class);
+        parent::__construct($registry, Facture::class);
     }
 
     //    /**
