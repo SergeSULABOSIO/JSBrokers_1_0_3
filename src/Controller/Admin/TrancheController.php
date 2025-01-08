@@ -29,7 +29,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/tranche", name: 'admin.tranche.')]
 #[IsGranted('ROLE_USER')]
-class trancheController extends AbstractController
+class TrancheController extends AbstractController
 {
     public MenuActivator $activator;
 
