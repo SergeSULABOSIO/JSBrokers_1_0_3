@@ -42,16 +42,16 @@ class Facture
     /**
      * @var Collection<int, Bordereau>
      */
-    #[ORM\OneToMany(targetEntity: Bordereau::class, mappedBy: 'factureCommission')]
+    #[ORM\OneToMany(targetEntity: Bordereau::class, mappedBy: 'facture')]
     private Collection $bordereaux;
 
     /**
      * @var Collection<int, Paiement>
      */
-    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'factureCommission')]
+    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'facture')]
     private Collection $paiements;
 
-    #[ORM\ManyToOne(inversedBy: 'factureCommissions')]
+    #[ORM\ManyToOne(inversedBy: 'factures')]
     private ?Invite $invite = null;
 
     public function __construct()
