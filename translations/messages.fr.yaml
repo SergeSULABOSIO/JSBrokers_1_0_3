@@ -434,6 +434,12 @@ company_menu_groupes: "Groupe"
 company_menu_bordereaux: "Bordereaux"
 company_menu_cotation: "Proposition"
 company_menu_revenucourtier: "Revenus de courtage"
+avenant_souscription: "Souscription"
+avenant_incorporation: "Incorporation"
+avenant_prorogation: "Prorogation"
+avenant_annulation: "Annulation"
+avenant_resiliation: "Résiliation"
+avenant_renouvellement: "Renouvellement"
 
 
 

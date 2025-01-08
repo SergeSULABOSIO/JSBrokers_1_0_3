@@ -37,7 +37,7 @@
                     <span class="mb-0">{{ "company_menu_products" | trans }}</span>
                 </div>
             </a>
-            <a href="#" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.avenant'? 'active' : '' }}">
+            <a href="{{ path('admin.avenant.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.avenant'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
                     <span class="mb-0">{{ "company_menu_avenants" | trans }}</span>
                 </div>

@@ -10,6 +10,47 @@ class Constante
         private TranslatorInterface $translator,
     ) {}
 
+
+    public function getTabTypeAvenants(): array
+    {
+        return [
+            $this->translator->trans("avenant_souscription") => 0,
+            $this->translator->trans("avenant_incorporation") => 1,
+            $this->translator->trans("avenant_prorogation") => 2,
+            $this->translator->trans("avenant_annulation") => 3,
+            $this->translator->trans("avenant_resiliation") => 4,
+            $this->translator->trans("avenant_renouvellement") => 5,
+        ];
+    }
+
+    public function getTypeAvenant(int $code): string
+    {
+        switch ($code) {
+            case 0:
+                return $this->translator->trans("avenant_souscription");
+                break;
+            case 1:
+                return $this->translator->trans("avenant_incorporation");
+                break;
+            case 2:
+                return $this->translator->trans("avenant_prorogation");
+                break;
+            case 3:
+                return $this->translator->trans("avenant_annulation");
+                break;
+            case 4:
+                return $this->translator->trans("avenant_resiliation");
+                break;
+            case 5:
+                return $this->translator->trans("avenant_renouvellement");
+                break;
+
+            default:
+                return $this->translator->trans("avenant_inconnu");
+                break;
+        }
+    }
+
     public function getTabLangues(): array
     {
         return [

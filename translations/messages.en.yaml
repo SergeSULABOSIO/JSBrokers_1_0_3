@@ -434,6 +434,12 @@ company_menu_groupes: "Group"
 company_menu_bordereaux: "Statements"
 company_menu_cotation: "Quote"
 company_menu_revenucourtier: "Brokerage Revenues"
+avenant_souscription: "Subscription"
+avenant_incorporation: "Endorsement"
+avenant_prorogation: "Extension"
+avenant_annulation: "Cancellation"
+avenant_resiliation: "Termination"
+avenant_renouvellement: "Renewal"
 
 
 
