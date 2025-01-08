@@ -48,7 +48,7 @@
                         <tr id="row_feedback_{{ feedback.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.feedback.edit', {'idFeedback':feedback.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ feedback.description }}
+                                    {{ feedback.description }} | Tâche: {{ feedback.tache.description }}
                                 </a>
                             </td>
                             <td>
