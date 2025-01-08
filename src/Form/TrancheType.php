@@ -2,15 +2,11 @@
 
 namespace App\Form;
 
-use App\Entity\Invite;
 use App\Entity\Tranche;
-use App\Entity\Cotation;
-use App\Entity\FactureCommission;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;

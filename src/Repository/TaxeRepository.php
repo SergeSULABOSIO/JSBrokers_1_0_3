@@ -21,7 +21,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 class TaxeRepository extends ServiceEntityRepository
 {
     public function __construct(
-        ManagerRegistry $registry,
+        private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
     ) {
