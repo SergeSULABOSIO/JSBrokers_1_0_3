@@ -15,7 +15,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 class AvenantRepository extends ServiceEntityRepository
 {
     public function __construct(
-        ManagerRegistry $registry,
+        private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
     )
@@ -50,13 +50,13 @@ class AvenantRepository extends ServiceEntityRepository
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
-            $this->createQueryBuilder('a')
-                ->leftJoin("a.cotation", "c")
-                ->leftJoin("c.piste", "p")
-                ->leftJoin("p.invite", "i")
-                ->where('i.entreprise = :entrepriseId')
+            $this->createQueryBuilder('avenant')
+                ->leftJoin("avenant.cotation", "cotation")
+                ->leftJoin("cotation.piste", "piste")
+                ->leftJoin("piste.invite", "invite")
+                ->where('invite.entreprise = :entrepriseId')
                 ->setParameter('entrepriseId', ''.$idEntreprise.'')
-                ->orderBy('a.id', 'DESC'),
+                ->orderBy('avenant.id', 'DESC'),
             $page,
             20,
         );
