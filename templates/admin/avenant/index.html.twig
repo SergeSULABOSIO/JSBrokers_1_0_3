@@ -49,7 +49,7 @@
                         <tr id="row_avenant_{{ avenant.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.avenant.edit', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ constante.getTypeAvenant(avenant.type) }} | {{ avenant.description }} | Police: {{ avenant.referencePolice }} | {{ avenant.startingAt|format_datetime('short', 'short', locale: utilisateur.locale) }} - {{ avenant.endingAt|format_datetime('short', 'short', locale: utilisateur.locale) }}
+                                    {{ constante.getTypeAvenant(avenant.type) }} | {{ avenant.description }} | Police: {{ avenant.referencePolice }} | {{ avenant.startingAt|format_datetime('short', 'none', locale: utilisateur.locale) }} - {{ avenant.endingAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
                                 </a>
                             </td>
                             <td>
