@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Revenu;
 use App\Entity\Cotation;
+use App\Entity\TypeRevenu;
 use App\Entity\RevenuPourCourtier;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
@@ -29,7 +30,7 @@ class RevenuPourCourtierType extends AbstractType
         $builder
             ->add('type', EntityType::class, [
                 'label' => "Type de revenu",
-                'class' => Revenu::class,
+                'class' => TypeRevenu::class,
                 'choice_label' => 'nom',
             ])
             ->add('nom', TextType::class, [
