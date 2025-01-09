@@ -52,8 +52,10 @@ class RevenuPourCourtierRepository extends ServiceEntityRepository
     {
         return $this->paginator->paginate(
             $this->createQueryBuilder('revenu')
-                ->leftJoin("revenu.type", "type")
-                ->where('type.entreprise = :entrepriseId')
+                ->leftJoin("revenu.cotation", "cotation")
+                ->leftJoin("cotation.piste", "piste")
+                ->leftJoin("piste.invite", "invite")
+                ->where('invite.entreprise = :entrepriseId')
                 ->setParameter('entrepriseId', ''.$idEntreprise.'')
                 ->orderBy('revenu.id', 'DESC'),
             $page,

@@ -16,7 +16,7 @@
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
             Clients
         </button>
-        <button class="nav-link" id="nav-revenus-tab" data-bs-toggle="tab" data-bs-target="#nav-revenus" type="button" role="tab" aria-controls="nav-revenus" aria-selected="true">
+        <button class="nav-link" id="nav-typerevenus-tab" data-bs-toggle="tab" data-bs-target="#nav-typerevenus" type="button" role="tab" aria-controls="nav-typerevenus" aria-selected="true">
             {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
             Revenus
         </button>
@@ -44,8 +44,8 @@
     <div class="tab-pane fade" id="nav-clients" role="tabpanel" aria-labelledby="nav-clients-tab" tabindex="0">
         {{ form_widget(form.clients) }}
     </div>
-    <div class="tab-pane fade" id="nav-revenus" role="tabpanel" aria-labelledby="nav-revenus-tab" tabindex="0">
-        {{ form_widget(form.revenus) }}
+    <div class="tab-pane fade" id="nav-typerevenus" role="tabpanel" aria-labelledby="nav-typerevenus-tab" tabindex="0">
+        {{ form_widget(form.typerevenus) }}
     </div>
     <div class="tab-pane fade" id="nav-chargements" role="tabpanel" aria-labelledby="nav-chargements-tab" tabindex="0">
         {{ form_widget(form.chargements) }}

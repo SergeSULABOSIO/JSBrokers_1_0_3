@@ -2,18 +2,19 @@
 
 namespace App\Form;
 
-use App\Entity\CompteBancaire;
 use App\Entity\Entreprise;
+use App\Form\TypeRevenuType;
+use App\Entity\CompteBancaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class EntrepriseType extends AbstractType
 {
@@ -245,7 +246,7 @@ class EntrepriseType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ])
-            ->add('revenus', CollectionType::class, [
+            ->add('typerevenus', CollectionType::class, [
                 'label' => "entreprise_form_label_typerevenus",
                 'entry_type' => TypeRevenuType::class,
                 'by_reference' => false,
