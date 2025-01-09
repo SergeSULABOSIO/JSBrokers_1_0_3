@@ -63,11 +63,18 @@ class Piste
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $taches;
 
+    /**
+     * @var Collection<int, Partenaire>
+     */
+    #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'pistes')]
+    private Collection $partenaires;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
         $this->cotations = new ArrayCollection();
         $this->documents = new ArrayCollection();
+        $this->partenaires = new ArrayCollection();
     }
 
 
@@ -287,6 +294,30 @@ class Piste
                 $document->setPiste(null);
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Partenaire>
+     */
+    public function getPartenaires(): Collection
+    {
+        return $this->partenaires;
+    }
+
+    public function addPartenaire(Partenaire $partenaire): static
+    {
+        if (!$this->partenaires->contains($partenaire)) {
+            $this->partenaires->add($partenaire);
+        }
+
+        return $this;
+    }
+
+    public function removePartenaire(Partenaire $partenaire): static
+    {
+        $this->partenaires->removeElement($partenaire);
 
         return $this;
     }
