@@ -26,9 +26,14 @@ class Note
 
     #[ORM\Column]
     private ?int $type = null;
+    public const TYPE_NOTE_DE_DEBIT = 0;
+    public const TYPE_NOTE_DE_CREDIT = 1;
 
     #[ORM\Column]
     private ?int $addressedTo = null;
+    public const TO_CLIENT = 0;
+    public const TO_ASSUREUR = 1;
+    public const TO_PARTENAIRE = 2;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
     private ?Invite $invite = null;

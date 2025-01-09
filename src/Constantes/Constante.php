@@ -23,6 +23,50 @@ class Constante
         ];
     }
 
+    public function getTabTypeNotes(): array
+    {
+        return [
+            $this->translator->trans("note_de_debit") => 0,
+            $this->translator->trans("note_de_credit") => 1,
+        ];
+    }
+
+    public function getTypeNote(int $type): string
+    {
+        switch ($type) {
+            case 0:
+                return $this->translator->trans("note_de_debit");
+                break;
+            case 1:
+                return $this->translator->trans("note_de_credit");
+                break;
+        }
+    }
+
+    public function getTabAddressedTo(): array
+    {
+        return [
+            $this->translator->trans("addressed_to_client") => 0,
+            $this->translator->trans("addressed_to_insurer") => 1,
+            $this->translator->trans("addressed_to_partner") => 2,
+        ];
+    }
+
+    public function getAddressedTo(int $addressedTo): string
+    {
+        switch ($addressedTo) {
+            case 0:
+                return $this->translator->trans("addressed_to_client");
+                break;
+            case 1:
+                return $this->translator->trans("addressed_to_insurer");
+                break;
+            case 2:
+                return $this->translator->trans("addressed_to_partner");
+                break;
+        }
+    }
+
     public function getTypeAvenant(int $code): string
     {
         switch ($code) {
