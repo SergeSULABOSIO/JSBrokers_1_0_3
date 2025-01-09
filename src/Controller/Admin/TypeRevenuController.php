@@ -2,18 +2,21 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
-use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
-use App\Entity\CompteBancaire;
 use App\Entity\Revenu;
-use App\Form\CompteBancaireType;
 use App\Form\RevenuType;
-use App\Repository\CompteBancaireRepository;
+use App\Entity\Entreprise;
+use App\Entity\TypeRevenu;
+use App\Form\TypeRevenuType;
+use App\Constantes\Constante;
+use App\Entity\CompteBancaire;
+use App\Form\CompteBancaireType;
+use App\Constantes\MenuActivator;
 use App\Repository\InviteRepository;
-use App\Repository\EntrepriseRepository;
 use App\Repository\RevenuRepository;
+use App\Repository\EntrepriseRepository;
+use App\Repository\TypeRevenuRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\CompteBancaireRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -25,7 +28,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/typerevenu", name: 'admin.typerevenu.')]
 #[IsGranted('ROLE_USER')]
-class RevenuController extends AbstractController
+class TypeRevenuController extends AbstractController
 {
     public MenuActivator $activator;
 
@@ -35,7 +38,7 @@ class RevenuController extends AbstractController
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private RevenuRepository $revenuRepository,
+        private TypeRevenuRepository $typerevenuRepository,
         private Constante $constante,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
@@ -48,10 +51,10 @@ class RevenuController extends AbstractController
         $page = $request->query->getInt("page", 1);
 
         return $this->render('admin/typerevenu/index.html.twig', [
-            'pageName' => $this->translator->trans("revenu_page_name_new"),
+            'pageName' => $this->translator->trans("typerevenu_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'revenus' => $this->revenuRepository->paginateForEntreprise($idEntreprise, $page),
+            'typerevenus' => $this->typerevenuRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
@@ -68,35 +71,35 @@ class RevenuController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Revenu $revenu */
-        $revenu = new Revenu();
+        /** @var TypeRevenu $typerevenu */
+        $typerevenu = new TypeRevenu();
         //Paramètres par défaut
-        $revenu->setNom("REVENUE" . (rand(2000, 3000)));
-        $revenu->setEntreprise($entreprise);
-        $revenu->setFormule(Revenu::FORMULE_POURCENTAGE_PRIME_NETTE);
-        $revenu->setPourcentage(0.1);
-        $revenu->setAppliquerPourcentageDuRisque(true);
-        $revenu->setMontantflat(0);
-        $revenu->setMultipayments(true);
-        $revenu->setRedevable(Revenu::REDEVABLE_ASSUREUR);
-        $revenu->setShared(false);
+        $typerevenu->setNom("REVENUE" . (rand(2000, 3000)));
+        $typerevenu->setEntreprise($entreprise);
+        $typerevenu->setFormule(TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE);
+        $typerevenu->setPourcentage(0.1);
+        $typerevenu->setAppliquerPourcentageDuRisque(true);
+        $typerevenu->setMontantflat(0);
+        $typerevenu->setMultipayments(true);
+        $typerevenu->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+        $typerevenu->setShared(false);
         
 
-        $form = $this->createForm(RevenuType::class, $revenu);
+        $form = $this->createForm(TypeRevenuType::class, $typerevenu);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($revenu);
+            $this->manager->persist($typerevenu);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("revenu_creation_ok", [
-                ":revenu" => $revenu->getNom(),
+            $this->addFlash("success", $this->translator->trans("typerevenu_creation_ok", [
+                ":typerevenu" => $typerevenu->getNom(),
             ]));
-            return $this->redirectToRoute("admin.revenu.index", [
+            return $this->redirectToRoute("admin.typerevenu.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
         return $this->render('admin/typerevenu/create.html.twig', [
-            'pageName' => $this->translator->trans("revenu_page_name_new"),
+            'pageName' => $this->translator->trans("typerevenu_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
@@ -105,8 +108,8 @@ class RevenuController extends AbstractController
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idRevenu}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idRevenu, Request $request)
+    #[Route('/edit/{idEntreprise}/{idTypeRevenu}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idTypeRevenu, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -114,45 +117,45 @@ class RevenuController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Revenu $revenu */
-        $revenu = $this->revenuRepository->find($idRevenu);
+        /** @var TypeRevenu $typerevenu */
+        $typerevenu = $this->typerevenuRepository->find($idTypeRevenu);
 
-        $form = $this->createForm(RevenuType::class, $revenu);
+        $form = $this->createForm(TypeRevenuType::class, $typerevenu);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($revenu); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->persist($typerevenu); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("revenu_edition_ok", [
-                ":revenu" => $revenu->getNom(),
+            $this->addFlash("success", $this->translator->trans("typerevenu_edition_ok", [
+                ":typerevenu" => $typerevenu->getNom(),
             ]));
-            return $this->redirectToRoute("admin.revenu.index", [
+            return $this->redirectToRoute("admin.typerevenu.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
         return $this->render('admin/typerevenu/edit.html.twig', [
-            'pageName' => $this->translator->trans("revenu_page_name_update", [
-                ":revenu" => $revenu->getNom(),
+            'pageName' => $this->translator->trans("typerevenu_page_name_update", [
+                ":typerevenu" => $typerevenu->getNom(),
             ]),
             'utilisateur' => $user,
-            'revenu' => $revenu,
+            'typerevenu' => $typerevenu,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
         ]);
     }
 
-    #[Route('/remove/{idEntreprise}/{idRevenu}', name: 'remove', requirements: ['idRevenu' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idRevenu, Request $request)
+    #[Route('/remove/{idEntreprise}/{idTypeRevenu}', name: 'remove', requirements: ['idTypeRevenu' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function remove($idEntreprise, $idTypeRevenu, Request $request)
     {
-        /** @var Revenu $revenu */
-        $revenu = $this->revenuRepository->find($idRevenu);
+        /** @var TypeRevenu $typerevenu */
+        $typerevenu = $this->typerevenuRepository->find($idTypeRevenu);
 
-        $message = $this->translator->trans("revenu_deletion_ok", [
-            ":revenu" => $revenu->getNom(),
+        $message = $this->translator->trans("typerevenu_deletion_ok", [
+            ":typerevenu" => $typerevenu->getNom(),
         ]);;
         
-        $this->manager->remove($revenu);
+        $this->manager->remove($typerevenu);
         $this->manager->flush();
 
         $this->addFlash("success", $message);

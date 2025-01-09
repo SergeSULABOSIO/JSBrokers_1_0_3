@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "revenu_description" | trans }}
+	{{ "typerevenu_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -22,16 +22,16 @@
 		<div class="card shadow-sm bg-body" style="width: 40rem;">
 			<div class="card-body">
 				<p>
-					{{ "revenu_form_description" | trans({
+					{{ "typerevenu_form_description" | trans({
 						":user": utilisateur.nom, 
-						":revenu": revenu.nom, 
+						":typerevenu": typerevenu.nom, 
 					}) | raw }}
 				</p>
 				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
 					<div class = "m-2">
 						{{ form(form, {action: path('admin.typerevenu.edit', {
 							idEntreprise:entreprise.id,
-							idRevenu:revenu.id
+							idTypeRevenu:typerevenu.id
 							})}) 
 						}}
 					</div>

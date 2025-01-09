@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "revenu_description" | trans }}
+	{{ "typerevenu_description" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -22,7 +22,7 @@
 		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
 			<div class="card-body">
 				<p>
-					{{ "revenu_creation_description_message" | trans({
+					{{ "typerevenu_creation_description_message" | trans({
 						":user": utilisateur.nom, 
 						":company": entreprise.nom, 
 					}) | raw}}

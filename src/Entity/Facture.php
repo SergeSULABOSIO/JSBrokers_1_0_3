@@ -17,7 +17,7 @@ class Facture
 
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
-
+    
     /**
      * @var Collection<int, Tranche>
      */

@@ -2,7 +2,7 @@
 
 namespace App\Repository;
 
-use App\Entity\Revenu;
+use App\Entity\TypeRevenu;
 use Doctrine\Persistence\ManagerRegistry;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -12,14 +12,14 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 /**
  * @extends ServiceEntityRepository<Revenu>
  */
-class RevenuRepository extends ServiceEntityRepository
+class TypeRevenuRepository extends ServiceEntityRepository
 {
     public function __construct(
         ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
     ) {
-        parent::__construct($registry, Revenu::class);
+        parent::__construct($registry, TypeRevenu::class);
     }
 
     //    /**
@@ -50,10 +50,10 @@ class RevenuRepository extends ServiceEntityRepository
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
-            $this->createQueryBuilder("m")
-                ->where('m.entreprise = :entrepriseId')
+            $this->createQueryBuilder("typerevenu")
+                ->where('typerevenu.entreprise = :entrepriseId')
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
-                ->orderBy('m.id', 'DESC'),
+                ->orderBy('typerevenu.id', 'DESC'),
             $page,
             20,
         );

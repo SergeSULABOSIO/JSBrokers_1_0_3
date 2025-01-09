@@ -125,8 +125,8 @@ class Entreprise
     /**
      * @var Collection<int, Revenu>
      */
-    #[ORM\OneToMany(targetEntity: Revenu::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    private Collection $revenus;
+    #[ORM\OneToMany(targetEntity: TypeRevenu::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $typerevenus;
 
     /**
      * @var Collection<int, Taxe>
@@ -170,7 +170,7 @@ class Entreprise
         $this->monnaies = new ArrayCollection();
         $this->taxes = new ArrayCollection();
         $this->compteBancaires = new ArrayCollection();
-        $this->revenus = new ArrayCollection();
+        $this->typerevenus = new ArrayCollection();
         $this->risques = new ArrayCollection();
         $this->chargements = new ArrayCollection();
         $this->classeurs = new ArrayCollection();
@@ -452,27 +452,27 @@ class Entreprise
     /**
      * @return Collection<int, Revenu>
      */
-    public function getRevenus(): Collection
+    public function getTypeRevenus(): Collection
     {
-        return $this->revenus;
+        return $this->typerevenus;
     }
 
-    public function addRevenu(Revenu $revenu): static
+    public function addTypeRevenu(TypeRevenu $typerevenu): static
     {
-        if (!$this->revenus->contains($revenu)) {
-            $this->revenus->add($revenu);
-            $revenu->setEntreprise($this);
+        if (!$this->typerevenus->contains($typerevenu)) {
+            $this->typerevenus->add($typerevenu);
+            $typerevenu->setEntreprise($this);
         }
 
         return $this;
     }
 
-    public function removeRevenu(Revenu $revenu): static
+    public function removeTypeRevenu(TypeRevenu $typerevenu): static
     {
-        if ($this->revenus->removeElement($revenu)) {
+        if ($this->typerevenus->removeElement($typerevenu)) {
             // set the owning side to null (unless already changed)
-            if ($revenu->getEntreprise() === $this) {
-                $revenu->setEntreprise(null);
+            if ($typerevenu->getEntreprise() === $this) {
+                $typerevenu->setEntreprise(null);
             }
         }
 

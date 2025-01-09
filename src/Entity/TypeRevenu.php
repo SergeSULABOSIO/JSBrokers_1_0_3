@@ -2,13 +2,13 @@
 
 namespace App\Entity;
 
-use App\Repository\RevenuRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\TypeRevenuRepository;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 
-#[ORM\Entity(repositoryClass: RevenuRepository::class)]
-class Revenu
+#[ORM\Entity(repositoryClass: TypeRevenuRepository::class)]
+class TypeRevenu
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -45,7 +45,7 @@ class Revenu
     #[ORM\Column(nullable: true)]
     private ?float $pourcentage = null;
 
-    #[ORM\ManyToOne(inversedBy: 'revenus')]
+    #[ORM\ManyToOne(inversedBy: 'typesrevenus')]
     private ?Entreprise $entreprise = null;
 
     #[ORM\Column(nullable: true)]

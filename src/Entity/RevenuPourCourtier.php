@@ -14,7 +14,7 @@ class RevenuPourCourtier
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'revenuPourCourtiers')]
-    private ?Revenu $type = null;
+    private ?TypeRevenu $type = null;
 
     #[ORM\Column(nullable: true)]
     private ?float $montantFlatExceptionel = null;
@@ -39,12 +39,12 @@ class RevenuPourCourtier
         return $this->id;
     }
 
-    public function getType(): ?Revenu
+    public function getType(): ?TypeRevenu
     {
         return $this->type;
     }
 
-    public function setType(?Revenu $type): static
+    public function setType(?TypeRevenu $type): static
     {
         $this->type = $type;
 
