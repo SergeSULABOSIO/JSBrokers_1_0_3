@@ -80,6 +80,12 @@ class Invite
     #[ORM\Column(nullable: true)]
     private ?bool $proprietaire = null;
 
+    /**
+     * @var Collection<int, Note>
+     */
+    #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'invite')]
+    private Collection $notes;
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
@@ -90,6 +96,7 @@ class Invite
         $this->pieceSinistres = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
         $this->assistants = new ArrayCollection();
+        $this->notes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -370,6 +377,36 @@ class Invite
     public function setProprietaire(?bool $proprietaire): static
     {
         $this->proprietaire = $proprietaire;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Note>
+     */
+    public function getNotes(): Collection
+    {
+        return $this->notes;
+    }
+
+    public function addNote(Note $note): static
+    {
+        if (!$this->notes->contains($note)) {
+            $this->notes->add($note);
+            $note->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNote(Note $note): static
+    {
+        if ($this->notes->removeElement($note)) {
+            // set the owning side to null (unless already changed)
+            if ($note->getInvite() === $this) {
+                $note->setInvite(null);
+            }
+        }
 
         return $this;
     }

@@ -42,6 +42,9 @@ class Paiement
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'paiement', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $preuves;
 
+    #[ORM\ManyToOne(inversedBy: 'paiements')]
+    private ?Note $note = null;
+
 
     public function __construct()
     {
@@ -163,6 +166,18 @@ class Paiement
                 $preufe->setPaiement(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getNote(): ?Note
+    {
+        return $this->note;
+    }
+
+    public function setNote(?Note $note): static
+    {
+        $this->note = $note;
 
         return $this;
     }

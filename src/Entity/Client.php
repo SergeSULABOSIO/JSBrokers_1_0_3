@@ -63,12 +63,19 @@ class Client
     #[ORM\ManyToOne(inversedBy: 'clients')]
     private ?Groupe $groupe = null;
 
+    /**
+     * @var Collection<int, Note>
+     */
+    #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'client')]
+    private Collection $notes;
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
         $this->pistes = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
         $this->documents = new ArrayCollection();
+        $this->notes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -281,6 +288,36 @@ class Client
     public function setGroupe(?Groupe $groupe): static
     {
         $this->groupe = $groupe;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Note>
+     */
+    public function getNotes(): Collection
+    {
+        return $this->notes;
+    }
+
+    public function addNote(Note $note): static
+    {
+        if (!$this->notes->contains($note)) {
+            $this->notes->add($note);
+            $note->setClient($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNote(Note $note): static
+    {
+        if ($this->notes->removeElement($note)) {
+            // set the owning side to null (unless already changed)
+            if ($note->getClient() === $this) {
+                $note->setClient(null);
+            }
+        }
 
         return $this;
     }

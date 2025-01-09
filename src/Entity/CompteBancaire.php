@@ -36,9 +36,16 @@ class CompteBancaire
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'compteBancaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
+    /**
+     * @var Collection<int, Note>
+     */
+    #[ORM\ManyToMany(targetEntity: Note::class, mappedBy: 'comptes')]
+    private Collection $notes;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        $this->notes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -137,6 +144,33 @@ class CompteBancaire
             if ($document->getCompteBancaire() === $this) {
                 $document->setCompteBancaire(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Note>
+     */
+    public function getNotes(): Collection
+    {
+        return $this->notes;
+    }
+
+    public function addNote(Note $note): static
+    {
+        if (!$this->notes->contains($note)) {
+            $this->notes->add($note);
+            $note->addCompte($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNote(Note $note): static
+    {
+        if ($this->notes->removeElement($note)) {
+            $note->removeCompte($this);
         }
 
         return $this;
