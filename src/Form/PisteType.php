@@ -6,6 +6,7 @@ use App\Entity\Piste;
 use App\Entity\Client;
 use App\Entity\Risque;
 use App\Entity\Avenant;
+use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -88,11 +89,19 @@ class PisteType extends AbstractType
                 'required' => false,
                 'choice_label' => 'nomComplet',
             ])
-
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
+            ->add('partenaires', PartenaireAutocompleteField::class, [
+                'required' => false,
+                'label' => "Partenaires",
+                'class' => Partenaire::class,
+                'choice_label' => "nom",
+                'multiple' => true,
+                'expanded' => false,
+                'by_reference' => false,
+                'autocomplete' => true,
+                'attr' => [
+                    'placeholder' => "Les intermédiaires",
+                ],
+            ])
             ->add('taches', CollectionType::class, [
                 'label' => "Tâches",
                 'entry_type' => TacheType::class,
