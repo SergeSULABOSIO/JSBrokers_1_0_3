@@ -45,7 +45,7 @@ class TypeRevenu
     #[ORM\Column(nullable: true)]
     private ?float $pourcentage = null;
 
-    #[ORM\ManyToOne(inversedBy: 'typesrevenus')]
+    #[ORM\ManyToOne(inversedBy: 'typerevenus')]
     private ?Entreprise $entreprise = null;
 
     #[ORM\Column(nullable: true)]

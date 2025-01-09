@@ -246,8 +246,8 @@ class EntrepriseType extends AbstractType
                 ],
             ])
             ->add('revenus', CollectionType::class, [
-                'label' => "entreprise_form_label_revenus",
-                'entry_type' => RevenuType::class,
+                'label' => "entreprise_form_label_typerevenus",
+                'entry_type' => TypeRevenuType::class,
                 'by_reference' => false,
                 'allow_add' => true,
                 'allow_delete' => true,
