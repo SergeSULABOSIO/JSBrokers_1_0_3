@@ -193,7 +193,7 @@ class TypeRevenu
     {
         if (!$this->revenuPourCourtiers->contains($revenuPourCourtier)) {
             $this->revenuPourCourtiers->add($revenuPourCourtier);
-            $revenuPourCourtier->setType($this);
+            $revenuPourCourtier->setTypeRevenu($this);
         }
 
         return $this;
@@ -203,8 +203,8 @@ class TypeRevenu
     {
         if ($this->revenuPourCourtiers->removeElement($revenuPourCourtier)) {
             // set the owning side to null (unless already changed)
-            if ($revenuPourCourtier->getType() === $this) {
-                $revenuPourCourtier->setType(null);
+            if ($revenuPourCourtier->getTypeRevenu() === $this) {
+                $revenuPourCourtier->setTypeRevenu(null);
             }
         }
 
