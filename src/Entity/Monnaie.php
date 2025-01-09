@@ -2,8 +2,6 @@
 
 namespace App\Entity;
 
-use App\Constantes\Constante;
-use App\Constantes\Constantes;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\MonnaieRepository;

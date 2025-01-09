@@ -40,9 +40,6 @@ class Bordereau
     #[ORM\ManyToOne(inversedBy: 'bordereaus')]
     private ?Invite $invite = null;
 
-    #[ORM\ManyToOne(inversedBy: 'bordereaux')]
-    private ?Facture $facture = null;
-
     /**
      * @var Collection<int, Document>
      */
@@ -141,18 +138,6 @@ class Bordereau
     public function setInvite(?Invite $invite): static
     {
         $this->invite = $invite;
-
-        return $this;
-    }
-
-    public function getFacture(): ?Facture
-    {
-        return $this->facture;
-    }
-
-    public function setFacture(?Facture $facture): static
-    {
-        $this->facture = $facture;
 
         return $this;
     }

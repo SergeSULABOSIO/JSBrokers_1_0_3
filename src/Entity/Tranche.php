@@ -34,9 +34,6 @@ class Tranche
     #[ORM\ManyToOne(inversedBy: 'tranches')]
     private ?Cotation $cotation = null;
 
-    #[ORM\ManyToOne(inversedBy: 'articles')]
-    private ?Facture $facture = null;
-
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $echeanceAt = null;
 
@@ -125,18 +122,6 @@ class Tranche
     public function setCotation(?Cotation $cotation): static
     {
         $this->cotation = $cotation;
-
-        return $this;
-    }
-
-    public function getFacture(): ?Facture
-    {
-        return $this->facture;
-    }
-
-    public function setFacture(?Facture $facture): static
-    {
-        $this->facture = $facture;
 
         return $this;
     }

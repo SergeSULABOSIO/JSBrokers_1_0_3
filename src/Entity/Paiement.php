@@ -34,9 +34,6 @@ class Paiement
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'paiements')]
-    private ?Facture $facture = null;
-
-    #[ORM\ManyToOne(inversedBy: 'paiements')]
     private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
 
     /**
@@ -124,18 +121,6 @@ class Paiement
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    public function getFacture(): ?Facture
-    {
-        return $this->facture;
-    }
-
-    public function setFacture(?Facture $facture): static
-    {
-        $this->facture = $facture;
 
         return $this;
     }

@@ -51,12 +51,6 @@ class Invite
     private Collection $bordereaus;
 
     /**
-     * @var Collection<int, FactureCommission>
-     */
-    #[ORM\OneToMany(targetEntity: Facture::class, mappedBy: 'invite')]
-    private Collection $factures;
-
-    /**
      * @var Collection<int, PieceSinistre>
      */
     #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'invite')]
@@ -93,7 +87,6 @@ class Invite
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
         $this->bordereaus = new ArrayCollection();
-        $this->factures = new ArrayCollection();
         $this->pieceSinistres = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
         $this->assistants = new ArrayCollection();
@@ -242,37 +235,6 @@ class Invite
 
         return $this;
     }
-
-    /**
-     * @return Collection<int, FactureCommission>
-     */
-    public function getFactures(): Collection
-    {
-        return $this->factures;
-    }
-
-    public function addFacture(Facture $facture): static
-    {
-        if (!$this->factures->contains($facture)) {
-            $this->factures->add($facture);
-            $facture->setInvite($this);
-        }
-
-        return $this;
-    }
-
-    public function removeFacture(Facture $facture): static
-    {
-        if ($this->factures->removeElement($facture)) {
-            // set the owning side to null (unless already changed)
-            if ($facture->getInvite() === $this) {
-                $facture->setInvite(null);
-            }
-        }
-
-        return $this;
-    }
-
 
     /**
      * @return Collection<int, PieceSinistre>
