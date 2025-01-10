@@ -45,11 +45,11 @@ class NoteController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
-        return $this->render('admin/risque/index.html.twig', [
-            'pageName' => $this->translator->trans("risque_page_name_new"),
+        return $this->render('admin/note/index.html.twig', [
+            'pageName' => $this->translator->trans("note_page_name_new"),
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'risques' => $this->risqueRepository->paginateForEntreprise($idEntreprise, $page),
+            'notes' => $this->noteRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
@@ -57,100 +57,100 @@ class NoteController extends AbstractController
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    // #[Route('/create/{idEntreprise}', name: 'create')]
+    // public function create($idEntreprise, Request $request)
+    // {
+    //     /** @var Entreprise $entreprise */
+    //     $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+    //     /** @var Utilisateur $user */
+    //     $user = $this->getUser();
+
+    //     /** @var Risque $risque */
+    //     $risque = new Risque();
+    //     //Paramètres par défaut
+    //     $risque->setCode("RSK" . (rand(0, 100)));
+    //     $risque->setNomComplet("RISQUE" . (rand(2000, 3000)));
+    //     $risque->setPourcentageCommissionSpecifiqueHT(0.1);
+    //     $risque->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE);
+    //     $risque->setImposable(true);
+    //     $risque->setEntreprise($entreprise);
+
+    //     $form = $this->createForm(RisqueType::class, $risque);
+    //     $form->handleRequest($request);
+
+    //     if ($form->isSubmitted() && $form->isValid()) {
+    //         $this->manager->persist($risque);
+    //         $this->manager->flush();
+    //         $this->addFlash("success", $this->translator->trans("risque_creation_ok", [
+    //             ":risque" => $risque->getNomComplet(),
+    //         ]));
+    //         return $this->redirectToRoute("admin.risque.index", [
+    //             'idEntreprise' => $idEntreprise,
+    //         ]);
+    //     }
+    //     return $this->render('admin/risque/create.html.twig', [
+    //         'pageName' => $this->translator->trans("risque_page_name_new"),
+    //         'utilisateur' => $user,
+    //         'entreprise' => $entreprise,
+    //         'activator' => $this->activator,
+    //         'form' => $form,
+    //     ]);
+    // }
+
+
+    // #[Route('/edit/{idEntreprise}/{idRisque}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    // public function edit($idEntreprise, $idRisque, Request $request)
+    // {
+    //     /** @var Entreprise $entreprise */
+    //     $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+    //     /** @var Utilisateur $user */
+    //     $user = $this->getUser();
+
+    //     /** @var Risque $risque */
+    //     $risque = $this->risqueRepository->find($idRisque);
+
+    //     $form = $this->createForm(RisqueType::class, $risque);
+    //     $form->handleRequest($request);
+
+    //     if ($form->isSubmitted() && $form->isValid()) {
+    //         $this->manager->persist($risque); //On peut ignorer cette instruction car la fonction flush suffit.
+    //         $this->manager->flush();
+    //         $this->addFlash("success", $this->translator->trans("risque_edition_ok", [
+    //             ":risque" => $risque->getNomComplet(),
+    //         ]));
+    //         return $this->redirectToRoute("admin.risque.index", [
+    //             'idEntreprise' => $idEntreprise,
+    //         ]);
+    //     }
+    //     return $this->render('admin/risque/edit.html.twig', [
+    //         'pageName' => $this->translator->trans("risque_page_name_update", [
+    //             ":risque" => $risque->getNomComplet(),
+    //         ]),
+    //         'utilisateur' => $user,
+    //         'risque' => $risque,
+    //         'entreprise' => $entreprise,
+    //         'activator' => $this->activator,
+    //         'form' => $form,
+    //     ]);
+    // }
+
+    #[Route('/remove/{idEntreprise}/{idNote}', name: 'remove', requirements: ['idNote' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function remove($idEntreprise, $idNote, Request $request)
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        /** @var Note $note */
+        $note = $this->noteRepository->find($idNote);
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Risque $risque */
-        $risque = new Risque();
-        //Paramètres par défaut
-        $risque->setCode("RSK" . (rand(0, 100)));
-        $risque->setNomComplet("RISQUE" . (rand(2000, 3000)));
-        $risque->setPourcentageCommissionSpecifiqueHT(0.1);
-        $risque->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE);
-        $risque->setImposable(true);
-        $risque->setEntreprise($entreprise);
-
-        $form = $this->createForm(RisqueType::class, $risque);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($risque);
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("risque_creation_ok", [
-                ":risque" => $risque->getNomComplet(),
-            ]));
-            return $this->redirectToRoute("admin.risque.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/risque/create.html.twig', [
-            'pageName' => $this->translator->trans("risque_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
-    }
-
-
-    #[Route('/edit/{idEntreprise}/{idRisque}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idRisque, Request $request)
-    {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Risque $risque */
-        $risque = $this->risqueRepository->find($idRisque);
-
-        $form = $this->createForm(RisqueType::class, $risque);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($risque); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("risque_edition_ok", [
-                ":risque" => $risque->getNomComplet(),
-            ]));
-            return $this->redirectToRoute("admin.risque.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/risque/edit.html.twig', [
-            'pageName' => $this->translator->trans("risque_page_name_update", [
-                ":risque" => $risque->getNomComplet(),
-            ]),
-            'utilisateur' => $user,
-            'risque' => $risque,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
-    }
-
-    #[Route('/remove/{idEntreprise}/{idRisque}', name: 'remove', requirements: ['idRisque' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idRisque, Request $request)
-    {
-        /** @var Risque $risque */
-        $risque = $this->risqueRepository->find($idRisque);
-
-        $message = $this->translator->trans("risque_deletion_ok", [
-            ":risque" => $risque->getNomComplet(),
+        $message = $this->translator->trans("note_deletion_ok", [
+            ":note" => $note->getNomComplet(),
         ]);;
         
-        $this->manager->remove($risque);
+        $this->manager->remove($note);
         $this->manager->flush();
 
         $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.risque.index", [
+        return $this->redirectToRoute("admin.note.index", [
             'idEntreprise' => $idEntreprise,
         ]);
     }
