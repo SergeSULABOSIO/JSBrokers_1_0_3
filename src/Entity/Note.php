@@ -21,7 +21,7 @@ class Note
     /**
      * @var Collection<int, Article>
      */
-    #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'note')]
+    #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'note', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $articles;
 
     #[ORM\Column]

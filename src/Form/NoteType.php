@@ -66,7 +66,7 @@ class NoteType extends AbstractType
                 'choice_label' => 'nom',
             ])
             ->add('partenaire', PartenaireAutocompleteField::class, [
-                'label' => "Intermédiaire",
+                'label' => "Intermédiaire ou partenaire",
                 'class' => Partenaire::class,
                 'required' => false,
                 'choice_label' => 'nom',
@@ -79,13 +79,37 @@ class NoteType extends AbstractType
             ])
             ->add('comptes', CompteBancaireAutocompleteField::class, [
                 'label' => "Comptes bancaires",
+                'attr' => [
+                    'placeholder' => "Séléctionner le compte",
+                ],
                 'class' => CompteBancaire::class,
                 'required' => false,
                 'multiple' => true,
                 'choice_label' => 'intitule',
             ])
+            ->add('articles', CollectionType::class, [
+                'label' => "Articles",
+                'help' => "Il s'agit en réalité des tranches des fonds dûs.",
+                'entry_type' => ArticleType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "description",
+                ],
+            ])
             ->add('paiements', CollectionType::class, [
                 'label' => "Paiements",
+                'help' => "Les paiements relatives à cette notes.",
                 'entry_type' => PaiementType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -106,7 +130,10 @@ class NoteType extends AbstractType
 
             //Le bouton suivant
             ->add('Suivant', SubmitType::class, [
-                'label' => "Suivant"
+                'label' => "Suivant",
+                'attr' => [
+                    'class' => "btn btn-secondary",
+                ],
             ])
             // ->add('Annuler', SubmitType::class, [
             //     'label' => "Annuler"
