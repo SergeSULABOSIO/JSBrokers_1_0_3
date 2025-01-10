@@ -11,6 +11,7 @@ use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\DTO\NotePageADTO;
 use App\Form\NotePageAType;
+use App\Form\NoteType;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\RisqueRepository;
@@ -77,8 +78,12 @@ class NoteController extends AbstractController
         $note = new Note();
         //Paramètres par défaut
         $note->setInvite($invite);
+        $note->setType(Note::TYPE_NOTE_DE_DEBIT);
+        $note->setAddressedTo(Note::TO_ASSUREUR);
 
-        $form = $this->createForm(NotePageAType::class, $note);
+        
+        $form = $this->createForm(NoteType::class, $note);
+        // dd($note);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -101,42 +106,42 @@ class NoteController extends AbstractController
     }
 
 
-    // #[Route('/edit/{idEntreprise}/{idRisque}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    // public function edit($idEntreprise, $idRisque, Request $request)
-    // {
-    //     /** @var Entreprise $entreprise */
-    //     $entreprise = $this->entrepriseRepository->find($idEntreprise);
+    #[Route('/edit/{idEntreprise}/{idNote}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idNote, Request $request)
+    {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
-    //     /** @var Utilisateur $user */
-    //     $user = $this->getUser();
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
 
-    //     /** @var Risque $risque */
-    //     $risque = $this->risqueRepository->find($idRisque);
+        /** @var Note $note */
+        $note = $this->noteRepository->find($idNote);
 
-    //     $form = $this->createForm(RisqueType::class, $risque);
-    //     $form->handleRequest($request);
+        $form = $this->createForm(NoteType::class, $note);
+        $form->handleRequest($request);
 
-    //     if ($form->isSubmitted() && $form->isValid()) {
-    //         $this->manager->persist($risque); //On peut ignorer cette instruction car la fonction flush suffit.
-    //         $this->manager->flush();
-    //         $this->addFlash("success", $this->translator->trans("risque_edition_ok", [
-    //             ":risque" => $risque->getNomComplet(),
-    //         ]));
-    //         return $this->redirectToRoute("admin.risque.index", [
-    //             'idEntreprise' => $idEntreprise,
-    //         ]);
-    //     }
-    //     return $this->render('admin/risque/edit.html.twig', [
-    //         'pageName' => $this->translator->trans("risque_page_name_update", [
-    //             ":risque" => $risque->getNomComplet(),
-    //         ]),
-    //         'utilisateur' => $user,
-    //         'risque' => $risque,
-    //         'entreprise' => $entreprise,
-    //         'activator' => $this->activator,
-    //         'form' => $form,
-    //     ]);
-    // }
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->manager->persist($note); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->flush();
+            $this->addFlash("success", $this->translator->trans("note_edition_ok", [
+                ":note" => $note->getNom(),
+            ]));
+            return $this->redirectToRoute("admin.note.index", [
+                'idEntreprise' => $idEntreprise,
+            ]);
+        }
+        return $this->render('admin/note/edit.html.twig', [
+            'pageName' => $this->translator->trans("note_page_name_update", [
+                ":note" => $note->getNom(),
+            ]),
+            'utilisateur' => $user,
+            'note' => $note,
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
+            'form' => $form,
+        ]);
+    }
 
     #[Route('/remove/{idEntreprise}/{idNote}', name: 'remove', requirements: ['idNote' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove($idEntreprise, $idNote, Request $request)

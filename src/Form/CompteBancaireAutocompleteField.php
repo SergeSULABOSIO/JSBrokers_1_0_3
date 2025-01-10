@@ -2,7 +2,8 @@
 
 namespace App\Form;
 
-use App\Entity\Partenaire;
+use App\Entity\Assureur;
+use App\Entity\CompteBancaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -10,9 +11,8 @@ use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
 
 #[AsEntityAutocompleteField]
-class PartenaireAutocompleteField extends AbstractType
+class CompteBancaireAutocompleteField extends AbstractType
 {
-
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
     ) {}
@@ -20,9 +20,9 @@ class PartenaireAutocompleteField extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'class' => Partenaire::class,
-            'placeholder' => 'Séléctionner le partenaire',
-            'choice_label' => 'nom',
+            'class' => CompteBancaire::class,
+            'placeholder' => "Séléctionnez le compte",
+            'choice_label' => 'intitule',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
 
             // choose which fields to use in the search
