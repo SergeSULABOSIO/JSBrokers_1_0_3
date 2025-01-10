@@ -2,11 +2,15 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Note;
+use App\Entity\Invite;
 use App\Entity\Risque;
 use App\Form\RisqueType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\DTO\NotePageADTO;
+use App\Form\NotePageAType;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\RisqueRepository;
@@ -57,46 +61,44 @@ class NoteController extends AbstractController
     }
 
 
-    // #[Route('/create/{idEntreprise}', name: 'create')]
-    // public function create($idEntreprise, Request $request)
-    // {
-    //     /** @var Entreprise $entreprise */
-    //     $entreprise = $this->entrepriseRepository->find($idEntreprise);
+    #[Route('/create/{idEntreprise}', name: 'create')]
+    public function create($idEntreprise, Request $request)
+    {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
-    //     /** @var Utilisateur $user */
-    //     $user = $this->getUser();
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
 
-    //     /** @var Risque $risque */
-    //     $risque = new Risque();
-    //     //Paramètres par défaut
-    //     $risque->setCode("RSK" . (rand(0, 100)));
-    //     $risque->setNomComplet("RISQUE" . (rand(2000, 3000)));
-    //     $risque->setPourcentageCommissionSpecifiqueHT(0.1);
-    //     $risque->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE);
-    //     $risque->setImposable(true);
-    //     $risque->setEntreprise($entreprise);
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-    //     $form = $this->createForm(RisqueType::class, $risque);
-    //     $form->handleRequest($request);
+        /** @var Note $note */
+        $note = new Note();
+        //Paramètres par défaut
+        $note->setInvite($invite);
 
-    //     if ($form->isSubmitted() && $form->isValid()) {
-    //         $this->manager->persist($risque);
-    //         $this->manager->flush();
-    //         $this->addFlash("success", $this->translator->trans("risque_creation_ok", [
-    //             ":risque" => $risque->getNomComplet(),
-    //         ]));
-    //         return $this->redirectToRoute("admin.risque.index", [
-    //             'idEntreprise' => $idEntreprise,
-    //         ]);
-    //     }
-    //     return $this->render('admin/risque/create.html.twig', [
-    //         'pageName' => $this->translator->trans("risque_page_name_new"),
-    //         'utilisateur' => $user,
-    //         'entreprise' => $entreprise,
-    //         'activator' => $this->activator,
-    //         'form' => $form,
-    //     ]);
-    // }
+        $form = $this->createForm(NotePageAType::class, $note);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->manager->persist($note);
+            $this->manager->flush();
+            $this->addFlash("success", $this->translator->trans("note_creation_ok", [
+                ":note" => $note->getNom(),
+            ]));
+            return $this->redirectToRoute("admin.note.index", [
+                'idEntreprise' => $idEntreprise,
+            ]);
+        }
+        return $this->render('admin/note/create.html.twig', [
+            'pageName' => $this->translator->trans("note_page_name_new"),
+            'utilisateur' => $user,
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
+            'form' => $form,
+        ]);
+    }
 
 
     // #[Route('/edit/{idEntreprise}/{idRisque}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -143,7 +145,7 @@ class NoteController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         $message = $this->translator->trans("note_deletion_ok", [
-            ":note" => $note->getNomComplet(),
+            ":note" => $note->getNom(),
         ]);;
         
         $this->manager->remove($note);
