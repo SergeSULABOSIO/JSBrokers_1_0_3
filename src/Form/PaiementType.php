@@ -52,7 +52,8 @@ class PaiementType extends AbstractType
                 'widget' => 'single_text',
             ])
             ->add('preuves', CollectionType::class, [
-                'label' => "Preuve de paiement",
+                'label' => "Documents",
+                'help' => "Preuve de paiement ou tout autre document.",
                 'entry_type' => DocumentType::class,
                 'by_reference' => false,
                 'allow_add' => true,
