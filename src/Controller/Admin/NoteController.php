@@ -64,8 +64,8 @@ class NoteController extends AbstractController
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/create/{idEntreprise}/{page}', name: 'create')]
+    public function create($idEntreprise, $page, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -83,7 +83,11 @@ class NoteController extends AbstractController
         $note->setInvite($invite);
         $note->setAddressedTo(Note::TO_NULL);
 
-        $form = $this->createForm(NoteType::class, $note);
+        $form = $this->createForm(NoteType::class, $note, [
+            "page" => $page,
+            "type" => $note->getType(),
+            "addressedTo" => $page->getAddressedTo(),
+        ]);
 
         $form->handleRequest($request);
 

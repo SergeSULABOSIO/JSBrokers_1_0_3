@@ -112,7 +112,7 @@ class NoteType extends AbstractType
                     'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
                     'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
                     'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "description",
+                    'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ])
             ->add('paiements', CollectionType::class, [
@@ -150,6 +150,9 @@ class NoteType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Note::class,
+            "page" => -1,
+            "type" => -1,
+            "addressedTo" => -1,
         ]);
     }
 }
