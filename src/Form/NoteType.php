@@ -28,7 +28,8 @@ class NoteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $labelbtSubmit = "Suivant";
+        $labelbtSubmit = "PAGE SUIVANTE";
+        $labelbtBack = "PAGE PRECEDENTE";
         if ($options["page"] != -1) {
             if ($options["type"] != -1 && $options["addressedTo"] != -1) {
                 // dd("Builder: ", $builder->getForm());
@@ -37,14 +38,14 @@ class NoteType extends AbstractType
                 //     "type: " . $options["type"], 
                 //     "addressedTo: " . $options["addressedTo"],
                 // );
-                $labelbtSubmit = match ($options['page']) {
-                    1 => "Suivant",
-                    2 => "Terminer",
+                $labelbtSubmit = match (true) {
+                    $options['page'] == $options['pageMax'] => "TERMINER",
+                    default => "PAGE SUIVANTE",
                 };
             }
         }
 
-
+        //PAGE 1
         $builder
             ->add('reference', TextType::class, [
                 'required' => false,
@@ -84,24 +85,6 @@ class NoteType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            ->add('client', ClientAutocompleteField::class, [
-                'label' => "Client",
-                'class' => Client::class,
-                'required' => false,
-                'choice_label' => 'nom',
-            ])
-            ->add('partenaire', PartenaireAutocompleteField::class, [
-                'label' => "Intermédiaire ou partenaire",
-                'class' => Partenaire::class,
-                'required' => false,
-                'choice_label' => 'nom',
-            ])
-            ->add('assureur', AssureurAutocompleteField::class, [
-                'label' => "Assureur",
-                'class' => Assureur::class,
-                'required' => false,
-                'choice_label' => 'nom',
-            ])
             ->add('comptes', CompteBancaireAutocompleteField::class, [
                 'label' => "Comptes bancaires",
                 'attr' => [
@@ -111,26 +94,6 @@ class NoteType extends AbstractType
                 'required' => false,
                 'multiple' => true,
                 'choice_label' => 'intitule',
-            ])
-            ->add('articles', CollectionType::class, [
-                'label' => "Articles",
-                'help' => "Il s'agit en réalité des tranches des fonds dûs.",
-                'entry_type' => ArticleType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
             ])
             ->add('paiements', CollectionType::class, [
                 'label' => "Paiements",
@@ -152,15 +115,70 @@ class NoteType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "description",
                 ],
             ])
+        ;
 
+
+        //PAGE 2
+        $builder
+            ->add('client', ClientAutocompleteField::class, [
+                'label' => "Client",
+                'class' => Client::class,
+                'required' => false,
+                'choice_label' => 'nom',
+            ])
+            ->add('partenaire', PartenaireAutocompleteField::class, [
+                'label' => "Intermédiaire ou partenaire",
+                'class' => Partenaire::class,
+                'required' => false,
+                'choice_label' => 'nom',
+            ])
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur",
+                'class' => Assureur::class,
+                'required' => false,
+                'choice_label' => 'nom',
+            ])
+            ->add('articles', CollectionType::class, [
+                'label' => "Articles",
+                'help' => "Il s'agit en réalité des tranches des fonds dûs.",
+                'entry_type' => ArticleType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "nom",
+                ],
+            ])
+        ;
+
+        //BAS DE PAGE
+        if ($options['page'] > 1) {
+            $builder
+                //Le bouton précédent
+                ->add('precedent', SubmitType::class, [
+                    'label' => $labelbtBack,
+                    'attr' => [
+                        'class' => "btn btn-secondary",
+                    ],
+                ]);
+        }
+        $builder
             //Le bouton suivant
-            ->add('Suivant', SubmitType::class, [
+            ->add('suivant', SubmitType::class, [
                 'label' => $labelbtSubmit,
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],
-            ])
-        ;
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -168,6 +186,7 @@ class NoteType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Note::class,
             "page" => -1,
+            "pageMax" => -100,
             "type" => -1,
             "addressedTo" => -1,
         ]);

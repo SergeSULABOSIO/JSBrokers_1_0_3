@@ -28,8 +28,17 @@
 					}) | raw}}
 					<hr>
 				</p>
-				Page {{ page }}.
-				{{ form(form) }}
+				{% if page == pageMax %}
+					Vous êtes sur la dernière page du formulaire, il ne vous reste plus qu'à terminer l'édition.
+				{% else %}
+					Vous êtes sur la page {{ page }} sur {{ pageMax }}.
+				{% endif %}
+				{# {{ form(form) }} #}
+				{{ form(form, {action: path('admin.note.create', {
+						idEntreprise:entreprise.id,
+						page:page,
+						})}) 
+					}}
 				</div>
 			</div>
 		</div>	

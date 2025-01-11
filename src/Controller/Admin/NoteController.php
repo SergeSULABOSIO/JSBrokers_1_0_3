@@ -25,13 +25,16 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\Form\Form;
+use Symfony\Component\Form\SubmitButton;
+use Symfony\Component\Form\Test\FormInterface;
 
 #[Route("/admin/note", name: 'admin.note.')]
 #[IsGranted('ROLE_USER')]
 class NoteController extends AbstractController
 {
     public MenuActivator $activator;
+    public int $pageMax = 2;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -85,6 +88,7 @@ class NoteController extends AbstractController
 
         $form = $this->createForm(NoteType::class, $note, [
             "page" => $page,
+            "pageMax" => $this->pageMax,
             "type" => $note->getType(),
             "addressedTo" => $note->getAddressedTo(),
         ]);
@@ -92,9 +96,10 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $page++;
+            $page = $this->movePage($page, $this->pageMax, $form);
             $form = $this->createForm(NoteType::class, $note, [
                 "page" => $page,
+                "pageMax" => $this->pageMax,
                 "type" => $note->getType(),
                 "addressedTo" => $note->getAddressedTo(),
             ]);
@@ -117,7 +122,31 @@ class NoteController extends AbstractController
             'activator' => $this->activator,
             'form' => $form,
             "page" => $page,
+            "pageMax" => $this->pageMax,
         ]);
+    }
+
+    private function movePage($page, $pageMax, Form $form): int
+    {
+        /** @var SubmitButton $btSuivant */
+        $btSuivant = $form->has("suivant") != null ? $form->get("suivant") : null;
+
+        /** @var SubmitButton $btPrecedent */
+        $btPrecedent = $form->has("precedent") != null ? $form->get("precedent") : null;
+
+        // dd($form->get("suivant"));
+
+        if ($btSuivant != null && $page < $pageMax) {
+            if ($btSuivant->isClicked() == true) {
+                $page++;
+            }
+        }
+        if ($btPrecedent != null && $page > 1) {
+            if ($btPrecedent->isClicked() == true) {
+                $page--;
+            }
+        }
+        return $page;
     }
 
 
@@ -161,6 +190,7 @@ class NoteController extends AbstractController
             'activator' => $this->activator,
             'form' => $form,
             "page" => $page,
+            "pageMax" => $this->pageMax,
         ]);
     }
 
