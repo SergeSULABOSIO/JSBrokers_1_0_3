@@ -36,6 +36,7 @@ class Note
     public const TO_CLIENT = 0;
     public const TO_ASSUREUR = 1;
     public const TO_PARTENAIRE = 2;
+    public const TO_AUTORITE_FISCALE = 3;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
     private ?Invite $invite = null;
