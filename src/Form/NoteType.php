@@ -11,7 +11,6 @@ use App\Entity\CompteBancaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -47,6 +46,7 @@ class NoteType extends AbstractType
                 'label' => "Type de la note",
                 'expanded' => true,
                 'choices'  => [
+                    "Null" => Note::TYPE_NULL,
                     "Note de débit" => Note::TYPE_NOTE_DE_DEBIT,
                     "Note de crédit" => Note::TYPE_NOTE_DE_CREDIT,
                 ]
@@ -55,6 +55,7 @@ class NoteType extends AbstractType
                 'label' => "Type de la note",
                 'expanded' => true,
                 'choices'  => [
+                    "Null" => Note::TO_NULL,
                     "A l'attention du client" => Note::TO_CLIENT,
                     "A l'attention de l'assureur" => Note::TO_ASSUREUR,
                     "A l'attention de l'intermédiaire" => Note::TO_PARTENAIRE,
