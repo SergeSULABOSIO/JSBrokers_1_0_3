@@ -76,46 +76,19 @@ class NoteController extends AbstractController
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-        // /** @var Note $note */
-        // $note = new Note();
-        // //Paramètres par défaut
-        // $note->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
-        // $note->setInvite($invite);
-        // $note->setType(Note::TYPE_NULL);
-        // $note->setAddressedTo(Note::TO_NULL);
+        /** @var Note $note */
+        $note = new Note();
+        $note->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
+        $note->setType(Note::TYPE_NULL);
+        $note->setInvite($invite);
+        $note->setAddressedTo(Note::TO_NULL);
 
-        // $page = 1;
-
-        $note_pageA = new NotePageADTO();
-        $note_pageA->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
-        $note_pageA->setType(Note::TYPE_NULL);
-        $note_pageA->setAddressedTo(Note::TO_NULL);
-
-        $form = $this->createForm(NotePageAType::class, $note_pageA);
-
-        // $form = $this->createForm(NoteType::class, $note, [
-        //     'page' => $page,
-        //     'type' => $note->getType(),
-        //     'addressedTo' => $note->getAddressedTo(),
-        // ]);
+        $form = $this->createForm(NoteType::class, $note);
 
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // if ($note->getType() != -1 && $note->getNom() != null && $note->getAddressedTo() != -1) {
-            //     // dd($note);
-            //     $form = $this->createForm(NoteType::class, $note, [
-            //         'page' => $page,
-            //         'type' => $note->getType(),
-            //         'addressedTo' => $note->getAddressedTo(),
-            //     ]);
-            //     $page++;
-            // }
-            // if ($page == 2) {
-            //     dd("Le moment d'enregistrer les données dans la base!");
-            // }
-
-
+            // dd($note);
 
             // $this->manager->persist($note);
             // $this->manager->flush();
