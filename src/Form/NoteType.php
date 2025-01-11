@@ -28,9 +28,22 @@ class NoteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        // if ($options["page"] != -1) {
-        //     dd("Nous construisons le formulaire, mais nous sommes sur la page " . $options["page"]);
-        // }
+        $labelbtSubmit = "Suivant";
+        if ($options["page"] != -1) {
+            if ($options["type"] != -1 && $options["addressedTo"] != -1) {
+                // dd("Builder: ", $builder->getForm());
+                // dd(
+                //     "page: " . $options["page"], 
+                //     "type: " . $options["type"], 
+                //     "addressedTo: " . $options["addressedTo"],
+                // );
+                $labelbtSubmit = match ($options['page']) {
+                    1 => "Suivant",
+                    2 => "Terminer",
+                };
+            }
+        }
+
 
         $builder
             ->add('reference', TextType::class, [
@@ -142,7 +155,7 @@ class NoteType extends AbstractType
 
             //Le bouton suivant
             ->add('Suivant', SubmitType::class, [
-                'label' => "Suivant",
+                'label' => $labelbtSubmit,
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],

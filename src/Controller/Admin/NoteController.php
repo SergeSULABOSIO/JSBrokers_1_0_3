@@ -92,6 +92,13 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $page++;
+            $form = $this->createForm(NoteType::class, $note, [
+                "page" => $page,
+                "type" => $note->getType(),
+                "addressedTo" => $note->getAddressedTo(),
+            ]);
+            // dd($form);
             // dd($note);
 
             // $this->manager->persist($note);
@@ -109,6 +116,7 @@ class NoteController extends AbstractController
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
+            "page" => $page,
         ]);
     }
 
@@ -152,6 +160,7 @@ class NoteController extends AbstractController
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
+            "page" => $page,
         ]);
     }
 
