@@ -2,21 +2,19 @@
 
 namespace App\DTO;
 
-use App\Entity\Assureur;
-use App\Entity\Client;
 use App\Entity\CompteBancaire;
 use App\Entity\Paiement;
-use DateTimeImmutable;
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
 
-
 class NotePageADTO
 {
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 4, max:255)]
+    private ?string $reference = null;
 
     #[Assert\NotBlank]
-    #[Assert\Length(min: 4, max:50)]
+    #[Assert\Length(min: 4, max:255)]
     private ?string $nom = null;
 
     #[Assert\NotBlank]
@@ -26,25 +24,37 @@ class NotePageADTO
     private ?int $addressedTo = null;
 
     #[Assert\NotBlank]
-    #[Assert\Length(min: 4, max:200)]
+    #[Assert\Length(min: 4, max:400)]
     private ?string $description = null;
 
-    /**
+     /**
      * @var Collection<int, CompteBancaire>
      */
-    private Collection $comptes;
-
+    public Collection $comptes;
 
     /**
      * @var Collection<int, Paiement>
      */
-    private Collection $paiements;
+    public Collection $paiements;
 
-
-    public function __construct()
+    /**
+     * Get the value of reference
+     */ 
+    public function getReference()
     {
-        $this->comptes = new ArrayCollection();
-        $this->paiements = new ArrayCollection();
+        return $this->reference;
+    }
+
+    /**
+     * Set the value of reference
+     *
+     * @return  self
+     */ 
+    public function setReference($reference)
+    {
+        $this->reference = $reference;
+
+        return $this;
     }
 
     /**
@@ -123,59 +133,6 @@ class NotePageADTO
     public function setDescription($description)
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, CompteBancaire>
-     */
-    public function getComptes(): Collection
-    {
-        return $this->comptes;
-    }
-
-    public function addCompte(CompteBancaire $compte): static
-    {
-        if (!$this->comptes->contains($compte)) {
-            $this->comptes->add($compte);
-        }
-
-        return $this;
-    }
-
-    public function removeCompte(CompteBancaire $compte): static
-    {
-        $this->comptes->removeElement($compte);
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Paiement>
-     */
-    public function getPaiements(): Collection
-    {
-        return $this->paiements;
-    }
-
-    public function addPaiement(Paiement $paiement): static
-    {
-        if (!$this->paiements->contains($paiement)) {
-            $this->paiements->add($paiement);
-        }
-
-        return $this;
-    }
-
-    public function removePaiement(Paiement $paiement): static
-    {
-        if ($this->paiements->removeElement($paiement)) {
-            // set the owning side to null (unless already changed)
-            if ($paiement->getNote() === $this) {
-                $paiement->setNote(null);
-            }
-        }
 
         return $this;
     }

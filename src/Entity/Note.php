@@ -26,11 +26,13 @@ class Note
 
     #[ORM\Column]
     private ?int $type = null;
+    public const TYPE_NULL = -1;
     public const TYPE_NOTE_DE_DEBIT = 0;
     public const TYPE_NOTE_DE_CREDIT = 1;
 
     #[ORM\Column]
     private ?int $addressedTo = null;
+    public const TO_NULL = -1;
     public const TO_CLIENT = 0;
     public const TO_ASSUREUR = 1;
     public const TO_PARTENAIRE = 2;
@@ -61,6 +63,9 @@ class Note
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'note')]
     private Collection $paiements;
+
+    #[ORM\Column(length: 255)]
+    private ?string $reference = null;
 
     public function __construct()
     {
@@ -250,6 +255,18 @@ class Note
                 $paiement->setNote(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getReference(): ?string
+    {
+        return $this->reference;
+    }
+
+    public function setReference(string $reference): static
+    {
+        $this->reference = $reference;
 
         return $this;
     }

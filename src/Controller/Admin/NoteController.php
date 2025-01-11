@@ -16,6 +16,7 @@ use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\RisqueRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\ServiceDates;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -34,6 +35,7 @@ class NoteController extends AbstractController
 
     public function __construct(
         private MailerInterface $mailer,
+        private ServiceDates $serviceDates,
         private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
@@ -74,27 +76,55 @@ class NoteController extends AbstractController
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-        /** @var Note $note */
-        $note = new Note();
-        //Paramètres par défaut
-        $note->setInvite($invite);
-        $note->setType(Note::TYPE_NOTE_DE_DEBIT);
-        $note->setAddressedTo(Note::TO_ASSUREUR);
+        // /** @var Note $note */
+        // $note = new Note();
+        // //Paramètres par défaut
+        // $note->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
+        // $note->setInvite($invite);
+        // $note->setType(Note::TYPE_NULL);
+        // $note->setAddressedTo(Note::TO_NULL);
 
-        
-        $form = $this->createForm(NoteType::class, $note);
-        // dd($note);
+        // $page = 1;
+
+        $note_pageA = new NotePageADTO();
+        $note_pageA->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
+        $note_pageA->setType(Note::TYPE_NULL);
+        $note_pageA->setAddressedTo(Note::TO_NULL);
+
+        $form = $this->createForm(NotePageAType::class, $note_pageA);
+
+        // $form = $this->createForm(NoteType::class, $note, [
+        //     'page' => $page,
+        //     'type' => $note->getType(),
+        //     'addressedTo' => $note->getAddressedTo(),
+        // ]);
+
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($note);
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("note_creation_ok", [
-                ":note" => $note->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.note.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // if ($note->getType() != -1 && $note->getNom() != null && $note->getAddressedTo() != -1) {
+            //     // dd($note);
+            //     $form = $this->createForm(NoteType::class, $note, [
+            //         'page' => $page,
+            //         'type' => $note->getType(),
+            //         'addressedTo' => $note->getAddressedTo(),
+            //     ]);
+            //     $page++;
+            // }
+            // if ($page == 2) {
+            //     dd("Le moment d'enregistrer les données dans la base!");
+            // }
+
+
+
+            // $this->manager->persist($note);
+            // $this->manager->flush();
+            // $this->addFlash("success", $this->translator->trans("note_creation_ok", [
+            //     ":note" => $note->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.note.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
         }
         return $this->render('admin/note/create.html.twig', [
             'pageName' => $this->translator->trans("note_page_name_new"),
@@ -152,7 +182,7 @@ class NoteController extends AbstractController
         $message = $this->translator->trans("note_deletion_ok", [
             ":note" => $note->getNom(),
         ]);;
-        
+
         $this->manager->remove($note);
         $this->manager->flush();
 
