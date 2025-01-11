@@ -107,6 +107,7 @@ class NoteType extends AbstractType
         }
 
         if ($options['page'] == 2) {
+            dd($options['page']);
             //PAGE 2
             //Construction selon la destinationde la note
             switch ($options['addressedTo']) {
