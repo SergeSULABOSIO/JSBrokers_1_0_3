@@ -67,8 +67,11 @@ class NoteController extends AbstractController
     }
 
 
-    #[Route('/create/{idEntreprise}/{page}', name: 'create')]
-    public function create($idEntreprise, $page, Request $request)
+    #[Route('/create/{idEntreprise}/{page}', name: 'create', requirements: [
+        'idEntreprise' => Requirement::DIGITS,
+        'page' => Requirement::DIGITS,
+    ])]
+    public function create(int $idEntreprise, int $page, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -95,14 +98,17 @@ class NoteController extends AbstractController
 
         $form->handleRequest($request);
 
+        // dd($page, $this->pageMax, $form->isSubmitted(), $form->isValid(), $form);
+
         if ($form->isSubmitted() && $form->isValid()) {
-            $page = $this->movePage($page, $this->pageMax, $form);
+            $page = $this->movePage($page, $form);
             $form = $this->createForm(NoteType::class, $note, [
                 "page" => $page,
                 "pageMax" => $this->pageMax,
                 "type" => $note->getType(),
                 "addressedTo" => $note->getAddressedTo(),
             ]);
+
             // dd($form);
             // dd($note);
 
@@ -126,7 +132,7 @@ class NoteController extends AbstractController
         ]);
     }
 
-    private function movePage($page, $pageMax, Form $form): int
+    private function movePage(int $page, Form $form): int
     {
         /** @var SubmitButton $btSuivant */
         $btSuivant = $form->has("suivant") != null ? $form->get("suivant") : null;
@@ -136,7 +142,7 @@ class NoteController extends AbstractController
 
         // dd($form->get("suivant"));
 
-        if ($btSuivant != null && $page < $pageMax) {
+        if ($btSuivant != null && $page < $this->pageMax) {
             if ($btSuivant->isClicked() == true) {
                 $page++;
             }

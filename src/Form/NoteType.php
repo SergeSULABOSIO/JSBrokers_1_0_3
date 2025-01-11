@@ -217,14 +217,16 @@ class NoteType extends AbstractType
                     ],
                 ]);
         }
-        $builder
-            //Le bouton suivant
-            ->add('suivant', SubmitType::class, [
-                'label' => $labelbtSubmit,
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ]);
+        if ($options['page'] <= $options['pageMax']) {
+            $builder
+                //Le bouton suivant
+                ->add('suivant', SubmitType::class, [
+                    'label' => $labelbtSubmit,
+                    'attr' => [
+                        'class' => "btn btn-secondary",
+                    ],
+                ]);
+        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void
