@@ -108,6 +108,7 @@ class NoteController extends AbstractController
                 "type" => $note->getType(),
                 "addressedTo" => $note->getAddressedTo(),
             ]);
+            dd($page, $note, $form);
 
             // dd($form);
             // dd($note);
@@ -142,16 +143,17 @@ class NoteController extends AbstractController
 
         // dd($form->get("suivant"));
 
-        if ($btSuivant != null && $page < $this->pageMax) {
-            if ($btSuivant->isClicked() == true) {
+        if ($btSuivant != null) {
+            if ($btSuivant->isClicked() == true) {// && $page < $this->pageMax
                 $page++;
             }
         }
-        if ($btPrecedent != null && $page > 1) {
-            if ($btPrecedent->isClicked() == true) {
+        if ($btPrecedent != null) {
+            if ($btPrecedent->isClicked() == true) {// && $page > 1
                 $page--;
             }
         }
+        // dd($page);
         return $page;
     }
 
