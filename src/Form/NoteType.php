@@ -28,6 +28,10 @@ class NoteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        // if ($options["page"] != -1) {
+        //     dd("Nous construisons le formulaire, mais nous sommes sur la page " . $options["page"]);
+        // }
+
         $builder
             ->add('reference', TextType::class, [
                 'required' => false,

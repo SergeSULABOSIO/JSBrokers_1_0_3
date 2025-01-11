@@ -48,7 +48,7 @@
 						{% for note in notes %}
 							<tr id="row_note_{{ note.id }}">
 								<td>
-									<a class="m-2" href="{{ path('admin.note.edit', {'idNote':note.id, 'idEntreprise': entreprise.id})}}">
+									<a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
 										{{ note.nom }} - {{ note.description }}
 									</a>
 								</td>

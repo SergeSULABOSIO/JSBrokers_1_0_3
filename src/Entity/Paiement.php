@@ -48,7 +48,7 @@ class Paiement
 
     public function __construct()
     {
-        // $this->preuves = new ArrayCollection();
+        $this->preuves = new ArrayCollection();
     }
 
     public function getId(): ?int

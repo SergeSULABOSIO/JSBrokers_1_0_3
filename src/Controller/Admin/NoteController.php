@@ -86,7 +86,7 @@ class NoteController extends AbstractController
         $form = $this->createForm(NoteType::class, $note, [
             "page" => $page,
             "type" => $note->getType(),
-            "addressedTo" => $page->getAddressedTo(),
+            "addressedTo" => $note->getAddressedTo(),
         ]);
 
         $form->handleRequest($request);
@@ -113,8 +113,8 @@ class NoteController extends AbstractController
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idNote}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idNote, Request $request)
+    #[Route('/edit/{idEntreprise}/{idNote}/{page}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function edit($idEntreprise, $idNote, $page, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -125,7 +125,12 @@ class NoteController extends AbstractController
         /** @var Note $note */
         $note = $this->noteRepository->find($idNote);
 
-        $form = $this->createForm(NoteType::class, $note);
+        $form = $this->createForm(NoteType::class, $note, [
+            "page" => $page,
+            "type" => $note->getType(),
+            "addressedTo" => $note->getAddressedTo(),
+        ]);
+
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
