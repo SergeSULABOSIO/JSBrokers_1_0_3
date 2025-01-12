@@ -107,6 +107,10 @@ class DocumentRepository extends ServiceEntityRepository
                 //via bordereau
                 ->leftJoin("document.bordereau", "bordereau")
                 ->leftJoin("bordereau.invite", "invitei")
+                //via Note
+                ->leftJoin("document.paiement", "paiementb")
+                ->leftJoin("paiementb.note", "note")
+                ->leftJoin("note.invite", "invitej")
 
 
                 //Condition Où
@@ -123,6 +127,7 @@ class DocumentRepository extends ServiceEntityRepository
                 ->orWhere('comptebancaire.entreprise = :entrepriseId')
                 ->orWhere('client.entreprise = :entrepriseId')
                 ->orWhere('invitei.entreprise = :entrepriseId')
+                ->orWhere('invitej.entreprise = :entrepriseId')
 
                 ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('document.id', 'DESC'),

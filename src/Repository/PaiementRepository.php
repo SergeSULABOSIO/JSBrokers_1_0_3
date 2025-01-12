@@ -57,8 +57,8 @@ class PaiementRepository extends ServiceEntityRepository
                 ->leftJoin("offre.notificationSinistre", "notification")
                 ->leftJoin("notification.invite", "invite")
                 //via facture
-                ->leftJoin("paiement.factureCommission", "facture")
-                ->leftJoin("facture.invite", "inviteb")
+                ->leftJoin("paiement.note", "note")
+                ->leftJoin("note.invite", "inviteb")
                 //condition
                 ->where("invite.entreprise = :entrepriseId")
                 ->orWhere("inviteb.entreprise = :entrepriseId")
