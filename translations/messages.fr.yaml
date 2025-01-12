@@ -441,7 +441,11 @@ avenant_annulation: "Annulation"
 avenant_resiliation: "Résiliation"
 avenant_renouvellement: "Renouvellement"
 company_menu_tranches: "Tranches"
-
+note_de_debit: "Note de débit"
+note_de_credit: "Note de crédit"
+addressed_to_client: "Au client"
+addressed_to_insurer: "A l'assureur"
+addressed_to_partner: "Au partenaire"
 
 
 

@@ -49,7 +49,20 @@
 							<tr id="row_note_{{ note.id }}">
 								<td>
 									<a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
-										{{ note.nom }} - {{ note.description }}
+										{{ constante.getTypeNote(note.type) }}
+										{% if note.addressedTo == 0 %}
+											/ {{ note.client.nom }}
+										{% endif %}
+										{% if note.addressedTo == 1 %}
+											/ {{ note.assureur.nom }}
+										{% endif %}
+										{% if note.addressedTo == 2 %}
+											/ {{ note.partenaire.nom }}
+										{% endif %}
+										{% if note.addressedTo == 3 %}
+											/ {# {{ note.assureur.nom }} #}
+										{% endif %}
+										 / {{ note.nom }}
 									</a>
 								</td>
 								<td>
