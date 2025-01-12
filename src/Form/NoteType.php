@@ -97,12 +97,6 @@ class NoteType extends AbstractType
                     'placeholder' => "Référence",
                 ],
             ])
-            ->add('nom', TextType::class, [
-                'label' => "Nom",
-                'attr' => [
-                    'placeholder' => "Nom",
-                ],
-            ])
             ->add('type', ChoiceType::class, [
                 'label' => "Type",
                 'expanded' => true,
@@ -122,6 +116,12 @@ class NoteType extends AbstractType
                     "De l'intermédiaire" => Note::TO_PARTENAIRE,
                     "De l'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
                 ]
+            ])
+            ->add('nom', TextType::class, [
+                'label' => "Nom",
+                'attr' => [
+                    'placeholder' => "Nom",
+                ],
             ])
             ->add('description', TextType::class, [
                 'label' => "Description",

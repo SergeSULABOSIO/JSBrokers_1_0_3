@@ -87,12 +87,8 @@ class NoteController extends AbstractController
         /** @var Note $note */
         $note = $this->loadNote($idNote, $invite);
 
-        $form = $this->createForm(NoteType::class, $note, [
-            "page" => $page,
-            "pageMax" => $this->pageMax,
-            "type" => $note->getType(),
-            "addressedTo" => $note->getAddressedTo(),
-        ]);
+        /** @var Form $form */
+        $form = $this->buildForm($note, $page);
 
         $form->handleRequest($request);
 
@@ -107,12 +103,14 @@ class NoteController extends AbstractController
                 ]);
             } else {
                 $page = $this->movePage($page, $form);
-                $form = $this->createForm(NoteType::class, $note, [
-                    "page" => $page,
-                    "pageMax" => $this->pageMax,
-                    "type" => $note->getType(),
-                    "addressedTo" => $note->getAddressedTo(),
-                ]);
+                // $form = $this->createForm(NoteType::class, $note, [
+                //     "page" => $page,
+                //     "pageMax" => $this->pageMax,
+                //     "type" => $note->getType(),
+                //     "addressedTo" => $note->getAddressedTo(),
+                // ]);
+                /** @var Form $form */
+                $form = $this->buildForm($note, $page);
             }
         }
         // dd($page, $this->pageMax, $form);
@@ -128,6 +126,17 @@ class NoteController extends AbstractController
             "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "pageMax" => $this->pageMax,
         ]);
+    }
+
+    private function buildForm(?Note $note, $page): Form
+    {
+        $form = $this->createForm(NoteType::class, $note, [
+            "page" => $page,
+            "pageMax" => $this->pageMax,
+            "type" => $note->getType(),
+            "addressedTo" => $note->getAddressedTo(),
+        ]);
+        return $form;
     }
 
     private function saveNote(Note $note, bool $creation): void
