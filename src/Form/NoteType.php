@@ -21,6 +21,13 @@ use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class NoteType extends AbstractType
 {
+    private string $helpArticle = "";
+    private string $labelbtSubmit = "PAGE SUIVANTE";
+    private string $labelbtBack = "PAGE PRECEDENTE";
+    private string $helpAssureur = "";
+    private string $helpClient = "";
+    private string $helppartenaire = "";
+
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
@@ -28,12 +35,9 @@ class NoteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $labelbtSubmit = "PAGE SUIVANTE";
-        $labelbtBack = "PAGE PRECEDENTE";
-        $helpArticle = "";
         if ($options["page"] != -1) {
             if ($options["type"] != -1 && $options["addressedTo"] != -1) {
-                $labelbtSubmit = match (true) {
+                $this->labelbtSubmit = match (true) {
                     $options['page'] == $options['pageMax'] => "TERMINER",
                     default => "PAGE SUIVANTE",
                 };
@@ -42,169 +46,13 @@ class NoteType extends AbstractType
 
         if ($options['page'] == 1) {
             //PAGE 1
-            $builder
-                ->add('reference', TextType::class, [
-                    'required' => false,
-                    'label' => "Référence",
-                    'attr' => [
-                        'placeholder' => "Référence",
-                    ],
-                ])
-                ->add('nom', TextType::class, [
-                    'label' => "Nom",
-                    'attr' => [
-                        'placeholder' => "Nom",
-                    ],
-                ])
-                ->add('type', ChoiceType::class, [
-                    'label' => "Type",
-                    'expanded' => true,
-                    'choices'  => [
-                        "Null" => Note::TYPE_NULL,
-                        "Note de débit" => Note::TYPE_NOTE_DE_DEBIT,
-                        "Note de crédit" => Note::TYPE_NOTE_DE_CREDIT,
-                    ]
-                ])
-                ->add('addressedTo', ChoiceType::class, [
-                    'label' => "A destination",
-                    'expanded' => true,
-                    'choices'  => [
-                        "Null" => Note::TO_NULL,
-                        "Du client" => Note::TO_CLIENT,
-                        "De l'assureur" => Note::TO_ASSUREUR,
-                        "De l'intermédiaire" => Note::TO_PARTENAIRE,
-                        "De l'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
-                    ]
-                ])
-                ->add('description', TextType::class, [
-                    'label' => "Description",
-                    'attr' => [
-                        'placeholder' => "Description",
-                    ],
-                ])
-
-                ->add('paiements', CollectionType::class, [
-                    'label' => "Paiements",
-                    'help' => "Les paiements relatives à cette notes.",
-                    'entry_type' => PaiementType::class,
-                    'by_reference' => false,
-                    'allow_add' => true,
-                    'allow_delete' => true,
-                    'entry_options' => [
-                        'label' => false,
-                    ],
-                    'attr' => [
-                        'data-controller' => 'form-collection-entites',
-                        'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                        'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                        'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                        'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                        'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                        'data-form-collection-entites-view-field-value' => "description",
-                    ],
-                ])
-            ;
+            $this->buildPageA($builder, $options);
         }
 
         if ($options['page'] == 2) {
-            dd($options['page']);
+            // dd($options['page']);
             //PAGE 2
-            //Construction selon la destinationde la note
-            switch ($options['addressedTo']) {
-                case Note::TO_ASSUREUR:
-                    $helpAssureur = "";
-                    $helpArticle = "Les articles sont les tranches depuis lesquelles les commissions seront extraites.";
-                    if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
-                        $helpAssureur = "L'assureur à qui vous désirez addreser cette note de débit pour la collecte de vos commissions.";
-                    } else {
-                        $helpAssureur = "L'assureur à qui vous désirez addreser cette note de crédit pour remboursement quelconque.";
-                    }
-                    $builder->add('assureur', AssureurAutocompleteField::class, [
-                        'label' => "Assureur",
-                        'help' => $helpAssureur,
-                        'class' => Assureur::class,
-                        'required' => false,
-                        'choice_label' => 'nom',
-                    ]);
-
-                    break;
-                case Note::TO_CLIENT:
-                    $helpClient = "";
-                    $helpArticle = "Les articles sont les tranches depuis lesquelles les commissions seront extraites.";
-                    if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
-                        $helpClient = "Le client à qui vous désirez addreser cette note de débit pour la collecte de vos commissions.";
-                    } else {
-                        $helpClient = "Le client à qui vous désirez addreser cette note de crédit pour remboursement quelconque.";
-                    }
-                    $builder->add('client', ClientAutocompleteField::class, [
-                        'label' => "Client",
-                        'help' => $helpClient,
-                        'class' => Client::class,
-                        'required' => false,
-                        'choice_label' => 'nom',
-                    ]);
-
-                    break;
-                case Note::TO_PARTENAIRE:
-                    $helppartenaire = "";
-                    if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
-                        $helppartenaire = "L'intermédiaire à qui vous désirez addreser cette note de débit pour la collecte de vos commissions.";
-                    } else {
-                        $helpArticle = "Les articles sont les tranches depuis lesquelles les retrocommissions seront extraites.";
-                        $helppartenaire = "L'intermédiaire à qui vous désirez addreser cette note de crédit pour retrocéssion quelconque.";
-                    }
-                    $builder->add('partenaire', PartenaireAutocompleteField::class, [
-                        'label' => "Intermédiaire ou partenaire",
-                        'help' => $helppartenaire,
-                        'class' => Partenaire::class,
-                        'required' => false,
-                        'choice_label' => 'nom',
-                    ]);
-
-                    break;
-                case Note::TO_AUTORITE_FISCALE:
-                    $builder; // Ici il faudra charger le champ de sélection de l'autorité fiscale
-                    break;
-
-                default:
-                    # code...
-                    break;
-            }
-            //Construction selon le type
-            if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
-                $builder->add('comptes', CompteBancaireAutocompleteField::class, [
-                    'label' => "Comptes bancaires",
-                    'help' => "Comptes bancaires auxquels vous désirez vous faire payés.",
-                    'attr' => [
-                        'placeholder' => "Séléctionner le compte",
-                    ],
-                    'class' => CompteBancaire::class,
-                    'required' => false,
-                    'multiple' => true,
-                    'choice_label' => 'intitule',
-                ]);
-            }
-            $builder
-                ->add('articles', CollectionType::class, [
-                    'label' => "Articles",
-                    'help' => $helpArticle,
-                    'entry_type' => ArticleType::class,
-                    'by_reference' => false,
-                    'allow_add' => true,
-                    'allow_delete' => true,
-                    'entry_options' => [
-                        'label' => false,
-                    ],
-                    'attr' => [
-                        'data-controller' => 'form-collection-entites',
-                        'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                        'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                        'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                        'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                        'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                        'data-form-collection-entites-view-field-value' => "nom",
-                    ],
-                ]);
+            $this->buildPageB($builder, $options);
         }
 
         //BAS DE PAGE
@@ -212,7 +60,7 @@ class NoteType extends AbstractType
             $builder
                 //Le bouton précédent
                 ->add('precedent', SubmitType::class, [
-                    'label' => $labelbtBack,
+                    'label' => $this->labelbtBack,
                     'attr' => [
                         'class' => "btn btn-secondary",
                     ],
@@ -222,12 +70,175 @@ class NoteType extends AbstractType
             $builder
                 //Le bouton suivant
                 ->add('suivant', SubmitType::class, [
-                    'label' => $labelbtSubmit,
+                    'label' => $this->labelbtSubmit,
                     'attr' => [
                         'class' => "btn btn-secondary",
                     ],
                 ]);
         }
+    }
+
+    private function buildPageA(FormBuilderInterface $builder, array $options): void
+    {
+        $builder
+            ->add('reference', TextType::class, [
+                'required' => false,
+                'label' => "Référence",
+                'attr' => [
+                    'placeholder' => "Référence",
+                ],
+            ])
+            ->add('nom', TextType::class, [
+                'label' => "Nom",
+                'attr' => [
+                    'placeholder' => "Nom",
+                ],
+            ])
+            ->add('type', ChoiceType::class, [
+                'label' => "Type",
+                'expanded' => true,
+                'choices'  => [
+                    "Null" => Note::TYPE_NULL,
+                    "Note de débit" => Note::TYPE_NOTE_DE_DEBIT,
+                    "Note de crédit" => Note::TYPE_NOTE_DE_CREDIT,
+                ]
+            ])
+            ->add('addressedTo', ChoiceType::class, [
+                'label' => "A destination",
+                'expanded' => true,
+                'choices'  => [
+                    "Null" => Note::TO_NULL,
+                    "Du client" => Note::TO_CLIENT,
+                    "De l'assureur" => Note::TO_ASSUREUR,
+                    "De l'intermédiaire" => Note::TO_PARTENAIRE,
+                    "De l'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
+                ]
+            ])
+            ->add('description', TextType::class, [
+                'label' => "Description",
+                'attr' => [
+                    'placeholder' => "Description",
+                ],
+            ])
+
+            ->add('paiements', CollectionType::class, [
+                'label' => "Paiements",
+                'help' => "Les paiements relatives à cette notes.",
+                'entry_type' => PaiementType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "description",
+                ],
+            ])
+        ;
+    }
+
+    private function buildPageB(FormBuilderInterface $builder, array $options): void
+    {
+        //Construction selon la destinationde la note
+        switch ($options['addressedTo']) {
+            case Note::TO_ASSUREUR:
+                $this->helpArticle = "Les articles sont les tranches depuis lesquelles les commissions seront extraites.";
+                if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
+                    $this->helpAssureur = "L'assureur à qui vous désirez addreser cette note de débit pour la collecte de vos commissions.";
+                } else {
+                    $this->helpAssureur = "L'assureur à qui vous désirez addreser cette note de crédit pour remboursement quelconque.";
+                }
+                $builder->add('assureur', AssureurAutocompleteField::class, [
+                    'label' => "Assureur",
+                    'help' => $this->helpAssureur,
+                    'class' => Assureur::class,
+                    'required' => false,
+                    'choice_label' => 'nom',
+                ]);
+
+                break;
+            case Note::TO_CLIENT:
+                $this->helpArticle = "Les articles sont les tranches depuis lesquelles les commissions seront extraites.";
+                if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
+                    $this->helpClient = "Le client à qui vous désirez addreser cette note de débit pour la collecte de vos commissions.";
+                } else {
+                    $this->helpClient = "Le client à qui vous désirez addreser cette note de crédit pour remboursement quelconque.";
+                }
+                $builder->add('client', ClientAutocompleteField::class, [
+                    'label' => "Client",
+                    'help' => $this->helpClient,
+                    'class' => Client::class,
+                    'required' => false,
+                    'choice_label' => 'nom',
+                ]);
+
+                break;
+            case Note::TO_PARTENAIRE:
+                if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
+                    $this->helppartenaire = "L'intermédiaire à qui vous désirez addreser cette note de débit pour la collecte de vos commissions.";
+                } else {
+                    $this->helpArticle = "Les articles sont les tranches depuis lesquelles les retrocommissions seront extraites.";
+                    $this->helppartenaire = "L'intermédiaire à qui vous désirez addreser cette note de crédit pour retrocéssion quelconque.";
+                }
+                $builder->add('partenaire', PartenaireAutocompleteField::class, [
+                    'label' => "Intermédiaire ou partenaire",
+                    'help' => $this->helppartenaire,
+                    'class' => Partenaire::class,
+                    'required' => false,
+                    'choice_label' => 'nom',
+                ]);
+
+                break;
+            case Note::TO_AUTORITE_FISCALE:
+                $builder; // Ici il faudra charger le champ de sélection de l'autorité fiscale
+                break;
+
+            default:
+                # code...
+                break;
+        }
+        //Construction selon le type
+        if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
+            $builder->add('comptes', CompteBancaireAutocompleteField::class, [
+                'label' => "Comptes bancaires",
+                'help' => "Comptes bancaires auxquels vous désirez vous faire payés.",
+                'attr' => [
+                    'placeholder' => "Séléctionner le compte",
+                ],
+                'class' => CompteBancaire::class,
+                'required' => false,
+                'multiple' => true,
+                'choice_label' => 'intitule',
+            ]);
+        }
+        $builder
+            ->add('articles', CollectionType::class, [
+                'label' => "Articles",
+                'help' => $this->helpArticle,
+                'entry_type' => ArticleType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "nom",
+                ],
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
