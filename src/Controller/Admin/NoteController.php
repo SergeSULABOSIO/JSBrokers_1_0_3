@@ -93,28 +93,18 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->saveNote($note, true);
-            // dd($page, $form);
-            if ($page == $this->pageMax) {
+            $page = $this->movePage($page, $form);
+            if ($page > $this->pageMax) {
                 $note->setValidated(true);
-                $this->saveNote($note, true);
                 return $this->redirectToRoute("admin.note.index", [
                     'idEntreprise' => $idEntreprise,
                 ]);
             } else {
-                $page = $this->movePage($page, $form);
-                // $form = $this->createForm(NoteType::class, $note, [
-                //     "page" => $page,
-                //     "pageMax" => $this->pageMax,
-                //     "type" => $note->getType(),
-                //     "addressedTo" => $note->getAddressedTo(),
-                // ]);
                 /** @var Form $form */
                 $form = $this->buildForm($note, $page);
             }
+            $this->saveNote($note, false);
         }
-        // dd($page, $this->pageMax, $form);
-
         return $this->render('admin/note/create.html.twig', [
             'pageName' => $this->pageName,
             'utilisateur' => $user,
@@ -206,57 +196,10 @@ class NoteController extends AbstractController
     ])]
     public function edit(int $idEntreprise, int $idNote, int $page, Request $request)
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Note $note */
-        $note = $this->loadNote($idNote, $invite);
-
-        $form = $this->createForm(NoteType::class, $note, [
-            "page" => $page,
-            "type" => $note->getType(),
-            "addressedTo" => $note->getAddressedTo(),
-        ]);
-
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->saveNote($note, false);
-            if ($page == $this->pageMax) {
-                $note->setValidated(true);
-                $this->saveNote($note, false);
-                return $this->redirectToRoute("admin.note.index", [
-                    'idEntreprise' => $idEntreprise,
-                ]);
-            } else {
-                $page = $this->movePage($page, $form);
-                $form = $this->createForm(NoteType::class, $note, [
-                    "page" => $page,
-                    "pageMax" => $this->pageMax,
-                    "type" => $note->getType(),
-                    "addressedTo" => $note->getAddressedTo(),
-                ]);
-            }
-        }
-        // dd($page, $form);
-        return $this->render('admin/note/edit.html.twig', [
-            'pageName' => $this->pageName,
-            'utilisateur' => $user,
-            'note' => $note,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-            "page" => $page,
-            "idNote" => $note->getId() == null ? -1 : $note->getId(),
-            "pageMax" => $this->pageMax,
-        ]);
+        return $this->create($idEntreprise, $idNote, $page, $request);
     }
+
+
 
     #[Route('/remove/{idEntreprise}/{idNote}', name: 'remove', requirements: ['idNote' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
     public function remove($idEntreprise, $idNote, Request $request)
