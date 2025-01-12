@@ -35,6 +35,7 @@ class NoteController extends AbstractController
 {
     public MenuActivator $activator;
     public int $pageMax = 2;
+    public string $pageName = "";
 
     public function __construct(
         private MailerInterface $mailer,
@@ -67,11 +68,12 @@ class NoteController extends AbstractController
     }
 
 
-    #[Route('/create/{idEntreprise}/{page}', name: 'create', requirements: [
+    #[Route('/create/{idEntreprise}/{idNote}/{page}', name: 'create', requirements: [
         'idEntreprise' => Requirement::DIGITS,
+        'idNote' => Requirement::CATCH_ALL,
         'page' => Requirement::DIGITS,
     ])]
-    public function create(int $idEntreprise, int $page, Request $request)
+    public function create(int $idEntreprise, int $idNote, int $page, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -83,11 +85,7 @@ class NoteController extends AbstractController
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
         /** @var Note $note */
-        $note = new Note();
-        $note->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
-        $note->setType(Note::TYPE_NULL);
-        $note->setInvite($invite);
-        $note->setAddressedTo(Note::TO_NULL);
+        $note = $this->loadNote($idNote, $invite);
 
         $form = $this->createForm(NoteType::class, $note, [
             "page" => $page,
@@ -98,41 +96,73 @@ class NoteController extends AbstractController
 
         $form->handleRequest($request);
 
-        // dd($page, $this->pageMax, $form->isSubmitted(), $form->isValid(), $form);
-
         if ($form->isSubmitted() && $form->isValid()) {
-            $page = $this->movePage($page, $form);
-            // if ($page == $this->pageMax) {
-            $form = $this->createForm(NoteType::class, $note, [
-                "page" => $page,
-                "pageMax" => $this->pageMax,
-                "type" => $note->getType(),
-                "addressedTo" => $note->getAddressedTo(),
-            ]);
-            // }
-            // dd($page, $note, $form);
-
-            // dd($form);
-            // dd($note);
-
-            // $this->manager->persist($note);
-            // $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("note_creation_ok", [
-            //     ":note" => $note->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.note.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            $this->saveNote($note, true);
+            // dd($page, $form);
+            if ($page == $this->pageMax) {
+                $note->setValidated(true);
+                $this->saveNote($note, true);
+                return $this->redirectToRoute("admin.note.index", [
+                    'idEntreprise' => $idEntreprise,
+                ]);
+            } else {
+                $page = $this->movePage($page, $form);
+                $form = $this->createForm(NoteType::class, $note, [
+                    "page" => $page,
+                    "pageMax" => $this->pageMax,
+                    "type" => $note->getType(),
+                    "addressedTo" => $note->getAddressedTo(),
+                ]);
+            }
         }
+        // dd($page, $this->pageMax, $form);
+
         return $this->render('admin/note/create.html.twig', [
-            'pageName' => $this->translator->trans("note_page_name_new"),
+            'pageName' => $this->pageName,
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
+            'note' => $note,
             'form' => $form,
             "page" => $page,
+            "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "pageMax" => $this->pageMax,
         ]);
+    }
+
+    private function saveNote(Note $note, bool $creation): void
+    {
+        //save
+        $this->manager->persist($note);
+        $this->manager->flush();
+        if ($creation == true) {
+            $this->addFlash("success", $this->translator->trans("note_creation_ok", [
+                ":note" => $note->getNom(),
+            ]));
+        } else {
+            $this->addFlash("success", $this->translator->trans("note_edition_ok", [
+                ":note" => $note->getNom(),
+            ]));
+        }
+    }
+
+    private function loadNote(int $idNote, ?Invite $invite): Note
+    {
+        $note = new Note();
+        if ($idNote != -1 && $idNote != null) {
+            $note = $this->noteRepository->find($idNote);
+            $this->pageName = $this->translator->trans("note_page_name_new");
+        } else {
+            $note->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
+            $note->setType(Note::TYPE_NULL);
+            $note->setInvite($invite);
+            $note->setAddressedTo(Note::TO_NULL);
+            $note->setValidated(false);
+            $this->pageName = $this->translator->trans("note_page_name_update", [
+                ":note" => $note->getNom(),
+            ]);
+        }
+        return $note;
     }
 
     private function movePage(int $page, Form $form): int
@@ -160,8 +190,12 @@ class NoteController extends AbstractController
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idNote}/{page}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idNote, $page, Request $request)
+    #[Route('/edit/{idEntreprise}/{idNote}/{page}', name: 'edit', methods: ['GET', 'POST'], requirements: [
+        'idEntreprise' => Requirement::DIGITS,
+        'idNote' => Requirement::CATCH_ALL,
+        'page' => Requirement::DIGITS,
+    ])]
+    public function edit(int $idEntreprise, int $idNote, int $page, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -169,8 +203,11 @@ class NoteController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
         /** @var Note $note */
-        $note = $this->noteRepository->find($idNote);
+        $note = $this->loadNote($idNote, $invite);
 
         $form = $this->createForm(NoteType::class, $note, [
             "page" => $page,
@@ -181,25 +218,33 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($note); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("note_edition_ok", [
-                ":note" => $note->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.note.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            $this->saveNote($note, false);
+            if ($page == $this->pageMax) {
+                $note->setValidated(true);
+                $this->saveNote($note, false);
+                return $this->redirectToRoute("admin.note.index", [
+                    'idEntreprise' => $idEntreprise,
+                ]);
+            } else {
+                $page = $this->movePage($page, $form);
+                $form = $this->createForm(NoteType::class, $note, [
+                    "page" => $page,
+                    "pageMax" => $this->pageMax,
+                    "type" => $note->getType(),
+                    "addressedTo" => $note->getAddressedTo(),
+                ]);
+            }
         }
+        // dd($page, $form);
         return $this->render('admin/note/edit.html.twig', [
-            'pageName' => $this->translator->trans("note_page_name_update", [
-                ":note" => $note->getNom(),
-            ]),
+            'pageName' => $this->pageName,
             'utilisateur' => $user,
             'note' => $note,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
             "page" => $page,
+            "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "pageMax" => $this->pageMax,
         ]);
     }

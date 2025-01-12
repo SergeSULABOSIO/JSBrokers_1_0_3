@@ -36,6 +36,7 @@
 				{# {{ form(form) }} #}
 				{{ form(form, {action: path('admin.note.create', {
 						idEntreprise:entreprise.id,
+						idNote:idNote,
 						page:page,
 						})}) 
 					}}

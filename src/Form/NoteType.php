@@ -66,16 +66,25 @@ class NoteType extends AbstractType
                     ],
                 ]);
         }
-        if ($options['page'] <= $options['pageMax']) {
-            $builder
-                //Le bouton suivant
-                ->add('suivant', SubmitType::class, [
-                    'label' => $this->labelbtSubmit,
-                    'attr' => [
-                        'class' => "btn btn-secondary",
-                    ],
-                ]);
-        }
+        $builder
+            //Le bouton suivant
+            ->add('suivant', SubmitType::class, [
+                'label' => $this->labelbtSubmit,
+                'attr' => [
+                    'class' => "btn btn-secondary",
+                ],
+            ]);
+    }
+
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $resolver->setDefaults([
+            'data_class' => Note::class,
+            "page" => -1,
+            "pageMax" => -100,
+            "type" => -1,
+            "addressedTo" => -1,
+        ]);
     }
 
     private function buildPageA(FormBuilderInterface $builder, array $options): void
@@ -162,8 +171,8 @@ class NoteType extends AbstractType
                     'required' => false,
                     'choice_label' => 'nom',
                 ]);
-
                 break;
+
             case Note::TO_CLIENT:
                 $this->helpArticle = "Les articles sont les tranches depuis lesquelles les commissions seront extraites.";
                 if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
@@ -178,8 +187,8 @@ class NoteType extends AbstractType
                     'required' => false,
                     'choice_label' => 'nom',
                 ]);
-
                 break;
+
             case Note::TO_PARTENAIRE:
                 if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
                     $this->helppartenaire = "L'intermédiaire à qui vous désirez addreser cette note de débit pour la collecte de vos commissions.";
@@ -194,8 +203,8 @@ class NoteType extends AbstractType
                     'required' => false,
                     'choice_label' => 'nom',
                 ]);
-
                 break;
+                
             case Note::TO_AUTORITE_FISCALE:
                 $builder; // Ici il faudra charger le champ de sélection de l'autorité fiscale
                 break;
@@ -239,16 +248,5 @@ class NoteType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ]);
-    }
-
-    public function configureOptions(OptionsResolver $resolver): void
-    {
-        $resolver->setDefaults([
-            'data_class' => Note::class,
-            "page" => -1,
-            "pageMax" => -100,
-            "type" => -1,
-            "addressedTo" => -1,
-        ]);
     }
 }

@@ -156,7 +156,7 @@
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.note' %}
-        <a href="{{ path('admin.note.create', {'page':1, 'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
+        <a href="{{ path('admin.note.create', {'idNote':-1, 'page':1, 'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "entreprise_bouton_new_note" | trans }}
         </a>

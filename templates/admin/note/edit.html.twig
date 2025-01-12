@@ -30,7 +30,8 @@
 				<div class = "m-2">
 					{{ form(form, {action: path('admin.note.edit', {
 						idEntreprise:entreprise.id,
-						idNote:note.id
+						idNote:note.id,
+						page:page,
 						})}) 
 					}}
 				</div>
