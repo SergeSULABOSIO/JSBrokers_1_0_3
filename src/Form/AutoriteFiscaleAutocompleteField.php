@@ -35,11 +35,13 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
                 $entreprise = $user->getConnectedTo();
     
                 // dd($entreprise->getNom());
-                Ici je dois personnaliser cette requête DQL
-                return $er->createQueryBuilder('e')
-                    ->where('e.entreprise =:eseId')
+                // Ici je dois personnaliser cette requête DQL
+                return $er->createQueryBuilder('autorite')
+                    ->leftJoin('autorite.note', "note")
+                    ->leftJoin('note.invite', "invite")
+                    ->where('invite.entreprise =:eseId')
                     ->setParameter('eseId', $entreprise->getId())
-                    ->orderBy('e.id', 'ASC');
+                    ->orderBy('autorite.id', 'ASC');
             },
 
             // choose which fields to use in the search
