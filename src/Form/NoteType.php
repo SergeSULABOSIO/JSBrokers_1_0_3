@@ -6,6 +6,7 @@ use App\Entity\Note;
 use App\Entity\Client;
 use App\Entity\Invite;
 use App\Entity\Assureur;
+use App\Entity\AutoriteFiscale;
 use App\Entity\Partenaire;
 use App\Entity\CompteBancaire;
 use App\Services\FormListenerFactory;
@@ -228,7 +229,7 @@ class NoteType extends AbstractType
                 $builder->add('autoritefiscale', AutoriteFiscaleAutocompleteField::class, [
                     'label' => "Autorité fiscale",
                     'help' => $this->helpautorite,
-                    'class' => Partenaire::class,
+                    'class' => AutoriteFiscale::class,
                     'required' => false,
                     'choice_label' => 'abreviation',
                 ]);
