@@ -36,6 +36,7 @@ class NoteController extends AbstractController
     public MenuActivator $activator;
     public int $pageMax = 2;
     public string $pageName = "";
+    private bool $validateBeforeSaving = false;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -93,18 +94,23 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->deleteNoteIfNeeded($form, $note, $idEntreprise);
+            if ($this->deleteNoteIfNeeded($form, $note, $idEntreprise) == true) {
+                return $this->redirectToRoute("admin.note.index", [
+                    'idEntreprise' => $idEntreprise,
+                ]);
+            }
             $page = $this->movePage($page, $form);
             if ($page > $this->pageMax) {
-                $note->setValidated(true);
+                $this->validateBeforeSaving = true;
+                $this->saveNote($note, false);
                 return $this->redirectToRoute("admin.note.index", [
                     'idEntreprise' => $idEntreprise,
                 ]);
             } else {
+                $this->saveNote($note, false);
                 /** @var Form $form */
                 $form = $this->buildForm($note, $page);
             }
-            $this->saveNote($note, false);
         }
         return $this->render('admin/note/create.html.twig', [
             'pageName' => $this->pageName,
@@ -133,6 +139,9 @@ class NoteController extends AbstractController
 
     private function saveNote(Note $note, bool $creation): void
     {
+        if ($this->validateBeforeSaving == true) {
+            $note->setValidated(true);
+        }
         //save
         $this->manager->persist($note);
         $this->manager->flush();
@@ -147,7 +156,7 @@ class NoteController extends AbstractController
         }
     }
 
-    private function loadNote(int $idNote, ?Invite $invite): Note
+    private function loadNote(int $idNote, ?Invite $invite): ?Note
     {
         $note = new Note();
         if ($idNote != -1 && $idNote != null) {
@@ -166,15 +175,26 @@ class NoteController extends AbstractController
         return $note;
     }
 
-    private function deleteNoteIfNeeded(Form $form, ?Note $note, $idEntreprise): bool{
+    private function deleteNoteIfNeeded(Form $form, ?Note $note, $idEntreprise): bool
+    {
         /** @var SubmitButton $btDelete */
         $btDelete = $form->has("delete") != null ? $form->get("delete") : null;
         if ($btDelete != null) {
             if ($btDelete->isClicked() == true) {
-                $this->remove($idEntreprise, $note->getId(), new Request());
+                // dd("Je dois supprimer ", $note);
+                // $this->remove($idEntreprise, $note->getId(), new Request());
+                // $message = $this->translator->trans("note_deletion_ok", [
+                //     ":note" => $note->getNom(),
+                // ]);;
+
+                $this->manager->remove($note);
+                $this->manager->flush();
+
+                // dd("Deleted!");
+                // $this->addFlash("success", $message);
+                return true;
             }
         }
-
         return false;
     }
 
