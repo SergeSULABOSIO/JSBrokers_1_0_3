@@ -23,6 +23,7 @@ class NoteType extends AbstractType
 {
     private string $helpArticle = "";
     private string $labelbtSubmit = "PAGE SUIVANTE";
+    private string $labelbtDelete = "SUPPRIMER";
     private string $labelbtBack = "PAGE PRECEDENTE";
     private string $helpAssureur = "";
     private string $helpClient = "";
@@ -74,6 +75,16 @@ class NoteType extends AbstractType
                     'class' => "btn btn-secondary",
                 ],
             ]);
+        if ($options['idNote'] != -1) {
+            $builder
+                //Le bouton suppression
+                ->add('delete', SubmitType::class, [
+                    'label' => $this->labelbtDelete,
+                    'attr' => [
+                        'class' => "btn btn-danger",
+                    ],
+                ]);
+        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -81,6 +92,7 @@ class NoteType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Note::class,
             "page" => -1,
+            "idNote" => -1,
             "pageMax" => -100,
             "type" => -1,
             "addressedTo" => -1,
@@ -204,7 +216,7 @@ class NoteType extends AbstractType
                     'choice_label' => 'nom',
                 ]);
                 break;
-                
+
             case Note::TO_AUTORITE_FISCALE:
                 $builder; // Ici il faudra charger le champ de sélection de l'autorité fiscale
                 break;

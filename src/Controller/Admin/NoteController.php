@@ -93,6 +93,7 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->deleteNoteIfNeeded($form, $note, $idEntreprise);
             $page = $this->movePage($page, $form);
             if ($page > $this->pageMax) {
                 $note->setValidated(true);
@@ -121,6 +122,7 @@ class NoteController extends AbstractController
     private function buildForm(?Note $note, $page): Form
     {
         $form = $this->createForm(NoteType::class, $note, [
+            "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "page" => $page,
             "pageMax" => $this->pageMax,
             "type" => $note->getType(),
@@ -162,6 +164,18 @@ class NoteController extends AbstractController
             ]);
         }
         return $note;
+    }
+
+    private function deleteNoteIfNeeded(Form $form, ?Note $note, $idEntreprise): bool{
+        /** @var SubmitButton $btDelete */
+        $btDelete = $form->has("delete") != null ? $form->get("delete") : null;
+        if ($btDelete != null) {
+            if ($btDelete->isClicked() == true) {
+                $this->remove($idEntreprise, $note->getId(), new Request());
+            }
+        }
+
+        return false;
     }
 
     private function movePage(int $page, Form $form): int
