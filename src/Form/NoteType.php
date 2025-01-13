@@ -28,6 +28,7 @@ class NoteType extends AbstractType
     private string $helpAssureur = "";
     private string $helpClient = "";
     private string $helppartenaire = "";
+    private string $helpautorite = "";
 
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
@@ -218,7 +219,19 @@ class NoteType extends AbstractType
                 break;
 
             case Note::TO_AUTORITE_FISCALE:
-                $builder; // Ici il faudra charger le champ de sélection de l'autorité fiscale
+                if ($options['type'] == Note::TYPE_NOTE_DE_DEBIT) {
+                    $this->helpautorite = "L'autorité foscale à qui vous désirez addreser cette note de débit.";
+                } else {
+                    $this->helpArticle = "Les articles sont les tranches depuis lesquelles les taxes seront extraites.";
+                    $this->helpautorite = "L'autorité à qui vous désirez addreser cette note de crédit pour retrocéssion des taxes.";
+                }
+                $builder->add('autoritesfiscales', AutoriteFiscaleType::class, [
+                    'label' => "Autorité fiscale",
+                    'help' => $this->helpautorite,
+                    'class' => Partenaire::class,
+                    'required' => false,
+                    'choice_label' => 'abreviation',
+                ]);
                 break;
 
             default:

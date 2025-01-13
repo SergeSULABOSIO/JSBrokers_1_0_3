@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Entity\Entreprise;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\TaxeRepository;
@@ -28,9 +30,9 @@ class Taxe
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $tauxVIE = null;
 
-    #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
-    #[ORM\Column(length: 255)]
-    private ?string $organisation = null;
+    // #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
+    // #[ORM\Column(length: 255)]
+    // private ?string $organisation = null;
 
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
     #[ORM\Column(length: 5)]
@@ -46,9 +48,15 @@ class Taxe
     #[ORM\ManyToOne(inversedBy: 'taxes')]
     private ?Entreprise $entreprise = null;
 
+    /**
+     * @var Collection<int, AutoriteFiscale>
+     */
+    #[ORM\OneToMany(targetEntity: AutoriteFiscale::class, mappedBy: 'taxe', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $autoriteFiscales;
+
     public function __construct()
     {
-
+        $this->autoriteFiscales = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -68,18 +76,18 @@ class Taxe
         return $this;
     }
 
-    public function getOrganisation(): ?string
-    {
-        return $this->organisation;
-    }
+    // public function getOrganisation(): ?string
+    // {
+    //     return $this->organisation;
+    // }
 
-    public function setOrganisation(string $organisation): self
-    {
+    // public function setOrganisation(string $organisation): self
+    // {
         
-        $this->organisation = $organisation;
+    //     $this->organisation = $organisation;
         
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function __toString()
     {
@@ -165,6 +173,36 @@ class Taxe
     public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AutoriteFiscale>
+     */
+    public function getAutoriteFiscales(): Collection
+    {
+        return $this->autoriteFiscales;
+    }
+
+    public function addAutoriteFiscale(AutoriteFiscale $autoriteFiscale): static
+    {
+        if (!$this->autoriteFiscales->contains($autoriteFiscale)) {
+            $this->autoriteFiscales->add($autoriteFiscale);
+            $autoriteFiscale->setTaxe($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAutoriteFiscale(AutoriteFiscale $autoriteFiscale): static
+    {
+        if ($this->autoriteFiscales->removeElement($autoriteFiscale)) {
+            // set the owning side to null (unless already changed)
+            if ($autoriteFiscale->getTaxe() === $this) {
+                $autoriteFiscale->setTaxe(null);
+            }
+        }
 
         return $this;
     }

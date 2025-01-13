@@ -71,11 +71,18 @@ class Note
     #[ORM\Column]
     private ?bool $validated = null;
 
+    /**
+     * @var Collection<int, AutoriteFiscale>
+     */
+    #[ORM\OneToMany(targetEntity: AutoriteFiscale::class, mappedBy: 'note', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $autoritesfiscales;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
         $this->comptes = new ArrayCollection();
         $this->paiements = new ArrayCollection();
+        $this->autoritesfiscales = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -283,6 +290,36 @@ class Note
     public function setValidated(bool $validated): static
     {
         $this->validated = $validated;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, AutoriteFiscale>
+     */
+    public function getAutoritesfiscales(): Collection
+    {
+        return $this->autoritesfiscales;
+    }
+
+    public function addAutoritesfiscale(AutoriteFiscale $autoritesfiscale): static
+    {
+        if (!$this->autoritesfiscales->contains($autoritesfiscale)) {
+            $this->autoritesfiscales->add($autoritesfiscale);
+            $autoritesfiscale->setNote($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAutoritesfiscale(AutoriteFiscale $autoritesfiscale): static
+    {
+        if ($this->autoritesfiscales->removeElement($autoritesfiscale)) {
+            // set the owning side to null (unless already changed)
+            if ($autoritesfiscale->getNote() === $this) {
+                $autoritesfiscale->setNote(null);
+            }
+        }
 
         return $this;
     }
