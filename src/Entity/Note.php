@@ -71,18 +71,15 @@ class Note
     #[ORM\Column]
     private ?bool $validated = null;
 
-    /**
-     * @var Collection<int, AutoriteFiscale>
-     */
-    #[ORM\OneToMany(targetEntity: AutoriteFiscale::class, mappedBy: 'note', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    private Collection $autoritesfiscales;
+    #[ORM\ManyToOne(inversedBy: 'notes')]
+    private ?AutoriteFiscale $autoritefiscale = null;
+
 
     public function __construct()
     {
         $this->articles = new ArrayCollection();
         $this->comptes = new ArrayCollection();
         $this->paiements = new ArrayCollection();
-        $this->autoritesfiscales = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -294,32 +291,14 @@ class Note
         return $this;
     }
 
-    /**
-     * @return Collection<int, AutoriteFiscale>
-     */
-    public function getAutoritesfiscales(): Collection
+    public function getAutoritefiscale(): ?AutoriteFiscale
     {
-        return $this->autoritesfiscales;
+        return $this->autoritefiscale;
     }
 
-    public function addAutoritesfiscale(AutoriteFiscale $autoritesfiscale): static
+    public function setAutoritefiscale(?AutoriteFiscale $autoritefiscale): static
     {
-        if (!$this->autoritesfiscales->contains($autoritesfiscale)) {
-            $this->autoritesfiscales->add($autoritesfiscale);
-            $autoritesfiscale->setNote($this);
-        }
-
-        return $this;
-    }
-
-    public function removeAutoritesfiscale(AutoriteFiscale $autoritesfiscale): static
-    {
-        if ($this->autoritesfiscales->removeElement($autoritesfiscale)) {
-            // set the owning side to null (unless already changed)
-            if ($autoritesfiscale->getNote() === $this) {
-                $autoritesfiscale->setNote(null);
-            }
-        }
+        $this->autoritefiscale = $autoritefiscale;
 
         return $this;
     }

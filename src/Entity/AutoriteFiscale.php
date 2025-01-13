@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\AutoriteFiscaleRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AutoriteFiscaleRepository::class)]
@@ -24,6 +26,17 @@ class AutoriteFiscale
 
     #[ORM\ManyToOne(inversedBy: 'autoritesfiscales')]
     private ?Note $note = null;
+
+    /**
+     * @var Collection<int, Note>
+     */
+    #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'autoritefiscale')]
+    private Collection $notes;
+
+    public function __construct()
+    {
+        $this->notes = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -74,6 +87,36 @@ class AutoriteFiscale
     public function setNote(?Note $note): static
     {
         $this->note = $note;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Note>
+     */
+    public function getNotes(): Collection
+    {
+        return $this->notes;
+    }
+
+    public function addNote(Note $note): static
+    {
+        if (!$this->notes->contains($note)) {
+            $this->notes->add($note);
+            $note->setAutoritefiscale($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNote(Note $note): static
+    {
+        if ($this->notes->removeElement($note)) {
+            // set the owning side to null (unless already changed)
+            if ($note->getAutoritefiscale() === $this) {
+                $note->setAutoritefiscale(null);
+            }
+        }
 
         return $this;
     }

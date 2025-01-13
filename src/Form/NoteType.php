@@ -225,7 +225,7 @@ class NoteType extends AbstractType
                     $this->helpArticle = "Les articles sont les tranches depuis lesquelles les taxes seront extraites.";
                     $this->helpautorite = "L'autorité à qui vous désirez addreser cette note de crédit pour retrocéssion des taxes.";
                 }
-                $builder->add('autoritesfiscales', AutoriteFiscaleType::class, [
+                $builder->add('autoritefiscale', AutoriteFiscaleAutocompleteField::class, [
                     'label' => "Autorité fiscale",
                     'help' => $this->helpautorite,
                     'class' => Partenaire::class,
