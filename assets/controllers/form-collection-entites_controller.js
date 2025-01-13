@@ -18,7 +18,7 @@ export default class extends Controller {
 
         //Construction de l'élement Bouton pour la supression de l'element de la collection
         const btnAjouter = document.createElement("button");
-        btnAjouter.setAttribute('class', "btn btn-secondary");
+        btnAjouter.setAttribute('class', "btn btn-outline-secondary");//btn-secondary
         btnAjouter.setAttribute('type', "button");
         btnAjouter.innerHTML = this.addLabelValue || "Add";
         btnAjouter.addEventListener('click', this.addElement);
