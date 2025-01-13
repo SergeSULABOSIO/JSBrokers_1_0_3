@@ -94,11 +94,13 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            //On rentre sur la page Index si le client a supprimé la note
             if ($this->deleteNoteIfNeeded($form, $note, $idEntreprise) == true) {
                 return $this->redirectToRoute("admin.note.index", [
                     'idEntreprise' => $idEntreprise,
                 ]);
             }
+            //Si non, on continue l'édition de la note
             $page = $this->movePage($page, $form);
             if ($page > $this->pageMax) {
                 $this->validateBeforeSaving = true;
