@@ -20,6 +20,7 @@ class TypeRevenuType extends AbstractType
         $builder
             ->add('nom', TextType::class, [
                 'label' => "Nom",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Nom ici",
                 ],
@@ -27,6 +28,7 @@ class TypeRevenuType extends AbstractType
             ->add('formule', ChoiceType::class, [
                 'label' => "Quelle est la formule applicable?",
                 'expanded' => true,
+                'required' => false,
                 'choices'  => [
                     "Un pourcentage du Fronting" => TypeRevenu::FORMULE_POURCENTAGE_FRONTING,
                     "Un pourcentage de la prime nette" => TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE,
@@ -62,6 +64,7 @@ class TypeRevenuType extends AbstractType
                 'help' => "Le montant partageable (càd l'assiette) équivaut au montant après déduction de toutes les taxes.",
                 'label' => "Est-il partageable avec un partenaire?",
                 'expanded' => true,
+                'required' => false,
                 'choices'  => [
                     "Oui, si celui-ci existe." => true,
                     "Non, pas du tout." => false,
@@ -70,6 +73,7 @@ class TypeRevenuType extends AbstractType
             ->add('multipayments', ChoiceType::class, [
                 'label' => "Son paiement peut-il être échélonné?",
                 'expanded' => true,
+                'required' => false,
                 'choices'  => [
                     "Oui, il peut être payé en plusieurs tranches." => true,
                     "Non, pas du tout." => false,
@@ -78,6 +82,7 @@ class TypeRevenuType extends AbstractType
             ->add('redevable', ChoiceType::class, [
                 'label' => "Qui est débiteur?",
                 'expanded' => true,
+                'required' => false,
                 'choices'  => [
                     "L'assureur" => TypeRevenu::REDEVABLE_ASSUREUR,
                     "Le client" => TypeRevenu::REDEVABLE_CLIENT,

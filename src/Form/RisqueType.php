@@ -39,6 +39,7 @@ class RisqueType extends AbstractType
             ])
             ->add('pourcentageCommissionSpecifiqueHT', PercentType::class, [
                 'label' => "Taux de commission",
+                'required' => false,
                 'help' => "Il s'agit ici du taux que l'application doit considérer uniquement pour ce risque.",
                 'attr' => [
                     'placeholder' => "Taux",
@@ -48,6 +49,7 @@ class RisqueType extends AbstractType
                 'label' => "Branche d'assurance",
                 'help' => "IARD pour 'I'ncendie 'A'ccident et 'R'isques 'D'ivers. Càd autres que les assurances Vie.",
                 'expanded' => true,
+                'required' => false,
                 'choices'  => [
                     "Les IARD (non vie)" => Risque::BRANCHE_IARD_OU_NON_VIE,
                     "Vie" => Risque::BRANCHE_VIE,
@@ -57,6 +59,7 @@ class RisqueType extends AbstractType
                 'label' => "Ce risque est-il imposable?",
                 'help' => "Oui, si les taxes doivent être chargées.",
                 'expanded' => true,
+                'required' => false,
                 'choices'  => [
                     "Oui" => true,
                     "Non" => false,

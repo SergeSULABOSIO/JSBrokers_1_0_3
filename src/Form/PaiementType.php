@@ -37,6 +37,7 @@ class PaiementType extends AbstractType
             ->add('montant', MoneyType::class, [
                 'label' => "Montant",
                 'currency' => "USD",
+                'required' => false,
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant",
@@ -58,6 +59,7 @@ class PaiementType extends AbstractType
                 'by_reference' => false,
                 'allow_add' => true,
                 'allow_delete' => true,
+                'required' => false,
                 'entry_options' => [
                     'label' => false,
                 ],

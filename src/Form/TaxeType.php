@@ -28,12 +28,14 @@ class TaxeType extends AbstractType
         $builder
             ->add('code', TextType::class, [
                 'label' => "Code de la taxe",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Code",
                 ],
             ])
             ->add('description', TextareaType::class, [
                 'label' => "Description",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Description ici",
                 ],
@@ -47,12 +49,14 @@ class TaxeType extends AbstractType
             
             ->add('tauxIARD', PercentType::class, [
                 'label' => "Taux (IARD)",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Taux",
                 ],
             ])
             ->add('tauxVIE', PercentType::class, [
                 'label' => "Taux (VIE)",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Taux",
                 ],
@@ -60,6 +64,7 @@ class TaxeType extends AbstractType
             ->add('redevable', ChoiceType::class, [
                 'label' => "Qui sont-ils redevables à cette taxe?",
                 'expanded' => true,
+                'required' => false,
                 'choices'  => [
                     "Le client et le courtier" => Taxe::REDEVABLE_COURTIER_ET_CLIENT,
                     "Le courtier" => Taxe::REDEVABLE_COURTIER,
@@ -72,6 +77,7 @@ class TaxeType extends AbstractType
                 'entry_type' => AutoriteFiscaleType::class,
                 'by_reference' => false,
                 'allow_add' => true,
+                'required' => false,
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
