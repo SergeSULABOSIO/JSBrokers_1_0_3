@@ -38,6 +38,7 @@ class AutoriteFiscale
         $this->notes = new ArrayCollection();
     }
 
+
     public function getId(): ?int
     {
         return $this->id;
@@ -119,5 +120,10 @@ class AutoriteFiscale
         }
 
         return $this;
+    }
+
+    public function __toString()
+    {
+        return $this->nom . " - " . $this->abreviation;
     }
 }

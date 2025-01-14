@@ -231,7 +231,7 @@ class NoteType extends AbstractType
                     'help' => $this->helpautorite,
                     'class' => AutoriteFiscale::class,
                     'required' => false,
-                    'choice_label' => 'abreviation',
+                    'choice_label' => 'nom',
                 ]);
                 break;
 

@@ -46,6 +46,7 @@ class DocumentType extends AbstractType
             ])
             ->add('classeur', EntityType::class, [
                 'class' => Classeur::class,
+                'required' => false,
                 'choice_label' => 'nom',
             ])
             // ->add('createdAt', null, [
