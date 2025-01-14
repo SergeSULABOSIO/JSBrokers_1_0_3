@@ -30,7 +30,7 @@ class PisteType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('client', EntityType::class, [
+            ->add('client', ClientAutocompleteField::class, [
                 'label' => "Client / Assurée ou Prospect",
                 'required' => true,
                 'class' => Client::class,

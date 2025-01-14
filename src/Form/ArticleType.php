@@ -39,7 +39,7 @@ class ArticleType extends AbstractType
             ])
             ->add('pourcentage', PercentType::class, [
                 'label' => "Portion concernée de la tranche",
-                'help' => "100% si vous désirez facturer toute cette tranche, sinon merci de préciser la portion en pourcentage.",
+                'help' => "100% si vous désirez s'appliquer sur toute cette tranche, sinon merci de préciser la portion en pourcentage.",
                 'required' => true,
                 'scale' => 3,
                 'attr' => [

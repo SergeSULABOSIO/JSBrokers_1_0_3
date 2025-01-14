@@ -36,9 +36,9 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
     
                 // Ici je dois personnaliser cette requête DQL
                 return $er->createQueryBuilder('autorite')
-                    ->leftJoin('autorite.note', "note")
-                    ->leftJoin('note.invite', "invite")
-                    ->where('invite.entreprise =:eseId')
+                    ->leftJoin('autorite.taxe', "taxe")
+                    // ->leftJoin('note.invite', "invite")
+                    ->where('taxe.entreprise =:eseId')
                     ->setParameter('eseId', $entreprise->getId())
                     ->orderBy('autorite.id', 'ASC');
             },
