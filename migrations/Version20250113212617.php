@@ -1,0 +1,255 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DoctrineMigrations;
+
+use Doctrine\DBAL\Schema\Schema;
+use Doctrine\Migrations\AbstractMigration;
+
+/**
+ * Auto-generated Migration: Please modify to your needs!
+ */
+final class Version20250113212617 extends AbstractMigration
+{
+    public function getDescription(): string
+    {
+        return '';
+    }
+
+    public function up(Schema $schema): void
+    {
+        // this up() migration is auto-generated, please modify it to your needs
+        $this->addSql('CREATE TABLE article (id INT AUTO_INCREMENT NOT NULL, tranche_id INT DEFAULT NULL, note_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, pourcentage DOUBLE PRECISION NOT NULL, INDEX IDX_23A0E66B76F6B31 (tranche_id), INDEX IDX_23A0E6626ED0855 (note_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE assureur (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL, url VARCHAR(255) DEFAULT NULL, adresse_physique VARCHAR(255) DEFAULT NULL, INDEX IDX_7B0E5955A4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE autorite_fiscale (id INT AUTO_INCREMENT NOT NULL, taxe_id INT DEFAULT NULL, note_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, abreviation VARCHAR(10) NOT NULL, INDEX IDX_FF4842301AB947A4 (taxe_id), INDEX IDX_FF48423026ED0855 (note_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE avenant (id INT AUTO_INCREMENT NOT NULL, cotation_id INT DEFAULT NULL, type INT NOT NULL, starting_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', ending_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', description VARCHAR(255) NOT NULL, reference_police VARCHAR(255) NOT NULL, INDEX IDX_2FE5CE55D14FAF0 (cotation_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE bordereau (id INT AUTO_INCREMENT NOT NULL, assureur_id INT DEFAULT NULL, invite_id INT DEFAULT NULL, type INT NOT NULL, nom VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', received_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', montant_ttc DOUBLE PRECISION NOT NULL, INDEX IDX_F7B4C56180F7E20A (assureur_id), INDEX IDX_F7B4C561EA417747 (invite_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE chargement (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(20) NOT NULL, description VARCHAR(255) DEFAULT NULL, montantflat DOUBLE PRECISION DEFAULT NULL, imposable TINYINT(1) NOT NULL, taux_sur_prime_nette DOUBLE PRECISION DEFAULT NULL, INDEX IDX_36328758A4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE chargement_pour_prime (id INT AUTO_INCREMENT NOT NULL, type_id INT DEFAULT NULL, cotation_id INT DEFAULT NULL, montant_flat_exceptionel DOUBLE PRECISION DEFAULT NULL, taux_exceptionel DOUBLE PRECISION DEFAULT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', nom VARCHAR(255) NOT NULL, INDEX IDX_8065D3CAC54C8C93 (type_id), INDEX IDX_8065D3CA5D14FAF0 (cotation_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE classeur (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, description VARCHAR(255) NOT NULL, INDEX IDX_D15F835AA4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE client (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, groupe_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, adresse VARCHAR(255) DEFAULT NULL, telephone VARCHAR(255) DEFAULT NULL, email VARCHAR(255) DEFAULT NULL, exonere TINYINT(1) NOT NULL, INDEX IDX_C7440455A4AEAFEA (entreprise_id), INDEX IDX_C74404557A45358C (groupe_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE compte_bancaire (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, intitule VARCHAR(255) NOT NULL, numero VARCHAR(255) NOT NULL, banque VARCHAR(255) NOT NULL, code_swift VARCHAR(255) NOT NULL, INDEX IDX_50BC21DEA4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE condition_partage (id INT AUTO_INCREMENT NOT NULL, partenaire_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, formule INT NOT NULL, seuil DOUBLE PRECISION NOT NULL, taux DOUBLE PRECISION DEFAULT NULL, critere_risque INT NOT NULL, unite INT NOT NULL, INDEX IDX_CF012D1F98DE13AC (partenaire_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE contact (id INT AUTO_INCREMENT NOT NULL, client_id INT DEFAULT NULL, notification_sinistre_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, telephone VARCHAR(255) NOT NULL, email VARCHAR(255) DEFAULT NULL, fonction VARCHAR(255) DEFAULT NULL, type INT NOT NULL, INDEX IDX_4C62E63819EB6921 (client_id), INDEX IDX_4C62E638F4F2559E (notification_sinistre_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE cotation (id INT AUTO_INCREMENT NOT NULL, assureur_id INT DEFAULT NULL, piste_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, duree INT NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_996DA94480F7E20A (assureur_id), INDEX IDX_996DA944C34065BC (piste_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE document (id INT AUTO_INCREMENT NOT NULL, classeur_id INT DEFAULT NULL, piece_sinistre_id INT DEFAULT NULL, offre_indemnisation_sinistre_id INT DEFAULT NULL, cotation_id INT DEFAULT NULL, avenant_id INT DEFAULT NULL, tache_id INT DEFAULT NULL, feedback_id INT DEFAULT NULL, client_id INT DEFAULT NULL, bordereau_id INT DEFAULT NULL, compte_bancaire_id INT DEFAULT NULL, piste_id INT DEFAULT NULL, partenaire_id INT DEFAULT NULL, paiement_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_D8698A76EC10E96A (classeur_id), INDEX IDX_D8698A76DFB9960E (piece_sinistre_id), INDEX IDX_D8698A7672DDD90D (offre_indemnisation_sinistre_id), INDEX IDX_D8698A765D14FAF0 (cotation_id), INDEX IDX_D8698A7685631A3A (avenant_id), INDEX IDX_D8698A76D2235D39 (tache_id), INDEX IDX_D8698A76D249A887 (feedback_id), INDEX IDX_D8698A7619EB6921 (client_id), INDEX IDX_D8698A7655D5304E (bordereau_id), INDEX IDX_D8698A76AF1E371E (compte_bancaire_id), INDEX IDX_D8698A76C34065BC (piste_id), INDEX IDX_D8698A7698DE13AC (partenaire_id), INDEX IDX_D8698A762A4C4478 (paiement_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE entreprise (id INT AUTO_INCREMENT NOT NULL, utilisateur_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, licence VARCHAR(255) NOT NULL, adresse VARCHAR(255) NOT NULL, telephone VARCHAR(255) NOT NULL, rccm VARCHAR(255) NOT NULL, idnat VARCHAR(255) NOT NULL, numimpot VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', thumbnail VARCHAR(255) DEFAULT NULL, INDEX IDX_D19FA60FB88E14F (utilisateur_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE feedback (id INT AUTO_INCREMENT NOT NULL, tache_id INT DEFAULT NULL, invite_id INT DEFAULT NULL, description VARCHAR(255) NOT NULL, next_action_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', next_action VARCHAR(255) DEFAULT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', type INT NOT NULL, INDEX IDX_D2294458D2235D39 (tache_id), INDEX IDX_D2294458EA417747 (invite_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE groupe (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, description VARCHAR(255) NOT NULL, INDEX IDX_4B98C21A4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE invite (id INT AUTO_INCREMENT NOT NULL, invite_id INT DEFAULT NULL, entreprise_id INT DEFAULT NULL, email VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', nom VARCHAR(255) DEFAULT NULL, proprietaire TINYINT(1) DEFAULT NULL, INDEX IDX_C7E210D7EA417747 (invite_id), INDEX IDX_C7E210D7A4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE modele_piece_sinistre (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, description VARCHAR(255) NOT NULL, obligatoire TINYINT(1) DEFAULT NULL, INDEX IDX_3723B98AA4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE monnaie (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, code VARCHAR(255) NOT NULL, tauxusd NUMERIC(10, 2) NOT NULL, fonction INT NOT NULL, locale TINYINT(1) NOT NULL, INDEX IDX_B3A6E2E6A4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE note (id INT AUTO_INCREMENT NOT NULL, invite_id INT DEFAULT NULL, client_id INT DEFAULT NULL, partenaire_id INT DEFAULT NULL, assureur_id INT DEFAULT NULL, autoritefiscale_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, type INT NOT NULL, addressed_to INT NOT NULL, description VARCHAR(255) DEFAULT NULL, reference VARCHAR(255) NOT NULL, validated TINYINT(1) NOT NULL, INDEX IDX_CFBDFA14EA417747 (invite_id), INDEX IDX_CFBDFA1419EB6921 (client_id), INDEX IDX_CFBDFA1498DE13AC (partenaire_id), INDEX IDX_CFBDFA1480F7E20A (assureur_id), INDEX IDX_CFBDFA14D8FB132F (autoritefiscale_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE note_compte_bancaire (note_id INT NOT NULL, compte_bancaire_id INT NOT NULL, INDEX IDX_956D59AE26ED0855 (note_id), INDEX IDX_956D59AEAF1E371E (compte_bancaire_id), PRIMARY KEY(note_id, compte_bancaire_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE notification_sinistre (id INT AUTO_INCREMENT NOT NULL, assure_id INT DEFAULT NULL, risque_id INT DEFAULT NULL, invite_id INT DEFAULT NULL, reference_police VARCHAR(255) NOT NULL, reference_sinistre VARCHAR(255) DEFAULT NULL, description_de_fait VARCHAR(255) NOT NULL, occured_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', lieu VARCHAR(255) NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', dommage DOUBLE PRECISION DEFAULT NULL, INDEX IDX_A0BC42C21F4BE942 (assure_id), INDEX IDX_A0BC42C24ECC2413 (risque_id), INDEX IDX_A0BC42C2EA417747 (invite_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE offre_indemnisation_sinistre (id INT AUTO_INCREMENT NOT NULL, notification_sinistre_id INT DEFAULT NULL, nom VARCHAR(255) DEFAULT NULL, franchise_appliquee DOUBLE PRECISION DEFAULT NULL, montant_payable DOUBLE PRECISION NOT NULL, beneficiaire VARCHAR(255) NOT NULL, reference_bancaire VARCHAR(255) DEFAULT NULL, INDEX IDX_D73D1ECCF4F2559E (notification_sinistre_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE paiement (id INT AUTO_INCREMENT NOT NULL, offre_indemnisation_sinistre_id INT DEFAULT NULL, note_id INT DEFAULT NULL, description VARCHAR(255) NOT NULL, montant DOUBLE PRECISION NOT NULL, reference VARCHAR(255) NOT NULL, paid_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_B1DC7A1E72DDD90D (offre_indemnisation_sinistre_id), INDEX IDX_B1DC7A1E26ED0855 (note_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE partenaire (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, adresse_physique VARCHAR(255) DEFAULT NULL, telephone VARCHAR(255) DEFAULT NULL, email VARCHAR(255) DEFAULT NULL, part DOUBLE PRECISION NOT NULL, INDEX IDX_32FFA373A4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE piece_sinistre (id INT AUTO_INCREMENT NOT NULL, type_id INT DEFAULT NULL, invite_id INT DEFAULT NULL, notification_sinistre_id INT DEFAULT NULL, description VARCHAR(255) NOT NULL, received_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', fourni_par VARCHAR(255) NOT NULL, INDEX IDX_C1DE1588C54C8C93 (type_id), INDEX IDX_C1DE1588EA417747 (invite_id), INDEX IDX_C1DE1588F4F2559E (notification_sinistre_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE piste (id INT AUTO_INCREMENT NOT NULL, risque_id INT DEFAULT NULL, client_id INT DEFAULT NULL, invite_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, prime_potentielle DOUBLE PRECISION DEFAULT NULL, commission_potentielle DOUBLE PRECISION DEFAULT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', type_avenant INT NOT NULL, description_du_risque VARCHAR(255) NOT NULL, INDEX IDX_59E250774ECC2413 (risque_id), INDEX IDX_59E2507719EB6921 (client_id), INDEX IDX_59E25077EA417747 (invite_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE piste_partenaire (piste_id INT NOT NULL, partenaire_id INT NOT NULL, INDEX IDX_6110D3B3C34065BC (piste_id), INDEX IDX_6110D3B398DE13AC (partenaire_id), PRIMARY KEY(piste_id, partenaire_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE revenu_pour_courtier (id INT AUTO_INCREMENT NOT NULL, type_revenu_id INT DEFAULT NULL, cotation_id INT DEFAULT NULL, montant_flat_exceptionel DOUBLE PRECISION DEFAULT NULL, taux_exceptionel DOUBLE PRECISION DEFAULT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', nom VARCHAR(255) NOT NULL, INDEX IDX_8CAA04C120F3EE6A (type_revenu_id), INDEX IDX_8CAA04C15D14FAF0 (cotation_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE risque (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, condition_partage_id INT DEFAULT NULL, code VARCHAR(6) NOT NULL, description VARCHAR(255) DEFAULT NULL, pourcentage_commission_specifique_ht DOUBLE PRECISION DEFAULT NULL, branche INT NOT NULL, nom_complet VARCHAR(255) NOT NULL, imposable TINYINT(1) NOT NULL, INDEX IDX_20230D24A4AEAFEA (entreprise_id), INDEX IDX_20230D2426164BCB (condition_partage_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE tache (id INT AUTO_INCREMENT NOT NULL, executor_id INT DEFAULT NULL, piste_id INT DEFAULT NULL, cotation_id INT DEFAULT NULL, notification_sinistre_id INT DEFAULT NULL, offre_indemnisation_sinistre_id INT DEFAULT NULL, description VARCHAR(255) NOT NULL, to_be_ended_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', closed TINYINT(1) NOT NULL, INDEX IDX_938720758ABD09BB (executor_id), INDEX IDX_93872075C34065BC (piste_id), INDEX IDX_938720755D14FAF0 (cotation_id), INDEX IDX_93872075F4F2559E (notification_sinistre_id), INDEX IDX_9387207572DDD90D (offre_indemnisation_sinistre_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE taxe (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, description VARCHAR(255) NOT NULL, taux_iard NUMERIC(10, 2) NOT NULL, taux_vie NUMERIC(10, 2) NOT NULL, code VARCHAR(5) NOT NULL, redevable INT NOT NULL, INDEX IDX_56322FE9A4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE tranche (id INT AUTO_INCREMENT NOT NULL, cotation_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, montant_flat DOUBLE PRECISION DEFAULT NULL, pourcentage DOUBLE PRECISION DEFAULT NULL, payable_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', echeance_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_666758405D14FAF0 (cotation_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE type_revenu (id INT AUTO_INCREMENT NOT NULL, entreprise_id INT DEFAULT NULL, nom VARCHAR(255) NOT NULL, formule INT DEFAULT NULL, montantflat DOUBLE PRECISION DEFAULT NULL, shared TINYINT(1) NOT NULL, multipayments TINYINT(1) NOT NULL, redevable INT NOT NULL, pourcentage DOUBLE PRECISION DEFAULT NULL, appliquer_pourcentage_du_risque TINYINT(1) DEFAULT NULL, INDEX IDX_5E74AB7DA4AEAFEA (entreprise_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE utilisateur (id INT AUTO_INCREMENT NOT NULL, connected_to_id INT DEFAULT NULL, email VARCHAR(180) NOT NULL, roles JSON NOT NULL COMMENT \'(DC2Type:json)\', password VARCHAR(255) NOT NULL, nom VARCHAR(255) NOT NULL, is_verified TINYINT(1) NOT NULL, created_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', locale VARCHAR(255) DEFAULT \'fr\' NOT NULL, INDEX IDX_1D1C63B3318EA8F9 (connected_to_id), UNIQUE INDEX UNIQ_IDENTIFIER_EMAIL (email), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE messenger_messages (id BIGINT AUTO_INCREMENT NOT NULL, body LONGTEXT NOT NULL, headers LONGTEXT NOT NULL, queue_name VARCHAR(190) NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', available_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', delivered_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', INDEX IDX_75EA56E0FB7336F0 (queue_name), INDEX IDX_75EA56E0E3BD61CE (available_at), INDEX IDX_75EA56E016BA31DB (delivered_at), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('ALTER TABLE article ADD CONSTRAINT FK_23A0E66B76F6B31 FOREIGN KEY (tranche_id) REFERENCES tranche (id)');
+        $this->addSql('ALTER TABLE article ADD CONSTRAINT FK_23A0E6626ED0855 FOREIGN KEY (note_id) REFERENCES note (id)');
+        $this->addSql('ALTER TABLE assureur ADD CONSTRAINT FK_7B0E5955A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE autorite_fiscale ADD CONSTRAINT FK_FF4842301AB947A4 FOREIGN KEY (taxe_id) REFERENCES taxe (id)');
+        $this->addSql('ALTER TABLE autorite_fiscale ADD CONSTRAINT FK_FF48423026ED0855 FOREIGN KEY (note_id) REFERENCES note (id)');
+        $this->addSql('ALTER TABLE avenant ADD CONSTRAINT FK_2FE5CE55D14FAF0 FOREIGN KEY (cotation_id) REFERENCES cotation (id)');
+        $this->addSql('ALTER TABLE bordereau ADD CONSTRAINT FK_F7B4C56180F7E20A FOREIGN KEY (assureur_id) REFERENCES assureur (id)');
+        $this->addSql('ALTER TABLE bordereau ADD CONSTRAINT FK_F7B4C561EA417747 FOREIGN KEY (invite_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE chargement ADD CONSTRAINT FK_36328758A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE chargement_pour_prime ADD CONSTRAINT FK_8065D3CAC54C8C93 FOREIGN KEY (type_id) REFERENCES chargement (id)');
+        $this->addSql('ALTER TABLE chargement_pour_prime ADD CONSTRAINT FK_8065D3CA5D14FAF0 FOREIGN KEY (cotation_id) REFERENCES cotation (id)');
+        $this->addSql('ALTER TABLE classeur ADD CONSTRAINT FK_D15F835AA4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE client ADD CONSTRAINT FK_C7440455A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE client ADD CONSTRAINT FK_C74404557A45358C FOREIGN KEY (groupe_id) REFERENCES groupe (id)');
+        $this->addSql('ALTER TABLE compte_bancaire ADD CONSTRAINT FK_50BC21DEA4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE condition_partage ADD CONSTRAINT FK_CF012D1F98DE13AC FOREIGN KEY (partenaire_id) REFERENCES partenaire (id)');
+        $this->addSql('ALTER TABLE contact ADD CONSTRAINT FK_4C62E63819EB6921 FOREIGN KEY (client_id) REFERENCES client (id)');
+        $this->addSql('ALTER TABLE contact ADD CONSTRAINT FK_4C62E638F4F2559E FOREIGN KEY (notification_sinistre_id) REFERENCES notification_sinistre (id)');
+        $this->addSql('ALTER TABLE cotation ADD CONSTRAINT FK_996DA94480F7E20A FOREIGN KEY (assureur_id) REFERENCES assureur (id)');
+        $this->addSql('ALTER TABLE cotation ADD CONSTRAINT FK_996DA944C34065BC FOREIGN KEY (piste_id) REFERENCES piste (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76EC10E96A FOREIGN KEY (classeur_id) REFERENCES classeur (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76DFB9960E FOREIGN KEY (piece_sinistre_id) REFERENCES piece_sinistre (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A7672DDD90D FOREIGN KEY (offre_indemnisation_sinistre_id) REFERENCES offre_indemnisation_sinistre (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A765D14FAF0 FOREIGN KEY (cotation_id) REFERENCES cotation (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A7685631A3A FOREIGN KEY (avenant_id) REFERENCES avenant (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76D2235D39 FOREIGN KEY (tache_id) REFERENCES tache (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76D249A887 FOREIGN KEY (feedback_id) REFERENCES feedback (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A7619EB6921 FOREIGN KEY (client_id) REFERENCES client (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A7655D5304E FOREIGN KEY (bordereau_id) REFERENCES bordereau (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76AF1E371E FOREIGN KEY (compte_bancaire_id) REFERENCES compte_bancaire (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76C34065BC FOREIGN KEY (piste_id) REFERENCES piste (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A7698DE13AC FOREIGN KEY (partenaire_id) REFERENCES partenaire (id)');
+        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A762A4C4478 FOREIGN KEY (paiement_id) REFERENCES paiement (id)');
+        $this->addSql('ALTER TABLE entreprise ADD CONSTRAINT FK_D19FA60FB88E14F FOREIGN KEY (utilisateur_id) REFERENCES utilisateur (id)');
+        $this->addSql('ALTER TABLE feedback ADD CONSTRAINT FK_D2294458D2235D39 FOREIGN KEY (tache_id) REFERENCES tache (id)');
+        $this->addSql('ALTER TABLE feedback ADD CONSTRAINT FK_D2294458EA417747 FOREIGN KEY (invite_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE groupe ADD CONSTRAINT FK_4B98C21A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE invite ADD CONSTRAINT FK_C7E210D7EA417747 FOREIGN KEY (invite_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE invite ADD CONSTRAINT FK_C7E210D7A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE modele_piece_sinistre ADD CONSTRAINT FK_3723B98AA4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE monnaie ADD CONSTRAINT FK_B3A6E2E6A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE note ADD CONSTRAINT FK_CFBDFA14EA417747 FOREIGN KEY (invite_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE note ADD CONSTRAINT FK_CFBDFA1419EB6921 FOREIGN KEY (client_id) REFERENCES client (id)');
+        $this->addSql('ALTER TABLE note ADD CONSTRAINT FK_CFBDFA1498DE13AC FOREIGN KEY (partenaire_id) REFERENCES partenaire (id)');
+        $this->addSql('ALTER TABLE note ADD CONSTRAINT FK_CFBDFA1480F7E20A FOREIGN KEY (assureur_id) REFERENCES assureur (id)');
+        $this->addSql('ALTER TABLE note ADD CONSTRAINT FK_CFBDFA14D8FB132F FOREIGN KEY (autoritefiscale_id) REFERENCES autorite_fiscale (id)');
+        $this->addSql('ALTER TABLE note_compte_bancaire ADD CONSTRAINT FK_956D59AE26ED0855 FOREIGN KEY (note_id) REFERENCES note (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE note_compte_bancaire ADD CONSTRAINT FK_956D59AEAF1E371E FOREIGN KEY (compte_bancaire_id) REFERENCES compte_bancaire (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE notification_sinistre ADD CONSTRAINT FK_A0BC42C21F4BE942 FOREIGN KEY (assure_id) REFERENCES client (id)');
+        $this->addSql('ALTER TABLE notification_sinistre ADD CONSTRAINT FK_A0BC42C24ECC2413 FOREIGN KEY (risque_id) REFERENCES risque (id)');
+        $this->addSql('ALTER TABLE notification_sinistre ADD CONSTRAINT FK_A0BC42C2EA417747 FOREIGN KEY (invite_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE offre_indemnisation_sinistre ADD CONSTRAINT FK_D73D1ECCF4F2559E FOREIGN KEY (notification_sinistre_id) REFERENCES notification_sinistre (id)');
+        $this->addSql('ALTER TABLE paiement ADD CONSTRAINT FK_B1DC7A1E72DDD90D FOREIGN KEY (offre_indemnisation_sinistre_id) REFERENCES offre_indemnisation_sinistre (id)');
+        $this->addSql('ALTER TABLE paiement ADD CONSTRAINT FK_B1DC7A1E26ED0855 FOREIGN KEY (note_id) REFERENCES note (id)');
+        $this->addSql('ALTER TABLE partenaire ADD CONSTRAINT FK_32FFA373A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE piece_sinistre ADD CONSTRAINT FK_C1DE1588C54C8C93 FOREIGN KEY (type_id) REFERENCES modele_piece_sinistre (id)');
+        $this->addSql('ALTER TABLE piece_sinistre ADD CONSTRAINT FK_C1DE1588EA417747 FOREIGN KEY (invite_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE piece_sinistre ADD CONSTRAINT FK_C1DE1588F4F2559E FOREIGN KEY (notification_sinistre_id) REFERENCES notification_sinistre (id)');
+        $this->addSql('ALTER TABLE piste ADD CONSTRAINT FK_59E250774ECC2413 FOREIGN KEY (risque_id) REFERENCES risque (id)');
+        $this->addSql('ALTER TABLE piste ADD CONSTRAINT FK_59E2507719EB6921 FOREIGN KEY (client_id) REFERENCES client (id)');
+        $this->addSql('ALTER TABLE piste ADD CONSTRAINT FK_59E25077EA417747 FOREIGN KEY (invite_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE piste_partenaire ADD CONSTRAINT FK_6110D3B3C34065BC FOREIGN KEY (piste_id) REFERENCES piste (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE piste_partenaire ADD CONSTRAINT FK_6110D3B398DE13AC FOREIGN KEY (partenaire_id) REFERENCES partenaire (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE revenu_pour_courtier ADD CONSTRAINT FK_8CAA04C120F3EE6A FOREIGN KEY (type_revenu_id) REFERENCES type_revenu (id)');
+        $this->addSql('ALTER TABLE revenu_pour_courtier ADD CONSTRAINT FK_8CAA04C15D14FAF0 FOREIGN KEY (cotation_id) REFERENCES cotation (id)');
+        $this->addSql('ALTER TABLE risque ADD CONSTRAINT FK_20230D24A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE risque ADD CONSTRAINT FK_20230D2426164BCB FOREIGN KEY (condition_partage_id) REFERENCES condition_partage (id)');
+        $this->addSql('ALTER TABLE tache ADD CONSTRAINT FK_938720758ABD09BB FOREIGN KEY (executor_id) REFERENCES invite (id)');
+        $this->addSql('ALTER TABLE tache ADD CONSTRAINT FK_93872075C34065BC FOREIGN KEY (piste_id) REFERENCES piste (id)');
+        $this->addSql('ALTER TABLE tache ADD CONSTRAINT FK_938720755D14FAF0 FOREIGN KEY (cotation_id) REFERENCES cotation (id)');
+        $this->addSql('ALTER TABLE tache ADD CONSTRAINT FK_93872075F4F2559E FOREIGN KEY (notification_sinistre_id) REFERENCES notification_sinistre (id)');
+        $this->addSql('ALTER TABLE tache ADD CONSTRAINT FK_9387207572DDD90D FOREIGN KEY (offre_indemnisation_sinistre_id) REFERENCES offre_indemnisation_sinistre (id)');
+        $this->addSql('ALTER TABLE taxe ADD CONSTRAINT FK_56322FE9A4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE tranche ADD CONSTRAINT FK_666758405D14FAF0 FOREIGN KEY (cotation_id) REFERENCES cotation (id)');
+        $this->addSql('ALTER TABLE type_revenu ADD CONSTRAINT FK_5E74AB7DA4AEAFEA FOREIGN KEY (entreprise_id) REFERENCES entreprise (id)');
+        $this->addSql('ALTER TABLE utilisateur ADD CONSTRAINT FK_1D1C63B3318EA8F9 FOREIGN KEY (connected_to_id) REFERENCES entreprise (id)');
+    }
+
+    public function down(Schema $schema): void
+    {
+        // this down() migration is auto-generated, please modify it to your needs
+        $this->addSql('ALTER TABLE article DROP FOREIGN KEY FK_23A0E66B76F6B31');
+        $this->addSql('ALTER TABLE article DROP FOREIGN KEY FK_23A0E6626ED0855');
+        $this->addSql('ALTER TABLE assureur DROP FOREIGN KEY FK_7B0E5955A4AEAFEA');
+        $this->addSql('ALTER TABLE autorite_fiscale DROP FOREIGN KEY FK_FF4842301AB947A4');
+        $this->addSql('ALTER TABLE autorite_fiscale DROP FOREIGN KEY FK_FF48423026ED0855');
+        $this->addSql('ALTER TABLE avenant DROP FOREIGN KEY FK_2FE5CE55D14FAF0');
+        $this->addSql('ALTER TABLE bordereau DROP FOREIGN KEY FK_F7B4C56180F7E20A');
+        $this->addSql('ALTER TABLE bordereau DROP FOREIGN KEY FK_F7B4C561EA417747');
+        $this->addSql('ALTER TABLE chargement DROP FOREIGN KEY FK_36328758A4AEAFEA');
+        $this->addSql('ALTER TABLE chargement_pour_prime DROP FOREIGN KEY FK_8065D3CAC54C8C93');
+        $this->addSql('ALTER TABLE chargement_pour_prime DROP FOREIGN KEY FK_8065D3CA5D14FAF0');
+        $this->addSql('ALTER TABLE classeur DROP FOREIGN KEY FK_D15F835AA4AEAFEA');
+        $this->addSql('ALTER TABLE client DROP FOREIGN KEY FK_C7440455A4AEAFEA');
+        $this->addSql('ALTER TABLE client DROP FOREIGN KEY FK_C74404557A45358C');
+        $this->addSql('ALTER TABLE compte_bancaire DROP FOREIGN KEY FK_50BC21DEA4AEAFEA');
+        $this->addSql('ALTER TABLE condition_partage DROP FOREIGN KEY FK_CF012D1F98DE13AC');
+        $this->addSql('ALTER TABLE contact DROP FOREIGN KEY FK_4C62E63819EB6921');
+        $this->addSql('ALTER TABLE contact DROP FOREIGN KEY FK_4C62E638F4F2559E');
+        $this->addSql('ALTER TABLE cotation DROP FOREIGN KEY FK_996DA94480F7E20A');
+        $this->addSql('ALTER TABLE cotation DROP FOREIGN KEY FK_996DA944C34065BC');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A76EC10E96A');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A76DFB9960E');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A7672DDD90D');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A765D14FAF0');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A7685631A3A');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A76D2235D39');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A76D249A887');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A7619EB6921');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A7655D5304E');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A76AF1E371E');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A76C34065BC');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A7698DE13AC');
+        $this->addSql('ALTER TABLE document DROP FOREIGN KEY FK_D8698A762A4C4478');
+        $this->addSql('ALTER TABLE entreprise DROP FOREIGN KEY FK_D19FA60FB88E14F');
+        $this->addSql('ALTER TABLE feedback DROP FOREIGN KEY FK_D2294458D2235D39');
+        $this->addSql('ALTER TABLE feedback DROP FOREIGN KEY FK_D2294458EA417747');
+        $this->addSql('ALTER TABLE groupe DROP FOREIGN KEY FK_4B98C21A4AEAFEA');
+        $this->addSql('ALTER TABLE invite DROP FOREIGN KEY FK_C7E210D7EA417747');
+        $this->addSql('ALTER TABLE invite DROP FOREIGN KEY FK_C7E210D7A4AEAFEA');
+        $this->addSql('ALTER TABLE modele_piece_sinistre DROP FOREIGN KEY FK_3723B98AA4AEAFEA');
+        $this->addSql('ALTER TABLE monnaie DROP FOREIGN KEY FK_B3A6E2E6A4AEAFEA');
+        $this->addSql('ALTER TABLE note DROP FOREIGN KEY FK_CFBDFA14EA417747');
+        $this->addSql('ALTER TABLE note DROP FOREIGN KEY FK_CFBDFA1419EB6921');
+        $this->addSql('ALTER TABLE note DROP FOREIGN KEY FK_CFBDFA1498DE13AC');
+        $this->addSql('ALTER TABLE note DROP FOREIGN KEY FK_CFBDFA1480F7E20A');
+        $this->addSql('ALTER TABLE note DROP FOREIGN KEY FK_CFBDFA14D8FB132F');
+        $this->addSql('ALTER TABLE note_compte_bancaire DROP FOREIGN KEY FK_956D59AE26ED0855');
+        $this->addSql('ALTER TABLE note_compte_bancaire DROP FOREIGN KEY FK_956D59AEAF1E371E');
+        $this->addSql('ALTER TABLE notification_sinistre DROP FOREIGN KEY FK_A0BC42C21F4BE942');
+        $this->addSql('ALTER TABLE notification_sinistre DROP FOREIGN KEY FK_A0BC42C24ECC2413');
+        $this->addSql('ALTER TABLE notification_sinistre DROP FOREIGN KEY FK_A0BC42C2EA417747');
+        $this->addSql('ALTER TABLE offre_indemnisation_sinistre DROP FOREIGN KEY FK_D73D1ECCF4F2559E');
+        $this->addSql('ALTER TABLE paiement DROP FOREIGN KEY FK_B1DC7A1E72DDD90D');
+        $this->addSql('ALTER TABLE paiement DROP FOREIGN KEY FK_B1DC7A1E26ED0855');
+        $this->addSql('ALTER TABLE partenaire DROP FOREIGN KEY FK_32FFA373A4AEAFEA');
+        $this->addSql('ALTER TABLE piece_sinistre DROP FOREIGN KEY FK_C1DE1588C54C8C93');
+        $this->addSql('ALTER TABLE piece_sinistre DROP FOREIGN KEY FK_C1DE1588EA417747');
+        $this->addSql('ALTER TABLE piece_sinistre DROP FOREIGN KEY FK_C1DE1588F4F2559E');
+        $this->addSql('ALTER TABLE piste DROP FOREIGN KEY FK_59E250774ECC2413');
+        $this->addSql('ALTER TABLE piste DROP FOREIGN KEY FK_59E2507719EB6921');
+        $this->addSql('ALTER TABLE piste DROP FOREIGN KEY FK_59E25077EA417747');
+        $this->addSql('ALTER TABLE piste_partenaire DROP FOREIGN KEY FK_6110D3B3C34065BC');
+        $this->addSql('ALTER TABLE piste_partenaire DROP FOREIGN KEY FK_6110D3B398DE13AC');
+        $this->addSql('ALTER TABLE revenu_pour_courtier DROP FOREIGN KEY FK_8CAA04C120F3EE6A');
+        $this->addSql('ALTER TABLE revenu_pour_courtier DROP FOREIGN KEY FK_8CAA04C15D14FAF0');
+        $this->addSql('ALTER TABLE risque DROP FOREIGN KEY FK_20230D24A4AEAFEA');
+        $this->addSql('ALTER TABLE risque DROP FOREIGN KEY FK_20230D2426164BCB');
+        $this->addSql('ALTER TABLE tache DROP FOREIGN KEY FK_938720758ABD09BB');
+        $this->addSql('ALTER TABLE tache DROP FOREIGN KEY FK_93872075C34065BC');
+        $this->addSql('ALTER TABLE tache DROP FOREIGN KEY FK_938720755D14FAF0');
+        $this->addSql('ALTER TABLE tache DROP FOREIGN KEY FK_93872075F4F2559E');
+        $this->addSql('ALTER TABLE tache DROP FOREIGN KEY FK_9387207572DDD90D');
+        $this->addSql('ALTER TABLE taxe DROP FOREIGN KEY FK_56322FE9A4AEAFEA');
+        $this->addSql('ALTER TABLE tranche DROP FOREIGN KEY FK_666758405D14FAF0');
+        $this->addSql('ALTER TABLE type_revenu DROP FOREIGN KEY FK_5E74AB7DA4AEAFEA');
+        $this->addSql('ALTER TABLE utilisateur DROP FOREIGN KEY FK_1D1C63B3318EA8F9');
+        $this->addSql('DROP TABLE article');
+        $this->addSql('DROP TABLE assureur');
+        $this->addSql('DROP TABLE autorite_fiscale');
+        $this->addSql('DROP TABLE avenant');
+        $this->addSql('DROP TABLE bordereau');
+        $this->addSql('DROP TABLE chargement');
+        $this->addSql('DROP TABLE chargement_pour_prime');
+        $this->addSql('DROP TABLE classeur');
+        $this->addSql('DROP TABLE client');
+        $this->addSql('DROP TABLE compte_bancaire');
+        $this->addSql('DROP TABLE condition_partage');
+        $this->addSql('DROP TABLE contact');
+        $this->addSql('DROP TABLE cotation');
+        $this->addSql('DROP TABLE document');
+        $this->addSql('DROP TABLE entreprise');
+        $this->addSql('DROP TABLE feedback');
+        $this->addSql('DROP TABLE groupe');
+        $this->addSql('DROP TABLE invite');
+        $this->addSql('DROP TABLE modele_piece_sinistre');
+        $this->addSql('DROP TABLE monnaie');
+        $this->addSql('DROP TABLE note');
+        $this->addSql('DROP TABLE note_compte_bancaire');
+        $this->addSql('DROP TABLE notification_sinistre');
+        $this->addSql('DROP TABLE offre_indemnisation_sinistre');
+        $this->addSql('DROP TABLE paiement');
+        $this->addSql('DROP TABLE partenaire');
+        $this->addSql('DROP TABLE piece_sinistre');
+        $this->addSql('DROP TABLE piste');
+        $this->addSql('DROP TABLE piste_partenaire');
+        $this->addSql('DROP TABLE revenu_pour_courtier');
+        $this->addSql('DROP TABLE risque');
+        $this->addSql('DROP TABLE tache');
+        $this->addSql('DROP TABLE taxe');
+        $this->addSql('DROP TABLE tranche');
+        $this->addSql('DROP TABLE type_revenu');
+        $this->addSql('DROP TABLE utilisateur');
+        $this->addSql('DROP TABLE messenger_messages');
+    }
+}

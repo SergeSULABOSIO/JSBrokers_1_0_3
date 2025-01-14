@@ -70,11 +70,12 @@ class FormListenerFactory
             /** @var Entreprise $entreprise */
             $entreprise = $user->getConnectedTo();
 
+            
             // dd($entreprise->getNom());
 
             return $er->createQueryBuilder('e')
                 ->where('e.entreprise =:eseId')
-                ->setParameter('eseId', $entreprise->getId())
+                ->setParameter('eseId', $entreprise != null ? $entreprise->getId(): -1)
                 ->orderBy('e.id', 'ASC');
         };
     }

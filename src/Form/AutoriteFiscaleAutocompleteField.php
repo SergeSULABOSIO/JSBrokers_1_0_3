@@ -34,7 +34,6 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
                 /** @var Entreprise $entreprise */
                 $entreprise = $user->getConnectedTo();
     
-                // dd($entreprise->getNom());
                 // Ici je dois personnaliser cette requête DQL
                 return $er->createQueryBuilder('autorite')
                     ->leftJoin('autorite.note', "note")
