@@ -183,6 +183,6 @@ class Tranche
 
     public function __toString()
     {
-        return "bbbb";
+        return $this->nom . "/" . $this->cotation != null ? $this->cotation : "";
     }
 }

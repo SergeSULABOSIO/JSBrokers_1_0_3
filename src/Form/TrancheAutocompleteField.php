@@ -26,7 +26,7 @@ class TrancheAutocompleteField extends AbstractType
         $resolver->setDefaults([
             'class' => Tranche::class,
             'placeholder' => "Séléctionnez la tranche",
-            'choice_label' => 'nom',
+            // 'choice_label' => 'nom',
             'query_builder' => function (EntityRepository $er): QueryBuilder {
                 /** @var Utilisateur $user */
                 $user = $this->security->getUser();

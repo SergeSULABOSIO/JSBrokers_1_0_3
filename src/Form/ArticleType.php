@@ -35,7 +35,7 @@ class ArticleType extends AbstractType
                 'label' => "Tranche",
                 'class' => Tranche::class,
                 'required' => false,
-                // 'choice_label' => 'nom',
+                'choice_label' => 'nom',
             ])
             ->add('pourcentage', PercentType::class, [
                 'label' => "Portion concernée de la tranche",
