@@ -11,6 +11,8 @@ use App\Entity\Partenaire;
 use App\Entity\CompteBancaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Event\PostSetDataEvent;
+use Symfony\Component\Form\Event\PreSetDataEvent;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -18,6 +20,9 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+
 // use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class NoteType extends AbstractType
@@ -165,6 +170,19 @@ class NoteType extends AbstractType
                 ],
             ])
         ;
+    }
+
+    public function onPostSetData(PostSetDataEvent $event): void {
+        /** @var Note $note */
+        $note = $event->getData();
+
+        /** @var Form $form */
+        $form = $event->getForm();
+
+        // dd("J'écoute!!!", $note, $form);
+        if($note->getType() == Note::TYPE_NOTE_DE_DEBIT){
+            dd("Vous voulez faire une note de DEBIT !!!!!");
+        }
     }
 
     private function buildPageB(FormBuilderInterface $builder, array $options): void

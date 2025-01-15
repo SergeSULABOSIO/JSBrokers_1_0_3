@@ -180,4 +180,9 @@ class Tranche
 
         return $this;
     }
+
+    public function __toString()
+    {
+        return "bbbb";
+    }
 }

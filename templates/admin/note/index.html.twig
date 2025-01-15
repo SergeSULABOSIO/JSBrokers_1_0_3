@@ -50,16 +50,16 @@
 								<td>
 									<a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
 										{{ constante.getTypeNote(note.type) }}
-										{% if note.addressedTo == 0 %}
+										{% if note.addressedTo == 0 and note.client != null %}
 											/ {{ note.client.nom }}
 										{% endif %}
-										{% if note.addressedTo == 1 %}
+										{% if note.addressedTo == 1 and note.assureur != null %}
 											/ {{ note.assureur.nom }}
 										{% endif %}
-										{% if note.addressedTo == 2 %}
+										{% if note.addressedTo == 2 and note.partenaire != null %}
 											/ {{ note.partenaire.nom }}
 										{% endif %}
-										{% if note.addressedTo == 3 %}
+										{% if note.addressedTo == 3 and note.autoritefiscale != null %}
 											/ {{ note.autoritefiscale.nom }}
 										{% endif %}
 										 / {{ note.nom }}
