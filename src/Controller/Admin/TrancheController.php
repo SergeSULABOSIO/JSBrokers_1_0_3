@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Entity\Tache;
 use App\Entity\Invite;
@@ -12,6 +13,7 @@ use App\Form\TrancheType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Constantes\PanierNotes;
 use App\Repository\TaxeRepository;
 use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
@@ -51,6 +53,13 @@ class TrancheController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
+        // dd(
+        //     time(),
+        //     $request->getSession()->getMetadataBag()->getCreated(), 
+        //     $request->getSession()->getMetadataBag()->getLastUsed(),
+        //     $request->getSession()
+        // );
+
         return $this->render('admin/tranche/index.html.twig', [
             'pageName' => $this->translator->trans("tache_page_name_new"),
             'utilisateur' => $this->getUser(),
@@ -59,6 +68,7 @@ class TrancheController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            "panier" => $request->getSession()->get(PanierNotes::NOM),
         ]);
     }
 

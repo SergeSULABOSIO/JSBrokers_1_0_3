@@ -74,6 +74,9 @@ class Note
     #[ORM\ManyToOne(inversedBy: 'notes')]
     private ?AutoriteFiscale $autoritefiscale = null;
 
+    #[ORM\Column(length: 255)]
+    private ?string $signature = null;
+
 
     public function __construct()
     {
@@ -299,6 +302,18 @@ class Note
     public function setAutoritefiscale(?AutoriteFiscale $autoritefiscale): static
     {
         $this->autoritefiscale = $autoritefiscale;
+
+        return $this;
+    }
+
+    public function getSignature(): ?string
+    {
+        return $this->signature;
+    }
+
+    public function setSignature(string $signature): static
+    {
+        $this->signature = $signature;
 
         return $this;
     }

@@ -9,6 +9,7 @@ use App\Form\RisqueType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Constantes\PanierNotes;
 use App\DTO\NotePageADTO;
 use App\Form\NotePageAType;
 use App\Form\NoteType;
@@ -28,6 +29,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Form;
 use Symfony\Component\Form\SubmitButton;
 use Symfony\Component\Form\Test\FormInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 #[Route("/admin/note", name: 'admin.note.')]
 #[IsGranted('ROLE_USER')]
@@ -47,6 +51,7 @@ class NoteController extends AbstractController
         private InviteRepository $inviteRepository,
         private NoteRepository $noteRepository,
         private Constante $constante,
+        private RequestStack $requestStack,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -57,6 +62,13 @@ class NoteController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
+        // dd(
+        //     time(),
+        //     $request->getSession()->getMetadataBag()->getCreated(), 
+        //     $request->getSession()->getMetadataBag()->getLastUsed(),
+        //     $request->getSession()
+        // );
+
         return $this->render('admin/note/index.html.twig', [
             'pageName' => $this->translator->trans("note_page_name_new"),
             'utilisateur' => $this->getUser(),
@@ -65,6 +77,7 @@ class NoteController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            "panier" => $request->getSession()->get(PanierNotes::NOM),
         ]);
     }
 
@@ -76,6 +89,8 @@ class NoteController extends AbstractController
     ])]
     public function create(int $idEntreprise, int $idNote, int $page, Request $request)
     {
+        $this->openSession($request);
+
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
@@ -104,12 +119,12 @@ class NoteController extends AbstractController
             $page = $this->movePage($page, $form);
             if ($page > $this->pageMax) {
                 $this->validateBeforeSaving = true;
-                $this->saveNote($note, false);
+                $this->saveNote($note, false, $request);
                 return $this->redirectToRoute("admin.note.index", [
                     'idEntreprise' => $idEntreprise,
                 ]);
             } else {
-                $this->saveNote($note, false);
+                $this->saveNote($note, false, $request);
                 /** @var Form $form */
                 $form = $this->buildForm($note, $page);
             }
@@ -124,7 +139,17 @@ class NoteController extends AbstractController
             "page" => $page,
             "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "pageMax" => $this->pageMax,
+            "panier" => $request->getSession()->get(PanierNotes::NOM),
         ]);
+    }
+
+    private function openSession(Request $request)
+    {
+        if ($request->getSession()->get(PanierNotes::NOM) == null) {
+            $panier = new PanierNotes();
+            $request->getSession()->set(PanierNotes::NOM, $panier);
+            // dd("session recréée!");
+        }
     }
 
     private function buildForm(?Note $note, $page): Form
@@ -139,11 +164,17 @@ class NoteController extends AbstractController
         return $form;
     }
 
-    private function saveNote(Note $note, bool $creation): void
+    private function saveNote(Note $note, bool $creation, Request $request): void
     {
         if ($this->validateBeforeSaving == true) {
             $note->setValidated(true);
         }
+
+        //Enregistrement dans la session
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+        $panier->addNote($note);
+        
         //save
         $this->manager->persist($note);
         $this->manager->flush();
