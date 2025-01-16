@@ -190,11 +190,13 @@ class NoteController extends AbstractController
 
     private function loadNote(int $idNote, ?Invite $invite): ?Note
     {
+        /** @var Note */
         $note = new Note();
         if ($idNote != -1 && $idNote != null) {
             $note = $this->noteRepository->find($idNote);
             $this->pageName = $this->translator->trans("note_page_name_new");
         } else {
+            $note->setSignature(time());
             $note->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
             $note->setType(Note::TYPE_NULL);
             $note->setInvite($invite);
@@ -204,6 +206,7 @@ class NoteController extends AbstractController
                 ":note" => $note->getNom(),
             ]);
         }
+        // dd($note);
         return $note;
     }
 

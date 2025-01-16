@@ -71,9 +71,9 @@ class PanierNotes
         $this->notes = new ArrayCollection();
     }
 
-    public function getNote(string $nom): Note{
+    public function getNote(string $signature): Note{
         foreach ($this->notes as $note) {
-            if ($note->getNom() == $nom) {
+            if ($note->getSignature() == $signature) {
                 return $note;
             }
         }
