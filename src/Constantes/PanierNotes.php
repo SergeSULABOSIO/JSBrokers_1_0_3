@@ -51,10 +51,17 @@ class PanierNotes
 
     public function addNote(Note $note): static
     {
-        if (!$this->notes->contains($note)) {
+        $index = -1;
+        foreach ($this->notes as $oldnote) {
+            $index++;
+            if ($oldnote->getSignature() == $note->getSignature()) {
+                break;
+            }
+        }
+        if ($index == -1) {
             $this->notes->add($note);
         }else{
-            $this->notes->set($this->notes->indexOf($note), $note);
+            $this->notes->set($index, $note);
         }
 
         return $this;

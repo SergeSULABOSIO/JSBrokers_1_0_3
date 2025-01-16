@@ -46,7 +46,7 @@ class NoteType extends AbstractType
         if ($options["page"] != -1) {
             if ($options["type"] != -1 && $options["addressedTo"] != -1) {
                 $this->labelbtSubmit = match (true) {
-                    $options['page'] == $options['pageMax'] => "TERMINER",
+                    $options['page'] == $options['pageMax'] => "TRIER LES ARTICLES",
                     default => "PAGE SUIVANTE",
                 };
             }
@@ -111,9 +111,22 @@ class NoteType extends AbstractType
         $builder
             ->add('reference', TextType::class, [
                 'required' => false,
+                'disabled' => true,
                 'label' => "Référence",
                 'attr' => [
                     'placeholder' => "Référence",
+                ],
+            ])
+            ->add('nom', TextType::class, [
+                'label' => "Nom",
+                'attr' => [
+                    'placeholder' => "Nom",
+                ],
+            ])
+            ->add('description', TextType::class, [
+                'label' => "Description",
+                'attr' => [
+                    'placeholder' => "Description",
                 ],
             ])
             ->add('type', ChoiceType::class, [
@@ -136,19 +149,6 @@ class NoteType extends AbstractType
                     "De l'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
                 ]
             ])
-            ->add('nom', TextType::class, [
-                'label' => "Nom",
-                'attr' => [
-                    'placeholder' => "Nom",
-                ],
-            ])
-            ->add('description', TextType::class, [
-                'label' => "Description",
-                'attr' => [
-                    'placeholder' => "Description",
-                ],
-            ])
-
             ->add('paiements', CollectionType::class, [
                 'label' => "Paiements",
                 'help' => "Les paiements relatives à cette notes.",
@@ -170,19 +170,6 @@ class NoteType extends AbstractType
                 ],
             ])
         ;
-    }
-
-    public function onPostSetData(PostSetDataEvent $event): void {
-        /** @var Note $note */
-        $note = $event->getData();
-
-        /** @var Form $form */
-        $form = $event->getForm();
-
-        // dd("J'écoute!!!", $note, $form);
-        if($note->getType() == Note::TYPE_NOTE_DE_DEBIT){
-            dd("Vous voulez faire une note de DEBIT !!!!!");
-        }
     }
 
     private function buildPageB(FormBuilderInterface $builder, array $options): void

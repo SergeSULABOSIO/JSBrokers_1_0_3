@@ -82,6 +82,20 @@ class NoteController extends AbstractController
     }
 
 
+    #[Route('/viderpanier/{idEntreprise}/{currentURL}', name: 'viderpanier', requirements: [
+        'idEntreprise' => Requirement::DIGITS,
+        'currentURL' => '.+'
+    ])]
+    public function viderpanier(int $idEntreprise, $currentURL, Request $request)
+    {
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+        if($panier != null){
+            $panier->viderPanier();
+        }
+        return $this->redirect($currentURL);
+    }
+
     #[Route('/create/{idEntreprise}/{idNote}/{page}', name: 'create', requirements: [
         'idEntreprise' => Requirement::DIGITS,
         'idNote' => Requirement::CATCH_ALL,
@@ -168,7 +182,6 @@ class NoteController extends AbstractController
         if ($this->validateBeforeSaving == true) {
             $note->setValidated(true);
         }
-
         //Enregistrement dans la session
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
@@ -197,7 +210,7 @@ class NoteController extends AbstractController
             $this->pageName = $this->translator->trans("note_page_name_new");
         } else {
             $note->setSignature(time());
-            $note->setReference("N" . ($this->serviceDates->aujourdhui()->getTimestamp()));
+            $note->setReference("N" . (time()));
             $note->setType(Note::TYPE_NULL);
             $note->setInvite($invite);
             $note->setAddressedTo(Note::TO_NULL);
