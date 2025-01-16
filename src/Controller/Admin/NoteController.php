@@ -146,8 +146,7 @@ class NoteController extends AbstractController
     private function openSession(Request $request)
     {
         if ($request->getSession()->get(PanierNotes::NOM) == null) {
-            $panier = new PanierNotes();
-            $request->getSession()->set(PanierNotes::NOM, $panier);
+            $request->getSession()->set(PanierNotes::NOM, new PanierNotes());
             // dd("session recréée!");
         }
     }
