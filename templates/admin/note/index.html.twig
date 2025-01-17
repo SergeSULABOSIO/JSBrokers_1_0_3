@@ -16,10 +16,7 @@
 	{{ "note_description" | trans }}
 	<p>
 		{{ panier }}:</br>
-		{% for note in panier.notes %}
-			- {{ note.nom }}</br>
-		{% endfor %}
-
+		- {{ panier.note.id }} / {{ panier.note.nom }} / sign:{{ panier.note.signature }} / ref:{{ panier.note.reference }}</br>
 		{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
 		<a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
 			Vider le panier

@@ -90,7 +90,7 @@ class NoteController extends AbstractController
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
-        if($panier != null){
+        if ($panier != null) {
             $panier->viderPanier();
         }
         return $this->redirect($currentURL);
@@ -115,7 +115,7 @@ class NoteController extends AbstractController
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
         /** @var Note $note */
-        $note = $this->loadNote($idNote, $invite);
+        $note = $this->loadNote($idNote, $invite, $request);
 
         /** @var Form $form */
         $form = $this->buildForm($note, $page);
@@ -134,7 +134,8 @@ class NoteController extends AbstractController
             if ($page > $this->pageMax) {
                 $this->validateBeforeSaving = true;
                 $this->saveNote($note, false, $request);
-                return $this->redirectToRoute("admin.note.index", [
+                $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
+                return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
                     'idEntreprise' => $idEntreprise,
                 ]);
             } else {
@@ -185,8 +186,8 @@ class NoteController extends AbstractController
         //Enregistrement dans la session
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
-        $panier->addNote($note);
-        
+        $panier->setNote($note);
+
         //save
         $this->manager->persist($note);
         $this->manager->flush();
@@ -201,24 +202,31 @@ class NoteController extends AbstractController
         }
     }
 
-    private function loadNote(int $idNote, ?Invite $invite): ?Note
+    private function loadNote(int $idNote, ?Invite $invite, Request $request): ?Note
     {
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+
         /** @var Note */
         $note = new Note();
         if ($idNote != -1 && $idNote != null) {
             $note = $this->noteRepository->find($idNote);
-            $this->pageName = $this->translator->trans("note_page_name_new");
+            $panier->setNote($note);
         } else {
-            $note->setSignature(time());
-            $note->setReference("N" . (time()));
-            $note->setType(Note::TYPE_NULL);
-            $note->setInvite($invite);
-            $note->setAddressedTo(Note::TO_NULL);
-            $note->setValidated(false);
-            $this->pageName = $this->translator->trans("note_page_name_update", [
-                ":note" => $note->getNom(),
-            ]);
+            if ($panier->getNote() != null) {
+                $note = $panier->getNote();
+            } else {
+                $note->setSignature(time());
+                $note->setReference("N" . (time()));
+                $note->setType(Note::TYPE_NULL);
+                $note->setInvite($invite);
+                $note->setAddressedTo(Note::TO_NULL);
+                $note->setValidated(false);
+            }
         }
+        $this->pageName = $this->translator->trans("note_page_name_update", [
+            ":note" => $note->getNom(),
+        ]);
         // dd($note);
         return $note;
     }
