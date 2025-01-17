@@ -86,10 +86,30 @@ class NoteController extends AbstractController
         'idEntreprise' => Requirement::DIGITS,
         'currentURL' => '.+'
     ])]
-    public function viderpanier(int $idEntreprise, $currentURL, Request $request)
+    public function viderpanier($currentURL, Request $request)
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
+
+        //On save d'abord dans la base de données
+
+        /** @var Note $note */
+        $note = $panier->getNote();
+
+        dd($note);
+        $this->manager->persist($note);
+        $this->manager->flush();
+
+        if ($note->getId() == null) {
+            $this->addFlash("success", $this->translator->trans("note_creation_ok", [
+                ":note" => $note->getNom(),
+            ]));
+        } else {
+            $this->addFlash("success", $this->translator->trans("note_edition_ok", [
+                ":note" => $note->getNom(),
+            ]));
+        }
+        //Puis on vide le panier
         if ($panier != null) {
             $panier->viderPanier();
         }
@@ -133,13 +153,13 @@ class NoteController extends AbstractController
             $page = $this->movePage($page, $form);
             if ($page > $this->pageMax) {
                 $this->validateBeforeSaving = true;
-                $this->saveNote($note, false, $request);
+                $this->saveNote($note, $request);
                 $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
                 return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
                     'idEntreprise' => $idEntreprise,
                 ]);
             } else {
-                $this->saveNote($note, false, $request);
+                $this->saveNote($note, $request);
                 /** @var Form $form */
                 $form = $this->buildForm($note, $page);
             }
@@ -178,7 +198,7 @@ class NoteController extends AbstractController
         return $form;
     }
 
-    private function saveNote(Note $note, bool $creation, Request $request): void
+    private function saveNote(Note $note, Request $request): void
     {
         if ($this->validateBeforeSaving == true) {
             $note->setValidated(true);
@@ -188,18 +208,18 @@ class NoteController extends AbstractController
         $panier = $request->getSession()->get(PanierNotes::NOM);
         $panier->setNote($note);
 
-        //save
-        $this->manager->persist($note);
-        $this->manager->flush();
-        if ($creation == true) {
-            $this->addFlash("success", $this->translator->trans("note_creation_ok", [
-                ":note" => $note->getNom(),
-            ]));
-        } else {
-            $this->addFlash("success", $this->translator->trans("note_edition_ok", [
-                ":note" => $note->getNom(),
-            ]));
-        }
+        // //save
+        // $this->manager->persist($note);
+        // $this->manager->flush();
+        // if ($creation == true) {
+        //     $this->addFlash("success", $this->translator->trans("note_creation_ok", [
+        //         ":note" => $note->getNom(),
+        //     ]));
+        // } else {
+        //     $this->addFlash("success", $this->translator->trans("note_edition_ok", [
+        //         ":note" => $note->getNom(),
+        //     ]));
+        // }
     }
 
     private function loadNote(int $idNote, ?Invite $invite, Request $request): ?Note

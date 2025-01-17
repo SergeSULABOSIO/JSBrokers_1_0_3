@@ -14,15 +14,18 @@
 
 {% block descriptionRubrique %}
 	{{ "tranche_description" | trans }}
-    <p>
-		{{ panier }}:</br>
-		- {{ panier.note.id }} / {{ panier.note.nom }} / sign:{{ panier.note.signature }} / ref:{{ panier.note.reference }}</br>
-		{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-		<a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-			Vider le panier
-		</a>
-	</p>a>
-	</p>
+    {% if panier != null %}
+		<p>
+			{% if panier.note != null %}
+			{{ panier }}:</br>
+				- {{ panier.note.nom }} / {{ panier.note.reference }}</br>
+				{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+				<a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+					Enregistrer la note, puis vider le panier
+				</a>
+			{% endif %}
+		</p>
+	{% endif %}
 {% endblock %}
 
 {% block menuLateraleGauche %}

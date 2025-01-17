@@ -6,7 +6,7 @@ use App\Entity\Note;
 
 class PanierNotes
 {
-    public const NOM = "PANIER_NOTES_TEMPORAIRES";
+    public const NOM = "PANIER";
     private ?Note $note = null;
 
 
@@ -14,7 +14,7 @@ class PanierNotes
 
     public function __toString()
     {
-        return self::NOM . ", " . $this->getNote();
+        return self::NOM;
     }
 
     /**
