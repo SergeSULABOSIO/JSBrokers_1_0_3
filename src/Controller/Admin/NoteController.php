@@ -32,6 +32,9 @@ use Symfony\Component\Form\Test\FormInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\Messenger\Transport\Serialization\Serializer;
+use Symfony\Component\Serializer\Serializer as SerializerSerializer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/note", name: 'admin.note.')]
 #[IsGranted('ROLE_USER')]
@@ -91,27 +94,9 @@ class NoteController extends AbstractController
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
 
-        //On save d'abord dans la base de données
-
-        /** @var Note $note */
-        $note = $panier->getNote();
-
-        dd($note);
-        $this->manager->persist($note);
-        $this->manager->flush();
-
-        if ($note->getId() == null) {
-            $this->addFlash("success", $this->translator->trans("note_creation_ok", [
-                ":note" => $note->getNom(),
-            ]));
-        } else {
-            $this->addFlash("success", $this->translator->trans("note_edition_ok", [
-                ":note" => $note->getNom(),
-            ]));
-        }
         //Puis on vide le panier
         if ($panier != null) {
-            $panier->viderPanier();
+            $panier->viderpanier();
         }
         return $this->redirect($currentURL);
     }
@@ -121,7 +106,7 @@ class NoteController extends AbstractController
         'idNote' => Requirement::CATCH_ALL,
         'page' => Requirement::DIGITS,
     ])]
-    public function create(int $idEntreprise, int $idNote, int $page, Request $request)
+    public function create(int $idEntreprise, int $idNote, int $page, Request $request, SerializerInterface $serializer)
     {
         $this->openSession($request);
 
@@ -153,13 +138,13 @@ class NoteController extends AbstractController
             $page = $this->movePage($page, $form);
             if ($page > $this->pageMax) {
                 $this->validateBeforeSaving = true;
-                $this->saveNote($note, $request);
+                $this->saveNote($note, $request, $serializer);
                 $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
                 return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
                     'idEntreprise' => $idEntreprise,
                 ]);
             } else {
-                $this->saveNote($note, $request);
+                $this->saveNote($note, $request, $serializer);
                 /** @var Form $form */
                 $form = $this->buildForm($note, $page);
             }
@@ -206,20 +191,25 @@ class NoteController extends AbstractController
         //Enregistrement dans la session
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
-        $panier->setNote($note);
 
-        // //save
-        // $this->manager->persist($note);
-        // $this->manager->flush();
-        // if ($creation == true) {
-        //     $this->addFlash("success", $this->translator->trans("note_creation_ok", [
-        //         ":note" => $note->getNom(),
-        //     ]));
-        // } else {
-        //     $this->addFlash("success", $this->translator->trans("note_edition_ok", [
-        //         ":note" => $note->getNom(),
-        //     ]));
-        // }
+        $panier
+            ->setIdNote($note->getId())
+            ->setNomNote($note->getNom())
+            ->setSignature($note->getSignature())
+            ->setNbArticle(count($note->getArticles()));
+
+        //save
+        $this->manager->persist($note);
+        $this->manager->flush();
+        if ($note->getId() == null) {
+            $this->addFlash("success", $this->translator->trans("note_creation_ok", [
+                ":note" => $note->getNom(),
+            ]));
+        } else {
+            $this->addFlash("success", $this->translator->trans("note_edition_ok", [
+                ":note" => $note->getNom(),
+            ]));
+        }
     }
 
     private function loadNote(int $idNote, ?Invite $invite, Request $request): ?Note
@@ -229,12 +219,29 @@ class NoteController extends AbstractController
 
         /** @var Note */
         $note = new Note();
+        //si la note a un identifiant = la note existe dans la base de données
         if ($idNote != -1 && $idNote != null) {
             $note = $this->noteRepository->find($idNote);
-            $panier->setNote($note);
+            $panier
+                ->setIdNote($note->getId())
+                ->setNomNote($note->getNom())
+                ->setSignature($note->getSignature())
+                ->setNbArticle(count($note->getArticles()))
+            ;
         } else {
-            if ($panier->getNote() != null) {
-                $note = $panier->getNote();
+            //Si non, si le panier a un ID de la note en mémoire cache (dans la session), on réintérroge la base de données
+            if ($panier->getIdNote() != null) {
+                $note = $this->noteRepository->find($panier->getIdNote());
+                if ($note != null) {
+                    $panier
+                        ->setIdNote($note->getId())
+                        ->setNomNote($note->getNom())
+                        ->setSignature($note->getSignature())
+                        ->setNbArticle(count($note->getArticles()))
+                    ;
+                } else {
+                    $panier->viderpanier();
+                }
             } else {
                 $note->setSignature(time());
                 $note->setReference("N" . (time()));
@@ -304,9 +311,9 @@ class NoteController extends AbstractController
         'idNote' => Requirement::CATCH_ALL,
         'page' => Requirement::DIGITS,
     ])]
-    public function edit(int $idEntreprise, int $idNote, int $page, Request $request)
+    public function edit(int $idEntreprise, int $idNote, int $page, Request $request, SerializerInterface $serializer)
     {
-        return $this->create($idEntreprise, $idNote, $page, $request);
+        return $this->create($idEntreprise, $idNote, $page, $request, $serializer);
     }
 
 
