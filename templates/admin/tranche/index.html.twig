@@ -16,12 +16,12 @@
 	{{ "tranche_description" | trans }}
     {% if panier != null %}
 		<p>
-			{% if panier.note != null %}
-			{{ panier }}:</br>
-				- {{ panier.note.nom }} / {{ panier.note.reference }}</br>
+			{% if panier.idNote != null %}
+				{{ panier }}:</br>
+				- {{ panier.nomNote }} / {{ panier.reference }} / {{ panier.nbArticle }} article(s)</br>
 				{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
 				<a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-					Enregistrer la note, puis vider le panier
+					Vider le panier
 				</a>
 			{% endif %}
 		</p>

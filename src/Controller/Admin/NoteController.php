@@ -18,6 +18,7 @@ use App\Repository\InviteRepository;
 use App\Repository\RisqueRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\ServiceDates;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -191,13 +192,7 @@ class NoteController extends AbstractController
         //Enregistrement dans la session
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
-
-        $panier
-            ->setIdNote($note->getId())
-            ->setNomNote($note->getNom())
-            ->setSignature($note->getSignature())
-            ->setNbArticle(count($note->getArticles()));
-
+        $panier->setNote($note);
         //save
         $this->manager->persist($note);
         $this->manager->flush();
@@ -222,23 +217,15 @@ class NoteController extends AbstractController
         //si la note a un identifiant = la note existe dans la base de données
         if ($idNote != -1 && $idNote != null) {
             $note = $this->noteRepository->find($idNote);
-            $panier
-                ->setIdNote($note->getId())
-                ->setNomNote($note->getNom())
-                ->setSignature($note->getSignature())
-                ->setNbArticle(count($note->getArticles()))
-            ;
+            if ($note != null){
+                $panier->setNote($note);
+            }
         } else {
             //Si non, si le panier a un ID de la note en mémoire cache (dans la session), on réintérroge la base de données
             if ($panier->getIdNote() != null) {
                 $note = $this->noteRepository->find($panier->getIdNote());
                 if ($note != null) {
-                    $panier
-                        ->setIdNote($note->getId())
-                        ->setNomNote($note->getNom())
-                        ->setSignature($note->getSignature())
-                        ->setNbArticle(count($note->getArticles()))
-                    ;
+                    $panier->setNote($note);
                 } else {
                     $panier->viderpanier();
                 }
