@@ -87,7 +87,10 @@ class TrancheController extends AbstractController
         $panier = $request->getSession()->get(PanierNotes::NOM);
 
         /** @var Note $note */
-        $note = $this->noteRepository->find($idNote);
+        $note = $this->noteRepository->find($panier->getIdNote());
+
+        Ici je chercher à retirer la tranche (et son article relatif) de la note.
+
         if ($note != null) {
             $panier->setNote($note);
             $this->addFlash("success", "La note '" . $note->getNom() . "' a été insérée dans le panier.");
