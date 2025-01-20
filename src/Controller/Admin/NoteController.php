@@ -90,7 +90,7 @@ class NoteController extends AbstractController
         'idEntreprise' => Requirement::DIGITS,
         'currentURL' => '.+'
     ])]
-    public function viderpanier($currentURL, Request $request)
+    public function viderpanier($currentURL, int $idEntreprise, Request $request)
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
@@ -98,6 +98,47 @@ class NoteController extends AbstractController
         //Puis on vide le panier
         if ($panier != null) {
             $panier->viderpanier();
+        }
+        return $this->redirect($currentURL);
+    }
+
+    #[Route('/mettredanslepanier/{idNote}/{idEntreprise}/{currentURL}', name: 'mettredanslepanier', requirements: [
+        'idNote' => Requirement::DIGITS,
+        'idEntreprise' => Requirement::DIGITS,
+        'currentURL' => '.+'
+    ])]
+    public function mettredanslepanier($currentURL, int $idNote, $idEntreprise, Request $request)
+    {
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+
+        /** @var Note $note */
+        $note = $this->noteRepository->find($idNote);
+        if ($note != null) {
+            $panier->setNote($note);
+            $this->addFlash("success", "La note '" . $note->getNom() . "' a été insérée dans le panier.");
+        }else{
+            $this->addFlash("danger", "Cher utilisateur, cette note est introuvable dans la base de données.");
+        }
+        return $this->redirect($currentURL);
+    }
+
+
+    #[Route('/retirerdupanier/{idNote}/{idEntreprise}/{currentURL}', name: 'retirerdupanier', requirements: [
+        'idNote' => Requirement::DIGITS,
+        'idEntreprise' => Requirement::DIGITS,
+        'currentURL' => '.+'
+    ])]
+    public function retirerdupanier($currentURL, int $idNote, $idEntreprise, Request $request)
+    {
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+        
+        if ($panier->getIdNote() == $idNote) {
+            $panier->viderpanier();
+            $this->addFlash("success", "La note a été rétirée du panier.");
+        }else{
+            $this->addFlash("danger", "Cher utilisateur, cette note n'est pas dans le panier.");
         }
         return $this->redirect($currentURL);
     }
@@ -313,7 +354,14 @@ class NoteController extends AbstractController
 
         $message = $this->translator->trans("note_deletion_ok", [
             ":note" => $note->getNom(),
-        ]);;
+        ]);
+
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+        if ($panier->getIdNote() == $idNote) {
+            $panier->viderpanier();
+        }
+        
 
         $this->manager->remove($note);
         $this->manager->flush();

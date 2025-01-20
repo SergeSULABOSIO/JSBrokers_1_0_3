@@ -14,11 +14,13 @@ use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Constantes\PanierNotes;
+use App\Entity\Article;
 use App\Repository\TaxeRepository;
 use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
 use App\Repository\TrancheRepository;
 use App\Repository\EntrepriseRepository;
+use App\Repository\NoteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -42,6 +44,7 @@ class TrancheController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private TrancheRepository $trancheRepository,
+        private NoteRepository $noteRepository,
         private Constante $constante,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
@@ -70,6 +73,62 @@ class TrancheController extends AbstractController
             'activator' => $this->activator,
             "panier" => $request->getSession()->get(PanierNotes::NOM),
         ]);
+    }
+
+
+    #[Route('/mettredanslepanier/{idNote}/{idEntreprise}/{currentURL}', name: 'mettredanslepanier', requirements: [
+        'idNote' => Requirement::DIGITS,
+        'idEntreprise' => Requirement::DIGITS,
+        'currentURL' => '.+'
+    ])]
+    public function mettredanslepanier($currentURL, int $idNote, $idEntreprise, Request $request)
+    {
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+
+        /** @var Note $note */
+        $note = $this->noteRepository->find($idNote);
+        if ($note != null) {
+            $panier->setNote($note);
+            $this->addFlash("success", "La note '" . $note->getNom() . "' a été insérée dans le panier.");
+        }else{
+            $this->addFlash("danger", "Cher utilisateur, cette note est introuvable dans la base de données.");
+        }
+        return $this->redirect($currentURL);
+    }
+
+
+    #[Route('/mettredanslanote/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+        'idTranche' => Requirement::DIGITS,
+        'idEntreprise' => Requirement::DIGITS,
+        'currentURL' => '.+'
+    ])]
+    public function mettredanslanote($currentURL, int $idTranche, $idEntreprise, Request $request)
+    {
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+
+        /** @var Tranche $tranche */
+        $tranche = $this->trancheRepository->find($idTranche);
+
+        /** @var Note $note */
+        $note = $this->noteRepository->find($panier->getIdNote());
+
+        if ($panier->containsTranche($idTranche) == false) {
+            /** @var Article $article */
+            $article = new Article();
+            $article->setPourcentage(100);
+            $article->setTranche($tranche);
+            $article->setNom($tranche->getNom() . "/" . $tranche->getCotation()->getAvenants()[0]->getReferencePolice());
+            $note->addArticle($article);
+
+            $panier->setNote($note);
+
+            $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
+        }else{
+            $this->addFlash("danger", "Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.");
+        }
+        return $this->redirect($currentURL);
     }
 
 

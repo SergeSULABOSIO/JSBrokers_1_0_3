@@ -34,6 +34,10 @@ class PanierNotes
         $this->IdArticles = new ArrayCollection();
     }
 
+    public function containsTranche(int $idTranche): bool{
+        return $this->IdArticles->contains($idTranche);
+    }
+
     public function setNote(?Note $note): self{
         $this->setIdNote($note->getId());
         $this->setNomNote($note->getNom());
@@ -41,10 +45,12 @@ class PanierNotes
         $this->setAddressedTo($note->getAddressedTo());
         $this->setReference($note->getReference());
         $this->setSignature($note->getSignature());
-        $this->setIdAssureur($note->getAssureur()->getId());
-        $this->setIdClient($note->getClient()->getId());
-        $this->setIdPartenaire($note->getPartenaire()->getId());
-        $this->setIdAutoriteFiscale($note->getAutoritefiscale()->getId());
+
+        $this->setIdAssureur($note->getAssureur() ? $note->getAssureur()->getId(): -1);
+        $this->setIdClient($note->getClient() ? $note->getClient()->getId(): -1);
+        $this->setIdPartenaire($note->getPartenaire() ? $note->getPartenaire()->getId():-1);
+        $this->setIdAutoriteFiscale($note->getAutoritefiscale() ? $note->getAutoritefiscale()->getId():-1);
+
         $this->IdArticles = new ArrayCollection();
         foreach ($note->getArticles() as $article) {
             $this->addIdArticle($article->getId());

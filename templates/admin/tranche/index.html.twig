@@ -90,6 +90,27 @@
                                             {# Autres #}
                                         </a>
                                         <ul class="dropdown-menu">
+                                            {% if panier != null %}
+                                                {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+                                                {% if panier.containsTranche(tranche.id) == false %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'idTranche': tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+                                                            {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+                                                            Mettre dans la note <b>{{ panier.nomNote }}</b>
+                                                        </a>
+                                                    </li>
+                                                {% else %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche': tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+                                                            {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+                                                            Retirer de la note <b>{{ panier.nomNote }}</b>
+                                                        </a>
+                                                    </li>
+                                                {% endif %}
+                                            {% endif %}
+
+
+
                                             <li>
                                                 <a class="dropdown-item" href="#">
                                                     {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
