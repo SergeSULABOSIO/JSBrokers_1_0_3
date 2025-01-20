@@ -76,12 +76,12 @@ class TrancheController extends AbstractController
     }
 
 
-    #[Route('/mettredanslepanier/{idNote}/{idEntreprise}/{currentURL}', name: 'mettredanslepanier', requirements: [
+    #[Route('/retirerdelanote/{idTranche}/{idEntreprise}/{currentURL}', name: 'retirerdelanote', requirements: [
         'idNote' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
         'currentURL' => '.+'
     ])]
-    public function mettredanslepanier($currentURL, int $idNote, $idEntreprise, Request $request)
+    public function retirerdelanote($currentURL, int $idTranche, $idEntreprise, Request $request)
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
