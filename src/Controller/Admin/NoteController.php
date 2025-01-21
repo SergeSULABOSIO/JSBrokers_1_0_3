@@ -111,6 +111,10 @@ class NoteController extends AbstractController
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
+        //Si le panier n'existe pas encore il faut le créer vite
+        if ($panier == null) {
+            $this->openSession($request);
+        }
 
         /** @var Note $note */
         $note = $this->noteRepository->find($idNote);

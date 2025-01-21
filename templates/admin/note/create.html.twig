@@ -13,8 +13,8 @@
 	{% if panier != null %}
 		<p>
 			{% if panier.idNote != null %}
-				{{ panier }}:</br>
-				- {{ panier.nomNote }} / {{ panier.reference }} / {{ panier.nbArticle }} article(s)</br>
+				{{ panier }}, créer le {{ panier.createdAt|format_datetime('short', 'short', locale: utilisateur.locale)}}:</br>
+				- {{ panier.nomNote }} / {{ panier.reference }} / {{ panier.nbTranche }} tranche(s)</br>
 				{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
 				<a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
 					Vider le panier

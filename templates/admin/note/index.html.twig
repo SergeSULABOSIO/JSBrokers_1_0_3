@@ -17,8 +17,8 @@
 	{% if panier != null %}
 		<p>
 			{% if panier.idNote != null %}
-				{{ panier }}:</br>
-				- {{ panier.nomNote }} / {{ panier.reference }} / {{ panier.nbArticle }} article(s)</br>
+				{{ panier }}, créer le {{ panier.createdAt|format_datetime('short', 'short', locale: utilisateur.locale)}}:</br>
+				- {{ panier.nomNote }} / {{ panier.reference }} / {{ panier.nbTranche }} tranche(s)</br>
 				{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
 				<a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
 					Vider le panier
@@ -98,18 +98,27 @@
 											</a>
 											<ul class="dropdown-menu">
 												{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-												{% if panier.idNote != note.id %}
+												{% if panier != null %}
+													{% if panier.idNote != note.id %}
+														<li>
+															<a class="dropdown-item" href="{{ path('admin.note.mettredanslepanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+																{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+																Mettre dans le panier
+															</a>
+														</li>
+													{% else %}
+														<li>
+															<a class="dropdown-item" href="{{ path('admin.note.retirerdupanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+																{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+																Retirer du panier
+															</a>
+														</li>
+													{% endif %}
+												{% else %}
 													<li>
 														<a class="dropdown-item" href="{{ path('admin.note.mettredanslepanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
 															{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-															Mettre dans le panier
-														</a>
-													</li>
-												{% else %}
-													<li>
-														<a class="dropdown-item" href="{{ path('admin.note.retirerdupanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-															{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-															Retirer du panier
+															Créer le panier puis insérer cette note
 														</a>
 													</li>
 												{% endif %}

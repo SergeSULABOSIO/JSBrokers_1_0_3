@@ -3,6 +3,7 @@
 namespace App\Constantes;
 
 use App\Entity\Note;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
@@ -20,10 +21,12 @@ class PanierNotes
     private int $idPartenaire;
     private int $idClient;
     private int $idAutoriteFiscale;
+    private DateTimeImmutable $createdAt;
 
 
     public function __construct() {
         $this->idTranches = new ArrayCollection();
+        $this->createdAt = new DateTimeImmutable("now");
     }
 
     public function viderpanier(){
@@ -319,5 +322,13 @@ class PanierNotes
         $this->idAutoriteFiscale = $idAutoriteFiscale;
 
         return $this;
+    }
+
+    /**
+     * Get the value of createdAt
+     */ 
+    public function getCreatedAt()
+    {
+        return $this->createdAt;
     }
 }
