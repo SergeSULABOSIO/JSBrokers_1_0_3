@@ -13,7 +13,7 @@ class PanierNotes
     private string $nomNote;
     private string $reference;
     private $idNote = null;
-    private Collection $IdArticles;
+    private Collection $idTranches;
     private int $type;
     private int $addressedTo;
     private int $idAssureur;
@@ -23,7 +23,7 @@ class PanierNotes
 
 
     public function __construct() {
-        $this->IdArticles = new ArrayCollection();
+        $this->idTranches = new ArrayCollection();
     }
 
     public function viderpanier(){
@@ -31,11 +31,11 @@ class PanierNotes
         $this->nomNote = "";
         $this->signature = "";
         $this->reference = "";
-        $this->IdArticles = new ArrayCollection();
+        $this->idTranches = new ArrayCollection();
     }
 
     public function containsTranche(int $idTranche): bool{
-        return $this->IdArticles->contains($idTranche);
+        return $this->idTranches->contains($idTranche);
     }
 
     public function setNote(?Note $note): self{
@@ -51,9 +51,9 @@ class PanierNotes
         $this->setIdPartenaire($note->getPartenaire() ? $note->getPartenaire()->getId():-1);
         $this->setIdAutoriteFiscale($note->getAutoritefiscale() ? $note->getAutoritefiscale()->getId():-1);
 
-        $this->IdArticles = new ArrayCollection();
+        $this->idTranches = new ArrayCollection();
         foreach ($note->getArticles() as $article) {
-            $this->addIdArticle($article->getId());
+            $this->addIdTranche($article->getTranche()->getId());
         }
         return $this;
     }
@@ -66,24 +66,24 @@ class PanierNotes
     /**
      * @return Collection<int, AutoriteFiscale>
      */
-    public function getIdArticles(): Collection
+    public function getIdTranches(): ArrayCollection
     {
-        return $this->IdArticles;
+        return $this->idTranches;
     }
 
-    public function addIdArticle(int $idArticle): static
+    public function addIdTranche(int $idTranche): static
     {
-        if (!$this->IdArticles->contains($idArticle)) {
-            $this->IdArticles->add($idArticle);
+        if (!$this->idTranches->contains($idTranche)) {
+            $this->idTranches->add($idTranche);
         }
 
         return $this;
     }
 
-    public function removeIdArticle(int $idArticle): static
+    public function removeIdTranche(int $idTranche): static
     {
-        if ($this->IdArticles->contains($idArticle)) {
-            $this->IdArticles->removeElement($idArticle);
+        if ($this->idTranches->contains($idTranche)) {
+            $this->idTranches->removeElement($idTranche);
         }
 
         return $this;
@@ -152,9 +152,9 @@ class PanierNotes
     /**
      * Get the value of nbArticle
      */ 
-    public function getNbArticle()
+    public function getNbTranche()
     {
-        return count($this->getIdArticles());
+        return count($this->getIdTranches());
     }
 
     /**
@@ -182,9 +182,9 @@ class PanierNotes
      *
      * @return  self
      */ 
-    public function setArticles($articles)
+    public function setTranches($tranches)
     {
-        $this->IdArticles = $articles;
+        $this->idTranches = $tranches;
 
         return $this;
     }
@@ -194,9 +194,9 @@ class PanierNotes
      *
      * @return  self
      */ 
-    public function setIdArticles(?ArrayCollection $IdArticles)
+    public function setIdTranches(?ArrayCollection $idTranches)
     {
-        $this->IdArticles = $IdArticles;
+        $this->idTranches = $idTranches;
 
         return $this;
     }

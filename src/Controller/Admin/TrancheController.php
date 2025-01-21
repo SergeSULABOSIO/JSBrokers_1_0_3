@@ -77,7 +77,7 @@ class TrancheController extends AbstractController
 
 
     #[Route('/retirerdelanote/{idTranche}/{idEntreprise}/{currentURL}', name: 'retirerdelanote', requirements: [
-        'idNote' => Requirement::DIGITS,
+        'idTranche' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
         'currentURL' => '.+'
     ])]
@@ -89,13 +89,27 @@ class TrancheController extends AbstractController
         /** @var Note $note */
         $note = $this->noteRepository->find($panier->getIdNote());
 
-        Ici je chercher à retirer la tranche (et son article relatif) de la note.
-
         if ($note != null) {
+            /** @var Article $articleToDelete */
+            $articleToDelete = null;
+            foreach ($note->getArticles() as $article) {
+                if($article->getTranche()->getId() == $idTranche){
+                    $articleToDelete = $article;
+                    break;
+                }
+            }
+            $note->removeArticle($articleToDelete);
+            //on actualise la base de données
+            $this->manager->refresh($note);
+            $this->manager->flush();
+            //On actualise le panier
             $panier->setNote($note);
-            $this->addFlash("success", "La note '" . $note->getNom() . "' a été insérée dans le panier.");
+            // $panier->removeIdTranche($idTranche);
+
+            // $panier->setNote($note); //Pas important car c'est un objet.
+            $this->addFlash("success", "La tranche a été retirée du panier.");
         }else{
-            $this->addFlash("danger", "Cher utilisateur, cette note est introuvable dans la base de données.");
+            $this->addFlash("danger", "Cher utilisateur, la note est introuvable dans le panier.");
         }
         return $this->redirect($currentURL);
     }
@@ -123,8 +137,12 @@ class TrancheController extends AbstractController
             $article->setPourcentage(100);
             $article->setTranche($tranche);
             $article->setNom($tranche->getNom() . "/" . $tranche->getCotation()->getAvenants()[0]->getReferencePolice());
+            
+            //On actualise la base de données
             $note->addArticle($article);
-
+            $this->manager->refresh($note);
+            $this->manager->flush();
+            //On actualise le panier
             $panier->setNote($note);
 
             $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
