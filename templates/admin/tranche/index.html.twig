@@ -98,7 +98,7 @@
                                         <ul class="dropdown-menu">
                                             {% if panier != null %}
                                                 {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-                                                {% if panier.containsTranche(tranche.id) == false %}
+                                                {% if panier.containsTranche(tranche.id) == true %}
                                                     <li>
                                                         <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'idTranche': tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
                                                             {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}

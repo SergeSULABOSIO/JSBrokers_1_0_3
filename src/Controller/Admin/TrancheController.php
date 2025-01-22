@@ -92,6 +92,7 @@ class TrancheController extends AbstractController
         if ($note != null) {
             /** @var Article $articleToDelete */
             $articleToDelete = null;
+            
             foreach ($note->getArticles() as $article) {
                 if($article->getTranche()->getId() == $idTranche){
                     $articleToDelete = $article;
