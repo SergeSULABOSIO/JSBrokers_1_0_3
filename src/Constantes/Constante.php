@@ -276,6 +276,11 @@ class Constante
                     if ($tranche->getCotation()) {
                         /** @var Cotation $cotation */
                         $cotation = $tranche->getCotation();
+                        
+                        // $montant = match ($note->getAddressedTo()) {
+                        //     Note::TO_ASSUREUR => 0,
+                        //     Note::TO_CLIENT => 0,
+                        // }
 
                         switch ($note->getAddressedTo()) {
                             case Note::TO_ASSUREUR:
