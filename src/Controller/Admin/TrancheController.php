@@ -92,24 +92,28 @@ class TrancheController extends AbstractController
         if ($note != null) {
             /** @var Article $articleToDelete */
             $articleToDelete = null;
-            
+
             foreach ($note->getArticles() as $article) {
-                if($article->getTranche()->getId() == $idTranche){
-                    $articleToDelete = $article;
-                    break;
+                if ($article) {
+                    if ($article->getTranche()->getId() == $idTranche) {
+                        $articleToDelete = $article;
+                        // dd("Article à supprimer:", $article);
+                        break;
+                    }
                 }
             }
-            $note->removeArticle($articleToDelete);
-            //on actualise la base de données
-            $this->manager->refresh($note);
-            $this->manager->flush();
-            //On actualise le panier
-            $panier->setNote($note);
-            // $panier->removeIdTranche($idTranche);
+            if ($articleToDelete) {
+                $note->removeArticle($articleToDelete);
 
-            // $panier->setNote($note); //Pas important car c'est un objet.
-            $this->addFlash("success", "La tranche a été retirée du panier.");
-        }else{
+                //on actualise la base de données
+                $this->manager->refresh($note);
+                $this->manager->flush();
+
+                //On actualise le panier
+                $panier->setNote($note);
+                $this->addFlash("success", "La tranche a été retirée du panier.");
+            }
+        } else {
             $this->addFlash("danger", "Cher utilisateur, la note est introuvable dans le panier.");
         }
         return $this->redirect($currentURL);
@@ -138,7 +142,7 @@ class TrancheController extends AbstractController
             $article->setPourcentage(100);
             $article->setTranche($tranche);
             $article->setNom($tranche->getNom() . "/" . $tranche->getCotation()->getAvenants()[0]->getReferencePolice());
-            
+
             //On actualise la base de données
             $note->addArticle($article);
             $this->manager->refresh($note);
@@ -147,7 +151,7 @@ class TrancheController extends AbstractController
             $panier->setNote($note);
 
             $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
-        }else{
+        } else {
             $this->addFlash("danger", "Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.");
         }
         return $this->redirect($currentURL);
@@ -236,7 +240,7 @@ class TrancheController extends AbstractController
         $message = $this->translator->trans("tranche_deletion_ok", [
             ":tranche" => $tranche->getNom(),
         ]);;
-        
+
         $this->manager->remove($tranche);
         $this->manager->flush();
 

@@ -1,0 +1,16 @@
+<div>
+  {% if panier != null %}
+      <hr>
+        <p>
+          {% if panier.idNote != null %}
+            {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}{{ panier }}, créer le {{ panier.createdAt|format_datetime('short', 'short', locale: utilisateur.locale)}}:</br>
+            - {{ panier.nomNote }} / {{ panier.reference }} / {{ panier.nbTranche }} tranche(s)</br>
+            {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+            <a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+              Vider le panier
+            </a>
+          {% endif %}
+        </p>
+      <hr>
+	{% endif %}
+</div>

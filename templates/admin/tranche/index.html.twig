@@ -14,18 +14,7 @@
 
 {% block descriptionRubrique %}
 	{{ "tranche_description" | trans }}
-    {% if panier != null %}
-		<p>
-			{% if panier.idNote != null %}
-				{{ panier }}, créer le {{ panier.createdAt|format_datetime('short', 'short', locale: utilisateur.locale)}}:</br>
-				- {{ panier.nomNote }} / {{ panier.reference }} / {{ panier.nbTranche }} tranche(s)</br>
-				{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-				<a class="m-2" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-					Vider le panier
-				</a>
-			{% endif %}
-		</p>
-	{% endif %}
+    {% include 'segments/panier_pour_note.html.twig' %}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -61,12 +50,13 @@
                         <tr id="row_tranche_{{ tranche.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ tranche.nom }} 
+                                    
                                     {% if panier != null %}
-                                        {% if panier.containsTranche(tranche.id) == false %}
-                                            [panier*]
+                                        {% if panier.containsTranche(tranche.id) == true %}
+                                            {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
                                         {% endif %}
-                                    {% endif %}                    
+                                    {% endif %}  
+                                    {{ tranche.nom }}                   
                                     (à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
                                     {% if tranche.cotation != null %}
                                          | {{ tranche.cotation.nom|slice(0, 20) }}...
@@ -98,18 +88,18 @@
                                         <ul class="dropdown-menu">
                                             {% if panier != null %}
                                                 {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-                                                {% if panier.containsTranche(tranche.id) == true %}
+                                                {% if panier.containsTranche(tranche.id) == false %}
                                                     <li>
                                                         <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'idTranche': tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
                                                             {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                            Mettre dans la note <b>{{ panier.nomNote }}</b>
+                                                            Mettre cette tranche dans la note
                                                         </a>
                                                     </li>
                                                 {% else %}
                                                     <li>
                                                         <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche': tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
                                                             {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                            Retirer de la note <b>{{ panier.nomNote }}</b>
+                                                            Retirer cette tranche de la note
                                                         </a>
                                                     </li>
                                                 {% endif %}
