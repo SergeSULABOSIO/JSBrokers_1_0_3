@@ -46,7 +46,7 @@ class NoteType extends AbstractType
         if ($options["page"] != -1) {
             if ($options["type"] != -1 && $options["addressedTo"] != -1) {
                 $this->labelbtSubmit = match (true) {
-                    $options['page'] == $options['pageMax'] => "TRIER LES ARTICLES",
+                    $options['page'] == $options['pageMax'] => "TERMINER PUIS ALLER TRIER LES TRANCHES",
                     default => "PAGE SUIVANTE",
                 };
             }
