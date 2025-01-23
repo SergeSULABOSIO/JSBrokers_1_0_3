@@ -5,6 +5,7 @@ namespace App\Constantes;
 use App\Entity\Cotation;
 use App\Entity\Note;
 use App\Entity\Tranche;
+use Doctrine\Common\Collections\Collection;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class Constante
@@ -265,7 +266,36 @@ class Constante
     ];
 
 
-    public function Note_getMontant_Numeric(?Note $note): float
+    public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation, ?Collection $typesrevenus = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+    public function Cotation_getMontant_commission_payable_par_client(?Cotation $cotation, ?Collection $typesrevenus = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+    public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation, ?Collection $autoritesFiscales = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation, ?Collection $partenaires = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+
+    public function Note_getMontant(?Note $note): float
     {
         $montant = 0;
         if ($note) {
@@ -277,34 +307,32 @@ class Constante
                         /** @var Cotation $cotation */
                         $cotation = $tranche->getCotation();
                         
-                        // $montant = match ($note->getAddressedTo()) {
-                        //     Note::TO_ASSUREUR => 0,
-                        //     Note::TO_CLIENT => 0,
-                        // }
-
                         switch ($note->getAddressedTo()) {
                             case Note::TO_ASSUREUR:
-                                dd("On facture à l'assureur les commissions payables par lui-même.");
-
+                                // dd("On facture à l'assureur les commissions payables par lui-même.");
+                                $montant = $this->Cotation_getMontant_commission_payable_par_assureur($cotation);
                                 break;
 
                             case Note::TO_CLIENT:
                                 dd("On facture au client les frais de gestion payables par lui-même.");
+                                $montant = $this->Cotation_getMontant_commission_payable_par_client($cotation);
                                 break;
 
                             case Note::TO_PARTENAIRE:
                                 dd("Le partenaire nous facture les retrocommissions payable par nous.");
+                                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
                                 break;
 
                             case Note::TO_AUTORITE_FISCALE:
                                 dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
+                                $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
                                 break;
 
                             default:
                                 # code...
                                 break;
                         }
-                        // dd($cotation);
+                        dd("Montant tranche: ", $montant * $tranche->getPourcentage());
                     }
                 }
             }
@@ -314,11 +342,11 @@ class Constante
             //Il faut savoir son type
             switch ($note->getType()) {
                 case Note::TYPE_NOTE_DE_CREDIT:
-                    $montant = $montant * -1;
+                    // $montant = $montant * -1;
                     break;
 
                 case Note::TYPE_NOTE_DE_DEBIT:
-                    $montant = $montant * 1;
+                    // $montant = $montant * 1;
                     break;
 
                 default:
@@ -327,6 +355,6 @@ class Constante
             }
         }
         // dd($note);
-        return 0;
+        return $montant;
     }
 }
