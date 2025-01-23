@@ -146,7 +146,7 @@ class TrancheController extends AbstractController
                         /** @var Article $article */
                         $article = new Article();
 
-                        $article->setPourcentage(100);
+                        $article->setPourcentage(1);
                         $article->setTranche($tranche);
                         $article->setNom($this->getNomArticle($tranche));
 
