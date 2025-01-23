@@ -2,7 +2,9 @@
 
 namespace App\Constantes;
 
+use App\Entity\Cotation;
 use App\Entity\Note;
+use App\Entity\Tranche;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class Constante
@@ -265,7 +267,60 @@ class Constante
 
     public function Note_getMontant_Numeric(?Note $note): float
     {
-        
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                if ($article->getTranche()) {
+                    /** @var Tranche $tranche */
+                    $tranche = $article->getTranche();
+                    if ($tranche->getCotation()) {
+                        /** @var Cotation $cotation */
+                        $cotation = $tranche->getCotation();
+
+                        switch ($note->getAddressedTo()) {
+                            case Note::TO_ASSUREUR:
+                                dd("On facture à l'assureur");
+                                break;
+
+                            case Note::TO_CLIENT:
+                                dd("On facture au client");
+                                break;
+
+                            case Note::TO_PARTENAIRE:
+                                dd("Le partenaire nous facture");
+                                break;
+
+                            case Note::TO_AUTORITE_FISCALE:
+                                dd("L'autorité fiscale nous facture");
+                                break;
+
+                            default:
+                                # code...
+                                break;
+                        }
+                        // dd($cotation);
+                    }
+                }
+            }
+
+
+
+            //Il faut savoir son type
+            switch ($note->getType()) {
+                case Note::TYPE_NOTE_DE_CREDIT:
+                    $montant = $montant * -1;
+                    break;
+
+                case Note::TYPE_NOTE_DE_DEBIT:
+                    $montant = $montant * 1;
+                    break;
+
+                default:
+                    # code...
+                    break;
+            }
+        }
+        // dd($note);
         return 0;
     }
 }
