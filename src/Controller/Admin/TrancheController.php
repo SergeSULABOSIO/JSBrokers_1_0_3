@@ -191,7 +191,7 @@ class TrancheController extends AbstractController
             }
             $echeance = "";
             if ($tranche->getEcheanceAt()) {
-                $echeance = " (échéance: " . $tranche->getEcheanceAt()->format('d-m-Y') . ")";
+                $echeance = " (début: " . $tranche->getPayableAt()->format('d-m-Y') . ")";
             }
             $nomArticle = $tranche->getNom() . $echeance . " / " . $nomArticle;
         }
