@@ -15,6 +15,10 @@ use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Constantes\PanierNotes;
 use App\Entity\Article;
+use App\Entity\Client;
+use App\Entity\Cotation;
+use App\Entity\Piste;
+use App\Entity\Risque;
 use App\Repository\TaxeRepository;
 use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
@@ -144,7 +148,7 @@ class TrancheController extends AbstractController
 
                         $article->setPourcentage(100);
                         $article->setTranche($tranche);
-                        $article->setNom($tranche->getNom() . "/" . $tranche->getCotation()->getNom());
+                        $article->setNom($this->getNomArticle($tranche));
 
                         //On actualise la base de données
                         $note->addArticle($article);
@@ -167,6 +171,32 @@ class TrancheController extends AbstractController
             $this->addFlash("danger", "Le panier est vide. Merci d'y mettre d'abord la note.");
         }
         return $this->redirect($currentURL);
+    }
+
+    private function getNomArticle(?Tranche $tranche): string {
+        $nomArticle = "";
+        if ($tranche->getCotation()) {
+            /** @var Cotation */
+            $cotation = $tranche->getCotation();
+            $nomArticle = $cotation->getNom();
+            if ($cotation->getPiste()) {
+                /** @var Piste */
+                $piste = $cotation->getPiste();
+                if ($piste->getRisque()) {
+                    $nomArticle = $piste->getRisque()->getCode() . " / " . $nomArticle;
+                }
+                if ($piste->getClient()) {
+                    $nomArticle = $piste->getClient()->getNom() . " / " . $nomArticle;
+                }
+            }
+            $echeance = "";
+            if ($tranche->getEcheanceAt()) {
+                $echeance = " (échéance: " . $tranche->getEcheanceAt()->format('d-m-Y') . ")";
+            }
+            $nomArticle = $tranche->getNom() . $echeance . " / " . $nomArticle;
+        }
+        // dd($nomArticle);
+        return $nomArticle;
     }
 
 
