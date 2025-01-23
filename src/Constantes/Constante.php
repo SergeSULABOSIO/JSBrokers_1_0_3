@@ -279,19 +279,20 @@ class Constante
 
                         switch ($note->getAddressedTo()) {
                             case Note::TO_ASSUREUR:
-                                dd("On facture à l'assureur");
+                                dd("On facture à l'assureur les commissions payables par lui-même.");
+
                                 break;
 
                             case Note::TO_CLIENT:
-                                dd("On facture au client");
+                                dd("On facture au client les frais de gestion payables par lui-même.");
                                 break;
 
                             case Note::TO_PARTENAIRE:
-                                dd("Le partenaire nous facture");
+                                dd("Le partenaire nous facture les retrocommissions payable par nous.");
                                 break;
 
                             case Note::TO_AUTORITE_FISCALE:
-                                dd("L'autorité fiscale nous facture");
+                                dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
                                 break;
 
                             default:
