@@ -2,6 +2,7 @@
 
 namespace App\Constantes;
 
+use App\Entity\Note;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class Constante
@@ -260,4 +261,11 @@ class Constante
         "ZMW - Zambian kwacha" => "ZMW",
         "ZWL - Zimbabwean dollar (fifth)[e]" => "ZWL"
     ];
+
+
+    public function Note_getMontant_Numeric(?Note $note): float
+    {
+        
+        return 0;
+    }
 }

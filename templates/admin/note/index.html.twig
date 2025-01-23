@@ -50,6 +50,7 @@
 							<tr id="row_note_{{ note.id }}">
 								<td>
 									<a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
+										{{ constante.Note_getMontant_Numeric(note) }} USD - 
 										{{ constante.getTypeNote(note.type) }}
 										{% if note.addressedTo == 0 and note.client != null %}
 											/ {{ note.client.nom }}
