@@ -314,7 +314,7 @@ class Constante
     public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation, ?Collection $typesrevenus = null): float
     {
         $montant = 0;
-        
+        dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
         return $montant;
     }
 
