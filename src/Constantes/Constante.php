@@ -266,10 +266,55 @@ class Constante
     ];
 
 
-    public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation, ?Collection $typesrevenus = null): float
+    public function Tranche_getMontant_prime_payable_par_client(?Tranche $tranche): float
     {
         $montant = 0;
 
+        return $montant;
+    }
+
+
+    public function Tranche_getMontant_commission_payable_par_assureur(?Tranche $tranche, ?Collection $typesrevenus = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+    public function Tranche_getMontant_commission_payable_par_client(?Tranche $tranche, ?Collection $typesrevenus = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+    public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche, ?Collection $autoritesFiscales = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+    public function Tranche_getMontant_retrocommissions_payable_par_courtier(?Tranche $tranche, ?Collection $partenaires = null): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+
+    public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+
+
+    public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation, ?Collection $typesrevenus = null): float
+    {
+        $montant = 0;
+        
         return $montant;
     }
 
@@ -294,8 +339,7 @@ class Constante
         return $montant;
     }
 
-
-    public function Note_getMontant(?Note $note): float
+    public function Note_getMontant_payable(?Note $note): float
     {
         $montant = 0;
         if ($note) {
@@ -306,7 +350,7 @@ class Constante
                     if ($tranche->getCotation()) {
                         /** @var Cotation $cotation */
                         $cotation = $tranche->getCotation();
-                        
+
                         switch ($note->getAddressedTo()) {
                             case Note::TO_ASSUREUR:
                                 // dd("On facture à l'assureur les commissions payables par lui-même.");
@@ -332,29 +376,11 @@ class Constante
                                 # code...
                                 break;
                         }
-                        dd("Montant tranche: ", $montant * $tranche->getPourcentage());
                     }
+                    $montant = $montant * $tranche->getPourcentage();
                 }
             }
-
-
-
-            //Il faut savoir son type
-            switch ($note->getType()) {
-                case Note::TYPE_NOTE_DE_CREDIT:
-                    // $montant = $montant * -1;
-                    break;
-
-                case Note::TYPE_NOTE_DE_DEBIT:
-                    // $montant = $montant * 1;
-                    break;
-
-                default:
-                    # code...
-                    break;
-            }
         }
-        // dd($note);
         return $montant;
     }
 }
