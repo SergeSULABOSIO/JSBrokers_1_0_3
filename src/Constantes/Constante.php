@@ -2,9 +2,12 @@
 
 namespace App\Constantes;
 
+use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Entity\Note;
+use App\Entity\RevenuPourCourtier;
 use App\Entity\Tranche;
+use App\Entity\TypeRevenu;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -314,6 +317,38 @@ class Constante
     public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation, ?Collection $typesrevenus = null): float
     {
         $montant = 0;
+        $primeTotal = 0;
+        if ($cotation) {
+            foreach ($cotation->getRevenus() as $revenu) {
+                /** @var RevenuPourCourtier $revenuPourCourtier*/
+                $revenuPourCourtier = $revenu;
+
+                /** @var TypeRevenu $typeRevenu */
+                $typeRevenu = $revenuPourCourtier->getTypeRevenu();
+
+                //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
+                if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
+                    switch ($typeRevenu->getFormule()) {
+                        case TypeRevenu::FORMULE_POURCENTAGE_FRONTING:
+                            # code...
+                            break;
+
+                        case TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE:
+                            # code...
+                            break;
+
+                        case TypeRevenu::FORMULE_POURCENTAGE_PRIME_TOTALE:
+                            # code...
+                            break;
+
+                        default:
+                            # code...
+                            break;
+                    }
+                }
+                dd($revenuPourCourtier, $typeRevenu);
+            }
+        }
         dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
         return $montant;
     }
