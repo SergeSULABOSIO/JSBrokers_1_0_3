@@ -34,6 +34,16 @@ class TypeRevenuType extends AbstractType
                 'choice_label' => 'nom',
                 'help' => 'Le composant de la prime (ou chargement) sur base duquel ce revenu sera calculé automatiquement.',
             ])
+            ->add('appliquerPourcentageDuRisque', ChoiceType::class, [
+                'help' => "Si vous cochez 'OUI', càd qu'en cas de déifférence, c'est le pourcentage commission spécifique au risque qui sera appliqué.",
+                'required' => false,
+                'label' => "Privilégier le taux de commission configuré pour le risque concerné?",
+                'expanded' => true,
+                'choices'  => [
+                    "Oui, si celui-ci existe et qu'il est différent du pourcentage de ce revenu." => true,
+                    "Non, pas du tout." => false,
+                ],
+            ])
             // ->add('formule', ChoiceType::class, [
             //     'label' => "Quelle est la formule applicable?",
             //     'expanded' => true,
@@ -47,23 +57,15 @@ class TypeRevenuType extends AbstractType
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
                 'required' => false,
+                'help' => "On applique un %",
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Pourcentage",
                 ],
             ])
-            ->add('appliquerPourcentageDuRisque', ChoiceType::class, [
-                'help' => "Si vous cochez 'OUI', càd qu'en cas de déifférence, c'est le pourcentage commission spécifique au risque qui sera appliqué.",
-                'required' => false,
-                'label' => "Privilégier le taux de commission (pourcentage) spécifique au risque?",
-                'expanded' => true,
-                'choices'  => [
-                    "Oui, si celui-ci existe et qu'il est différent du pourcentage de ce revenu." => true,
-                    "Non, pas du tout." => false,
-                ],
-            ])
             ->add('montantflat', NumberType::class, [
                 'label' => "Montant fixe",
+                'help' => "On considère un montant fixe",
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Montant fixe",

@@ -39,6 +39,14 @@ class RevenuPourCourtierType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
+            ->add('tauxExceptionel', PercentType::class, [
+                'label' => "Taux exceptionnel",
+                'required' => false,
+                'scale' => 3,
+                'attr' => [
+                    'placeholder' => "Taux",
+                ],
+            ])
             ->add('montantFlatExceptionel', MoneyType::class, [
                 'label' => "Montant fixe (exceptionnel)",
                 'required' => false,
@@ -46,14 +54,6 @@ class RevenuPourCourtierType extends AbstractType
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant fixe",
-                ],
-            ])
-            ->add('tauxExceptionel', PercentType::class, [
-                'label' => "Taux exceptionnel",
-                'required' => false,
-                'scale' => 3,
-                'attr' => [
-                    'placeholder' => "Taux",
                 ],
             ])
             // ->add('createdAt', null, [

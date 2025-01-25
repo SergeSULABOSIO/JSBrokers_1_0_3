@@ -2,11 +2,13 @@
 
 namespace App\Constantes;
 
+use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Entity\Note;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use Doctrine\Common\Collections\Collection;
@@ -308,20 +310,77 @@ class Constante
         return $montant;
     }
 
-
+    je suis ici
     public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
-
+        foreach ($cotation->getChargements() as $loading) {
+            /** @var ChargementPourPrime $chargement */
+            $chargement = $loading;
+            $montant += $chargement->getMontantFlatExceptionel();
+        }
         return $montant;
     }
 
+    private function Cotation_getMontant_commission(?TypeRevenu $typeRevenu, ?RevenuPourCourtier $revenuPourCourtier, ?Cotation $cotation): float
+    {
+        $montant = 0;
+        if ($typeRevenu->getTypeChargement()) {
+            /** @var Chargement $typeChargementCible */
+            $typeChargementCible = $typeRevenu->getTypeChargement();
+            $montantChargementCible = 0;
+            // dd("Je suis ici!", $revenuPourCourtier, $typeRevenu, $typeChargementCible->getNom());
+
+            //On doit récupérer le montant ou la valeur de ce composant
+            foreach ($cotation->getChargements() as $loading) {
+                if ($loading->getId() == $typeChargementCible->getId()) {
+                    /** @var ChargementPourPrime $chargement */
+                    $chargement = $loading;
+                    $montantChargementCible = $chargement->getMontantFlatExceptionel();
+                    // dd($chargement->getNom(), $montantChargementCible);
+                }
+            }
+
+            //Comment s'applique le taux sur de commission sur le montant du chargement / composant?
+            if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
+                if ($cotation->getPiste()) {
+                    if ($cotation->getPiste()->getRisque()) {
+                        /** @var Risque $couverture */
+                        $couverture = $cotation->getPiste()->getRisque();
+                        $montant += $montantChargementCible * $couverture->getPourcentageCommissionSpecifiqueHT();
+                        // dd("Chargement: " . $montantChargementCible, "On applique le taux de com lié au risque " . $couverture->getNomComplet() . " qui est de " . $couverture->getPourcentageCommissionSpecifiqueHT(), "Commission: " . $montant);
+                    }
+                }
+            } else {
+                // dd("Non, on applique le % spécifique à ce type de Revenu", $typeRevenu, $typeRevenu->isAppliquerPourcentageDuRisque());
+                //On cherche à appliquer d'abord le taux du revenu sur la cotation
+                if ($revenuPourCourtier->getTauxExceptionel() != 0) {
+                    $montant += $montantChargementCible * $revenuPourCourtier->getTauxExceptionel();
+                } else if ($revenuPourCourtier->getMontantFlatExceptionel() != 0) {
+                    $montant += $revenuPourCourtier->getMontantFlatExceptionel();
+                } else {
+                    //Auncune formule définie sur le revenu situé dans la cotation
+                    //On doit appliquer la formule par défaut pour ce type de revenu
+                    if ($typeRevenu->getPourcentage() != 0) {
+                        // dd("On applique le pourcentage spécifique à " . $revenuPourCourtier->getNom(),);
+                        $montant += $montantChargementCible * $typeRevenu->getPourcentage();
+                    } else if ($typeRevenu->getMontantflat() != 0) {
+                        // dd("On applique le montant flat qui est de " . $revenuPourCourtier->getMontantFlatExceptionel());
+                        $montant += $montantChargementCible * $typeRevenu->getMontantflat();
+                    } else {
+                        // dd("Il n'y a malheuresement aucun revenu fixé!");
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
 
     public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation, ?Collection $typesrevenus = null): float
     {
         $montant = 0;
-        $primeTotal = 0;
         if ($cotation) {
+            //Pour chaque revenu configuré dans cette cotation
             foreach ($cotation->getRevenus() as $revenu) {
                 /** @var RevenuPourCourtier $revenuPourCourtier*/
                 $revenuPourCourtier = $revenu;
@@ -331,33 +390,8 @@ class Constante
 
                 //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
                 if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
-                    switch ($typeRevenu->getFormule()) {
-                        case TypeRevenu::FORMULE_POURCENTAGE_FRONTING:
-                            $fronting_fee = 0;
-                            foreach ($cotation->getChargements() as $chargement) {
-                                /** @var ChargementPourPrime $loading */
-                                $loading = $chargement;
-                                dd("Je suis ici!", $loading);
-                                if(str_contains(strtolower($loading->getNom()), "fronting")){
-                                    dd("J'ai trouvé le fonting", $loading);
-                                }
-                            }
-                            break;
-
-                        case TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE:
-                            # code...
-                            break;
-
-                        case TypeRevenu::FORMULE_POURCENTAGE_PRIME_TOTALE:
-                            # code...
-                            break;
-
-                        default:
-                            # code...
-                            break;
-                    }
+                    $montant = $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
                 }
-                // dd($revenuPourCourtier, $typeRevenu);
             }
         }
         // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
@@ -367,7 +401,22 @@ class Constante
     public function Cotation_getMontant_commission_payable_par_client(?Cotation $cotation, ?Collection $typesrevenus = null): float
     {
         $montant = 0;
+        if ($cotation) {
+            //Pour chaque revenu configuré dans cette cotation
+            foreach ($cotation->getRevenus() as $revenu) {
+                /** @var RevenuPourCourtier $revenuPourCourtier*/
+                $revenuPourCourtier = $revenu;
 
+                /** @var TypeRevenu $typeRevenu */
+                $typeRevenu = $revenuPourCourtier->getTypeRevenu();
+
+                //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
+                if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                    $montant = $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
+                }
+            }
+        }
+        // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
         return $montant;
     }
 
