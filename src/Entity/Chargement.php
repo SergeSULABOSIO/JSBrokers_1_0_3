@@ -39,9 +39,16 @@ class Chargement
     #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'type')]
     private Collection $chargementPourPrimes;
 
+    /**
+     * @var Collection<int, TypeRevenu>
+     */
+    #[ORM\OneToMany(targetEntity: TypeRevenu::class, mappedBy: 'typeChargement')]
+    private Collection $typeRevenus;
+
     public function __construct()
     {
         $this->chargementPourPrimes = new ArrayCollection();
+        $this->typeRevenus = new ArrayCollection();
     }
 
 
@@ -151,6 +158,36 @@ class Chargement
             // set the owning side to null (unless already changed)
             if ($chargementPourPrime->getType() === $this) {
                 $chargementPourPrime->setType(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, TypeRevenu>
+     */
+    public function getTypeRevenus(): Collection
+    {
+        return $this->typeRevenus;
+    }
+
+    public function addTypeRevenu(TypeRevenu $typeRevenu): static
+    {
+        if (!$this->typeRevenus->contains($typeRevenu)) {
+            $this->typeRevenus->add($typeRevenu);
+            $typeRevenu->setTypeChargement($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTypeRevenu(TypeRevenu $typeRevenu): static
+    {
+        if ($this->typeRevenus->removeElement($typeRevenu)) {
+            // set the owning side to null (unless already changed)
+            if ($typeRevenu->getTypeChargement() === $this) {
+                $typeRevenu->setTypeChargement(null);
             }
         }
 

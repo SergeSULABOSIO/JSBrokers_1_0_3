@@ -57,6 +57,9 @@ class TypeRevenu
     #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'type')]
     private Collection $revenuPourCourtiers;
 
+    #[ORM\ManyToOne(inversedBy: 'typeRevenus')]
+    private ?Chargement $typeChargement = null;
+
     public function __construct()
     {
         $this->revenuPourCourtiers = new ArrayCollection();
@@ -207,6 +210,18 @@ class TypeRevenu
                 $revenuPourCourtier->setTypeRevenu(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getTypeChargement(): ?Chargement
+    {
+        return $this->typeChargement;
+    }
+
+    public function setTypeChargement(?Chargement $typeChargement): static
+    {
+        $this->typeChargement = $typeChargement;
 
         return $this;
     }

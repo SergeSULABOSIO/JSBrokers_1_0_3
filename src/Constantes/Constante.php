@@ -12,6 +12,8 @@ use App\Entity\TypeRevenu;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
+use function PHPUnit\Framework\containsOnly;
+
 class Constante
 {
     public function __construct(
@@ -335,9 +337,10 @@ class Constante
                             foreach ($cotation->getChargements() as $chargement) {
                                 /** @var ChargementPourPrime $loading */
                                 $loading = $chargement;
-                                // if($loading->getType() == ChargementPourPrime::){
-
-                                // }
+                                dd("Je suis ici!", $loading);
+                                if(str_contains(strtolower($loading->getNom()), "fronting")){
+                                    dd("J'ai trouvé le fonting", $loading);
+                                }
                             }
                             break;
 
@@ -354,10 +357,10 @@ class Constante
                             break;
                     }
                 }
-                dd($revenuPourCourtier, $typeRevenu);
+                // dd($revenuPourCourtier, $typeRevenu);
             }
         }
-        dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
+        // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
         return $montant;
     }
 
