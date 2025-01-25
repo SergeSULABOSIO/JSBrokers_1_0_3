@@ -32,12 +32,12 @@ class ChargementPourPrimeType extends AbstractType
                 'class' => Chargement::class,
                 'choice_label' => 'nom',
             ])
-            // ->add('nom', TextType::class, [
-            //     'label' => "Nom",
-            //     'attr' => [
-            //         'placeholder' => "Nom",
-            //     ],
-            // ])
+            ->add('nom', TextType::class, [
+                'label' => "Nom",
+                'attr' => [
+                    'placeholder' => "Nom",
+                ],
+            ])
             ->add('montantFlatExceptionel', MoneyType::class, [
                 'label' => "Montant",
                 'required' => false,

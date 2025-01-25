@@ -31,8 +31,8 @@ class ChargementPourPrime
     #[ORM\ManyToOne(inversedBy: 'chargements')]
     private ?Cotation $cotation = null;
 
-    // #[ORM\Column(length: 255)]
-    // private ?string $nom = null;
+    #[ORM\Column(length: 255)]
+    private ?string $nom = null;
 
     public function getId(): ?int
     {
@@ -111,15 +111,15 @@ class ChargementPourPrime
         return $this;
     }
 
-    // public function getNom(): ?string
-    // {
-    //     return $this->nom;
-    // }
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
 
-    // public function setNom(string $nom): static
-    // {
-    //     $this->nom = $nom;
+    public function setNom(string $nom): static
+    {
+        $this->nom = $nom;
 
-    //     return $this;
-    // }
+        return $this;
+    }
 }
