@@ -2,6 +2,7 @@
 
 namespace App\Constantes;
 
+use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Entity\Note;
@@ -330,7 +331,14 @@ class Constante
                 if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
                     switch ($typeRevenu->getFormule()) {
                         case TypeRevenu::FORMULE_POURCENTAGE_FRONTING:
-                            # code...
+                            $fronting_fee = 0;
+                            foreach ($cotation->getChargements() as $chargement) {
+                                /** @var ChargementPourPrime $loading */
+                                $loading = $chargement;
+                                // if($loading->getType() == ChargementPourPrime::){
+
+                                // }
+                            }
                             break;
 
                         case TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE:

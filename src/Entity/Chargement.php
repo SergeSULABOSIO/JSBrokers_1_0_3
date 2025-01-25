@@ -21,14 +21,14 @@ class Chargement
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $description = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?float $montantflat = null;
+    // #[ORM\Column(nullable: true)]
+    // private ?float $montantflat = null;
 
-    #[ORM\Column]
-    private ?bool $imposable = null;
+    // #[ORM\Column]
+    // private ?bool $imposable = null;
     
-    #[ORM\Column(nullable: true)]
-    private ?float $tauxSurPrimeNette = null;
+    // #[ORM\Column(nullable: true)]
+    // private ?float $tauxSurPrimeNette = null;
     
     #[ORM\ManyToOne(inversedBy: 'chargements')]
     private ?Entreprise $entreprise = null;
@@ -74,29 +74,29 @@ class Chargement
         return $this;
     }
 
-    public function getMontantflat(): ?float
-    {
-        return $this->montantflat;
-    }
+    // public function getMontantflat(): ?float
+    // {
+    //     return $this->montantflat;
+    // }
 
-    public function setMontantflat(?float $montantflat): static
-    {
-        $this->montantflat = $montantflat;
+    // public function setMontantflat(?float $montantflat): static
+    // {
+    //     $this->montantflat = $montantflat;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
-    public function isImposable(): ?bool
-    {
-        return $this->imposable;
-    }
+    // public function isImposable(): ?bool
+    // {
+    //     return $this->imposable;
+    // }
 
-    public function setImposable(bool $imposable): static
-    {
-        $this->imposable = $imposable;
+    // public function setImposable(bool $imposable): static
+    // {
+    //     $this->imposable = $imposable;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getEntreprise(): ?Entreprise
     {
@@ -110,17 +110,17 @@ class Chargement
         return $this;
     }
 
-    public function getTauxSurPrimeNette(): ?float
-    {
-        return $this->tauxSurPrimeNette;
-    }
+    // public function getTauxSurPrimeNette(): ?float
+    // {
+    //     return $this->tauxSurPrimeNette;
+    // }
 
-    public function setTauxSurPrimeNette(?float $tauxSurPrimeNette): static
-    {
-        $this->tauxSurPrimeNette = $tauxSurPrimeNette;
+    // public function setTauxSurPrimeNette(?float $tauxSurPrimeNette): static
+    // {
+    //     $this->tauxSurPrimeNette = $tauxSurPrimeNette;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function __toString(): string
     {

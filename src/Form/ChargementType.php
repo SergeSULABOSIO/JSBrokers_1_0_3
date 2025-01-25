@@ -30,32 +30,32 @@ class ChargementType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            ->add('montantflat', MoneyType::class, [
-                'label' => "Montant Flat",
-                'currency' => "USD",
-                'required' => false,
-                'grouping' => true,
-                'attr' => [
-                    'placeholder' => "Code",
-                ],
-            ])
-            ->add('tauxSurPrimeNette', PercentType::class, [
-                'required' => false,
-                'label' => "Taux par rapport à la prime nette",
-                'scale' => 3,
-                'attr' => [
-                    'placeholder' => "Taux",
-                ],
-            ])
-            ->add('imposable', ChoiceType::class, [
-                'label' => "Peut-on appliquer les taxes?",
-                'help' => "Oui, si les taxes peuvent s'appliquer.",
-                'expanded' => true,
-                'choices'  => [
-                    "Oui" => true,
-                    "Non" => false,
-                ],
-            ])
+            // ->add('montantflat', MoneyType::class, [
+            //     'label' => "Montant Flat",
+            //     'currency' => "USD",
+            //     'required' => false,
+            //     'grouping' => true,
+            //     'attr' => [
+            //         'placeholder' => "Code",
+            //     ],
+            // ])
+            // ->add('tauxSurPrimeNette', PercentType::class, [
+            //     'required' => false,
+            //     'label' => "Taux par rapport à la prime nette",
+            //     'scale' => 3,
+            //     'attr' => [
+            //         'placeholder' => "Taux",
+            //     ],
+            // ])
+            // ->add('imposable', ChoiceType::class, [
+            //     'label' => "Peut-on appliquer les taxes?",
+            //     'help' => "Oui, si les taxes peuvent s'appliquer.",
+            //     'expanded' => true,
+            //     'choices'  => [
+            //         "Oui" => true,
+            //         "Non" => false,
+            //     ],
+            // ])
             //Le bouton d'enregistrement / soumission
              ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
