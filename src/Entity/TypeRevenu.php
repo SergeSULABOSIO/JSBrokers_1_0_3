@@ -18,12 +18,12 @@ class TypeRevenu
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $formule = null;
+    // #[ORM\Column(nullable: true)]
+    // private ?int $formule = null;
 
-    public const FORMULE_POURCENTAGE_PRIME_NETTE = 0;
-    public const FORMULE_POURCENTAGE_FRONTING = 1;
-    public const FORMULE_POURCENTAGE_PRIME_TOTALE = 2;
+    // public const FORMULE_POURCENTAGE_PRIME_NETTE = 0;
+    // public const FORMULE_POURCENTAGE_FRONTING = 1;
+    // public const FORMULE_POURCENTAGE_PRIME_TOTALE = 2;
 
     #[ORM\Column(nullable: true)]
     private ?float $montantflat = null;
@@ -83,17 +83,17 @@ class TypeRevenu
         return $this;
     }
 
-    public function getFormule(): ?int
-    {
-        return $this->formule;
-    }
+    // public function getFormule(): ?int
+    // {
+    //     return $this->formule;
+    // }
 
-    public function setFormule(int $formule): static
-    {
-        $this->formule = $formule;
+    // public function setFormule(int $formule): static
+    // {
+    //     $this->formule = $formule;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getMontantflat(): ?float
     {

@@ -2,10 +2,12 @@
 
 namespace App\Form;
 
+use App\Entity\Chargement;
 use App\Entity\Revenu;
 use App\Entity\TypeRevenu;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -25,16 +27,23 @@ class TypeRevenuType extends AbstractType
                     'placeholder' => "Nom ici",
                 ],
             ])
-            ->add('formule', ChoiceType::class, [
-                'label' => "Quelle est la formule applicable?",
-                'expanded' => true,
+            ->add('typeChargement', EntityType::class, [
+                'label' => "Chargement cible",
                 'required' => false,
-                'choices'  => [
-                    "Un pourcentage du Fronting" => TypeRevenu::FORMULE_POURCENTAGE_FRONTING,
-                    "Un pourcentage de la prime nette" => TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE,
-                    "Un pourcentage de la prime totale" => TypeRevenu::FORMULE_POURCENTAGE_PRIME_TOTALE,
-                ],
+                'class' => Chargement::class,
+                'choice_label' => 'nom',
+                'help' => 'Le composant de la prime (ou chargement) sur base duquel ce revenu sera calculé automatiquement.',
             ])
+            // ->add('formule', ChoiceType::class, [
+            //     'label' => "Quelle est la formule applicable?",
+            //     'expanded' => true,
+            //     'required' => false,
+            //     'choices'  => [
+            //         "Un pourcentage du Fronting" => TypeRevenu::FORMULE_POURCENTAGE_FRONTING,
+            //         "Un pourcentage de la prime nette" => TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE,
+            //         "Un pourcentage de la prime totale" => TypeRevenu::FORMULE_POURCENTAGE_PRIME_TOTALE,
+            //     ],
+            // ])
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
                 'required' => false,
