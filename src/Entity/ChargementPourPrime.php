@@ -19,8 +19,8 @@ class ChargementPourPrime
     #[ORM\Column(nullable: true)]
     private ?float $montantFlatExceptionel = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?float $tauxExceptionel = null;
+    // #[ORM\Column(nullable: true)]
+    // private ?float $tauxExceptionel = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
@@ -31,8 +31,8 @@ class ChargementPourPrime
     #[ORM\ManyToOne(inversedBy: 'chargements')]
     private ?Cotation $cotation = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $nom = null;
+    // #[ORM\Column(length: 255)]
+    // private ?string $nom = null;
 
     public function getId(): ?int
     {
@@ -63,17 +63,17 @@ class ChargementPourPrime
         return $this;
     }
 
-    public function getTauxExceptionel(): ?float
-    {
-        return $this->tauxExceptionel;
-    }
+    // public function getTauxExceptionel(): ?float
+    // {
+    //     return $this->tauxExceptionel;
+    // }
 
-    public function setTauxExceptionel(?float $tauxExceptionel): static
-    {
-        $this->tauxExceptionel = $tauxExceptionel;
+    // public function setTauxExceptionel(?float $tauxExceptionel): static
+    // {
+    //     $this->tauxExceptionel = $tauxExceptionel;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getCreatedAt(): ?\DateTimeImmutable
     {
@@ -111,15 +111,15 @@ class ChargementPourPrime
         return $this;
     }
 
-    public function getNom(): ?string
-    {
-        return $this->nom;
-    }
+    // public function getNom(): ?string
+    // {
+    //     return $this->nom;
+    // }
 
-    public function setNom(string $nom): static
-    {
-        $this->nom = $nom;
+    // public function setNom(string $nom): static
+    // {
+    //     $this->nom = $nom;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 }

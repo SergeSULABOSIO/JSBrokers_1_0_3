@@ -32,29 +32,29 @@ class ChargementPourPrimeType extends AbstractType
                 'class' => Chargement::class,
                 'choice_label' => 'nom',
             ])
-            ->add('nom', TextType::class, [
-                'label' => "Nom",
-                'attr' => [
-                    'placeholder' => "Nom",
-                ],
-            ])
+            // ->add('nom', TextType::class, [
+            //     'label' => "Nom",
+            //     'attr' => [
+            //         'placeholder' => "Nom",
+            //     ],
+            // ])
             ->add('montantFlatExceptionel', MoneyType::class, [
-                'label' => "Montant fixe (exceptionnel)",
+                'label' => "Montant",
                 'required' => false,
                 'currency' => "USD",
                 'grouping' => true,
                 'attr' => [
-                    'placeholder' => "Montant fixe",
+                    'placeholder' => "Montant",
                 ],
             ])
-            ->add('tauxExceptionel', PercentType::class, [
-                'label' => "Taux exceptionnel",
-                'required' => false,
-                'scale' => 3,
-                'attr' => [
-                    'placeholder' => "Taux",
-                ],
-            ])
+            // ->add('tauxExceptionel', PercentType::class, [
+            //     'label' => "Taux exceptionnel",
+            //     'required' => false,
+            //     'scale' => 3,
+            //     'attr' => [
+            //         'placeholder' => "Taux",
+            //     ],
+            // ])
             // ->add('createdAt', null, [
             //     'widget' => 'single_text',
             // ])
