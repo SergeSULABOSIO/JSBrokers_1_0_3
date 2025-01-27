@@ -310,7 +310,7 @@ class Constante
         return $montant;
     }
 
-    je suis ici
+    
     public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
@@ -318,6 +318,7 @@ class Constante
             /** @var ChargementPourPrime $chargement */
             $chargement = $loading;
             $montant += $chargement->getMontantFlatExceptionel();
+            // dd("ici", $loading);
         }
         return $montant;
     }
@@ -376,7 +377,7 @@ class Constante
         return $montant;
     }
 
-    public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation, ?Collection $typesrevenus = null): float
+    public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation): float
     {
         $montant = 0;
         if ($cotation) {
@@ -390,7 +391,7 @@ class Constante
 
                 //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
                 if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
-                    $montant = $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
+                    $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
                 }
             }
         }
@@ -398,7 +399,7 @@ class Constante
         return $montant;
     }
 
-    public function Cotation_getMontant_commission_payable_par_client(?Cotation $cotation, ?Collection $typesrevenus = null): float
+    public function Cotation_getMontant_commission_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
         if ($cotation) {
@@ -412,7 +413,7 @@ class Constante
 
                 //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
                 if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                    $montant = $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
+                    $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
                 }
             }
         }

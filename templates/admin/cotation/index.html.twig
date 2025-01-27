@@ -49,14 +49,19 @@
                         <tr id="row_cotation_{{ cotation.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.cotation.edit', {'idCotation':cotation.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ cotation.nom }} 
+                                    {{ cotation.nom }}
                                     {% if cotation.piste != null %}
                                        | Piste: {{ cotation.piste }}
                                     {% endif %}
                                     {% if cotation.avenants|length != 0 %}
                                         | Avénant ({{cotation.avenants|length}})
                                     {% endif %}
-                                </a>
+                                </a><br/>
+                                <small>
+                                    <span class="text-secondary fw-bold">Prime TTC dûe par le client: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation) }} USD </span> 
+                                    |<span class="text-secondary fw-light"> Com. dûe par Assureur: {{ constante.Cotation_getMontant_commission_payable_par_assureur(cotation) }} USD</span> 
+                                    |<span class="text-secondary fw-light"> Com. dûe par Cient: {{ constante.Cotation_getMontant_commission_payable_par_client(cotation) }} USD</span> 
+                                </small>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
