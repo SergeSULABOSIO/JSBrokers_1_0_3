@@ -239,6 +239,7 @@ class CotationType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Cotation::class,
+            'cotation' => null,
         ]);
     }
 }
