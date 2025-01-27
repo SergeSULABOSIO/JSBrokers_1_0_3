@@ -112,6 +112,9 @@ class CotationController extends AbstractController
         $cotation = $this->cotationRepository->find($idCotation);
 
         $form = $this->createForm(CotationType::class, $cotation);
+        if ($cotation) {
+            $form->get('prime')->setData($this->constante->Cotation_getMontant_prime_payable_par_client($cotation));
+        }
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -120,9 +123,9 @@ class CotationController extends AbstractController
             $this->addFlash("success", $this->translator->trans("cotation_edition_ok", [
                 ":cotation" => $cotation->getNom(),
             ]));
-            return $this->redirectToRoute("admin.cotation.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // return $this->redirectToRoute("admin.cotation.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
         }
         return $this->render('admin/cotation/edit.html.twig', [
             'pageName' => $this->translator->trans("cotation_page_name_update", [

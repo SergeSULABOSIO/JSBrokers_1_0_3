@@ -12,6 +12,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
@@ -76,6 +77,20 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ])
+
+            //champ non mappé
+            ->add('prime', MoneyType::class, [
+                'label' => "Prime TTC",
+                'currency' => "USD",
+                'grouping' => true,
+                'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Prime totale",
+                ],
+            ])
+
             ->add('revenus', CollectionType::class, [
                 'label' => "Revenus",
                 'entry_type' => RevenuPourCourtierType::class,
@@ -153,7 +168,7 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "description",
                 ],
             ])
-
+            
             ->add('avenants', CollectionType::class, [
                 'label' => "Avenants",
                 'entry_type' => AvenantType::class,

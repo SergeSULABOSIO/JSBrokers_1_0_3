@@ -410,7 +410,7 @@ class Constante
 
                 /** @var TypeRevenu $typeRevenu */
                 $typeRevenu = $revenuPourCourtier->getTypeRevenu();
-
+                
                 //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
                 if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
                     $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
