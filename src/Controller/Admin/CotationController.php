@@ -111,9 +111,18 @@ class CotationController extends AbstractController
         /** @var Cotation $cotation */
         $cotation = $this->cotationRepository->find($idCotation);
 
-        $form = $this->createForm(CotationType::class, $cotation);
+        $form = $this->createForm(CotationType::class, $cotation, [
+            "cotation" => $cotation
+        ]);
         if ($cotation) {
             $form->get('prime')->setData($this->constante->Cotation_getMontant_prime_payable_par_client($cotation));
+            
+            $comNette = $this->constante->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->constante->Cotation_getMontant_commission_payable_par_client($cotation);
+            $tvaCom = $comNette * 0.16;
+            $comTTC = $comNette + $tvaCom;
+            $form->get('commissionNette')->setData($comNette);
+            $form->get('commissionNetteTva')->setData($tvaCom);
+            $form->get('commissionTTC')->setData($comTTC);
         }
         $form->handleRequest($request);
 
@@ -144,11 +153,11 @@ class CotationController extends AbstractController
     {
         /** @var Cotation $cotation */
         $cotation = $this->cotationRepository->find($idCotation);
-        
+
         $message = $this->translator->trans("cotation_deletion_ok", [
             ":cotation" => $cotation->getNom(),
         ]);
-        
+
         $this->manager->remove($cotation);
         $this->manager->flush();
 

@@ -110,6 +110,40 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ])
+            //champ non mappé
+            ->add('commissionNette', MoneyType::class, [
+                'label' => "Commission totale ht",
+                'currency' => "USD",
+                'grouping' => true,
+                'help' => "La somme des revenus ci-haut.",
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Commission totale ht",
+                ],
+            ])
+            //champ non mappé
+            ->add('commissionNetteTva', MoneyType::class, [
+                'label' => "Taxes",
+                'currency' => "USD",
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Taxes",
+                ],
+            ])
+            //champ non mappé
+            ->add('commissionTTC', MoneyType::class, [
+                'label' => "Commission TTC",
+                'currency' => "USD",
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Commission TTC",
+                ],
+            ])
             ->add('tranches', CollectionType::class, [
                 'label' => "Tranches",
                 'entry_type' => TrancheType::class,
