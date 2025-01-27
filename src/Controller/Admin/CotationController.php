@@ -8,6 +8,9 @@ use App\Constantes\MenuActivator;
 use App\Entity\Assureur;
 use App\Entity\Contact;
 use App\Entity\Cotation;
+use App\Entity\Piste;
+use App\Entity\Risque;
+use App\Entity\Taxe;
 use App\Form\AssureurType;
 use App\Form\ContactType;
 use App\Form\CotationType;
@@ -16,6 +19,7 @@ use App\Repository\ContactRepository;
 use App\Repository\CotationRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\ServiceTaxes;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -40,6 +44,7 @@ class CotationController extends AbstractController
         private InviteRepository $inviteRepository,
         private CotationRepository $cotationRepository,
         private Constante $constante,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
@@ -116,13 +121,36 @@ class CotationController extends AbstractController
         ]);
         if ($cotation) {
             $form->get('prime')->setData($this->constante->Cotation_getMontant_prime_payable_par_client($cotation));
-            
+
             $comNette = $this->constante->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->constante->Cotation_getMontant_commission_payable_par_client($cotation);
-            $tvaCom = $comNette * 0.16;
+            $tvaCom = 0;
+
+            Je suis ici - calculs des taxes
+            foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAss) {
+                /** @var Taxe $taxeAssureur */
+                $taxeAssureur = $taxeAss;
+                // dd($taxeAssureur, $cotation);
+                if ($cotation->getPiste()) {
+                    /** @var Piste $piste */
+                    $piste = $cotation->getPiste();
+                    if ($piste->getRisque()) {
+                        /** @var Risque $risque */
+                        $risque = $piste->getRisque();
+                        if ($risque->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE) {
+                            $tvaCom += $comNette * $taxeAssureur->getTauxIARD();
+                        }else{
+                            $tvaCom += $comNette * $taxeAssureur->getTauxVIE();
+                        }
+                    }
+                }
+            }
+
             $comTTC = $comNette + $tvaCom;
             $form->get('commissionNette')->setData($comNette);
             $form->get('commissionNetteTva')->setData($tvaCom);
             $form->get('commissionTTC')->setData($comTTC);
+
+            // dd($this->serviceTaxes->getTaxesPayableParCourtier());
         }
         $form->handleRequest($request);
 

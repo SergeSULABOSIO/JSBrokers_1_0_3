@@ -66,9 +66,8 @@ class TaxeType extends AbstractType
                 'expanded' => true,
                 'required' => false,
                 'choices'  => [
-                    "Le client et le courtier" => Taxe::REDEVABLE_COURTIER_ET_CLIENT,
+                    "L'assureur" => Taxe::REDEVABLE_ASSUREUR,
                     "Le courtier" => Taxe::REDEVABLE_COURTIER,
-                    "Le client" => Taxe::REDEVABLE_CLIENT,
                 ],
             ])
             ->add('autoriteFiscales', CollectionType::class, [

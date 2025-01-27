@@ -41,9 +41,8 @@ class Taxe
     #[ORM\Column]
     private ?int $redevable = null;
 
-    public const REDEVABLE_COURTIER_ET_CLIENT = 0;
+    public const REDEVABLE_ASSUREUR = 0;
     public const REDEVABLE_COURTIER = 1;
-    public const REDEVABLE_CLIENT = 2;
 
     #[ORM\ManyToOne(inversedBy: 'taxes')]
     private ?Entreprise $entreprise = null;
