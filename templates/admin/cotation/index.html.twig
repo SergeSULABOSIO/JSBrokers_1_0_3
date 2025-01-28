@@ -57,7 +57,7 @@
                                         | Avénant ({{cotation.avenants|length}})
                                     {% endif %}
                                 </a><br/>
-                                <small>
+                                <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime TTC dûe par le client: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     |<span class="text-secondary fw-light"> Com. dûe par Assureur: {{ constante.Cotation_getMontant_commission_payable_par_assureur(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     |<span class="text-secondary fw-light"> Com. dûe par Cient: {{ constante.Cotation_getMontant_commission_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 

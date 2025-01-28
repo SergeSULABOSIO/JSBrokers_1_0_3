@@ -278,7 +278,14 @@ class Constante
     public function Tranche_getMontant_prime_payable_par_client(?Tranche $tranche): float
     {
         $montant = 0;
-
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $primeCotation = $this->Cotation_getMontant_prime_payable_par_client($tranche->getCotation());
+                // dd($primeCotation, $tranche);
+                $montant = $primeCotation * $tranche->getPourcentage();
+            }
+            
+        }
         return $montant;
     }
 

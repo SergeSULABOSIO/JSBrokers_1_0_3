@@ -25,6 +25,7 @@ use App\Repository\InviteRepository;
 use App\Repository\TrancheRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\NoteRepository;
+use App\Services\ServiceMonnaies;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -50,6 +51,7 @@ class TrancheController extends AbstractController
         private TrancheRepository $trancheRepository,
         private NoteRepository $noteRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -60,13 +62,6 @@ class TrancheController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
-        // dd(
-        //     time(),
-        //     $request->getSession()->getMetadataBag()->getCreated(), 
-        //     $request->getSession()->getMetadataBag()->getLastUsed(),
-        //     $request->getSession()
-        // );
-
         return $this->render('admin/tranche/index.html.twig', [
             'pageName' => $this->translator->trans("tache_page_name_new"),
             'utilisateur' => $this->getUser(),
@@ -74,6 +69,7 @@ class TrancheController extends AbstractController
             'tranches' => $this->trancheRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
             "panier" => $request->getSession()->get(PanierNotes::NOM),
         ]);
@@ -248,7 +244,9 @@ class TrancheController extends AbstractController
         /** @var Tranche $tranche */
         $tranche = $this->trancheRepository->find($idTranche);
 
-        $form = $this->createForm(TrancheType::class, $tranche);
+        $form = $this->createForm(TrancheType::class, $tranche, [
+            "tranche" => $tranche
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

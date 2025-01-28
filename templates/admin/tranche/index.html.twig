@@ -50,21 +50,27 @@
                         <tr id="row_tranche_{{ tranche.id }}">
                             <td>
                                 <a class="m-2" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
-                                    
                                     {% if panier != null %}
                                         {% if panier.containsTranche(tranche.id) == true %}
                                             {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
                                         {% endif %}
                                     {% endif %}  
-                                    {{ tranche.nom }}                   
-                                    (à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
+                                    {{ tranche.nom }}                 
+                                    ({{ tranche.pourcentage * 100 }}% à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
                                     {% if tranche.cotation != null %}
                                          | {{ tranche.cotation.nom|slice(0, 20) }}...
                                     {% endif %}
                                     {% if tranche.cotation.piste != null %}
                                          | {{ tranche.cotation.piste.nom|slice(0, 20) }}...
                                     {% endif %}
-                                </a>
+                                </a><br/>
+                                <small class ="m-2">
+                                    <span class="text-secondary fw-light">Prime dûe: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
+                                    <span class="text-secondary fw-light">Commission: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
+                                    <span class="text-secondary fw-light">Rétrocom: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
+                                    <span class="text-secondary fw-light">Arca: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
+                                    <span class="text-secondary fw-light">Tva: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
