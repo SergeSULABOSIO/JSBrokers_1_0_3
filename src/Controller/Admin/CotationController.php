@@ -19,6 +19,7 @@ use App\Repository\ContactRepository;
 use App\Repository\CotationRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -45,6 +46,7 @@ class CotationController extends AbstractController
         private CotationRepository $cotationRepository,
         private Constante $constante,
         private ServiceTaxes $serviceTaxes,
+        private ServiceMonnaies $serviceMonnaies,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
@@ -62,6 +64,7 @@ class CotationController extends AbstractController
             'cotations' => $this->cotationRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
         ]);
     }
@@ -80,7 +83,7 @@ class CotationController extends AbstractController
         $cotation = new Cotation();
         //Paramètres par défaut
         // $contact->setEntreprise($entreprise);
-        
+
         $form = $this->createForm(CotationType::class, $cotation, [
             "cotation" => $cotation
         ]);
