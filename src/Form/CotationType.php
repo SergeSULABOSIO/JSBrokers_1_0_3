@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\Assureur;
 use App\Entity\Cotation;
 use App\Services\FormListenerFactory;
+use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -21,11 +22,14 @@ class CotationType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        dd($this->serviceMonnaies->getMonnaieAffichage());
+
         $builder
             ->add('nom', TextType::class, [
                 'label' => "Nom",
@@ -76,21 +80,26 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
-            ])
+            ]);
 
-            //champ non mappé
-            ->add('prime', MoneyType::class, [
-                'label' => "Prime TTC",
-                'currency' => "USD",
-                'grouping' => true,
-                'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Prime totale",
-                ],
-            ])
+        if ($options['cotation'] != null) {
+            $builder
+                //champ non mappé
+                ->add('prime', MoneyType::class, [
+                    'label' => "Prime TTC",
+                    'currency' => "USD",
+                    'grouping' => true,
+                    'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
+                    'mapped' => false,
+                    'disabled' => true,
+                    'attr' => [
+                        'placeholder' => "Prime totale",
+                    ],
+                ]);
+        }
 
+
+        $builder
             ->add('revenus', CollectionType::class, [
                 'label' => "Revenus",
                 'entry_type' => RevenuPourCourtierType::class,
@@ -109,41 +118,48 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
-            ])
-            //champ non mappé
-            ->add('commissionNette', MoneyType::class, [
-                'label' => "Commission totale ht",
-                'currency' => "USD",
-                'grouping' => true,
-                'help' => "La somme des revenus ci-haut.",
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Commission totale ht",
-                ],
-            ])
-            //champ non mappé
-            ->add('commissionNetteTva', MoneyType::class, [
-                'label' => "Taxes",
-                'currency' => "USD",
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Taxes",
-                ],
-            ])
-            //champ non mappé
-            ->add('commissionTTC', MoneyType::class, [
-                'label' => "Commission TTC",
-                'currency' => "USD",
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Commission TTC",
-                ],
-            ])
+            ]);
+
+        if ($options['cotation'] != null) {
+            $builder
+                //champ non mappé
+                ->add('commissionNette', MoneyType::class, [
+                    'label' => "Commission totale ht",
+                    'currency' => "USD",
+                    'grouping' => true,
+                    'help' => "La somme des revenus ci-haut.",
+                    'mapped' => false,
+                    'disabled' => true,
+                    'attr' => [
+                        'placeholder' => "Commission totale ht",
+                    ],
+                ])
+                //champ non mappé
+                ->add('commissionNetteTva', MoneyType::class, [
+                    'label' => "Taxes",
+                    'currency' => "USD",
+                    'grouping' => true,
+                    'mapped' => false,
+                    'disabled' => true,
+                    'attr' => [
+                        'placeholder' => "Taxes",
+                    ],
+                ])
+                //champ non mappé
+                ->add('commissionTTC', MoneyType::class, [
+                    'label' => "Commission TTC",
+                    'currency' => "USD",
+                    'grouping' => true,
+                    'mapped' => false,
+                    'disabled' => true,
+                    'attr' => [
+                        'placeholder' => "Commission TTC",
+                    ],
+                ]);
+        }
+
+
+        $builder
             ->add('tranches', CollectionType::class, [
                 'label' => "Tranches",
                 'entry_type' => TrancheType::class,
@@ -182,7 +198,7 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "nom",
                 ],
             ])
-            
+
             ->add('taches', CollectionType::class, [
                 'label' => "Tâches",
                 'entry_type' => TacheType::class,
@@ -202,7 +218,7 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "description",
                 ],
             ])
-            
+
             ->add('avenants', CollectionType::class, [
                 'label' => "Avenants",
                 'entry_type' => AvenantType::class,
@@ -222,7 +238,7 @@ class CotationType extends AbstractType
                     'data-form-collection-entites-view-field-value' => "description",
                 ],
             ])
-            
+
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",

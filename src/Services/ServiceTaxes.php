@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Entity\Entreprise;
+use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
 use ArrayObject;

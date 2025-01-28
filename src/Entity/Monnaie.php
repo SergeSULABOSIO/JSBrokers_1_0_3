@@ -27,6 +27,11 @@ class Monnaie
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $tauxusd = null;
 
+    public const FONCTION_AUCUNE = -1;
+    public const FONCTION_SAISIE_ET_AFFICHAGE = 0;
+    public const FONCTION_SAISIE_UNIQUEMENT = 1;
+    public const FONCTION_AFFICHAGE_UNIQUEMENT = 2;
+
     #[ORM\Column]
     private ?int $fonction = null;
 

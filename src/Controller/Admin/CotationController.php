@@ -125,7 +125,6 @@ class CotationController extends AbstractController
             $comNette = $this->constante->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->constante->Cotation_getMontant_commission_payable_par_client($cotation);
             $tvaCom = 0;
 
-            Je suis ici - calculs des taxes
             foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAss) {
                 /** @var Taxe $taxeAssureur */
                 $taxeAssureur = $taxeAss;
