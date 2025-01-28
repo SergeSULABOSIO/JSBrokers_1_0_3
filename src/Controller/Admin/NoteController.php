@@ -18,6 +18,8 @@ use App\Repository\InviteRepository;
 use App\Repository\RisqueRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\ServiceDates;
+use App\Services\ServiceMonnaies;
+use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -56,6 +58,8 @@ class NoteController extends AbstractController
         private NoteRepository $noteRepository,
         private Constante $constante,
         private RequestStack $requestStack,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -66,13 +70,6 @@ class NoteController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
-        // dd(
-        //     time(),
-        //     $request->getSession()->getMetadataBag()->getCreated(), 
-        //     $request->getSession()->getMetadataBag()->getLastUsed(),
-        //     $request->getSession()
-        // );
-
         return $this->render('admin/note/index.html.twig', [
             'pageName' => $this->translator->trans("note_page_name_new"),
             'utilisateur' => $this->getUser(),
@@ -80,6 +77,7 @@ class NoteController extends AbstractController
             'notes' => $this->noteRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
             "panier" => $request->getSession()->get(PanierNotes::NOM),
         ]);
@@ -121,7 +119,7 @@ class NoteController extends AbstractController
         if ($note != null) {
             $panier->setNote($note);
             $this->addFlash("success", "La note '" . $note->getNom() . "' a été insérée dans le panier.");
-        }else{
+        } else {
             $this->addFlash("danger", "Cher utilisateur, cette note est introuvable dans la base de données.");
         }
         return $this->redirect($currentURL);
@@ -137,11 +135,11 @@ class NoteController extends AbstractController
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
-        
+
         if ($panier->getIdNote() == $idNote) {
             $panier->viderpanier();
             $this->addFlash("success", "La note a été rétirée du panier.");
-        }else{
+        } else {
             $this->addFlash("danger", "Cher utilisateur, cette note n'est pas dans le panier.");
         }
         return $this->redirect($currentURL);
@@ -170,6 +168,9 @@ class NoteController extends AbstractController
 
         /** @var Form $form */
         $form = $this->buildForm($note, $page);
+
+        
+        // dd($note);
 
         $form->handleRequest($request);
 
@@ -225,7 +226,13 @@ class NoteController extends AbstractController
             "pageMax" => $this->pageMax,
             "type" => $note->getType(),
             "addressedTo" => $note->getAddressedTo(),
+            "note" => $note,
         ]);
+        if ($note != null) {
+            $form->get('montantDue')->setData($this->constante->Note_getMontant_payable($note));
+            $form->get('montantPaye')->setData($this->constante->Note_getMontant_paye($note));
+            $form->get('montantSolde')->setData($this->constante->Note_getMontant_solde($note));
+        }
         return $form;
     }
 
@@ -262,7 +269,7 @@ class NoteController extends AbstractController
         //si la note a un identifiant = la note existe dans la base de données
         if ($idNote != -1 && $idNote != null) {
             $note = $this->noteRepository->find($idNote);
-            if ($note != null){
+            if ($note != null) {
                 $panier->setNote($note);
             }
         } else {
@@ -365,7 +372,7 @@ class NoteController extends AbstractController
         if ($panier->getIdNote() == $idNote) {
             $panier->viderpanier();
         }
-        
+
 
         $this->manager->remove($note);
         $this->manager->flush();

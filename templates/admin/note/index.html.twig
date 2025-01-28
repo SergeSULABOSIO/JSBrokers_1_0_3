@@ -50,8 +50,7 @@
 							<tr id="row_note_{{ note.id }}">
 								<td>
 									<a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
-										{{ constante.Note_getMontant_payable(note) }} USD - 
-										{{ constante.getTypeNote(note.type) }}
+										Réf.: {{ note.reference }} - {{ note.description }}
 										{% if note.addressedTo == 0 and note.client != null %}
 											/ {{ note.client.nom }}
 										{% endif %}
@@ -64,8 +63,24 @@
 										{% if note.addressedTo == 3 and note.autoritefiscale != null %}
 											/ {{ note.autoritefiscale.nom }}
 										{% endif %}
-										 / {{ note.nom }}
-									</a>
+									</a><br/>
+									<small class ="m-2">
+                                    	<span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
+                                    	<span class="text-secondary fw-bold">Montant payé: {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
+                                    	<span class="text-secondary fw-bold">Solde: {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+										{% if note.addressedTo == 0 and note.client != null %}
+											<span class="text-secondary fw-light">| {{ constante.getTypeNote(note.type) }} - {{ note.nom }}</span>
+										{% endif %}
+										{% if note.addressedTo == 1 and note.assureur != null %}
+											<span class="text-secondary fw-light">| {{ constante.getTypeNote(note.type) }} - {{ note.nom }}</span>
+										{% endif %}
+										{% if note.addressedTo == 2 and note.partenaire != null %}
+											<span class="text-secondary fw-light">| {{ constante.getTypeNote(note.type) }} - {{ note.nom }}</span>
+										{% endif %}
+										{% if note.addressedTo == 3 and note.autoritefiscale != null %}
+											<span class="text-secondary fw-light">| {{ constante.getTypeNote(note.type) }} - {{ note.nom }}</span>
+										{% endif %}
+									</small>
 								</td>
 								<td>
 									<div class="d-flex gap-1 d-flex justify-content-end">

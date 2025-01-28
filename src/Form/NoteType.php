@@ -6,22 +6,24 @@ use App\Entity\Note;
 use App\Entity\Client;
 use App\Entity\Invite;
 use App\Entity\Assureur;
-use App\Entity\AutoriteFiscale;
 use App\Entity\Partenaire;
 use App\Entity\CompteBancaire;
+use App\Entity\AutoriteFiscale;
+use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Event\PostSetDataEvent;
-use Symfony\Component\Form\Event\PreSetDataEvent;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\Event\PreSetDataEvent;
+use Symfony\Component\Form\Event\PostSetDataEvent;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 
 // use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
@@ -38,7 +40,8 @@ class NoteType extends AbstractType
 
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -61,6 +64,46 @@ class NoteType extends AbstractType
             // dd($options['page']);
             //PAGE 2
             $this->buildPageB($builder, $options);
+        }
+
+        if ($options['note'] != null) {
+            $builder
+                //champ non mappé
+                ->add('montantDue', MoneyType::class, [
+                    'label' => "Montant dû",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    'grouping' => true,
+                    // 'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
+                    'mapped' => false,
+                    'disabled' => true,
+                    'attr' => [
+                        'placeholder' => "Montant dû",
+                    ],
+                ])
+                //champ non mappé
+                ->add('montantPaye', MoneyType::class, [
+                    'label' => "Montant payé",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    'grouping' => true,
+                    // 'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
+                    'mapped' => false,
+                    'disabled' => true,
+                    'attr' => [
+                        'placeholder' => "Montant payé",
+                    ],
+                ])
+                //champ non mappé
+                ->add('montantSolde', MoneyType::class, [
+                    'label' => "Solde restant dû",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    'grouping' => true,
+                    // 'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
+                    'mapped' => false,
+                    'disabled' => true,
+                    'attr' => [
+                        'placeholder' => "Solde restant dû",
+                    ],
+                ]);
         }
 
         //BAS DE PAGE
@@ -103,6 +146,7 @@ class NoteType extends AbstractType
             "pageMax" => -100,
             "type" => -1,
             "addressedTo" => -1,
+            "note" => null,
         ]);
     }
 
@@ -149,6 +193,11 @@ class NoteType extends AbstractType
                     "De l'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
                 ]
             ])
+        ;
+
+        // dd($options['note']);
+
+        $builder
             ->add('paiements', CollectionType::class, [
                 'label' => "Paiements",
                 'help' => "Les paiements relatives à cette notes.",
@@ -168,8 +217,7 @@ class NoteType extends AbstractType
                     'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
                     'data-form-collection-entites-view-field-value' => "description",
                 ],
-            ])
-        ;
+            ]);
     }
 
     private function buildPageB(FormBuilderInterface $builder, array $options): void

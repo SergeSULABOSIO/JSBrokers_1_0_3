@@ -7,6 +7,7 @@ use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Entity\Note;
+use App\Entity\Paiement;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\Tranche;
@@ -432,6 +433,24 @@ class Constante
     {
         $montant = 0;
 
+        return $montant;
+    }
+
+    public function Note_getMontant_solde(?Note $note): float
+    {
+        return $this->Note_getMontant_payable($note) - $this->Note_getMontant_paye($note);
+    }
+
+    public function Note_getMontant_paye(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getPaiements() as $encaisse) {
+                /** @var Paiement $paiement */
+                $paiement = $encaisse;
+                $montant += $paiement->getMontant();
+            }
+        }
         return $montant;
     }
 
