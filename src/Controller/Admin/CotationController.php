@@ -80,8 +80,10 @@ class CotationController extends AbstractController
         $cotation = new Cotation();
         //Paramètres par défaut
         // $contact->setEntreprise($entreprise);
-
-        $form = $this->createForm(CotationType::class, $cotation);
+        
+        $form = $this->createForm(CotationType::class, $cotation, [
+            "cotation" => $cotation
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

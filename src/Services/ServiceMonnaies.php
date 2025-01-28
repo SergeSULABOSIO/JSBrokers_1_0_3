@@ -49,4 +49,14 @@ class ServiceMonnaies
         }
         return null;
     }
+
+    public function getCodeMonnaieAffichage()
+    {
+        /** @var Monnaie $monnaieAffichage */
+        $monnaie = $this->getMonnaieAffichage();
+        if ($monnaie) {
+            return $monnaie->getCode();
+        }
+        return null;
+    }
 }

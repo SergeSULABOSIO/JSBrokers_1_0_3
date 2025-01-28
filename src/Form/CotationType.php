@@ -28,7 +28,7 @@ class CotationType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        dd($this->serviceMonnaies->getMonnaieAffichage());
+        // dd($this->serviceMonnaies->getCodeMonnaieAffichage());
 
         $builder
             ->add('nom', TextType::class, [
@@ -87,7 +87,7 @@ class CotationType extends AbstractType
                 //champ non mappé
                 ->add('prime', MoneyType::class, [
                     'label' => "Prime TTC",
-                    'currency' => "USD",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     'grouping' => true,
                     'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
                     'mapped' => false,
@@ -125,7 +125,7 @@ class CotationType extends AbstractType
                 //champ non mappé
                 ->add('commissionNette', MoneyType::class, [
                     'label' => "Commission totale ht",
-                    'currency' => "USD",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     'grouping' => true,
                     'help' => "La somme des revenus ci-haut.",
                     'mapped' => false,
@@ -137,7 +137,7 @@ class CotationType extends AbstractType
                 //champ non mappé
                 ->add('commissionNetteTva', MoneyType::class, [
                     'label' => "Taxes",
-                    'currency' => "USD",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     'grouping' => true,
                     'mapped' => false,
                     'disabled' => true,
@@ -148,7 +148,7 @@ class CotationType extends AbstractType
                 //champ non mappé
                 ->add('commissionTTC', MoneyType::class, [
                     'label' => "Commission TTC",
-                    'currency' => "USD",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     'grouping' => true,
                     'mapped' => false,
                     'disabled' => true,
