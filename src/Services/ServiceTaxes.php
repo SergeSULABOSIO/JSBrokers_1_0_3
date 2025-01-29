@@ -63,4 +63,26 @@ class ServiceTaxes
         }
         return $tab;
     }
+
+    public function getMontantTaxe($montant, bool $tauxIARD, bool $taxeAssureur)
+    {
+        $gross = 0;
+        if ($taxeAssureur == true) {
+            foreach ($this->getTaxesPayableParAssureur() as $taxeAss) {
+                $gross += match ($tauxIARD) {
+                    true => $montant * $taxeAss->getTauxIARD(),
+                    false => $montant * $taxeAss->getTauxVIE(),
+                };
+            }
+        } else {
+            foreach ($this->getTaxesPayableParCourtier() as $taxeCou) {
+                $gross += match ($tauxIARD) {
+                    true => $montant * $taxeCou->getTauxIARD(),
+                    false => $montant * $taxeCou->getTauxVIE(),
+                };
+            }
+        }
+
+        return $gross;
+    }
 }

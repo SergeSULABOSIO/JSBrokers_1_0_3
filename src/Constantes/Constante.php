@@ -12,6 +12,7 @@ use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
+use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -21,6 +22,7 @@ class Constante
 {
     public function __construct(
         private TranslatorInterface $translator,
+        private ServiceTaxes $serviceTaxes,
     ) {}
 
 
@@ -284,7 +286,6 @@ class Constante
                 // dd($primeCotation, $tranche);
                 $montant = $primeCotation * $tranche->getPourcentage();
             }
-            
         }
         return $montant;
     }
@@ -318,7 +319,7 @@ class Constante
         return $montant;
     }
 
-    
+
     public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
@@ -342,13 +343,17 @@ class Constante
 
             //On doit récupérer le montant ou la valeur de ce composant
             foreach ($cotation->getChargements() as $loading) {
-                if ($loading->getId() == $typeChargementCible->getId()) {
-                    /** @var ChargementPourPrime $chargement */
-                    $chargement = $loading;
-                    $montantChargementCible = $chargement->getMontantFlatExceptionel();
-                    // dd($chargement->getNom(), $montantChargementCible);
+                // dd($loading);
+                if ($loading->getType()) {
+                    if ($loading->getType()->getId() == $typeChargementCible->getId()) {
+                        /** @var ChargementPourPrime $chargement */
+                        $chargement = $loading;
+                        $montantChargementCible = $chargement->getMontantFlatExceptionel();
+                        // dd($chargement->getNom(), $montantChargementCible);
+                    }
                 }
             }
+            // dd($typeRevenu, $montantChargementCible, $cotation->getChargements());
 
             //Comment s'applique le taux sur de commission sur le montant du chargement / composant?
             if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
@@ -418,7 +423,7 @@ class Constante
 
                 /** @var TypeRevenu $typeRevenu */
                 $typeRevenu = $revenuPourCourtier->getTypeRevenu();
-                
+
                 //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
                 if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
                     $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
@@ -427,6 +432,23 @@ class Constante
         }
         // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
         return $montant;
+    }
+
+    public function Cotation_getMontant_commission_ttc_payable_par_client(?Cotation $cotation): float{
+        $net = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
+        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true) + $net;
+    }
+
+    public function isIARD(?Cotation $cotation):bool
+    {
+        if ($cotation) {
+            if ($cotation->getPiste()) {
+                if ($cotation->getPiste()->getRisque()) {
+                    return $cotation->getPiste()->getRisque()->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE;
+                }
+            }
+        }
+        return false;
     }
 
     public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation, ?Collection $autoritesFiscales = null): float

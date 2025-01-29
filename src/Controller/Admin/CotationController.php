@@ -130,29 +130,42 @@ class CotationController extends AbstractController
             $comNette = $this->constante->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->constante->Cotation_getMontant_commission_payable_par_client($cotation);
             $tvaCom = 0;
 
-            foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAss) {
-                /** @var Taxe $taxeAssureur */
-                $taxeAssureur = $taxeAss;
-                // dd($taxeAssureur, $cotation);
-                if ($cotation->getPiste()) {
-                    /** @var Piste $piste */
-                    $piste = $cotation->getPiste();
-                    if ($piste->getRisque()) {
-                        /** @var Risque $risque */
-                        $risque = $piste->getRisque();
-                        if ($risque->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE) {
-                            $tvaCom += $comNette * $taxeAssureur->getTauxIARD();
-                        }else{
-                            $tvaCom += $comNette * $taxeAssureur->getTauxVIE();
-                        }
-                    }
+            if ($cotation->getPiste()) {
+                /** @var Piste $piste */
+                $piste = $cotation->getPiste();
+                if ($piste->getRisque()) {
+                    /** @var Risque $risque */
+                    $tvaCom = $this->serviceTaxes->getMontantTaxe(
+                        $comNette,
+                        $piste->getRisque()->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE,
+                        true
+                    );
                 }
             }
 
-            $comTTC = $comNette + $tvaCom;
+            // foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAss) {
+            //     /** @var Taxe $taxeAssureur */
+            //     $taxeAssureur = $taxeAss;
+            //     // dd($taxeAssureur, $cotation);
+            //     if ($cotation->getPiste()) {
+            //         /** @var Piste $piste */
+            //         $piste = $cotation->getPiste();
+            //         if ($piste->getRisque()) {
+            //             /** @var Risque $risque */
+            //             $risque = $piste->getRisque();
+            //             if ($risque->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE) {
+            //                 $tvaCom += $comNette * $taxeAssureur->getTauxIARD();
+            //             }else{
+            //                 $tvaCom += $comNette * $taxeAssureur->getTauxVIE();
+            //             }
+            //             // dd($comNette, $risque, $tvaCom);
+            //         }
+            //     }
+            // }
+
             $form->get('commissionNette')->setData($comNette);
             $form->get('commissionNetteTva')->setData($tvaCom);
-            $form->get('commissionTTC')->setData($comTTC);
+            $form->get('commissionTTC')->setData($comNette + $tvaCom);
 
             // dd($this->serviceTaxes->getTaxesPayableParCourtier());
         }
