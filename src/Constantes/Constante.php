@@ -277,61 +277,237 @@ class Constante
     ];
 
 
-    public function Tranche_getMontant_prime_payable_par_client(?Tranche $tranche): float
+    
+
+
+
+
+
+
+
+
+    public function isIARD(?Cotation $cotation): bool
+    {
+        if ($cotation) {
+            if ($cotation->getPiste()) {
+                if ($cotation->getPiste()->getRisque()) {
+                    return $cotation->getPiste()->getRisque()->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE;
+                }
+            }
+        }
+        return false;
+    }
+
+
+
+
+
+
+    /**
+     * CLIENT
+     */
+    public function Cotation_getClient(?Cotation $cotation)
+    {
+        if ($cotation) {
+            if ($cotation->getPiste()) {
+                return $cotation->getPiste()->getClient();
+            }
+        }
+        return null;
+    }
+
+
+
+
+
+    /**
+     * ASSUREUR
+     */
+    public function Cotation_getAssureur(?Cotation $cotation)
+    {
+        if ($cotation) {
+            if ($cotation->getAssureur()) {
+                return $cotation->getAssureur();
+            }
+        }
+        return null;
+    }
+
+
+
+
+
+    /**
+     * NOTE - NOTE DE DEBIT OU NOTE DE CREDIT
+     */
+    public function Note_getMontant_solde(?Note $note): float
+    {
+        return $this->Note_getMontant_payable($note) - $this->Note_getMontant_paye($note);
+    }
+    public function Note_getMontant_paye(?Note $note): float
     {
         $montant = 0;
-        if ($tranche != null) {
-            if ($tranche->getCotation()) {
-                $primeCotation = $this->Cotation_getMontant_prime_payable_par_client($tranche->getCotation());
-                // dd($primeCotation, $tranche);
-                $montant = $primeCotation * $tranche->getPourcentage();
+        if ($note) {
+            foreach ($note->getPaiements() as $encaisse) {
+                /** @var Paiement $paiement */
+                $paiement = $encaisse;
+                $montant += $paiement->getMontant();
+            }
+        }
+        return $montant;
+    }
+    public function Note_getMontant_payable(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                if ($article->getTranche()) {
+                    /** @var Tranche $tranche */
+                    $tranche = $article->getTranche();
+                    if ($tranche->getCotation()) {
+                        /** @var Cotation $cotation */
+                        $cotation = $tranche->getCotation();
+
+                        switch ($note->getAddressedTo()) {
+                            case Note::TO_ASSUREUR:
+                                // dd("On facture à l'assureur les commissions payables par lui-même.");
+                                $montant = $this->Cotation_getMontant_commission_payable_par_assureur($cotation);
+                                break;
+
+                            case Note::TO_CLIENT:
+                                dd("On facture au client les frais de gestion payables par lui-même.");
+                                $montant = $this->Cotation_getMontant_commission_payable_par_client($cotation);
+                                break;
+
+                            case Note::TO_PARTENAIRE:
+                                dd("Le partenaire nous facture les retrocommissions payable par nous.");
+                                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+                                break;
+
+                            case Note::TO_AUTORITE_FISCALE:
+                                dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
+                                $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
+                                break;
+
+                            default:
+                                # code...
+                                break;
+                        }
+                    }
+                    $montant = $montant * $tranche->getPourcentage();
+                }
             }
         }
         return $montant;
     }
 
 
-    public function Tranche_getMontant_commission_payable_par_assureur(?Tranche $tranche, ?Collection $typesrevenus = null): float
+
+
+
+    /**
+     * LE FRAIS ARCA - TAXES PAYABLES PAR LE COURTIER
+     */
+    public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation): float
     {
-        $montant = 0;
-
-        return $montant;
-    }
-
-    public function Tranche_getMontant_commission_payable_par_client(?Tranche $tranche, ?Collection $typesrevenus = null): float
-    {
-        $montant = 0;
-
-        return $montant;
-    }
-
-    public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche, ?Collection $autoritesFiscales = null): float
-    {
-        $montant = 0;
-
-        return $montant;
-    }
-
-    public function Tranche_getMontant_retrocommissions_payable_par_courtier(?Tranche $tranche, ?Collection $partenaires = null): float
-    {
-        $montant = 0;
-
-        return $montant;
+        $net = $this->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->Cotation_getMontant_commission_payable_par_client($cotation);
+        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), false);
     }
 
 
-    public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
+
+
+
+
+    /**
+     * LA TVA - TAXES PAYABLES PAR L'ASSUREUR
+     */
+    public function Cotation_getMontant_taxe_payable_par_assureur(?Cotation $cotation): float
+    {
+        $net = $this->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->Cotation_getMontant_commission_payable_par_client($cotation);
+        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+    }
+    public function Cotation_getMontant_taxe_payable_par_assureur_payee(?Cotation $cotation): float
+    {
+        return 0;
+    }
+    public function Cotation_getMontant_taxe_payable_par_assureur_solde(?Cotation $cotation): float
+    {
+        return $this->Cotation_getMontant_taxe_payable_par_assureur($cotation) - $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
+    }
+
+
+
+
+    /**
+     * LES COMMISSIONS
+     */
+    public function Cotation_getMontant_commission_ttc_solde(?Cotation $cotation): float
+    {
+        return $this->Cotation_getMontant_commission_ttc($cotation) - $this->Cotation_getMontant_commission_ttc_collectee($cotation);
+    }
+    public function Cotation_getMontant_commission_ttc_collectee(?Cotation $cotation): float
+    {
+        return 0;
+    }
+    public function Cotation_getMontant_commission_ttc(?Cotation $cotation): float
+    {
+        $comTTCAssureur = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
+        $comTTCClient = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
+        return $comTTCAssureur + $comTTCClient;
+    }
+    public function Cotation_getMontant_commission_ttc_payable_par_client(?Cotation $cotation): float
+    {
+        $net = $this->Cotation_getMontant_commission_payable_par_client($cotation);
+        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true) + $net;
+    }
+    public function Cotation_getMontant_commission_ttc_payable_par_assureur(?Cotation $cotation): float
+    {
+        $net = $this->Cotation_getMontant_commission_payable_par_assureur($cotation);
+        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true) + $net;
+    }
+    public function Cotation_getMontant_commission_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
-        foreach ($cotation->getChargements() as $loading) {
-            /** @var ChargementPourPrime $chargement */
-            $chargement = $loading;
-            $montant += $chargement->getMontantFlatExceptionel();
-            // dd("ici", $loading);
+        if ($cotation) {
+            //Pour chaque revenu configuré dans cette cotation
+            foreach ($cotation->getRevenus() as $revenu) {
+                /** @var RevenuPourCourtier $revenuPourCourtier*/
+                $revenuPourCourtier = $revenu;
+
+                /** @var TypeRevenu $typeRevenu */
+                $typeRevenu = $revenuPourCourtier->getTypeRevenu();
+
+                //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
+                if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                    $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
+                }
+            }
         }
+        // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
         return $montant;
     }
+    public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation): float
+    {
+        $montant = 0;
+        if ($cotation) {
+            //Pour chaque revenu configuré dans cette cotation
+            foreach ($cotation->getRevenus() as $revenu) {
+                /** @var RevenuPourCourtier $revenuPourCourtier*/
+                $revenuPourCourtier = $revenu;
 
+                /** @var TypeRevenu $typeRevenu */
+                $typeRevenu = $revenuPourCourtier->getTypeRevenu();
+
+                //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
+                if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
+                    $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
+                }
+            }
+        }
+        // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
+        return $montant;
+    }
     private function Cotation_getMontant_commission(?TypeRevenu $typeRevenu, ?RevenuPourCourtier $revenuPourCourtier, ?Cotation $cotation): float
     {
         $montant = 0;
@@ -390,141 +566,47 @@ class Constante
         return $montant;
     }
 
-    public function Cotation_getMontant_commission_payable_par_assureur(?Cotation $cotation): float
-    {
-        $montant = 0;
-        if ($cotation) {
-            //Pour chaque revenu configuré dans cette cotation
-            foreach ($cotation->getRevenus() as $revenu) {
-                /** @var RevenuPourCourtier $revenuPourCourtier*/
-                $revenuPourCourtier = $revenu;
 
-                /** @var TypeRevenu $typeRevenu */
-                $typeRevenu = $revenuPourCourtier->getTypeRevenu();
 
-                //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
-                if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
-                    $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
-                }
-            }
-        }
-        // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
-        return $montant;
-    }
 
-    public function Cotation_getMontant_commission_payable_par_client(?Cotation $cotation): float
-    {
-        $montant = 0;
-        if ($cotation) {
-            //Pour chaque revenu configuré dans cette cotation
-            foreach ($cotation->getRevenus() as $revenu) {
-                /** @var RevenuPourCourtier $revenuPourCourtier*/
-                $revenuPourCourtier = $revenu;
 
-                /** @var TypeRevenu $typeRevenu */
-                $typeRevenu = $revenuPourCourtier->getTypeRevenu();
 
-                //Uniquement pour les revenus qui sont redevebles à nous par l'assureur
-                if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                    $montant += $this->Cotation_getMontant_commission($typeRevenu, $revenuPourCourtier, $cotation);
-                }
-            }
-        }
-        // dd("Je dois calculer ici la commission payable par l'assureur dans cette proposition");
-        return $montant;
-    }
 
-    public function Cotation_getMontant_commission_ttc_payable_par_client(?Cotation $cotation): float{
-        $net = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
-        return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true) + $net;
-    }
 
-    public function isIARD(?Cotation $cotation):bool
-    {
-        if ($cotation) {
-            if ($cotation->getPiste()) {
-                if ($cotation->getPiste()->getRisque()) {
-                    return $cotation->getPiste()->getRisque()->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE;
-                }
-            }
-        }
-        return false;
-    }
-
-    public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation, ?Collection $autoritesFiscales = null): float
+    /**
+     * RETRO-COMMISSION DUE AU PARTENAIRE
+     */
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation): float
     {
         $montant = 0;
 
         return $montant;
     }
 
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation, ?Collection $partenaires = null): float
+
+    /**
+     * PRIME D'ASSURANCE
+     */
+    public function Tranche_getMontant_prime_payable_par_client(?Tranche $tranche): float
     {
         $montant = 0;
-
-        return $montant;
-    }
-
-    public function Note_getMontant_solde(?Note $note): float
-    {
-        return $this->Note_getMontant_payable($note) - $this->Note_getMontant_paye($note);
-    }
-
-    public function Note_getMontant_paye(?Note $note): float
-    {
-        $montant = 0;
-        if ($note) {
-            foreach ($note->getPaiements() as $encaisse) {
-                /** @var Paiement $paiement */
-                $paiement = $encaisse;
-                $montant += $paiement->getMontant();
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $montant = $this->Cotation_getMontant_prime_payable_par_client($tranche->getCotation()) * $tranche->getPourcentage();
             }
         }
         return $montant;
     }
-
-    public function Note_getMontant_payable(?Note $note): float
+    public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
-        if ($note) {
-            foreach ($note->getArticles() as $article) {
-                if ($article->getTranche()) {
-                    /** @var Tranche $tranche */
-                    $tranche = $article->getTranche();
-                    if ($tranche->getCotation()) {
-                        /** @var Cotation $cotation */
-                        $cotation = $tranche->getCotation();
-
-                        switch ($note->getAddressedTo()) {
-                            case Note::TO_ASSUREUR:
-                                // dd("On facture à l'assureur les commissions payables par lui-même.");
-                                $montant = $this->Cotation_getMontant_commission_payable_par_assureur($cotation);
-                                break;
-
-                            case Note::TO_CLIENT:
-                                dd("On facture au client les frais de gestion payables par lui-même.");
-                                $montant = $this->Cotation_getMontant_commission_payable_par_client($cotation);
-                                break;
-
-                            case Note::TO_PARTENAIRE:
-                                dd("Le partenaire nous facture les retrocommissions payable par nous.");
-                                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
-                                break;
-
-                            case Note::TO_AUTORITE_FISCALE:
-                                dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
-                                $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
-                                break;
-
-                            default:
-                                # code...
-                                break;
-                        }
-                    }
-                    $montant = $montant * $tranche->getPourcentage();
-                }
-            }
+        foreach ($cotation->getChargements() as $loading) {
+            /** @var ChargementPourPrime $chargement */
+            $chargement = $loading;
+            $montant += $chargement->getMontantFlatExceptionel();
+            // dd("ici", $loading);
         }
         return $montant;
     }
+
 }

@@ -57,13 +57,31 @@
                                         | Avénant ({{cotation.avenants|length}})
                                     {% endif %}
                                 </a><br/>
+                                Offre {{ constante.Cotation_getClient(cotation).nom }} pour {{ constante.Cotation_getAssureur(cotation).nom }}<br/>
+                                {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    |<span class="text-secondary fw-light"> Com. dûe par Assureur: {{ constante.Cotation_getMontant_commission_payable_par_assureur(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    |<span class="text-secondary fw-light"> Com. dûe par Cient: {{ constante.Cotation_getMontant_commission_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    |<span class="text-secondary fw-light"> Rétro-com: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    |<span class="text-secondary fw-light"> Arca: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    |<span class="text-secondary fw-light"> Tva: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Prime payée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Solde dû: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {# Section commissions #}
+                                <small class="m-2">
+                                    <span class="text-secondary">Com. nette: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. totale: {{ constante.Cotation_getMontant_commission_ttc(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {# Section Taxes : TVA#}
+                                <small class="m-2">
+                                    <span class="text-secondary">Tva (16%): {{ constante.Cotation_getMontant_taxe_payable_par_assureur(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Tva payée: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {# Section Taxe: ARCA #}
+                                <small class="m-2">
+                                    <span class="text-secondary">ARCA (2%): {{ constante.Cotation_getMontant_taxe_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Arca payée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde dû: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small>
                             </td>
                             <td>
