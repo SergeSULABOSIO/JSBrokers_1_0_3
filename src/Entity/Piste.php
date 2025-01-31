@@ -69,12 +69,19 @@ class Piste
     #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'pistes')]
     private Collection $partenaires;
 
+    /**
+     * @var Collection<int, ConditionPartage>
+     */
+    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'piste')]
+    private Collection $conditionsPartageExceptionnelles;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
         $this->cotations = new ArrayCollection();
         $this->documents = new ArrayCollection();
         $this->partenaires = new ArrayCollection();
+        $this->conditionsPartageExceptionnelles = new ArrayCollection();
     }
 
 
@@ -318,6 +325,36 @@ class Piste
     public function removePartenaire(Partenaire $partenaire): static
     {
         $this->partenaires->removeElement($partenaire);
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ConditionPartage>
+     */
+    public function getConditionsPartageExceptionnelles(): Collection
+    {
+        return $this->conditionsPartageExceptionnelles;
+    }
+
+    public function addConditionsPartageExceptionnelle(ConditionPartage $conditionsPartageExceptionnelle): static
+    {
+        if (!$this->conditionsPartageExceptionnelles->contains($conditionsPartageExceptionnelle)) {
+            $this->conditionsPartageExceptionnelles->add($conditionsPartageExceptionnelle);
+            $conditionsPartageExceptionnelle->setPiste($this);
+        }
+
+        return $this;
+    }
+
+    public function removeConditionsPartageExceptionnelle(ConditionPartage $conditionsPartageExceptionnelle): static
+    {
+        if ($this->conditionsPartageExceptionnelles->removeElement($conditionsPartageExceptionnelle)) {
+            // set the owning side to null (unless already changed)
+            if ($conditionsPartageExceptionnelle->getPiste() === $this) {
+                $conditionsPartageExceptionnelle->setPiste(null);
+            }
+        }
 
         return $this;
     }

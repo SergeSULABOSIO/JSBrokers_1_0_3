@@ -47,6 +47,9 @@ class ConditionPartage
 
     #[ORM\Column]
     private ?int $unite = null;
+
+    #[ORM\ManyToOne(inversedBy: 'conditionsPartageExceptionnelles')]
+    private ?Piste $piste = null;
     public const UNITE_PAR_CLIENT_ET_PAR_COUVERTURES = 0;
     public const UNITE_PAR_CLIENT = 1;
     public const UNITE_PAR_COUVERTURE = 2;
@@ -172,6 +175,18 @@ class ConditionPartage
     public function setUnite(int $unite): static
     {
         $this->unite = $unite;
+
+        return $this;
+    }
+
+    public function getPiste(): ?Piste
+    {
+        return $this->piste;
+    }
+
+    public function setPiste(?Piste $piste): static
+    {
+        $this->piste = $piste;
 
         return $this;
     }
