@@ -48,16 +48,9 @@
                     {% for cotation in cotations %}
                         <tr id="row_cotation_{{ cotation.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.cotation.edit', {'idCotation':cotation.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ cotation.nom }}
-                                    {% if cotation.piste != null %}
-                                       | Piste: {{ cotation.piste }}
-                                    {% endif %}
-                                    {% if cotation.avenants|length != 0 %}
-                                        | Avénant ({{cotation.avenants|length}})
-                                    {% endif %}
-                                </a><br/>
-                                Offre {{ constante.Cotation_getClient(cotation).nom }} pour {{ constante.Cotation_getAssureur(cotation).nom }}<br/>
+                                <a class="m-2 fw-bold" href="{{ path('admin.cotation.edit', {'idCotation':cotation.id, 'idEntreprise': entreprise.id})}}">
+                                    Proposition {{ constante.Cotation_getRisque(cotation).nomComplet }} de {{ constante.Cotation_getAssureur(cotation).nom }} pour {{ constante.Cotation_getClient(cotation).nom }}<br/>
+                                </a>
                                 {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
@@ -80,9 +73,17 @@
                                 {# Section Taxe: ARCA #}
                                 <small class="m-2">
                                     <span class="text-secondary">ARCA (2%): {{ constante.Cotation_getMontant_taxe_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Arca payée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Solde dû: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small>
+                                    <span class="text-secondary"> • Arca payée: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {% if constante.Cotation_getPartenaire(cotation) %}
+                                    {# Retro-commission #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">Rétro-com {{ constante.Cotation_getPartenaire(cotation) }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com payée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Solde dû: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

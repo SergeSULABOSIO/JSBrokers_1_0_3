@@ -144,7 +144,11 @@ class Partenaire
 
     public function __toString(): string
     {
-        return $this->nom;
+        if (count($this->conditionPartages) != 0) {
+            return $this->nom;
+        } else {
+            return $this->nom . " (" . $this->part * 100 . "%)";
+        }
     }
 
     /**

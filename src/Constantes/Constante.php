@@ -302,6 +302,23 @@ class Constante
 
 
 
+    /**
+     * RISQUE ou COUVERTURE
+     */
+    public function Cotation_getRisque(?Cotation $cotation)
+    {
+        if ($cotation) {
+            if ($cotation->getPiste()) {
+                return $cotation->getPiste()->getRisque();
+            }
+        }
+        return null;
+    }
+
+
+
+
+
 
     /**
      * CLIENT
@@ -311,6 +328,24 @@ class Constante
         if ($cotation) {
             if ($cotation->getPiste()) {
                 return $cotation->getPiste()->getClient();
+            }
+        }
+        return null;
+    }
+
+
+
+    /**
+     * PARTENAIRE
+     */
+    public function Cotation_getPartenaire(?Cotation $cotation)
+    {
+        if ($cotation) {
+            if ($cotation->getPiste()) {
+                if (count($cotation->getPiste()->getPartenaires()) >= 1) {
+                    // dd($cotation->getPiste()->getPartenaires()[0]);
+                    return $cotation->getPiste()->getPartenaires()[0];
+                }
             }
         }
         return null;
@@ -412,6 +447,14 @@ class Constante
     {
         $net = $this->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->Cotation_getMontant_commission_payable_par_client($cotation);
         return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), false);
+    }
+    public function Cotation_getMontant_taxe_payable_par_courtier_payee(?Cotation $cotation): float
+    {
+        return 0;
+    }
+    public function Cotation_getMontant_taxe_payable_par_courtier_solde(?Cotation $cotation): float
+    {
+        return $this->Cotation_getMontant_taxe_payable_par_courtier($cotation) - $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
     }
 
 
@@ -579,7 +622,7 @@ class Constante
     public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation): float
     {
         $montant = 0;
-
+        dd($cotation);
         return $montant;
     }
 
