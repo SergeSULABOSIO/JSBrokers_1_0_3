@@ -5,6 +5,7 @@ namespace App\Constantes;
 use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
+use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Note;
 use App\Entity\Paiement;
@@ -14,6 +15,7 @@ use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
+use Symfony\Component\ExpressionLanguage\Node\ConditionalNode;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 use function PHPUnit\Framework\containsOnly;
@@ -498,6 +500,18 @@ class Constante
     /**
      * LES COMMISSIONS
      */
+    public function Cotation_getMontant_commission_pure(?Cotation $cotation): float
+    {
+        $comHT = $this->Cotation_getMontant_commission_ht($cotation);
+        $taxeCourtier = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
+        return $comHT - $taxeCourtier;
+    }
+    public function Cotation_getMontant_commission_ht(?Cotation $cotation): float
+    {
+        $comTTC = $this->Cotation_getMontant_commission_ttc($cotation);
+        $taxeAssureur = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation);
+        return $comTTC - $taxeAssureur;
+    }
     public function Cotation_getMontant_commission_ttc_solde(?Cotation $cotation): float
     {
         return $this->Cotation_getMontant_commission_ttc($cotation) - $this->Cotation_getMontant_commission_ttc_collectee($cotation);
@@ -635,7 +649,29 @@ class Constante
     public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation): float
     {
         $montant = 0;
-        // dd($cotation);
+        if ($cotation->getPiste()) {
+            if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
+                /** @var ConditionPartage $conditionPartagePiste */
+                $conditionPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles()[0];
+                
+                $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
+                $forme = $conditionPartagePiste->getFormule();
+                $seuil = $conditionPartagePiste->getSeuil();
+                $taux = $conditionPartagePiste->getTaux();
+                $critere = $conditionPartagePiste->getCritereRisque();
+                $uniteMesure = $conditionPartagePiste->getUnite();
+                $produitsCible = $conditionPartagePiste->getProduits();
+
+                //formule
+                $seuil = match ($forme) {
+                    ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL => 0,
+                    ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL => 0,
+                    ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL => 0,
+                };
+                
+                dd("Assiette: " . $assiette_commission_pure, "Conditions particulière", $seuil, $taux, $critere, $uniteMesure, $produitsCible);
+            }
+        }
         return $montant;
     }
 
