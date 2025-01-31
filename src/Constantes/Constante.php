@@ -350,6 +350,19 @@ class Constante
         }
         return null;
     }
+    public function Cotation_hasConditionsSpeciales(?Cotation $cotation): bool
+    {
+        if ($cotation) {
+            if ($cotation->getPiste()) {
+                if (count($cotation->getPiste()->getPartenaires()) >= 1) {
+                    // dd($cotation->getPiste()->getPartenaires()[0]);
+                    // dd($cotation->getPiste()->getConditionsPartageExceptionnelles()[0]);
+                    return count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0;
+                }
+            }
+        }
+        return false;
+    }
 
 
 
@@ -622,7 +635,7 @@ class Constante
     public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation): float
     {
         $montant = 0;
-        dd($cotation);
+        // dd($cotation);
         return $montant;
     }
 

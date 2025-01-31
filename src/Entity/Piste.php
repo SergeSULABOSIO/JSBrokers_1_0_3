@@ -72,7 +72,7 @@ class Piste
     /**
      * @var Collection<int, ConditionPartage>
      */
-    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'piste')]
+    #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $conditionsPartageExceptionnelles;
 
     public function __construct()

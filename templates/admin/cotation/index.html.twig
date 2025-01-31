@@ -81,7 +81,10 @@
                                     <small class="m-2">
                                         <span class="text-secondary">Rétro-com {{ constante.Cotation_getPartenaire(cotation) }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Solde dû: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Solde dû: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        {% if constante.Cotation_hasConditionsSpeciales(cotation) %}
+                                            <span class="text-secondary fw-bold"> | Avec conditions spéciales.</span>
+                                        {% endif %}
                                     </small>
                                 {% endif %}
                             </td>
