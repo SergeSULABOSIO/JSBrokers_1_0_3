@@ -38,7 +38,7 @@ class ConditionPartageType extends AbstractType
                 'choices'  => [
                    "Lorsque l'assiette est au moins égale au seuil" => ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL,
                    "Lorsque l'assiette est inférieure au seuil" => ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL,
-                   "Ne pas appliquer le seuil" => ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL,
+                   "Ne pas appliquer le seuil" => ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL,
                 ],
             ])
             ->add('seuil', MoneyType::class, [
@@ -85,16 +85,16 @@ class ConditionPartageType extends AbstractType
                     'placeholder' => "Risques concernés",
                 ],
             ])
-            ->add('unite', ChoiceType::class, [
-                'label' => "Unité de mésure",
-                'help' => "Par quelle mésure appliquer cette condition?",
-                'expanded' => true,
-                'choices'  => [
-                   "Par client et par couverture" => ConditionPartage::UNITE_PAR_CLIENT_ET_PAR_COUVERTURES,
-                   "Par client uniquement" => ConditionPartage::UNITE_PAR_CLIENT,
-                   "Par couverture uniquement" => ConditionPartage::UNITE_PAR_COUVERTURE,
-                ],
-            ])
+            // ->add('unite', ChoiceType::class, [
+            //     'label' => "Unité de mésure",
+            //     'help' => "Par quelle mésure appliquer cette condition?",
+            //     'expanded' => true,
+            //     'choices'  => [
+            //        "Par client et par couverture" => ConditionPartage::UNITE_PAR_CLIENT_ET_PAR_COUVERTURES,
+            //        "Par client uniquement" => ConditionPartage::UNITE_PAR_CLIENT,
+            //        "Par couverture uniquement" => ConditionPartage::UNITE_PAR_COUVERTURE,
+            //     ],
+            // ])
             // ->add('partenaire', EntityType::class, [
             //     'class' => Partenaire::class,
             //     'choice_label' => 'id',

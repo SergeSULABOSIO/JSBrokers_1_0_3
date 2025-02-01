@@ -45,14 +45,16 @@ class ConditionPartage
     public const CRITERE_INCLURE_TOUS_CES_RISQUES = 1;
     public const CRITERE_PAS_RISQUES_CIBLES = 2;
 
-    #[ORM\Column]
-    private ?int $unite = null;
+    // #[ORM\Column]
+    // private ?int $unite = null;
+    // public const UNITE_PAR_CLIENT_ET_PAR_COUVERTURES = 0;
+    // public const UNITE_PAR_CLIENT = 1;
+    // public const UNITE_PAR_COUVERTURE = 2;
 
     #[ORM\ManyToOne(inversedBy: 'conditionsPartageExceptionnelles')]
     private ?Piste $piste = null;
-    public const UNITE_PAR_CLIENT_ET_PAR_COUVERTURES = 0;
-    public const UNITE_PAR_CLIENT = 1;
-    public const UNITE_PAR_COUVERTURE = 2;
+
+  
     
 
     public function __construct()
@@ -167,17 +169,17 @@ class ConditionPartage
         return $this;
     }
 
-    public function getUnite(): ?int
-    {
-        return $this->unite;
-    }
+    // public function getUnite(): ?int
+    // {
+    //     return $this->unite;
+    // }
 
-    public function setUnite(int $unite): static
-    {
-        $this->unite = $unite;
+    // public function setUnite(int $unite): static
+    // {
+    //     $this->unite = $unite;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getPiste(): ?Piste
     {

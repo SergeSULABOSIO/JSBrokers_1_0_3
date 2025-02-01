@@ -19,6 +19,7 @@ use Symfony\Component\ExpressionLanguage\Node\ConditionalNode;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 use function PHPUnit\Framework\containsOnly;
+use function PHPUnit\Framework\returnSelf;
 
 class Constante
 {
@@ -279,7 +280,7 @@ class Constante
     ];
 
 
-    
+
 
 
 
@@ -653,27 +654,105 @@ class Constante
             if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
                 /** @var ConditionPartage $conditionPartagePiste */
                 $conditionPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles()[0];
-                
-                $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
-                $forme = $conditionPartagePiste->getFormule();
-                $seuil = $conditionPartagePiste->getSeuil();
-                $taux = $conditionPartagePiste->getTaux();
-                $critere = $conditionPartagePiste->getCritereRisque();
-                $uniteMesure = $conditionPartagePiste->getUnite();
-                $produitsCible = $conditionPartagePiste->getProduits();
 
+                $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
+                $formule = $conditionPartagePiste->getFormule();
+                $seuil = $conditionPartagePiste->getSeuil();
+                $risque = $cotation->getPiste()->getRisque();
                 //formule
-                $seuil = match ($forme) {
-                    ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL => 0,
-                    ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL => 0,
-                    ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL => 0,
-                };
-                
-                dd("Assiette: " . $assiette_commission_pure, "Conditions particulière", $seuil, $taux, $critere, $uniteMesure, $produitsCible);
+                switch ($formule) {
+                    case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
+                        // dd("ici");
+                        return $this->calculerRetroCommission($risque, $conditionPartagePiste, $assiette_commission_pure);
+                        break;
+                    case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
+                        if ($assiette_commission_pure < $seuil) {
+                            // dd("On partage car l'assiette de " . $assiette_commission_pure . " est inférieur au seuil de " . $seuil);
+                            return $this->calculerRetroCommission($risque, $conditionPartagePiste, $assiette_commission_pure);
+                        } else {
+                            // dd("La condition n'est pas respectée ", "Assiette:" . $assiette_commission_pure, "Seuil:" . $seuil);
+                            return 0;
+                        }
+                        break;
+                    case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
+                        if ($assiette_commission_pure >= $seuil) {
+                            // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
+                            return $this->calculerRetroCommission($risque, $conditionPartagePiste, $assiette_commission_pure);
+                        } else {
+                            // dd("On ne partage pas");
+                            return 0;
+                        }
+                        break;
+
+                    default:
+                        # code...
+                        break;
+                }
             }
         }
         return $montant;
     }
+    public function Cotation_getTauxConditionsSpecialePiste(?Cotation $cotation)
+    {
+        if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
+            /** @var ConditionPartage $conditionPartagePiste */
+            $conditionPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles()[0];
+            return ($conditionPartagePiste->getTaux() * 100) . "%";
+        } else {
+            return null;
+        }
+    }
+    public function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
+    {
+        $montant = 0;
+        $taux = $conditionPartage->getTaux();
+        $produitsCible = $conditionPartage->getProduits();
+
+        switch ($conditionPartage->getCritereRisque()) {
+            case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
+                $canShare = true;
+                foreach ($produitsCible as $produitCible) {
+                    if ($produitCible == $risque) {
+                        //Ketourah / Ketura, je t'aime.
+                        // dd("On ne partage pas car " . $risque . " est dans ", $produitsCible);
+                        $canShare = false;
+                    }
+                }
+                $montant = $canShare == true ? ($assiette * $taux) : 0;
+                break;
+            case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
+                foreach ($produitsCible as $produitCible) {
+                    if ($produitCible == $risque) {
+                        // dd("Oui, on partage car " . $risque . " est dans ", $produitsCible);
+                        $montant = $assiette * $taux;
+                    }
+                }
+                break;
+            case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
+                //On applique le taux à l'assiette
+                $montant = $assiette * $taux;
+                break;
+
+            default:
+                # code...
+                break;
+        }
+        return $montant;
+    }
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation): float
+    {
+        return 0;
+    }
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier_solde(?Cotation $cotation): float
+    {
+        $retrocom = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+        $retrocom_paye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+        return $retrocom - $retrocom_paye;
+    }
+
+
+
+
 
 
     /**
@@ -700,5 +779,4 @@ class Constante
         }
         return $montant;
     }
-
 }
