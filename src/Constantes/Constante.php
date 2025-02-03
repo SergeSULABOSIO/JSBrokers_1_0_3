@@ -5,6 +5,7 @@ namespace App\Constantes;
 use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
+use App\Entity\Client;
 use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Note;
@@ -349,6 +350,8 @@ class Constante
                 if (count($cotation->getPiste()->getPartenaires()) >= 1) {
                     // dd($cotation->getPiste()->getPartenaires()[0]);
                     return $cotation->getPiste()->getPartenaires()[0];
+                } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
+                    return $cotation->getPiste()->getClient()->getPartenaires()[0];
                 }
             }
         }
@@ -648,6 +651,17 @@ class Constante
     /**
      * RETRO-COMMISSION DUE AU PARTENAIRE
      */
+    private function Cotation_appliquerTauxRetrocomPartenaire(?Partenaire $partenaire, ?Cotation $cotation)
+    {
+        $montant = 0;
+        if (count($partenaire->getConditionPartages()) != 0) {
+            //On traite les conditions spéciales attachées au partenaire
+            $montant = $this->appliquerConditions($partenaire->getConditionPartages()[0], $cotation);
+        } else if ($partenaire->getPart() != 0) {
+            $montant = $this->Cotation_getMontant_commission_pure($cotation) * $partenaire->getPart();
+        }
+        return $montant;
+    }
     public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation): float
     {
         $montant = 0;
@@ -660,15 +674,22 @@ class Constante
                     if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
                         //On traite les conditions spéciale attachées à la piste
                         $montant = $this->appliquerConditions($cotation->getPiste()->getConditionsPartageExceptionnelles()[0], $cotation);
-                    } else if (count($partenaire->getConditionPartages()) != 0) {
-                        //On traite les conditions spéciales attachées au partenaire
-                        // dd("Je traite les conditions attachées au partenaire", $partenaire->getConditionPartages());
-                        $montant = $this->appliquerConditions($partenaire->getConditionPartages()[0], $cotation);
-                    } else if ($partenaire->getPart() != 0) {
-                        // dd("Je travail sur la condition simple ", $partenaire);
-                        $montant = $this->Cotation_getMontant_commission_pure($cotation) * $partenaire->getPart();
+                    } else {
+                        $montant = $this->Cotation_appliquerTauxRetrocomPartenaire($partenaire, $cotation);
                     }
+                    //  else if (count($partenaire->getConditionPartages()) != 0) {
+                    //     //On traite les conditions spéciales attachées au partenaire
+                    //     // dd("Je traite les conditions attachées au partenaire", $partenaire->getConditionPartages());
+                    //     $montant = $this->appliquerConditions($partenaire->getConditionPartages()[0], $cotation);
+                    // } else if ($partenaire->getPart() != 0) {
+                    //     // dd("Je travail sur la condition simple ", $partenaire);
+                    //     $montant = $this->Cotation_getMontant_commission_pure($cotation) * $partenaire->getPart();
+                    // }
                 }
+            } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
+                /** @var Partenaire $partenaire */
+                $partenaire = $cotation->getPiste()->getClient()->getPartenaires()[0];
+                $montant = $this->Cotation_appliquerTauxRetrocomPartenaire($partenaire, $cotation);
             }
         }
         return $montant;
@@ -686,7 +707,9 @@ class Constante
     private function appliquerConditions(?ConditionPartage $conditionPartage, ?Cotation $cotation): float
     {
         $montant = 0;
+        //Assiette de l'affaire individuelle
         $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
+
         $formule = $conditionPartage->getFormule();
         $seuil = $conditionPartage->getSeuil();
         $risque = $cotation->getPiste()->getRisque();

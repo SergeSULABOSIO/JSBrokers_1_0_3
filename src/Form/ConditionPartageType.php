@@ -32,12 +32,22 @@ class ConditionPartageType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
+            ->add('uniteMesure', ChoiceType::class, [
+                'label' => "Unité de mésure",
+                'help' => "L'unité de mésure représente l'indicateur où le seuil s'applique.",
+                'expanded' => true,
+                'choices'  => [
+                   "La somme des commissions pures de l'affaire" => ConditionPartage::UNITE_COMMISSION_PURE_AFFAIRE,
+                   "La somme des commissions pures du client" => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT,
+                   "La somme des commissions pures du parténaire" => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE,
+                ],
+            ])
             ->add('formule', ChoiceType::class, [
                 'label' => "Formule",
                 'expanded' => true,
                 'choices'  => [
-                   "Lorsque l'assiette est au moins égale au seuil" => ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL,
-                   "Lorsque l'assiette est inférieure au seuil" => ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL,
+                   "Lorsque l'unité de mésure est au moins égale au seuil" => ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL,
+                   "Lorsque l'unité de mésure est inférieure au seuil" => ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL,
                    "Ne pas appliquer le seuil" => ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL,
                 ],
             ])
@@ -86,20 +96,7 @@ class ConditionPartageType extends AbstractType
                     'placeholder' => "Risques concernés",
                 ],
             ])
-            // ->add('unite', ChoiceType::class, [
-            //     'label' => "Unité de mésure",
-            //     'help' => "Par quelle mésure appliquer cette condition?",
-            //     'expanded' => true,
-            //     'choices'  => [
-            //        "Par client et par couverture" => ConditionPartage::UNITE_PAR_CLIENT_ET_PAR_COUVERTURES,
-            //        "Par client uniquement" => ConditionPartage::UNITE_PAR_CLIENT,
-            //        "Par couverture uniquement" => ConditionPartage::UNITE_PAR_COUVERTURE,
-            //     ],
-            // ])
-            // ->add('partenaire', EntityType::class, [
-            //     'class' => Partenaire::class,
-            //     'choice_label' => 'id',
-            // ])
+            
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",

@@ -45,14 +45,15 @@ class ConditionPartage
     public const CRITERE_INCLURE_TOUS_CES_RISQUES = 1;
     public const CRITERE_PAS_RISQUES_CIBLES = 2;
 
-    // #[ORM\Column]
-    // private ?int $unite = null;
-    // public const UNITE_PAR_CLIENT_ET_PAR_COUVERTURES = 0;
-    // public const UNITE_PAR_CLIENT = 1;
-    // public const UNITE_PAR_COUVERTURE = 2;
 
     #[ORM\ManyToOne(inversedBy: 'conditionsPartageExceptionnelles')]
     private ?Piste $piste = null;
+
+    public const UNITE_COMMISSION_PURE_AFFAIRE = 0;
+    public const UNITE_SOMME_COMMISSION_PURE_CLIENT = 1;
+    public const UNITE_SOMME_COMMISSION_PURE_PARTENAIRE = 2;
+    #[ORM\Column(nullable: true)]
+    private ?int $uniteMesure = null;
 
   
     
@@ -189,6 +190,18 @@ class ConditionPartage
     public function setPiste(?Piste $piste): static
     {
         $this->piste = $piste;
+
+        return $this;
+    }
+
+    public function getUniteMesure(): ?int
+    {
+        return $this->uniteMesure;
+    }
+
+    public function setUniteMesure(?int $uniteMesure): static
+    {
+        $this->uniteMesure = $uniteMesure;
 
         return $this;
     }
