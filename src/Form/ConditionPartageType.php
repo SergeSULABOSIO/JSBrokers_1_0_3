@@ -54,7 +54,7 @@ class ConditionPartageType extends AbstractType
             ->add('taux', PercentType::class, [
                 'label' => "Taux applicable",
                 'help' => "Ce pourcentage ne s'appliquera que sur les commissions hors taxes (l'assiette partageable).",
-                'required' => true,
+                'required' => false,
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Taux",
@@ -63,6 +63,7 @@ class ConditionPartageType extends AbstractType
             ->add('critereRisque', ChoiceType::class, [
                 'label' => "Critère sur le risque",
                 'help' => "Comment s'applique cette condition par rapport au risque.",
+                'required' => false,
                 'expanded' => true,
                 'choices'  => [
                    "On ne partage pas quand il s'agit de risques ciblés" => ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES,

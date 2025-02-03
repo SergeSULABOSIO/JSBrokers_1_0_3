@@ -9,6 +9,7 @@ use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Note;
 use App\Entity\Paiement;
+use App\Entity\Partenaire;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\Tranche;
@@ -651,44 +652,24 @@ class Constante
     {
         $montant = 0;
         if ($cotation->getPiste()) {
-            if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
-                /** @var ConditionPartage $conditionPartagePiste */
-                $conditionPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles()[0];
-
-                $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
-                $formule = $conditionPartagePiste->getFormule();
-                $seuil = $conditionPartagePiste->getSeuil();
-                $risque = $cotation->getPiste()->getRisque();
-                //formule
-                switch ($formule) {
-                    case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
-                        // dd("ici");
-                        return $this->calculerRetroCommission($risque, $conditionPartagePiste, $assiette_commission_pure);
-                        break;
-                    case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
-                        if ($assiette_commission_pure < $seuil) {
-                            // dd("On partage car l'assiette de " . $assiette_commission_pure . " est inférieur au seuil de " . $seuil);
-                            return $this->calculerRetroCommission($risque, $conditionPartagePiste, $assiette_commission_pure);
-                        } else {
-                            // dd("La condition n'est pas respectée ", "Assiette:" . $assiette_commission_pure, "Seuil:" . $seuil);
-                            return 0;
-                        }
-                        break;
-                    case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
-                        if ($assiette_commission_pure >= $seuil) {
-                            // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
-                            return $this->calculerRetroCommission($risque, $conditionPartagePiste, $assiette_commission_pure);
-                        } else {
-                            // dd("On ne partage pas");
-                            return 0;
-                        }
-                        break;
-
-                    default:
-                        # code...
-                        break;
+            //On cherche à appliquer les conditions de partage attachées à la piste
+            if (count($cotation->getPiste()->getPartenaires()) != 0) {
+                /** @var Partenaire $partenaire */
+                $partenaire = $cotation->getPiste()->getPartenaires()[0];
+                if ($partenaire) {
+                    if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
+                        //On traite les conditions spéciale attachées à la piste
+                        $montant = $this->appliquerConditions($cotation->getPiste()->getConditionsPartageExceptionnelles()[0], $cotation);
+                    }else if(count($partenaire->getConditionPartages()) != 0){
+                        //On traite les conditions spéciales attachées au partenaire
+                        // dd("Je traite les conditions attachées au partenaire", $partenaire->getConditionPartages());
+                        $montant = $this->appliquerConditions($partenaire->getConditionPartages()[0], $cotation);
+                    }else if ($partenaire->getPart() != 0) {
+                        dd("Je travail sur la condition simple ", $partenaire);
+                    }
                 }
             }
+            
         }
         return $montant;
     }
@@ -702,7 +683,45 @@ class Constante
             return null;
         }
     }
-    public function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
+    private function appliquerConditions(?ConditionPartage $conditionPartage, ?Cotation $cotation): float
+    {
+        $montant = 0;
+        $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
+        $formule = $conditionPartage->getFormule();
+        $seuil = $conditionPartage->getSeuil();
+        $risque = $cotation->getPiste()->getRisque();
+        //formule
+        switch ($formule) {
+            case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
+                // dd("ici");
+                return $this->calculerRetroCommission($risque, $conditionPartage, $assiette_commission_pure);
+                break;
+            case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
+                if ($assiette_commission_pure < $seuil) {
+                    // dd("On partage car l'assiette de " . $assiette_commission_pure . " est inférieur au seuil de " . $seuil);
+                    return $this->calculerRetroCommission($risque, $conditionPartage, $assiette_commission_pure);
+                } else {
+                    // dd("La condition n'est pas respectée ", "Assiette:" . $assiette_commission_pure, "Seuil:" . $seuil);
+                    return 0;
+                }
+                break;
+            case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
+                if ($assiette_commission_pure >= $seuil) {
+                    // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
+                    return $this->calculerRetroCommission($risque, $conditionPartage, $assiette_commission_pure);
+                } else {
+                    // dd("On ne partage pas");
+                    return 0;
+                }
+                break;
+
+            default:
+                # code...
+                break;
+        }
+        return $montant;
+    }
+    private function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
     {
         $montant = 0;
         $taux = $conditionPartage->getTaux();
