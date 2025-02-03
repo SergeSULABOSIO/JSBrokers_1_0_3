@@ -709,7 +709,15 @@ class Constante
         $montant = 0;
         //Assiette de l'affaire individuelle
         $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
-
+        
+        //Application de l'unité de mésure
+        $uniteMesure = match ($conditionPartage->getUniteMesure()) {
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_AFFAIRE => 0,
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => 100,
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => 200,
+        };
+        dd("Unité de mésure: " . $conditionPartage->getUniteMesure(), "Réponse: " . $uniteMesure);
+        
         $formule = $conditionPartage->getFormule();
         $seuil = $conditionPartage->getSeuil();
         $risque = $cotation->getPiste()->getRisque();

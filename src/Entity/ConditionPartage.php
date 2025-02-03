@@ -49,7 +49,7 @@ class ConditionPartage
     #[ORM\ManyToOne(inversedBy: 'conditionsPartageExceptionnelles')]
     private ?Piste $piste = null;
 
-    public const UNITE_COMMISSION_PURE_AFFAIRE = 0;
+    public const UNITE_SOMME_COMMISSION_PURE_AFFAIRE = 0;
     public const UNITE_SOMME_COMMISSION_PURE_CLIENT = 1;
     public const UNITE_SOMME_COMMISSION_PURE_PARTENAIRE = 2;
     #[ORM\Column(nullable: true)]
