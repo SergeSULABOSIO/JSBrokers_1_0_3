@@ -37,7 +37,7 @@ class ConditionPartageType extends AbstractType
                 'help' => "L'unité de mésure représente l'indicateur où le seuil s'applique.",
                 'expanded' => true,
                 'choices'  => [
-                   "La somme des commissions pures de l'affaire" => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_AFFAIRE,
+                   "La somme des commissions pures du risque" => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE,
                    "La somme des commissions pures du client" => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT,
                    "La somme des commissions pures du parténaire" => ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE,
                 ],

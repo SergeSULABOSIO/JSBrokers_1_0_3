@@ -712,7 +712,7 @@ class Constante
         
         //Application de l'unité de mésure
         $uniteMesure = match ($conditionPartage->getUniteMesure()) {
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_AFFAIRE => 0,
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => 0,
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => 100,
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => 200,
         };
