@@ -3,8 +3,9 @@
 namespace App\Form;
 
 use App\Entity\Client;
-use App\Entity\Entreprise;
 use App\Entity\Groupe;
+use App\Entity\Entreprise;
+use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -67,6 +68,20 @@ class ClientType extends AbstractType
                 'choices'  => [
                     "Oui" => true,
                     "Non" => false,
+                ],
+            ])
+            ->add('partenaires', PartenaireAutocompleteField::class, [
+                'required' => false,
+                'label' => "Partenaires",
+                'class' => Partenaire::class,
+                'choice_label' => "nom",
+                'help' => "Les rétrocommissions seront prélévées dans l'ensemble du portfeuil de ce client puis partagées aves les partenaires figurant sur cette liste.",
+                'multiple' => true,
+                'expanded' => false,
+                'by_reference' => false,
+                'autocomplete' => true,
+                'attr' => [
+                    'placeholder' => "Les intermédiaires",
                 ],
             ])
             ->add('contacts', CollectionType::class, [

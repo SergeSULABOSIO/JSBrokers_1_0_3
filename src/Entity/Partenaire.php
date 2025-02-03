@@ -57,12 +57,19 @@ class Partenaire
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'partenaire')]
     private Collection $notes;
 
+    /**
+     * @var Collection<int, Client>
+     */
+    #[ORM\ManyToMany(targetEntity: Client::class, mappedBy: 'partenaires')]
+    private Collection $clients;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
         $this->conditionPartages = new ArrayCollection();
         $this->pistes = new ArrayCollection();
         $this->notes = new ArrayCollection();
+        $this->clients = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -263,6 +270,33 @@ class Partenaire
             if ($note->getPartenaire() === $this) {
                 $note->setPartenaire(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Client>
+     */
+    public function getClients(): Collection
+    {
+        return $this->clients;
+    }
+
+    public function addClient(Client $client): static
+    {
+        if (!$this->clients->contains($client)) {
+            $this->clients->add($client);
+            $client->addPartenaire($this);
+        }
+
+        return $this;
+    }
+
+    public function removeClient(Client $client): static
+    {
+        if ($this->clients->removeElement($client)) {
+            $client->removePartenaire($this);
         }
 
         return $this;

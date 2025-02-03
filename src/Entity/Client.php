@@ -69,6 +69,12 @@ class Client
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'client')]
     private Collection $notes;
 
+    /**
+     * @var Collection<int, Partenaire>
+     */
+    #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'clients')]
+    private Collection $partenaires;
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
@@ -76,6 +82,7 @@ class Client
         $this->notificationSinistres = new ArrayCollection();
         $this->documents = new ArrayCollection();
         $this->notes = new ArrayCollection();
+        $this->partenaires = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -318,6 +325,30 @@ class Client
                 $note->setClient(null);
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Partenaire>
+     */
+    public function getPartenaires(): Collection
+    {
+        return $this->partenaires;
+    }
+
+    public function addPartenaire(Partenaire $partenaire): static
+    {
+        if (!$this->partenaires->contains($partenaire)) {
+            $this->partenaires->add($partenaire);
+        }
+
+        return $this;
+    }
+
+    public function removePartenaire(Partenaire $partenaire): static
+    {
+        $this->partenaires->removeElement($partenaire);
 
         return $this;
     }
