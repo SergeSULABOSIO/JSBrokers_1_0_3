@@ -3,11 +3,13 @@
 namespace App\Constantes;
 
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\Avenant;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
 use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
+use App\Entity\Entreprise;
 use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Partenaire;
@@ -15,8 +17,10 @@ use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
+use App\Repository\CotationRepository;
 use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\ExpressionLanguage\Node\ConditionalNode;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -28,6 +32,8 @@ class Constante
     public function __construct(
         private TranslatorInterface $translator,
         private ServiceTaxes $serviceTaxes,
+        private Security $security,
+        private CotationRepository $cotationRepository,
     ) {}
 
 
@@ -704,6 +710,44 @@ class Constante
             return null;
         }
     }
+    public function Cotation_isBound(?Cotation $cotation): bool
+    {
+        return $cotation->getAvenants()[0] != null || count($cotation->getAvenants()) != 0;
+    }
+    private function Cotation_getSommeCommissionPureRisque(?Cotation $cotation):float
+    {
+        $somme = 0;
+        /** @var Entreprise $entreprise */
+        $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
+        $cotationsBoundDuPartenaire = $this->cotationRepository->loadBoundCotationsWithPartnerRisque($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getRisque(), $this->Cotation_getPartenaire($cotation));
+        foreach ($cotationsBoundDuPartenaire as $proposition) {
+            $somme += $this->Cotation_getMontant_commission_pure($proposition);
+        }
+        return $somme;
+    }
+    private function Cotation_getSommeCommissionPureClient(?Cotation $cotation):float
+    {
+        // dd($cotation->getAvenants()[0]);
+        $somme = 0;
+        /** @var Entreprise $entreprise */
+        $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
+        $cotationsBoundDuPartenaire = $this->cotationRepository->loadBoundCotationsWithPartnerClient($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getClient(), $this->Cotation_getPartenaire($cotation));
+        foreach ($cotationsBoundDuPartenaire as $proposition) {
+            $somme += $this->Cotation_getMontant_commission_pure($proposition);
+        }
+        return $somme;
+    }
+    private function Cotation_getSommeCommissionPurePartenaire(?Cotation $cotation):float
+    {
+        $somme = 0;
+        /** @var Entreprise $entreprise */
+        $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
+        $cotationsBoundDuPartenaire = $this->cotationRepository->loadBoundCotationsWithPartnerAll($cotation->getPiste()->getExercice(), $entreprise, $this->Cotation_getPartenaire($cotation));
+        foreach ($cotationsBoundDuPartenaire as $proposition) {
+            $somme += $this->Cotation_getMontant_commission_pure($proposition);
+        }
+        return $somme;
+    }
     private function appliquerConditions(?ConditionPartage $conditionPartage, ?Cotation $cotation): float
     {
         $montant = 0;
@@ -712,11 +756,11 @@ class Constante
         
         //Application de l'unité de mésure
         $uniteMesure = match ($conditionPartage->getUniteMesure()) {
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => 0,
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => 100,
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => 200,
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $this->Cotation_getSommeCommissionPureRisque($cotation),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $this->Cotation_getSommeCommissionPureClient($cotation),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->Cotation_getSommeCommissionPurePartenaire($cotation),
         };
-        dd("Unité de mésure: " . $conditionPartage->getUniteMesure(), "Réponse: " . $uniteMesure);
+        // dd("Unité de mésure: " . $uniteMesure);
         
         $formule = $conditionPartage->getFormule();
         $seuil = $conditionPartage->getSeuil();
@@ -728,7 +772,7 @@ class Constante
                 return $this->calculerRetroCommission($risque, $conditionPartage, $assiette_commission_pure);
                 break;
             case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
-                if ($assiette_commission_pure < $seuil) {
+                if ($uniteMesure < $seuil) {
                     // dd("On partage car l'assiette de " . $assiette_commission_pure . " est inférieur au seuil de " . $seuil);
                     return $this->calculerRetroCommission($risque, $conditionPartage, $assiette_commission_pure);
                 } else {
@@ -737,7 +781,7 @@ class Constante
                 }
                 break;
             case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
-                if ($assiette_commission_pure >= $seuil) {
+                if ($uniteMesure >= $seuil) {
                     // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
                     return $this->calculerRetroCommission($risque, $conditionPartage, $assiette_commission_pure);
                 } else {

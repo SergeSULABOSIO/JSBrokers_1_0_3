@@ -19,6 +19,7 @@ use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 
 class PisteType extends AbstractType
 {
@@ -47,12 +48,19 @@ class PisteType extends AbstractType
                 'label' => "Type d'Avenant",
                 'expanded' => true,
                 'choices'  => [
-                    "SOUSCRIPTION"      => Avenant::AVENANT_SOUSCRIPTION,
-                    "INCORPORATION"     => Avenant::AVENANT_INCORPORATION,
-                    "PROROGATION"       => Avenant::AVENANT_PROROGATION,
-                    "ANNULATION"        => Avenant::AVENANT_ANNULATION,
-                    "RENOUVELLEMENT"    => Avenant::AVENANT_RENOUVELLEMENT,
-                    "RESILIATION"       => Avenant::AVENANT_RESILIATION,
+                    "SOUSCRIPTION"      => Piste::AVENANT_SOUSCRIPTION,
+                    "INCORPORATION"     => Piste::AVENANT_INCORPORATION,
+                    "PROROGATION"       => Piste::AVENANT_PROROGATION,
+                    "ANNULATION"        => Piste::AVENANT_ANNULATION,
+                    "RENOUVELLEMENT"    => Piste::AVENANT_RENOUVELLEMENT,
+                    "RESILIATION"       => Piste::AVENANT_RESILIATION,
+                ],
+            ])
+            ->add('exercice', NumberType::class, [
+                'label' => "Exercice comptable (année)",
+                'grouping' => false,
+                'attr' => [
+                    'placeholder' => "Année",
                 ],
             ])
             ->add('primePotentielle', MoneyType::class, [

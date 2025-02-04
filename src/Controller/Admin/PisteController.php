@@ -15,6 +15,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\PisteRepository;
 use App\Repository\TacheRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -76,8 +77,9 @@ class PisteController extends AbstractController
         /** @var Piste $piste */
         $piste = new Piste();
         //Paramètres par défaut
-        $piste->setTypeAvenant(Avenant::AVENANT_SOUSCRIPTION);
+        $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
         $piste->setInvite($invite);
+        $piste->setExercice((new DateTimeImmutable("now"))->format('Y'));
 
         $form = $this->createForm(PisteType::class, $piste);
         $form->handleRequest($request);

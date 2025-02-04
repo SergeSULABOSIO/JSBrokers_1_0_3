@@ -80,12 +80,14 @@ class PartenaireController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($partenaire);
             $this->manager->flush();
+
             $this->addFlash("success", $this->translator->trans("partenaire_creation_ok", [
                 ":partenaire" => $partenaire->getNom(),
             ]));
-            return $this->redirectToRoute("admin.partenaire.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+
+            // return $this->redirectToRoute("admin.partenaire.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
         }
         return $this->render('admin/partenaire/create.html.twig', [
             'pageName' => $this->translator->trans("partenaire_page_name_new"),

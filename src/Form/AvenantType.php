@@ -39,18 +39,18 @@ class AvenantType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            ->add('type', ChoiceType::class, [
-                'label' => "Type d'Avenant",
-                'expanded' => true,
-                'choices'  => [
-                    "SOUSCRIPTION"      => Avenant::AVENANT_SOUSCRIPTION,
-                    "INCORPORATION"     => Avenant::AVENANT_INCORPORATION,
-                    "PROROGATION"       => Avenant::AVENANT_PROROGATION,
-                    "ANNULATION"        => Avenant::AVENANT_ANNULATION,
-                    "RENOUVELLEMENT"    => Avenant::AVENANT_RENOUVELLEMENT,
-                    "RESILIATION"       => Avenant::AVENANT_RESILIATION,
-                ],
-            ])
+            // ->add('type', ChoiceType::class, [
+            //     'label' => "Type d'Avenant",
+            //     'expanded' => true,
+            //     'choices'  => [
+            //         "SOUSCRIPTION"      => Avenant::AVENANT_SOUSCRIPTION,
+            //         "INCORPORATION"     => Avenant::AVENANT_INCORPORATION,
+            //         "PROROGATION"       => Avenant::AVENANT_PROROGATION,
+            //         "ANNULATION"        => Avenant::AVENANT_ANNULATION,
+            //         "RENOUVELLEMENT"    => Avenant::AVENANT_RENOUVELLEMENT,
+            //         "RESILIATION"       => Avenant::AVENANT_RESILIATION,
+            //     ],
+            // ])
             ->add('startingAt', DateTimeType::class, [
                 'label' => "Date début",
                 'widget' => 'single_text',

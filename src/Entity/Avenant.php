@@ -15,14 +15,14 @@ class Avenant
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column]
-    private ?int $type = null;
-    public const AVENANT_SOUSCRIPTION = 0;
-    public const AVENANT_INCORPORATION = 1;
-    public const AVENANT_PROROGATION = 2;
-    public const AVENANT_ANNULATION = 3;
-    public const AVENANT_RESILIATION = 4;
-    public const AVENANT_RENOUVELLEMENT = 5;
+    // #[ORM\Column]
+    // private ?int $type = null;
+    // public const AVENANT_SOUSCRIPTION = 0;
+    // public const AVENANT_INCORPORATION = 1;
+    // public const AVENANT_PROROGATION = 2;
+    // public const AVENANT_ANNULATION = 3;
+    // public const AVENANT_RESILIATION = 4;
+    // public const AVENANT_RENOUVELLEMENT = 5;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $startingAt = null;
@@ -61,17 +61,17 @@ class Avenant
         return $this->id;
     }
 
-    public function getType(): ?int
-    {
-        return $this->type;
-    }
+    // public function getType(): ?int
+    // {
+    //     return $this->type;
+    // }
 
-    public function setType(int $type): static
-    {
-        $this->type = $type;
+    // public function setType(int $type): static
+    // {
+    //     $this->type = $type;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getStartingAt(): ?\DateTimeImmutable
     {

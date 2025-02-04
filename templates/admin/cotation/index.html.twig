@@ -49,6 +49,9 @@
                         <tr id="row_cotation_{{ cotation.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.cotation.edit', {'idCotation':cotation.id, 'idEntreprise': entreprise.id})}}">
+                                    {% if constante.Cotation_isBound(cotation) %}
+                                        (*)
+                                    {% endif %}
                                     Proposition {{ constante.Cotation_getRisque(cotation).nomComplet }} de {{ constante.Cotation_getAssureur(cotation).nom }} pour {{ constante.Cotation_getClient(cotation).nom }}<br/>
                                 </a>
                                 {# Section prime #}

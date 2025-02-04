@@ -10,6 +10,13 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: PisteRepository::class)]
 class Piste
 {
+    public const AVENANT_SOUSCRIPTION = 0;
+    public const AVENANT_INCORPORATION = 1;
+    public const AVENANT_PROROGATION = 2;
+    public const AVENANT_ANNULATION = 3;
+    public const AVENANT_RESILIATION = 4;
+    public const AVENANT_RENOUVELLEMENT = 5;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -74,6 +81,9 @@ class Piste
      */
     #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'piste', cascade: ['persist', 'remove'])]
     private Collection $conditionsPartageExceptionnelles;
+
+    #[ORM\Column]
+    private ?int $exercice = null;
 
     public function __construct()
     {
@@ -355,6 +365,18 @@ class Piste
                 $conditionsPartageExceptionnelle->setPiste(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getExercice(): ?int
+    {
+        return $this->exercice;
+    }
+
+    public function setExercice(int $exercice): static
+    {
+        $this->exercice = $exercice;
 
         return $this;
     }

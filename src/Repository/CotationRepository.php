@@ -2,10 +2,16 @@
 
 namespace App\Repository;
 
+use App\Entity\Avenant;
+use App\Entity\Client;
+use App\Entity\Risque;
 use App\Entity\Cotation;
+use App\Entity\Entreprise;
+use App\Entity\Partenaire;
 use Doctrine\Persistence\ManagerRegistry;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
+use Doctrine\Common\Collections\ArrayCollection;
 use Knp\Component\Pager\Pagination\PaginationInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
@@ -17,7 +23,7 @@ class CotationRepository extends ServiceEntityRepository
     public function __construct(
         private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
-        private Security $security
+        private Security $security,
     ) {
         parent::__construct($registry, Cotation::class);
     }
@@ -46,6 +52,98 @@ class CotationRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function loadBoundCotationsWithPartnerRisque($annee, ?Entreprise $entreprise, ?Risque $risque, ?Partenaire $partenaire)
+    {
+        $data = $this->createQueryBuilder('cotation')
+        ->leftJoin("cotation.piste", "piste")
+        ->leftJoin("piste.invite", "invite")
+        // ->leftJoin("piste.risque", "risque")
+        ->Where('invite.entreprise = :ese')
+        ->andWhere('piste.risque = :risque')
+        ->setParameter('ese', $entreprise->getId())
+        ->setParameter('risque', $risque->getId())
+        ->orderBy('cotation.id', 'ASC')
+        // ->setMaxResults(10)
+        ->getQuery()
+        ->getResult();
+        
+        $resultat = new ArrayCollection([]);
+        foreach ($data as $cotation) {
+            if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
+                $resultat->add($cotation);
+            }
+        }
+        return $resultat;
+    }
+
+    public function loadBoundCotationsWithPartnerClient($annee, ?Entreprise $entreprise, ?Client $client, ?Partenaire $partenaire)
+    {
+        $data = $this->createQueryBuilder('cotation')
+        ->leftJoin("cotation.piste", "piste")
+        ->leftJoin("piste.invite", "invite")
+        // ->leftJoin("piste.client", "client")
+        ->Where('invite.entreprise = :ese')
+        ->andWhere('piste.client = :client')
+        ->setParameter('ese', $entreprise->getId())
+        ->setParameter('client', $client->getId())
+        ->orderBy('cotation.id', 'ASC')
+        // ->setMaxResults(10)
+        ->getQuery()
+        ->getResult();
+        
+        $resultat = new ArrayCollection([]);
+        foreach ($data as $cotation) {
+            if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
+                /** @var Avenant $avenant */
+                $avenant = $cotation->getAvenants()[0];
+                // dd($avenant, $avenant->getStartingAt(), $avenant->getStartingAt()->format('Y'));
+                if ($annee == $avenant->getStartingAt()->format('Y')) {
+                    $resultat->add($cotation);
+                }
+            }
+        }
+        return $resultat;
+    }
+
+    public function loadBoundCotationsWithPartnerAll($annee, ?Entreprise $entreprise, ?Partenaire $partenaire)
+    {
+        $data = $this->createQueryBuilder('cotation')
+        ->leftJoin("cotation.piste", "piste")
+        ->leftJoin("piste.invite", "invite")
+        // ->leftJoin("piste.client", "client")
+        ->Where('invite.entreprise = :ese')
+        // ->andWhere('piste.risque = :risque')
+        ->setParameter('ese', $entreprise->getId())
+        // ->setParameter('client', $client->getId())
+        ->orderBy('cotation.id', 'ASC')
+        // ->setMaxResults(10)
+        ->getQuery()
+        ->getResult();
+        
+        $resultat = new ArrayCollection([]);
+        foreach ($data as $cotation) {
+            if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
+                $resultat->add($cotation);
+            }
+        }
+        return $resultat;
+    }
+
+    public function getPartenaire(?Cotation $cotation)
+    {
+        if ($cotation) {
+            if ($cotation->getPiste()) {
+                if (count($cotation->getPiste()->getPartenaires()) >= 1) {
+                    // dd($cotation->getPiste()->getPartenaires()[0]);
+                    return $cotation->getPiste()->getPartenaires()[0];
+                } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
+                    return $cotation->getPiste()->getClient()->getPartenaires()[0];
+                }
+            }
+        }
+        return null;
+    }
 
     public function paginateForInvite(int $idInvite, int $page): PaginationInterface
     {
