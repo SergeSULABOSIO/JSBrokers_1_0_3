@@ -349,6 +349,15 @@ class Constante
     /**
      * PARTENAIRE
      */
+    public function Tranche_getPartenaire(?Tranche $tranche)
+    {
+        if ($tranche) {
+            if ($tranche->getCotation()) {
+                return $this->Cotation_getPartenaire($tranche->getCotation());
+            }
+        }
+        return null;
+    }
     public function Cotation_getPartenaire(?Cotation $cotation)
     {
         if ($cotation) {
@@ -372,6 +381,15 @@ class Constante
                     // dd($cotation->getPiste()->getConditionsPartageExceptionnelles()[0]);
                     return count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0;
                 }
+            }
+        }
+        return false;
+    }
+    public function Tranche_hasConditionsSpeciales(?Tranche $tranche): bool
+    {
+        if ($tranche) {
+            if ($tranche->getPiste()) {
+                return $this->Cotation_hasConditionsSpeciales($tranche->getCotation());
             }
         }
         return false;
@@ -777,6 +795,16 @@ class Constante
         }
         return $montant;
     }
+    public function Tranche_getMontant_retrocommissions_payable_par_courtier(?Tranche $tranche): float
+    {
+        $montant = 0;
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($tranche->getCotation()) * $tranche->getPourcentage();
+            }            
+        }
+        return $montant;
+    }
     public function Cotation_getTauxConditionsSpecialePiste(?Cotation $cotation)
     {
         if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
@@ -914,10 +942,20 @@ class Constante
     {
         return 0;
     }
+    public function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche): float
+    {
+        return 0;
+    }
     public function Cotation_getMontant_retrocommissions_payable_par_courtier_solde(?Cotation $cotation): float
     {
         $retrocom = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
         $retrocom_paye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+        return $retrocom - $retrocom_paye;
+    }
+    public function Tranche_getMontant_retrocommissions_payable_par_courtier_solde(?Tranche $tranche): float
+    {
+        $retrocom = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
+        $retrocom_paye = $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche);
         return $retrocom - $retrocom_paye;
     }
 

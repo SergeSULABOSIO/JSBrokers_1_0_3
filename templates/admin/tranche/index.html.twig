@@ -84,17 +84,17 @@
                                     <span class="text-secondary"> • Arca payée: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Solde dû: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
-                                {# {% if constante.Cotation_getPartenaire(cotation) %} #}
+                                {% if constante.Tranche_getPartenaire(tranche) %}
                                     {# Retro-commission #}
-                                    {# <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ constante.Cotation_getPartenaire(cotation) }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                        {% if constante.Cotation_hasConditionsSpeciales(cotation) %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">Rétro-com dûe à {{ constante.Tranche_getPartenaire(tranche) }}: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Solde dû: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        {% if constante.Tranche_hasConditionsSpeciales(tranche) %}
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(cotation) }}).</span>
                                         {% endif %}
-                                    </small><br> #}
-                                {# {% endif %} #}
+                                    </small><br>
+                                {% endif %}
                                 <small class="m-2">
                                     <span class="text-secondary">Proposition: {{ tranche.cotation }}</span> 
                                 </small>
