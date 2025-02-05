@@ -558,6 +558,10 @@ class Constante
         $taxeAssureur = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation);
         return $comTTC - $taxeAssureur;
     }
+    public function Tranche_getMontant_commission_ttc_solde(?Tranche $tranche): float
+    {
+        return $this->Tranche_getMontant_commission_ttc($tranche) - $this->Tranche_getMontant_commission_ttc_collectee($tranche);
+    }
     public function Cotation_getMontant_commission_ttc_solde(?Cotation $cotation): float
     {
         return $this->Cotation_getMontant_commission_ttc($cotation) - $this->Cotation_getMontant_commission_ttc_collectee($cotation);
