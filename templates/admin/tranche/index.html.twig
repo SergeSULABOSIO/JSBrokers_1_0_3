@@ -57,6 +57,7 @@
                                     {% endif %}
                                     {{ tranche.nom }}                 
                                     ({{ tranche.pourcentage * 100 }}% à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
+                                    pour {{ tranche.cotation.piste.client }}
                                 </a><br/>
                                 {# Section prime #}
                                 <small class="m-2">
