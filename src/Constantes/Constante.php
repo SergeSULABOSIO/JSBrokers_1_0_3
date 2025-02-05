@@ -541,6 +541,11 @@ class Constante
         }
         return $montant;
     }
+    public function Tranche_getMontant_commission_ttc_collectee(?Tranche $tranche): float
+    {
+        $montant = 0;
+        return $montant;
+    }
     public function Cotation_getMontant_commission_pure(?Cotation $cotation): float
     {
         $comHT = $this->Cotation_getMontant_commission_ht($cotation);

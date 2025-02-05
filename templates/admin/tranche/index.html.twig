@@ -69,7 +69,7 @@
                                     <span class="text-secondary">Com. pure: {{ constante.Tranche_getMontant_commission_pure(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Com. ht: {{ constante.Tranche_getMontant_commission_ht(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • C. totale: {{ constante.Tranche_getMontant_commission_ttc(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {# <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    <span class="text-secondary"> • C. collectée: {{ constante.Tranche_getMontant_commission_ttc_collectee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {# <span class="text-secondary"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
                                 </small><br/>
                                 {# Section Taxes : TVA#}
