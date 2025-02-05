@@ -469,6 +469,21 @@ class Constante
     /**
      * LE FRAIS ARCA - TAXES PAYABLES PAR LE COURTIER
      */
+    public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche): float
+    {
+        $montant = 0;
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($tranche->getCotation()) * $tranche->getPourcentage();
+            }
+        }
+        return $montant;
+    }
+    public function Tranche_getMontant_taxe_payable_par_courtier_payee(?Tranche $tranche): float
+    {
+        $montant = 0;
+        return $montant;
+    }
     public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation): float
     {
         $net = $this->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->Cotation_getMontant_commission_payable_par_client($cotation);
@@ -491,6 +506,25 @@ class Constante
     /**
      * LA TVA - TAXES PAYABLES PAR L'ASSUREUR
      */
+    public function Tranche_getMontant_taxe_payable_par_assureur(?Tranche $tranche): float
+    {
+        $montant = 0;
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $montant = $this->Cotation_getMontant_taxe_payable_par_assureur($tranche->getCotation()) * $tranche->getPourcentage();
+            }
+        }
+        return $montant;
+    }
+    public function Tranche_getMontant_taxe_payable_par_assureur_payee(?Tranche $tranche): float
+    {
+        $montant = 0;
+        return $montant;
+    }
+    public function Tranche_getMontant_taxe_payable_par_assureur_solde(?Tranche $tranche): float
+    {
+        return $this->Tranche_getMontant_taxe_payable_par_assureur($tranche) - $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
+    }
     public function Cotation_getMontant_taxe_payable_par_assureur(?Cotation $cotation): float
     {
         $net = $this->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->Cotation_getMontant_commission_payable_par_client($cotation);
