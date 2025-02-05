@@ -437,7 +437,7 @@ class Constante
     }
     public function Note_getMontant_payable(?Note $note): float
     {
-        Je suis ici
+        Je suis ic
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
