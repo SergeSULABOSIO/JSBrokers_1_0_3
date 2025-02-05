@@ -49,27 +49,54 @@
                     {% for tranche in tranches %}
                         <tr id="row_tranche_{{ tranche.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
+                                <a class="m-2 fw-bold" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
                                     {% if panier != null %}
                                         {% if panier.containsTranche(tranche.id) == true %}
                                             {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
                                         {% endif %}
-                                    {% endif %}  
+                                    {% endif %}
                                     {{ tranche.nom }}                 
                                     ({{ tranche.pourcentage * 100 }}% à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
-                                    {% if tranche.cotation != null %}
-                                         | {{ tranche.cotation.nom|slice(0, 20) }}...
-                                    {% endif %}
-                                    {% if tranche.cotation.piste != null %}
-                                         | {{ tranche.cotation.piste.nom|slice(0, 20) }}...
-                                    {% endif %}
                                 </a><br/>
-                                <small class ="m-2">
-                                    <span class="text-secondary fw-light">Prime dûe: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
-                                    <span class="text-secondary fw-light">Commission: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
-                                    <span class="text-secondary fw-light">Rétrocom: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
-                                    <span class="text-secondary fw-light">Arca: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} | </span> 
-                                    <span class="text-secondary fw-light">Tva: {{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                {# Section prime #}
+                                <small class="m-2">
+                                    <span class="text-secondary fw-bold">Prime: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Tranche_getMontant_prime_payable_par_client_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Solde dû: {{ constante.Tranche_getMontant_prime_payable_par_client_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {# Section commissions #}
+                                {# <small class="m-2">
+                                    <span class="text-secondary">Com. pure: {{ constante.Cotation_getMontant_commission_pure(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. ht: {{ constante.Cotation_getMontant_commission_ht(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. totale: {{ constante.Cotation_getMontant_commission_ttc(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/> #}
+                                {# Section Taxes : TVA#}
+                                {# <small class="m-2">
+                                    <span class="text-secondary">Tva (16%): {{ constante.Cotation_getMontant_taxe_payable_par_assureur(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Tva payée: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/> #}
+                                {# Section Taxe: ARCA #}
+                                {# <small class="m-2">
+                                    <span class="text-secondary">ARCA (2%): {{ constante.Cotation_getMontant_taxe_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Arca payée: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/> #}
+                                {# {% if constante.Cotation_getPartenaire(cotation) %} #}
+                                    {# Retro-commission #}
+                                    {# <small class="m-2">
+                                        <span class="text-secondary">Rétro-com dûe à {{ constante.Cotation_getPartenaire(cotation) }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        {% if constante.Cotation_hasConditionsSpeciales(cotation) %}
+                                            <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(cotation) }}).</span>
+                                        {% endif %}
+                                    </small><br> #}
+                                {# {% endif %} #}
+                                <small class="m-2">
+                                    <span class="text-secondary">Proposition: {{ tranche.cotation }}</span> 
                                 </small>
                             </td>
                             <td>

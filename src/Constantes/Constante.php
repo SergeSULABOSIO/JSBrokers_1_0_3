@@ -862,6 +862,19 @@ class Constante
         }
         return $montant;
     }
+    public function Tranche_getMontant_prime_payable_par_client_payee(?Tranche $tranche): float
+    {
+        $montant = 0;
+        return $montant;
+    }
+    public function Tranche_getMontant_prime_payable_par_client_solde(?Tranche $tranche): float
+    {
+        $montant =
+            $this->Tranche_getMontant_prime_payable_par_client($tranche)
+            - $this->Tranche_getMontant_prime_payable_par_client_payee($tranche);
+
+        return $montant;
+    }
     public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
