@@ -91,7 +91,7 @@
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Solde dû: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         {% if constante.Tranche_hasConditionsSpeciales(tranche) %}
-                                            <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(cotation) }}).</span>
+                                            <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Tranche_getTauxConditionsSpecialePiste(tranche) }}).</span>
                                         {% endif %}
                                     </small><br>
                                 {% endif %}

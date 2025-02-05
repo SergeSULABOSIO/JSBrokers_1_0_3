@@ -388,7 +388,7 @@ class Constante
     public function Tranche_hasConditionsSpeciales(?Tranche $tranche): bool
     {
         if ($tranche) {
-            if ($tranche->getPiste()) {
+            if ($tranche->getCotation()) {
                 return $this->Cotation_hasConditionsSpeciales($tranche->getCotation());
             }
         }
@@ -814,6 +814,15 @@ class Constante
         } else {
             return null;
         }
+    }
+    public function Tranche_getTauxConditionsSpecialePiste(?Tranche $tranche)
+    {
+        if ($tranche) {
+            if ($tranche->getCotation()) {
+                return $this->Cotation_getTauxConditionsSpecialePiste($tranche->getCotation());
+            }
+        }
+        return null;
     }
     public function Cotation_isBound(?Cotation $cotation): bool
     {
