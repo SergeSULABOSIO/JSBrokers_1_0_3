@@ -82,7 +82,7 @@
                                 <small class="m-2">
                                     <span class="text-secondary">ARCA (2%): {{ constante.Tranche_getMontant_taxe_payable_par_courtier(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Arca payée: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde dû: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {# {% if constante.Cotation_getPartenaire(cotation) %} #}
                                     {# Retro-commission #}

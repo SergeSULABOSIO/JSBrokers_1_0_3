@@ -484,6 +484,10 @@ class Constante
         $montant = 0;
         return $montant;
     }
+    public function Tranche_getMontant_taxe_payable_par_courtier_solde(?Tranche $tranche): float
+    {
+        return $this->Tranche_getMontant_taxe_payable_par_courtier($tranche) - $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche);
+    }
     public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation): float
     {
         $net = $this->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->Cotation_getMontant_commission_payable_par_client($cotation);
