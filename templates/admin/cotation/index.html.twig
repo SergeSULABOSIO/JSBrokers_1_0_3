@@ -52,7 +52,7 @@
                                     {% if constante.Cotation_isBound(cotation) %}
                                         (*)
                                     {% endif %}
-                                    Proposition {{ constante.Cotation_getRisque(cotation).nomComplet }} de {{ constante.Cotation_getAssureur(cotation).nom }} pour {{ constante.Cotation_getClient(cotation).nom }}<br/>
+                                    {{ constante.Cotation_getRisque(cotation).nomComplet }} de {{ constante.Cotation_getAssureur(cotation).nom }} pour {{ constante.Cotation_getClient(cotation).nom }}<br/>
                                 </a>
                                 {# Section prime #}
                                 <small class="m-2">
@@ -89,8 +89,11 @@
                                         {% if constante.Cotation_hasConditionsSpeciales(cotation) %}
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(cotation) }}).</span>
                                         {% endif %}
-                                    </small>
+                                    </small><br>
                                 {% endif %}
+                                <small class="m-2">
+                                    <span class="text-secondary">Piste: {{ cotation.piste }}</span> 
+                                </small>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
