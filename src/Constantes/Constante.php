@@ -437,7 +437,6 @@ class Constante
     }
     public function Note_getMontant_payable(?Note $note): float
     {
-        Je suis ic
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
@@ -451,16 +450,19 @@ class Constante
                         switch ($note->getAddressedTo()) {
                             case Note::TO_ASSUREUR:
                                 // dd("On facture à l'assureur les commissions payables par lui-même.");
-                                $montant = $this->Cotation_getMontant_commission_payable_par_assureur($cotation);
+                                // $montant = $this->Cotation_getMontant_commission_payable_par_assureur($cotation);
+                                $montant = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
                                 break;
 
                             case Note::TO_CLIENT:
-                                dd("On facture au client les frais de gestion payables par lui-même.");
-                                $montant = $this->Cotation_getMontant_commission_payable_par_client($cotation);
+                                // dd("On facture au client les frais de gestion payables par lui-même.");
+                                // $montant = $this->Cotation_getMontant_commission_payable_par_client($cotation);
+                                $montant = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
                                 break;
 
                             case Note::TO_PARTENAIRE:
                                 dd("Le partenaire nous facture les retrocommissions payable par nous.");
+                                // $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
                                 $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
                                 break;
 
