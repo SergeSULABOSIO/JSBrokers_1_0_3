@@ -56,22 +56,24 @@ class CotationRepository extends ServiceEntityRepository
     public function loadBoundCotationsWithPartnerRisque($annee, ?Entreprise $entreprise, ?Risque $risque, ?Partenaire $partenaire)
     {
         $data = $this->createQueryBuilder('cotation')
-        ->leftJoin("cotation.piste", "piste")
-        ->leftJoin("piste.invite", "invite")
-        // ->leftJoin("piste.risque", "risque")
-        ->Where('invite.entreprise = :ese')
-        ->andWhere('piste.risque = :risque')
-        ->setParameter('ese', $entreprise->getId())
-        ->setParameter('risque', $risque->getId())
-        ->orderBy('cotation.id', 'ASC')
-        // ->setMaxResults(10)
-        ->getQuery()
-        ->getResult();
-        
+            ->leftJoin("cotation.piste", "piste")
+            ->leftJoin("piste.invite", "invite")
+            // ->leftJoin("piste.risque", "risque")
+            ->Where('invite.entreprise = :ese')
+            ->andWhere('piste.risque = :risque')
+            ->setParameter('ese', $entreprise->getId())
+            ->setParameter('risque', $risque->getId())
+            ->orderBy('cotation.id', 'ASC')
+            // ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
         $resultat = new ArrayCollection([]);
         foreach ($data as $cotation) {
             if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
-                $resultat->add($cotation);
+                if ($this->isSameAnnee($annee, $cotation)) {
+                    $resultat->add($cotation);
+                }
             }
         }
         return $resultat;
@@ -80,25 +82,22 @@ class CotationRepository extends ServiceEntityRepository
     public function loadBoundCotationsWithPartnerClient($annee, ?Entreprise $entreprise, ?Client $client, ?Partenaire $partenaire)
     {
         $data = $this->createQueryBuilder('cotation')
-        ->leftJoin("cotation.piste", "piste")
-        ->leftJoin("piste.invite", "invite")
-        // ->leftJoin("piste.client", "client")
-        ->Where('invite.entreprise = :ese')
-        ->andWhere('piste.client = :client')
-        ->setParameter('ese', $entreprise->getId())
-        ->setParameter('client', $client->getId())
-        ->orderBy('cotation.id', 'ASC')
-        // ->setMaxResults(10)
-        ->getQuery()
-        ->getResult();
-        
+            ->leftJoin("cotation.piste", "piste")
+            ->leftJoin("piste.invite", "invite")
+            // ->leftJoin("piste.client", "client")
+            ->Where('invite.entreprise = :ese')
+            ->andWhere('piste.client = :client')
+            ->setParameter('ese', $entreprise->getId())
+            ->setParameter('client', $client->getId())
+            ->orderBy('cotation.id', 'ASC')
+            // ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
         $resultat = new ArrayCollection([]);
         foreach ($data as $cotation) {
             if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
-                /** @var Avenant $avenant */
-                $avenant = $cotation->getAvenants()[0];
-                // dd($avenant, $avenant->getStartingAt(), $avenant->getStartingAt()->format('Y'));
-                if ($annee == $avenant->getStartingAt()->format('Y')) {
+                if ($this->isSameAnnee($annee, $cotation)) {
                     $resultat->add($cotation);
                 }
             }
@@ -106,25 +105,32 @@ class CotationRepository extends ServiceEntityRepository
         return $resultat;
     }
 
+    private function isSameAnnee($annee, ?Cotation $cotation): bool
+    {
+        return $annee == $cotation->getAvenants()[0]->getStartingAt()->format('Y');
+    }
+
     public function loadBoundCotationsWithPartnerAll($annee, ?Entreprise $entreprise, ?Partenaire $partenaire)
     {
         $data = $this->createQueryBuilder('cotation')
-        ->leftJoin("cotation.piste", "piste")
-        ->leftJoin("piste.invite", "invite")
-        // ->leftJoin("piste.client", "client")
-        ->Where('invite.entreprise = :ese')
-        // ->andWhere('piste.risque = :risque')
-        ->setParameter('ese', $entreprise->getId())
-        // ->setParameter('client', $client->getId())
-        ->orderBy('cotation.id', 'ASC')
-        // ->setMaxResults(10)
-        ->getQuery()
-        ->getResult();
-        
+            ->leftJoin("cotation.piste", "piste")
+            ->leftJoin("piste.invite", "invite")
+            // ->leftJoin("piste.client", "client")
+            ->Where('invite.entreprise = :ese')
+            // ->andWhere('piste.risque = :risque')
+            ->setParameter('ese', $entreprise->getId())
+            // ->setParameter('client', $client->getId())
+            ->orderBy('cotation.id', 'ASC')
+            // ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
         $resultat = new ArrayCollection([]);
         foreach ($data as $cotation) {
             if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
-                $resultat->add($cotation);
+                if ($this->isSameAnnee($annee, $cotation)) {
+                    $resultat->add($cotation);
+                }
             }
         }
         return $resultat;

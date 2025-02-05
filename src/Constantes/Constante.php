@@ -714,7 +714,7 @@ class Constante
     {
         return $cotation->getAvenants()[0] != null || count($cotation->getAvenants()) != 0;
     }
-    private function Cotation_getSommeCommissionPureRisque(?Cotation $cotation):float
+    private function Cotation_getSommeCommissionPureRisque(?Cotation $cotation): float
     {
         $somme = 0;
         /** @var Entreprise $entreprise */
@@ -725,7 +725,7 @@ class Constante
         }
         return $somme;
     }
-    private function Cotation_getSommeCommissionPureClient(?Cotation $cotation):float
+    private function Cotation_getSommeCommissionPureClient(?Cotation $cotation): float
     {
         // dd($cotation->getAvenants()[0]);
         $somme = 0;
@@ -737,7 +737,7 @@ class Constante
         }
         return $somme;
     }
-    private function Cotation_getSommeCommissionPurePartenaire(?Cotation $cotation):float
+    private function Cotation_getSommeCommissionPurePartenaire(?Cotation $cotation): float
     {
         $somme = 0;
         /** @var Entreprise $entreprise */
@@ -753,7 +753,7 @@ class Constante
         $montant = 0;
         //Assiette de l'affaire individuelle
         $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
-        
+
         //Application de l'unité de mésure
         $uniteMesure = match ($conditionPartage->getUniteMesure()) {
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $this->Cotation_getSommeCommissionPureRisque($cotation),
@@ -761,7 +761,7 @@ class Constante
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->Cotation_getSommeCommissionPurePartenaire($cotation),
         };
         // dd("Unité de mésure: " . $uniteMesure);
-        
+
         $formule = $conditionPartage->getFormule();
         $seuil = $conditionPartage->getSeuil();
         $risque = $cotation->getPiste()->getRisque();
@@ -871,6 +871,20 @@ class Constante
             $montant += $chargement->getMontantFlatExceptionel();
             // dd("ici", $loading);
         }
+        return $montant;
+    }
+    public function Cotation_getMontant_prime_payable_par_client_payee(?Cotation $cotation): float
+    {
+        $montant = 0;
+
+        return $montant;
+    }
+    public function Cotation_getMontant_prime_payable_par_client_solde(?Cotation $cotation): float
+    {
+        $montant =
+            $this->Cotation_getMontant_prime_payable_par_client($cotation)
+            - $this->Cotation_getMontant_prime_payable_par_client_payee($cotation);
+
         return $montant;
     }
 }

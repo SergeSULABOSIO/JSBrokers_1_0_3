@@ -57,8 +57,8 @@
                                 {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Prime payée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Solde dû: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Cotation_getMontant_prime_payable_par_client_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Solde dû: {{ constante.Cotation_getMontant_prime_payable_par_client_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
