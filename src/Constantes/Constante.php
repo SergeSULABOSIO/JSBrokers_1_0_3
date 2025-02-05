@@ -511,6 +511,36 @@ class Constante
     /**
      * LES COMMISSIONS
      */
+    public function Tranche_getMontant_commission_pure(?Tranche $tranche): float
+    {
+        $montant = 0;
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $montant = $this->Cotation_getMontant_commission_pure($tranche->getCotation()) * $tranche->getPourcentage();
+            }
+        }
+        return $montant;
+    }
+    public function Tranche_getMontant_commission_ttc(?Tranche $tranche): float
+    {
+        $montant = 0;
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $montant = $this->Cotation_getMontant_commission_ttc($tranche->getCotation()) * $tranche->getPourcentage();
+            }
+        }
+        return $montant;
+    }
+    public function Tranche_getMontant_commission_ht(?Tranche $tranche): float
+    {
+        $montant = 0;
+        if ($tranche != null) {
+            if ($tranche->getCotation()) {
+                $montant = $this->Cotation_getMontant_commission_ht($tranche->getCotation()) * $tranche->getPourcentage();
+            }
+        }
+        return $montant;
+    }
     public function Cotation_getMontant_commission_pure(?Cotation $cotation): float
     {
         $comHT = $this->Cotation_getMontant_commission_ht($cotation);
