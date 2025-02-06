@@ -423,7 +423,7 @@ class Constante
                 /** @var Paiement $paiement */
                 $paiement = $encaisse;
                 $montant += $paiement->getMontant();
-                dd("Paiement : ", $paiement);
+                // dd("Paiement : ", $paiement);
             }
         }
         return $montant;
@@ -447,6 +447,7 @@ class Constante
                 # code...
                 break;
         }
+        return "";
     }
     public function Note_getNameOfTypeNote(?Note $note)
     {

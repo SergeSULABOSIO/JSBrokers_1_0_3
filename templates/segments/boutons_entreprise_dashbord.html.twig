@@ -113,12 +113,12 @@
           {{ "entreprise_bouton_new_feedback" | trans }}
         </a>
     {% endif %}
-    {% if app.current_route starts with 'admin.paiement' %}
+    {# {% if app.current_route starts with 'admin.paiement' %}
         <a href="{{ path('admin.paiement.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "entreprise_bouton_new_paiement" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {% if app.current_route starts with 'admin.groupe' %}
         <a href="{{ path('admin.groupe.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}

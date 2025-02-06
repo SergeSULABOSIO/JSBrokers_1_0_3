@@ -8,6 +8,7 @@ use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -22,11 +23,45 @@ class PaiementType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        if ($options['note'] != null) {
+            $builder
+                ->add('referenceNote', TextType::class, [
+                    'label' => "Référence de la note",
+                    'disabled' => true,
+                    'mapped' => false,
+                    'attr' => [
+                        'placeholder' => "Référence",
+                    ],
+                ])
+                ->add('montantPayable', MoneyType::class, [
+                    'label' => "Montant payable",
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    'required' => false,
+                    'disabled' => true,
+                    'mapped' => false,
+                    'grouping' => true,
+                    'attr' => [
+                        'placeholder' => "Montant",
+                    ],
+                ])
+                ->add('montantPaye', MoneyType::class, [
+                    'label' => "Montant payé",
+                    'disabled' => true,
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    'required' => false,
+                    'mapped' => false,
+                    'grouping' => true,
+                    'attr' => [
+                        'placeholder' => "Montant",
+                    ],
+                ]);
+        }
         $builder
             ->add('description', TextType::class, [
                 'label' => "Description",
@@ -35,8 +70,8 @@ class PaiementType extends AbstractType
                 ],
             ])
             ->add('montant', MoneyType::class, [
-                'label' => "Montant",
-                'currency' => "USD",
+                'label' => "Montant dû",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'required' => false,
                 'grouping' => true,
                 'attr' => [
@@ -50,6 +85,7 @@ class PaiementType extends AbstractType
                 ],
             ])
             ->add('paidAt', DateTimeType::class, [
+                'label' => "Date de paiement",
                 'widget' => 'single_text',
             ])
             ->add('preuves', CollectionType::class, [
@@ -103,6 +139,7 @@ class PaiementType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Paiement::class,
+            'note' => null,
         ]);
     }
 }

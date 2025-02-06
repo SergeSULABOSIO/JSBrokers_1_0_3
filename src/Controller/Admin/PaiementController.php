@@ -2,17 +2,20 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
-use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\Paiement;
+use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Form\PaiementType;
 use App\Form\PartenaireType;
+use App\Constantes\Constante;
+use App\Constantes\MenuActivator;
+use App\Entity\Document;
+use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
-use App\Repository\EntrepriseRepository;
 use App\Repository\PaiementRepository;
+use App\Repository\EntrepriseRepository;
 use App\Repository\PartenaireRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -34,6 +37,7 @@ class PaiementController extends AbstractController
         private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
+        private NoteRepository $noteRepository,
         private InviteRepository $inviteRepository,
         private PaiementRepository $paiementRepository,
         private Constante $constante,
@@ -59,11 +63,14 @@ class PaiementController extends AbstractController
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/create/{idEntreprise}/{idNote}', name: 'create', requirements: ['idEntreprise' => Requirement::DIGITS, 'idNote' => Requirement::DIGITS])]
+    public function create($idEntreprise, $idNote, Request $request)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        /** @var Note $note */
+        $note = $this->noteRepository->find($idNote);
 
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -72,7 +79,24 @@ class PaiementController extends AbstractController
         $paiement = new Paiement();
         //Paramètres par défaut
 
-        $form = $this->createForm(PaiementType::class, $paiement);
+        if ($note) {
+            $reference = $this->constante->Note_getNameOfTypeNote($note) . " ref.: " . $note->getReference() . " - " . $this->constante->Note_getNameOfAddressedTo($note);
+            $paiement->setDescription("Paiement - " . $reference);
+            $paiement->setMontant($this->constante->Note_getMontant_solde($note));
+            $paiement->setPaidAt(new DateTimeImmutable("now"));
+
+            // dd($this->constante->Note_getMontant_payable($note));
+
+            /** @var Document $pop */
+            $pop = (new Document())
+                ->setNom("Preuve de paiement - " . $reference);
+
+            $paiement->addPreuve($pop);
+        }
+
+        $form = $this->createForm(PaiementType::class, $paiement, [
+            'note' => $note
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -141,7 +165,7 @@ class PaiementController extends AbstractController
         $message = $this->translator->trans("paiement_deletion_ok", [
             ":paiement" => $paiement->getDescription(),
         ]);;
-        
+
         $this->manager->remove($paiement);
         $this->manager->flush();
 
