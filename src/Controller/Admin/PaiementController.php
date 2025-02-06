@@ -70,7 +70,10 @@ class PaiementController extends AbstractController
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         /** @var Note $note */
-        $note = $this->noteRepository->find($idNote);
+        $note = null;
+        if ($idNote) {
+            $note = $this->noteRepository->find($idNote);
+        }
 
         /** @var Utilisateur $user */
         $user = $this->getUser();
