@@ -418,10 +418,12 @@ class Constante
     {
         $montant = 0;
         if ($note) {
+            // dd("Les paiements: ", $note->getPaiements());
             foreach ($note->getPaiements() as $encaisse) {
                 /** @var Paiement $paiement */
                 $paiement = $encaisse;
                 $montant += $paiement->getMontant();
+                dd("Paiement : ", $paiement);
             }
         }
         return $montant;

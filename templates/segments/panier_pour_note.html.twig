@@ -5,7 +5,7 @@
       <p>
         {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}{{ panier }}, créer le {{ panier.createdAt|format_datetime('short', 'short', locale: utilisateur.locale)}}:</br>
         <a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':panier.idnote, 'idEntreprise': entreprise.id})}}">
-          {{ ux_icon('hugeicons:invoice', {height: '18px', width: '18px'}) }}{{ panier.nomNote }} • {{ panier.reference }} • {{ panier.nbTranche }} tranche(s) • {{ constante.Note_getNameOfAddressedTo(note) }}</br>
+          {{ ux_icon('hugeicons:invoice', {height: '18px', width: '18px'}) }}{{ constante.Note_getNameOfTypeNote(note) }} • {{ panier.nomNote }} • {{ panier.reference }} • {{ panier.nbTranche }} tranche(s) • {{ constante.Note_getNameOfAddressedTo(note) }}</br>
         </a>
         <small class ="m-2">
           <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
