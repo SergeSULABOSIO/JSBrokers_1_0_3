@@ -85,8 +85,6 @@ class PaiementController extends AbstractController
             $paiement->setMontant($this->constante->Note_getMontant_solde($note));
             $paiement->setPaidAt(new DateTimeImmutable("now"));
 
-            // dd($this->constante->Note_getMontant_payable($note));
-
             /** @var Document $pop */
             $pop = (new Document())
                 ->setNom("Preuve de paiement - " . $reference);
