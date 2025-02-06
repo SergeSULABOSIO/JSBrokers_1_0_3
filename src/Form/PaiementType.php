@@ -60,8 +60,21 @@ class PaiementType extends AbstractType
                     'attr' => [
                         'placeholder' => "Montant",
                     ],
+                ])
+                ->add('montantSolde', MoneyType::class, [
+                    'label' => "Solde restant dû",
+                    'disabled' => true,
+                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    'required' => false,
+                    'mapped' => false,
+                    'grouping' => true,
+                    'attr' => [
+                        'placeholder' => "Montant",
+                    ],
                 ]);
         }
+
+
         $builder
             ->add('description', TextType::class, [
                 'label' => "Description",
@@ -70,7 +83,7 @@ class PaiementType extends AbstractType
                 ],
             ])
             ->add('montant', MoneyType::class, [
-                'label' => "Montant dû",
+                'label' => "Montant en cours de paiement",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'required' => false,
                 'grouping' => true,
@@ -89,7 +102,7 @@ class PaiementType extends AbstractType
                 'widget' => 'single_text',
             ])
             ->add('preuves', CollectionType::class, [
-                'label' => "Documents",
+                'label' => "Documents ou preuve de paiement",
                 'help' => "Preuve de paiement ou tout autre document.",
                 'entry_type' => DocumentType::class,
                 'by_reference' => false,

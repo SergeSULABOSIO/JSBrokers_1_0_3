@@ -84,13 +84,14 @@ class PaiementController extends AbstractController
 
         if ($note) {
             $reference = $this->constante->Note_getNameOfTypeNote($note) . " ref.: " . $note->getReference() . " - " . $this->constante->Note_getNameOfAddressedTo($note);
+            $paiement->setReference("PYM" . (new DateTimeImmutable("now"))->getTimestamp() . "-" . $note->getReference());
             $paiement->setDescription("Paiement - " . $reference);
             $paiement->setMontant($this->constante->Note_getMontant_solde($note));
             $paiement->setPaidAt(new DateTimeImmutable("now"));
 
             /** @var Document $pop */
-            $pop = (new Document())
-                ->setNom("Preuve de paiement - " . $reference);
+            $pop = new Document();
+            $pop->setNom("Preuve de paiement - " . $reference);
 
             $paiement->addPreuve($pop);
         }
@@ -98,6 +99,12 @@ class PaiementController extends AbstractController
         $form = $this->createForm(PaiementType::class, $paiement, [
             'note' => $note
         ]);
+        if ($note != null) {
+            $form->get('referenceNote')->setData($note->getReference());
+            $form->get('montantPayable')->setData($this->constante->Note_getMontant_payable($note));
+            $form->get('montantPaye')->setData($this->constante->Note_getMontant_paye($note));
+            $form->get('montantSolde')->setData($this->constante->Note_getMontant_solde($note));
+        }
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
