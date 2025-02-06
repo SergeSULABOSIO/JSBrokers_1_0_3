@@ -70,6 +70,15 @@ class NoteController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
+        /** @var Panier $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+        /** @var Note $note */
+        $note = null;
+        if ($panier) {
+            $note = $this->noteRepository->find($panier->getIdNote());
+        }
+
+
         return $this->render('admin/note/index.html.twig', [
             'pageName' => $this->translator->trans("note_page_name_new"),
             'utilisateur' => $this->getUser(),
@@ -79,7 +88,8 @@ class NoteController extends AbstractController
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
-            "panier" => $request->getSession()->get(PanierNotes::NOM),
+            "panier" => $panier,
+            "note" => $note,
         ]);
     }
 
@@ -207,6 +217,8 @@ class NoteController extends AbstractController
             "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "pageMax" => $this->pageMax,
             "panier" => $request->getSession()->get(PanierNotes::NOM),
+            "constante" => $this->constante,
+            "serviceMonnaie" => $this->serviceMonnaies,
         ]);
     }
 
