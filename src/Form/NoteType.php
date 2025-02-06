@@ -312,7 +312,7 @@ class NoteType extends AbstractType
                 'help' => $this->helpArticle,
                 'entry_type' => ArticleType::class,
                 'by_reference' => false,
-                'allow_add' => true,
+                'allow_add' => false,
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,

@@ -20,6 +20,7 @@ use App\Entity\TypeRevenu;
 use App\Repository\CotationRepository;
 use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
+use PhpParser\Node\Stmt\Nop;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\ExpressionLanguage\Node\ConditionalNode;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -57,17 +58,7 @@ class Constante
         ];
     }
 
-    public function getTypeNote(int $type): string
-    {
-        switch ($type) {
-            case 0:
-                return $this->translator->trans("note_de_debit");
-                break;
-            case 1:
-                return $this->translator->trans("note_de_credit");
-                break;
-        }
-    }
+    
 
     public function getTabAddressedTo(): array
     {
@@ -435,6 +426,38 @@ class Constante
         }
         return $montant;
     }
+    public function Note_getNameOfAddressedTo(?Note $note): string
+    {
+        switch ($note->getAddressedTo()) {
+            case Note::TO_ASSUREUR:
+                return $note->getAssureur()->getNom();
+                break;
+            case Note::TO_CLIENT:
+                return $note->getClient()->getNom();
+                break;
+            case Note::TO_PARTENAIRE:
+                return $note->getPartenaire()->getNom();
+                break;
+            case Note::TO_AUTORITE_FISCALE:
+                return $note->getAutoritefiscale()->getNom();
+                break;
+            default:
+                # code...
+                break;
+        }
+    }
+    public function Note_getNameOfTypeNote(?Note $note)
+    {
+        switch ($note->getType()) {
+            case Note::TYPE_NOTE_DE_DEBIT:
+                return $this->translator->trans("note_de_debit");
+                break;
+            case Note::TYPE_NOTE_DE_CREDIT:
+                return $this->translator->trans("note_de_credit");
+                break;
+        }
+        return null;
+    }
     public function Note_getMontant_payable(?Note $note): float
     {
         $montant = 0;
@@ -450,24 +473,21 @@ class Constante
                         switch ($note->getAddressedTo()) {
                             case Note::TO_ASSUREUR:
                                 // dd("On facture à l'assureur les commissions payables par lui-même.");
-                                // $montant = $this->Cotation_getMontant_commission_payable_par_assureur($cotation);
                                 $montant = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
                                 break;
 
                             case Note::TO_CLIENT:
                                 // dd("On facture au client les frais de gestion payables par lui-même.");
-                                // $montant = $this->Cotation_getMontant_commission_payable_par_client($cotation);
                                 $montant = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
                                 break;
 
                             case Note::TO_PARTENAIRE:
-                                dd("Le partenaire nous facture les retrocommissions payable par nous.");
-                                // $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+                                // dd("Le partenaire nous facture les retrocommissions payable par nous.");
                                 $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
                                 break;
 
                             case Note::TO_AUTORITE_FISCALE:
-                                dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
+                                // dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
                                 $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
                                 break;
 
@@ -804,7 +824,7 @@ class Constante
         if ($tranche != null) {
             if ($tranche->getCotation()) {
                 $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($tranche->getCotation()) * $tranche->getPourcentage();
-            }            
+            }
         }
         return $montant;
     }
