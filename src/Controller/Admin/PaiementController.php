@@ -81,7 +81,7 @@ class PaiementController extends AbstractController
         /** @var Paiement $paiement */
         $paiement = new Paiement();
         //Paramètres par défaut
-        
+
         if ($note) {
             $reference = $this->constante->Note_getNameOfTypeNote($note) . " ref.: " . $note->getReference() . " - " . $this->constante->Note_getNameOfAddressedTo($note);
             $paiement->setReference("PYM" . (new DateTimeImmutable("now"))->getTimestamp() . "-" . $note->getReference());
@@ -94,6 +94,7 @@ class PaiementController extends AbstractController
             $pop->setNom("Preuve de paiement - " . $reference);
 
             $paiement->addPreuve($pop);
+            $paiement->setNote($note);
         }
 
         $form = $this->createForm(PaiementType::class, $paiement, [
