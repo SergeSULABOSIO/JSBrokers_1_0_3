@@ -3,6 +3,7 @@
 namespace App\Constantes;
 
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\Article;
 use App\Entity\Avenant;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
@@ -58,7 +59,7 @@ class Constante
         ];
     }
 
-    
+
 
     public function getTabAddressedTo(): array
     {
@@ -603,12 +604,12 @@ class Constante
         }
         return $montant;
     }
-    public function Tranche_getMontant_commission_ttc(?Tranche $tranche): float
+    public function Tranche_getMontant_commission_ttc(?Tranche $tranche, ?int $addressedTo = -1): float
     {
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
-                $montant = $this->Cotation_getMontant_commission_ttc($tranche->getCotation()) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_commission_ttc($tranche->getCotation(), $addressedTo) * $tranche->getPourcentage();
             }
         }
         return $montant;
@@ -626,6 +627,31 @@ class Constante
     public function Tranche_getMontant_commission_ttc_collectee(?Tranche $tranche): float
     {
         $montant = 0;
+        if (count($tranche->getArticles())) {
+            /** @var Article $article */
+            foreach ($tranche->getArticles() as $article) {
+                $pourcentageTrancheFacture = $article->getPourcentage();
+                $montantDu = $this->Tranche_getMontant_commission_ttc($tranche, $article->getNote()->getAddressedTo());
+                $montantFacture = $montantDu * $pourcentageTrancheFacture;
+                $montantPaye = 0;
+                foreach ($article->getNote()->getPaiements() as $paiement) {
+                    $montantPaye += $paiement->getMontant();
+                }
+                dd(
+                    "Tranche:",
+                    $tranche,
+                    "Article où la tranche a été appelée:",
+                    $article,
+                    "Note concernée:",
+                    $article->getNote(),
+                    "Pourcentage de la tranche facturée:", $pourcentageTrancheFacture,
+                    "Montant du:", $montantDu,
+                    "Facturé à :", $article->getNote()->getAddressedTo(),
+                    "Montant facturé :", $montantFacture,
+                    "Montant payé :", $montantPaye
+                );
+            }
+        }
         return $montant;
     }
     public function Cotation_getMontant_commission_pure(?Cotation $cotation): float
@@ -652,11 +678,22 @@ class Constante
     {
         return 0;
     }
-    public function Cotation_getMontant_commission_ttc(?Cotation $cotation): float
+    public function Cotation_getMontant_commission_ttc(?Cotation $cotation, ?int $addressedTo = -1): float
     {
-        $comTTCAssureur = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
-        $comTTCClient = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
-        return $comTTCAssureur + $comTTCClient;
+        switch ($addressedTo) {
+            case Note::TO_ASSUREUR:
+                return $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
+                break;
+            case Note::TO_CLIENT:
+                return $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
+                break;
+
+            default:
+                $comTTCAssureur = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
+                $comTTCClient = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
+                return $comTTCAssureur + $comTTCClient;
+                break;
+        }
     }
     public function Cotation_getMontant_commission_ttc_payable_par_client(?Cotation $cotation): float
     {

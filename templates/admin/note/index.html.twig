@@ -107,10 +107,12 @@
 													</li>
 												{% endif %}
 												<li>
-													<a class="dropdown-item" href="{{ path('admin.paiement.create', {'idNote': note.id, 'idEntreprise': entreprise.id})}}">
-														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Ajouter un paiement
-													</a>
+													{% if constante.Note_getMontant_solde(note) != 0 %}
+														<a class="dropdown-item" href="{{ path('admin.paiement.create', {'idNote': note.id, 'idEntreprise': entreprise.id})}}">
+															{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+															Ajouter un paiement
+														</a>
+													{% endif %}
 												</li>
 												<li>
 													<a class="dropdown-item" href="#">
