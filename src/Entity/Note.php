@@ -77,7 +77,6 @@ class Note
     #[ORM\Column(length: 255)]
     private ?string $signature = null;
 
-
     public function __construct()
     {
         $this->articles = new ArrayCollection();

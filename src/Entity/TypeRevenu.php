@@ -60,9 +60,22 @@ class TypeRevenu
     #[ORM\ManyToOne(inversedBy: 'typeRevenus')]
     private ?Chargement $typeChargement = null;
 
+    #[ORM\ManyToOne(inversedBy: 'revenus')]
+    private ?Note $note = null;
+
+    #[ORM\ManyToOne(inversedBy: 'typeRevenu')]
+    private ?Article $article = null;
+
+    /**
+     * @var Collection<int, Article>
+     */
+    #[ORM\ManyToMany(targetEntity: Article::class, mappedBy: 'revenus')]
+    private Collection $articles;
+
     public function __construct()
     {
         $this->revenuPourCourtiers = new ArrayCollection();
+        $this->articles = new ArrayCollection();
     }
 
 
@@ -222,6 +235,57 @@ class TypeRevenu
     public function setTypeChargement(?Chargement $typeChargement): static
     {
         $this->typeChargement = $typeChargement;
+
+        return $this;
+    }
+
+    public function getNote(): ?Note
+    {
+        return $this->note;
+    }
+
+    public function setNote(?Note $note): static
+    {
+        $this->note = $note;
+
+        return $this;
+    }
+
+    public function getArticle(): ?Article
+    {
+        return $this->article;
+    }
+
+    public function setArticle(?Article $article): static
+    {
+        $this->article = $article;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Article>
+     */
+    public function getArticles(): Collection
+    {
+        return $this->articles;
+    }
+
+    public function addArticle(Article $article): static
+    {
+        if (!$this->articles->contains($article)) {
+            $this->articles->add($article);
+            $article->addRevenu($this);
+        }
+
+        return $this;
+    }
+
+    public function removeArticle(Article $article): static
+    {
+        if ($this->articles->removeElement($article)) {
+            $article->removeRevenu($this);
+        }
 
         return $this;
     }

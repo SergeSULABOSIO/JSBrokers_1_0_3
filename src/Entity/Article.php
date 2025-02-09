@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\ArticleRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ArticleRepository::class)]
@@ -24,6 +26,17 @@ class Article
 
     #[ORM\ManyToOne(inversedBy: 'articles')]
     private ?Note $note = null;
+
+    #[ORM\ManyToOne(inversedBy: 'articles')]
+    private ?RevenuPourCourtier $revenuFacture = null;
+
+    #[ORM\ManyToOne(inversedBy: 'articles')]
+    private ?Taxe $taxeFacturee = null;
+
+    public function __construct()
+    {
+
+    }
 
     public function getId(): ?int
     {
@@ -74,6 +87,30 @@ class Article
     public function setNote(?Note $note): static
     {
         $this->note = $note;
+
+        return $this;
+    }
+
+    public function getRevenuFacture(): ?RevenuPourCourtier
+    {
+        return $this->revenuFacture;
+    }
+
+    public function setRevenuFacture(?RevenuPourCourtier $revenuFacture): static
+    {
+        $this->revenuFacture = $revenuFacture;
+
+        return $this;
+    }
+
+    public function getTaxeFacturee(): ?Taxe
+    {
+        return $this->taxeFacturee;
+    }
+
+    public function setTaxeFacturee(?Taxe $taxeFacturee): static
+    {
+        $this->taxeFacturee = $taxeFacturee;
 
         return $this;
     }

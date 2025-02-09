@@ -514,6 +514,40 @@ class Constante
     /**
      * LE FRAIS ARCA - TAXES PAYABLES PAR LE COURTIER
      */
+    public function Tranche_getRevenus(?Tranche $tranche, ?PanierNotes $panier)
+    {
+        $tabRevenus = [];
+        // dd("Je suis ici", $panier->getAddressedTo());
+        if ($tranche) {
+            if ($tranche->getCotation()) {
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($tranche->getCotation()->getRevenus() as $revenu) {
+                    switch ($panier->getAddressedTo()) {
+                        case Note::TO_ASSUREUR:
+                            if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
+                                $tabRevenus[] = $revenu;
+                            }
+                            break;
+                        case Note::TO_CLIENT:
+                            if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                                $tabRevenus[] = $revenu;
+                            }
+                            break;
+                        case Note::TO_AUTORITE_FISCALE:
+                            // if ($revenu->getTypeRevenu()->getRe) {
+                            //     $tabRevenus[] = $revenu;
+                            // }
+                            break;
+
+                        default:
+                            # code...
+                            break;
+                    }
+                }
+            }
+        }
+        return $tabRevenus;
+    }
     public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche): float
     {
         $montant = 0;
@@ -630,6 +664,29 @@ class Constante
         if (count($tranche->getArticles())) {
             /** @var Article $article */
             foreach ($tranche->getArticles() as $article) {
+                //Destination
+                $destination = match ($article->getNote()->getAddressedTo()) {
+                    Note::TO_ASSUREUR => "A l'assureur " . $article->getNote()->getAssureur(),
+                    Note::TO_CLIENT => "Au client " . $article->getNote()->getClient(),
+                    Note::TO_PARTENAIRE => "Au partenaire " . $article->getNote()->getPartenaire(),
+                    Note::TO_AUTORITE_FISCALE => "A l'autorité fiscale " . $article->getNote()->getAutoritefiscale(),
+                };
+                $type = match ($article->getNote()->getType()) {
+                    Note::TYPE_NOTE_DE_CREDIT => "Note de crédit",
+                    Note::TYPE_NOTE_DE_DEBIT => "Note de débit",
+                };
+                $cequelonfacture = match ($article->getNote()->getAddressedTo()) {
+                    Note::TO_ASSUREUR => $this->Tranche_getMontant_commission_ttc($tranche, $article->getNote()->getAddressedTo()),
+                    Note::TO_CLIENT => $this->Tranche_getMontant_commission_ttc($tranche, $article->getNote()->getAddressedTo()),
+                    Note::TO_PARTENAIRE => $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche),
+                    Note::TO_AUTORITE_FISCALE => $this->Tranche_getMontant_taxe_payable_par_assureur($tranche),
+                };
+
+                // dd($destination, $type);
+
+
+
+
                 $pourcentageTrancheFacture = $article->getPourcentage();
                 $montantDu = $this->Tranche_getMontant_commission_ttc($tranche, $article->getNote()->getAddressedTo());
                 $montantFacture = $montantDu * $pourcentageTrancheFacture;
@@ -637,19 +694,20 @@ class Constante
                 foreach ($article->getNote()->getPaiements() as $paiement) {
                     $montantPaye += $paiement->getMontant();
                 }
-                dd(
-                    "Tranche:",
-                    $tranche,
-                    "Article où la tranche a été appelée:",
-                    $article,
-                    "Note concernée:",
-                    $article->getNote(),
-                    "Pourcentage de la tranche facturée:", $pourcentageTrancheFacture,
-                    "Montant du:", $montantDu,
-                    "Facturé à :", $article->getNote()->getAddressedTo(),
-                    "Montant facturé :", $montantFacture,
-                    "Montant payé :", $montantPaye
-                );
+                // dd(
+                //     "Destination: " . $destination,
+                //     "Tranche:",
+                //     $tranche,
+                //     "Article où la tranche a été appelée:",
+                //     $article,
+                //     "Note concernée:",
+                //     $article->getNote(),
+                //     "Pourcentage de la tranche facturée:", $pourcentageTrancheFacture,
+                //     "Montant du:", $montantDu,
+                //     "Facturé à :", $article->getNote()->getAddressedTo(),
+                //     "Montant facturé :", $montantFacture,
+                //     "Montant payé :", $montantPaye
+                // );
             }
         }
         return $montant;

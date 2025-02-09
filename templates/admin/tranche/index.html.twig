@@ -120,6 +120,16 @@
                                             {# Autres #}
                                         </a>
                                         <ul class="dropdown-menu">
+                                            {% for revenue in constante.Tranche_getRevenus(tranche, panier) %}
+                                                <li>
+                                                    <a class="dropdown-item" href="#">
+                                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+                                                        Mettre <span class='text-primary fw-bold'>{{ revenue.nom }}</span> dans la note
+                                                    </a>
+                                                </li>
+                                            {% endfor %}
+                                            
+
                                             {% if panier != null %}
                                                 {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
                                                 {% if panier.containsTranche(tranche.id) == false %}
