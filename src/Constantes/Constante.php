@@ -570,17 +570,6 @@ class Constante
                             }
                         }
                         break;
-                    case Note::TO_AUTORITE_FISCALE:
-                        // /** @var Taxe $taxe */
-                        // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
-                        //     if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                        //         $tabRevenus[] = [
-                        //             "poste" => $revenu,
-                        //             "addressedTo" => Note::TO_ASSUREUR,
-                        //         ];
-                        //     }
-                        // }
-                        break;
                     case Note::TO_PARTENAIRE:
                         // /** @var Taxe $taxe */
                         // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
@@ -591,6 +580,19 @@ class Constante
                         //         ];
                         //     }
                         // }
+                        dd("Je suis ici");
+                        break;
+                    case Note::TO_AUTORITE_FISCALE:
+                        // /** @var Taxe $taxe */
+                        // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
+                        //     if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                        //         $tabRevenus[] = [
+                        //             "poste" => $revenu,
+                        //             "addressedTo" => Note::TO_ASSUREUR,
+                        //         ];
+                        //     }
+                        // }
+                        dd("Je suis ici");
                         break;
 
                     default:
