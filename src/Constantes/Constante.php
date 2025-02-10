@@ -518,14 +518,14 @@ class Constante
     /**
      * REVENU POUR COURTIER
      */
-    public function Revenu_getMontant_ttc(?RevenuPourCourtier $revenu):float
+    public function Revenu_getMontant_ttc(?RevenuPourCourtier $revenu): float
     {
         $net = $this->Revenu_getMontant_Net($revenu);
         $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($revenu->getCotation()), true);
         return $net + $taxe;
     }
 
-    public function Revenu_getMontant_Net(?RevenuPourCourtier $revenu):float
+    public function Revenu_getMontant_Net(?RevenuPourCourtier $revenu): float
     {
         return $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
     }
@@ -571,6 +571,17 @@ class Constante
                         }
                         break;
                     case Note::TO_AUTORITE_FISCALE:
+                        // /** @var Taxe $taxe */
+                        // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
+                        //     if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                        //         $tabRevenus[] = [
+                        //             "poste" => $revenu,
+                        //             "addressedTo" => Note::TO_ASSUREUR,
+                        //         ];
+                        //     }
+                        // }
+                        break;
+                    case Note::TO_PARTENAIRE:
                         // /** @var Taxe $taxe */
                         // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
                         //     if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
