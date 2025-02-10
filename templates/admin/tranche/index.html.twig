@@ -120,17 +120,17 @@
                                             {# Autres #}
                                         </a>
                                         <ul class="dropdown-menu">
-                                            {% for revenue in constante.Tranche_getRevenus(tranche, panier) %}
+                                            {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier) %}
                                                 <li>
                                                     <a class="dropdown-item" href="#">
                                                         {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                        Mettre <span class='text-primary fw-bold'>{{ revenue.nom }}</span> dans la note
+                                                        Facturer <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']}} USD) de {{ posteFacturable['poste'].nom }}</span> dans la note
                                                     </a>
                                                 </li>
                                             {% endfor %}
                                             
 
-                                            {% if panier != null %}
+                                            {# {% if panier != null %}
                                                 {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
                                                 {% if panier.containsTranche(tranche.id) == false %}
                                                     <li>
@@ -147,7 +147,7 @@
                                                         </a>
                                                     </li>
                                                 {% endif %}
-                                            {% endif %}
+                                            {% endif %} #}
                                         </ul>
                                     </div>
                                 </div>

@@ -16,12 +16,14 @@ use App\Entity\Paiement;
 use App\Entity\Partenaire;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
+use App\Entity\Taxe;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Repository\CotationRepository;
 use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
 use PhpParser\Node\Stmt\Nop;
+use Proxies\__CG__\App\Entity\Revenu;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\ExpressionLanguage\Node\ConditionalNode;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -431,22 +433,24 @@ class Constante
     }
     public function Note_getNameOfAddressedTo(?Note $note): string
     {
-        switch ($note->getAddressedTo()) {
-            case Note::TO_ASSUREUR:
-                return $note->getAssureur()->getNom();
-                break;
-            case Note::TO_CLIENT:
-                return $note->getClient()->getNom();
-                break;
-            case Note::TO_PARTENAIRE:
-                return $note->getPartenaire()->getNom();
-                break;
-            case Note::TO_AUTORITE_FISCALE:
-                return $note->getAutoritefiscale()->getNom();
-                break;
-            default:
-                # code...
-                break;
+        if ($note) {
+            switch ($note->getAddressedTo()) {
+                case Note::TO_ASSUREUR:
+                    return $note->getAssureur() != null ? $note->getAssureur()->getNom() : "";
+                    break;
+                case Note::TO_CLIENT:
+                    return $note->getClient() != null ? $note->getClient()->getNom() : "";
+                    break;
+                case Note::TO_PARTENAIRE:
+                    return $note->getPartenaire() != null ? $note->getPartenaire()->getNom() : "";
+                    break;
+                case Note::TO_AUTORITE_FISCALE:
+                    return $note->getAutoritefiscale() != null ? $note->getAutoritefiscale()->getNom() : "";
+                    break;
+                default:
+                    # code...
+                    break;
+            }
         }
         return "";
     }
@@ -512,41 +516,82 @@ class Constante
 
 
     /**
+     * REVENU POUR COURTIER
+     */
+    public function Revenu_getMontant_ttc(?RevenuPourCourtier $revenu):float
+    {
+        $net = $this->Revenu_getMontant_Net($revenu);
+        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($revenu->getCotation()), true);
+        return $net + $taxe;
+    }
+
+    public function Revenu_getMontant_Net(?RevenuPourCourtier $revenu):float
+    {
+        return $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
+    }
+
+
+
+
+
+    /**
      * LE FRAIS ARCA - TAXES PAYABLES PAR LE COURTIER
      */
-    public function Tranche_getRevenus(?Tranche $tranche, ?PanierNotes $panier)
+    public function Tranche_getPostesFacturables(?Tranche $tranche, ?PanierNotes $panier)
     {
-        $tabRevenus = [];
+        $tabPostesFacturables = [];
         // dd("Je suis ici", $panier->getAddressedTo());
         if ($tranche) {
             if ($tranche->getCotation()) {
-                /** @var RevenuPourCourtier $revenu */
-                foreach ($tranche->getCotation()->getRevenus() as $revenu) {
-                    switch ($panier->getAddressedTo()) {
-                        case Note::TO_ASSUREUR:
+                switch ($panier->getAddressedTo()) {
+                    case Note::TO_ASSUREUR:
+                        /** @var RevenuPourCourtier $revenu */
+                        foreach ($tranche->getCotation()->getRevenus() as $revenu) {
                             if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
-                                $tabRevenus[] = $revenu;
+                                $tabPostesFacturables[] = [
+                                    "poste" => $revenu,
+                                    "addressedTo" => Note::TO_ASSUREUR,
+                                    "pourcentage" => $tranche->getPourcentage(),
+                                    "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                ];
                             }
-                            break;
-                        case Note::TO_CLIENT:
+                        }
+                        break;
+                    case Note::TO_CLIENT:
+                        /** @var RevenuPourCourtier $revenu */
+                        foreach ($tranche->getCotation()->getRevenus() as $revenu) {
                             if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                                $tabRevenus[] = $revenu;
+                                $tabPostesFacturables[] = [
+                                    "poste" => $revenu,
+                                    "addressedTo" => Note::TO_CLIENT,
+                                    "pourcentage" => $tranche->getPourcentage(),
+                                    "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                ];
                             }
-                            break;
-                        case Note::TO_AUTORITE_FISCALE:
-                            // if ($revenu->getTypeRevenu()->getRe) {
-                            //     $tabRevenus[] = $revenu;
-                            // }
-                            break;
+                        }
+                        break;
+                    case Note::TO_AUTORITE_FISCALE:
+                        // /** @var Taxe $taxe */
+                        // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
+                        //     if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                        //         $tabRevenus[] = [
+                        //             "poste" => $revenu,
+                        //             "addressedTo" => Note::TO_ASSUREUR,
+                        //         ];
+                        //     }
+                        // }
+                        break;
 
-                        default:
-                            # code...
-                            break;
-                    }
+                    default:
+                        # code...
+                        break;
                 }
             }
         }
-        return $tabRevenus;
+        // if (count($tabPostesFacturables) != 0) {
+        //     dd($tabPostesFacturables);
+        // }
+        return $tabPostesFacturables;
     }
     public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche): float
     {
@@ -862,8 +907,6 @@ class Constante
         }
         return $montant;
     }
-
-
 
 
 
