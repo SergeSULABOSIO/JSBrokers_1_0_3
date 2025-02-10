@@ -124,7 +124,7 @@
                                                 <li>
                                                     <a class="dropdown-item" href="#">
                                                         {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                        Insérer <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}) de {{ posteFacturable['poste'].nom }}</span> dans la note
+                                                        Insérer <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}) de {{ posteFacturable['poste'] }}</span> dans la note
                                                     </a>
                                                 </li>
                                             {% endfor %}

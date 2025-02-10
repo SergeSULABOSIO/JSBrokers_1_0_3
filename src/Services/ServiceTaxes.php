@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Entity\AutoriteFiscale;
 use App\Entity\Entreprise;
 use App\Entity\Risque;
 use App\Entity\Taxe;
@@ -84,5 +85,20 @@ class ServiceTaxes
         }
 
         return $gross;
+    }
+
+
+    public function getMontantTaxeAutorite($montantNet, ?bool $tauxIARD, ?AutoriteFiscale $autoriteFiscale)
+    {
+        $montantTaxe = 0;
+        foreach ($this->getTaxes() as $taxe) {
+            if ($autoriteFiscale->getTaxe() == $taxe) {
+                $montantTaxe += match ($tauxIARD) {
+                    true => $montantNet * $taxe->getTauxIARD(),
+                    false => $montantNet * $taxe->getTauxVIE(),
+                };
+            }
+        }
+        return $montantTaxe;
     }
 }

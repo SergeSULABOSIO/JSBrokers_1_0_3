@@ -4,6 +4,7 @@ namespace App\Constantes;
 
 use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\Article;
+use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
@@ -19,6 +20,7 @@ use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
+use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\CotationRepository;
 use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
@@ -38,6 +40,7 @@ class Constante
         private ServiceTaxes $serviceTaxes,
         private Security $security,
         private CotationRepository $cotationRepository,
+        private AutoriteFiscaleRepository $autoriteFiscaleRepository,
     ) {}
 
 
@@ -549,7 +552,7 @@ class Constante
                         foreach ($tranche->getCotation()->getRevenus() as $revenu) {
                             if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
                                 $tabPostesFacturables[] = [
-                                    "poste" => $revenu,
+                                    "poste" => $revenu->getNom(),
                                     "addressedTo" => Note::TO_ASSUREUR,
                                     "pourcentage" => $tranche->getPourcentage(),
                                     "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
@@ -561,38 +564,46 @@ class Constante
                         /** @var RevenuPourCourtier $revenu */
                         foreach ($tranche->getCotation()->getRevenus() as $revenu) {
                             if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                                $tabPostesFacturables[] = [
-                                    "poste" => $revenu,
-                                    "addressedTo" => Note::TO_CLIENT,
-                                    "pourcentage" => $tranche->getPourcentage(),
-                                    "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
-                                ];
+                                $montant = $this->Revenu_getMontant_ttc($revenu);
+                                if ($montant != 0) {
+                                    $tabPostesFacturables[] = [
+                                        "poste" => $revenu->getNom(),
+                                        "addressedTo" => Note::TO_CLIENT,
+                                        "pourcentage" => $tranche->getPourcentage(),
+                                        "montantPayable" => $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                    ];
+                                }
                             }
                         }
                         break;
                     case Note::TO_PARTENAIRE:
-                        // /** @var Taxe $taxe */
-                        // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
-                        //     if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                        //         $tabRevenus[] = [
-                        //             "poste" => $revenu,
-                        //             "addressedTo" => Note::TO_ASSUREUR,
-                        //         ];
-                        //     }
-                        // }
-                        dd("Je suis ici");
+                        $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
+                        if ($montant != 0) {
+                            $tabPostesFacturables[] = [
+                                "poste" => "Rétrocommission",
+                                "addressedTo" => Note::TO_PARTENAIRE,
+                                "pourcentage" => $tranche->getPourcentage(),
+                                "montantPayable" => $montant * $tranche->getPourcentage(),
+                            ];
+                        }
                         break;
                     case Note::TO_AUTORITE_FISCALE:
-                        // /** @var Taxe $taxe */
-                        // foreach ($tranche->getCotation()->getRevenus() as $revenu) {
-                        //     if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                        //         $tabRevenus[] = [
-                        //             "poste" => $revenu,
-                        //             "addressedTo" => Note::TO_ASSUREUR,
-                        //         ];
-                        //     }
-                        // }
-                        dd("Je suis ici");
+                        /** @var AutoriteFiscale $autorite */
+                        $autorite = $this->autoriteFiscaleRepository->find($panier->getIdAutoriteFiscale());
+                        if ($autorite != null) {
+                            $net = $this->Tranche_getMontant_commission_ht($tranche);
+                            $isIARD = match ($tranche->getCotation()->getPiste()->getRisque()->getBranche()) {
+                                Risque::BRANCHE_IARD_OU_NON_VIE => true,
+                                Risque::BRANCHE_VIE => false,
+                            };
+                            $montant = $this->serviceTaxes->getMontantTaxeAutorite($net, $isIARD, $autorite);
+                            $tabPostesFacturables[] = [
+                                "poste" => $autorite->getTaxe()->getCode(),
+                                "addressedTo" => Note::TO_AUTORITE_FISCALE,
+                                "pourcentage" => $tranche->getPourcentage(),
+                                "montantPayable" => $montant * $tranche->getPourcentage(),
+                            ];
+                        }
                         break;
 
                     default:
