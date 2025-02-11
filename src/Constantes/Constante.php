@@ -558,7 +558,7 @@ class Constante
                                             "poste" => $revenu->getNom(),
                                             "addressedTo" => Note::TO_ASSUREUR,
                                             "pourcentage" => $tranche->getPourcentage(),
-                                            "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                            "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu),
                                         ];
                                     }
                                 }
@@ -576,7 +576,7 @@ class Constante
                                                 "poste" => $revenu->getNom(),
                                                 "addressedTo" => Note::TO_CLIENT,
                                                 "pourcentage" => $tranche->getPourcentage(),
-                                                "montantPayable" => $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                                "montantPayable" => $this->Revenu_getMontant_ttc($revenu),
                                             ];
                                         }
                                     }
@@ -592,7 +592,7 @@ class Constante
                                         "poste" => "Rétrocommission",
                                         "addressedTo" => Note::TO_PARTENAIRE,
                                         "pourcentage" => $tranche->getPourcentage(),
-                                        "montantPayable" => $montant * $tranche->getPourcentage(),
+                                        "montantPayable" => $montant,
                                         "idCible" => $panier->getIdPartenaire(),
                                         "idPoste" => -1,
                                         "idNote" => $panier->getIdNote(),
@@ -615,7 +615,7 @@ class Constante
                                     "poste" => $autorite->getTaxe()->getCode(),
                                     "addressedTo" => Note::TO_AUTORITE_FISCALE,
                                     "pourcentage" => $tranche->getPourcentage(),
-                                    "montantPayable" => $montant * $tranche->getPourcentage(),
+                                    "montantPayable" => $montant,
                                 ];
                             }
                             break;
@@ -770,9 +770,9 @@ class Constante
 
 
 
-                $pourcentageTrancheFacture = $article->getPourcentage();
+                // $pourcentageTrancheFacture = $article->getPourcentage();
                 $montantDu = $this->Tranche_getMontant_commission_ttc($tranche, $article->getNote()->getAddressedTo());
-                $montantFacture = $montantDu * $pourcentageTrancheFacture;
+                // $montantFacture = $montantDu * $pourcentageTrancheFacture;
                 $montantPaye = 0;
                 foreach ($article->getNote()->getPaiements() as $paiement) {
                     $montantPaye += $paiement->getMontant();

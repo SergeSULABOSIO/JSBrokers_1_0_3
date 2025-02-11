@@ -151,31 +151,28 @@ class TrancheController extends AbstractController
             if ($note) {
                 /** @var Tranche $tranche */
                 $tranche = $this->trancheRepository->find($idTranche);
-                dd("Je suis ici !", $montantPayable, $poste, $tranche);
-                //     if ($tranche) {
-                //         if ($panier->containsTranche($idTranche) == false) {
-
-                //             /** @var Article $article */
-                //             $article = new Article();
-
-                //             $article->setPourcentage(1);
-                //             $article->setTranche($tranche);
-                //             $article->setNom($this->getNomArticle($tranche));
-
-                //             //On actualise la base de données
-                //             $note->addArticle($article);
-                //             $this->manager->persist($note);
-                //             $this->manager->flush();
-                //             //On actualise le panier
-                //             $panier->setNote($note);
-
-                //             $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
-                //         } else {
-                //             $this->addFlash("danger", "Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.");
-                //         }
-                //     } else {
-                //         $this->addFlash("danger", "Cette tranche est introuvable dans la base de données.");
-                //     }
+                if ($tranche) {
+                    //         if ($panier->containsTranche($idTranche) == false) {
+                    /** @var Article $article */
+                    $article = new Article();
+                    $article->setNom($poste);
+                    $article->setMontant($montantPayable);
+                    $article->setTranche($tranche);
+                    $article->setNote($note);
+                    //On actualise la base de données
+                    $note->addArticle($article);
+                    $this->manager->persist($note);
+                    $this->manager->flush();
+                    //On actualise le panier
+                    $panier->setNote($note);
+                    // dd("Je suis ici !", $article);
+                    $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
+                    //         } else {
+                    //             $this->addFlash("danger", "Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.");
+                    //         }
+                } else {
+                    $this->addFlash("danger", "Cette tranche est introuvable dans la base de données.");
+                }
             } else {
                 $this->addFlash("danger", "La note n'existe pas. Impossible d'ajouter quoi que ce soit.");
             }

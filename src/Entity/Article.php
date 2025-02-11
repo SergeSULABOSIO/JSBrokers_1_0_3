@@ -3,8 +3,6 @@
 namespace App\Entity;
 
 use App\Repository\ArticleRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ArticleRepository::class)]
@@ -21,17 +19,11 @@ class Article
     #[ORM\ManyToOne(inversedBy: 'articles')]
     private ?Tranche $tranche = null;
 
-    #[ORM\Column]
-    private ?float $pourcentage = null;
-
     #[ORM\ManyToOne(inversedBy: 'articles')]
     private ?Note $note = null;
 
-    #[ORM\ManyToOne(inversedBy: 'articles')]
-    private ?RevenuPourCourtier $revenuFacture = null;
-
-    #[ORM\ManyToOne(inversedBy: 'articles')]
-    private ?Taxe $taxeFacturee = null;
+    #[ORM\Column(nullable: true)]
+    private ?float $montant = null;
 
     public function __construct()
     {
@@ -67,18 +59,6 @@ class Article
         return $this;
     }
 
-    public function getPourcentage(): ?float
-    {
-        return $this->pourcentage;
-    }
-
-    public function setPourcentage(float $pourcentage): static
-    {
-        $this->pourcentage = $pourcentage;
-
-        return $this;
-    }
-
     public function getNote(): ?Note
     {
         return $this->note;
@@ -91,26 +71,14 @@ class Article
         return $this;
     }
 
-    public function getRevenuFacture(): ?RevenuPourCourtier
+    public function getMontant(): ?float
     {
-        return $this->revenuFacture;
+        return $this->montant;
     }
 
-    public function setRevenuFacture(?RevenuPourCourtier $revenuFacture): static
+    public function setMontant(?float $montant): static
     {
-        $this->revenuFacture = $revenuFacture;
-
-        return $this;
-    }
-
-    public function getTaxeFacturee(): ?Taxe
-    {
-        return $this->taxeFacturee;
-    }
-
-    public function setTaxeFacturee(?Taxe $taxeFacturee): static
-    {
-        $this->taxeFacturee = $taxeFacturee;
+        $this->montant = $montant;
 
         return $this;
     }
