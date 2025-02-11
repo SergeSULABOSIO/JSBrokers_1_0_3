@@ -122,36 +122,18 @@
                                             {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
                                             {# Autres #}
                                         </a>
-                                        <ul class="dropdown-menu">
-                                            {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier) %}
-                                                <li>
-                                                    <a class="dropdown-item" href="#">
-                                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                        Insérer <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}) de {{ posteFacturable['poste'] }}</span> dans la note
-                                                    </a>
-                                                </li>
-                                            {% endfor %}
-                                            
-
-                                            {# {% if panier != null %}
-                                                {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-                                                {% if panier.containsTranche(tranche.id) == false %}
-                                                    <li>
-                                                        <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'idTranche': tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-                                                            {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                            Mettre cette tranche dans la note
-                                                        </a>
-                                                    </li>
-                                                {% else %}
-                                                    <li>
-                                                        <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche': tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-                                                            {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                            Retirer cette tranche de la note
-                                                        </a>
-                                                    </li>
+                                            <ul class="dropdown-menu">
+                                                {% if constante.Tranche_getPostesFacturables(tranche, panier) is not empty %}
+                                                    {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier) %}
+                                                        <li>
+                                                            <a class="dropdown-item" href="#">
+                                                                {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+                                                                Insérer <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}) de {{ posteFacturable['poste'] }}</span> dans la note
+                                                            </a>
+                                                        </li>
+                                                    {% endfor %}
                                                 {% endif %}
-                                            {% endif %} #}
-                                        </ul>
+                                            </ul>
                                     </div>
                                 </div>
                             </td>

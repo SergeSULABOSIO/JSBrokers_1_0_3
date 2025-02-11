@@ -546,84 +546,85 @@ class Constante
         // dd("Je suis ici", $panier->getAddressedTo());
         if ($tranche) {
             if ($tranche->getCotation()) {
-                switch ($panier->getAddressedTo()) {
-                    case Note::TO_ASSUREUR:
-                        /** @var RevenuPourCourtier $revenu */
-                        foreach ($tranche->getCotation()->getRevenus() as $revenu) {
-                            if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
-                                //On doit s'assurer que l'assureur sur la liste est bien celui qui est dans le panier
-                                if ($tranche->getCotation()->getAssureur()->getId() == $panier->getIdAssureur()) {
-                                    $tabPostesFacturables[] = [
-                                        "poste" => $revenu->getNom(),
-                                        "addressedTo" => Note::TO_ASSUREUR,
-                                        "pourcentage" => $tranche->getPourcentage(),
-                                        "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
-                                    ];
-                                }
-                            }
-                        }
-                        break;
-                    case Note::TO_CLIENT:
-                        /** @var RevenuPourCourtier $revenu */
-                        foreach ($tranche->getCotation()->getRevenus() as $revenu) {
-                            if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                                //On doit s'assurer que le client sur la liste est bien celui qui est dans le panier
-                                if ($tranche->getCotation()->getPiste()->getClient()->getId() == $panier->getIdClient()) {
-                                    $montant = $this->Revenu_getMontant_ttc($revenu);
-                                    if ($montant != 0) {
+                if ($this->Cotation_isBound($tranche->getCotation())) {
+                    switch ($panier->getAddressedTo()) {
+                        case Note::TO_ASSUREUR:
+                            /** @var RevenuPourCourtier $revenu */
+                            foreach ($tranche->getCotation()->getRevenus() as $revenu) {
+                                if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
+                                    //On doit s'assurer que l'assureur sur la liste est bien celui qui est dans le panier
+                                    if ($tranche->getCotation()->getAssureur()->getId() == $panier->getIdAssureur()) {
                                         $tabPostesFacturables[] = [
                                             "poste" => $revenu->getNom(),
-                                            "addressedTo" => Note::TO_CLIENT,
+                                            "addressedTo" => Note::TO_ASSUREUR,
                                             "pourcentage" => $tranche->getPourcentage(),
-                                            "montantPayable" => $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                            "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
                                         ];
                                     }
                                 }
                             }
-                        }
-                        break;
-                    case Note::TO_PARTENAIRE:
-                        //On doit s'assurer que la tranche sur la liste est bien celle qui est dans le panier
-                        if ($this->Tranche_getPartenaire($tranche)->getId() == $panier->getIdPartenaire()) {
-                            $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
-                            if ($montant != 0) {
+                            break;
+                        case Note::TO_CLIENT:
+                            /** @var RevenuPourCourtier $revenu */
+                            foreach ($tranche->getCotation()->getRevenus() as $revenu) {
+                                if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                                    //On doit s'assurer que le client sur la liste est bien celui qui est dans le panier
+                                    if ($tranche->getCotation()->getPiste()->getClient()->getId() == $panier->getIdClient()) {
+                                        $montant = $this->Revenu_getMontant_ttc($revenu);
+                                        if ($montant != 0) {
+                                            $tabPostesFacturables[] = [
+                                                "poste" => $revenu->getNom(),
+                                                "addressedTo" => Note::TO_CLIENT,
+                                                "pourcentage" => $tranche->getPourcentage(),
+                                                "montantPayable" => $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                            ];
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+                        case Note::TO_PARTENAIRE:
+                            //On doit s'assurer que la tranche sur la liste est bien celle qui est dans le panier
+                            if ($this->Tranche_getPartenaire($tranche)->getId() == $panier->getIdPartenaire()) {
+                                $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
+                                if ($montant != 0) {
+                                    $tabPostesFacturables[] = [
+                                        "poste" => "Rétrocommission",
+                                        "addressedTo" => Note::TO_PARTENAIRE,
+                                        "pourcentage" => $tranche->getPourcentage(),
+                                        "montantPayable" => $montant * $tranche->getPourcentage(),
+                                    ];
+                                }
+                            }
+                            break;
+                        case Note::TO_AUTORITE_FISCALE:
+                            /** @var AutoriteFiscale $autorite */
+                            $autorite = $this->autoriteFiscaleRepository->find($panier->getIdAutoriteFiscale());
+                            if ($autorite != null) {
+                                $net = $this->Tranche_getMontant_commission_ht($tranche);
+                                $isIARD = match ($tranche->getCotation()->getPiste()->getRisque()->getBranche()) {
+                                    Risque::BRANCHE_IARD_OU_NON_VIE => true,
+                                    Risque::BRANCHE_VIE => false,
+                                };
+                                $montant = $this->serviceTaxes->getMontantTaxeAutorite($net, $isIARD, $autorite);
                                 $tabPostesFacturables[] = [
-                                    "poste" => "Rétrocommission",
-                                    "addressedTo" => Note::TO_PARTENAIRE,
+                                    "poste" => $autorite->getTaxe()->getCode(),
+                                    "addressedTo" => Note::TO_AUTORITE_FISCALE,
                                     "pourcentage" => $tranche->getPourcentage(),
                                     "montantPayable" => $montant * $tranche->getPourcentage(),
                                 ];
                             }
-                        }
-                        break;
-                    case Note::TO_AUTORITE_FISCALE:
-                        /** @var AutoriteFiscale $autorite */
-                        $autorite = $this->autoriteFiscaleRepository->find($panier->getIdAutoriteFiscale());
-                        if ($autorite != null) {
-                            $net = $this->Tranche_getMontant_commission_ht($tranche);
-                            $isIARD = match ($tranche->getCotation()->getPiste()->getRisque()->getBranche()) {
-                                Risque::BRANCHE_IARD_OU_NON_VIE => true,
-                                Risque::BRANCHE_VIE => false,
-                            };
-                            $montant = $this->serviceTaxes->getMontantTaxeAutorite($net, $isIARD, $autorite);
-                            $tabPostesFacturables[] = [
-                                "poste" => $autorite->getTaxe()->getCode(),
-                                "addressedTo" => Note::TO_AUTORITE_FISCALE,
-                                "pourcentage" => $tranche->getPourcentage(),
-                                "montantPayable" => $montant * $tranche->getPourcentage(),
-                            ];
-                        }
-                        break;
+                            break;
 
-                    default:
-                        # code...
-                        break;
+                        default:
+                            # code...
+                            break;
+                    }
+                }else{
+                    // dd("On ne peux pas facturer un poste qui dont la cotation n'est pas validée par le client");
                 }
             }
         }
-        // if (count($tabPostesFacturables) != 0) {
-        //     dd($tabPostesFacturables);
-        // }
         return $tabPostesFacturables;
     }
     public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche): float
