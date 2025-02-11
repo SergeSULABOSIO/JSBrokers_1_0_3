@@ -593,6 +593,7 @@ class Constante
                                         "addressedTo" => Note::TO_PARTENAIRE,
                                         "pourcentage" => $tranche->getPourcentage(),
                                         "montantPayable" => $montant * $tranche->getPourcentage(),
+                                        "idCible" => $panier->getIdPartenaire(),
                                         "idPoste" => -1,
                                         "idNote" => $panier->getIdNote(),
                                         "idTranche" => $tranche->getId(),
