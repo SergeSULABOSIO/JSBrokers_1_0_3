@@ -139,6 +139,7 @@ class TrancheController extends AbstractController
     ])]
     public function mettredanslanote($currentURL, int $idTranche, $idEntreprise, Request $request)
     {
+        dd("Je suis ici !");
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
         if ($panier && $panier->getIdNote()) {
