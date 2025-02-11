@@ -473,44 +473,36 @@ class Constante
     {
         $montant = 0;
         if ($note) {
-            foreach ($note->getArticles() as $article) {
-                if ($article->getTranche()) {
-                    /** @var Tranche $tranche */
-                    $tranche = $article->getTranche();
-                    if ($tranche->getCotation()) {
-                        /** @var Cotation $cotation */
-                        $cotation = $tranche->getCotation();
+            switch ($note->getAddressedTo()) {
+                case Note::TO_ASSUREUR:
+                    // dd("On facture à l'assureur les commissions payables par lui-même.");
+                    // $montant = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
+                    break;
 
-                        switch ($note->getAddressedTo()) {
-                            case Note::TO_ASSUREUR:
-                                // dd("On facture à l'assureur les commissions payables par lui-même.");
-                                $montant = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
-                                break;
+                case Note::TO_CLIENT:
+                    // dd("On facture au client les frais de gestion payables par lui-même.");
+                    // $montant = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
+                    break;
 
-                            case Note::TO_CLIENT:
-                                // dd("On facture au client les frais de gestion payables par lui-même.");
-                                $montant = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
-                                break;
-
-                            case Note::TO_PARTENAIRE:
-                                // dd("Le partenaire nous facture les retrocommissions payable par nous.");
-                                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
-                                break;
-
-                            case Note::TO_AUTORITE_FISCALE:
-                                // dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
-                                $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
-                                break;
-
-                            default:
-                                # code...
-                                break;
-                        }
+                case Note::TO_PARTENAIRE:
+                    // dd("Le partenaire nous facture les retrocommissions payable par nous.");
+                    // $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+                    foreach ($note->getArticles() as $article) {
+                        $montant += $article->getMontant();
                     }
-                    $montant = $montant * $tranche->getPourcentage();
-                }
+                    break;
+
+                case Note::TO_AUTORITE_FISCALE:
+                    // dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
+                    // $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
+                    break;
+
+                default:
+                    # code...
+                    break;
             }
         }
+        // dd("Articles: ", $note->getArticles(), $montant);
         return $montant;
     }
 
@@ -624,7 +616,7 @@ class Constante
                             # code...
                             break;
                     }
-                }else{
+                } else {
                     // dd("On ne peux pas facturer un poste qui dont la cotation n'est pas validée par le client");
                 }
             }

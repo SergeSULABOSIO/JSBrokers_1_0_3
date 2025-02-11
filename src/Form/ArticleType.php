@@ -43,7 +43,7 @@ class ArticleType extends AbstractType
                 'class' => Tranche::class,
                 'disabled' => true,
                 'required' => false,
-                'choice_label' => 'nom',
+                // 'choice_label' => 'nom',
             ])
             ->add('montant', MoneyType::class, [
                 'label' => "Prime TTC",
