@@ -53,7 +53,7 @@ class CotationRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function loadBoundCotationsWithPartnerRisque($annee, ?Entreprise $entreprise, ?Risque $risque, ?Partenaire $partenaire)
+    public function loadCotationsWithPartnerRisque($annee, ?Entreprise $entreprise, ?Risque $risque, ?Partenaire $partenaire)
     {
         $data = $this->createQueryBuilder('cotation')
             ->leftJoin("cotation.piste", "piste")
@@ -70,7 +70,7 @@ class CotationRepository extends ServiceEntityRepository
 
         $resultat = new ArrayCollection([]);
         foreach ($data as $cotation) {
-            if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
+            if ($this->getPartenaire($cotation) == $partenaire) {
                 if ($this->isSameAnnee($annee, $cotation)) {
                     $resultat->add($cotation);
                 }
@@ -79,7 +79,7 @@ class CotationRepository extends ServiceEntityRepository
         return $resultat;
     }
 
-    public function loadBoundCotationsWithPartnerClient($annee, ?Entreprise $entreprise, ?Client $client, ?Partenaire $partenaire)
+    public function loadCotationsWithPartnerClient($annee, ?Entreprise $entreprise, ?Client $client, ?Partenaire $partenaire)
     {
         $data = $this->createQueryBuilder('cotation')
             ->leftJoin("cotation.piste", "piste")
@@ -96,7 +96,7 @@ class CotationRepository extends ServiceEntityRepository
 
         $resultat = new ArrayCollection([]);
         foreach ($data as $cotation) {
-            if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
+            if ($this->getPartenaire($cotation) == $partenaire) {
                 if ($this->isSameAnnee($annee, $cotation)) {
                     $resultat->add($cotation);
                 }
@@ -107,10 +107,16 @@ class CotationRepository extends ServiceEntityRepository
 
     private function isSameAnnee($annee, ?Cotation $cotation): bool
     {
-        return $annee == $cotation->getAvenants()[0]->getStartingAt()->format('Y');
+        //Toute cotation doit avoir une date probable de démarrage de la police.
+        //Mais c'est beaucoup plus l'année qui importe plus
+        if (count($cotation->getAvenants()) != 0) {
+            return $annee == $cotation->getAvenants()[0]->getStartingAt()->format('Y');
+        }else{
+            return $annee == $cotation->getPiste()->getExercice();
+        }
     }
 
-    public function loadBoundCotationsWithPartnerAll($annee, ?Entreprise $entreprise, ?Partenaire $partenaire)
+    public function loadCotationsWithPartnerAll($annee, ?Entreprise $entreprise, ?Partenaire $partenaire)
     {
         $data = $this->createQueryBuilder('cotation')
             ->leftJoin("cotation.piste", "piste")
@@ -127,7 +133,7 @@ class CotationRepository extends ServiceEntityRepository
 
         $resultat = new ArrayCollection([]);
         foreach ($data as $cotation) {
-            if (count($cotation->getAvenants()) != 0 && $this->getPartenaire($cotation) == $partenaire) {
+            if ($this->getPartenaire($cotation) == $partenaire) {
                 if ($this->isSameAnnee($annee, $cotation)) {
                     $resultat->add($cotation);
                 }

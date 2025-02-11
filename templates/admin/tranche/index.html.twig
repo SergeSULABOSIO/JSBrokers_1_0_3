@@ -55,6 +55,9 @@
                                             {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
                                         {% endif %}
                                     {% endif %}
+                                    {% if constante.Cotation_isBound(tranche.cotation) %}
+                                        (bound)
+                                    {% endif %}
                                     {{ tranche.nom }}                 
                                     ({{ tranche.pourcentage * 100 }}% à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
                                     pour {{ tranche.cotation.piste.client }}

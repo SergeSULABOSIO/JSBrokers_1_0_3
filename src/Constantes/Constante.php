@@ -348,8 +348,8 @@ class Constante
      */
     public function Tranche_getPartenaire(?Tranche $tranche)
     {
-        if ($tranche) {
-            if ($tranche->getCotation()) {
+        if ($tranche != null) {
+            if ($tranche->getCotation() != null) {
                 return $this->Cotation_getPartenaire($tranche->getCotation());
             }
         }
@@ -357,9 +357,9 @@ class Constante
     }
     public function Cotation_getPartenaire(?Cotation $cotation)
     {
-        if ($cotation) {
-            if ($cotation->getPiste()) {
-                if (count($cotation->getPiste()->getPartenaires()) >= 1) {
+        if ($cotation != null) {
+            if ($cotation->getPiste() != null) {
+                if (count($cotation->getPiste()->getPartenaires()) != 0) {
                     // dd($cotation->getPiste()->getPartenaires()[0]);
                     return $cotation->getPiste()->getPartenaires()[0];
                 } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
@@ -551,12 +551,15 @@ class Constante
                         /** @var RevenuPourCourtier $revenu */
                         foreach ($tranche->getCotation()->getRevenus() as $revenu) {
                             if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
-                                $tabPostesFacturables[] = [
-                                    "poste" => $revenu->getNom(),
-                                    "addressedTo" => Note::TO_ASSUREUR,
-                                    "pourcentage" => $tranche->getPourcentage(),
-                                    "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
-                                ];
+                                //On doit s'assurer que l'assureur sur la liste est bien celui qui est dans le panier
+                                if ($tranche->getCotation()->getAssureur()->getId() == $panier->getIdAssureur()) {
+                                    $tabPostesFacturables[] = [
+                                        "poste" => $revenu->getNom(),
+                                        "addressedTo" => Note::TO_ASSUREUR,
+                                        "pourcentage" => $tranche->getPourcentage(),
+                                        "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                    ];
+                                }
                             }
                         }
                         break;
@@ -564,27 +567,33 @@ class Constante
                         /** @var RevenuPourCourtier $revenu */
                         foreach ($tranche->getCotation()->getRevenus() as $revenu) {
                             if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                                $montant = $this->Revenu_getMontant_ttc($revenu);
-                                if ($montant != 0) {
-                                    $tabPostesFacturables[] = [
-                                        "poste" => $revenu->getNom(),
-                                        "addressedTo" => Note::TO_CLIENT,
-                                        "pourcentage" => $tranche->getPourcentage(),
-                                        "montantPayable" => $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
-                                    ];
+                                //On doit s'assurer que le client sur la liste est bien celui qui est dans le panier
+                                if ($tranche->getCotation()->getPiste()->getClient()->getId() == $panier->getIdClient()) {
+                                    $montant = $this->Revenu_getMontant_ttc($revenu);
+                                    if ($montant != 0) {
+                                        $tabPostesFacturables[] = [
+                                            "poste" => $revenu->getNom(),
+                                            "addressedTo" => Note::TO_CLIENT,
+                                            "pourcentage" => $tranche->getPourcentage(),
+                                            "montantPayable" => $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage(),
+                                        ];
+                                    }
                                 }
                             }
                         }
                         break;
                     case Note::TO_PARTENAIRE:
-                        $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
-                        if ($montant != 0) {
-                            $tabPostesFacturables[] = [
-                                "poste" => "Rétrocommission",
-                                "addressedTo" => Note::TO_PARTENAIRE,
-                                "pourcentage" => $tranche->getPourcentage(),
-                                "montantPayable" => $montant * $tranche->getPourcentage(),
-                            ];
+                        //On doit s'assurer que la tranche sur la liste est bien celle qui est dans le panier
+                        if ($this->Tranche_getPartenaire($tranche)->getId() == $panier->getIdPartenaire()) {
+                            $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
+                            if ($montant != 0) {
+                                $tabPostesFacturables[] = [
+                                    "poste" => "Rétrocommission",
+                                    "addressedTo" => Note::TO_PARTENAIRE,
+                                    "pourcentage" => $tranche->getPourcentage(),
+                                    "montantPayable" => $montant * $tranche->getPourcentage(),
+                                ];
+                            }
                         }
                         break;
                     case Note::TO_AUTORITE_FISCALE:
@@ -966,14 +975,6 @@ class Constante
                     } else {
                         $montant = $this->Cotation_appliquerTauxRetrocomPartenaire($partenaire, $cotation);
                     }
-                    //  else if (count($partenaire->getConditionPartages()) != 0) {
-                    //     //On traite les conditions spéciales attachées au partenaire
-                    //     // dd("Je traite les conditions attachées au partenaire", $partenaire->getConditionPartages());
-                    //     $montant = $this->appliquerConditions($partenaire->getConditionPartages()[0], $cotation);
-                    // } else if ($partenaire->getPart() != 0) {
-                    //     // dd("Je travail sur la condition simple ", $partenaire);
-                    //     $montant = $this->Cotation_getMontant_commission_pure($cotation) * $partenaire->getPart();
-                    // }
                 }
             } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
                 /** @var Partenaire $partenaire */
@@ -987,7 +988,7 @@ class Constante
     {
         $montant = 0;
         if ($tranche != null) {
-            if ($tranche->getCotation()) {
+            if ($tranche->getCotation() != null) {
                 $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($tranche->getCotation()) * $tranche->getPourcentage();
             }
         }
@@ -1021,8 +1022,8 @@ class Constante
         $somme = 0;
         /** @var Entreprise $entreprise */
         $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $cotationsBoundDuPartenaire = $this->cotationRepository->loadBoundCotationsWithPartnerRisque($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getRisque(), $this->Cotation_getPartenaire($cotation));
-        foreach ($cotationsBoundDuPartenaire as $proposition) {
+        $cotationsDuPartenaire = $this->cotationRepository->loadCotationsWithPartnerRisque($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getRisque(), $this->Cotation_getPartenaire($cotation));
+        foreach ($cotationsDuPartenaire as $proposition) {
             $somme += $this->Cotation_getMontant_commission_pure($proposition);
         }
         return $somme;
@@ -1030,11 +1031,13 @@ class Constante
     private function Cotation_getSommeCommissionPureClient(?Cotation $cotation): float
     {
         // dd($cotation->getAvenants()[0]);
+        // dd("Unité de mésure: ", $cotation);
+
         $somme = 0;
         /** @var Entreprise $entreprise */
         $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $cotationsBoundDuPartenaire = $this->cotationRepository->loadBoundCotationsWithPartnerClient($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getClient(), $this->Cotation_getPartenaire($cotation));
-        foreach ($cotationsBoundDuPartenaire as $proposition) {
+        $cotationsDuPartenaire = $this->cotationRepository->loadCotationsWithPartnerClient($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getClient(), $this->Cotation_getPartenaire($cotation));
+        foreach ($cotationsDuPartenaire as $proposition) {
             $somme += $this->Cotation_getMontant_commission_pure($proposition);
         }
         return $somme;
@@ -1044,8 +1047,8 @@ class Constante
         $somme = 0;
         /** @var Entreprise $entreprise */
         $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $cotationsBoundDuPartenaire = $this->cotationRepository->loadBoundCotationsWithPartnerAll($cotation->getPiste()->getExercice(), $entreprise, $this->Cotation_getPartenaire($cotation));
-        foreach ($cotationsBoundDuPartenaire as $proposition) {
+        $cotationsDuPartenaire = $this->cotationRepository->loadCotationsWithPartnerAll($cotation->getPiste()->getExercice(), $entreprise, $this->Cotation_getPartenaire($cotation));
+        foreach ($cotationsDuPartenaire as $proposition) {
             $somme += $this->Cotation_getMontant_commission_pure($proposition);
         }
         return $somme;
@@ -1055,6 +1058,7 @@ class Constante
         $montant = 0;
         //Assiette de l'affaire individuelle
         $assiette_commission_pure = $this->Cotation_getMontant_commission_pure($cotation);
+        // dd("Je suis ici ", $assiette_commission_pure);
 
         //Application de l'unité de mésure
         $uniteMesure = match ($conditionPartage->getUniteMesure()) {
@@ -1062,6 +1066,7 @@ class Constante
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $this->Cotation_getSommeCommissionPureClient($cotation),
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->Cotation_getSommeCommissionPurePartenaire($cotation),
         };
+
         // dd("Unité de mésure: " . $uniteMesure);
 
         $formule = $conditionPartage->getFormule();
@@ -1083,6 +1088,7 @@ class Constante
                 }
                 break;
             case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
+                // dd("Ici ", $montant, $uniteMesure, $seuil);
                 if ($uniteMesure >= $seuil) {
                     // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
                     return $this->calculerRetroCommission($risque, $conditionPartage, $assiette_commission_pure);
