@@ -65,6 +65,7 @@ class CotationController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
             'activator' => $this->activator,
         ]);
     }

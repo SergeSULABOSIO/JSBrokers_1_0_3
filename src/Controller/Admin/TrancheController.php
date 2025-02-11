@@ -26,6 +26,7 @@ use App\Repository\TrancheRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\NoteRepository;
 use App\Services\ServiceMonnaies;
+use App\Services\ServiceTaxes;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -52,6 +53,7 @@ class TrancheController extends AbstractController
         private NoteRepository $noteRepository,
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -78,6 +80,7 @@ class TrancheController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
             'activator' => $this->activator,
             "panier" => $panier,
             "note" => $note,
