@@ -132,58 +132,61 @@ class TrancheController extends AbstractController
     }
 
 
-    #[Route('/mettredanslanote/{idNote}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+    #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+        'poste' => Requirement::CATCH_ALL,
+        'montantPayable' => Requirement::CATCH_ALL,
         'idNote' => Requirement::DIGITS,
         'idTranche' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
-        'currentURL' => '.+'
+        'currentURL' => Requirement::CATCH_ALL
     ])]
-    public function mettredanslanote($currentURL, int $idNote, int $idTranche, $idEntreprise, Request $request)
+    public function mettredanslanote($currentURL, string $poste, float $montantPayable, int $idNote, int $idTranche, $idEntreprise, Request $request)
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
         if ($panier && $panier->getIdNote() == $idNote) {
             /** @var Note $note */
             $note = $this->noteRepository->find($idNote);
-            dd("Je suis ici !", $note);
 
-            // if ($note) {
-            //     /** @var Tranche $tranche */
-            //     $tranche = $this->trancheRepository->find($idTranche);
-            //     if ($tranche) {
-            //         if ($panier->containsTranche($idTranche) == false) {
+            if ($note) {
+                /** @var Tranche $tranche */
+                $tranche = $this->trancheRepository->find($idTranche);
+                dd("Je suis ici !", $montantPayable, $poste, $tranche);
+                //     if ($tranche) {
+                //         if ($panier->containsTranche($idTranche) == false) {
 
-            //             /** @var Article $article */
-            //             $article = new Article();
+                //             /** @var Article $article */
+                //             $article = new Article();
 
-            //             $article->setPourcentage(1);
-            //             $article->setTranche($tranche);
-            //             $article->setNom($this->getNomArticle($tranche));
+                //             $article->setPourcentage(1);
+                //             $article->setTranche($tranche);
+                //             $article->setNom($this->getNomArticle($tranche));
 
-            //             //On actualise la base de données
-            //             $note->addArticle($article);
-            //             $this->manager->persist($note);
-            //             $this->manager->flush();
-            //             //On actualise le panier
-            //             $panier->setNote($note);
+                //             //On actualise la base de données
+                //             $note->addArticle($article);
+                //             $this->manager->persist($note);
+                //             $this->manager->flush();
+                //             //On actualise le panier
+                //             $panier->setNote($note);
 
-            //             $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
-            //         } else {
-            //             $this->addFlash("danger", "Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.");
-            //         }
-            //     } else {
-            //         $this->addFlash("danger", "Cette tranche est introuvable dans la base de données.");
-            //     }
-            // } else {
-            //     $this->addFlash("danger", "La note n'existe pas. Impossible d'ajouter quoi que ce soit.");
-            // }
+                //             $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
+                //         } else {
+                //             $this->addFlash("danger", "Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.");
+                //         }
+                //     } else {
+                //         $this->addFlash("danger", "Cette tranche est introuvable dans la base de données.");
+                //     }
+            } else {
+                $this->addFlash("danger", "La note n'existe pas. Impossible d'ajouter quoi que ce soit.");
+            }
         } else {
             $this->addFlash("danger", "Désolé, vous ne pouvez pas l'insérer dans ce panier car il contient une autre note.");
         }
         return $this->redirect($currentURL);
     }
 
-    private function getNomArticle(?Tranche $tranche): string {
+    private function getNomArticle(?Tranche $tranche): string
+    {
         $nomArticle = "";
         if ($tranche->getCotation()) {
             /** @var Cotation */
