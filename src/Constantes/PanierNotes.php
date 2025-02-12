@@ -48,13 +48,13 @@ class PanierNotes
     }
 
 
-    public function isInvoiced(int $idTranche, float $montantArticle, string $poteFacturable): bool{
+    public function isInvoiced(int $idTranche, float $montantArticle, string $posteFacturable): bool{
         if ($this->idTranches->contains($idTranche)) {
-            $indexTranche = $this->idTranches->indexOf($idTranche);
-            $montantArticleStocke = $this->montantsArticles->get($indexTranche);
-            $posteArticleStocke = $this->postesFacturables->get($indexTranche);
+            $index = $this->idTranches->indexOf($idTranche);
+            $montantArticleStocke = $this->montantsArticles->get($index);
+            $posteArticleStocke = $this->postesFacturables->get($index);
             // dd("Ici...", $montantArticle, $montantArticleStocke);
-            return ($montantArticle == $montantArticleStocke) && ($posteArticleStocke == $poteFacturable);
+            return ($montantArticle == $montantArticleStocke) && ($posteArticleStocke == $posteFacturable);
         }else{
             return false;
         }
