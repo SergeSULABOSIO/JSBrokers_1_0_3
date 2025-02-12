@@ -16,6 +16,7 @@ class PanierNotes
     private $idNote = null;
     private Collection $idTranches;
     private Collection $montantsArticles;
+    private Collection $postesFacturables;
     private int $type;
     private int $addressedTo;
     private int $idAssureur;
@@ -28,6 +29,7 @@ class PanierNotes
     public function __construct() {
         $this->idTranches = new ArrayCollection();
         $this->montantsArticles = new ArrayCollection();
+        $this->postesFacturables = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable("now");
     }
 
@@ -38,6 +40,7 @@ class PanierNotes
         $this->reference = "";
         $this->idTranches = new ArrayCollection();
         $this->montantsArticles = new ArrayCollection();
+        $this->postesFacturables = new ArrayCollection();
     }
 
     public function containsTranche(int $idTranche): bool{
@@ -45,12 +48,13 @@ class PanierNotes
     }
 
 
-    public function isInvoiced(int $idTranche, float $montantArticle): bool{
+    public function isInvoiced(int $idTranche, float $montantArticle, string $poteFacturable): bool{
         if ($this->idTranches->contains($idTranche)) {
             $indexTranche = $this->idTranches->indexOf($idTranche);
             $montantArticleStocke = $this->montantsArticles->get($indexTranche);
+            $posteArticleStocke = $this->postesFacturables->get($indexTranche);
             // dd("Ici...", $montantArticle, $montantArticleStocke);
-            return $montantArticle == $montantArticleStocke;
+            return ($montantArticle == $montantArticleStocke) && ($posteArticleStocke == $poteFacturable);
         }else{
             return false;
         }
@@ -71,6 +75,7 @@ class PanierNotes
 
         $this->idTranches = new ArrayCollection();
         $this->montantsArticles = new ArrayCollection();
+        $this->postesFacturables = new ArrayCollection();
         foreach ($note->getArticles() as $article) {
             $this->addIdTranche($article->getTranche()->getId());
             $this->addMontantsArticles($article->getMontant());
@@ -126,6 +131,31 @@ class PanierNotes
     {
         if ($this->montantsArticles->contains($montantArticle)) {
             $this->montantsArticles->removeElement($montantArticle);
+        }
+
+        return $this;
+    }
+
+
+
+    public function postesFacturables(): ArrayCollection
+    {
+        return $this->postesFacturables();
+    }
+
+    public function addPostesFacturables(string $posteFacturable): static
+    {
+        if (!$this->postesFacturables->contains($posteFacturable)) {
+            $this->postesFacturables->add($posteFacturable);
+        }
+
+        return $this;
+    }
+
+    public function removePostesFacturables(string $posteFacturable): static
+    {
+        if ($this->postesFacturables->contains($posteFacturable)) {
+            $this->postesFacturables->removeElement($posteFacturable);
         }
 
         return $this;

@@ -134,8 +134,7 @@
                                                         {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
                                                         {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier) %}
                                                             <li>
-                                                            {{posteFacturable['montantPayable']}}
-                                                                {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable']) %}
+                                                                {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
                                                                     <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
                                                                         {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
                                                                         Retier <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}) de {{ posteFacturable['poste'] }}</span> de la note
