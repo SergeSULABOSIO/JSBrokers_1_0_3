@@ -3,6 +3,7 @@
 namespace App\Constantes;
 
 use App\Entity\Note;
+use App\Entity\Tranche;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -15,8 +16,7 @@ class PanierNotes
     private string $reference;
     private $idNote = null;
     private Collection $idTranches;
-    private Collection $montantsArticles;
-    private Collection $postesFacturables;
+    private Collection $checkList;
     private int $type;
     private int $addressedTo;
     private int $idAssureur;
@@ -28,8 +28,7 @@ class PanierNotes
 
     public function __construct() {
         $this->idTranches = new ArrayCollection();
-        $this->montantsArticles = new ArrayCollection();
-        $this->postesFacturables = new ArrayCollection();
+        $this->checkList = new ArrayCollection();
         $this->createdAt = new DateTimeImmutable("now");
     }
 
@@ -39,8 +38,7 @@ class PanierNotes
         $this->signature = "";
         $this->reference = "";
         $this->idTranches = new ArrayCollection();
-        $this->montantsArticles = new ArrayCollection();
-        $this->postesFacturables = new ArrayCollection();
+        $this->checkList = new ArrayCollection();
     }
 
     public function containsTranche(int $idTranche): bool{
@@ -49,15 +47,7 @@ class PanierNotes
 
 
     public function isInvoiced(int $idTranche, float $montantArticle, string $posteFacturable): bool{
-        if ($this->idTranches->contains($idTranche)) {
-            $index = $this->idTranches->indexOf($idTranche);
-            $montantArticleStocke = $this->montantsArticles->get($index);
-            $posteArticleStocke = $this->postesFacturables->get($index);
-            // dd("Ici...", $montantArticle, $montantArticleStocke);
-            return ($montantArticle == $montantArticleStocke) && ($posteArticleStocke == $posteFacturable);
-        }else{
-            return false;
-        }
+        return $this->checkList->contains($idTranche . "_" . $montantArticle . "_" . $posteFacturable);
     }
 
     public function setNote(?Note $note): self{
@@ -72,12 +62,12 @@ class PanierNotes
         $this->setIdPartenaire($note->getPartenaire() ? $note->getPartenaire()->getId():-1);
         $this->setIdAutoriteFiscale($note->getAutoritefiscale() ? $note->getAutoritefiscale()->getId():-1);
         $this->idTranches = new ArrayCollection();
-        $this->montantsArticles = new ArrayCollection();
-        $this->postesFacturables = new ArrayCollection();
+        $this->checkList = new ArrayCollection();
         foreach ($note->getArticles() as $article) {
-            $this->addIdTranche($article->getTranche()->getId());
-            $this->addMontantsArticles($article->getMontant());
-            $this->addPostesFacturables($article->getNom());
+            /** @var Tranche $tranche */
+            $tranche = $article->getTranche();
+            $this->addIdTranche($tranche->getId());
+            $this->addCheckList($tranche->getId() . "_" . $article->getMontant() . "_" . $article->getNom());
         }
         return $this;
     }
@@ -112,49 +102,24 @@ class PanierNotes
     }
 
     
-    public function getMontantsArticles(): ArrayCollection
+    public function getCheckList(): ArrayCollection
     {
-        return $this->montantsArticles;
+        return $this->checkList;
     }
 
-    public function addMontantsArticles(float $montantArticle): static
+    public function addCheckList(string $checkList): static
     {
-        if (!$this->montantsArticles->contains($montantArticle)) {
-            $this->montantsArticles->add($montantArticle);
+        if (!$this->checkList->contains($checkList)) {
+            $this->checkList->add($checkList);
         }
 
         return $this;
     }
 
-    public function removeMontantsArticles(float $montantArticle): static
+    public function removeCheckList(string $checkList): static
     {
-        if ($this->montantsArticles->contains($montantArticle)) {
-            $this->montantsArticles->removeElement($montantArticle);
-        }
-
-        return $this;
-    }
-
-
-
-    public function postesFacturables(): ArrayCollection
-    {
-        return $this->postesFacturables();
-    }
-
-    public function addPostesFacturables(string $posteFacturable): static
-    {
-        if (!$this->postesFacturables->contains($posteFacturable)) {
-            $this->postesFacturables->add($posteFacturable);
-        }
-
-        return $this;
-    }
-
-    public function removePostesFacturables(string $posteFacturable): static
-    {
-        if ($this->postesFacturables->contains($posteFacturable)) {
-            $this->postesFacturables->removeElement($posteFacturable);
+        if ($this->checkList->contains($checkList)) {
+            $this->checkList->removeElement($checkList);
         }
 
         return $this;
