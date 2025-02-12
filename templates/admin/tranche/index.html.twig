@@ -137,12 +137,12 @@
                                                                 {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
                                                                     <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
                                                                         {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                                        Retier <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}) de {{ posteFacturable['poste'] }}</span> de la note
+                                                                        Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
                                                                     </a>
                                                                 {% else %}
                                                                     <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
                                                                         {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                                        Insérer <span class='text-primary fw-bold'>{{ posteFacturable['pourcentage'] * 100 }}% (soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}) de {{ posteFacturable['poste'] }}</span> dans la note
+                                                                        Insérer <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> dans la note
                                                                     </a>
                                                                 {% endif %}
                                                             </li>
