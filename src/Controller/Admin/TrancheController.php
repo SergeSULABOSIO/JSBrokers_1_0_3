@@ -106,13 +106,18 @@ class TrancheController extends AbstractController
             $articleToDelete = null;
 
             foreach ($note->getArticles() as $article) {
-                if ($article) {
-                    if ($article->getTranche()->getId() == $idTranche) {
-                        $articleToDelete = $article;
-                        // dd("Article à supprimer:", $article);
-                        break;
-                    }
+                if ($panier->isInvoiced($article->getTranche()->getId(), $article->getMontant(), $article->getNom())) {
+                    $articleToDelete = $article;
+                    // dd("Article à supprimer:", $article);
+                    break;
                 }
+                // if ($article) {
+                //     if ($article->getTranche()->getId() == $idTranche) {
+                //         $articleToDelete = $article;
+                //         // dd("Article à supprimer:", $article);
+                //         break;
+                //     }
+                // }
             }
             if ($articleToDelete) {
                 $note->removeArticle($articleToDelete);
@@ -152,7 +157,8 @@ class TrancheController extends AbstractController
                 /** @var Tranche $tranche */
                 $tranche = $this->trancheRepository->find($idTranche);
                 if ($tranche) {
-                    if ($panier->containsTranche($idTranche) == false) {
+                    //On vérifie si cette article n'existe pas déjà dans le panier
+                    if ($panier->isInvoiced($idTranche, $montantPayable, $poste) == false) {
                         /** @var Article $article */
                         $article = new Article();
                         $article->setNom($poste);
