@@ -71,7 +71,6 @@ class PanierNotes
         $this->setIdClient($note->getClient() ? $note->getClient()->getId(): -1);
         $this->setIdPartenaire($note->getPartenaire() ? $note->getPartenaire()->getId():-1);
         $this->setIdAutoriteFiscale($note->getAutoritefiscale() ? $note->getAutoritefiscale()->getId():-1);
-
         $this->idTranches = new ArrayCollection();
         $this->montantsArticles = new ArrayCollection();
         $this->postesFacturables = new ArrayCollection();
