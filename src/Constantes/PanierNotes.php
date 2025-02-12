@@ -67,7 +67,6 @@ class PanierNotes
         $this->setAddressedTo($note->getAddressedTo());
         $this->setReference($note->getReference());
         $this->setSignature($note->getSignature());
-
         $this->setIdAssureur($note->getAssureur() ? $note->getAssureur()->getId(): -1);
         $this->setIdClient($note->getClient() ? $note->getClient()->getId(): -1);
         $this->setIdPartenaire($note->getPartenaire() ? $note->getPartenaire()->getId():-1);
@@ -79,6 +78,7 @@ class PanierNotes
         foreach ($note->getArticles() as $article) {
             $this->addIdTranche($article->getTranche()->getId());
             $this->addMontantsArticles($article->getMontant());
+            $this->addPostesFacturables($article->getNom());
         }
         return $this;
     }
