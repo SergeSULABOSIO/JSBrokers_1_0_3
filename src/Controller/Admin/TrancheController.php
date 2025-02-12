@@ -63,7 +63,6 @@ class TrancheController extends AbstractController
     public function index($idEntreprise, Request $request)
     {
         $page = $request->query->getInt("page", 1);
-
         /** @var Panier $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
         /** @var Note $note */
@@ -71,6 +70,7 @@ class TrancheController extends AbstractController
         if ($panier) {
             $note = $this->noteRepository->find($panier->getIdNote());
         }
+        // dd("Panier ", $panier);
 
         return $this->render('admin/tranche/index.html.twig', [
             'pageName' => $this->translator->trans("tache_page_name_new"),

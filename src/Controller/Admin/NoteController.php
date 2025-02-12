@@ -72,6 +72,8 @@ class NoteController extends AbstractController
 
         /** @var Panier $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
+
+
         /** @var Note $note */
         $note = null;
         if ($panier) {
@@ -106,7 +108,9 @@ class NoteController extends AbstractController
         //Puis on vide le panier
         if ($panier != null) {
             $panier->viderpanier();
+            $request->getSession()->remove(PanierNotes::NOM, null);
         }
+        // dd("Ici", $currentURL);
         return $this->redirect($currentURL);
     }
 
@@ -162,24 +166,32 @@ class NoteController extends AbstractController
     ])]
     public function create(int $idEntreprise, int $idNote, int $page, Request $request, SerializerInterface $serializer)
     {
+
         $this->openSession($request);
 
+        
+        
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
+        
         /** @var Utilisateur $user */
         $user = $this->getUser();
-
+        
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
+        
         /** @var Note $note */
         $note = $this->loadNote($idNote, $invite, $request);
-
+        
         /** @var Form $form */
         $form = $this->buildForm($note, $page);
-
         
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+        // dd("panier ", $panier);
+        // dd("Ici...", $panier);
+
+
         // dd($note);
 
         $form->handleRequest($request);
@@ -216,7 +228,7 @@ class NoteController extends AbstractController
             "page" => $page,
             "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "pageMax" => $this->pageMax,
-            "panier" => $request->getSession()->get(PanierNotes::NOM),
+            "panier" => $panier,
             "constante" => $this->constante,
             "serviceMonnaie" => $this->serviceMonnaies,
         ]);
