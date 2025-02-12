@@ -48,8 +48,8 @@ class PanierNotes
     public function isInvoiced(int $idTranche, float $montantArticle): bool{
         if ($this->idTranches->contains($idTranche)) {
             $indexTranche = $this->idTranches->indexOf($idTranche);
-            $montantArticleStocke = $this->montantsArticles->indexOf($indexTranche);
-            // dd("Ici...", $idTranche, $indexTranche, $montantArticle, $this->montantsArticles);
+            $montantArticleStocke = $this->montantsArticles->get($indexTranche);
+            // dd("Ici...", $montantArticle, $montantArticleStocke);
             return $montantArticle == $montantArticleStocke;
         }else{
             return false;

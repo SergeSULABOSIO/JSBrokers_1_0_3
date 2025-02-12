@@ -108,7 +108,7 @@ class NoteController extends AbstractController
         //Puis on vide le panier
         if ($panier != null) {
             $panier->viderpanier();
-            $request->getSession()->remove(PanierNotes::NOM, null);
+            $request->getSession()->remove(PanierNotes::NOM);
         }
         // dd("Ici", $currentURL);
         return $this->redirect($currentURL);
