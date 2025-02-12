@@ -69,43 +69,42 @@ class NoteType extends AbstractType
         }
 
         if ($options['note'] != null) {
-            $builder
-                //champ non mappé
-                ->add('montantDue', MoneyType::class, [
-                    'label' => "Montant dû",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'grouping' => true,
-                    // 'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
-                    'mapped' => false,
-                    'disabled' => true,
-                    'attr' => [
-                        'placeholder' => "Montant dû",
-                    ],
-                ])
-                //champ non mappé
-                ->add('montantPaye', MoneyType::class, [
-                    'label' => "Montant payé",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'grouping' => true,
-                    // 'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
-                    'mapped' => false,
-                    'disabled' => true,
-                    'attr' => [
-                        'placeholder' => "Montant payé",
-                    ],
-                ])
-                //champ non mappé
-                ->add('montantSolde', MoneyType::class, [
-                    'label' => "Solde restant dû",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'grouping' => true,
-                    // 'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
-                    'mapped' => false,
-                    'disabled' => true,
-                    'attr' => [
-                        'placeholder' => "Solde restant dû",
-                    ],
-                ]);
+            if ($options['note']->getId() != null) {
+                $builder
+                    //champ non mappé
+                    ->add('montantDue', MoneyType::class, [
+                        'label' => "Montant dû",
+                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        'grouping' => true,
+                        'mapped' => false,
+                        'disabled' => true,
+                        'attr' => [
+                            'placeholder' => "Montant dû",
+                        ],
+                    ])
+                    //champ non mappé
+                    ->add('montantPaye', MoneyType::class, [
+                        'label' => "Montant payé",
+                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        'grouping' => true,
+                        'mapped' => false,
+                        'disabled' => true,
+                        'attr' => [
+                            'placeholder' => "Montant payé",
+                        ],
+                    ])
+                    //champ non mappé
+                    ->add('montantSolde', MoneyType::class, [
+                        'label' => "Solde restant dû",
+                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        'grouping' => true,
+                        'mapped' => false,
+                        'disabled' => true,
+                        'attr' => [
+                            'placeholder' => "Solde restant dû",
+                        ],
+                    ]);
+            }
         }
 
         //BAS DE PAGE
@@ -177,18 +176,20 @@ class NoteType extends AbstractType
             ])
             ->add('type', ChoiceType::class, [
                 'label' => "Type",
+                'required' => true,
                 'expanded' => true,
                 'choices'  => [
-                    "Null" => Note::TYPE_NULL,
+                    // "Null" => Note::TYPE_NULL,
                     "Note de débit" => Note::TYPE_NOTE_DE_DEBIT,
                     "Note de crédit" => Note::TYPE_NOTE_DE_CREDIT,
                 ]
             ])
             ->add('addressedTo', ChoiceType::class, [
                 'label' => "A destination",
+                'required' => true,
                 'expanded' => true,
                 'choices'  => [
-                    "Null" => Note::TO_NULL,
+                    // "Null" => Note::TO_NULL,
                     "Du client" => Note::TO_CLIENT,
                     "De l'assureur" => Note::TO_ASSUREUR,
                     "De l'intermédiaire" => Note::TO_PARTENAIRE,
@@ -197,29 +198,32 @@ class NoteType extends AbstractType
             ])
         ;
 
-        // dd($options['note']);
-
-        $builder
-            ->add('paiements', CollectionType::class, [
-                'label' => "Paiements",
-                'help' => "Les paiements relatives à cette notes.",
-                'entry_type' => PaiementType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "description",
-                ],
-            ]);
+        // dd($options['note']->getId());
+        if ($options['note'] != null) {
+            if ($options['note']->getId() != null) {
+                $builder
+                    ->add('paiements', CollectionType::class, [
+                        'label' => "Paiements",
+                        'help' => "Les paiements relatives à cette notes.",
+                        'entry_type' => PaiementType::class,
+                        'by_reference' => false,
+                        'allow_add' => true,
+                        'allow_delete' => true,
+                        'entry_options' => [
+                            'label' => false,
+                        ],
+                        'attr' => [
+                            'data-controller' => 'form-collection-entites',
+                            'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                            'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                            'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                            'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                            'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                            'data-form-collection-entites-view-field-value' => "description",
+                        ],
+                    ]);
+            }
+        }
     }
 
     private function buildPageB(FormBuilderInterface $builder, array $options): void

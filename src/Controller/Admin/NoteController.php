@@ -76,10 +76,12 @@ class NoteController extends AbstractController
 
         /** @var Note $note */
         $note = null;
-        if ($panier) {
-            $note = $this->noteRepository->find($panier->getIdNote());
+        if ($panier != null) {
+            if ($panier->getIdNote() != null) {
+                $note = $this->noteRepository->find($panier->getIdNote());
+                // dd("Ici...", $panier, $note);
+            }
         }
-
 
         return $this->render('admin/note/index.html.twig', [
             'pageName' => $this->translator->trans("note_page_name_new"),
@@ -102,6 +104,13 @@ class NoteController extends AbstractController
     ])]
     public function viderpanier($currentURL, int $idEntreprise, Request $request)
     {
+        $this->detruirePanier($request);
+        // dd("Ici", $currentURL);
+        return $this->redirect($currentURL);
+    }
+
+    private function detruirePanier(Request $request)
+    {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
 
@@ -110,8 +119,6 @@ class NoteController extends AbstractController
             $panier->viderpanier();
             $request->getSession()->remove(PanierNotes::NOM);
         }
-        // dd("Ici", $currentURL);
-        return $this->redirect($currentURL);
     }
 
     #[Route('/mettredanslepanier/{idNote}/{idEntreprise}/{currentURL}', name: 'mettredanslepanier', requirements: [
@@ -166,30 +173,31 @@ class NoteController extends AbstractController
     ])]
     public function create(int $idEntreprise, int $idNote, int $page, Request $request, SerializerInterface $serializer)
     {
+        //S'il s'agit de la création d'une nouvelle note, il faut vider d'abord le panier
+        if ($idNote == -1) {
+            $this->detruirePanier($request);
+        }
+        // dd("Edition...", $idNote);
 
         $this->openSession($request);
 
-        
-        
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
-        
+
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-        
+
         /** @var Note $note */
         $note = $this->loadNote($idNote, $invite, $request);
-        
+
         /** @var Form $form */
         $form = $this->buildForm($note, $page);
-        
+
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
-        // dd("panier ", $panier);
-        // dd("Ici...", $panier);
 
 
         // dd($note);
@@ -244,6 +252,7 @@ class NoteController extends AbstractController
 
     private function buildForm(?Note $note, $page): Form
     {
+        // dd("Note: ", $note);
         $form = $this->createForm(NoteType::class, $note, [
             "idNote" => $note->getId() == null ? -1 : $note->getId(),
             "page" => $page,
@@ -253,9 +262,11 @@ class NoteController extends AbstractController
             "note" => $note,
         ]);
         if ($note != null) {
-            $form->get('montantDue')->setData($this->constante->Note_getMontant_payable($note));
-            $form->get('montantPaye')->setData($this->constante->Note_getMontant_paye($note));
-            $form->get('montantSolde')->setData($this->constante->Note_getMontant_solde($note));
+            if ($note->getId() != null) {
+                $form->get('montantDue')->setData($this->constante->Note_getMontant_payable($note));
+                $form->get('montantPaye')->setData($this->constante->Note_getMontant_paye($note));
+                $form->get('montantSolde')->setData($this->constante->Note_getMontant_solde($note));
+            }
         }
         return $form;
     }
@@ -308,9 +319,9 @@ class NoteController extends AbstractController
             } else {
                 $note->setSignature(time());
                 $note->setReference("N" . (time()));
-                $note->setType(Note::TYPE_NULL);
+                $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                 $note->setInvite($invite);
-                $note->setAddressedTo(Note::TO_NULL);
+                $note->setAddressedTo(Note::TO_ASSUREUR);
                 $note->setValidated(false);
             }
         }
