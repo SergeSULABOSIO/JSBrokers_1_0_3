@@ -487,6 +487,14 @@ class Constante
     /**
      * REVENU POUR COURTIER
      */
+    public function Revenu_getMontant_ttc_tranche(?RevenuPourCourtier $revenu, ?Tranche $tranche): float
+    {
+        if ($tranche != null && $revenu != null) {
+            return $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage();
+        }else{
+            return 0;
+        }
+    }
     public function Revenu_getMontant_ttc(?RevenuPourCourtier $revenu): float
     {
         $net = $this->Revenu_getMontant_Net($revenu);
@@ -520,13 +528,13 @@ class Constante
                                 if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
                                     //On doit s'assurer que l'assureur sur la liste est bien celui qui est dans le panier
                                     if ($tranche->getCotation()->getAssureur()->getId() == $panier->getIdAssureur()) {
-                                        $montant = $this->Revenu_getMontant_ttc($revenu);
+                                        $montant = $this->Revenu_getMontant_ttc_tranche($revenu, $tranche);
                                         if ($montant != 0) {
                                             $tabPostesFacturables[] = [
                                                 "poste" => $revenu->getNom(),
                                                 "addressedTo" => Note::TO_ASSUREUR,
                                                 "pourcentage" => $tranche->getPourcentage(),
-                                                "montantPayable" => $montant * $tranche->getPourcentage(),
+                                                "montantPayable" => $montant,
                                                 "idCible" => $panier->getIdAssureur(),
                                                 "idPoste" => $revenu->getId(),
                                                 "idNote" => $panier->getIdNote(),
@@ -543,13 +551,13 @@ class Constante
                                 if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
                                     //On doit s'assurer que le client sur la liste est bien celui qui est dans le panier
                                     if ($tranche->getCotation()->getPiste()->getClient()->getId() == $panier->getIdClient()) {
-                                        $montant = $this->Revenu_getMontant_ttc($revenu);
+                                        $montant = $this->Revenu_getMontant_ttc_tranche($revenu, $tranche);
                                         if ($montant != 0) {
                                             $tabPostesFacturables[] = [
                                                 "poste" => $revenu->getNom(),
                                                 "addressedTo" => Note::TO_CLIENT,
                                                 "pourcentage" => $tranche->getPourcentage(),
-                                                "montantPayable" => $montant * $tranche->getPourcentage(),
+                                                "montantPayable" => $montant,
                                                 "idCible" => $panier->getIdClient(),
                                                 "idPoste" => $revenu->getId(),
                                                 "idNote" => $panier->getIdNote(),
