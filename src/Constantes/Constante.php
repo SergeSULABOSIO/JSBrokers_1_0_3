@@ -577,7 +577,7 @@ class Constante
                                         "poste" => "Rétrocommission",
                                         "addressedTo" => Note::TO_PARTENAIRE,
                                         "pourcentage" => $tranche->getPourcentage(),
-                                        "montantPayable" => $montant * $tranche->getPourcentage(),
+                                        "montantPayable" => $montant,
                                         "idCible" => $panier->getIdPartenaire(),
                                         "idPoste" => -1,
                                         "idNote" => $panier->getIdNote(),
