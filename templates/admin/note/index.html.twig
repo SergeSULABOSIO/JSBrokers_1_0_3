@@ -50,6 +50,9 @@
 							<tr id="row_note_{{ note.id }}">
 								<td>
 									<a class="m-2 fw-bold" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
+										{% if panier.containsNote(note.id) == true %}
+                                            {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
+                                        {% endif %}
 										Réf.: {{ note.reference }} • {{ note.description }} • {{ constante.Note_getNameOfAddressedTo(note) }}
 									</a><br/>
 									<small class ="m-2">
@@ -86,14 +89,16 @@
 													{% if panier.idNote != note.id %}
 														<li>
 															<a class="dropdown-item" href="{{ path('admin.note.mettredanslepanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-																{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+																{# {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }} #}
+																{{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
 																Mettre dans le panier
 															</a>
 														</li>
 													{% else %}
 														<li>
 															<a class="dropdown-item" href="{{ path('admin.note.retirerdupanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-																{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+																{# {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }} #}
+																{{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
 																Retirer du panier
 															</a>
 														</li>

@@ -121,6 +121,11 @@ class NoteController extends AbstractController
         }
     }
 
+    private function loadPanierFromRequest(?Request $request): ?PanierNotes
+    {
+        return $request->getSession()->get(PanierNotes::NOM);
+    }
+
     #[Route('/mettredanslepanier/{idNote}/{idEntreprise}/{currentURL}', name: 'mettredanslepanier', requirements: [
         'idNote' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
@@ -128,11 +133,16 @@ class NoteController extends AbstractController
     ])]
     public function mettredanslepanier($currentURL, int $idNote, $idEntreprise, Request $request)
     {
-        /** @var PanierNotes $panier */
-        $panier = $request->getSession()->get(PanierNotes::NOM);
+        $panier = $this->loadPanierFromRequest($request);
         //Si le panier n'existe pas encore il faut le créer vite
         if ($panier == null) {
             $this->openSession($request);
+            $panier = $this->loadPanierFromRequest($request);
+        } else {
+            // dd($panier);
+            if ($panier->getIdNote() == null) {
+                $this->openSession($request);
+            }
         }
 
         /** @var Note $note */

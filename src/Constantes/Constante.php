@@ -448,7 +448,7 @@ class Constante
                     return $note->getPartenaire() != null ? $note->getPartenaire()->getNom() : "";
                     break;
                 case Note::TO_AUTORITE_FISCALE:
-                    return $note->getAutoritefiscale() != null ? $note->getAutoritefiscale()->getNom() : "";
+                    return $note->getAutoritefiscale() != null ? $note->getAutoritefiscale()->getAbreviation() : "";
                     break;
                 default:
                     # code...
@@ -473,34 +473,39 @@ class Constante
     {
         $montant = 0;
         if ($note) {
-            switch ($note->getAddressedTo()) {
-                case Note::TO_ASSUREUR:
-                    // dd("On facture à l'assureur les commissions payables par lui-même.");
-                    // $montant = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation);
-                    break;
-
-                case Note::TO_CLIENT:
-                    // dd("On facture au client les frais de gestion payables par lui-même.");
-                    // $montant = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation);
-                    break;
-
-                case Note::TO_PARTENAIRE:
-                    // dd("Le partenaire nous facture les retrocommissions payable par nous.");
-                    // $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
-                    foreach ($note->getArticles() as $article) {
-                        $montant += $article->getMontant();
-                    }
-                    break;
-
-                case Note::TO_AUTORITE_FISCALE:
-                    // dd("L'autorité fiscale nous facture nous factures ses taxes auxquelles nous sommes redevables.");
-                    // $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
-                    break;
-
-                default:
-                    # code...
-                    break;
+            foreach ($note->getArticles() as $article) {
+                $montant += $article->getMontant();
             }
+            // switch ($note->getAddressedTo()) {
+            //     case Note::TO_ASSUREUR:
+            //         foreach ($note->getArticles() as $article) {
+            //             $montant += $article->getMontant();
+            //         }
+            //         break;
+
+            //     case Note::TO_CLIENT:
+            //         foreach ($note->getArticles() as $article) {
+            //             $montant += $article->getMontant();
+            //         }
+            //         break;
+
+            //     case Note::TO_PARTENAIRE:
+            //         foreach ($note->getArticles() as $article) {
+            //             $montant += $article->getMontant();
+            //         }
+            //         break;
+
+            //     case Note::TO_AUTORITE_FISCALE:
+            //         foreach ($note->getArticles() as $article) {
+            //             $montant += $article->getMontant();
+            //         }
+            //         break;
+            //         break;
+
+            //     default:
+            //         # code...
+            //         break;
+            // }
         }
         // dd("Articles: ", $note->getArticles(), $montant);
         return $montant;
@@ -608,6 +613,10 @@ class Constante
                                     "addressedTo" => Note::TO_AUTORITE_FISCALE,
                                     "pourcentage" => $tranche->getPourcentage(),
                                     "montantPayable" => $montant,
+                                    "idCible" => $panier->getIdAutoriteFiscale(),
+                                    "idPoste" => $autorite->getTaxe()->getId(),
+                                    "idNote" => $panier->getIdNote(),
+                                    "idTranche" => $tranche->getId(),
                                 ];
                             }
                             break;

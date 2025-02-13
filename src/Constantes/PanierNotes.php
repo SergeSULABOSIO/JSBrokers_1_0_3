@@ -45,6 +45,10 @@ class PanierNotes
         return $this->idTranches->contains($idTranche);
     }
 
+    public function containsNote(int $idNote): bool{
+        return $this->idNote == $idNote;
+    }
+
 
     public function isInvoiced(int $idTranche, float $montantArticle, string $posteFacturable): bool{
         return $this->checkList->contains($idTranche . "_" . $montantArticle . "_" . $posteFacturable);
