@@ -543,6 +543,7 @@ class Constante
                                                 "addressedTo" => Note::TO_CLIENT,
                                                 "pourcentage" => $tranche->getPourcentage(),
                                                 "montantPayable" => $this->Revenu_getMontant_ttc($revenu),
+                                                Ici
                                             ];
                                         }
                                     }
