@@ -476,38 +476,7 @@ class Constante
             foreach ($note->getArticles() as $article) {
                 $montant += $article->getMontant();
             }
-            // switch ($note->getAddressedTo()) {
-            //     case Note::TO_ASSUREUR:
-            //         foreach ($note->getArticles() as $article) {
-            //             $montant += $article->getMontant();
-            //         }
-            //         break;
-
-            //     case Note::TO_CLIENT:
-            //         foreach ($note->getArticles() as $article) {
-            //             $montant += $article->getMontant();
-            //         }
-            //         break;
-
-            //     case Note::TO_PARTENAIRE:
-            //         foreach ($note->getArticles() as $article) {
-            //             $montant += $article->getMontant();
-            //         }
-            //         break;
-
-            //     case Note::TO_AUTORITE_FISCALE:
-            //         foreach ($note->getArticles() as $article) {
-            //             $montant += $article->getMontant();
-            //         }
-            //         break;
-            //         break;
-
-            //     default:
-            //         # code...
-            //         break;
-            // }
         }
-        // dd("Articles: ", $note->getArticles(), $montant);
         return $montant;
     }
 
