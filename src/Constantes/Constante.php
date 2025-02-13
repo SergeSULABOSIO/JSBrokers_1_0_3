@@ -542,8 +542,11 @@ class Constante
                                                 "poste" => $revenu->getNom(),
                                                 "addressedTo" => Note::TO_CLIENT,
                                                 "pourcentage" => $tranche->getPourcentage(),
-                                                "montantPayable" => $this->Revenu_getMontant_ttc($revenu),
-                                                Ici
+                                                "montantPayable" => $montant,
+                                                "idCible" => $panier->getIdClient(),
+                                                "idPoste" => $revenu->getId(),
+                                                "idNote" => $panier->getIdNote(),
+                                                "idTranche" => $tranche->getId(),
                                             ];
                                         }
                                     }
