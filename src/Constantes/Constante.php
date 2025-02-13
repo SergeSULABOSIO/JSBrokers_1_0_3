@@ -520,12 +520,19 @@ class Constante
                                 if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR) {
                                     //On doit s'assurer que l'assureur sur la liste est bien celui qui est dans le panier
                                     if ($tranche->getCotation()->getAssureur()->getId() == $panier->getIdAssureur()) {
-                                        $tabPostesFacturables[] = [
-                                            "poste" => $revenu->getNom(),
-                                            "addressedTo" => Note::TO_ASSUREUR,
-                                            "pourcentage" => $tranche->getPourcentage(),
-                                            "montantPayable" =>  $this->Revenu_getMontant_ttc($revenu),
-                                        ];
+                                        $montant = $this->Revenu_getMontant_ttc($revenu);
+                                        if ($montant != 0) {
+                                            $tabPostesFacturables[] = [
+                                                "poste" => $revenu->getNom(),
+                                                "addressedTo" => Note::TO_ASSUREUR,
+                                                "pourcentage" => $tranche->getPourcentage(),
+                                                "montantPayable" => $montant * $tranche->getPourcentage(),
+                                                "idCible" => $panier->getIdAssureur(),
+                                                "idPoste" => $revenu->getId(),
+                                                "idNote" => $panier->getIdNote(),
+                                                "idTranche" => $tranche->getId(),
+                                            ];
+                                        }
                                     }
                                 }
                             }
@@ -542,7 +549,7 @@ class Constante
                                                 "poste" => $revenu->getNom(),
                                                 "addressedTo" => Note::TO_CLIENT,
                                                 "pourcentage" => $tranche->getPourcentage(),
-                                                "montantPayable" => $montant,
+                                                "montantPayable" => $montant * $tranche->getPourcentage(),
                                                 "idCible" => $panier->getIdClient(),
                                                 "idPoste" => $revenu->getId(),
                                                 "idNote" => $panier->getIdNote(),
@@ -562,7 +569,7 @@ class Constante
                                         "poste" => "Rétrocommission",
                                         "addressedTo" => Note::TO_PARTENAIRE,
                                         "pourcentage" => $tranche->getPourcentage(),
-                                        "montantPayable" => $montant,
+                                        "montantPayable" => $montant * $tranche->getPourcentage(),
                                         "idCible" => $panier->getIdPartenaire(),
                                         "idPoste" => -1,
                                         "idNote" => $panier->getIdNote(),

@@ -50,9 +50,11 @@
 							<tr id="row_note_{{ note.id }}">
 								<td>
 									<a class="m-2 fw-bold" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
-										{% if panier.containsNote(note.id) == true %}
-                                            {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
-                                        {% endif %}
+										{% if panier != null %}
+											{% if panier.containsNote(note.id) == true %}
+												{{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
+											{% endif %}
+										{% endif %}
 										Réf.: {{ note.reference }} • {{ note.description }} • {{ constante.Note_getNameOfAddressedTo(note) }}
 									</a><br/>
 									<small class ="m-2">
