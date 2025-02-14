@@ -207,7 +207,7 @@ class NoteType extends AbstractType
                         'help' => "Les paiements relatives à cette notes.",
                         'entry_type' => PaiementType::class,
                         'by_reference' => false,
-                        'allow_add' => true,
+                        'allow_add' => false,
                         'allow_delete' => true,
                         'entry_options' => [
                             'label' => false,

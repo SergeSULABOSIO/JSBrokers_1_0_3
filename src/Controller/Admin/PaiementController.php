@@ -9,7 +9,10 @@ use App\Form\PaiementType;
 use App\Form\PartenaireType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Entity\Classeur;
 use App\Entity\Document;
+use App\Repository\ClasseurRepository;
+use App\Repository\DocumentRepository;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\PaiementRepository;
@@ -40,6 +43,7 @@ class PaiementController extends AbstractController
         private NoteRepository $noteRepository,
         private InviteRepository $inviteRepository,
         private PaiementRepository $paiementRepository,
+        private ClasseurRepository $classeurRepository,
         private Constante $constante,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
@@ -60,6 +64,23 @@ class PaiementController extends AbstractController
             'constante' => $this->constante,
             'activator' => $this->activator,
         ]);
+    }
+
+    private function loadClasseurPreuvesDesPaiements(Entreprise $entreprise):Classeur
+    {
+        /** @var Classeur $classeurPOP */
+        $classeurPOP = $this->classeurRepository->findOneByNom(Classeur::NOM_CLASSEUR_POP, $entreprise->getId());
+        // $classeurPOP = $this->loadClasseurPreuvesDesPaiements($idEntreprise);
+        if ($classeurPOP == null) {
+            $classeurPOP = (new Classeur())
+                ->setNom(Classeur::NOM_CLASSEUR_POP)
+                ->setDescription("Classeur des preuves des paiements")
+                ->setEntreprise($entreprise);
+            $this->manager->persist($classeurPOP);
+            $this->manager->flush();
+            // dd("Classeur POP", $classeurPOP, "Crée.");
+        }
+        return $classeurPOP;
     }
 
 
@@ -92,6 +113,7 @@ class PaiementController extends AbstractController
             /** @var Document $pop */
             $pop = new Document();
             $pop->setNom("Preuve de paiement - " . $reference);
+            $pop->setClasseur($this->loadClasseurPreuvesDesPaiements($entreprise));
 
             $paiement->addPreuve($pop);
             $paiement->setNote($note);

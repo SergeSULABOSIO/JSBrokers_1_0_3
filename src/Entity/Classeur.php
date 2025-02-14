@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: ClasseurRepository::class)]
 class Classeur
 {
+    public const NOM_CLASSEUR_POP = "PREUVES DES PAIEMENTS";
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

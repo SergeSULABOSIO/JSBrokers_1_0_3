@@ -48,6 +48,19 @@ class ClasseurRepository extends ServiceEntityRepository
     //        ;
     //    }
 
+       public function findOneByNom($nom, $idEntreprise): ?Classeur
+       {
+           return $this->createQueryBuilder('c')
+               ->andWhere('c.nom = :nom')
+               ->andWhere('c.entreprise = :entreprise')
+               ->orWhere('c.description = :nom')
+               ->setParameter('nom', $nom)
+               ->setParameter('entreprise', $idEntreprise)
+               ->getQuery()
+               ->getOneOrNullResult()
+           ;
+       }
+
     public function paginate(int $idEntreprise, int $page): PaginationInterface
     {
         /** @var Utilisateur $user */
