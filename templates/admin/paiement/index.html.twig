@@ -51,9 +51,11 @@
                                     {# {{ paiement.description }} #}
                                     Réf.: {{ paiement.reference }} • {{ paiement.description }}
                                 </a><br/>
-                                <span class="m-2 text-secondary fw-bold">
-                                    {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
-                                </span><br/>
+                                <small class ="m-2">
+                                    <span class="text-secondary fw-bold">
+                                        {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                    </span>
+                                </small><br/>
                                 <small class ="m-2">
                                     <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 

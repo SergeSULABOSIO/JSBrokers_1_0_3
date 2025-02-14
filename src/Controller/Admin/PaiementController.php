@@ -139,7 +139,7 @@ class PaiementController extends AbstractController
             $this->addFlash("success", $this->translator->trans("paiement_creation_ok", [
                 ":paiement" => $paiement->getDescription(),
             ]));
-            return $this->redirectToRoute("admin.paiement.index", [
+            return $this->redirectToRoute("admin.note.index", [
                 'idEntreprise' => $idEntreprise,
             ]);
         }
