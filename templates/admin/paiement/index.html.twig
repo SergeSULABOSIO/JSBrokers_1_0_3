@@ -47,9 +47,21 @@
                     {% for paiement in paiements %}
                         <tr id="row_paiement_{{ paiement.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.paiement.edit', {'idPaiement':paiement.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ paiement.description }}
-                                </a>
+                                <a class="m-2 fw-bold" href="{{ path('admin.paiement.edit', {'idPaiement':paiement.id, 'idEntreprise': entreprise.id})}}">
+                                    {# {{ paiement.description }} #}
+                                    Réf.: {{ paiement.reference }} • {{ paiement.description }}
+                                </a><br/>
+                                <span class="m-2 text-secondary fw-bold">
+                                    {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                </span><br/>
+                                <small class ="m-2">
+                                    <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                <small class ="m-2">
+                                    <span class="text-secondary">{{ constante.Note_getNameOfTypeNote(paiement.note) }} • {{ paiement.note.nom }} • {{ paiement.note.reference }}</span>
+                                </small>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

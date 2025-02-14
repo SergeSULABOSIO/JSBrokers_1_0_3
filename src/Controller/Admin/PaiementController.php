@@ -2,6 +2,9 @@
 
 namespace App\Controller\Admin;
 
+use DateTimeImmutable;
+use App\Entity\Classeur;
+use App\Entity\Document;
 use App\Entity\Paiement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
@@ -9,16 +12,14 @@ use App\Form\PaiementType;
 use App\Form\PartenaireType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
-use App\Entity\Classeur;
-use App\Entity\Document;
-use App\Repository\ClasseurRepository;
-use App\Repository\DocumentRepository;
+use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
+use App\Repository\ClasseurRepository;
+use App\Repository\DocumentRepository;
 use App\Repository\PaiementRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\PartenaireRepository;
-use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -44,6 +45,7 @@ class PaiementController extends AbstractController
         private InviteRepository $inviteRepository,
         private PaiementRepository $paiementRepository,
         private ClasseurRepository $classeurRepository,
+        private ServiceMonnaies $serviceMonnaies,
         private Constante $constante,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
@@ -61,6 +63,7 @@ class PaiementController extends AbstractController
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'paiements' => $this->paiementRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
+            'serviceMonnaie' => $this->serviceMonnaies,
             'constante' => $this->constante,
             'activator' => $this->activator,
         ]);

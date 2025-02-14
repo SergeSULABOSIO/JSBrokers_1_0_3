@@ -418,7 +418,9 @@ class Constante
      */
     public function Note_getMontant_solde(?Note $note): float
     {
-        return $this->Note_getMontant_payable($note) - $this->Note_getMontant_paye($note);
+        $solde = $this->Note_getMontant_payable($note) - $this->Note_getMontant_paye($note);
+        // dd(round($solde, 4));
+        return round($solde, 4);
     }
     public function Note_getMontant_paye(?Note $note): float
     {

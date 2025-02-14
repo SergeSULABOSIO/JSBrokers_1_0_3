@@ -60,7 +60,11 @@
 									<small class ="m-2">
                                     	<span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     	<span class="text-secondary"> • Montant payé: {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    	<span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    	{% set couleur = "text-secondary" %}
+										{% if constante.Note_getMontant_solde(note) != 0 %}
+                                    		{% set couleur = "text-danger" %}
+										{% endif %}
+										<span class="{{couleur}}"> • Solde: {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
 									</small><br/>
 									<small class ="m-2">
 										<span class="text-secondary">{{ constante.Note_getNameOfTypeNote(note) }} - {{ note.nom }}</span>
