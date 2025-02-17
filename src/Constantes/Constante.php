@@ -493,7 +493,7 @@ class Constante
     {
         if ($tranche != null && $revenu != null) {
             return $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage();
-        }else{
+        } else {
             return 0;
         }
     }
@@ -736,11 +736,40 @@ class Constante
     {
         $montant = 0;
         if (count($tranche->getArticles())) {
-            dd("Articles où cette tranche est appellée:", $tranche->getArticles());
-
             /** @var Article $article */
-            foreach ($tranche->getArticles() as $article) {
+            foreach ($tranche->getArticles() as $articleTranche) {
+                /** @var Article $article */
+                $article = $articleTranche;
 
+                /** @var Note $note */
+                $note = $article->getNote();
+                $montantNote = $this->Note_getMontant_payable($note);
+                $montantNotePaye = $this->Note_getMontant_paye($note);
+
+                //Quelle proportion de la note a-t-elle été payée (100%?)
+                $proportionPaiement = $montantNotePaye / $montantNote;
+
+                //Qu'est-ce qu'on a facturé?
+                switch ($note->getAddressedTo()) {
+                    case Note::TO_ASSUREUR:
+                        // dd("Addressé à l'assureur ", $article);
+                        break;
+                    case Note::TO_CLIENT:
+                        // dd("Addressé au client");
+                        break;
+                    case Note::TO_AUTORITE_FISCALE:
+                        // dd("Addressé à l'autorité fiscale");
+                        break;
+                    case Note::TO_PARTENAIRE:
+                        // dd("Addressé au partenaire");
+                        break;
+
+                    default:
+                        # code...
+                        break;
+                }
+
+                // dd($article, "Porportion de paiement = " . $proportionPaiement);
             }
         }
         return $montant;

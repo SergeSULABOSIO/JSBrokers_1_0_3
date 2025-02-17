@@ -25,6 +25,9 @@ class Article
     #[ORM\Column(nullable: true)]
     private ?float $montant = null;
 
+    #[ORM\Column]
+    private ?int $idPoste = null;
+
     public function __construct()
     {
 
@@ -79,6 +82,18 @@ class Article
     public function setMontant(?float $montant): static
     {
         $this->montant = $montant;
+
+        return $this;
+    }
+
+    public function getIdPoste(): ?int
+    {
+        return $this->idPoste;
+    }
+
+    public function setIdPoste(int $idPoste): static
+    {
+        $this->idPoste = $idPoste;
 
         return $this;
     }

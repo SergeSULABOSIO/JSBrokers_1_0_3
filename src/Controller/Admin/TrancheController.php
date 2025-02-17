@@ -137,15 +137,16 @@ class TrancheController extends AbstractController
     }
 
 
-    #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+    #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
         'poste' => Requirement::CATCH_ALL,
         'montantPayable' => Requirement::CATCH_ALL,
         'idNote' => Requirement::DIGITS,
+        'idPoste' => Requirement::DIGITS,
         'idTranche' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
         'currentURL' => Requirement::CATCH_ALL
     ])]
-    public function mettredanslanote($currentURL, string $poste, float $montantPayable, int $idNote, int $idTranche, $idEntreprise, Request $request)
+    public function mettredanslanote($currentURL, string $poste, int $idPoste, float $montantPayable, int $idNote, int $idTranche, $idEntreprise, Request $request)
     {
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
@@ -162,6 +163,7 @@ class TrancheController extends AbstractController
                         /** @var Article $article */
                         $article = new Article();
                         $article->setNom($poste);
+                        $article->setIdPoste($idPoste);
                         $article->setMontant($montantPayable);
                         $article->setTranche($tranche);
                         $article->setNote($note);

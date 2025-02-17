@@ -414,10 +414,11 @@ class NoteController extends AbstractController
 
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
-        if ($panier->getIdNote() == $idNote) {
-            $panier->viderpanier();
+        if ($panier) {
+            if ($panier->getIdNote() == $idNote) {
+                $panier->viderpanier();
+            }
         }
-
 
         $this->manager->remove($note);
         $this->manager->flush();
