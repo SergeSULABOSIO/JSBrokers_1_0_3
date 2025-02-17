@@ -668,7 +668,8 @@ class Constante
     }
     public function Tranche_getMontant_taxe_payable_par_courtier_solde(?Tranche $tranche): float
     {
-        return $this->Tranche_getMontant_taxe_payable_par_courtier($tranche) - $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche);
+        $solde = $this->Tranche_getMontant_taxe_payable_par_courtier($tranche) - $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche);
+        return round($solde, 4);
     }
     public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation): float
     {
@@ -734,7 +735,8 @@ class Constante
     }
     public function Tranche_getMontant_taxe_payable_par_assureur_solde(?Tranche $tranche): float
     {
-        return $this->Tranche_getMontant_taxe_payable_par_assureur($tranche) - $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
+        $solde = $this->Tranche_getMontant_taxe_payable_par_assureur($tranche) - $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
+        return $solde;
     }
     public function Cotation_getMontant_taxe_payable_par_assureur(?Cotation $cotation): float
     {
@@ -830,7 +832,8 @@ class Constante
     }
     public function Tranche_getMontant_commission_ttc_solde(?Tranche $tranche): float
     {
-        return $this->Tranche_getMontant_commission_ttc($tranche) - $this->Tranche_getMontant_commission_ttc_collectee($tranche);
+        $solde = $this->Tranche_getMontant_commission_ttc($tranche) - $this->Tranche_getMontant_commission_ttc_collectee($tranche);
+        return $solde;
     }
     public function Cotation_getMontant_commission_ttc_solde(?Cotation $cotation): float
     {
@@ -1204,7 +1207,7 @@ class Constante
     {
         $retrocom = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
         $retrocom_paye = $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche);
-        return $retrocom - $retrocom_paye;
+        return round($retrocom - $retrocom_paye, 4);
     }
 
 
@@ -1235,8 +1238,7 @@ class Constante
         $montant =
             $this->Tranche_getMontant_prime_payable_par_client($tranche)
             - $this->Tranche_getMontant_prime_payable_par_client_payee($tranche);
-
-        return $montant;
+        return round($montant, 4);
     }
     public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
     {
