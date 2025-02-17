@@ -678,11 +678,19 @@ class Constante
     }
     public function Cotation_getMontant_taxe_payable_par_courtier_payee(?Cotation $cotation): float
     {
-        return 0;
+        $montant = 0;
+        if ($cotation != null) {
+            /** @var Tranche $tranche */
+            foreach ($cotation->getTranches() as $tranche) {
+                $montant += $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche);
+            }
+        }
+        return $montant;
     }
     public function Cotation_getMontant_taxe_payable_par_courtier_solde(?Cotation $cotation): float
     {
-        return $this->Cotation_getMontant_taxe_payable_par_courtier($cotation) - $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
+        $solde = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation) - $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
+        return round($solde, 4);
     }
 
 
@@ -745,11 +753,19 @@ class Constante
     }
     public function Cotation_getMontant_taxe_payable_par_assureur_payee(?Cotation $cotation): float
     {
-        return 0;
+        $montant = 0;
+        if ($cotation != null) {
+            /** @var Tranche $tranche */
+            foreach ($cotation->getTranches() as $tranche) {
+                $montant += $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
+            }
+        }
+        return $montant;
     }
     public function Cotation_getMontant_taxe_payable_par_assureur_solde(?Cotation $cotation): float
     {
-        return $this->Cotation_getMontant_taxe_payable_par_assureur($cotation) - $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
+        $solde = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation) - $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
+        return round($solde, 4);
     }
 
 
@@ -837,11 +853,19 @@ class Constante
     }
     public function Cotation_getMontant_commission_ttc_solde(?Cotation $cotation): float
     {
-        return $this->Cotation_getMontant_commission_ttc($cotation) - $this->Cotation_getMontant_commission_ttc_collectee($cotation);
+        $solde = $this->Cotation_getMontant_commission_ttc($cotation) - $this->Cotation_getMontant_commission_ttc_collectee($cotation);
+        return round($solde, 4);
     }
     public function Cotation_getMontant_commission_ttc_collectee(?Cotation $cotation): float
     {
-        return 0;
+        $montant = 0;
+        if ($cotation != null) {
+            /** @var Tranche $tranche */
+            foreach ($cotation->getTranches() as $tranche) {
+                $montant += $this->Tranche_getMontant_commission_ttc_collectee($tranche);
+            }
+        }
+        return $montant;
     }
     public function Cotation_getMontant_commission_ttc(?Cotation $cotation, ?int $addressedTo = -1): float
     {
@@ -1172,7 +1196,14 @@ class Constante
     }
     public function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation): float
     {
-        return 0;
+        $montant = 0;
+        if ($cotation != null) {
+            /** @var Tranche $tranche */
+            foreach ($cotation->getTranches() as $tranche) {
+                $montant += $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche);
+            }
+        }
+        return $montant;
     }
     public function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche): float
     {
@@ -1201,7 +1232,7 @@ class Constante
     {
         $retrocom = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
         $retrocom_paye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
-        return $retrocom - $retrocom_paye;
+        return round($retrocom - $retrocom_paye, 4);
     }
     public function Tranche_getMontant_retrocommissions_payable_par_courtier_solde(?Tranche $tranche): float
     {
@@ -1263,6 +1294,6 @@ class Constante
             $this->Cotation_getMontant_prime_payable_par_client($cotation)
             - $this->Cotation_getMontant_prime_payable_par_client_payee($cotation);
 
-        return $montant;
+        return round($montant, 4);
     }
 }

@@ -58,7 +58,11 @@
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Cotation_getMontant_prime_payable_par_client_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Solde dû: {{ constante.Cotation_getMontant_prime_payable_par_client_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Cotation_getMontant_prime_payable_par_client_solde(cotation) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Solde dû: {{ constante.Cotation_getMontant_prime_payable_par_client_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
@@ -66,7 +70,11 @@
                                     <span class="text-secondary"> • Com. ht: {{ constante.Cotation_getMontant_commission_ht(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • C. totale: {{ constante.Cotation_getMontant_commission_ttc(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Cotation_getMontant_commission_ttc_solde(cotation) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {% for taxe in serviceTaxe.taxes %}
                                      {% if taxe.redevable == 0 %}
@@ -74,7 +82,11 @@
                                         <small class="m-2">
                                             <span class="text-secondary">{{ taxe.code }}: {{ constante.Cotation_getMontant_taxe_payable_par_assureur(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Solde: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {% set couleur = "text-secondary" %}
+                                            {% if constante.Cotation_getMontant_taxe_payable_par_assureur_solde(cotation) != 0 %}
+                                                {% set couleur = "text-danger" %}
+                                            {% endif %}
+                                            <span class="{{couleur}}"> • Solde: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         </small><br/>
                                      {% endif %}
                                      {% if taxe.redevable == 1 %}
@@ -82,7 +94,11 @@
                                         <small class="m-2">
                                             <span class="text-secondary">{{ taxe.code }}: {{ constante.Cotation_getMontant_taxe_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {% set couleur = "text-secondary" %}
+                                            {% if constante.Cotation_getMontant_taxe_payable_par_courtier_solde(cotation) != 0 %}
+                                                {% set couleur = "text-danger" %}
+                                            {% endif %}
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         </small><br/>
                                      {% endif %}
                                 {% endfor %}
@@ -91,7 +107,11 @@
                                     <small class="m-2">
                                         <span class="text-secondary">Rétro-com dûe à {{ constante.Cotation_getPartenaire(cotation) }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Solde dû: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(cotation) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde dû: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         {% if constante.Cotation_hasConditionsSpeciales(cotation) %}
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(cotation) }}).</span>
                                         {% endif %}
