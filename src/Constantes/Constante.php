@@ -692,6 +692,7 @@ class Constante
 
                 //Qu'est-ce qu'on a facturé?
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR) {
+                    // dd("Paiement Taxe", $article);
                     $montant += $proportionPaiement * $article->getMontant();
                 }
                 // dd($article, "Porportion de paiement = " . $proportionPaiement);
@@ -770,7 +771,13 @@ class Constante
 
                 //Qu'est-ce qu'on a facturé?
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
-                    $montant += $proportionPaiement * $article->getMontant();
+                    /** @var RevenuPourCourtier $revenu */
+                    $revenu = $this->revenuPourCourtierRepository->find($article->getIdPoste());
+                    if ($revenu->getTypeRevenu()) {
+                        if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR || $revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                            $montant += $proportionPaiement * $article->getMontant();
+                        }
+                    }
                 }
                 // dd($article, "Porportion de paiement = " . $proportionPaiement);
             }
