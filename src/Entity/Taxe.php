@@ -218,25 +218,25 @@ class Taxe
         return $this->articles;
     }
 
-    public function addArticle(Article $article): static
-    {
-        if (!$this->articles->contains($article)) {
-            $this->articles->add($article);
-            $article->setTaxeFacturee($this);
-        }
+    // public function addArticle(Article $article): static
+    // {
+    //     if (!$this->articles->contains($article)) {
+    //         $this->articles->add($article);
+    //         $article->setTaxeFacturee($this);
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
-    public function removeArticle(Article $article): static
-    {
-        if ($this->articles->removeElement($article)) {
-            // set the owning side to null (unless already changed)
-            if ($article->getTaxeFacturee() === $this) {
-                $article->setTaxeFacturee(null);
-            }
-        }
+    // public function removeArticle(Article $article): static
+    // {
+    //     if ($this->articles->removeElement($article)) {
+    //         // set the owning side to null (unless already changed)
+    //         if ($article->getTaxeFacturee() === $this) {
+    //             $article->setTaxeFacturee(null);
+    //         }
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 }

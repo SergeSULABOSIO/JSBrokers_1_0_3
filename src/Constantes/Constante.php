@@ -23,6 +23,7 @@ use App\Entity\TypeRevenu;
 use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\CotationRepository;
 use App\Repository\RevenuPourCourtierRepository;
+use App\Repository\TaxeRepository;
 use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
 use PhpParser\Node\Stmt\Nop;
@@ -42,7 +43,8 @@ class Constante
         private Security $security,
         private CotationRepository $cotationRepository,
         private AutoriteFiscaleRepository $autoriteFiscaleRepository,
-        private RevenuPourCourtierRepository $revenuPourCourtierRepository
+        private RevenuPourCourtierRepository $revenuPourCourtierRepository,
+        private TaxeRepository $taxeRepository,
     ) {}
 
 
@@ -583,7 +585,7 @@ class Constante
                                         "pourcentage" => $tranche->getPourcentage(),
                                         "montantPayable" => $montant,
                                         "idCible" => $panier->getIdPartenaire(),
-                                        "idPoste" => -1,
+                                        "idPoste" => $panier->getIdPartenaire(),
                                         "idNote" => $panier->getIdNote(),
                                         "idTranche" => $tranche->getId(),
                                     ];
@@ -637,6 +639,31 @@ class Constante
     public function Tranche_getMontant_taxe_payable_par_courtier_payee(?Tranche $tranche): float
     {
         $montant = 0;
+        if (count($tranche->getArticles())) {
+            /** @var Article $article */
+            foreach ($tranche->getArticles() as $articleTranche) {
+                /** @var Article $article */
+                $article = $articleTranche;
+
+                /** @var Note $note */
+                $note = $article->getNote();
+
+                //Quelle proportion de la note a-t-elle été payée (100%?)
+                $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
+
+                //Qu'est-ce qu'on a facturé?
+                if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
+                    /** @var Taxe $taxe */
+                    $taxe = $this->taxeRepository->find($article->getIdPoste());
+                    if ($taxe) {
+                        if ($taxe->getRedevable() == Taxe::REDEVABLE_COURTIER) {
+                            // dd("Paiement Tax", $article);
+                            $montant += $proportionPaiement * $article->getMontant();
+                        }
+                    }
+                }
+            }
+        }
         return $montant;
     }
     public function Tranche_getMontant_taxe_payable_par_courtier_solde(?Tranche $tranche): float
@@ -691,11 +718,16 @@ class Constante
                 $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
 
                 //Qu'est-ce qu'on a facturé?
-                if ($note->getAddressedTo() == Note::TO_ASSUREUR) {
-                    // dd("Paiement Taxe", $article);
-                    $montant += $proportionPaiement * $article->getMontant();
+                if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
+                    /** @var Taxe $taxe */
+                    $taxe = $this->taxeRepository->find($article->getIdPoste());
+                    if ($taxe) {
+                        if ($taxe->getRedevable() == Taxe::REDEVABLE_ASSUREUR) {
+                            // dd("Paiement Tax", $article);
+                            $montant += $proportionPaiement * $article->getMontant();
+                        }
+                    }
                 }
-                // dd($article, "Porportion de paiement = " . $proportionPaiement);
             }
         }
         return $montant;
