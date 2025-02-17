@@ -1173,7 +1173,26 @@ class Constante
     }
     public function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche): float
     {
-        return 0;
+        $montant = 0;
+        if (count($tranche->getArticles())) {
+            /** @var Article $article */
+            foreach ($tranche->getArticles() as $articleTranche) {
+                /** @var Article $article */
+                $article = $articleTranche;
+
+                /** @var Note $note */
+                $note = $article->getNote();
+
+                //Quelle proportion de la note a-t-elle été payée (100%?)
+                $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
+
+                //Qu'est-ce qu'on a facturé?
+                if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
+                    $montant += $proportionPaiement * $article->getMontant();
+                }
+            }
+        }
+        return $montant;
     }
     public function Cotation_getMontant_retrocommissions_payable_par_courtier_solde(?Cotation $cotation): float
     {
