@@ -22,6 +22,7 @@ use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\CotationRepository;
+use App\Repository\RevenuPourCourtierRepository;
 use App\Services\ServiceTaxes;
 use Doctrine\Common\Collections\Collection;
 use PhpParser\Node\Stmt\Nop;
@@ -41,6 +42,7 @@ class Constante
         private Security $security,
         private CotationRepository $cotationRepository,
         private AutoriteFiscaleRepository $autoriteFiscaleRepository,
+        private RevenuPourCourtierRepository $revenuPourCourtierRepository
     ) {}
 
 
@@ -676,6 +678,25 @@ class Constante
     public function Tranche_getMontant_taxe_payable_par_assureur_payee(?Tranche $tranche): float
     {
         $montant = 0;
+        if (count($tranche->getArticles())) {
+            /** @var Article $article */
+            foreach ($tranche->getArticles() as $articleTranche) {
+                /** @var Article $article */
+                $article = $articleTranche;
+
+                /** @var Note $note */
+                $note = $article->getNote();
+
+                //Quelle proportion de la note a-t-elle été payée (100%?)
+                $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
+
+                //Qu'est-ce qu'on a facturé?
+                if ($note->getAddressedTo() == Note::TO_ASSUREUR) {
+                    $montant += $proportionPaiement * $article->getMontant();
+                }
+                // dd($article, "Porportion de paiement = " . $proportionPaiement);
+            }
+        }
         return $montant;
     }
     public function Tranche_getMontant_taxe_payable_par_assureur_solde(?Tranche $tranche): float
@@ -743,32 +764,14 @@ class Constante
 
                 /** @var Note $note */
                 $note = $article->getNote();
-                $montantNote = $this->Note_getMontant_payable($note);
-                $montantNotePaye = $this->Note_getMontant_paye($note);
 
                 //Quelle proportion de la note a-t-elle été payée (100%?)
-                $proportionPaiement = $montantNotePaye / $montantNote;
+                $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
 
                 //Qu'est-ce qu'on a facturé?
-                switch ($note->getAddressedTo()) {
-                    case Note::TO_ASSUREUR:
-                        // dd("Addressé à l'assureur ", $article);
-                        break;
-                    case Note::TO_CLIENT:
-                        // dd("Addressé au client");
-                        break;
-                    case Note::TO_AUTORITE_FISCALE:
-                        // dd("Addressé à l'autorité fiscale");
-                        break;
-                    case Note::TO_PARTENAIRE:
-                        // dd("Addressé au partenaire");
-                        break;
-
-                    default:
-                        # code...
-                        break;
+                if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
+                    $montant += $proportionPaiement * $article->getMontant();
                 }
-
                 // dd($article, "Porportion de paiement = " . $proportionPaiement);
             }
         }
