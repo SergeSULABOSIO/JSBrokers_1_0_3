@@ -70,7 +70,7 @@
                                     {% if constante.Tranche_getMontant_prime_payable_par_client_solde(tranche) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde dû: {{ constante.Tranche_getMontant_prime_payable_par_client_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Tranche_getMontant_prime_payable_par_client_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {# Section commissions #}
                                 <small class="m-2">

@@ -1070,6 +1070,14 @@ class Constante
     {
         return $cotation->getAvenants()[0] != null || count($cotation->getAvenants()) != 0;
     }
+    public function RevenuPourCourtier_isBound(?RevenuPourCourtier $revenuPourCourtier): bool
+    {
+        if ($revenuPourCourtier != null) {
+            if ($revenuPourCourtier->getCotation() != null) {
+                return $revenuPourCourtier->getCotation()->getAvenants()[0] != null || count($revenuPourCourtier->getCotation()->getAvenants()) != 0;
+            }
+        }
+    }
     private function Cotation_getSommeCommissionPureRisque(?Cotation $cotation): float
     {
         $somme = 0;
