@@ -271,22 +271,22 @@ class TypeRevenu
         return $this->articles;
     }
 
-    public function addArticle(Article $article): static
-    {
-        if (!$this->articles->contains($article)) {
-            $this->articles->add($article);
-            $article->addRevenu($this);
-        }
+    // public function addArticle(Article $article): static
+    // {
+    //     if (!$this->articles->contains($article)) {
+    //         $this->articles->add($article);
+    //         $article->addRevenu($this);
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
-    public function removeArticle(Article $article): static
-    {
-        if ($this->articles->removeElement($article)) {
-            $article->removeRevenu($this);
-        }
+    // public function removeArticle(Article $article): static
+    // {
+    //     if ($this->articles->removeElement($article)) {
+    //         $article->removeRevenu($this);
+    //     }
 
-        return $this;
-    }
+    //     return $this;
+    // }
 }

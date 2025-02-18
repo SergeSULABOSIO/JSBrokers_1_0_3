@@ -507,6 +507,18 @@ class Constante
         $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($revenu->getCotation()), true);
         return $net + $taxe;
     }
+    public function Revenu_getNomPayable(?RevenuPourCourtier $revenu): string
+    {
+        if ($revenu != null) {
+            if ($revenu->getTypeRevenu() != null) {
+                return match ($revenu->getTypeRevenu()->getRedevable()) {
+                    TypeRevenu::REDEVABLE_ASSUREUR => $revenu->getCotation()->getAssureur()->getNom(),
+                    TypeRevenu::REDEVABLE_CLIENT => $revenu->getCotation()->getPiste()->getClient()->getNom(),
+                };
+            }
+        }
+        return "Indéfini";
+    }
 
     public function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
     {

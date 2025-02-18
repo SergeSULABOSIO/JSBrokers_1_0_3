@@ -52,7 +52,7 @@
                                     {% if constante.RevenuPourCourtier_isBound(revenucourtier) %}
                                         (bound)
                                     {% endif %}
-                                    {{ revenucourtier.nom }}                 
+                                    {{ revenucourtier.nom }} • {{ revenucourtier.typeRevenu.nom }} • dû(e) par {{ constante.Revenu_getNomPayable(revenucourtier) }}                 
                                 </a><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
