@@ -71,27 +71,17 @@
                                     {% endif %}
                                     {{ revenucourtier.nom }}                 
                                 </a><br/>
-                                {# Section prime #}
-                                {# <small class="m-2">
-                                    <span class="text-secondary fw-bold">Prime: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Tranche_getMontant_prime_payable_par_client_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Tranche_getMontant_prime_payable_par_client_solde(tranche) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Tranche_getMontant_prime_payable_par_client_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/> #}
                                 {# Section commissions #}
                                 {# <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Tranche_getMontant_commission_pure(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Tranche_getMontant_commission_ht(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Tranche_getMontant_commission_ttc(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Tranche_getMontant_commission_ttc_collectee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold">Com. pure: {{ constante.Tranche_getMontant_commission_pure(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Com. ht: {{ constante.Tranche_getMontant_commission_ht(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • C. totale: {{ constante.Tranche_getMontant_commission_ttc(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • C. collectée: {{ constante.Tranche_getMontant_commission_ttc_collectee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
                                     {% if constante.Tranche_getMontant_commission_ttc_solde(tranche) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_commission_ttc_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="{{couleur}} fw-bold"> • Solde: {{ constante.Tranche_getMontant_commission_ttc_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/> #}
                                 {# {% for taxe in serviceTaxe.taxes %} #}
                                      {# {% if taxe.redevable == 0 %} #}
@@ -163,10 +153,9 @@
                                             {# Supprimer #}
                                         </button>
                                     </form>
-                                    <div class="dropdown">
+                                    {# <div class="dropdown">
                                         <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
                                         </a>
                                         <ul class="dropdown-menu">
                                             <li>
@@ -188,7 +177,7 @@
                                                 </a>
                                             </li>
                                         </ul>
-                                    </div>
+                                    </div> #}
                                 </div>
                             </td>
                         </tr>
