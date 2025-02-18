@@ -2,26 +2,28 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Piste;
+use App\Entity\Tache;
+use App\Entity\Invite;
+use App\Entity\Avenant;
+use App\Form\PisteType;
+use App\Form\TacheType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
+use App\Services\ServiceTaxes;
 use App\Constantes\MenuActivator;
-use App\Entity\Avenant;
-use App\Entity\Invite;
-use App\Entity\Piste;
+use App\Services\ServiceMonnaies;
 use App\Entity\RevenuPourCourtier;
-use App\Entity\Tache;
-use App\Form\PisteType;
+use App\Repository\PisteRepository;
+use App\Repository\TacheRepository;
 use App\Form\RevenuPourCourtierType;
-use App\Form\TacheType;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\PisteRepository;
-use App\Repository\RevenuPourCourtierRepository;
-use App\Repository\TacheRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Repository\RevenuPourCourtierRepository;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -42,6 +44,8 @@ class RevenuCourtierController extends AbstractController
         private InviteRepository $inviteRepository,
         private RevenuPourCourtierRepository $revenuCourtierRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -59,6 +63,8 @@ class RevenuCourtierController extends AbstractController
             'revenucourtiers' => $this->revenuCourtierRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
             'activator' => $this->activator,
         ]);
     }

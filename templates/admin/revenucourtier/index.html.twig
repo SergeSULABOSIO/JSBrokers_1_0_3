@@ -47,23 +47,6 @@
                     {# Boucler les donnees #}
                     {% for revenucourtier in revenucourtiers %}
                         <tr id="row_revenucourtier_{{ revenucourtier.id }}">
-                            
-                            
-                            {# A SUPPRIMER PLUS TARD #}
-                            {# <td>
-                                <a class="m-2" href="{{ path('admin.revenucourtier.edit', {'idRevenucourtier':revenucourtier.id, 'idEntreprise': entreprise.id})}}">
-                                    XXX $ | {{ revenucourtier.nom }}
-                                    {% if revenucourtier.cotation != null %}
-                                        | {{revenucourtier.cotation.nom}}
-                                    {% endif %}
-                                    {% if revenucourtier.cotation.piste != null %}
-                                        | {{revenucourtier.cotation.piste.nom}}
-                                    {% endif %}
-                                </a>
-                            </td> #}
-
-
-                            {# NOUVELLE VERSION A GANRDER #}
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.revenucourtier.edit', {'idRevenucourtier':revenucourtier.id, 'idEntreprise': entreprise.id})}}">
                                     {% if constante.RevenuPourCourtier_isBound(revenucourtier) %}
@@ -72,17 +55,17 @@
                                     {{ revenucourtier.nom }}                 
                                 </a><br/>
                                 {# Section commissions #}
-                                {# <small class="m-2">
-                                    <span class="text-secondary fw-bold">Com. pure: {{ constante.Tranche_getMontant_commission_pure(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Com. ht: {{ constante.Tranche_getMontant_commission_ht(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • C. totale: {{ constante.Tranche_getMontant_commission_ttc(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • C. collectée: {{ constante.Tranche_getMontant_commission_ttc_collectee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Tranche_getMontant_commission_ttc_solde(tranche) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}} fw-bold"> • Solde: {{ constante.Tranche_getMontant_commission_ttc_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/> #}
+                                <small class="m-2">
+                                    <span class="text-secondary fw-bold">Com. pure: {{ constante.Revenu_getMontant_pure(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Com. ht: {{ constante.Revenu_getMontant_ht(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • C. totale: {{ constante.Revenu_getMontant_ttc(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {# <span class="text-secondary fw-bold"> • C. collectée: {{ constante.RevenuPourCourtier_getMontant_commission_ttc_collectee(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    {# {% set couleur = "text-secondary" %} #}
+                                    {# {% if constante.RevenuPourCourtier_getMontant_commission_ttc_solde(revenucourtier) != 0 %} #}
+                                        {# {% set couleur = "text-danger" %} #}
+                                    {# {% endif %} #}
+                                    {# <span class="{{couleur}} fw-bold"> • Solde: {{ constante.RevenuPourCourtier_getMontant_commission_ttc_solde(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                </small><br/>
                                 {# {% for taxe in serviceTaxe.taxes %} #}
                                      {# {% if taxe.redevable == 0 %} #}
                                         {# Section Taxes : TVA#}

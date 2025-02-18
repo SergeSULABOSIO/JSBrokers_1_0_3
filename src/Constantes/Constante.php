@@ -503,14 +503,21 @@ class Constante
     }
     public function Revenu_getMontant_ttc(?RevenuPourCourtier $revenu): float
     {
-        $net = $this->Revenu_getMontant_Net($revenu);
+        $net = $this->Revenu_getMontant_ht($revenu);
         $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($revenu->getCotation()), true);
         return $net + $taxe;
     }
 
-    public function Revenu_getMontant_Net(?RevenuPourCourtier $revenu): float
+    public function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
     {
         return $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
+    }
+
+    public function Revenu_getMontant_pure(?RevenuPourCourtier $revenu): float
+    {
+        $comNette = $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
+        $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $this->isIARD($revenu->getCotation()), false);
+        return $comNette - $taxeCourtier;
     }
 
 
@@ -943,22 +950,16 @@ class Constante
             /** @var Chargement $typeChargementCible */
             $typeChargementCible = $typeRevenu->getTypeChargement();
             $montantChargementCible = 0;
-            // dd("Je suis ici!", $revenuPourCourtier, $typeRevenu, $typeChargementCible->getNom());
-
             //On doit récupérer le montant ou la valeur de ce composant
             foreach ($cotation->getChargements() as $loading) {
-                // dd($loading);
                 if ($loading->getType()) {
                     if ($loading->getType()->getId() == $typeChargementCible->getId()) {
                         /** @var ChargementPourPrime $chargement */
                         $chargement = $loading;
                         $montantChargementCible = $chargement->getMontantFlatExceptionel();
-                        // dd($chargement->getNom(), $montantChargementCible);
                     }
                 }
             }
-            // dd($typeRevenu, $montantChargementCible, $cotation->getChargements());
-
             //Comment s'applique le taux sur de commission sur le montant du chargement / composant?
             if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
                 if ($cotation->getPiste()) {
