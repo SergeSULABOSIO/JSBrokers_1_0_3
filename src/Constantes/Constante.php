@@ -539,6 +539,11 @@ class Constante
         }
         return $montantCollecte;
     }
+    public function Revenu_getMontant_ttc_solde(?RevenuPourCourtier $revenu): float
+    {
+        $solde = $this->Revenu_getMontant_ttc($revenu) - $this->Revenu_getMontant_ttc_collecte($revenu);
+        return round($solde, 4);
+    }
 
     public function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
     {
