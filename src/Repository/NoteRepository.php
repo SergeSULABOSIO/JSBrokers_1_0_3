@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Note;
+use App\Entity\RevenuPourCourtier;
 use Doctrine\Persistence\ManagerRegistry;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -18,8 +19,7 @@ class NoteRepository extends ServiceEntityRepository
         private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
-    )
-    {
+    ) {
         parent::__construct($registry, Note::class);
     }
 
@@ -47,6 +47,21 @@ class NoteRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function findAllNotesDueByInsurerAndClient(?RevenuPourCourtier $revenu): array
+    {
+        return $this->createQueryBuilder("note")
+            //via invite
+            ->leftJoin("note.invite", "invite")
+            ->leftJoin("note.articles", "article")
+            //condition
+            ->where("article.idPoste = :idPoste")
+            ->setParameter('idPoste', '' . $revenu->getId() . '')
+            ->orderBy('note.id', 'DESC')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
 
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {

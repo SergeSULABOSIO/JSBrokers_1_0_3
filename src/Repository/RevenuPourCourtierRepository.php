@@ -18,8 +18,7 @@ class RevenuPourCourtierRepository extends ServiceEntityRepository
         private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
         private Security $security
-    )
-    {
+    ) {
         parent::__construct($registry, RevenuPourCourtier::class);
     }
 
@@ -48,6 +47,8 @@ class RevenuPourCourtierRepository extends ServiceEntityRepository
     //        ;
     //    }
 
+    
+
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
@@ -56,7 +57,7 @@ class RevenuPourCourtierRepository extends ServiceEntityRepository
                 ->leftJoin("cotation.piste", "piste")
                 ->leftJoin("piste.invite", "invite")
                 ->where('invite.entreprise = :entrepriseId')
-                ->setParameter('entrepriseId', ''.$idEntreprise.'')
+                ->setParameter('entrepriseId', '' . $idEntreprise . '')
                 ->orderBy('revenu.id', 'DESC'),
             $page,
             20,

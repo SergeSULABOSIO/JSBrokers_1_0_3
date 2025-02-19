@@ -56,10 +56,10 @@
                                 </a><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
-                                    <span class="text-secondary fw-bold">Com. pure: {{ constante.Revenu_getMontant_pure(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Com. ht: {{ constante.Revenu_getMontant_ht(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">Com. pure: {{ constante.Revenu_getMontant_pure(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. ht: {{ constante.Revenu_getMontant_ht(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary fw-bold"> • C. totale: {{ constante.Revenu_getMontant_ttc(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {# <span class="text-secondary fw-bold"> • C. collectée: {{ constante.RevenuPourCourtier_getMontant_commission_ttc_collectee(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    <span class="text-secondary"> • C. collectée: {{ constante.Revenu_getMontant_ttc_collecte(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {# {% set couleur = "text-secondary" %} #}
                                     {# {% if constante.RevenuPourCourtier_getMontant_commission_ttc_solde(revenucourtier) != 0 %} #}
                                         {# {% set couleur = "text-danger" %} #}

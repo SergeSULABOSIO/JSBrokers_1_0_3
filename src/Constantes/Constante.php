@@ -20,8 +20,10 @@ use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
+use App\Entity\Utilisateur;
 use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\CotationRepository;
+use App\Repository\NoteRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use App\Repository\TaxeRepository;
 use App\Services\ServiceTaxes;
@@ -44,6 +46,7 @@ class Constante
         private CotationRepository $cotationRepository,
         private AutoriteFiscaleRepository $autoriteFiscaleRepository,
         private RevenuPourCourtierRepository $revenuPourCourtierRepository,
+        private NoteRepository $noteRepository,
         private TaxeRepository $taxeRepository,
     ) {}
 
@@ -519,6 +522,23 @@ class Constante
         }
         return "Indéfini";
     }
+    public function Revenu_getMontant_ttc_collecte(?RevenuPourCourtier $revenu): float
+    {
+        $montantCollecte = 0;
+        $allNotesDueByInsurerAndClient = $this->noteRepository->findAllNotesDueByInsurerAndClient($revenu);
+        /** @var Note $note */
+        foreach ($allNotesDueByInsurerAndClient as $note) {
+            /** @var Article $article */
+            foreach ($note->getArticles() as $article) {
+                if ($article->getIdPoste() == $revenu->getId()) {
+                    $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
+                    $montantCollecte += $proportionPaiement * $article->getMontant();
+                    // dd("Montant facturé: " . $montantFacture, "Montant collectée: " . $montantCollecte, $article, $note);
+                }
+            }
+        }
+        return $montantCollecte;
+    }
 
     public function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
     {
@@ -835,15 +855,14 @@ class Constante
                 /** @var Note $note */
                 $note = $article->getNote();
 
-                //Quelle proportion de la note a-t-elle été payée (100%?)
-                $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
-
                 //Qu'est-ce qu'on a facturé?
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     /** @var RevenuPourCourtier $revenu */
                     $revenu = $this->revenuPourCourtierRepository->find($article->getIdPoste());
                     if ($revenu->getTypeRevenu()) {
                         if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR || $revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                            //Quelle proportion de la note a-t-elle été payée (100%?)
+                            $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
                             $montant += $proportionPaiement * $article->getMontant();
                         }
                     }
