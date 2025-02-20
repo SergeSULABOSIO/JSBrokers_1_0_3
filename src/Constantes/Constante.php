@@ -749,7 +749,7 @@ class Constante
         }
         return $tabPostesFacturables;
     }
-    public function Tranche_isAlreadyInvoiced(?Tranche $tranche, $posteFacturable)
+    public function Tranche_isAlreadyInADifferentNote(?Tranche $tranche, $posteFacturable)
     {
         // dd($tranche->getArticles());
         /** @var Article $article */
