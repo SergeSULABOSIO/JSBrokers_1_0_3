@@ -571,22 +571,63 @@ class Constante
     {
         $montantPaye = 0;
         if ($revenu != null) {
-           if ($revenu->getCotation() != null) {
-            if (count($revenu->getCotation()->getTranches()) != 0) {
-                /** @var Tranche $tranche */
-                // dd($revenu->getCotation()->getTranches());
-                foreach ($revenu->getCotation()->getTranches() as $tranche) {
-                    $montantPaye += $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
-                    // dd($tranche);
+            if ($revenu->getCotation() != null) {
+                if (count($revenu->getCotation()->getTranches()) != 0) {
+                    /** @var Tranche $tranche */
+                    // dd($revenu->getCotation()->getTranches());
+                    foreach ($revenu->getCotation()->getTranches() as $tranche) {
+                        $montantPaye += $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
+                        // dd($tranche);
+                    }
                 }
             }
-           }
+        }
+        return $montantPaye;
+    }
+    public function Revenu_getMontant_taxe_payable_par_courtier_payee(?RevenuPourCourtier $revenu): float
+    {
+        $montantPaye = 0;
+        if ($revenu != null) {
+            if ($revenu->getCotation() != null) {
+                if (count($revenu->getCotation()->getTranches()) != 0) {
+                    /** @var Tranche $tranche */
+                    // dd($revenu->getCotation()->getTranches());
+                    foreach ($revenu->getCotation()->getTranches() as $tranche) {
+                        $montantPaye += $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche);
+                        // dd($tranche);
+                    }
+                }
+            }
         }
         return $montantPaye;
     }
     public function Revenu_getMontant_taxe_payable_par_assureur_solde(?RevenuPourCourtier $revenu)
     {
         $solde = $this->Revenu_getMontant_taxe_payable_par_assureur($revenu) - $this->Revenu_getMontant_taxe_payable_par_assureur_payee($revenu);
+        return round($solde, 4);
+    }
+    public function Revenu_getMontant_taxe_payable_par_courtier_solde(?RevenuPourCourtier $revenu)
+    {
+        $solde = $this->Revenu_getMontant_taxe_payable_par_courtier($revenu) - $this->Revenu_getMontant_taxe_payable_par_courtier_payee($revenu);
+        return round($solde, 4);
+    }
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu): float
+    {
+        $montant = 0;
+        if ($revenu != null) {
+            if ($revenu->getCotation() != null) {
+                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation());
+            }
+        }
+        return $montant;
+    }
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu): float
+    {
+        return $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($revenu->getCotation());
+    }
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier_solde(?RevenuPourCourtier $revenu)
+    {
+        $solde = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu) - $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu);
         return round($solde, 4);
     }
 
@@ -707,6 +748,18 @@ class Constante
             }
         }
         return $tabPostesFacturables;
+    }
+    public function Tranche_isAlreadyInvoiced(?Tranche $tranche, $posteFacturable)
+    {
+        // dd($tranche->getArticles());
+        /** @var Article $article */
+        foreach ($tranche->getArticles() as $article) {
+            if($article->getNote() != null){
+                return $article->getNote()->getAddressedTo() == $posteFacturable['addressedTo'];
+            }
+        }
+        // dd("Il faut trouver si le poste ", $posteFacturable, " avait déjà été payée dans la tranche " . $tranche->getNom());
+        return false;
     }
     public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche): float
     {
