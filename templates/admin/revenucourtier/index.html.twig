@@ -52,8 +52,8 @@
                                     {% if constante.RevenuPourCourtier_isBound(revenucourtier) %}
                                         (bound)
                                     {% endif %}
-                                    {{ revenucourtier.nom }} • {{ revenucourtier.typeRevenu.nom }} • dû(e) par {{ constante.Revenu_getNomPayable(revenucourtier) }}  
-                                     • {{ revenucourtier.cotation.tranches|length }} Tranches               
+                                    {{ revenucourtier.nom }} • {{ revenucourtier.typeRevenu.nom }}, payable par {{ constante.Revenu_getNomPayable(revenucourtier) }}  
+                                    en {{ revenucourtier.cotation.tranches|length }} Tranches               
                                 </a><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
