@@ -498,6 +498,15 @@ class Constante
     /**
      * REVENU POUR COURTIER
      */
+    public function Revenu_getNomRedevable(?TypeRevenu $typeRevenu)
+    {
+        return match ($typeRevenu->getRedevable()) {
+            TypeRevenu::REDEVABLE_ASSUREUR => "Redevable par l'assureur",
+            TypeRevenu::REDEVABLE_CLIENT => "Redevable par le client",
+            TypeRevenu::REDEVABLE_PARTENAIRE => "Redevable par le partenaire",
+            TypeRevenu::REDEVABLE_REASSURER => "Redevable par le réassureur",
+        };
+    }
     public function Revenu_getMontant_ttc_tranche(?RevenuPourCourtier $revenu, ?Tranche $tranche): float
     {
         if ($tranche != null && $revenu != null) {
@@ -751,15 +760,40 @@ class Constante
     }
     public function Tranche_isAlreadyInADifferentNote(?Tranche $tranche, $posteFacturable)
     {
+        $rep = false;
         // dd($tranche->getArticles());
         /** @var Article $article */
         foreach ($tranche->getArticles() as $article) {
-            if($article->getNote() != null){
-                return $article->getNote()->getAddressedTo() == $posteFacturable['addressedTo'];
+            if ($article->getNote() != null) {
+                switch ($posteFacturable['addressedTo']) {
+                    case Note::TO_AUTORITE_FISCALE:
+                        if ($article->getNote()->getAutoritefiscale()) {
+                            $rep = $article->getNote()->getAutoritefiscale()->getId() == $posteFacturable['idCible'];
+                        }
+                        break;
+                    case Note::TO_ASSUREUR:
+                        if ($article->getNote()->getAssureur()) {
+                            $rep = $article->getNote()->getAssureur()->getId() == $posteFacturable['idCible'];
+                        }
+                        break;
+                    case Note::TO_CLIENT:
+                        if ($article->getNote()->getClient()) {
+                            $rep = $article->getNote()->getClient()->getId() == $posteFacturable['idCible'];
+                        }
+                        break;
+                    case Note::TO_PARTENAIRE:
+                        if ($article->getNote()->getPartenaire()) {
+                            $rep = $article->getNote()->getPartenaire()->getId() == $posteFacturable['idCible'];
+                        }
+                        break;
+                    default:
+                        # code...
+                        break;
+                }
             }
         }
         // dd("Il faut trouver si le poste ", $posteFacturable, " avait déjà été payée dans la tranche " . $tranche->getNom());
-        return false;
+        return $rep;
     }
     public function Tranche_getMontant_taxe_payable_par_courtier(?Tranche $tranche): float
     {

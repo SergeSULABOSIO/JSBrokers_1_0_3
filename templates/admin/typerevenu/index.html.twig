@@ -48,9 +48,31 @@
                     {% for typerevenu in typerevenus %}
                         <tr id="row_typerevenu_{{ typerevenu.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.typerevenu.edit', {'idTypeRevenu':typerevenu.id, 'idEntreprise': entreprise.id})}}">
+                                <a class="m-2 fw-bold" href="{{ path('admin.typerevenu.edit', {'idTypeRevenu':typerevenu.id, 'idEntreprise': entreprise.id})}}">
                                     {{ typerevenu.nom }}
-                                </a>
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">{{ constante.Revenu_getNomRedevable(typerevenu) }}</span> 
+                                    {% if typerevenu.pourcentage != 0 %}
+                                        <span class="text-secondary"> • {{typerevenu.pourcentage * 100}}% de {{ typerevenu.typeChargement.nom }}</span> 
+                                    {% endif %}
+                                    {% if typerevenu.montantflat != 0 %}
+                                        <span class="text-secondary"> • Montant fixe: {{typerevenu.montantflat |format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% endif %}
+                                    {% if typerevenu.shared == true %}
+                                        <span class="text-secondary"> • Partageable</span> 
+                                    {% else %}
+                                        <span class="text-danger"> • Non partageable</span> 
+                                    {% endif %}
+                                    {% if typerevenu.multipayments == true %}
+                                        <span class="text-secondary"> • Multi-tranches</span> 
+                                    {% else %}
+                                        <span class="text-danger"> • Mono-tranche</span> 
+                                    {% endif %}
+                                    {% if typerevenu.appliquerPourcentageDuRisque == true %}
+                                        <span class="text-secondary"> • Le taux de commission lié au risque prévaut</span> 
+                                    {% endif %}
+                                </small>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

@@ -48,9 +48,12 @@
                     {% for chargement in chargements %}
                         <tr id="row_chargement_{{ chargement.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.chargement.edit', {'idChargement':chargement.id, 'idEntreprise': entreprise.id})}}">
+                                <a class="m-2 fw-bold" href="{{ path('admin.chargement.edit', {'idChargement':chargement.id, 'idEntreprise': entreprise.id})}}">
                                     {{ chargement.nom }}
-                                </a>
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">{{ chargement.description }}</span> 
+                                </small>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
