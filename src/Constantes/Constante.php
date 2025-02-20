@@ -570,25 +570,26 @@ class Constante
     public function Revenu_getMontant_taxe_payable_par_assureur_payee(?RevenuPourCourtier $revenu): float
     {
         $montantPaye = 0;
-        // dd($this->serviceTaxes->getTaxesPayableParAssureur());
-        /** @var Taxe $taxeAssureur */
-        foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAssureur) {
-            $allArticleWhereTaxeDue = $this->articleRepository->findAllArticlesWhereTaxeDue($revenu, $taxeAssureur);
-            // dd($allArticleWhereTaxeDue);
-            $mtPaye = 0;
-            /** @var Article $article */
-            foreach ($allArticleWhereTaxeDue as $article) {
-                // /** @var Tranche $tranche */
-                // $tranche = $article->getTranche();
-                $proportionPaiement = $this->Note_getMontant_paye($article->getNote()) / $this->Note_getMontant_payable($article->getNote());
-                $mtPaye += $proportionPaiement * $article->getMontant();
-                // dd("Pro. Paiement: " . $proportionPaiement, "Mont Paye: " . $mtPaye, "Mont du: " . $article->getMontant(), $tranche->getCotation()->getId(), $revenu->getCotation()->getId());
+        if ($revenu != null) {
+           if ($revenu->getCotation() != null) {
+            if (count($revenu->getCotation()->getTranches()) != 0) {
+                /** @var Tranche $tranche */
+                // dd($revenu->getCotation()->getTranches());
+                foreach ($revenu->getCotation()->getTranches() as $tranche) {
+                    $montantPaye += $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
+                    // dd($tranche);
+                }
             }
-            $montantPaye = $mtPaye;
-            // dd($mtPaye);
+           }
         }
         return $montantPaye;
     }
+    public function Revenu_getMontant_taxe_payable_par_assureur_solde(?RevenuPourCourtier $revenu)
+    {
+        $solde = $this->Revenu_getMontant_taxe_payable_par_assureur($revenu) - $this->Revenu_getMontant_taxe_payable_par_assureur_payee($revenu);
+        return round($solde, 4);
+    }
+
 
 
 

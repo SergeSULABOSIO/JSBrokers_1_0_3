@@ -43,19 +43,19 @@ class ArticleRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function findAllArticlesWhereTaxeDue(?RevenuPourCourtier $revenu, ?Taxe $taxe): array
-    {
-        return $this->createQueryBuilder("article")
-            //via invite
-            ->leftJoin("article.tranche", "tranche")
-            //condition
-            ->where("article.idPoste = :idPoste")//Adressée à l'autorité fiscale
-            ->andWhere("tranche.cotation = :idCotation")
-            ->setParameter('idPoste', '' . $taxe->getId() . '')
-            ->setParameter('idCotation', '' . $revenu->getCotation()->getId() . '')
-            ->orderBy('article.id', 'DESC')
-            ->getQuery()
-            ->getResult()
-        ;
-    }
+    // public function findAllArticlesWhereTaxeDue(?RevenuPourCourtier $revenu, ?Taxe $taxe): array
+    // {
+    //     return $this->createQueryBuilder("article")
+    //         //via invite
+    //         ->leftJoin("article.tranche", "tranche")
+    //         //condition
+    //         ->where("article.idPoste = :idPoste")//Adressée à l'autorité fiscale
+    //         ->andWhere("tranche.cotation = :idCotation")
+    //         ->setParameter('idPoste', '' . $taxe->getId() . '')
+    //         ->setParameter('idCotation', '' . $revenu->getCotation()->getId() . '')
+    //         ->orderBy('article.id', 'DESC')
+    //         ->getQuery()
+    //         ->getResult()
+    //     ;
+    // }
 }

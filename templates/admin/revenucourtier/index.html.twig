@@ -52,7 +52,8 @@
                                     {% if constante.RevenuPourCourtier_isBound(revenucourtier) %}
                                         (bound)
                                     {% endif %}
-                                    {{ revenucourtier.nom }} • {{ revenucourtier.typeRevenu.nom }} • dû(e) par {{ constante.Revenu_getNomPayable(revenucourtier) }}                 
+                                    {{ revenucourtier.nom }} • {{ revenucourtier.typeRevenu.nom }} • dû(e) par {{ constante.Revenu_getNomPayable(revenucourtier) }}  
+                                     • {{ revenucourtier.cotation.tranches|length }} Tranches               
                                 </a><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
@@ -72,11 +73,11 @@
                                         <small class="m-2">
                                             <span class="text-secondary">{{ taxe.code }}: {{ constante.Revenu_getMontant_taxe_payable_par_assureur(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Revenu_getMontant_taxe_payable_par_assureur_payee(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {# {% set couleur = "text-secondary" %} #}
-                                            {# {% if constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche) != 0 %} #}
-                                                {# {% set couleur = "text-danger" %} #}
-                                            {# {% endif %} #}
-                                            {# <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                            {% set couleur = "text-secondary" %}
+                                            {% if constante.Revenu_getMontant_taxe_payable_par_assureur_solde(revenucourtier) != 0 %}
+                                                {% set couleur = "text-danger" %}
+                                            {% endif %}
+                                            <span class="{{couleur}}"> • Solde: {{ constante.Revenu_getMontant_taxe_payable_par_assureur_solde(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         </small><br/>
                                      {% endif %}
                                      {% if taxe.redevable == 1 %}
