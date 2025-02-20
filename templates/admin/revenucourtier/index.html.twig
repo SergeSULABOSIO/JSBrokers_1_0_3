@@ -66,32 +66,32 @@
                                     {% endif %}
                                     <span class="{{couleur}}"> • Solde: {{ constante.Revenu_getMontant_ttc_solde(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
-                                {# {% for taxe in serviceTaxe.taxes %} #}
-                                     {# {% if taxe.redevable == 0 %} #}
+                                {% for taxe in serviceTaxe.taxes %}
+                                     {% if taxe.redevable == 0 %}
                                         {# Section Taxes : TVA#}
-                                        {# <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Tranche_getMontant_taxe_payable_par_assureur(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/> #}
-                                     {# {% endif %} #}
-                                     {# {% if taxe.redevable == 1 %} #}
+                                        <small class="m-2">
+                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Revenu_getMontant_taxe_payable_par_assureur(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Revenu_getMontant_taxe_payable_par_assureur_payee(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {# {% set couleur = "text-secondary" %} #}
+                                            {# {% if constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche) != 0 %} #}
+                                                {# {% set couleur = "text-danger" %} #}
+                                            {# {% endif %} #}
+                                            {# <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                        </small><br/>
+                                     {% endif %}
+                                     {% if taxe.redevable == 1 %}
                                         {# Section Taxe: ARCA #}
-                                        {# <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Tranche_getMontant_taxe_payable_par_courtier(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/> #}
-                                     {# {% endif %} #}
-                                {# {% endfor %} #}
+                                        <small class="m-2">
+                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Revenu_getMontant_taxe_payable_par_courtier(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {# <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Revenu_getMontant_taxe_payable_par_courtier_payee(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                            {# {% set couleur = "text-secondary" %} #}
+                                            {# {% if constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche) != 0 %} #}
+                                                {# {% set couleur = "text-danger" %} #}
+                                            {# {% endif %} #}
+                                            {# <span class="{{couleur}}"> • Solde dû: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                        </small><br/>
+                                     {% endif %}
+                                {% endfor %}
                                 {# {% if constante.Tranche_getPartenaire(tranche) %} #}
                                     {# Retro-commission #}
                                     {# <small class="m-2">

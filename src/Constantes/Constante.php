@@ -21,6 +21,7 @@ use App\Entity\Taxe;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
+use App\Repository\ArticleRepository;
 use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\CotationRepository;
 use App\Repository\NoteRepository;
@@ -47,6 +48,7 @@ class Constante
         private AutoriteFiscaleRepository $autoriteFiscaleRepository,
         private RevenuPourCourtierRepository $revenuPourCourtierRepository,
         private NoteRepository $noteRepository,
+        private ArticleRepository $articleRepository,
         private TaxeRepository $taxeRepository,
     ) {}
 
@@ -525,9 +527,9 @@ class Constante
     public function Revenu_getMontant_ttc_collecte(?RevenuPourCourtier $revenu): float
     {
         $montantCollecte = 0;
-        $allNotesDueByInsurerAndClient = $this->noteRepository->findAllNotesDueByInsurerAndClient($revenu);
+        $allNotesComDueByInsurerAndClient = $this->noteRepository->findAllNotesDueByInsurerAndClient($revenu);
         /** @var Note $note */
-        foreach ($allNotesDueByInsurerAndClient as $note) {
+        foreach ($allNotesComDueByInsurerAndClient as $note) {
             /** @var Article $article */
             foreach ($note->getArticles() as $article) {
                 if ($article->getIdPoste() == $revenu->getId()) {
@@ -544,7 +546,6 @@ class Constante
         $solde = $this->Revenu_getMontant_ttc($revenu) - $this->Revenu_getMontant_ttc_collecte($revenu);
         return round($solde, 4);
     }
-
     public function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
     {
         return $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
@@ -555,6 +556,38 @@ class Constante
         $comNette = $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
         $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $this->isIARD($revenu->getCotation()), false);
         return $comNette - $taxeCourtier;
+    }
+    public function Revenu_getMontant_taxe_payable_par_assureur(?RevenuPourCourtier $revenu): float
+    {
+        $netRev = $this->Revenu_getMontant_ht($revenu);
+        return $this->serviceTaxes->getMontantTaxe($netRev, $this->isIARD($revenu->getCotation()), true);
+    }
+    public function Revenu_getMontant_taxe_payable_par_courtier(?RevenuPourCourtier $revenu): float
+    {
+        $netRev = $this->Revenu_getMontant_ht($revenu);
+        return $this->serviceTaxes->getMontantTaxe($netRev, $this->isIARD($revenu->getCotation()), false);
+    }
+    public function Revenu_getMontant_taxe_payable_par_assureur_payee(?RevenuPourCourtier $revenu): float
+    {
+        $montantPaye = 0;
+        // dd($this->serviceTaxes->getTaxesPayableParAssureur());
+        /** @var Taxe $taxeAssureur */
+        foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAssureur) {
+            $allArticleWhereTaxeDue = $this->articleRepository->findAllArticlesWhereTaxeDue($revenu, $taxeAssureur);
+            // dd($allArticleWhereTaxeDue);
+            $mtPaye = 0;
+            /** @var Article $article */
+            foreach ($allArticleWhereTaxeDue as $article) {
+                // /** @var Tranche $tranche */
+                // $tranche = $article->getTranche();
+                $proportionPaiement = $this->Note_getMontant_paye($article->getNote()) / $this->Note_getMontant_payable($article->getNote());
+                $mtPaye += $proportionPaiement * $article->getMontant();
+                // dd("Pro. Paiement: " . $proportionPaiement, "Mont Paye: " . $mtPaye, "Mont du: " . $article->getMontant(), $tranche->getCotation()->getId(), $revenu->getCotation()->getId());
+            }
+            $montantPaye = $mtPaye;
+            // dd($mtPaye);
+        }
+        return $montantPaye;
     }
 
 
@@ -567,6 +600,7 @@ class Constante
     public function Tranche_getPostesFacturables(?Tranche $tranche, ?PanierNotes $panier)
     {
         $tabPostesFacturables = [];
+        // dd($panier->getIdNote());
         // dd("Je suis ici", $panier->getAddressedTo());
         if ($tranche) {
             if ($tranche->getCotation()) {
@@ -587,7 +621,7 @@ class Constante
                                                 "montantPayable" => $montant,
                                                 "idCible" => $panier->getIdAssureur(),
                                                 "idPoste" => $revenu->getId(),
-                                                "idNote" => $panier->getIdNote(),
+                                                "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
                                                 "idTranche" => $tranche->getId(),
                                             ];
                                         }
@@ -610,7 +644,8 @@ class Constante
                                                 "montantPayable" => $montant,
                                                 "idCible" => $panier->getIdClient(),
                                                 "idPoste" => $revenu->getId(),
-                                                "idNote" => $panier->getIdNote(),
+                                                "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                                // "idNote" => $panier->getIdNote(),
                                                 "idTranche" => $tranche->getId(),
                                             ];
                                         }
@@ -630,7 +665,8 @@ class Constante
                                         "montantPayable" => $montant,
                                         "idCible" => $panier->getIdPartenaire(),
                                         "idPoste" => $panier->getIdPartenaire(),
-                                        "idNote" => $panier->getIdNote(),
+                                        "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                        // "idNote" => $panier->getIdNote(),
                                         "idTranche" => $tranche->getId(),
                                     ];
                                 }
@@ -653,7 +689,8 @@ class Constante
                                     "montantPayable" => $montant,
                                     "idCible" => $panier->getIdAutoriteFiscale(),
                                     "idPoste" => $autorite->getTaxe()->getId(),
-                                    "idNote" => $panier->getIdNote(),
+                                    "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                    // "idNote" => $panier->getIdNote(),
                                     "idTranche" => $tranche->getId(),
                                 ];
                             }

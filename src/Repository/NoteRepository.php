@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Note;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Taxe;
 use Doctrine\Persistence\ManagerRegistry;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -62,6 +63,7 @@ class NoteRepository extends ServiceEntityRepository
             ->getResult()
         ;
     }
+    //
 
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {

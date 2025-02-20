@@ -2,9 +2,11 @@
 
 namespace App\Repository;
 
+use App\Entity\Taxe;
 use App\Entity\Article;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use App\Entity\RevenuPourCourtier;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<Article>
@@ -40,4 +42,20 @@ class ArticleRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    public function findAllArticlesWhereTaxeDue(?RevenuPourCourtier $revenu, ?Taxe $taxe): array
+    {
+        return $this->createQueryBuilder("article")
+            //via invite
+            ->leftJoin("article.tranche", "tranche")
+            //condition
+            ->where("article.idPoste = :idPoste")//Adressée à l'autorité fiscale
+            ->andWhere("tranche.cotation = :idCotation")
+            ->setParameter('idPoste', '' . $taxe->getId() . '')
+            ->setParameter('idCotation', '' . $revenu->getCotation()->getId() . '')
+            ->orderBy('article.id', 'DESC')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
 }

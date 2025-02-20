@@ -67,8 +67,11 @@ class TrancheController extends AbstractController
         $panier = $request->getSession()->get(PanierNotes::NOM);
         /** @var Note $note */
         $note = null;
-        if ($panier) {
-            $note = $this->noteRepository->find($panier->getIdNote());
+        if ($panier != null) {
+            if ($panier->getIdNote() != null) {
+                // dd("Ici");
+                $note = $this->noteRepository->find($panier->getIdNote());
+            }
         }
         // dd("Panier ", $panier);
 
@@ -140,7 +143,7 @@ class TrancheController extends AbstractController
     #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
         'poste' => Requirement::CATCH_ALL,
         'montantPayable' => Requirement::CATCH_ALL,
-        'idNote' => Requirement::DIGITS,
+        // 'idNote' => Requirement::DIGITS,
         'idPoste' => Requirement::DIGITS,
         'idTranche' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
