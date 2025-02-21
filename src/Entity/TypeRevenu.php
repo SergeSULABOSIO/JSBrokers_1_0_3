@@ -54,7 +54,7 @@ class TypeRevenu
     /**
      * @var Collection<int, RevenuPourCourtier>
      */
-    #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'type')]
+    #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'typeRevenu')]
     private Collection $revenuPourCourtiers;
 
     #[ORM\ManyToOne(inversedBy: 'typeRevenus')]

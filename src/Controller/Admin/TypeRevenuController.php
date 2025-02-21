@@ -9,8 +9,10 @@ use App\Entity\TypeRevenu;
 use App\Form\TypeRevenuType;
 use App\Constantes\Constante;
 use App\Entity\CompteBancaire;
+use App\Services\ServiceTaxes;
 use App\Form\CompteBancaireType;
 use App\Constantes\MenuActivator;
+use App\Services\ServiceMonnaies;
 use App\Repository\InviteRepository;
 use App\Repository\RevenuRepository;
 use App\Repository\EntrepriseRepository;
@@ -40,6 +42,8 @@ class TypeRevenuController extends AbstractController
         private InviteRepository $inviteRepository,
         private TypeRevenuRepository $typerevenuRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -58,6 +62,8 @@ class TypeRevenuController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
         ]);
     }
 
@@ -76,7 +82,7 @@ class TypeRevenuController extends AbstractController
         //Paramètres par défaut
         $typerevenu->setNom("REVENUE" . (rand(2000, 3000)));
         $typerevenu->setEntreprise($entreprise);
-        $typerevenu->setFormule(TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE);
+        // $typerevenu->setFormule(TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE);
         $typerevenu->setPourcentage(0.1);
         $typerevenu->setAppliquerPourcentageDuRisque(true);
         $typerevenu->setMontantflat(0);

@@ -20,7 +20,6 @@ use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
-use App\Entity\Utilisateur;
 use App\Repository\ArticleRepository;
 use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\CotationRepository;
@@ -28,15 +27,9 @@ use App\Repository\NoteRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use App\Repository\TaxeRepository;
 use App\Services\ServiceTaxes;
-use Doctrine\Common\Collections\Collection;
-use PhpParser\Node\Stmt\Nop;
-use Proxies\__CG__\App\Entity\Revenu;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\ExpressionLanguage\Node\ConditionalNode;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-use function PHPUnit\Framework\containsOnly;
-use function PHPUnit\Framework\returnSelf;
 
 class Constante
 {
@@ -498,6 +491,86 @@ class Constante
     /**
      * REVENU POUR COURTIER
      */
+    public function Type_revenu_getMontant_pure(?TypeRevenu $typeRevenu): float
+    {
+        // dd($typeRevenu);
+        $tot = 0;
+        if ($typeRevenu != null) {
+            // dd($typeRevenu->getId());
+            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
+                // dd("Jai du contenu");
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $tot += $this->Revenu_getMontant_pure($revenu);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Type_revenu_getMontant_ht(?TypeRevenu $typeRevenu): float
+    {
+        // dd($typeRevenu);
+        $tot = 0;
+        if ($typeRevenu != null) {
+            // dd($typeRevenu->getId());
+            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
+                // dd("Jai du contenu");
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $tot += $this->Revenu_getMontant_ht($revenu);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Type_revenu_getMontant_ttc(?TypeRevenu $typeRevenu): float
+    {
+        // dd($typeRevenu);
+        $tot = 0;
+        if ($typeRevenu != null) {
+            // dd($typeRevenu->getId());
+            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
+                // dd("Jai du contenu");
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $tot += $this->Revenu_getMontant_ttc($revenu);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Type_revenu_getMontant_ttc_collecte(?TypeRevenu $typeRevenu): float
+    {
+        // dd($typeRevenu);
+        $tot = 0;
+        if ($typeRevenu != null) {
+            // dd($typeRevenu->getId());
+            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
+                // dd("Jai du contenu");
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $tot += $this->Revenu_getMontant_ttc_collecte($revenu);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Type_revenu_getMontant_ttc_solde(?TypeRevenu $typeRevenu): float
+    {
+        // dd($typeRevenu);
+        $tot = 0;
+        if ($typeRevenu != null) {
+            // dd($typeRevenu->getId());
+            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
+                // dd("Jai du contenu");
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $tot += $this->Revenu_getMontant_ttc_solde($revenu);
+                }
+            }
+        }
+        return $tot;
+    }
     public function Revenu_getNomRedevable(?TypeRevenu $typeRevenu)
     {
         return match ($typeRevenu->getRedevable()) {
