@@ -15,6 +15,7 @@ use App\Entity\Entreprise;
 use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Partenaire;
+use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\Taxe;
@@ -521,6 +522,36 @@ class Constante
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
                     $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(?TypeRevenu $typeRevenu)
+    {
+        $tot = 0;
+        if ($typeRevenu != null) {
+            // dd($typeRevenu->getId());
+            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
+                // dd("Jai du contenu");
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(?TypeRevenu $typeRevenu)
+    {
+        $tot = 0;
+        if ($typeRevenu != null) {
+            // dd($typeRevenu->getId());
+            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
+                // dd("Jai du contenu");
+                /** @var RevenuPourCourtier $revenu */
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_solde($revenu);
                 }
             }
         }
@@ -1616,6 +1647,299 @@ class Constante
     }
 
 
+    /**
+     * PISTE / PROPOSITION
+     */
+    public function Piste_getPartenaires(?Piste $piste)
+    {
+        $partenaires = new ArrayCollection();
+        if ($piste) {
+            if (count($piste->getCotations())) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $partenaire = $this->Cotation_getPartenaire($cotation);
+                        if ($partenaires->contains($cotation) == false) {
+                            $partenaires[] = $partenaire;
+                        }
+                    }
+                }
+            }
+        }
+        // dd($partenaires);
+        return $partenaires;
+    }
+    public function Piste_isBound(?Piste $piste): bool
+    {
+        $rep = false;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    $tempo = $cotation->getAvenants()[0] != null || count($cotation->getAvenants()) != 0;
+                    if ($tempo == true) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return $rep;
+    }
+    public function Piste_getMontant_prime_payable_par_client(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_prime_payable_par_client($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_prime_payable_par_client_payee(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_prime_payable_par_client_payee($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_prime_payable_par_client_solde(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_prime_payable_par_client_solde($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_commission_pure(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_commission_pure($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_commission_ht(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_commission_ht($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_commission_ttc(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_commission_ttc($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_commission_collectee(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_commission_ttc_collectee($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_commission_ttc_solde(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_commission_ttc_solde($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_taxe_payable_par_assureur(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_taxe_payable_par_assureur_payee(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_taxe_payable_par_assureur_solde(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_solde($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_taxe_payable_par_courtier(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_taxe_payable_par_courtier_payee(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_taxe_payable_par_courtier_solde(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_solde($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_retrocommissions_payable_par_courtier(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_retrocommissions_payable_par_courtier_payee(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Piste_getMontant_retrocommissions_payable_par_courtier_solde(?Piste $piste)
+    {
+        $tot = 0;
+        if ($piste) {
+            if (count($piste->getCotations()) != 0) {
+                /** @var Cotation $cotation */
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_solde($cotation);
+                    }
+                }
+            }
+        }
+        return $tot;
+    }
 
 
 

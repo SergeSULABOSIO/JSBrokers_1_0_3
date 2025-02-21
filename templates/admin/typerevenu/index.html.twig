@@ -115,12 +115,12 @@
                                     {# Retro-commission #}
                                     <small class="m-2">
                                         <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        {# <span class="text-secondary"> • Rétro-com payée: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                        {# {% set couleur = "text-secondary" %} #}
-										{# {% if constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu) != 0 %} #}
-                                    		{# {% set couleur = "text-danger" %} #}
-										{# {% endif %} #}
-										{# <span class="{{couleur}}"> • Solde dû: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> #}
+                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+										{% if constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu) != 0 %}
+                                    		{% set couleur = "text-danger" %}
+										{% endif %}
+										<span class="{{couleur}}"> • Solde dû: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                     </small><br>
                                 {% endfor %}
                             </td>
