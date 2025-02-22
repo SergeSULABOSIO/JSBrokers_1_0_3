@@ -4,6 +4,7 @@ namespace App\Constantes;
 
 use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\Article;
+use App\Entity\Assureur;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
 use App\Entity\Chargement;
@@ -403,6 +404,22 @@ class Constante
     /**
      * ASSUREUR
      */
+    public function Assureur_getPartenaires(?Assureur $assureur)
+    {
+        $partenaires = new ArrayCollection();
+
+        foreach ($assureur->getCotations() as $cotation) {
+            if ($this->Cotation_isBound($cotation)) {
+                /** @var Partenaire $partenaire */
+                $partenaire = $this->Cotation_getPartenaire($cotation);
+                if ($partenaires->contains($partenaire) == false && $partenaire != null) {
+                    $partenaires->add($partenaire);
+                }
+            }
+        }
+
+        return $partenaires;
+    }
     public function Cotation_getAssureur(?Cotation $cotation)
     {
         if ($cotation) {
@@ -411,6 +428,175 @@ class Constante
             }
         }
         return null;
+    }
+    public function Assureur_getMontant_prime_payable_par_client(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_prime_payable_par_client($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_prime_payable_par_client_payee(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_prime_payable_par_client_payee($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_prime_payable_par_client_solde(?Assureur $assureur): float
+    {
+        $tot = $this->Assureur_getMontant_prime_payable_par_client($assureur) - $this->Assureur_getMontant_prime_payable_par_client_payee($assureur);
+        return round($tot, 4);
+    }
+    public function Assureur_getMontant_commission_pure(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_commission_pure($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_commission_ht(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_commission_ht($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_commission_ttc(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_commission_ttc($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_commission_ttc_collectee(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_commission_ttc_collectee($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_commission_ttc_solde(?Assureur $assureur): float
+    {
+        $tot = $this->Assureur_getMontant_commission_ttc($assureur) - $this->Assureur_getMontant_commission_ttc_collectee($assureur);
+        return round($tot, 4);
+    }
+    public function Assureur_getMontant_taxe_payable_par_assureur(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_assureur($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_taxe_payable_par_assureur_payee(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_taxe_payable_par_assureur_solde(?Assureur $assureur): float
+    {
+        $tot = $this->Assureur_getMontant_taxe_payable_par_assureur($assureur) - $this->Assureur_getMontant_taxe_payable_par_assureur_payee($assureur);
+        return round($tot, 4);
+    }
+    public function Assureur_getMontant_taxe_payable_par_courtier(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_taxe_payable_par_courtier_payee(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_taxe_payable_par_courtier_solde(?Assureur $assureur): float
+    {
+        $tot = $this->Assureur_getMontant_taxe_payable_par_courtier($assureur) - $this->Assureur_getMontant_taxe_payable_par_courtier_payee($assureur);
+        return round($tot, 4);
+    }
+    public function Assureur_getMontant_retrocommissions_payable_par_courtier(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_retrocommissions_payable_par_courtier_payee(?Assureur $assureur): float
+    {
+        $tot = 0;
+        if ($assureur != null) {
+            foreach ($assureur->getCotations() as $cotation) {
+                if ($this->Cotation_isBound($cotation)) {
+                    $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+                }
+            }
+        }
+        return $tot;
+    }
+    public function Assureur_getMontant_retrocommissions_payable_par_courtier_solde(?Assureur $assureur): float
+    {
+        $tot = $this->Assureur_getMontant_retrocommissions_payable_par_courtier($assureur) - $this->Assureur_getMontant_retrocommissions_payable_par_courtier_payee($assureur);
+        return round($tot, 4);
     }
 
 

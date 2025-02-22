@@ -2,13 +2,15 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
-use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\Assureur;
+use App\Entity\Entreprise;
 use App\Form\AssureurType;
-use App\Repository\AssureurRepository;
+use App\Constantes\Constante;
+use App\Services\ServiceTaxes;
+use App\Constantes\MenuActivator;
+use App\Services\ServiceMonnaies;
 use App\Repository\InviteRepository;
+use App\Repository\AssureurRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,6 +36,8 @@ class AssureurController extends AbstractController
         private InviteRepository $inviteRepository,
         private AssureurRepository $assureurRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
@@ -52,6 +56,8 @@ class AssureurController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
         ]);
     }
 
