@@ -439,6 +439,16 @@ class Constante
         }
         return $tot;
     }
+    public function Client_getMontant_retrocommissions_payable_par_courtier_payee(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier_payee($piste);
+            }
+        }
+        return $tot;
+    }
     public function Client_getMontant_prime_payable_par_client_payee(?Client $client): float
     {
         $tot = 0;
