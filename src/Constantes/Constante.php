@@ -399,6 +399,109 @@ class Constante
 
 
 
+    /**
+     * CLIENT
+     */
+    public function Client_getMontant_prime_payable_par_client(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_prime_payable_par_client($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_prime_payable_par_client_payee(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_prime_payable_par_client_payee($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_prime_payable_par_client_solde(?Client $client): float
+    {
+        $tot = $this->Client_getMontant_prime_payable_par_client($client) - $this->Client_getMontant_prime_payable_par_client_payee($client);
+        return round($tot, 4);
+    }
+    public function Client_getMontant_commission_pure(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_pure($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_commission_ht(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_ht($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_commission_ttc(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_ttc($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_commission_ttc_collectee(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_collectee($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_commission_ttc_solde(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_ttc_solde($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_taxe_payable_par_assureur(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_assureur($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_taxe_payable_par_assureur_payee(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_assureur_payee($piste);
+            }
+        }
+        return $tot;
+    }
+
+
+
+
+
 
 
     /**
