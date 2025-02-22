@@ -49,10 +49,10 @@
                         <tr id="row_assureur_{{ assureur.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.assureur.edit', {'idAssureur':assureur.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ assureur.nom }} • {{ assureur.email }} • {{ assureur.url }}
+                                    {{ assureur.nom }}
                                 </a><br/>
                                 <small class="m-2">
-                                    <span class="text-secondary">{{ assureur.adressePhysique }}</span> 
+                                    <span class="text-secondary">{{ assureur.adressePhysique }} • {{ assureur.email }} • {{ assureur.url }}</span> 
                                 </small><br/>
                                 {# Section prime #}
                                 <small class="m-2">
