@@ -402,6 +402,33 @@ class Constante
     /**
      * CLIENT
      */
+    public function Client_getPartenaires(?Client $client)
+    {
+        $partenaires = new ArrayCollection();
+
+        foreach ($client->getPistes() as $piste) {
+            if ($this->Piste_isBound($piste)) {
+                /** @var Partenaire $partenaire */
+                $Tabpartenaires = $this->Piste_getPartenaires($piste);
+                foreach ($Tabpartenaires as $partenaire) {
+                    if ($partenaires->contains($partenaire) == false && $partenaire != null) {
+                        $partenaires->add($partenaire);
+                    }
+                }
+            }
+        }
+        return $partenaires;
+    }
+    public function Client_getMontant_retrocommissions_payable_par_courtier(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier($piste);
+            }
+        }
+        return $tot;
+    }
     public function Client_getMontant_prime_payable_par_client(?Client $client): float
     {
         $tot = 0;
@@ -496,6 +523,36 @@ class Constante
             }
         }
         return $tot;
+    }
+    public function Client_getMontant_taxe_payable_par_assureur_solde(?Client $client): float
+    {
+        $tot = $this->Client_getMontant_taxe_payable_par_assureur($client) - $this->Client_getMontant_taxe_payable_par_assureur_payee($client);
+        return round($tot, 4);
+    }
+    public function Client_getMontant_taxe_payable_par_courtier(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_courtier($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_taxe_payable_par_courtier_payee(?Client $client): float
+    {
+        $tot = 0;
+        if ($client != null) {
+            foreach ($client->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_courtier_payee($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Client_getMontant_taxe_payable_par_courtier_solde(?Client $client): float
+    {
+        $tot = $this->Client_getMontant_taxe_payable_par_courtier($client) - $this->Client_getMontant_taxe_payable_par_courtier_payee($client);
+        return round($tot, 4);
     }
 
 
