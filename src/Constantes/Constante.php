@@ -564,6 +564,11 @@ class Constante
         $tot = $this->Client_getMontant_taxe_payable_par_courtier($client) - $this->Client_getMontant_taxe_payable_par_courtier_payee($client);
         return round($tot, 4);
     }
+    public function Client_getMontant_retrocommissions_payable_par_courtier_solde(?Client $client): float
+    {
+        $tot = $this->Client_getMontant_retrocommissions_payable_par_courtier($client) - $this->Client_getMontant_retrocommissions_payable_par_courtier_payee($client);
+        return round($tot, 4);
+    }
 
 
 

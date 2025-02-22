@@ -108,11 +108,11 @@
                                     <small class="m-2">
                                         <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        {# {% set couleur = "text-secondary" %} #}
-                                        {# {% if constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur) != 0 %} #}
-                                            {# {% set couleur = "text-danger" %} #}
-                                        {# {% endif %} #}
-                                        {# <span class="{{couleur}}"> • Solde dû: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> #}
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                     </small><br>
                                 {% endfor %}
                             </td>
