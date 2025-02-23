@@ -48,14 +48,18 @@
                     {% for partenaire in partenaires %}
                         <tr id="row_partenaire_{{ partenaire.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.partenaire.edit', {'idPartenaire':partenaire.id, 'idEntreprise': entreprise.id})}}">
+                                <a class="m-2 fw-bold" href="{{ path('admin.partenaire.edit', {'idPartenaire':partenaire.id, 'idEntreprise': entreprise.id})}}">
                                     {{ partenaire.nom }}
                                     {% if partenaire.conditionPartages|length != 0 %}
-                                        Il y a {{partenaire.conditionPartages|length}} conditions ({% for condition in partenaire.conditionPartages %}{{ condition.nom }}, {% endfor %}).
-                                    {% else %}
-                                        ({{ partenaire.part * 100 }}%, pas de condition spéciale).
+                                         • {{partenaire.conditionPartages|length}} Condition(s) avancée(s)
                                     {% endif %}
-                                </a>
+                                    {% if partenaire.part != 0 %}
+                                         • {{ partenaire.part * 100 }}% de la commission pure.
+                                    {% endif %}
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">{{ partenaire.telephone }} •  {{ partenaire.email }} • {{ partenaire.adressePhysique }}</span> 
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

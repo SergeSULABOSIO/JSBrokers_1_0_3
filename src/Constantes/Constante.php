@@ -2352,7 +2352,6 @@ class Constante
         $montant =
             $this->Cotation_getMontant_prime_payable_par_client($cotation)
             - $this->Cotation_getMontant_prime_payable_par_client_payee($cotation);
-
         return round($montant, 4);
     }
 }
