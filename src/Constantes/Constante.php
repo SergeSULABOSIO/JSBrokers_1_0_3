@@ -2008,6 +2008,26 @@ class Constante
     }
 
 
+
+    /**
+     * 
+     * INTERMEDIAIRE
+     */
+    public function Partenaire_getMontant_prime_payable_par_client(?Partenaire $partenaire): float
+    {
+        $montant = 0;
+        dd($partenaire);
+        // foreach ($cotation->getChargements() as $loading) {
+        //     /** @var ChargementPourPrime $chargement */
+        //     $chargement = $loading;
+        //     $montant += $chargement->getMontantFlatExceptionel();
+        //     // dd("ici", $loading);
+        // }
+        return $montant;
+    }
+
+
+
     /**
      * PISTE / PROPOSITION
      */

@@ -60,6 +60,16 @@
                                 <small class="m-2">
                                     <span class="text-secondary">{{ partenaire.telephone }} •  {{ partenaire.email }} • {{ partenaire.adressePhysique }}</span> 
                                 </small><br/>
+                                {# Section prime #}
+                                <small class="m-2">
+                                    <span class="text-secondary fw-bold">Prime: {{ constante.Partenaire_getMontant_prime_payable_par_client(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {# <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Cotation_getMontant_prime_payable_par_client_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    {# {% set couleur = "text-secondary" %} #}
+                                    {# {% if constante.Cotation_getMontant_prime_payable_par_client_solde(cotation) != 0 %} #}
+                                        {# {% set couleur = "text-danger" %} #}
+                                    {# {% endif %} #}
+                                    {# <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Cotation_getMontant_prime_payable_par_client_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
