@@ -61,6 +61,7 @@ class RisqueController extends AbstractController
             'activator' => $this->activator,
             'serviceMonnaie' => $this->serviceMonnaies,
             'serviceTaxe' => $this->serviceTaxes,
+            'activator' => $this->activator,
         ]);
     }
 

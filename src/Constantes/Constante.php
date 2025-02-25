@@ -33,6 +33,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 
@@ -1244,6 +1245,18 @@ class Constante
     /**
      * RISQUE
      */
+    public function Risque_getNomBranche($branche)
+    {
+        if ($branche != null) {
+            return match ($branche) {
+                Risque::BRANCHE_IARD_OU_NON_VIE => "IARD",
+                Risque::BRANCHE_VIE => "VIE",
+            };
+        }else{
+            return "Branche non définie";
+        }
+       
+    }
     public function Risque_getMontant_prime_payable_par_client(?Risque $risque)
     {
         $tot = 0;

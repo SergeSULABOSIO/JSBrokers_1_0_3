@@ -49,7 +49,7 @@ class RisqueType extends AbstractType
                 'label' => "Branche d'assurance",
                 'help' => "IARD pour 'I'ncendie 'A'ccident et 'R'isques 'D'ivers. Càd autres que les assurances Vie.",
                 'expanded' => true,
-                'required' => false,
+                'required' => true,
                 'choices'  => [
                     "Les IARD (non vie)" => Risque::BRANCHE_IARD_OU_NON_VIE,
                     "Vie" => Risque::BRANCHE_VIE,
@@ -59,7 +59,7 @@ class RisqueType extends AbstractType
                 'label' => "Ce risque est-il imposable?",
                 'help' => "Oui, si les taxes doivent être chargées.",
                 'expanded' => true,
-                'required' => false,
+                'required' => true,
                 'choices'  => [
                     "Oui" => true,
                     "Non" => false,

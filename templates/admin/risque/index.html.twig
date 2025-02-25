@@ -51,6 +51,9 @@
                                 <a class="m-2 fw-bold" href="{{ path('admin.risque.edit', {'idRisque':risque.id, 'idEntreprise': entreprise.id})}}">
                                     {{ risque.code }} • {{ risque.nomComplet }}
                                 </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">{{ constante.Risque_getNomBranche(risque.branche) }}</span> 
+                                </small><br/>
                                 {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Risque_getMontant_prime_payable_par_client(risque)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
