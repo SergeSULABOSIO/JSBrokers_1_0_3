@@ -1267,7 +1267,7 @@ class Constante
     public function Risque_getMontant_prime_payable_par_client_solde(?Risque $risque)
     {
         $tot = $this->Risque_getMontant_prime_payable_par_client($risque) - $this->Risque_getMontant_prime_payable_par_client_payee($risque);
-        return $tot;
+        return round($tot, 4);
     }
 
 
