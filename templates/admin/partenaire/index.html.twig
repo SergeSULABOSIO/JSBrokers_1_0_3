@@ -51,7 +51,7 @@
                                 <a class="m-2 fw-bold" href="{{ path('admin.partenaire.edit', {'idPartenaire':partenaire.id, 'idEntreprise': entreprise.id})}}">
                                     {{ partenaire.nom }}
                                     {% if partenaire.conditionPartages|length != 0 %}
-                                         • {{partenaire.conditionPartages|length}} Condition(s) avancée(s)
+                                         • {{partenaire.conditionPartages|length}} Condition(s)
                                     {% endif %}
                                     {% if partenaire.part != 0 %}
                                          • {{ partenaire.part * 100 }}% de la commission pure.
@@ -121,7 +121,7 @@
                                 <small class="m-2">
                                     {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
                                         {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
-                                            <span class="text-danger"> • Condition: {{ condition }}</span>
+                                            <span class="text-danger"> • {{ condition }}</span>
                                         {% endfor %}
                                     {% endif %}
                                 </small><br>

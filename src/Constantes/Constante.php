@@ -2068,16 +2068,33 @@ class Constante
                     $texte .= ".";
                     break;
                 case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
-                    $texte .= " uniquement sur les risques suivants...";
+                    $texte .= $this->Partenaire_getTexteRisqueCibles(", uniquement sur ", 1, $conditionPartage);
                     break;
                 case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
-                    $texte .= " sur tous les autres risques sauf les risques suivants...";
+                    $texte .= $this->Partenaire_getTexteRisqueCibles(", sur tous les autres risques sauf ", 1, $conditionPartage);
                     break;
 
                 default:
                     # code...
                     break;
             }
+        }
+        return $texte;
+    }
+    private function Partenaire_getTexteRisqueCibles($texte, $index, ConditionPartage $conditionPartage)
+    {
+        /** @var Risque $risque */
+        foreach ($conditionPartage->getProduits() as $risque) {
+            if (count($conditionPartage->getProduits()) == $index && $index > 1) {
+                $texte .= " et " . $risque->getCode() . ".";
+            } else if ($index < count($conditionPartage->getProduits()) && $index != 1) {
+                $texte .= ", " . $risque->getCode() . "";
+            } else if (count($conditionPartage->getProduits()) == 1) {
+                $texte .= " " . $risque->getCode() . ".";
+            } else {
+                $texte .= " " . $risque->getCode() . "";
+            }
+            $index++;
         }
         return $texte;
     }
