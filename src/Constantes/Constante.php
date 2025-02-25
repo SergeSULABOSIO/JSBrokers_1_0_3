@@ -1247,15 +1247,17 @@ class Constante
      */
     public function Risque_getNomBranche($branche)
     {
-        if ($branche != null) {
-            return match ($branche) {
-                Risque::BRANCHE_IARD_OU_NON_VIE => "IARD",
-                Risque::BRANCHE_VIE => "VIE",
-            };
-        }else{
-            return "Branche non définie";
-        }
-       
+        return match ($branche) {
+            Risque::BRANCHE_IARD_OU_NON_VIE => "IARD",
+            Risque::BRANCHE_VIE => "VIE",
+        };
+    }
+    public function Risque_getNomImposable($branche)
+    {
+        return match ($branche) {
+            true => "Imposable",
+            false => "Non Imposable",
+        };
     }
     public function Risque_getMontant_prime_payable_par_client(?Risque $risque)
     {
@@ -2086,10 +2088,10 @@ class Constante
         $texte = "";
         if ($conditionPartage != null) {
             $unite = match ($conditionPartage->getUniteMesure()) {
-               ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => "(du client)",
-               ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => "(du risque)",
-               ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => "(du partenaire)",
-           };
+                ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => "(du client)",
+                ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => "(du risque)",
+                ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => "(du partenaire)",
+            };
 
             // dd($conditionPartage);
             switch ($conditionPartage->getFormule()) {

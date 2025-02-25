@@ -51,8 +51,8 @@ class RisqueType extends AbstractType
                 'expanded' => true,
                 'required' => true,
                 'choices'  => [
-                    "Les IARD (non vie)" => Risque::BRANCHE_IARD_OU_NON_VIE,
-                    "Vie" => Risque::BRANCHE_VIE,
+                    "IARD" => Risque::BRANCHE_IARD_OU_NON_VIE,
+                    "VIE" => Risque::BRANCHE_VIE,
                 ],
             ])
             ->add('imposable', ChoiceType::class, [
