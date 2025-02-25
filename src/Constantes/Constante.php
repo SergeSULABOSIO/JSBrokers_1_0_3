@@ -2041,10 +2041,6 @@ class Constante
     public function Partenaire_getDescriptionConditionSpecialePartage(?ConditionPartage $conditionPartage): string
     {
         $texte = "";
-
-        
-
-
         if ($conditionPartage != null) {
             $unite = match ($conditionPartage->getUniteMesure()) {
                ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => "(du client)",
