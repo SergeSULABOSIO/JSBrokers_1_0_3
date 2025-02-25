@@ -2,36 +2,37 @@
 
 namespace App\Constantes;
 
-use App\Controller\Admin\RevenuCourtierController;
-use App\Entity\Article;
-use App\Entity\Assureur;
-use App\Entity\AutoriteFiscale;
-use App\Entity\Avenant;
-use App\Entity\Chargement;
-use App\Entity\ChargementPourPrime;
-use App\Entity\Client;
-use App\Entity\ConditionPartage;
-use App\Entity\Cotation;
-use App\Entity\Entreprise;
-use App\Entity\Invite;
 use App\Entity\Note;
-use App\Entity\Paiement;
-use App\Entity\Partenaire;
-use App\Entity\Piste;
-use App\Entity\RevenuPourCourtier;
-use App\Entity\Risque;
 use App\Entity\Taxe;
+use App\Entity\Piste;
+use App\Entity\Client;
+use App\Entity\Invite;
+use App\Entity\Risque;
+use App\Entity\Article;
+use App\Entity\Avenant;
 use App\Entity\Tranche;
+use App\Entity\Assureur;
+use App\Entity\Cotation;
+use App\Entity\Paiement;
+use App\Entity\Chargement;
+use App\Entity\Entreprise;
+use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
-use App\Repository\ArticleRepository;
-use App\Repository\AutoriteFiscaleRepository;
-use App\Repository\CotationRepository;
-use App\Repository\NoteRepository;
-use App\Repository\RevenuPourCourtierRepository;
-use App\Repository\TaxeRepository;
 use App\Services\ServiceTaxes;
-use Doctrine\Common\Collections\ArrayCollection;
+use App\Entity\AutoriteFiscale;
+use App\Entity\ConditionPartage;
+use App\Services\ServiceMonnaies;
+use App\Entity\RevenuPourCourtier;
+use App\Repository\NoteRepository;
+use App\Repository\TaxeRepository;
+use App\Entity\ChargementPourPrime;
+use App\Repository\ArticleRepository;
+use App\Repository\CotationRepository;
 use Symfony\Bundle\SecurityBundle\Security;
+use App\Repository\AutoriteFiscaleRepository;
+use App\Repository\RevenuPourCourtierRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use App\Controller\Admin\RevenuCourtierController;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 
@@ -47,6 +48,7 @@ class Constante
         private NoteRepository $noteRepository,
         private ArticleRepository $articleRepository,
         private TaxeRepository $taxeRepository,
+        private ServiceMonnaies $serviceMonnaies,
     ) {}
 
 
@@ -2014,6 +2016,71 @@ class Constante
      * 
      * INTERMEDIAIRE
      */
+    public function Partenaire_hasConditionsSpeciales(?Partenaire $partenaire): bool
+    {
+        if ($partenaire) {
+            return count($partenaire->getConditionPartages()) != 0;
+        } else {
+            return false;
+        }
+    }
+    public function Partenaire_getDescriptionsConditionSpecialePartage(?Partenaire $partenaire): ArrayCollection
+    {
+        $tabDescription = new ArrayCollection();
+        if ($partenaire != null) {
+            if (count($partenaire->getConditionPartages()) != 0) {
+                foreach ($partenaire->getConditionPartages() as $condition) {
+                    $description = $this->Partenaire_getDescriptionConditionSpecialePartage($condition);
+                    if (!$tabDescription->contains($description)) {
+                        $tabDescription->add($description);
+                    }
+                }
+            }
+        }
+        return $tabDescription;
+    }
+    public function Partenaire_getDescriptionConditionSpecialePartage(?ConditionPartage $conditionPartage): string
+    {
+        $texte = "";
+        if ($conditionPartage != null) {
+            // dd($conditionPartage);
+            switch ($conditionPartage->getFormule()) {
+                case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
+                    if ($conditionPartage->getSeuil()) {
+                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure si celle-ci est au moins égale à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                    }
+                    break;
+                case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
+                    if ($conditionPartage->getSeuil()) {
+                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure si celle-ci est inférieur au seuil à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                    }
+                    break;
+                case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
+                    $texte = "";
+                    break;
+
+                default:
+                    # code...
+                    break;
+            }
+            switch ($conditionPartage->getCritereRisque()) {
+                case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
+                    $texte .= ".";
+                    break;
+                case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
+                    $texte .= " uniquement sur les risques suivants...";
+                    break;
+                case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
+                    $texte .= " sur tous les autres risques sauf les risques suivants...";
+                    break;
+
+                default:
+                    # code...
+                    break;
+            }
+        }
+        return $texte;
+    }
     public function Partenaire_getMontant_prime_payable_par_client(Partenaire $partenaire): float
     {
         $montant = 0;
