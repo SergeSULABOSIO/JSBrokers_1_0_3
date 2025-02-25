@@ -2,17 +2,19 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
-use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\Revenu;
 use App\Entity\Risque;
 use App\Form\RevenuType;
 use App\Form\RisqueType;
+use App\Entity\Entreprise;
+use App\Constantes\Constante;
+use App\Services\ServiceTaxes;
+use App\Constantes\MenuActivator;
+use App\Services\ServiceMonnaies;
 use App\Repository\InviteRepository;
-use App\Repository\EntrepriseRepository;
 use App\Repository\RevenuRepository;
 use App\Repository\RisqueRepository;
+use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -37,6 +39,8 @@ class RisqueController extends AbstractController
         private InviteRepository $inviteRepository,
         private RisqueRepository $risqueRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
@@ -55,6 +59,8 @@ class RisqueController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
         ]);
     }
 

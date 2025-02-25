@@ -1241,6 +1241,36 @@ class Constante
 
 
 
+    /**
+     * RISQUE
+     */
+    public function Risque_getMontant_prime_payable_par_client(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_prime_payable_par_client($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_prime_payable_par_client_payee(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_prime_payable_par_client_payee($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_prime_payable_par_client_solde(?Risque $risque)
+    {
+        $tot = $this->Risque_getMontant_prime_payable_par_client($risque) - $this->Risque_getMontant_prime_payable_par_client_payee($risque);
+        return $tot;
+    }
+
+
 
 
 
