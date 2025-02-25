@@ -2,13 +2,15 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Avenant;
 use App\Entity\Assureur;
+use App\Form\AvenantType;
 use App\Entity\Entreprise;
 use App\Form\AssureurType;
 use App\Constantes\Constante;
+use App\Services\ServiceTaxes;
 use App\Constantes\MenuActivator;
-use App\Entity\Avenant;
-use App\Form\AvenantType;
+use App\Services\ServiceMonnaies;
 use App\Repository\InviteRepository;
 use App\Repository\AvenantRepository;
 use App\Repository\AssureurRepository;
@@ -37,6 +39,8 @@ class AvenantController extends AbstractController
         private InviteRepository $inviteRepository,
         private AvenantRepository $avenantRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
@@ -55,6 +59,8 @@ class AvenantController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
         ]);
     }
 

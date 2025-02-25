@@ -2011,7 +2011,6 @@ class Constante
     }
 
 
-
     /**
      * 
      * INTERMEDIAIRE

@@ -51,29 +51,36 @@
                                 <a class="m-2 fw-bold" href="{{ path('admin.avenant.edit', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}">
                                     {{ avenant.description }} • Police: {{ avenant.referencePolice }} • Du {{ avenant.startingAt|format_datetime('short', 'none', locale: utilisateur.locale) }} au {{ avenant.endingAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
                                 </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">Exercice {{ avenant.cotation.piste.exercice }}</span> 
+                                    <span class="text-secondary"> • {{ avenant.cotation.assureur }}</span> 
+                                    <span class="text-secondary"> • {{ avenant.cotation.piste.client }}</span> 
+                                    <span class="text-secondary"> • {{ avenant.cotation.piste.risque }}</span> 
+                                    <span class="text-secondary"> • par {{ avenant.cotation.piste.invite.nom }}</span> 
+                                    <span class="text-secondary"> le  {{ avenant.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}</span> 
+                                </small><br/>
                                 {# Section prime #}
                                 <small class="m-2">
-                                    Ici
-                                    {# <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                    {# <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Cotation_getMontant_prime_payable_par_client_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                    {# {% set couleur = "text-secondary" %} #}
-                                    {# {% if constante.Cotation_getMontant_prime_payable_par_client_solde(cotation) != 0 %} #}
-                                        {# {% set couleur = "text-danger" %} #}
-                                    {# {% endif %} #}
-                                    {# <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Cotation_getMontant_prime_payable_par_client_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                </small><br/>
-                                {# Section commissions #}
-                                {# <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Cotation_getMontant_commission_pure(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Cotation_getMontant_commission_ht(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Cotation_getMontant_commission_ttc(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Cotation_getMontant_prime_payable_par_client_payee(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
-                                    {% if constante.Cotation_getMontant_commission_ttc_solde(cotation) != 0 %}
+                                    {% if constante.Cotation_getMontant_prime_payable_par_client_solde(avenant.cotation) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/> #}
+                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Cotation_getMontant_prime_payable_par_client_solde(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {# Section commissions #}
+                                <small class="m-2">
+                                    <span class="text-secondary">Com. pure: {{ constante.Cotation_getMontant_commission_pure(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. ht: {{ constante.Cotation_getMontant_commission_ht(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. totale: {{ constante.Cotation_getMontant_commission_ttc(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Cotation_getMontant_commission_ttc_solde(avenant.cotation) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
                                 {# {% for taxe in serviceTaxe.taxes %}
                                      {% if taxe.redevable == 0 %} #}
                                         {# Section Taxes : TVA#}
