@@ -111,12 +111,12 @@
                                 {# Retro-commission #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Partenaire_getMontant_retrocommissions_payable_par_courtier(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {# <span class="text-secondary fw-bold"> • Rétro-com payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                    {# {% set couleur = "text-secondary" %} #}
-                                    {# {% if constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(cotation) != 0 %} #}
-                                        {# {% set couleur = "text-danger" %} #}
-                                    {# {% endif %} #}
-                                    {# <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> #}
+                                    <span class="text-secondary fw-bold"> • Rétro-com payée: {{ constante.Partenaire_getMontant_retrocommissions_payable_par_courtier_payee(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Partenaire_getMontant_retrocommissions_payable_par_courtier_solde(partenaire) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Partenaire_getMontant_retrocommissions_payable_par_courtier_solde(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                 </small><br>
                             </td>
                             <td>
