@@ -2041,17 +2041,27 @@ class Constante
     public function Partenaire_getDescriptionConditionSpecialePartage(?ConditionPartage $conditionPartage): string
     {
         $texte = "";
+
+        
+
+
         if ($conditionPartage != null) {
+            $unite = match ($conditionPartage->getUniteMesure()) {
+               ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => "(du client)",
+               ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => "(du risque)",
+               ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => "(du partenaire)",
+           };
+
             // dd($conditionPartage);
             switch ($conditionPartage->getFormule()) {
                 case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
                     if ($conditionPartage->getSeuil()) {
-                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure si celle-ci est au moins égale à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure " . $unite . " si celle-ci (assiette) est au moins égale à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
                     }
                     break;
                 case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
                     if ($conditionPartage->getSeuil()) {
-                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure si celle-ci est inférieur au seuil à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure " . $unite . " si celle-ci (assiette) est inférieur au seuil à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
                     }
                     break;
                 case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
