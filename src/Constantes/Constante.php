@@ -2091,6 +2091,83 @@ class Constante
         }
         return $montant;
     }
+    public function Partenaire_getMontant_commission_ht(Partenaire $partenaire): float
+    {
+        $montant = 0;
+        if ($partenaire->getEntreprise()) {
+            if ($partenaire->getEntreprise()) {
+                /** @var Invite $invite */
+                foreach ($partenaire->getEntreprise()->getInvites() as $invite) {
+                    /** @var Piste $piste */
+                    foreach ($invite->getPistes() as $piste) {
+                        /** @var Cotation $cotation */
+                        foreach ($piste->getCotations() as $cotation) {
+                            if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
+                                if ($this->Cotation_isBound($cotation)) {
+                                    // dd("J'ai trouvé quelques chose", $cotation);
+                                    $montant += $this->Cotation_getMontant_commission_ht($cotation);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Partenaire_getMontant_commission_ttc(Partenaire $partenaire): float
+    {
+        $montant = 0;
+        if ($partenaire->getEntreprise()) {
+            if ($partenaire->getEntreprise()) {
+                /** @var Invite $invite */
+                foreach ($partenaire->getEntreprise()->getInvites() as $invite) {
+                    /** @var Piste $piste */
+                    foreach ($invite->getPistes() as $piste) {
+                        /** @var Cotation $cotation */
+                        foreach ($piste->getCotations() as $cotation) {
+                            if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
+                                if ($this->Cotation_isBound($cotation)) {
+                                    // dd("J'ai trouvé quelques chose", $cotation);
+                                    $montant += $this->Cotation_getMontant_commission_ttc($cotation);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Partenaire_getMontant_commission_ttc_collectee(Partenaire $partenaire): float
+    {
+        $montant = 0;
+        if ($partenaire->getEntreprise()) {
+            if ($partenaire->getEntreprise()) {
+                /** @var Invite $invite */
+                foreach ($partenaire->getEntreprise()->getInvites() as $invite) {
+                    /** @var Piste $piste */
+                    foreach ($invite->getPistes() as $piste) {
+                        /** @var Cotation $cotation */
+                        foreach ($piste->getCotations() as $cotation) {
+                            if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
+                                if ($this->Cotation_isBound($cotation)) {
+                                    // dd("J'ai trouvé quelques chose", $cotation);
+                                    $montant += $this->Cotation_getMontant_commission_ttc_collectee($cotation);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Partenaire_getMontant_commission_ttc_solde(Partenaire $partenaire): float
+    {
+        $montant = $this->Partenaire_getMontant_commission_ttc($partenaire) - $this->Partenaire_getMontant_commission_ttc_collectee($partenaire);
+        return round($montant, 4);
+    }
 
 
 

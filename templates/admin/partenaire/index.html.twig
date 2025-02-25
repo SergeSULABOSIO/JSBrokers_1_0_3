@@ -73,14 +73,14 @@
                                 {# Section commissions #}
                                 <small class="m-2">
                                     <span class="text-secondary">Com. pure: {{ constante.Partenaire_getMontant_commission_pure(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {# <span class="text-secondary"> • Com. ht: {{ constante.Cotation_getMontant_commission_ht(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                    {# <span class="text-secondary"> • C. totale: {{ constante.Cotation_getMontant_commission_ttc(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                    {# <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                    {# {% set couleur = "text-secondary" %} #}
-                                    {# {% if constante.Cotation_getMontant_commission_ttc_solde(cotation) != 0 %} #}
-                                        {# {% set couleur = "text-danger" %} #}
-                                    {# {% endif %} #}
-                                    {# <span class="{{couleur}}"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    <span class="text-secondary"> • Com. ht: {{ constante.Partenaire_getMontant_commission_ht(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. totale: {{ constante.Partenaire_getMontant_commission_ttc(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. collectée: {{ constante.Partenaire_getMontant_commission_ttc_collectee(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Partenaire_getMontant_commission_ttc_solde(partenaire) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Solde: {{ constante.Partenaire_getMontant_commission_ttc_solde(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                             </td>
                             <td>
