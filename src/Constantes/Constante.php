@@ -13,6 +13,7 @@ use App\Entity\Client;
 use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Partenaire;
@@ -2013,16 +2014,81 @@ class Constante
      * 
      * INTERMEDIAIRE
      */
-    public function Partenaire_getMontant_prime_payable_par_client(?Partenaire $partenaire): float
+    public function Partenaire_getMontant_prime_payable_par_client(Partenaire $partenaire): float
     {
         $montant = 0;
-        dd($partenaire);
-        // foreach ($cotation->getChargements() as $loading) {
-        //     /** @var ChargementPourPrime $chargement */
-        //     $chargement = $loading;
-        //     $montant += $chargement->getMontantFlatExceptionel();
-        //     // dd("ici", $loading);
-        // }
+        if ($partenaire->getEntreprise()) {
+            if ($partenaire->getEntreprise()) {
+                /** @var Invite $invite */
+                foreach ($partenaire->getEntreprise()->getInvites() as $invite) {
+                    /** @var Piste $piste */
+                    foreach ($invite->getPistes() as $piste) {
+                        /** @var Cotation $cotation */
+                        foreach ($piste->getCotations() as $cotation) {
+                            if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
+                                if ($this->Cotation_isBound($cotation)) {
+                                    // dd("J'ai trouvé quelques chose", $cotation);
+                                    $montant += $this->Cotation_getMontant_prime_payable_par_client($cotation);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Partenaire_getMontant_prime_payable_par_client_payee(Partenaire $partenaire): float
+    {
+        $montant = 0;
+        if ($partenaire->getEntreprise()) {
+            if ($partenaire->getEntreprise()) {
+                /** @var Invite $invite */
+                foreach ($partenaire->getEntreprise()->getInvites() as $invite) {
+                    /** @var Piste $piste */
+                    foreach ($invite->getPistes() as $piste) {
+                        /** @var Cotation $cotation */
+                        foreach ($piste->getCotations() as $cotation) {
+                            if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
+                                if ($this->Cotation_isBound($cotation)) {
+                                    // dd("J'ai trouvé quelques chose", $cotation);
+                                    $montant += $this->Cotation_getMontant_prime_payable_par_client_payee($cotation);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Partenaire_getMontant_prime_payable_par_client_solde(Partenaire $partenaire): float
+    {
+        $montant = $this->Partenaire_getMontant_prime_payable_par_client($partenaire) - $this->Partenaire_getMontant_prime_payable_par_client_payee($partenaire);
+        return round($montant, 4);
+    }
+    public function Partenaire_getMontant_commission_pure(Partenaire $partenaire): float
+    {
+        $montant = 0;
+        if ($partenaire->getEntreprise()) {
+            if ($partenaire->getEntreprise()) {
+                /** @var Invite $invite */
+                foreach ($partenaire->getEntreprise()->getInvites() as $invite) {
+                    /** @var Piste $piste */
+                    foreach ($invite->getPistes() as $piste) {
+                        /** @var Cotation $cotation */
+                        foreach ($piste->getCotations() as $cotation) {
+                            if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
+                                if ($this->Cotation_isBound($cotation)) {
+                                    // dd("J'ai trouvé quelques chose", $cotation);
+                                    $montant += $this->Cotation_getMontant_commission_pure($cotation);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         return $montant;
     }
 

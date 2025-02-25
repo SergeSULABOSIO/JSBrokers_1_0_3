@@ -63,12 +63,24 @@
                                 {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Partenaire_getMontant_prime_payable_par_client(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {# <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Cotation_getMontant_prime_payable_par_client_payee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Partenaire_getMontant_prime_payable_par_client_payee(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Partenaire_getMontant_prime_payable_par_client_solde(partenaire) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Partenaire_getMontant_prime_payable_par_client_solde(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {# Section commissions #}
+                                <small class="m-2">
+                                    <span class="text-secondary">Com. pure: {{ constante.Partenaire_getMontant_commission_pure(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {# <span class="text-secondary"> • Com. ht: {{ constante.Cotation_getMontant_commission_ht(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    {# <span class="text-secondary"> • C. totale: {{ constante.Cotation_getMontant_commission_ttc(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    {# <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
                                     {# {% set couleur = "text-secondary" %} #}
-                                    {# {% if constante.Cotation_getMontant_prime_payable_par_client_solde(cotation) != 0 %} #}
+                                    {# {% if constante.Cotation_getMontant_commission_ttc_solde(cotation) != 0 %} #}
                                         {# {% set couleur = "text-danger" %} #}
                                     {# {% endif %} #}
-                                    {# <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Cotation_getMontant_prime_payable_par_client_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
+                                    {# <span class="{{couleur}}"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
                                 </small><br/>
                             </td>
                             <td>
