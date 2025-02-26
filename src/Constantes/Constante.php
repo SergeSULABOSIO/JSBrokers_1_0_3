@@ -420,6 +420,116 @@ class Constante
         }
         return $tot;
     }
+    public function Groupe_getMontant_prime_payable_par_client_payee(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_prime_payable_par_client_payee($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_prime_payable_par_client_solde(?Groupe $groupe): float
+    {
+        $tot = $this->Groupe_getMontant_prime_payable_par_client($groupe) - $this->Groupe_getMontant_prime_payable_par_client_payee($groupe);
+        return round($tot, 4);
+    }
+    public function Groupe_getMontant_commission_pure(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_commission_pure($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_commission_ht(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_commission_ht($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_commission_ttc(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_commission_ttc($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_commission_ttc_collectee(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_commission_ttc_collectee($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_commission_ttc_solde(?Groupe $groupe): float
+    {
+        $tot = $this->Groupe_getMontant_commission_ttc($groupe) - $this->Groupe_getMontant_commission_ttc_collectee($groupe);
+        return round($tot, 4);
+    }
+    public function Groupe_getMontant_taxe_payable_par_assureur(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_taxe_payable_par_assureur($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_taxe_payable_par_assureur_payee(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_taxe_payable_par_assureur_payee($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_taxe_payable_par_assureur_solde(?Groupe $groupe): float
+    {
+        $tot = $this->Groupe_getMontant_taxe_payable_par_assureur($groupe) - $this->Groupe_getMontant_taxe_payable_par_assureur_payee($groupe);
+        return round($tot, 4);
+    }
+    public function Groupe_getMontant_taxe_payable_par_courtier(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_taxe_payable_par_courtier($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_taxe_payable_par_courtier_payee(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_taxe_payable_par_courtier_payee($client);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_taxe_payable_par_courtier_solde(?Groupe $groupe): float
+    {
+        $tot = $this->Groupe_getMontant_taxe_payable_par_courtier($groupe) - $this->Groupe_getMontant_taxe_payable_par_courtier_payee($groupe);
+        return round($tot, 4);
+    }
 
 
 

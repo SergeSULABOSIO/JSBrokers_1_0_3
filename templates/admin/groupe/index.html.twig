@@ -56,51 +56,51 @@
                                 {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Groupe_getMontant_prime_payable_par_client(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {# <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Client_getMontant_prime_payable_par_client_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                    {# {% set couleur = "text-secondary" %} #}
-                                    {# {% if constante.Client_getMontant_prime_payable_par_client_solde(client) != 0 %} #}
-                                        {# {% set couleur = "text-danger" %} #}
-                                    {# {% endif %} #}
-                                    {# <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Client_getMontant_prime_payable_par_client_solde(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>  #}
-                                </small><br/>
-                                {# Section commissions #}
-                                {# <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Client_getMontant_commission_pure(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Client_getMontant_commission_ht(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Client_getMontant_commission_ttc(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Client_getMontant_commission_ttc_collectee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Groupe_getMontant_prime_payable_par_client_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
-                                    {% if constante.Client_getMontant_commission_ttc_solde(client) != 0 %}
+                                    {% if constante.Groupe_getMontant_prime_payable_par_client_solde(groupe) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Client_getMontant_commission_ttc_solde(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/> #}
-                                {# {% for taxe in serviceTaxe.taxes %} #}
-                                     {# {% if taxe.redevable == 0 %} #}
+                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Groupe_getMontant_prime_payable_par_client_solde(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {# Section commissions #}
+                                <small class="m-2">
+                                    <span class="text-secondary">Com. pure: {{ constante.Groupe_getMontant_commission_pure(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. ht: {{ constante.Groupe_getMontant_commission_ht(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. totale: {{ constante.Groupe_getMontant_commission_ttc(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. collectée: {{ constante.Groupe_getMontant_commission_ttc_collectee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Groupe_getMontant_commission_ttc_solde(groupe) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Solde: {{ constante.Groupe_getMontant_commission_ttc_solde(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {% for taxe in serviceTaxe.taxes %}
+                                     {% if taxe.redevable == 0 %}
                                         {# Section Taxes : TVA#}
-                                        {# <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Client_getMontant_taxe_payable_par_assureur(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Client_getMontant_taxe_payable_par_assureur_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <small class="m-2">
+                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Groupe_getMontant_taxe_payable_par_assureur(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Groupe_getMontant_taxe_payable_par_assureur_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Client_getMontant_taxe_payable_par_assureur_solde(client) != 0 %}
+                                            {% if constante.Groupe_getMontant_taxe_payable_par_assureur_solde(groupe) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde: {{ constante.Client_getMontant_taxe_payable_par_assureur_solde(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/> #}
-                                     {# {% endif %} #}
-                                     {# {% if taxe.redevable == 1 %} #}
+                                            <span class="{{couleur}}"> • Solde: {{ constante.Groupe_getMontant_taxe_payable_par_assureur_solde(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        </small><br/>
+                                     {% endif %}
+                                     {% if taxe.redevable == 1 %}
                                         {# Section Taxe: ARCA #}
-                                        {# <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Client_getMontant_taxe_payable_par_courtier(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Client_getMontant_taxe_payable_par_courtier_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <small class="m-2">
+                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Groupe_getMontant_taxe_payable_par_courtier(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Groupe_getMontant_taxe_payable_par_courtier_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Client_getMontant_taxe_payable_par_courtier_solde(client) != 0 %}
+                                            {% if constante.Groupe_getMontant_taxe_payable_par_courtier_solde(groupe) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_taxe_payable_par_courtier_solde(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/> #}
-                                     {# {% endif %} #}
-                                {# {% endfor %} #}
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Groupe_getMontant_taxe_payable_par_courtier_solde(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        </small><br/>
+                                     {% endif %}
+                                {% endfor %}
                                 {# {% for partenaire in constante.Client_getPartenaires(client) %} #}
                                     {# Retro-commission #}
                                     {# {% if partenaire != null %}
