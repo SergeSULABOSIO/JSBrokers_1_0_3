@@ -101,20 +101,20 @@
                                         </small><br/>
                                      {% endif %}
                                 {% endfor %}
-                                {# {% for partenaire in constante.Client_getPartenaires(client) %} #}
+                                {% for partenaire in constante.Groupe_getPartenaires(groupe) %}
                                     {# Retro-commission #}
-                                    {# {% if partenaire != null %}
+                                    {% if partenaire != null %}
                                         <small class="m-2">
-                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier(client, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_payee(client, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier(groupe, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_payee(groupe, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire) != 0 %}
+                                            {% if constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         </small><br>
-                                    {% endif %} #}
-                                {# {% endfor %} #}
+                                    {% endif %}
+                                {% endfor %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

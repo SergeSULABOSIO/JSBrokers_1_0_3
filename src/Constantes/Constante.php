@@ -410,6 +410,44 @@ class Constante
     /**
      * GROUPE / SECTEUR D'ACTIVITE
      */
+    public function Groupe_getPartenaires(?Groupe $groupe): ArrayCollection
+    {
+        $partenaires = new ArrayCollection();
+
+        foreach ($groupe->getClients() as $client) {
+            foreach ($this->Client_getPartenaires($client) as $partenaire) {
+                if ($partenaires->contains($partenaire) == false && $partenaire != null) {
+                    $partenaires->add($partenaire);
+                }
+            }
+        }
+        return $partenaires;
+    }
+    public function Groupe_getMontant_retrocommissions_payable_par_courtier(?Groupe $groupe, ?Partenaire $partenaireCible): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_retrocommissions_payable_par_courtier($client, $partenaireCible);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_retrocommissions_payable_par_courtier_payee(?Groupe $groupe, ?Partenaire $partenaireCible): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_retrocommissions_payable_par_courtier_payee($client, $partenaireCible);
+            }
+        }
+        return $tot;
+    }
+    public function Groupe_getMontant_retrocommissions_payable_par_courtier_solde(?Groupe $groupe, ?Partenaire $partenaireCible): float
+    {
+        $tot = $this->Groupe_getMontant_retrocommissions_payable_par_courtier($groupe, $partenaireCible) - $this->Groupe_getMontant_retrocommissions_payable_par_courtier_payee($groupe, $partenaireCible);
+        return round($tot, 4);
+    }
     public function Groupe_getMontant_prime_payable_par_client(?Groupe $groupe): float
     {
         $tot = 0;
