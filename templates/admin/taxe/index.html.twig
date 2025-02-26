@@ -49,7 +49,7 @@
                         <tr id="row_taxe_{{ taxe.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.taxe.edit', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ taxe.code }} • {{ taxe.description }}
+                                    {{ taxe.code }} • {{ taxe.description }} • {{ constante.Taxe_getNomAutoriteFiscale(taxe) }}
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">La commission hors taxe est la base du calcul</span> 
@@ -72,8 +72,8 @@
                                 {% if taxe.redevable == 0 %}
                                     {# Section Taxes : TVA#}
                                     <small class="m-2 fw-bold">
-                                        <span class="text-secondary">{{ taxe.code }}: {{ constante.Taxe_getMontant_taxe_payable_par_assureur(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_assureur_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Montant {{ taxe.code }} générée: {{ constante.Taxe_getMontant_taxe_payable_par_assureur(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Montant {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_assureur_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
                                         {% if constante.Taxe_getMontant_taxe_payable_par_assureur_solde(taxe) != 0 %}
                                             {% set couleur = "text-danger" %}
@@ -84,8 +84,8 @@
                                 {% if taxe.redevable == 1 %}
                                     {# Section Taxe: ARCA #}
                                     <small class="m-2 fw-bold">
-                                        <span class="text-secondary">{{ taxe.code }}: {{ constante.Taxe_getMontant_taxe_payable_par_courtier(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_courtier_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Montant {{ taxe.code }} générée: {{ constante.Taxe_getMontant_taxe_payable_par_courtier(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Montant {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_courtier_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
                                         {% if constante.Taxe_getMontant_taxe_payable_par_courtier_solde(taxe) != 0 %}
                                             {% set couleur = "text-danger" %}

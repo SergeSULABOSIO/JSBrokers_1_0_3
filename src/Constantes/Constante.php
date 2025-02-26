@@ -3163,6 +3163,13 @@ class Constante
         }
         return "";
     }
+    public function Taxe_getNomAutoriteFiscale(?Taxe $taxe)
+    {
+        if ($taxe != null) {
+            return count($taxe->getAutoriteFiscales()) != 0 ? $taxe->getAutoriteFiscales()[0] : "Aucune autorité fiscale définie";
+        }
+        return "";
+    }
     public function Taxe_getMontant_commission_pure(?Taxe $taxe): float
     {
         $tot = 0;
@@ -3231,6 +3238,32 @@ class Constante
     public function Taxe_getMontant_taxe_payable_par_assureur_solde(?Taxe $taxe): float
     {
         $tot = $this->Taxe_getMontant_taxe_payable_par_assureur($taxe) - $this->Taxe_getMontant_taxe_payable_par_assureur_payee($taxe);
+        return round($tot, 4);
+    }
+
+    public function Taxe_getMontant_taxe_payable_par_courtier(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_taxe_payable_par_courtier($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_taxe_payable_par_courtier_payee(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_taxe_payable_par_courtier_payee($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_taxe_payable_par_courtier_solde(?Taxe $taxe): float
+    {
+        $tot = $this->Taxe_getMontant_taxe_payable_par_courtier($taxe) - $this->Taxe_getMontant_taxe_payable_par_courtier_payee($taxe);
         return round($tot, 4);
     }
 }
