@@ -51,11 +51,11 @@
                                 <a class="m-2 fw-bold" href="{{ path('admin.avenant.edit', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}">
                                     {{ constante.getTypeAvenant(avenant.cotation.piste.typeavenant) }} • Avenant n°{{ avenant.numero }} • Police: {{ avenant.referencePolice }} • Du {{ avenant.startingAt|format_datetime('short', 'none', locale: utilisateur.locale) }} au {{ avenant.endingAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
                                 </a><br/>
-                                <small class="m-2">
+                                <small class="m-2 fw-bold">
                                     <span class="text-secondary">Exercice {{ avenant.cotation.piste.exercice }}</span> 
                                     <span class="text-secondary"> • {{ avenant.cotation.assureur }}</span> 
                                     <span class="text-secondary"> • {{ avenant.cotation.piste.client }}</span> 
-                                    <span class="text-secondary"> • {{ avenant.cotation.piste.risque }}</span> 
+                                    <span class="text-secondary"> • {{ avenant.cotation.piste.risque.code }}</span> 
                                     <span class="text-secondary"> • par {{ avenant.cotation.piste.invite.nom }}</span> 
                                     <span class="text-secondary"> le  {{ avenant.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}</span> 
                                 </small><br/>
