@@ -3,10 +3,12 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Taxe;
+use App\Form\TaxeType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
+use App\Services\ServiceTaxes;
 use App\Constantes\MenuActivator;
-use App\Form\TaxeType;
+use App\Services\ServiceMonnaies;
 use App\Repository\TaxeRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -34,6 +36,8 @@ class TaxeController extends AbstractController
         private InviteRepository $inviteRepository,
         private TaxeRepository $taxeRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -52,6 +56,8 @@ class TaxeController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
         ]);
     }
 
@@ -71,7 +77,7 @@ class TaxeController extends AbstractController
         $taxe->setEntreprise($entreprise);
         $taxe->setCode("");
         $taxe->setDescription("");
-        $taxe->setOrganisation("");
+        // $taxe->setOrganisation("");
         $taxe->setRedevable(Taxe::REDEVABLE_COURTIER);
         $taxe->setTauxIARD(0);
         $taxe->setTauxVIE(0);

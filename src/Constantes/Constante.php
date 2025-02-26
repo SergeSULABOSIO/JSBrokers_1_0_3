@@ -3147,4 +3147,90 @@ class Constante
             - $this->Cotation_getMontant_prime_payable_par_client_payee($cotation);
         return round($montant, 4);
     }
+
+
+
+    /**
+     * TAXES
+     */
+    public function Taxe_getNomRedevable(?Taxe $taxe)
+    {
+        if ($taxe != null) {
+            return match ($taxe->getRedevable()) {
+                Taxe::REDEVABLE_ASSUREUR => "Supportée par l'assureur et collectée en même temps que les commissions.",
+                Taxe::REDEVABLE_COURTIER => "Supportée par le courtier",
+            };
+        }
+        return "";
+    }
+    public function Taxe_getMontant_commission_pure(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_commission_pure($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_commission_ht(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_commission_ht($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_commission_ttc(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_commission_ttc($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_commission_ttc_collectee(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_commission_ttc_collectee($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_commission_ttc_solde(?Taxe $taxe): float
+    {
+        $tot = $this->Taxe_getMontant_commission_ttc($taxe) - $this->Taxe_getMontant_commission_ttc_collectee($taxe);
+        return round($tot, 4);
+    }
+    public function Taxe_getMontant_taxe_payable_par_assureur(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_taxe_payable_par_assureur($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_taxe_payable_par_assureur_payee(?Taxe $taxe): float
+    {
+        $tot = 0;
+        if ($taxe != null) {
+            foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
+                $tot += $this->Groupe_getMontant_taxe_payable_par_assureur_payee($groupe);
+            }
+        }
+        return $tot;
+    }
+    public function Taxe_getMontant_taxe_payable_par_assureur_solde(?Taxe $taxe): float
+    {
+        $tot = $this->Taxe_getMontant_taxe_payable_par_assureur($taxe) - $this->Taxe_getMontant_taxe_payable_par_assureur_payee($taxe);
+        return round($tot, 4);
+    }
 }

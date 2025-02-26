@@ -48,9 +48,51 @@
                     {% for taxe in taxes %}
                         <tr id="row_taxe_{{ taxe.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.taxe.edit', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ taxe.code }} (IARD: {{ taxe.tauxIARD * 100 }}%, VIE: {{ taxe.tauxVIE * 100 }}%)
-                                </a>
+                                <a class="m-2 fw-bold" href="{{ path('admin.taxe.edit', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ taxe.code }} • {{ taxe.description }}
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">La commission hors taxe est la base du calcul</span> 
+                                </small><br/>
+                                <small class="m-2 fw-bold">
+                                    <span class="text-secondary">Taux - IARD: {{ taxe.tauxIARD * 100 }}% • Taux - VIE: {{ taxe.tauxVIE * 100 }}% • {{ constante.Taxe_getNomRedevable(taxe) }}</span> 
+                                </small><br/>
+                                {# Section commissions #}
+                                <small class="m-2">
+                                    <span class="text-secondary">Com. pure: {{ constante.Taxe_getMontant_commission_pure(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. ht: {{ constante.Taxe_getMontant_commission_ht(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. totale: {{ constante.Taxe_getMontant_commission_ttc(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. collectée: {{ constante.Taxe_getMontant_commission_ttc_collectee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if constante.Taxe_getMontant_commission_ttc_solde(taxe) != 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Solde: {{ constante.Taxe_getMontant_commission_ttc_solde(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {% if taxe.redevable == 0 %}
+                                    {# Section Taxes : TVA#}
+                                    <small class="m-2 fw-bold">
+                                        <span class="text-secondary">{{ taxe.code }}: {{ constante.Taxe_getMontant_taxe_payable_par_assureur(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_assureur_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Taxe_getMontant_taxe_payable_par_assureur_solde(taxe) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde: {{ constante.Taxe_getMontant_taxe_payable_par_assureur_solde(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                {% endif %}
+                                {% if taxe.redevable == 1 %}
+                                    {# Section Taxe: ARCA #}
+                                    <small class="m-2 fw-bold">
+                                        <span class="text-secondary">{{ taxe.code }}: {{ constante.Taxe_getMontant_taxe_payable_par_courtier(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_courtier_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Taxe_getMontant_taxe_payable_par_courtier_solde(taxe) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde: {{ constante.Taxe_getMontant_taxe_payable_par_courtier_solde(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
