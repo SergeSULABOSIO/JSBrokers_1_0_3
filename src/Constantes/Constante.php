@@ -33,6 +33,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\ReportSet\PartnerReportSet;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -443,12 +444,12 @@ class Constante
         }
         return $tot;
     }
-    public function Client_getMontant_retrocommissions_payable_par_courtier_payee(?Client $client): float
+    public function Client_getMontant_retrocommissions_payable_par_courtier_payee(?Client $client, ?Partenaire $partenaireCible = null): float
     {
         $tot = 0;
         if ($client != null) {
             foreach ($client->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier_payee($piste);
+                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier_payee($piste, $partenaireCible);
             }
         }
         return $tot;
@@ -877,7 +878,7 @@ class Constante
         // dd($partenaires);
         return $partenaires;
     }
-    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier(?TypeRevenu $typeRevenu)
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible = null)
     {
         $tot = 0;
         if ($typeRevenu != null) {
@@ -886,13 +887,13 @@ class Constante
                 // dd("Jai du contenu");
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu);
+                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible);
                 }
             }
         }
         return $tot;
     }
-    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(?TypeRevenu $typeRevenu)
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible = null)
     {
         $tot = 0;
         if ($typeRevenu != null) {
@@ -901,13 +902,13 @@ class Constante
                 // dd("Jai du contenu");
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu);
+                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
                 }
             }
         }
         return $tot;
     }
-    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(?TypeRevenu $typeRevenu)
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible = null)
     {
         $tot = 0;
         if ($typeRevenu != null) {
@@ -916,7 +917,7 @@ class Constante
                 // dd("Jai du contenu");
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_solde($revenu);
+                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_solde($revenu, $partenaireCible);
                 }
             }
         }
@@ -1220,23 +1221,23 @@ class Constante
         $solde = $this->Revenu_getMontant_taxe_payable_par_courtier($revenu) - $this->Revenu_getMontant_taxe_payable_par_courtier_payee($revenu);
         return round($solde, 4);
     }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu): float
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible): float
     {
         $montant = 0;
         if ($revenu != null) {
             if ($revenu->getCotation() != null) {
-                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation());
+                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible);
             }
         }
         return $montant;
     }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu): float
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible = null): float
     {
-        return $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($revenu->getCotation());
+        return $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($revenu->getCotation(), $partenaireCible);
     }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier_solde(?RevenuPourCourtier $revenu)
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier_solde(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible = null)
     {
-        $solde = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu) - $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu);
+        $solde = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible) - $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
         return round($solde, 4);
     }
 
@@ -1245,6 +1246,21 @@ class Constante
     /**
      * RISQUE
      */
+    public function Risque_getPartenaires(?Risque $risque): ArrayCollection
+    {
+        $Tabpartenaires = new ArrayCollection();
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                /** @var Partenaire $partenaire */
+                foreach ($this->Piste_getPartenaires($piste) as $partenaire) {
+                    if (!$Tabpartenaires->contains($partenaire)) {
+                        $Tabpartenaires->add($partenaire);
+                    }
+                }
+            }
+        }
+        return $Tabpartenaires;
+    }
     public function Risque_getNomBranche($branche)
     {
         return match ($branche) {
@@ -1282,6 +1298,128 @@ class Constante
     public function Risque_getMontant_prime_payable_par_client_solde(?Risque $risque)
     {
         $tot = $this->Risque_getMontant_prime_payable_par_client($risque) - $this->Risque_getMontant_prime_payable_par_client_payee($risque);
+        return round($tot, 4);
+    }
+    public function Risque_getMontant_commission_pure(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_pure($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_commission_ht(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_ht($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_commission_ttc(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_ttc($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_commission_collectee(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_commission_collectee($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_commission_ttc_solde(?Risque $risque)
+    {
+        $tot = $this->Risque_getMontant_commission_ttc($risque) - $this->Risque_getMontant_commission_collectee($risque);
+        return round($tot, 4);
+    }
+    public function Risque_getMontant_taxe_payable_par_assureur(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_assureur($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_taxe_payable_par_assureur_payee(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_assureur_payee($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_taxe_payable_par_courtier(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_courtier($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_taxe_payable_par_courtier_payee(?Risque $risque)
+    {
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_taxe_payable_par_courtier_payee($piste);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_taxe_payable_par_assureur_solde(?Risque $risque)
+    {
+        $tot = $this->Risque_getMontant_taxe_payable_par_assureur($risque) - $this->Risque_getMontant_taxe_payable_par_assureur_payee($risque);
+        return round($tot, 4);
+    }
+    public function Risque_getMontant_taxe_payable_par_courtier_solde(?Risque $risque)
+    {
+        $tot = $this->Risque_getMontant_taxe_payable_par_courtier($risque) - $this->Risque_getMontant_taxe_payable_par_courtier_payee($risque);
+        return round($tot, 4);
+    }
+    public function Risque_getMontant_retrocommissions_payable_par_courtier(?Risque $risque, ?Partenaire $partenaire = null)
+    {
+        // dd($risque, $partenaire);
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier($piste, $partenaire);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_retrocommissions_payable_par_courtier_payee(?Risque $risque, ?Partenaire $partenaire = null)
+    {
+        // dd($risque, $partenaire);
+        $tot = 0;
+        if ($risque) {
+            foreach ($risque->getPistes() as $piste) {
+                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier_payee($piste, $partenaire);
+            }
+        }
+        return $tot;
+    }
+    public function Risque_getMontant_retrocommissions_payable_par_courtier_solde(?Risque $risque, ?Partenaire $partenaireCible)
+    {
+        $tot = $this->Risque_getMontant_retrocommissions_payable_par_courtier($risque, $partenaireCible) - $this->Risque_getMontant_retrocommissions_payable_par_courtier_payee($risque, $partenaireCible);
         return round($tot, 4);
     }
 
@@ -1819,7 +1957,7 @@ class Constante
         }
         return $montant;
     }
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation): float
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation, ?Partenaire $partenaireCible = null): float
     {
         $montant = 0;
         if ($cotation->getPiste()) {
@@ -1828,27 +1966,49 @@ class Constante
                 /** @var Partenaire $partenaire */
                 $partenaire = $cotation->getPiste()->getPartenaires()[0];
                 if ($partenaire) {
-                    if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
-                        //On traite les conditions spéciale attachées à la piste
-                        $montant = $this->appliquerConditions($cotation->getPiste()->getConditionsPartageExceptionnelles()[0], $cotation);
-                    } else {
-                        $montant = $this->Cotation_appliquerTauxRetrocomPartenaire($partenaire, $cotation);
+
+                    //On doit d'abord s'assurer que nous parlons du même partenaire
+                    if ($this->isSamePartenaire($partenaire, $partenaireCible)) {
+                        if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
+                            //On traite les conditions spéciale attachées à la piste
+                            $montant = $this->appliquerConditions($cotation->getPiste()->getConditionsPartageExceptionnelles()[0], $cotation);
+                        } else {
+                            $montant = $this->Cotation_appliquerTauxRetrocomPartenaire($partenaire, $cotation);
+                        }
                     }
                 }
             } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
                 /** @var Partenaire $partenaire */
                 $partenaire = $cotation->getPiste()->getClient()->getPartenaires()[0];
-                $montant = $this->Cotation_appliquerTauxRetrocomPartenaire($partenaire, $cotation);
+
+                //On doit d'abord s'assurer que nous parlons du même partenaire
+                if ($this->isSamePartenaire($partenaire, $partenaireCible)) {
+                    $montant = $this->Cotation_appliquerTauxRetrocomPartenaire($partenaire, $cotation);
+                }
             }
         }
         return $montant;
     }
-    public function Tranche_getMontant_retrocommissions_payable_par_courtier(?Tranche $tranche): float
+
+    private function isSamePartenaire(?Partenaire $partenaire, ?Partenaire $partenaireCible): bool
+    {
+        if ($partenaireCible == null) {
+            return true;
+        } else {
+            if ($partenaireCible != $partenaire) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+    }
+
+    public function Tranche_getMontant_retrocommissions_payable_par_courtier(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
     {
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation() != null) {
-                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($tranche->getCotation()) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($tranche->getCotation(), $partenaireCible) * $tranche->getPourcentage();
             }
         }
         return $montant;
@@ -2008,50 +2168,60 @@ class Constante
         }
         return $montant;
     }
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation): float
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation, ?Partenaire $partenaireCible = null): float
     {
         $montant = 0;
         if ($cotation != null) {
-            /** @var Tranche $tranche */
-            foreach ($cotation->getTranches() as $tranche) {
-                $montant += $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche);
-            }
-        }
-        return $montant;
-    }
-    public function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche): float
-    {
-        $montant = 0;
-        if (count($tranche->getArticles())) {
-            /** @var Article $article */
-            foreach ($tranche->getArticles() as $articleTranche) {
-                /** @var Article $article */
-                $article = $articleTranche;
-
-                /** @var Note $note */
-                $note = $article->getNote();
-
-                //Quelle proportion de la note a-t-elle été payée (100%?)
-                $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
-
-                //Qu'est-ce qu'on a facturé?
-                if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $proportionPaiement * $article->getMontant();
+            $partenaire = $cotation->getPiste()->getPartenaires()[0];
+            if ($partenaire) {
+                //On doit d'abord s'assurer que nous parlons du même partenaire
+                if ($this->isSamePartenaire($partenaire, $partenaireCible)) {
+                    /** @var Tranche $tranche */
+                    foreach ($cotation->getTranches() as $tranche) {
+                        $montant += $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche, $partenaireCible);
+                    }
                 }
             }
         }
         return $montant;
     }
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier_solde(?Cotation $cotation): float
+    public function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
     {
-        $retrocom = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
-        $retrocom_paye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+        $montant = 0;
+        if (count($tranche->getArticles())) {
+            //On doit d'abord s'assurer que nous parlons du même partenaire
+            if ($this->isSamePartenaire($tranche->getCotation()->getPiste()->getPartenaires()[0], $partenaireCible)) {
+                /** @var Article $article */
+                foreach ($tranche->getArticles() as $articleTranche) {
+
+                    /** @var Article $article */
+                    $article = $articleTranche;
+
+                    /** @var Note $note */
+                    $note = $article->getNote();
+
+                    //Quelle proportion de la note a-t-elle été payée (100%?)
+                    $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
+
+                    //Qu'est-ce qu'on a facturé?
+                    if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
+                        $montant += $proportionPaiement * $article->getMontant();
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier_solde(?Cotation $cotation, ?Partenaire $partenaireCible = null): float
+    {
+        $retrocom = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaireCible);
+        $retrocom_paye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation, $partenaireCible);
         return round($retrocom - $retrocom_paye, 4);
     }
-    public function Tranche_getMontant_retrocommissions_payable_par_courtier_solde(?Tranche $tranche): float
+    public function Tranche_getMontant_retrocommissions_payable_par_courtier_solde(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
     {
-        $retrocom = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
-        $retrocom_paye = $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche);
+        $retrocom = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche, $partenaireCible);
+        $retrocom_paye = $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche, $partenaireCible);
         return round($retrocom - $retrocom_paye, 4);
     }
 
@@ -2712,7 +2882,7 @@ class Constante
         }
         return $tot;
     }
-    public function Piste_getMontant_retrocommissions_payable_par_courtier(?Piste $piste)
+    public function Piste_getMontant_retrocommissions_payable_par_courtier(?Piste $piste, ?Partenaire $partenaire = null)
     {
         $tot = 0;
         if ($piste) {
@@ -2720,14 +2890,14 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaire);
                     }
                 }
             }
         }
         return $tot;
     }
-    public function Piste_getMontant_retrocommissions_payable_par_courtier_payee(?Piste $piste)
+    public function Piste_getMontant_retrocommissions_payable_par_courtier_payee(?Piste $piste, ?Partenaire $partenaire)
     {
         $tot = 0;
         if ($piste) {
@@ -2735,14 +2905,14 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation, $partenaire);
                     }
                 }
             }
         }
         return $tot;
     }
-    public function Piste_getMontant_retrocommissions_payable_par_courtier_solde(?Piste $piste)
+    public function Piste_getMontant_retrocommissions_payable_par_courtier_solde(?Piste $piste, ?Partenaire $partenaireCible)
     {
         $tot = 0;
         if ($piste) {
@@ -2750,7 +2920,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_solde($cotation);
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_solde($cotation, $partenaireCible);
                     }
                 }
             }

@@ -101,17 +101,19 @@
                                      {% endif %}
                                 {% endfor %}
                                 {% for partenaire in constante.Piste_getPartenaires(piste) %}
-                                    {# Retro-commission #}
-                                    <small class="m-2">
-                                        {# {{partenaire.nom}} #}
-                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_payee(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        {% set couleur = "text-secondary" %}
-										{% if constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste) != 0 %}
-                                    		{% set couleur = "text-danger" %}
-										{% endif %}
-										<span class="{{couleur}}"> • Solde dû: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                    </small><br>
+                                    {% if partenaire != null %}
+                                        {# Retro-commission #}
+                                        <small class="m-2">
+                                            {# {{partenaire.nom}} #}
+                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier(piste, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_payee(piste, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {% set couleur = "text-secondary" %}
+                                            {% if constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste, partenaire) != 0 %}
+                                                {% set couleur = "text-danger" %}
+                                            {% endif %}
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        </small><br>
+                                    {% endif %}
                                 {% endfor %}
                             </td>
                             <td>

@@ -93,23 +93,24 @@
                                         </small><br/>
                                      {% endif %}
                                 {% endfor %}
-                                {% if constante.Cotation_getPartenaire(revenucourtier.cotation) %}
+                                {% set partenaire = constante.Cotation_getPartenaire(revenucourtier.cotation) %}
+                                {% if partenaire != null %}
                                     {# Retro-commission #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ constante.Cotation_getPartenaire(revenucourtier.cotation) }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_payee(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_payee(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
-										{% if constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier) != 0 %}
+										{% if constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire) != 0 %}
                                     		{% set couleur = "text-danger" %}
 										{% endif %}
-										<span class="{{couleur}}"> • Solde dû: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+										<span class="{{couleur}}"> • Solde dû: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         {% if constante.Cotation_hasConditionsSpeciales(revenucourtier.cotation) %}
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(revenucourtier.cotation) }}).</span>
                                         {% endif %}
                                     </small><br>
                                 {% endif %}
                                 <small class="m-2">
-                                    <span class="text-secondary">Proposition: {{ revenucourtier.cotation.nom }} • {{ revenucourtier.cotation.piste.client }} • {{ revenucourtier.cotation.piste.risque }} • {{ revenucourtier.cotation.assureur }}</span> 
+                                    <span class="text-secondary">Prop: {{ revenucourtier.cotation.nom }} • {{ revenucourtier.cotation.piste.client }} • {{ revenucourtier.cotation.piste.risque }} • {{ revenucourtier.cotation.assureur }}</span> 
                                 </small><br>
                                 <small class="m-2">
                                     <span class="text-secondary">Piste: {{ revenucourtier.cotation.piste }}</span> 
