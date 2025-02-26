@@ -12,7 +12,9 @@ use App\Form\TacheType;
 use App\Form\GroupeType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
+use App\Services\ServiceTaxes;
 use App\Constantes\MenuActivator;
+use App\Services\ServiceMonnaies;
 use App\Repository\PisteRepository;
 use App\Repository\TacheRepository;
 use App\Repository\GroupeRepository;
@@ -42,6 +44,8 @@ class GroupeController extends AbstractController
         private InviteRepository $inviteRepository,
         private GroupeRepository $groupeRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
@@ -60,6 +64,8 @@ class GroupeController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
         ]);
     }
 

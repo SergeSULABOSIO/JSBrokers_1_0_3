@@ -33,6 +33,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\Groupe;
 use App\Entity\ReportSet\PartnerReportSet;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -400,6 +401,24 @@ class Constante
             }
         }
         return false;
+    }
+
+
+
+
+
+    /**
+     * GROUPE / SECTEUR D'ACTIVITE
+     */
+    public function Groupe_getMontant_prime_payable_par_client(?Groupe $groupe): float
+    {
+        $tot = 0;
+        if ($groupe != null) {
+            foreach ($groupe->getClients() as $client) {
+                $tot += $this->Client_getMontant_prime_payable_par_client($client);
+            }
+        }
+        return $tot;
     }
 
 
