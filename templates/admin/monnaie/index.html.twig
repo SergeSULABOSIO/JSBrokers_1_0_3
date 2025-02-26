@@ -50,17 +50,22 @@
 							<tr id="row_monnaie_{{ monnaie.id }}">
 								<td>
 									{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
-										<a class="m-2" href="{{ path('admin.monnaie.edit', {'idMonnaie':monnaie.id, 'idEntreprise': entreprise.id})}}">
-											{{ monnaie.nom }}
-										</a>
+										<a class="m-2 fw-bold" href="{{ path('admin.monnaie.edit', {'idMonnaie':monnaie.id, 'idEntreprise': entreprise.id})}}">
+											{{ monnaie.nom }} • {{ monnaie.code }}
+										</a><br/>
+										<small class="m-2">
+											<span class="text-secondary">{{ "currency_item_exchange_rate" | trans}}{{ monnaie.tauxusd }}</span> 
+											<span class="text-secondary"> • {{ "currency_item_fonction" | trans}} {{ constante.getFonctionMonnaie(monnaie.getFonction) }}</span> 
+											<span class="text-secondary fw-bold">
+												{% if monnaie.islocale == 1 %}
+													 • {{ "currency_item_monnaie_locale" | trans}}</small>
+												{% else %}
+													 • {{ "currency_item_monnaie_etrangere" | trans}}</small>
+												{% endif %}
+											</span> 
+										</small><br/>
 										<span class="fst-italic text-body-tertiary">
-											<small>{{ "currency_item_exchange_rate" | trans}}{{ monnaie.tauxusd }}</small>
-											| <small>{{ "currency_item_fonction" | trans}} {{ constante.getFonctionMonnaie(monnaie.getFonction) }}</small>
-											{% if monnaie.islocale == 1 %}
-												| <small>{{ "currency_item_monnaie_locale" | trans}}</small>
-											{% else %}
-												| <small>{{ "currency_item_monnaie_etrangere" | trans}}</small>
-											{% endif %}
+											
 										</span>
 									{# </turbo-frame> #}
 								</td>

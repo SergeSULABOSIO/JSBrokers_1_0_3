@@ -48,9 +48,12 @@
                     {% for comptebancaire in comptebancaires %}
                         <tr id="row_taxe_{{ comptebancaire.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.comptebancaire.edit', {'idCompteBancaire':comptebancaire.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ comptebancaire.intitule }} - {{ comptebancaire.banque }}
-                                </a>
+                                <a class="m-2 fw-bold" href="{{ path('admin.comptebancaire.edit', {'idCompteBancaire':comptebancaire.id, 'idEntreprise': entreprise.id})}}">
+                                    Numéro: {{ comptebancaire.numero }} • Banque: {{ comptebancaire.banque }}
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">Intitulé: {{ comptebancaire.intitule }} • Code Swift: {{ comptebancaire.codeSwift }}</span> 
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
