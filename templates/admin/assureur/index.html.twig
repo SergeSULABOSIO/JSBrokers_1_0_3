@@ -104,15 +104,17 @@
                                 {% endfor %}
                                 {% for partenaire in constante.Assureur_getPartenaires(assureur) %}
                                     {# Retro-commission #}
-                                    <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_payee(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        {% set couleur = "text-secondary" %}
-                                        {% if constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur) != 0 %}
-                                            {% set couleur = "text-danger" %}
-                                        {% endif %}
-                                        <span class="{{couleur}}"> • Solde dû: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                    </small><br>
+                                    {% if partenaire != null %}
+                                        <small class="m-2">
+                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier(assureur, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_payee(assureur, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {% set couleur = "text-secondary" %}
+                                            {% if constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur, partenaire) != 0 %}
+                                                {% set couleur = "text-danger" %}
+                                            {% endif %}
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        </small><br>
+                                    {% endif %}
                                 {% endfor %}
                             </td>
                             <td>

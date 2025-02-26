@@ -424,12 +424,12 @@ class Constante
         }
         return $partenaires;
     }
-    public function Client_getMontant_retrocommissions_payable_par_courtier(?Client $client): float
+    public function Client_getMontant_retrocommissions_payable_par_courtier(?Client $client, ?Partenaire $partenaireCible = null): float
     {
         $tot = 0;
         if ($client != null) {
             foreach ($client->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier($piste);
+                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier($piste, $partenaireCible);
             }
         }
         return $tot;
@@ -569,9 +569,9 @@ class Constante
         $tot = $this->Client_getMontant_taxe_payable_par_courtier($client) - $this->Client_getMontant_taxe_payable_par_courtier_payee($client);
         return round($tot, 4);
     }
-    public function Client_getMontant_retrocommissions_payable_par_courtier_solde(?Client $client): float
+    public function Client_getMontant_retrocommissions_payable_par_courtier_solde(?Client $client, ?Partenaire $partenaireCible = null): float
     {
-        $tot = $this->Client_getMontant_retrocommissions_payable_par_courtier($client) - $this->Client_getMontant_retrocommissions_payable_par_courtier_payee($client);
+        $tot = $this->Client_getMontant_retrocommissions_payable_par_courtier($client, $partenaireCible) - $this->Client_getMontant_retrocommissions_payable_par_courtier_payee($client, $partenaireCible);
         return round($tot, 4);
     }
 
@@ -749,33 +749,33 @@ class Constante
         $tot = $this->Assureur_getMontant_taxe_payable_par_courtier($assureur) - $this->Assureur_getMontant_taxe_payable_par_courtier_payee($assureur);
         return round($tot, 4);
     }
-    public function Assureur_getMontant_retrocommissions_payable_par_courtier(?Assureur $assureur): float
+    public function Assureur_getMontant_retrocommissions_payable_par_courtier(?Assureur $assureur, ?Partenaire $partenaireCible = null): float
     {
         $tot = 0;
         if ($assureur != null) {
             foreach ($assureur->getCotations() as $cotation) {
                 if ($this->Cotation_isBound($cotation)) {
-                    $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation);
+                    $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaireCible);
                 }
             }
         }
         return $tot;
     }
-    public function Assureur_getMontant_retrocommissions_payable_par_courtier_payee(?Assureur $assureur): float
+    public function Assureur_getMontant_retrocommissions_payable_par_courtier_payee(?Assureur $assureur, ?Partenaire $partenaireCible = null): float
     {
         $tot = 0;
         if ($assureur != null) {
             foreach ($assureur->getCotations() as $cotation) {
                 if ($this->Cotation_isBound($cotation)) {
-                    $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+                    $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation, $partenaireCible);
                 }
             }
         }
         return $tot;
     }
-    public function Assureur_getMontant_retrocommissions_payable_par_courtier_solde(?Assureur $assureur): float
+    public function Assureur_getMontant_retrocommissions_payable_par_courtier_solde(?Assureur $assureur, ?Partenaire $partenaireCible = null): float
     {
-        $tot = $this->Assureur_getMontant_retrocommissions_payable_par_courtier($assureur) - $this->Assureur_getMontant_retrocommissions_payable_par_courtier_payee($assureur);
+        $tot = $this->Assureur_getMontant_retrocommissions_payable_par_courtier($assureur, $partenaireCible) - $this->Assureur_getMontant_retrocommissions_payable_par_courtier_payee($assureur, $partenaireCible);
         return round($tot, 4);
     }
 
