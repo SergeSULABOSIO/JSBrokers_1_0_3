@@ -32,6 +32,13 @@ class AvenantType extends AbstractType
                     'placeholder' => "Référence de la police",
                 ],
             ])
+            ->add('numero', TextType::class, [
+                'required' => true,
+                'label' => "Numéro",
+                'attr' => [
+                    'placeholder' => "Numéro",
+                ],
+            ])
             ->add('description', TextType::class, [
                 'required' => false,
                 'label' => "Description",

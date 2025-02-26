@@ -51,6 +51,9 @@ class Avenant
     #[ORM\Column(length: 255)]
     private ?string $referencePolice = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $numero = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -183,6 +186,18 @@ class Avenant
     public function setReferencePolice(string $referencePolice): static
     {
         $this->referencePolice = $referencePolice;
+
+        return $this;
+    }
+
+    public function getNumero(): ?string
+    {
+        return $this->numero;
+    }
+
+    public function setNumero(?string $numero): static
+    {
+        $this->numero = $numero;
 
         return $this;
     }
