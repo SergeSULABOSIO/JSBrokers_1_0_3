@@ -54,9 +54,9 @@
 											{{ monnaie.nom }} • {{ monnaie.code }}
 										</a><br/>
 										<small class="m-2">
-											<span class="text-secondary">{{ "currency_item_exchange_rate" | trans}}{{ monnaie.tauxusd }}</span> 
+											<span class="text-secondary fw-bold">{{ "currency_item_exchange_rate" | trans}} {{ 1 |format_currency('USD') }} = {{ monnaie.tauxusd |format_currency(monnaie.code) }}</span> 
 											<span class="text-secondary"> • {{ "currency_item_fonction" | trans}} {{ constante.getFonctionMonnaie(monnaie.getFonction) }}</span> 
-											<span class="text-secondary fw-bold">
+											<span class="text-secondary">
 												{% if monnaie.islocale == 1 %}
 													 • {{ "currency_item_monnaie_locale" | trans}}</small>
 												{% else %}
@@ -64,9 +64,6 @@
 												{% endif %}
 											</span> 
 										</small><br/>
-										<span class="fst-italic text-body-tertiary">
-											
-										</span>
 									{# </turbo-frame> #}
 								</td>
 								<td>
