@@ -42,10 +42,17 @@ class CompteBancaire
     #[ORM\ManyToMany(targetEntity: Note::class, mappedBy: 'comptes')]
     private Collection $notes;
 
+    /**
+     * @var Collection<int, Paiement>
+     */
+    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'CompteBancaire')]
+    private Collection $paiements;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
         $this->notes = new ArrayCollection();
+        $this->paiements = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -171,6 +178,36 @@ class CompteBancaire
     {
         if ($this->notes->removeElement($note)) {
             $note->removeCompte($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Paiement>
+     */
+    public function getPaiements(): Collection
+    {
+        return $this->paiements;
+    }
+
+    public function addPaiement(Paiement $paiement): static
+    {
+        if (!$this->paiements->contains($paiement)) {
+            $this->paiements->add($paiement);
+            $paiement->setCompteBancaire($this);
+        }
+
+        return $this;
+    }
+
+    public function removePaiement(Paiement $paiement): static
+    {
+        if ($this->paiements->removeElement($paiement)) {
+            // set the owning side to null (unless already changed)
+            if ($paiement->getCompteBancaire() === $this) {
+                $paiement->setCompteBancaire(null);
+            }
         }
 
         return $this;

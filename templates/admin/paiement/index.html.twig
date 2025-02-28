@@ -54,6 +54,9 @@
                                 <small class ="m-2">
                                     <span class="text-secondary fw-bold">
                                         {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                        {% if paiement.comptebancaire != null %}
+                                             dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}
+                                        {% endif %}
                                     </span>
                                 </small><br/>
                                 <small class ="m-2">

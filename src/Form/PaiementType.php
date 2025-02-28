@@ -2,6 +2,7 @@
 
 namespace App\Form;
 
+use App\Entity\CompteBancaire;
 use App\Entity\Paiement;
 use App\Entity\FactureCommission;
 use App\Services\FormListenerFactory;
@@ -100,6 +101,12 @@ class PaiementType extends AbstractType
             ->add('paidAt', DateTimeType::class, [
                 'label' => "Date de paiement",
                 'widget' => 'single_text',
+            ])
+            ->add('CompteBancaire', EntityType::class, [
+                'label' => "Compte bancaire",
+                'required' => true,
+                'class' => CompteBancaire::class,
+                'choice_label' => 'intitule',
             ])
             ->add('preuves', CollectionType::class, [
                 'label' => "Documents ou preuve de paiement",

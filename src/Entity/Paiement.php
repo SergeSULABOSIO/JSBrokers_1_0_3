@@ -45,6 +45,9 @@ class Paiement
     #[ORM\ManyToOne(inversedBy: 'paiements')]
     private ?Note $note = null;
 
+    #[ORM\ManyToOne(inversedBy: 'paiements')]
+    private ?CompteBancaire $CompteBancaire = null;
+
 
     public function __construct()
     {
@@ -178,6 +181,18 @@ class Paiement
     public function setNote(?Note $note): static
     {
         $this->note = $note;
+
+        return $this;
+    }
+
+    public function getCompteBancaire(): ?CompteBancaire
+    {
+        return $this->CompteBancaire;
+    }
+
+    public function setCompteBancaire(?CompteBancaire $CompteBancaire): static
+    {
+        $this->CompteBancaire = $CompteBancaire;
 
         return $this;
     }
