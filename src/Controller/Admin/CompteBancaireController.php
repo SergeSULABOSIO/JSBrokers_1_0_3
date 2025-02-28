@@ -3,17 +3,19 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Taxe;
+use App\Form\TaxeType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\CompteBancaire;
+use App\Services\ServiceTaxes;
 use App\Form\CompteBancaireType;
-use App\Form\TaxeType;
-use App\Repository\CompteBancaireRepository;
+use App\Constantes\MenuActivator;
+use App\Services\ServiceMonnaies;
 use App\Repository\TaxeRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\CompteBancaireRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -37,6 +39,8 @@ class CompteBancaireController extends AbstractController
         private InviteRepository $inviteRepository,
         private CompteBancaireRepository $compteBancaireRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
+        private ServiceTaxes $serviceTaxes,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
@@ -55,6 +59,8 @@ class CompteBancaireController extends AbstractController
             'page' => $page,
             'constante' => $this->constante,
             'activator' => $this->activator,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
         ]);
     }
 

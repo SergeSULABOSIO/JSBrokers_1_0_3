@@ -52,7 +52,11 @@
                                     Réf.: {{ paiement.reference }} • {{ paiement.description }}
                                 </a><br/>
                                 <small class ="m-2">
-                                    <span class="text-secondary fw-bold">
+                                    {% set coleur = 'text-danger' %}
+                                    {% if paiement.note.getType == 0 %}
+                                        {% set coleur = 'text-success' %}
+                                    {% endif %}
+                                    <span class="{{coleur}} fw-bold">
                                         {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
                                         {% if paiement.comptebancaire != null %}
                                              dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}

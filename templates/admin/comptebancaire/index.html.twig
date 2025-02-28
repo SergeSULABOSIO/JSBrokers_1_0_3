@@ -55,7 +55,9 @@
                                     <span class="text-secondary">Intitulé: {{ comptebancaire.intitule }} • Code Swift: {{ comptebancaire.codeSwift }}</span> 
                                 </small><br/>
                                 <small class="m-2 fw-bold">
-                                    <span class="text-secondary">Débit: XXXXX $ • Cédit: XXXXX $ •  Solde: XXXXX $</span> 
+                                    <span class="text-secondary">Débit: {{ constante.CompteBancaire_getMontantDebit(comptebancaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Crédit: {{ constante.CompteBancaire_getMontantCredit(comptebancaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Solde: {{ constante.CompteBancaire_getMontantSolde(comptebancaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                             </td>
                             <td>

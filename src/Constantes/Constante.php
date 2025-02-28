@@ -33,6 +33,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\CompteBancaire;
 use App\Entity\Groupe;
 use App\Entity\ReportSet\PartnerReportSet;
 use phpDocumentor\Reflection\Types\Integer;
@@ -3265,5 +3266,63 @@ class Constante
     {
         $tot = $this->Taxe_getMontant_taxe_payable_par_courtier($taxe) - $this->Taxe_getMontant_taxe_payable_par_courtier_payee($taxe);
         return round($tot, 4);
+    }
+
+
+    /**
+     * COMPTE BANCAIRE
+     */
+    public function CompteBancaire_getMontantDebit(?CompteBancaire $compteBancaire): float
+    {
+        $montant = 0;
+        // dd($compteBancaire);
+        if ($compteBancaire != null) {
+            /** @var Paiement $paiement */
+            foreach ($compteBancaire->getPaiements() as $paiement) {
+                // dd($paiement);
+                if ($paiement->getNote() != null) {
+                    if ($paiement->getNote()->getType() == Note::TYPE_NOTE_DE_DEBIT) {
+                        $montant += $paiement->getMontant();
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function CompteBancaire_getMontantCredit(?CompteBancaire $compteBancaire): float
+    {
+        $montant = 0;
+        // dd($compteBancaire);
+        if ($compteBancaire != null) {
+            /** @var Paiement $paiement */
+            foreach ($compteBancaire->getPaiements() as $paiement) {
+                // dd($paiement);
+                if ($paiement->getNote() != null) {
+                    if ($paiement->getNote()->getType() == Note::TYPE_NOTE_DE_CREDIT) {
+                        $montant += $paiement->getMontant();
+                    }
+                }
+            }
+        }
+        return $montant;
+    }
+    public function CompteBancaire_getMontantSolde(?CompteBancaire $compteBancaire): float
+    {
+        $montant = 0;
+        // dd($compteBancaire);
+        if ($compteBancaire != null) {
+            /** @var Paiement $paiement */
+            foreach ($compteBancaire->getPaiements() as $paiement) {
+                // dd($paiement);
+                if ($paiement->getNote() != null) {
+                    if ($paiement->getNote()->getType() == Note::TYPE_NOTE_DE_DEBIT) {
+                        $montant += $paiement->getMontant();
+                    }else if ($paiement->getNote()->getType() == Note::TYPE_NOTE_DE_CREDIT) {
+                        $montant -= $paiement->getMontant();
+                    }
+                }
+            }
+        }
+        return $montant;
     }
 }
