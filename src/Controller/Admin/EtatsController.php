@@ -63,9 +63,6 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-            # code...
-            // dd("Ici", $note, $currentURL);
-
             return $this->render('admin/etats/note/index.html.twig', [
                 'controller_name' => 'EtatsController',
                 'entreprise' => $entreprise,
