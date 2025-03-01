@@ -196,6 +196,18 @@ class NoteType extends AbstractType
                     "De l'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
                 ]
             ])
+            ->add('signedBy', TextType::class, [
+                'label' => "Signataire",
+                'attr' => [
+                    'placeholder' => "Nom du signataire",
+                ],
+            ])
+            ->add('titleSignedBy', TextType::class, [
+                'label' => "Titre du signataire",
+                'attr' => [
+                    'placeholder' => "Titre du signataire",
+                ],
+            ])
         ;
 
         // dd($options['note']->getId());

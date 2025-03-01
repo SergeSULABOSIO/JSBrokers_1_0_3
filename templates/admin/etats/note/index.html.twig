@@ -57,6 +57,15 @@
             .texte-centre {
                 text-align: center;
             }
+            .texte-droite {
+                text-align: right;
+            }
+            .center {
+                margin: auto;
+                /* width: 50%; */
+                /* border: 3px solid green; */
+                /* padding: 10px; */
+            }
             /* tbody tr:nth-child(even){
                 background-color:rgb(240, 240, 240);
             } */
@@ -79,12 +88,16 @@
                  • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span></br>
                  • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
             </p>
+            </br>
+
 
             {# Date de création et description de la note #}
             <p class="normal_texte">
                 <span class="gras">Date: {{ date|format_datetime('short', 'none', locale: utilisateur.locale)}}</span></br>
-                Description: {{ note.description }}</br>
-                Echéance de paiement: sans échéance.</br>          
+                <span class="gras">Description: {{ note.description }}</span></br>
+            </p>
+            <p class="normal_texte">
+                Modalité et conditions de paiement: sans échéance.</br>          
             </p>
             </br>
 
@@ -128,24 +141,42 @@
 
             {# Tableau de synthèse #}
             <p class="normal_texte texte-centre">Détailes</p>
-            <table class="tableau_vaste">
+            <table class="center" style="width: 60%;">
                 <thead>
-                    <th>Libellé</th>
-                    <th>Valeur</th>
+                    <th class="texte-centre">Libellé</th>
+                    <th class="texte-centre">Valeur</th>
                 </thead>
                 <tr>
-                    <td>Montant ht</td>
-                    <td>XXXXXX USD</td>
+                    <td>Total payable</td>
+                    <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                 </tr>
                 <tr>
-                    <td>Tva (16%)</td>
-                    <td>XXXXXX USD</td>
+                    <td>Montant payé</td>
+                    <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                 </tr>
                 <thead>
-                    <th>Montant total</th>
-                    <th>XXXXXX USD</th>
+                    <th>Solde restant dû</th>
+                    <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
                 </thead>
             </table>
+
+
+            {# Signature #}
+            </br></br></br>
+            <table class="droite" style="width: 50%;">
+                <tr>
+                    <td style = "border: 0px;">
+                        <p class="normal_texte texte-droite" style="padding:5px;">
+                            <span>Signature</span>
+                        </p>
+                        <p class="normal_texte texte-droite" style="padding:5px;">
+                            <span class="gras">{{ note.signedBy }}</span></br>
+                            <span class="gras">{{ note.titleSignedBy }}</span>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+            </br>
         </div>
     </body>
 </html>

@@ -77,6 +77,12 @@ class Note
     #[ORM\Column(length: 255)]
     private ?string $signature = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $signedBy = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $titleSignedBy = null;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
@@ -313,6 +319,30 @@ class Note
     public function setSignature(string $signature): static
     {
         $this->signature = $signature;
+
+        return $this;
+    }
+
+    public function getSignedBy(): ?string
+    {
+        return $this->signedBy;
+    }
+
+    public function setSignedBy(?string $signedBy): static
+    {
+        $this->signedBy = $signedBy;
+
+        return $this;
+    }
+
+    public function getTitleSignedBy(): ?string
+    {
+        return $this->titleSignedBy;
+    }
+
+    public function setTitleSignedBy(?string $titleSignedBy): static
+    {
+        $this->titleSignedBy = $titleSignedBy;
 
         return $this;
     }
