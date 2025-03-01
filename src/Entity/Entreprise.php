@@ -164,6 +164,9 @@ class Entreprise
     #[ORM\OneToMany(targetEntity: Groupe::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $groupes;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $capitalSociale = null;
+
 
     public function __construct()
     {
@@ -791,6 +794,18 @@ class Entreprise
                 $groupe->setEntreprise(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getCapitalSociale(): ?float
+    {
+        return $this->capitalSociale;
+    }
+
+    public function setCapitalSociale(?float $capitalSociale): static
+    {
+        $this->capitalSociale = $capitalSociale;
 
         return $this;
     }

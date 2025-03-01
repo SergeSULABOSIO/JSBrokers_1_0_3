@@ -59,4 +59,21 @@ class ServiceMonnaies
         }
         return null;
     }
+
+    public function getCodeMonnaieLocale(): ?string
+    {
+        if ($this->getUtilisateurConnecte()) {
+            if ($this->getUtilisateurConnecte()->getConnectedTo()) {
+                /** @var Entreprise $entreprise */
+                $entreprise = $this->getUtilisateurConnecte()->getConnectedTo();
+                /** @var Monnaie $monnaie */
+                foreach ($entreprise->getMonnaies() as $monnaie) {
+                    if ($monnaie->isLocale() == true) {
+                        return $monnaie->getCode();
+                    }
+                }
+            }
+        }
+        return "USD";
+    }
 }

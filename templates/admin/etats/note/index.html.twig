@@ -169,7 +169,7 @@
                             Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
                         {% else %}
                             {# Note de débit #}
-                            Solde restant dû
+                            Solde dû
                         {% endif %}
                     </th>
                     <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
@@ -212,9 +212,16 @@
             <hr>
             {# Bas de page #}
             <p class="petit_texte texte-centre" style="padding:1px;">
-                <span class="gras normal_texte">{{ entreprise.nom }}</span></br>
-                Adresse: <span class="gras">{{ entreprise.adresse }}</span> • Téléphone: <span class="gras">{{ entreprise.telephone }}</span> • Licence: <span class="gras">{{ entreprise.licence }}</span></br>
-                RCCM: <span class="gras">{{ entreprise.rccm }}</span> • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span> • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
+                <span class="gras normal_texte">{{ entreprise.nom }}</span>
+                </br>
+                Adresse: <span class="gras">{{ entreprise.adresse }}</span>
+                 • Téléphone: <span class="gras">{{ entreprise.telephone }}</span>
+                 • Licence: <span class="gras">{{ entreprise.licence }}</span>
+                 • Capital social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: utilisateur.locale) }}</span>
+                </br>
+                RCCM: <span class="gras">{{ entreprise.rccm }}</span>
+                 • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span>
+                 • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span>
             </p>
         </div>
     </body>

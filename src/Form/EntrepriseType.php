@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Entity\Entreprise;
 use App\Form\TypeRevenuType;
 use App\Entity\CompteBancaire;
+use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -13,6 +14,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
@@ -20,7 +22,8 @@ class EntrepriseType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -66,6 +69,15 @@ class EntrepriseType extends AbstractType
                 'label' => "entreprise_form_label_fin_id_number",
                 'attr' => [
                     'placeholder' => "entreprise_form_label_fin_id_number_placeholder",
+                ],
+            ])
+            ->add('capitalSociale', MoneyType::class, [
+                'label' => "Capital social",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieLocale(),
+                'grouping' => true,
+                'disabled' => false,
+                'attr' => [
+                    'placeholder' => "Capital sociale",
                 ],
             ])
             ->add('thumbnailFile', FileType::class, [
