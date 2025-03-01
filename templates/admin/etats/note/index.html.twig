@@ -32,6 +32,14 @@
                 font-size: 12px;
                 color: black;
             }
+            .petit_texte {
+                text-align: left;
+                font-weight: normal;
+                font-family: Georgia, serif;
+                font-style: normal;
+                font-size: 10px;
+                color: black;
+            }
             .tableau_vaste{
                 width: 100%;
                 border-collapse: collapse;
@@ -143,7 +151,7 @@
             <p class="normal_texte texte-centre">Détailes</p>
             <table class="center" style="width: 40%;">
                 <thead>
-                    <th class="texte-centre"  style="width: 40%;">Libellé</th>
+                    <th class="texte-centre"  style="width: 40%;">Description</th>
                     <th class="texte-centre">Valeur</th>
                 </thead>
                 <tr>
@@ -155,7 +163,15 @@
                     <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                 </tr>
                 <thead>
-                    <th>Solde restant dû</th>
+                    <th>
+                        {% if note.type == 1 %}
+                            {# Note de crédit #}
+                            Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
+                        {% else %}
+                            {# Note de débit #}
+                            Solde restant dû
+                        {% endif %}
+                    </th>
                     <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
                 </thead>
             </table>
@@ -177,6 +193,29 @@
                 </tr>
             </table>
             </br>
+
+
+            {# Liste des comptes banciares #}
+            {% if note.type == 0 %}
+                {# Note de débit #}
+                <span class="petit_texte">Payez cash ou par virement à l'un des comptes ci-dessous:
+                    <ol class="">
+                        {% for compte in note.comptes %}
+                            <li>{{ compte.banque }} • Intitulé: {{ compte.intitule }} • Num.:{{ compte.numero }} • Swift:{{ compte.codeSwift }}</li>
+                        {% endfor %}
+                    </ol>
+                </span>
+                </br>
+            {% endif %}
+
+
+            <hr>
+            {# Bas de page #}
+            <p class="petit_texte texte-centre" style="padding:1px;">
+                <span class="gras normal_texte">{{ entreprise.nom }}</span></br>
+                Adresse: <span class="gras">{{ entreprise.adresse }}</span> • Téléphone: <span class="gras">{{ entreprise.telephone }}</span> • Licence: <span class="gras">{{ entreprise.licence }}</span></br>
+                RCCM: <span class="gras">{{ entreprise.rccm }}</span> • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span> • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
+            </p>
         </div>
     </body>
 </html>
