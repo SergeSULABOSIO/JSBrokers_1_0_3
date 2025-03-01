@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		
+        {# <link rel="stylesheet" href="mystyle.css"> #}
+        <style>
+            .grand_titre {
+                text-align: center;
+                font-family: Verdana, sans-serif;
+                font-size: 20px;
+                color: black;
+                text-transform: uppercase;
+                font-weight: bold;
+                padding: 15px;
+            }
+            .moyen_titre {
+                text-transform: uppercase;
+                text-align: left;
+                font-family: Verdana, sans-serif;
+                font-size: 16px;
+                font-weight: bold;
+                color: black;
+                padding: 5px;
+            }
+            .normal_texte {
+                text-align: left;
+                font-weight: normal;
+                font-family: Georgia, serif;
+                font-style: normal;
+                font-size: 12px;
+                color: black;
+            }
+            .tableau_vaste{
+                width: 100%;
+                border-collapse: collapse;
+            }
+            table{
+                border-collapse: collapse;
+            }
+            th, td{
+                border: 1px solid darkgray;
+                padding: 5px;
+                text-align: left;
+            }
+            thead{
+                background-color: lightgray;
+            }
+            .gras {
+                font-weight: bold;
+            }
+            .droite {
+                position: relative;
+                left: 40%;
+            }
+            .texte-centre {
+                text-align: center;
+            }
+            /* tbody tr:nth-child(even){
+                background-color:rgb(240, 240, 240);
+            } */
+        </style>
+    </head>
+    <body>
+        <div class = "container">
+            {# Titre de la note #}
+            <p class="grand_titre">{{ constante.Note_getNameOfTypeNote(note) }} n°{{ note.reference }}</p>
+            
+            {# Nom de l'entrerise #}
+            <p class="moyen_titre">{{ entreprise.nom }}</p>
+
+            {# Détails sur l'entreprise #}
+            <p class="normal_texte">
+                 • Adresse: <span class="gras">{{ entreprise.adresse }}</span></br>
+                 • Téléphone: <span class="gras">{{ entreprise.telephone }}</span></br>
+                 • Licence: <span class="gras">{{ entreprise.licence }}</span></br>
+                 • RCCM: <span class="gras">{{ entreprise.rccm }}</span></br>
+                 • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span></br>
+                 • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
+            </p>
+
+            {# Date de création et description de la note #}
+            <p class="normal_texte">
+                <span class="gras">Date: {{ date|format_datetime('short', 'none', locale: utilisateur.locale)}}</span></br>
+                Description: {{ note.description }}</br>
+                Echéance de paiement: sans échéance.</br>          
+            </p>
+            </br>
+
+            {# Détails sur le bénéficiaire de la note = AddressedTo #}
+            <table class="droite" style="width: 50%;">
+                <tr>
+                    <td style = "width: 20%; border: 0px;">Adressée à </td>
+                    <td style = "border: 0px;">
+                        {% if note.addressedto == 0 %}
+                            {# Client #}
+                            <span class="gras">{{ note.client.nom }}</span></br>
+                             • Adresse: <span class="gras">{{ note.client.adresse }}</span></br>
+                             • Téléphone: <span class="gras">{{ note.client.telephone }}</span></br>
+                             • Email: <span class="gras">{{ note.client.email }}</span></br>
+                        {% endif %}
+                        {% if note.addressedto == 1 %}
+                            {# Assureur #}
+                            <span class="gras">{{ note.assureur.nom }}</span></br>
+                             • Adresse: <span class="gras">{{ note.assureur.adressePhysique }}</span></br>
+                             • Téléphone: <span class="gras">{{ note.assureur.url }}</span></br>
+                             • Email: <span class="gras">{{ note.assureur.email }}</span></br>
+                        {% endif %}
+                        {% if note.addressedto == 2 %}
+                            {# Partenaire #}
+                            <span class="gras">{{ note.partenaire.nom }}</span></br>
+                             • Adresse: <span class="gras">{{ note.partenaire.adressePhysique }}</span></br>
+                             • Téléphone: <span class="gras">{{ note.partenaire.telephone }}</span></br>
+                             • Email: <span class="gras">{{ note.partenaire.email }}</span></br>
+                        {% endif %}
+                        {% if note.addressedto == 3 %}
+                            {# Autorité fiscale #}
+                            <span class="gras">{{ note.autoritefiscale.abreviation }}</span></br>
+                             • <span class="gras">{{ note.autoritefiscale.nom }}</span></br>
+                             • Taxe: <span class="gras">{{ note.autoritefiscale.taxe.description }} - {{ note.autoritefiscale.taxe.code }}</span></br>
+                        {% endif %}
+                        {# {{ constante.Note_getNameOfAddressedTo(note) }} #}
+                    </td>
+                </tr>
+            </table>
+            </br>
+
+            {# Tableau de synthèse #}
+            <p class="normal_texte texte-centre">Détailes</p>
+            <table class="tableau_vaste">
+                <thead>
+                    <th>Libellé</th>
+                    <th>Valeur</th>
+                </thead>
+                <tr>
+                    <td>Montant ht</td>
+                    <td>XXXXXX USD</td>
+                </tr>
+                <tr>
+                    <td>Tva (16%)</td>
+                    <td>XXXXXX USD</td>
+                </tr>
+                <thead>
+                    <th>Montant total</th>
+                    <th>XXXXXX USD</th>
+                </thead>
+            </table>
+        </div>
+    </body>
+</html>
