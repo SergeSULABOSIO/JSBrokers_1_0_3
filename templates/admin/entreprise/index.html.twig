@@ -31,11 +31,13 @@
 		<div class="d-flex">
 			{# Boucler les entreprises #}
 			{% for entreprise in entreprises %}
-				<div class="card m-1 p-2 shadow-sm bg-body" style="width: 18rem;">
+				<div class="card m-1 p-2 shadow-sm bg-body" style="width: 25rem;">
 					{% if entreprise.thumbnail %}
-						<img class="rounded" src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 17rem; height: 10rem;">
+						<a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-dark">
+							<img style="align: center;" class="rounded" src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 22px; height: 14px;">
+						</a>
 					{% else %}
-						<img class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" style="width: 17rem; height: 10rem;">
+						<img style="align: center;" class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" style="width: 22px; height: 14px;">
 					{% endif %}
 					<div class="card-body">
 						<figure class="text-center">
