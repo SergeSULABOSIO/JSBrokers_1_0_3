@@ -67,7 +67,6 @@ class EtatsController extends AbstractController
             $html = $this->renderView(
                 'admin/etats/note/index.html.twig',
                 [
-                    'controller_name' => 'EtatsController',
                     'entreprise' => $entreprise,
                     'utilisateur' => $utilisateur,
                     'note' => $note,
@@ -125,7 +124,6 @@ class EtatsController extends AbstractController
             $html = $this->renderView(
                 'admin/etats/note/bordereau.html.twig',
                 [
-                    'controller_name' => 'EtatsController',
                     'entreprise' => $entreprise,
                     'utilisateur' => $utilisateur,
                     'note' => $note,
@@ -145,7 +143,7 @@ class EtatsController extends AbstractController
             // Render the HTML as PDF
             $dompdf->render();
             // Output the generated PDF to Browser
-            $dompdf->stream("BorederauNote-". $note->getId() .".pdf", [
+            $dompdf->stream("BorderauNote-". $note->getId() .".pdf", [
                 'Attachment' => false,
             ]);
             return new Response("", 200, [
