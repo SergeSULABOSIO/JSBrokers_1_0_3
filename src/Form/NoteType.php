@@ -321,7 +321,7 @@ class NoteType extends AbstractType
                 'class' => CompteBancaire::class,
                 'required' => false,
                 'multiple' => true,
-                'choice_label' => 'intitule',
+                'choice_label' => 'nom',
             ]);
         }
         $builder

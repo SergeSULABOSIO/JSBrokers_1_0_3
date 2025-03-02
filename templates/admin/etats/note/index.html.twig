@@ -8,8 +8,9 @@
         <style>
             .grand_titre {
                 text-align: center;
-                font-family: Verdana, sans-serif;
-                font-size: 20px;
+                /* font-family: Verdana, sans-serif; */
+                font-family: Arial, sans-serif;
+                font-size: 18px;
                 color: black;
                 text-transform: uppercase;
                 font-weight: bold;
@@ -18,16 +19,17 @@
             .moyen_titre {
                 text-transform: uppercase;
                 text-align: left;
-                font-family: Verdana, sans-serif;
+                /* font-family: Verdana, sans-serif; */
+                font-family: Arial, sans-serif;
                 font-size: 16px;
                 font-weight: bold;
                 color: black;
-                padding: 5px;
+                padding: 3px;
             }
             .normal_texte {
                 text-align: left;
                 font-weight: normal;
-                font-family: Georgia, serif;
+                font-family: Georgia, Arial;
                 font-style: normal;
                 font-size: 12px;
                 color: black;
@@ -35,7 +37,7 @@
             .petit_texte {
                 text-align: left;
                 font-weight: normal;
-                font-family: Georgia, serif;
+                font-family: Georgia, Arial;
                 font-style: normal;
                 font-size: 10px;
                 color: black;
@@ -49,8 +51,9 @@
             }
             th, td{
                 border: 1px solid darkgray;
-                padding: 5px;
+                padding: 3px;
                 text-align: left;
+                font-size: 12px;
             }
             thead{
                 background-color: lightgray;
@@ -70,25 +73,15 @@
             }
             .center {
                 margin: auto;
-                /* width: 50%; */
-                /* border: 3px solid green; */
-                /* padding: 10px; */
             }
-            /* tbody tr:nth-child(even){
-                background-color:rgb(240, 240, 240);
-            } */
         </style>
     </head>
     <body>
         <div class = "container">
-            {# Titre de la note #}
-            <p class="grand_titre">{{ constante.Note_getNameOfTypeNote(note) }} n°{{ note.reference }}</p>
-            
-            {# Nom de l'entrerise #}
-            <p class="moyen_titre">{{ entreprise.nom }}</p>
-
             {# Détails sur l'entreprise #}
             <p class="normal_texte">
+                {# Nom de l'entrerise #}
+                <span class="moyen_titre">{{ entreprise.nom }}</span><br>
                  • Adresse: <span class="gras">{{ entreprise.adresse }}</span></br>
                  • Téléphone: <span class="gras">{{ entreprise.telephone }}</span></br>
                  • Licence: <span class="gras">{{ entreprise.licence }}</span></br>
@@ -98,22 +91,30 @@
             </p>
             </br>
 
+            {# Titre de la note #}
+            <p class="grand_titre">{{ constante.Note_getNameOfTypeNote(note) }}</p>
+            
+
 
             {# Date de création et description de la note #}
             <p class="normal_texte">
-                <span class="gras">Date: {{ date|format_datetime('short', 'none', locale: utilisateur.locale)}}</span></br>
-                <span class="gras">Description: {{ note.description }}</span></br>
-            </p>
-            <p class="normal_texte">
-                Modalité et conditions de paiement: sans échéance.</br>          
+                Référence: <span class="gras">{{ note.reference }}</span></br>
+                Date: <span class="gras">{{ date|format_datetime('short', 'none', locale: utilisateur.locale)}}</span></br>
+                Description: <span class="gras">{{ note.description }}</span></br>
+                Modalité et conditions de paiement: <span class="gras">sans échéance.</span></br>          
             </p>
             </br>
 
             {# Détails sur le bénéficiaire de la note = AddressedTo #}
             <table class="droite" style="width: 50%;">
                 <tr>
-                    <td style = "width: 25%; border: 0px;">Adressée à </td>
+                    <td style = "width: 25%; border: 0px;">
+                        <span class="normal_texte">
+                            Adressée à 
+                        </span>    
+                    </td>
                     <td style = "border: 0px;">
+                        <span class="normal_texte">
                         {% if note.addressedto == 0 %}
                             {# Client #}
                             <span class="gras">{{ note.client.nom }}</span></br>
@@ -142,41 +143,43 @@
                              • Taxe: <span class="gras">{{ note.autoritefiscale.taxe.description }} - {{ note.autoritefiscale.taxe.code }}</span></br>
                         {% endif %}
                         {# {{ constante.Note_getNameOfAddressedTo(note) }} #}
+                        </span>
                     </td>
                 </tr>
             </table>
             </br>
 
             {# Tableau de synthèse #}
-            <p class="normal_texte texte-centre">Détailes</p>
-            <table class="center" style="width: 40%;">
-                <thead>
-                    <th class="texte-centre"  style="width: 40%;">Description</th>
-                    <th class="texte-centre">Valeur</th>
-                </thead>
-                <tr>
-                    <td>Total payable</td>
-                    <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                </tr>
-                <tr>
-                    <td>Montant payé</td>
-                    <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                </tr>
-                <thead>
-                    <th>
-                        {% if note.type == 1 %}
-                            {# Note de crédit #}
-                            Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
-                        {% else %}
-                            {# Note de débit #}
-                            Solde dû
-                        {% endif %}
-                    </th>
-                    <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                </thead>
-            </table>
-
-
+            <p class="normal_texte texte-centre">
+                Détailes
+                <table class="center" style="width: 40%;">
+                    <thead>
+                        <th class="texte-centre"  style="width: 40%;">Description</th>
+                        <th class="texte-centre">Valeur</th>
+                    </thead>
+                    <tr>
+                        <td>Total payable</td>
+                        <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Montant payé</td>
+                        <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                    </tr>
+                    <thead>
+                        <th>
+                            {% if note.type == 1 %}
+                                {# Note de crédit #}
+                                Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
+                            {% else %}
+                                {# Note de débit #}
+                                Solde dû
+                            {% endif %}
+                        </th>
+                        <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                    </thead>
+                </table>
+            </p>
+            
             {# Signature #}
             </br></br></br>
             <table class="droite" style="width: 50%;">
@@ -186,8 +189,8 @@
                             <span>Signature</span>
                         </p>
                         <p class="normal_texte texte-droite" style="padding:5px;">
-                            <span class="moyen_titre">{{ note.signedBy }}</span></br>
-                            <span class="gras">{{ note.titleSignedBy }}</span>
+                            <span class="normal_titre gras">{{ note.signedBy }}</span></br>
+                            <span class="">{{ note.titleSignedBy }}</span>
                         </p>
                     </td>
                 </tr>
@@ -196,22 +199,31 @@
 
 
             {# Liste des comptes banciares #}
-            {% if note.type == 0 %}
+            {% if note.type == 0 and note.comptes | length != 0 %}
                 {# Note de débit #}
-                <span class="petit_texte">Payez cash ou par virement à l'un des comptes ci-dessous:
+                <span class="normal_texte">Payez cash ou par virement à l'un des comptes ci-dessous:
                     <ol class="">
                         {% for compte in note.comptes %}
-                            <li>{{ compte.banque }} • Intitulé: {{ compte.intitule }} • Num.:{{ compte.numero }} • Swift:{{ compte.codeSwift }}</li>
+                            <li>
+                                <span class="normal_texte">
+                                    <span class="gras">{{ compte.banque }}</span>
+                                    • Nom: <span class="gras">{{ compte.intitule }}</span>
+                                    • N°.:<span class="gras">{{ compte.numero }}</span>
+                                    • Swift:<span class="gras">{{ compte.codeSwift }}</span>
+                                </span>
+                            </li>
                         {% endfor %}
                     </ol>
                 </span>
+                </br>
+                </br>
                 </br>
             {% endif %}
 
 
             <hr>
             {# Bas de page #}
-            <p class="petit_texte texte-centre" style="padding:1px;">
+            <p class="petit_texte texte-centre" style="">
                 <span class="gras normal_texte">{{ entreprise.nom }}</span>
                 </br>
                 Adresse: <span class="gras">{{ entreprise.adresse }}</span>

@@ -19,10 +19,16 @@ class CompteBancaireType extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('nom', TextType::class, [
+                'label' => "Nom du compte",
+                'attr' => [
+                    'placeholder' => "Nom du compte",
+                ],
+            ])
             ->add('intitule', TextType::class, [
                 'label' => "Intitulé du compte",
                 'attr' => [

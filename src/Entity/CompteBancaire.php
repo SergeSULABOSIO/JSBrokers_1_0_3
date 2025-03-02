@@ -48,6 +48,9 @@ class CompteBancaire
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'CompteBancaire')]
     private Collection $paiements;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $nom = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -209,6 +212,18 @@ class CompteBancaire
                 $paiement->setCompteBancaire(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
+
+    public function setNom(?string $nom): static
+    {
+        $this->nom = $nom;
 
         return $this;
     }
