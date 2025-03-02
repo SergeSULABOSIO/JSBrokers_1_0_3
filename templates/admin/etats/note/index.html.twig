@@ -74,6 +74,22 @@
             .center {
                 margin: auto;
             }
+            a:link {
+                text-decoration: none;
+            }
+
+            a:visited {
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            a:active {
+                text-decoration: underline;
+            }
         </style>
     </head>
     <body>
@@ -88,6 +104,7 @@
                  • RCCM: <span class="gras">{{ entreprise.rccm }}</span></br>
                  • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span></br>
                  • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
+                 • Site Web: <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a></br>
             </p>
             </br>
 
@@ -158,11 +175,11 @@
                         <th class="texte-centre">Valeur</th>
                     </thead>
                     <tr>
-                        <td>Total payable</td>
+                        <td>Montant Payable</td>
                         <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                     </tr>
                     <tr>
-                        <td>Montant payé</td>
+                        <td>Montant Payé</td>
                         <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                     </tr>
                     <thead>
@@ -234,6 +251,8 @@
                 RCCM: <span class="gras">{{ entreprise.rccm }}</span>
                  • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span>
                  • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span>
+                </br>
+                <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a>
             </p>
         </div>
     </body>

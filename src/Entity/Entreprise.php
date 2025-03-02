@@ -167,6 +167,9 @@ class Entreprise
     #[ORM\Column(nullable: true)]
     private ?float $capitalSociale = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $siteweb = null;
+
 
     public function __construct()
     {
@@ -806,6 +809,18 @@ class Entreprise
     public function setCapitalSociale(?float $capitalSociale): static
     {
         $this->capitalSociale = $capitalSociale;
+
+        return $this;
+    }
+
+    public function getSiteweb(): ?string
+    {
+        return $this->siteweb;
+    }
+
+    public function setSiteweb(?string $siteweb): static
+    {
+        $this->siteweb = $siteweb;
 
         return $this;
     }

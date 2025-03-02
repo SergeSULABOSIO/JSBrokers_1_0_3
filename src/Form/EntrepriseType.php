@@ -17,6 +17,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\UrlType;
 
 class EntrepriseType extends AbstractType
 {
@@ -78,6 +79,12 @@ class EntrepriseType extends AbstractType
                 'disabled' => false,
                 'attr' => [
                     'placeholder' => "Capital sociale",
+                ],
+            ])
+            ->add('siteweb', UrlType::class, [
+                'label' => "Wite Web",
+                'attr' => [
+                    'placeholder' => "Site web",
                 ],
             ])
             ->add('thumbnailFile', FileType::class, [
