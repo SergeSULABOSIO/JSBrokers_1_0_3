@@ -34,10 +34,12 @@
 				<div class="card m-1 p-2 shadow-sm bg-body" style="width: 25rem;">
 					{% if entreprise.thumbnail %}
 						<a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-dark">
-							<img style="align: center;" class="rounded" src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 22px; height: 14px;">
+							<img class="rounded" src="{{ vich_uploader_asset(entreprise, 'thumbnailFile') }}" alt="Image de l'entreprise" style="width: 380px; height: 220px;">
 						</a>
 					{% else %}
-						<img style="align: center;" class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" style="width: 22px; height: 14px;">
+						<a href="{{ path('admin.entreprise.dashbord', {'id':entreprise.id })}}" class="text-dark">
+							<img style="align: center;" class="rounded" src="/images/entreprises/default_entreprise.jpg" alt="Image de l'entreprise" style="width: 380px; height: 220px;">
+						</a>
 					{% endif %}
 					<div class="card-body">
 						<figure class="text-center">
