@@ -98,4 +98,62 @@ class EtatsController extends AbstractController
             return $this->redirect($currentURL);
         }
     }
+
+
+
+    #[Route(
+        '/imprimerBordereauNote/{idEntreprise}/{idNote}/{currentURL}',
+        name: 'imprimer_bordereau_note',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idNote' => Requirement::DIGITS,
+            'currentURL' => Requirement::CATCH_ALL
+        ]
+    )]
+    public function imprimerBordereauNote($currentURL, $idEntreprise, $idNote, Request $request): Response
+    {
+        /** @var Utilisateur $utilisateur */
+        $utilisateur = $this->getUser();
+
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        /** @var Note $note */
+        $note = $this->noteRepository->find($idNote);
+
+        if ($note != null) {
+            $html = $this->renderView(
+                'admin/etats/note/bordereau.html.twig',
+                [
+                    'controller_name' => 'EtatsController',
+                    'entreprise' => $entreprise,
+                    'utilisateur' => $utilisateur,
+                    'note' => $note,
+                    'constante' => $this->constante,
+                    'serviceMonnaie' => $this->serviceMonnaies,
+                    'serviceTaxe' => $this->serviceTaxes,
+                    'date' => new DateTimeImmutable("now"),
+                ]
+            );
+            $options = new Options();
+            $options->set('defaultFont', 'Arial');
+            // instantiate and use the dompdf class
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html);
+            // (Optional) Setup the paper size and orientation
+            $dompdf->setPaper('A4', 'landscape');
+            // Render the HTML as PDF
+            $dompdf->render();
+            // Output the generated PDF to Browser
+            $dompdf->stream("BorederauNote-". $note->getId() .".pdf", [
+                'Attachment' => false,
+            ]);
+            return new Response("", 200, [
+                "Content-Type" => "application/pdf",
+            ]);
+        } else {
+            $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
+            return $this->redirect($currentURL);
+        }
+    }
 }

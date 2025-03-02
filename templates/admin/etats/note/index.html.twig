@@ -173,6 +173,14 @@
                         <th class="texte-centre">Valeur</th>
                     </thead>
                     <tr>
+                        <td>Montant HT</td>
+                        <td class="texte-droite">{{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Montant Tva</td>
+                        <td class="texte-droite">{{ 16|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                    </tr>
+                    <tr>
                         <td>Montant Payable</td>
                         <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                     </tr>

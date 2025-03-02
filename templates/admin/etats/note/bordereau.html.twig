@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		
+        {# <link rel="stylesheet" href="mystyle.css"> #}
+        <style>
+            .grand_titre {
+                text-align: center;
+                font-family: Arial, sans-serif;
+                font-size: 18px;
+                color: black;
+                text-transform: uppercase;
+                font-weight: bold;
+                padding: 15px;
+            }
+            .moyen_titre {
+                text-transform: uppercase;
+                text-align: left;
+                font-family: Arial, sans-serif;
+                font-size: 16px;
+                font-weight: bold;
+                color: black;
+                padding: 3px;
+            }
+            .normal_texte {
+                text-align: left;
+                font-weight: normal;
+                font-family: Georgia, Arial;
+                font-style: normal;
+                font-size: 12px;
+                color: black;
+            }
+            .petit_texte {
+                text-align: left;
+                font-weight: normal;
+                font-family: Georgia, Arial;
+                font-style: normal;
+                font-size: 10px;
+                color: black;
+            }
+            .tableau_vaste{
+                width: 100%;
+                border-collapse: collapse;
+            }
+            table{
+                border-collapse: collapse;
+            }
+            th, td{
+                border: 1px solid darkgray;
+                padding: 3px;
+                text-align: left;
+                font-size: 12px;
+            }
+            thead{
+                background-color: lightgray;
+            }
+            .gras {
+                font-weight: bold;
+            }
+            .droite {
+                position: relative;
+                left: 40%;
+            }
+            .texte-centre {
+                text-align: center;
+            }
+            .texte-droite {
+                text-align: right;
+            }
+            .center {
+                margin: auto;
+            }
+            a:link {
+                text-decoration: none;
+            }
+
+            a:visited {
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            a:active {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+    <body>
+        <div class = "container">
+            {# Détails sur l'entreprise #}
+            <p class="normal_texte">
+                {# Nom de l'entrerise #}
+                <span class="moyen_titre">{{ entreprise.nom }}</span><br>
+                 • Adresse: <span class="gras">{{ entreprise.adresse }}</span></br>
+                 • Téléphone: <span class="gras">{{ entreprise.telephone }}</span></br>
+                 • Licence: <span class="gras">{{ entreprise.licence }}</span></br>
+                 • RCCM: <span class="gras">{{ entreprise.rccm }}</span></br>
+                 • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span></br>
+                 • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
+                 • Site Web: <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a></br>
+            </p>
+            </br>
+
+            
+
+            ICI JE METTRAIS LES DETAILS DU BORDEREAU
+
+
+
+            <hr>
+            {# Bas de page #}
+            <p class="petit_texte texte-centre" style="">
+                <span class="gras normal_texte">{{ entreprise.nom }}</span>
+                </br>
+                Adresse: <span class="gras">{{ entreprise.adresse }}</span>
+                 • Téléphone: <span class="gras">{{ entreprise.telephone }}</span>
+                 • Licence: <span class="gras">{{ entreprise.licence }}</span>
+                 • Capital social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: utilisateur.locale) }}</span>
+                </br>
+                RCCM: <span class="gras">{{ entreprise.rccm }}</span>
+                 • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span>
+                 • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span>
+                </br>
+                <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a>
+            </p>
+        </div>
+    </body>
+</html>
