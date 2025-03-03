@@ -62,12 +62,30 @@ class ClientType extends AbstractType
                 ],
             ])
             ->add('exonere', ChoiceType::class, [
-                'label' => "Cient est-il exonéré des taxes?",
+                'label' => "Le client est-il exonéré des taxes?",
                 'help' => "Oui, si le client n'est pas sensé payer de taxe tels que des ONGs.",
                 'expanded' => true,
                 'choices'  => [
                     "Oui" => true,
                     "Non" => false,
+                ],
+            ])
+            ->add('numimpot', TextType::class, [
+                'label' => "Nunméro Impôt (Nif)",
+                'attr' => [
+                    'placeholder' => "NIF",
+                ],
+            ])
+            ->add('rccm', TextType::class, [
+                'label' => "Nunméro RCCM (Rccm)",
+                'attr' => [
+                    'placeholder' => "RCCM",
+                ],
+            ])
+            ->add('idnat', TextType::class, [
+                'label' => "Nunméro d'Id. nationale (Idnat)",
+                'attr' => [
+                    'placeholder' => "Idnat",
                 ],
             ])
             ->add('partenaires', PartenaireAutocompleteField::class, [

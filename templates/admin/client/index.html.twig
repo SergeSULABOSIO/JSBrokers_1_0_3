@@ -52,6 +52,9 @@
                                     {{ client.nom }}
                                 </a><br/>
                                 <small class="m-2">
+                                    <span class="text-secondary">RCCM: {{ client.rccm }} • NIF: {{ client.numimpot }} • IDNAT: {{ client.idnat }}
+                                </small><br/>
+                                <small class="m-2">
                                     <span class="text-secondary">{% if client.groupe != null %}{{ client.groupe.nom }}{% endif %} • {{ client.email }} • {{ client.telephone }} • {{ client.adresse }}</span> 
                                     <span class="text-danger fw-bold">{% if client.exonere == true %} • Exonéré{% endif %}</span> 
                                 </small><br/>
