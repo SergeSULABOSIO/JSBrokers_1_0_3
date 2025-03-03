@@ -129,15 +129,15 @@
 													{% endif %}
 												</li>
 												<li>
-													<a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-														Ouvrir le bordereau
-													</a>
-												</li>
-												<li>
 													<a class="dropdown-item" href="{{ path('admin.etats.imprimer_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
 														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
 														Ouvrir la note
+													</a>
+												</li>
+												<li>
+													<a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+														{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+														Ouvrir le bordereau
 													</a>
 												</li>
 											</ul>

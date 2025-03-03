@@ -24,6 +24,24 @@ class AssureurType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
+            ->add('numimpot', TextType::class, [
+                'label' => "Nunméro Impôt (Nif)",
+                'attr' => [
+                    'placeholder' => "NIF",
+                ],
+            ])
+            ->add('rccm', TextType::class, [
+                'label' => "Nunméro RCCM (Rccm)",
+                'attr' => [
+                    'placeholder' => "RCCM",
+                ],
+            ])
+            ->add('idnat', TextType::class, [
+                'label' => "Nunméro d'Id. nationale (Idnat)",
+                'attr' => [
+                    'placeholder' => "Idnat",
+                ],
+            ])
             ->add('email', EmailType::class, [
                 'label' => "Email",
                 'attr' => [

@@ -120,6 +120,7 @@
             <p class="normal_texte">
                 Référence: <span class="gras">{{ note.reference }}</span></br>
                 Date: <span class="gras">{{ date|format_datetime('short', 'none', locale: utilisateur.locale)}}</span></br>
+                Utilisateur: <span class="gras">{{ utilisateur.nom }}</span></br>
                 Description: <span class="gras">{{ note.description }}</span></br>
                 Modalité et conditions de paiement: <span class="gras">sans échéance.</span></br>          
             </p>
@@ -146,6 +147,9 @@
                             {# Assureur #}
                             <span class="gras">{{ note.assureur.nom }}</span></br>
                              • Adresse: <span class="gras">{{ note.assureur.adressePhysique }}</span></br>
+                             • Nif: <span class="gras">{{ note.assureur.numimpot }}</span></br>
+                             • Rccm: <span class="gras">{{ note.assureur.rccm }}</span></br>
+                             • Idnat: <span class="gras">{{ note.assureur.idnat }}</span></br>
                              • Téléphone: <span class="gras">{{ note.assureur.url }}</span></br>
                              • Email: <span class="gras">{{ note.assureur.email }}</span></br>
                         {% endif %}
@@ -181,24 +185,24 @@
                             <th class="texte-centre">Valeur</th>
                         </thead>
                         <tr>
-                            <td>Montant HT</td>
-                            <td class="texte-droite">0 USD</td>
+                            <td class="texte-droite">Montant hors taxe</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         </tr>
                         <tr>
-                            <td>TVA</td>
-                            <td class="texte-droite">0 USD</td>
+                            <td class="texte-droite">{{ constante.Note_getNames_taxes_assureur() }}</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         </tr>
                         <tr>
-                            <td>Montant Payable</td>
-                            <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite gras">Montant Payable</td>
+                            <td class="texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         </tr>
                         <tr>
-                            <td>Montant Payé</td>
+                            <td class="texte-droite">Montant Payé</td>
                             <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         </tr>
                         <thead>
-                            <th>Solde dû</th>
-                            <td class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <th class="texte-droite">Solde restant dû</th>
+                            <td class="texte-droite gras">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         </thead>
                     </table>
                 {% else %}
@@ -277,10 +281,10 @@
                 Adresse: <span class="gras">{{ entreprise.adresse }}</span>
                  • Téléphone: <span class="gras">{{ entreprise.telephone }}</span>
                  • Licence: <span class="gras">{{ entreprise.licence }}</span>
-                 • Capital social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: utilisateur.locale) }}</span>
+                 • Capital Social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: utilisateur.locale) }}</span>
                 </br>
                 RCCM: <span class="gras">{{ entreprise.rccm }}</span>
-                 • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span>
+                 • Id. Nat: <span class="gras">{{ entreprise.idnat }}</span>
                  • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span>
                 </br>
                 <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a>

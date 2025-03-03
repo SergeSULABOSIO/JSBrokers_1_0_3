@@ -87,7 +87,7 @@ class Constante
         ];
     }
 
-    public function getAddressedTo(int $addressedTo): string
+    public function getAddressedTo(int $addressedTo)
     {
         switch ($addressedTo) {
             case 0:
@@ -954,6 +954,48 @@ class Constante
     /**
      * NOTE - NOTE DE DEBIT OU NOTE DE CREDIT
      */
+    public function Note_getMontant_ht(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
+                    $montant += $this->Tranche_getMontant_commission_ht($article->getTranche());
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Note_getMontant_taxes(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
+                    $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
+                }
+            }
+        }
+        return $montant;
+    }
+    public function Note_getNames_taxes_assureur()
+    {
+        $nomsTaxesAssureurs = "";
+        $multiple = count($this->serviceTaxes->getTaxesPayableParAssureur()) > 1 ? true : false;
+        // dd($multiple);
+        foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxe) {
+            $strTaux = "";
+            if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
+                $strTaux = " (" . ($taxe->getTauxIARD() * 100) . "%)";
+            }
+            $nomsTaxesAssureurs .= "" . $taxe->getCode() . $strTaux;
+            if ($multiple == true) {
+                $nomsTaxesAssureurs .= ", ";
+            }
+        }
+        return $nomsTaxesAssureurs;
+    }
+
     public function Note_getMontant_solde(?Note $note): float
     {
         $solde = $this->Note_getMontant_payable($note) - $this->Note_getMontant_paye($note);
@@ -2204,7 +2246,7 @@ class Constante
     {
         return $cotation->getAvenants()[0] != null || count($cotation->getAvenants()) != 0;
     }
-    public function RevenuPourCourtier_isBound(?RevenuPourCourtier $revenuPourCourtier): bool
+    public function RevenuPourCourtier_isBound(?RevenuPourCourtier $revenuPourCourtier)
     {
         if ($revenuPourCourtier != null) {
             if ($revenuPourCourtier->getCotation() != null) {
@@ -3317,7 +3359,7 @@ class Constante
                 if ($paiement->getNote() != null) {
                     if ($paiement->getNote()->getType() == Note::TYPE_NOTE_DE_DEBIT) {
                         $montant += $paiement->getMontant();
-                    }else if ($paiement->getNote()->getType() == Note::TYPE_NOTE_DE_CREDIT) {
+                    } else if ($paiement->getNote()->getType() == Note::TYPE_NOTE_DE_CREDIT) {
                         $montant -= $paiement->getMontant();
                     }
                 }

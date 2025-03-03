@@ -48,6 +48,15 @@ class Assureur
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'assureur')]
     private Collection $notes;
 
+    #[ORM\Column(length: 255)]
+    private ?string $numimpot = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $idnat = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $rccm = null;
+
     public function __construct()
     {
         $this->cotations = new ArrayCollection();
@@ -211,6 +220,42 @@ class Assureur
                 $note->setAssureur(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getNumimpot(): ?string
+    {
+        return $this->numimpot;
+    }
+
+    public function setNumimpot(string $numimpot): static
+    {
+        $this->numimpot = $numimpot;
+
+        return $this;
+    }
+
+    public function getIdnat(): ?string
+    {
+        return $this->idnat;
+    }
+
+    public function setIdnat(string $idnat): static
+    {
+        $this->idnat = $idnat;
+
+        return $this;
+    }
+
+    public function getRccm(): ?string
+    {
+        return $this->rccm;
+    }
+
+    public function setRccm(string $rccm): static
+    {
+        $this->rccm = $rccm;
 
         return $this;
     }
