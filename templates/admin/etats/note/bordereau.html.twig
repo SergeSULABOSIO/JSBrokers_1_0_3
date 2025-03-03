@@ -88,6 +88,13 @@
             a:active {
                 text-decoration: underline;
             }
+            .bas-de-page {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                width: 100%;
+                /* border: 3px solid #73AD21; */
+            }
         </style>
     </head>
     <body>
@@ -113,7 +120,7 @@
 
 
             {# Bas de page #}
-            <p class="petit_texte texte-centre" style="">
+            <p class="petit_texte texte-centre bas-de-page" style="">
                 <span class="gras normal_texte">{{ entreprise.nom }}</span>
                 </br>
                 Adresse: <span class="gras">{{ entreprise.adresse }}</span>
