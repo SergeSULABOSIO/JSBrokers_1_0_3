@@ -167,44 +167,70 @@
             {# Tableau de synthèse #}
             <p class="normal_texte texte-centre">
                 Synthèse
-                <table class="center" style="width: 40%;">
-                    <thead>
-                        <th class="texte-centre"  style="width: 40%;">Description</th>
-                        <th class="texte-centre">Valeur</th>
-                    </thead>
-                    {# Note de débit vers l'Assureur: il faut afficher le montant Ht et sa Tva #}
-                    {# {% if note.addressedto == 1 %}
+                {# Note de débit vers l'Assureur: il faut afficher le montant Ht et sa Tva #}
+                {% if note.addressedto == 1 %}
+                    {# Tableau avec TVA #}
+                    Tableau sans TVA
+                    <table class="center" style="width: 40%;">
+                        <thead>
+                            <th class="texte-centre"  style="width: 40%;">Description</th>
+                            <th class="texte-centre">Valeur</th>
+                        </thead>
                         <tr>
-                            <td>Montant HT</td>
-                            <td class="texte-droite">{{ 100|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td>Montant Payable</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         </tr>
                         <tr>
-                            <td>Montant Tva</td>
-                            <td class="texte-droite">{{ 16|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td>Montant Payé</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         </tr>
-                    {% endif %} #}
-                    <tr>
-                        <td>Montant Payable</td>
-                        <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                    </tr>
-                    <tr>
-                        <td>Montant Payé</td>
-                        <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                    </tr>
-                    <thead>
-                        <th>
-                            {% if note.type == 1 %}
-                                {# Note de crédit #}
-                                Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
-                            {% else %}
-                                {# Note de débit #}
-                                Solde dû
-                            {% endif %}
-                        </th>
-                        <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                    </thead>
-                </table>
+                        <thead>
+                            <th>
+                                {% if note.type == 1 %}
+                                    {# Note de crédit #}
+                                    Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
+                                {% else %}
+                                    {# Note de débit #}
+                                    Solde dû
+                                {% endif %}
+                            </th>
+                            <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                        </thead>
+                    </table>
+                {% else %}
+                    {# Tableau sans TVA #}
+                    <table class="center" style="width: 40%;">
+                        <thead>
+                            <th class="texte-centre"  style="width: 40%;">Description</th>
+                            <th class="texte-centre">Valeur</th>
+                        </thead>
+                        <tr>
+                            <td>Montant Payable</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Montant Payé</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                        </tr>
+                        <thead>
+                            <th>
+                                {% if note.type == 1 %}
+                                    {# Note de crédit #}
+                                    Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
+                                {% else %}
+                                    {# Note de débit #}
+                                    Solde dû
+                                {% endif %}
+                            </th>
+                            <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                        </thead>
+                    </table>
+                {% endif %}
             </p>
+
+
+
+            
             
             {# Signature #}
             </br></br></br>
