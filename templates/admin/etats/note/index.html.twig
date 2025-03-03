@@ -104,12 +104,10 @@
                  • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
                  • Site Web: <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a></br>
             </p>
-            </br>
+            {# </br> #}
 
             {# Titre de la note #}
             <p class="grand_titre">{{ constante.Note_getNameOfTypeNote(note) }}</p>
-            
-
 
             {# Date de création et description de la note #}
             <p class="normal_texte">
@@ -118,7 +116,7 @@
                 Description: <span class="gras">{{ note.description }}</span></br>
                 Modalité et conditions de paiement: <span class="gras">sans échéance.</span></br>          
             </p>
-            </br>
+            {# </br> #}
 
             {# Détails sur le bénéficiaire de la note = AddressedTo #}
             <table class="droite" style="width: 50%;">
@@ -170,31 +168,33 @@
                 {# Note de débit vers l'Assureur: il faut afficher le montant Ht et sa Tva #}
                 {% if note.addressedto == 1 %}
                     {# Tableau avec TVA #}
-                    Tableau sans TVA
                     <table class="center" style="width: 40%;">
                         <thead>
                             <th class="texte-centre"  style="width: 40%;">Description</th>
                             <th class="texte-centre">Valeur</th>
                         </thead>
                         <tr>
+                            <td>Montant HT</td>
+                            <td class="texte-droite">0 USD</td>
+                        </tr>
+                        <tr>
+                            <td>TVA</td>
+                            <td class="texte-droite">0 USD</td>
+                        </tr>
+                        <tr>
                             <td>Montant Payable</td>
                             <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            {# <td class="texte-droite">0 USD</td> #}
                         </tr>
                         <tr>
                             <td>Montant Payé</td>
                             <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            {# <td class="texte-droite">0 USD</td> #}
                         </tr>
                         <thead>
-                            <th>
-                                {% if note.type == 1 %}
-                                    {# Note de crédit #}
-                                    Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
-                                {% else %}
-                                    {# Note de débit #}
-                                    Solde dû
-                                {% endif %}
-                            </th>
-                            <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                            <th>Solde dû</th>
+                            <td class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            {# <th class="texte-droite">0 USD</th> #}
                         </thead>
                     </table>
                 {% else %}
@@ -227,13 +227,13 @@
                     </table>
                 {% endif %}
             </p>
+            </br>
 
 
 
             
             
             {# Signature #}
-            </br></br></br>
             <table class="droite" style="width: 50%;">
                 <tr>
                     <td style = "border: 0px;">
@@ -267,13 +267,10 @@
                         {% endfor %}
                     </ol>
                 </span>
-                </br>
-                </br>
-                </br>
             {% endif %}
-
-
-            <hr>
+            </br>
+            </br>
+            </br>
             {# Bas de page #}
             <p class="petit_texte texte-centre" style="">
                 <span class="gras normal_texte">{{ entreprise.nom }}</span>
