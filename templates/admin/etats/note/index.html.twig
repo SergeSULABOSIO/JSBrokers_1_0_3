@@ -184,17 +184,14 @@
                         <tr>
                             <td>Montant Payable</td>
                             <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                            {# <td class="texte-droite">0 USD</td> #}
                         </tr>
                         <tr>
                             <td>Montant Payé</td>
                             <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                            {# <td class="texte-droite">0 USD</td> #}
                         </tr>
                         <thead>
                             <th>Solde dû</th>
                             <td class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                            {# <th class="texte-droite">0 USD</th> #}
                         </thead>
                     </table>
                 {% else %}
@@ -217,9 +214,6 @@
                                 {% if note.type == 1 %}
                                     {# Note de crédit #}
                                     Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
-                                {% else %}
-                                    {# Note de débit #}
-                                    Solde dû
                                 {% endif %}
                             </th>
                             <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>

@@ -79,7 +79,6 @@ class EtatsController extends AbstractController
             // );
 
 
-
             $html = $this->renderView(
                 'admin/etats/note/index.html.twig',
                 [
