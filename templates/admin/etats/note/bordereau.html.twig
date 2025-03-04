@@ -99,23 +99,41 @@
     </head>
     <body>
         <div class = "container">
-            {# Détails sur l'entreprise #}
+            {# Titre du bordereau #}
             <p class="normal_texte">
-                {# Nom de l'entrerise #}
-                <span class="moyen_titre">{{ entreprise.nom }}</span><br>
-                 • Adresse: <span class="gras">{{ entreprise.adresse }}</span></br>
-                 • Téléphone: <span class="gras">{{ entreprise.telephone }}</span></br>
-                 • Licence: <span class="gras">{{ entreprise.licence }}</span></br>
-                 • RCCM: <span class="gras">{{ entreprise.rccm }}</span></br>
-                 • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span></br>
-                 • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span></br>
-                 • Site Web: <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a></br>
+                <span class="moyen_titre">
+                    BORDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} <span class="gras">{{ note.reference }}</span>
+                </span></br>
+                Description: <span class="gras">{{ note.description }}</span></br>
             </p>
-            </br>
 
-            
-
-            ICI JE METTRAIS LES DETAILS DU BORDEREAU
+            {# Contenu du boredereau - Grand Tableau #}
+            <table class="center" style="width: 100%;">
+                <thead>
+                    <th class="texte-centre"  style="width: 40%;">Description</th>
+                    <th class="texte-centre">Valeur</th>
+                </thead>
+                <tr>
+                    <td class="texte-droite">Montant hors taxe</td>
+                    <td class="texte-droite">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                </tr>
+                <tr>
+                    <td class="texte-droite">{{ constante.Note_getNames_taxes_assureur() }}</td>
+                    <td class="texte-droite">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                </tr>
+                <tr>
+                    <td class="texte-droite gras">Montant Payable</td>
+                    <td class="texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                </tr>
+                <tr>
+                    <td class="texte-droite">Montant Payé</td>
+                    <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                </tr>
+                <thead>
+                    <th class="texte-droite">Solde restant dû</th>
+                    <td class="texte-droite gras">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                </thead>
+            </table>
 
 
 
