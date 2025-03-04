@@ -140,9 +140,15 @@
                             {# Client #}
                             <span class="gras">{{ note.client.nom }}</span></br>
                              • Adresse: <span class="gras">{{ note.client.adresse }}</span></br>
-                             • Nif: <span class="gras">{{ note.client.numimpot }}</span></br>
-                             • Rccm: <span class="gras">{{ note.client.rccm }}</span></br>
-                             • Idnat: <span class="gras">{{ note.client.idnat }}</span></br>
+                            {% if note.client.numimpot %}
+                                 • Nif: <span class="gras">{{ note.client.numimpot }}</span></br>
+                            {% endif %}
+                            {% if note.client.rccm %}
+                                 • Rccm: <span class="gras">{{ note.client.rccm }}</span></br>
+                            {% endif %}
+                            {% if  note.client.idnat %}
+                                 • Idnat: <span class="gras">{{ note.client.idnat }}</span></br>
+                            {% endif %}
                              • Téléphone: <span class="gras">{{ note.client.telephone }}</span></br>
                              • Email: <span class="gras">{{ note.client.email }}</span></br>
                         {% endif %}
@@ -150,9 +156,15 @@
                             {# Assureur #}
                             <span class="gras">{{ note.assureur.nom }}</span></br>
                              • Adresse: <span class="gras">{{ note.assureur.adressePhysique }}</span></br>
-                             • Nif: <span class="gras">{{ note.assureur.numimpot }}</span></br>
-                             • Rccm: <span class="gras">{{ note.assureur.rccm }}</span></br>
-                             • Idnat: <span class="gras">{{ note.assureur.idnat }}</span></br>
+                            {% if note.assureur.numimpot %}
+                                 • Nif: <span class="gras">{{ note.assureur.numimpot }}</span></br>
+                            {% endif %}
+                            {% if note.assureur.rccm %}
+                                 • Rccm: <span class="gras">{{ note.assureur.rccm }}</span></br>
+                            {% endif %}
+                            {% if note.assureur.idnat %}
+                                 • Idnat: <span class="gras">{{ note.assureur.idnat }}</span></br>
+                            {% endif %}
                              • Téléphone: <span class="gras">{{ note.assureur.url }}</span></br>
                              • Email: <span class="gras">{{ note.assureur.email }}</span></br>
                         {% endif %}
@@ -160,6 +172,15 @@
                             {# Partenaire #}
                             <span class="gras">{{ note.partenaire.nom }}</span></br>
                              • Adresse: <span class="gras">{{ note.partenaire.adressePhysique }}</span></br>
+                            {% if note.partenaire.numimpot != null %}
+                                 • Nif: <span class="gras">{{ note.partenaire.numimpot }}</span></br>
+                            {% endif %}
+                            {% if note.partenaire.rccm %}
+                                 • Rccm: <span class="gras">{{ note.partenaire.rccm }}</span></br>
+                            {% endif %}
+                            {% if note.partenaire.idnat %}
+                                 • Idnat: <span class="gras">{{ note.partenaire.idnat }}</span></br>
+                            {% endif %}
                              • Téléphone: <span class="gras">{{ note.partenaire.telephone }}</span></br>
                              • Email: <span class="gras">{{ note.partenaire.email }}</span></br>
                         {% endif %}

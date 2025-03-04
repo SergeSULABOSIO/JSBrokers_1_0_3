@@ -53,6 +53,24 @@ class PartenaireType extends AbstractType
                     'placeholder' => "Email",
                 ],
             ])
+            ->add('numimpot', TextType::class, [
+                'label' => "Nunméro Impôt (Nif)",
+                'attr' => [
+                    'placeholder' => "NIF",
+                ],
+            ])
+            ->add('rccm', TextType::class, [
+                'label' => "Nunméro RCCM (Rccm)",
+                'attr' => [
+                    'placeholder' => "RCCM",
+                ],
+            ])
+            ->add('idnat', TextType::class, [
+                'label' => "Nunméro d'Id. nationale (Idnat)",
+                'attr' => [
+                    'placeholder' => "Idnat",
+                ],
+            ])
             ->add('part', PercentType::class, [
                 'label' => "Part du partenaire",
                 'help' => "Ce pourcentage ne s'appliquera que sur les commissions hors taxes (l'assiette partageable).",

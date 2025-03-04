@@ -63,6 +63,15 @@ class Partenaire
     #[ORM\ManyToMany(targetEntity: Client::class, mappedBy: 'partenaires')]
     private Collection $clients;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $idnat = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $numimpot = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $rccm = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -298,6 +307,42 @@ class Partenaire
         if ($this->clients->removeElement($client)) {
             $client->removePartenaire($this);
         }
+
+        return $this;
+    }
+
+    public function getIdnat(): ?string
+    {
+        return $this->idnat;
+    }
+
+    public function setIdnat(?string $idnat): static
+    {
+        $this->idnat = $idnat;
+
+        return $this;
+    }
+
+    public function getNumimpot(): ?string
+    {
+        return $this->numimpot;
+    }
+
+    public function setNumimpot(?string $numimpot): static
+    {
+        $this->numimpot = $numimpot;
+
+        return $this;
+    }
+
+    public function getRccm(): ?string
+    {
+        return $this->rccm;
+    }
+
+    public function setRccm(?string $rccm): static
+    {
+        $this->rccm = $rccm;
 
         return $this;
     }
