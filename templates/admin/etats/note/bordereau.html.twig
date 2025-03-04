@@ -102,9 +102,26 @@
             {# Titre du bordereau #}
             <p class="normal_texte">
                 <span class="moyen_titre">
-                    BORDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} <span class="gras">{{ note.reference }}</span>
+                    BORDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} Réf.:<span class="gras">{{ note.reference }}</span>
                 </span></br>
-                Description: <span class="gras">{{ note.description }}</span></br>
+                Adressée à :
+                {% if note.addressedto == 0 %}
+                    {# Client #}
+                    <span class="gras">{{ note.client.nom }}</span>
+                {% endif %}
+                {% if note.addressedto == 1 %}
+                    {# Assureur #}
+                    <span class="gras">{{ note.assureur.nom }}</span>
+                {% endif %}
+                {% if note.addressedto == 2 %}
+                    {# Partenaire #}
+                    <span class="gras">{{ note.partenaire.nom }}</span>
+                {% endif %}
+                {% if note.addressedto == 3 %}
+                    {# Autorité fiscale #}
+                    <span class="gras">{{ note.autoritefiscale.abreviation }}</span>
+                {% endif %}
+                 • Description: <span class="gras">{{ note.description }}</span>
             </p>
 
             {# Contenu du boredereau - Grand Tableau #}
@@ -134,7 +151,6 @@
                     <td class="texte-droite gras">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                 </thead>
             </table>
-
 
 
             {# Bas de page #}
