@@ -93,7 +93,6 @@
                 bottom: 0;
                 right: 0;
                 width: 100%;
-                /* border: 3px solid #73AD21; */
             }
         </style>
     </head>
@@ -123,11 +122,9 @@
                 {% endif %}
                  • Description: <span class="gras">{{ note.description }}</span>
             </p>
-
-            {# {% for i in 0..20 %}
+            {# {% for i in 0..25 %}
                 - Serge {{ i }}<br>
             {% endfor %} #}
-
             {# Contenu du boredereau - Grand Tableau #}
             <table class="center" style="width: 100%;">
                 <thead>
@@ -143,9 +140,9 @@
                     <th class="texte-centre">Tva (16%)</th>
                     <th class="texte-centre">Com. Totale</th>
                 </thead>
-                {% for i in 1..3 %}
+                {% for i in 1..10 %}
                     <tr>
-                        <td class="petit_texte texte-droite"> {{ i }} </td>
+                        <td class="petit_texte texte-droite"> 1 </td>
                         <td class="petit_texte">33002-0002-102-0013322/0002</td>
                         <td class="petit_texte texte-centre">01/01/2025 - 31/12/2025</td>
                         <td class="petit_texte ">MOTOR</td>
