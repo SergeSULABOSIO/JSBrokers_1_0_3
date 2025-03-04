@@ -51,7 +51,7 @@
                 border: 1px solid darkgray;
                 padding: 3px;
                 text-align: left;
-                font-size: 12px;
+                font-size: 10px;
             }
             thead{
                 background-color: lightgray;
@@ -124,31 +124,52 @@
                  • Description: <span class="gras">{{ note.description }}</span>
             </p>
 
+            {# {% for i in 0..20 %}
+                - Serge {{ i }}<br>
+            {% endfor %} #}
+
             {# Contenu du boredereau - Grand Tableau #}
             <table class="center" style="width: 100%;">
                 <thead>
-                    <th class="texte-centre"  style="width: 40%;">Description</th>
-                    <th class="texte-centre">Valeur</th>
+                    <th class="texte-centre">N°</th>
+                    <th class="texte-centre">Réf. Police</th>
+                    <th class="texte-centre">Période</th>
+                    <th class="texte-centre">Produit</th>
+                    <th class="texte-centre">Tranche</th>
+                    <th class="texte-centre">Client</th>
+                    <th class="texte-centre">Prime Nette</th>
+                    <th class="texte-centre">Taux</th>
+                    <th class="texte-centre">Com. pure</th>
+                    <th class="texte-centre">Tva (16%)</th>
+                    <th class="texte-centre">Com. Totale</th>
                 </thead>
-                <tr>
-                    <td class="texte-droite">Montant hors taxe</td>
-                    <td class="texte-droite">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                </tr>
-                <tr>
-                    <td class="texte-droite">{{ constante.Note_getNames_taxes_assureur() }}</td>
-                    <td class="texte-droite">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                </tr>
-                <tr>
-                    <td class="texte-droite gras">Montant Payable</td>
-                    <td class="texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                </tr>
-                <tr>
-                    <td class="texte-droite">Montant Payé</td>
-                    <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                </tr>
+                {% for i in 1..3 %}
+                    <tr>
+                        <td class="petit_texte texte-droite"> {{ i }} </td>
+                        <td class="petit_texte">33002-0002-102-0013322/0002</td>
+                        <td class="petit_texte texte-centre">01/01/2025 - 31/12/2025</td>
+                        <td class="petit_texte ">MOTOR</td>
+                        <td class="petit_texte texte-centre">Tranche1</td>
+                        <td class="petit_texte ">BGFibank RDC SA</td>
+                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                        <td class="petit_texte texte-droite">100,00 %</td>
+                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                    </tr>
+                {% endfor %}
                 <thead>
-                    <th class="texte-droite">Solde restant dû</th>
-                    <td class="texte-droite gras">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                    <th class="petit_texte "></th>
+                    <th class="petit_texte "></th>
+                    <th class="petit_texte "></th>
+                    <th class="petit_texte "></th>
+                    <th class="petit_texte "></th>
+                    <th class="petit_texte "></th>
+                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
                 </thead>
             </table>
 

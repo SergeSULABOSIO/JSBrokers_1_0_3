@@ -136,6 +136,22 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
+
+
+            // return $this->render(
+            //     'admin/etats/note/bordereau.html.twig',
+            //     [
+            //         'entreprise' => $entreprise,
+            //         'utilisateur' => $utilisateur,
+            //         'note' => $note,
+            //         'constante' => $this->constante,
+            //         'serviceMonnaie' => $this->serviceMonnaies,
+            //         'serviceTaxe' => $this->serviceTaxes,
+            //         'date' => new DateTimeImmutable("now"),
+            //     ]
+            // );
+
+
             $html = $this->renderView(
                 'admin/etats/note/bordereau.html.twig',
                 [
