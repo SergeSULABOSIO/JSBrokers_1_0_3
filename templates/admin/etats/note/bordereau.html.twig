@@ -1,11 +1,12 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
     <head>
-        {# <meta charset="UTF-8"> #}
-		{# <meta name="viewport" content="width=device-width, initial-scale=1"> #}
-		
-        {# <link rel="stylesheet" href="mystyle.css"> #}
+        <meta http-equiv="Content-Type" content="text/html;">
         <style>
+            .tableau_vaste{
+                width: 100%;
+                border-collapse: collapse;
+            }
             .grand_titre {
                 text-align: center;
                 font-family: Arial, sans-serif;
@@ -22,7 +23,9 @@
                 font-size: 16px;
                 font-weight: bold;
                 color: black;
-                /* padding: 3px; */
+            }
+            .gras {
+                font-weight: bold;
             }
             .normal_texte {
                 text-align: left;
@@ -40,25 +43,7 @@
                 font-size: 10px;
                 color: black;
             }
-            .tableau_vaste{
-                width: 100%;
-                border-collapse: collapse;
-            }
-            table{
-                border-collapse: collapse;
-            }
-            th, td{
-                border: 1px solid darkgray;
-                padding: 3px;
-                text-align: left;
-                font-size: 10px;
-            }
-            thead{
-                background-color: lightgray;
-            }
-            .gras {
-                font-weight: bold;
-            }
+
             .droite {
                 position: relative;
                 left: 40%;
@@ -69,9 +54,7 @@
             .texte-droite {
                 text-align: right;
             }
-            .center {
-                margin: auto;
-            }
+            
             a:link {
                 text-decoration: none;
             }
@@ -88,11 +71,45 @@
             a:active {
                 text-decoration: underline;
             }
+
+            .center {
+                margin: auto;
+            }
             .bas-de-page {
                 position: fixed;
                 bottom: 0;
                 right: 0;
                 width: 100%;
+            }
+
+            table {
+                margin-bottom: 2em;
+                
+            }
+
+            thead {
+                background-color: lightgray;
+            }
+
+            tbody {
+                /* background-color: #ffffee; */
+            }
+
+            th,td {
+                border: 1px solid darkgray;
+                padding: 3px;
+                text-align: left;
+                font-size: 10px;
+            }
+
+            .block {
+                /* display: block; */
+                background-color: lightgray;
+                padding: 1px;
+            }
+
+            table {
+                border-collapse: collapse;
             }
         </style>
     </head>
@@ -126,21 +143,24 @@
                 - Serge {{ i }}<br>
             {% endfor %} #}
             {# Contenu du boredereau - Grand Tableau #}
-            <table class="center" style="width: 100%;">
+            {# <table class="center">
                 <thead>
-                    <th class="texte-centre">N°</th>
-                    <th class="texte-centre">Réf. Police</th>
-                    <th class="texte-centre">Période</th>
-                    <th class="texte-centre">Produit</th>
-                    <th class="texte-centre">Tranche</th>
-                    <th class="texte-centre">Client</th>
-                    <th class="texte-centre">Prime Nette</th>
-                    <th class="texte-centre">Taux</th>
-                    <th class="texte-centre">Com. pure</th>
-                    <th class="texte-centre">Tva (16%)</th>
-                    <th class="texte-centre">Com. Totale</th>
+                    <tr>
+                        <th class="texte-centre">N°</th>
+                        <th class="texte-centre">Réf. Police</th>
+                        <th class="texte-centre">Période</th>
+                        <th class="texte-centre">Produit</th>
+                        <th class="texte-centre">Tranche</th>
+                        <th class="texte-centre">Client</th>
+                        <th class="texte-centre">Prime Nette</th>
+                        <th class="texte-centre">Taux</th>
+                        <th class="texte-centre">Com. pure</th>
+                        <th class="texte-centre">Tva (16%)</th>
+                        <th class="texte-centre">Com. Totale</th>
+                    </tr>
                 </thead>
-                {% for i in 1..30 %}
+                <tbody>
+                {% for i in 1..1 %}
                     <tr>
                         <td class="petit_texte texte-droite"> {{ i }} </td>
                         <td class="petit_texte">33002-0002-102-0013322/0002</td>
@@ -155,20 +175,58 @@
                         <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                     </tr>
                 {% endfor %}
+                </tbody>
                 <thead>
-                    <th class="petit_texte "></th>
-                    <th class="petit_texte "></th>
-                    <th class="petit_texte "></th>
-                    <th class="petit_texte "></th>
-                    <th class="petit_texte "></th>
-                    <th class="petit_texte "></th>
-                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                    <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                    <tr>
+                        <th class="petit_texte "></th>
+                        <th class="petit_texte "></th>
+                        <th class="petit_texte "></th>
+                        <th class="petit_texte "></th>
+                        <th class="petit_texte "></th>
+                        <th class="petit_texte "></th>
+                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                    </tr>
                 </thead>
-            </table>
+            </table> #}
+
+
+            {% for i in 1..70 %}
+                <div class="block">- Texte {{ i }}</div>
+            {% endfor %}
+
+            {# <table class="center"  style="width: 100%;"> 
+                <thead>
+                    <tr>
+                        <th>head 1</th>
+                        <th>head 2</th>
+                        <th>head 3</th>
+                        <th>head 4</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for i in 1..17 %}
+                    <tr>
+                        <td>cell 1</td>
+                        <td>cell 2</td>
+                        <td>cell 3</td>
+                        <td>cell 4</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <thead>
+                    <tr>
+                        <th>head 1</th>
+                        <th>head 2</th>
+                        <th>head 3</th>
+                        <th>head 4</th>
+                    </tr>
+                </thead>
+            </table> #}
+
 
 
             {# Bas de page #}

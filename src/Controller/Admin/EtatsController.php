@@ -79,7 +79,7 @@ class EtatsController extends AbstractController
             // );
 
 
-            $html = $this->renderView(
+            $html = $this->render(
                 'admin/etats/note/index.html.twig',
                 [
                     'entreprise' => $entreprise,
@@ -136,21 +136,21 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-            return $this->render(
-                'admin/etats/note/bordereau.html.twig',
-                [
-                    'entreprise' => $entreprise,
-                    'utilisateur' => $utilisateur,
-                    'note' => $note,
-                    'constante' => $this->constante,
-                    'serviceMonnaie' => $this->serviceMonnaies,
-                    'serviceTaxe' => $this->serviceTaxes,
-                    'date' => new DateTimeImmutable("now"),
-                ]
-            );
+            // return $this->render(
+            //     'admin/etats/note/bordereau.html.twig',
+            //     [
+            //         'entreprise' => $entreprise,
+            //         'utilisateur' => $utilisateur,
+            //         'note' => $note,
+            //         'constante' => $this->constante,
+            //         'serviceMonnaie' => $this->serviceMonnaies,
+            //         'serviceTaxe' => $this->serviceTaxes,
+            //         'date' => new DateTimeImmutable("now"),
+            //     ]
+            // );
 
 
-            $html = $this->renderView(
+            $html = $this->render(
                 'admin/etats/note/bordereau.html.twig',
                 [
                     'entreprise' => $entreprise,
@@ -165,14 +165,15 @@ class EtatsController extends AbstractController
             $options = new Options();
             $options->set('defaultFont', 'Arial');
             // instantiate and use the dompdf class
-            $dompdf = new Dompdf($options);
+            $dompdf = new Dompdf();
+            $dompdf->setOptions($options);
             $dompdf->loadHtml($html);
             // (Optional) Setup the paper size and orientation
             $dompdf->setPaper('A4', 'landscape');
             // Render the HTML as PDF
             $dompdf->render();
             // Output the generated PDF to Browser
-            $dompdf->stream("BorderauNote-". $note->getId() .".pdf", [
+            $dompdf->stream("Borderaunote-". $note->getId() .".pdf", [
                 'Attachment' => false,
             ]);
             return new Response("", 200, [
