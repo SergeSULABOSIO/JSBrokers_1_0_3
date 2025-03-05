@@ -84,7 +84,6 @@
 
             table {
                 margin-bottom: 2em;
-                
             }
 
             thead {
@@ -106,10 +105,6 @@
                 /* display: block; */
                 background-color: lightgray;
                 padding: 1px;
-            }
-
-            table {
-                border-collapse: collapse;
             }
         </style>
     </head>
@@ -139,6 +134,17 @@
                 {% endif %}
                  • Description: <span class="gras">{{ note.description }}</span>
             </p>
+
+
+
+            {% for i in 0..40 %}
+                <p class="normal_texte">
+                    - Serge {{ i }}<br>
+                    ABHSDHDGDHDGHDGDHGDHDGDGHDGDHGDHGD
+                </p>
+            {% endfor %}
+
+
             {# {% for i in 0..25 %}
                 - Serge {{ i }}<br>
             {% endfor %} #}
@@ -193,10 +199,6 @@
                 </thead>
             </table> #}
 
-
-            {% for i in 1..70 %}
-                <div class="block">- Texte {{ i }}</div>
-            {% endfor %}
 
             {# <table class="center"  style="width: 100%;"> 
                 <thead>
