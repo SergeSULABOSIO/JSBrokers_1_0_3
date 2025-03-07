@@ -80,7 +80,7 @@ class EtatsController extends AbstractController
             // );
 
 
-            $html = $this->render(
+            $html = $this->renderView(
                 'admin/etats/note/index.html.twig',
                 [
                     'entreprise' => $entreprise,
@@ -139,7 +139,6 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-            try {
                 // return $this->renderView(
                 //     'admin/etats/note/bordereau_test.html.twig',
                 //     [
@@ -155,7 +154,7 @@ class EtatsController extends AbstractController
 
 
                 $html = $this->renderView(
-                    'admin/etats/note/bordereau_test.html.twig',
+                    'admin/etats/note/bordereau.html.twig',
                     [
                         'entreprise' => $entreprise,
                         'utilisateur' => $utilisateur,
@@ -172,8 +171,7 @@ class EtatsController extends AbstractController
                 $options->set('isRemoteEnabled', true);
 
                 // instantiate and use the dompdf class
-                $dompdf = new Dompdf();
-                $dompdf->setOptions($options);
+                $dompdf = new Dompdf($options);
                 $dompdf->loadHtml($html);
                 $dompdf->setPaper('A4', 'landscape');
                 $dompdf->render();
@@ -186,32 +184,8 @@ class EtatsController extends AbstractController
                     200,
                     [
                         "Content-Type" => "application/pdf",
-                        'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
                     ]
                 );
-
-
-
-
-
-
-                // $dompdf = new Dompdf();
-                // $dompdf->loadHtml($html);
-                // $dompdf->render();
-
-                // return new Response(
-                //     $dompdf->output(),
-                //     200,
-                //     [
-                //         'Content-Type' => 'application/pdf',
-                //         'Content-Disposition' => 'attachment; filename="document.pdf"',
-                //     ]
-                // );
-            } catch (Exception $e) {
-                // Gestion de l'erreur Dompdf
-                $this->addFlash('error', 'Erreur lors de la génération du PDF : ' . $e->getMessage());
-                return $this->redirectToRoute($currentURL);
-            }
         } else {
             $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
             return $this->redirect($currentURL);
