@@ -84,6 +84,7 @@
 
             table {
                 margin-bottom: 2em;
+                border-collapse: collapse;
             }
 
             thead {
@@ -137,16 +138,16 @@
 
 
 
-            {% for i in 0..45 %}
+            {# {% for i in 0..45 %}
                 <p class="normal_texte">
                     - Serge {{ i }}<br>
                     ABHSDHDGDHDGHDGDHGDHDGDGHDGDHGDHGD
                 </p>
-            {% endfor %}
+            {% endfor %} #}
 
 
             {# Contenu du boredereau - Grand Tableau #}
-            {# <table class="center">
+            <table class="center">
                 <thead>
                     <tr>
                         <th class="texte-centre">N°</th>
@@ -155,7 +156,9 @@
                         <th class="texte-centre">Produit</th>
                         <th class="texte-centre">Tranche</th>
                         <th class="texte-centre">Client</th>
+                        <th class="texte-centre">Prime TTC</th>
                         <th class="texte-centre">Prime Nette</th>
+                        <th class="texte-centre">Fronting</th>
                         <th class="texte-centre">Taux</th>
                         <th class="texte-centre">Com. pure</th>
                         <th class="texte-centre">Tva (16%)</th>
@@ -163,21 +166,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                {% for i in 1..1 %}
                     <tr>
-                        <td class="petit_texte texte-droite"> {{ i }} </td>
+                        <td class="petit_texte texte-droite"> 1 </td>
                         <td class="petit_texte">33002-0002-102-0013322/0002</td>
                         <td class="petit_texte texte-centre">01/01/2025 - 31/12/2025</td>
-                        <td class="petit_texte ">MOTOR</td>
+                        <td class="petit_texte ">MOTOR TPL</td>
                         <td class="petit_texte texte-centre">Tranche1</td>
-                        <td class="petit_texte ">BGFibank RDC SA</td>
+                        <td class="petit_texte ">RESOLVE TO SAVE LIVES</td>
+                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         <td class="petit_texte texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         <td class="petit_texte texte-droite">100,00 %</td>
                         <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                         <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
                     </tr>
-                {% endfor %}
                 </tbody>
                 <thead>
                     <tr>
@@ -187,14 +190,16 @@
                         <th class="petit_texte "></th>
                         <th class="petit_texte "></th>
                         <th class="petit_texte "></th>
-                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
-                        <th class="petit_texte texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
+                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
+                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
+                        <th class="petit_texte texte-droite gras"></th>
+                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
+                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
+                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
                     </tr>
                 </thead>
-            </table> #}
+            </table>
 
 
             {# <table class="center"  style="width: 100%;"> 
