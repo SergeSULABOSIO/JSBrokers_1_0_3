@@ -9,7 +9,7 @@
             }
             .grand_titre {
                 text-align: center;
-                font-family: Arial, sans-serif;
+                /* font-family: Arial, sans-serif; */
                 font-size: 18px;
                 color: black;
                 text-transform: uppercase;
@@ -19,7 +19,7 @@
             .moyen_titre {
                 text-transform: uppercase;
                 text-align: left;
-                font-family: Arial, sans-serif;
+                /* font-family: Arial, sans-serif; */
                 font-size: 16px;
                 font-weight: bold;
                 color: black;
@@ -30,7 +30,7 @@
             .normal_texte {
                 text-align: left;
                 font-weight: normal;
-                font-family: Georgia, Arial;
+                /* font-family: Georgia, Arial; */
                 font-style: normal;
                 font-size: 12px;
                 color: black;
@@ -38,7 +38,7 @@
             .petit_texte {
                 text-align: left;
                 font-weight: normal;
-                font-family: Georgia, Arial;
+                /* font-family: Georgia, Arial; */
                 font-style: normal;
                 font-size: 10px;
                 color: black;
@@ -102,10 +102,15 @@
                 font-size: 10px;
             }
 
-            .block {
-                /* display: block; */
-                background-color: lightgray;
-                padding: 1px;
+            .row{
+                display:flex;
+                justify-content: space-around;
+            }
+            .col{
+                border:1px solid #ccc;
+                padding: 10px;
+                text-align: center;
+                flex: 1;
             }
         </style>
     </head>
@@ -137,110 +142,23 @@
             </p>
 
 
-
-            {# {% for i in 0..45 %}
-                <p class="normal_texte">
-                    - Serge {{ i }}<br>
-                    ABHSDHDGDHDGHDGDHGDHDGDGHDGDHGDHGD
-                </p>
-            {% endfor %} #}
-
-
-            {# Contenu du boredereau - Grand Tableau #}
-            <table class="center">
-                <thead>
-                    <tr>
-                        <th class="texte-centre">N°</th>
-                        <th class="texte-centre">Réf. Police</th>
-                        <th class="texte-centre">Période</th>
-                        <th class="texte-centre">Produit</th>
-                        <th class="texte-centre">Tranche</th>
-                        <th class="texte-centre">Client</th>
-                        <th class="texte-centre">Prime TTC</th>
-                        <th class="texte-centre">Prime Nette</th>
-                        <th class="texte-centre">Fronting</th>
-                        <th class="texte-centre">Taux</th>
-                        <th class="texte-centre">Com. pure</th>
-                        <th class="texte-centre">Tva (16%)</th>
-                        <th class="texte-centre">Com. Totale</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="petit_texte texte-droite"> 1 </td>
-                        <td class="petit_texte">33002-0002-102-0013322/0002</td>
-                        <td class="petit_texte texte-centre">01/01/2025 - 31/12/2025</td>
-                        <td class="petit_texte ">MOTOR TPL</td>
-                        <td class="petit_texte texte-centre">Tranche1</td>
-                        <td class="petit_texte ">RESOLVE TO SAVE LIVES</td>
-                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                        <td class="petit_texte texte-droite">100,00 %</td>
-                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                        <td class="petit_texte texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
-                    </tr>
-                </tbody>
-                <thead>
-                    <tr>
-                        <th class="petit_texte "></th>
-                        <th class="petit_texte "></th>
-                        <th class="petit_texte "></th>
-                        <th class="petit_texte "></th>
-                        <th class="petit_texte "></th>
-                        <th class="petit_texte "></th>
-                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
-                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
-                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
-                        <th class="petit_texte texte-droite gras"></th>
-                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
-                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
-                        <th class="petit_texte texte-droite gras">{{ 100000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
-                    </tr>
-                </thead>
-            </table>
-
-
-            {# <table class="center"  style="width: 100%;"> 
-                <thead>
-                    <tr>
-                        <th>head 1</th>
-                        <th>head 2</th>
-                        <th>head 3</th>
-                        <th>head 4</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for i in 1..17 %}
-                    <tr>
-                        <td>cell 1</td>
-                        <td>cell 2</td>
-                        <td>cell 3</td>
-                        <td>cell 4</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-                <thead>
-                    <tr>
-                        <th>head 1</th>
-                        <th>head 2</th>
-                        <th>head 3</th>
-                        <th>head 4</th>
-                    </tr>
-                </thead>
-            </table> #}
-
+            CONTENU ICI
+            <div class="col">   
+                <div class="row">N°</div>
+                <div class="row">Ref. Police</div>
+                <div class="row">Nom Client</div>
+            </div>
 
 
             {# Bas de page #}
+            <br/>
             <p class="petit_texte texte-centre bas-de-page" style="">
                 <span class="gras normal_texte">{{ entreprise.nom }}</span>
                 </br>
                 Adresse: <span class="gras">{{ entreprise.adresse }}</span>
                  • Téléphone: <span class="gras">{{ entreprise.telephone }}</span>
                  • Licence: <span class="gras">{{ entreprise.licence }}</span>
-                 • Capital social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: utilisateur.locale) }}</span>
+                 • Capital social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: 'en') }}</span>
                 </br>
                 RCCM: <span class="gras">{{ entreprise.rccm }}</span>
                  • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span>

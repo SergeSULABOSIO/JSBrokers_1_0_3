@@ -145,6 +145,7 @@ class EtatsController extends AbstractController
                 //         'entreprise' => $entreprise,
                 //         'utilisateur' => $utilisateur,
                 //         'note' => $note,
+                //         'tbody' => $this->buildTable(),
                 //         'constante' => $this->constante,
                 //         'serviceMonnaie' => $this->serviceMonnaies,
                 //         'serviceTaxe' => $this->serviceTaxes,
@@ -152,7 +153,7 @@ class EtatsController extends AbstractController
                 //     ]
                 // );
 
-
+                // dd($tr);
                 $html = $this->renderView(
                     'admin/etats/note/bordereau.html.twig',
                     [

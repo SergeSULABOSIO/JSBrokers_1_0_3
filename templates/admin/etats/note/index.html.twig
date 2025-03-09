@@ -210,23 +210,23 @@
                         </thead>
                         <tr>
                             <td class="texte-droite">Montant hors taxe</td>
-                            <td class="texte-droite">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         </tr>
                         <tr>
                             <td class="texte-droite">{{ constante.Note_getNames_taxes_assureur() }}</td>
-                            <td class="texte-droite">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         </tr>
                         <tr>
                             <td class="texte-droite gras">Montant Payable</td>
-                            <td class="texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         </tr>
                         <tr>
                             <td class="texte-droite">Montant Payé</td>
-                            <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         </tr>
                         <thead>
                             <th class="texte-droite">Solde restant dû</th>
-                            <td class="texte-droite gras">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite gras">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         </thead>
                     </table>
                 {% else %}
@@ -238,11 +238,11 @@
                         </thead>
                         <tr>
                             <td>Montant Payable</td>
-                            <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         </tr>
                         <tr>
                             <td>Montant Payé</td>
-                            <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</td>
+                            <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         </tr>
                         <thead>
                             <th>
@@ -251,7 +251,7 @@
                                     Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
                                 {% endif %}
                             </th>
-                            <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</th>
+                            <th class="texte-droite">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</th>
                         </thead>
                     </table>
                 {% endif %}
@@ -305,7 +305,7 @@
                 Adresse: <span class="gras">{{ entreprise.adresse }}</span>
                  • Téléphone: <span class="gras">{{ entreprise.telephone }}</span>
                  • Licence: <span class="gras">{{ entreprise.licence }}</span>
-                 • Capital Social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: utilisateur.locale) }}</span>
+                 • Capital Social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: 'en') }}</span>
                 </br>
                 RCCM: <span class="gras">{{ entreprise.rccm }}</span>
                  • Id. Nat: <span class="gras">{{ entreprise.idnat }}</span>
