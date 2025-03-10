@@ -31,14 +31,14 @@ class ServiceTcpdf
             "", //header image logo
             0,  //header image logo width in mm
             $entreprise->getNom(),  //string to print as title on document header
-            "By " . $this->utilisateur->getNom(),   //string to print on document header
+            "Edited By " . $this->utilisateur->getNom(),   //string to print on document header
             array(0, 0, 0), //Text color (RGB)
             array(0, 0, 0)  //Line color (RGB)
         );
         $this->tcpdf->setFooterData(array(0, 0, 0), array(array(0, 0, 0)));
 
         // set header and footer fonts
-        $this->tcpdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
+        $this->tcpdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', 8));
         $this->tcpdf->setFooterFont(array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
 
         // set default monospaced font
@@ -54,6 +54,12 @@ class ServiceTcpdf
 
         // set image scale factor
         $this->tcpdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+
+        // set some language-dependent strings (optional)
+        if (@file_exists(dirname(__FILE__) . '/lang/eng.php')) {
+            require_once(dirname(__FILE__) . '/lang/eng.php');
+            $this->tcpdf->setLanguageArray($l);
+        }
 
         // ---------------------------------------------------------
 

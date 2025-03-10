@@ -97,6 +97,17 @@
         </style>
     </head>
     <body>
-        <span class="moyen_titre">Serge</span>
+        {# Détails sur l'entreprise #}
+        <p class="normal_texte">
+            {# Nom de l'entrerise #}
+            <span class="moyen_titre">{{ entreprise.nom }}</span><br/>
+                • Adresse: <span class="gras">{{ entreprise.adresse }}</span><br/>
+                • Téléphone: <span class="gras">{{ entreprise.telephone }}</span><br/>
+                • Licence: <span class="gras">{{ entreprise.licence }}</span><br/>
+                • RCCM: <span class="gras">{{ entreprise.rccm }}</span><br/>
+                • ID. NAT: <span class="gras">{{ entreprise.idnat }}</span><br/>
+                • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span><br/>
+                • Site Web: <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a><br/>
+        </p>
     </body>
 </html>
