@@ -20,25 +20,35 @@ class ServiceTcpdf
         $this->utilisateur = $this->security->getUser();
     }
 
-    public function getTcpdf(Entreprise $entreprise, ?string $titre): TCPDF
+    public function getTcpdf(Entreprise $entreprise, ?string $titre, bool $withHeader = true, bool $withFooter = true): TCPDF
     {
         $this->tcpdf->SetCreator(PDF_CREATOR);
         $this->tcpdf->SetAuthor('User: ' . $this->utilisateur->getNom());
         $this->tcpdf->SetTitle($titre);
+
+        //Autorisation d'afficher ou non le header et footer de la page
+        $this->tcpdf->setPrintHeader($withHeader);
+        $this->tcpdf->setPrintFooter($withFooter);
 
         // set default header data
         $this->tcpdf->SetHeaderData(
             "", //header image logo
             0,  //header image logo width in mm
             $entreprise->getNom(),  //string to print as title on document header
-            "Edited By " . $this->utilisateur->getNom(),   //string to print on document header
+            "Adresse: " . $entreprise->getAdresse() . " • Site: " . $entreprise->getSiteweb() . "\n". 
+            "Tél.: " . $entreprise->getTelephone().
+            " • Licence.: " . $entreprise->getLicence().
+            " • RCCM.: " . $entreprise->getRccm().
+            " • IDNAT.: " . $entreprise->getIdnat().
+            " • N.Impôt.: " . $entreprise->getNumimpot()
+            ,   //string to print on document header
             array(0, 0, 0), //Text color (RGB)
             array(0, 0, 0)  //Line color (RGB)
         );
         $this->tcpdf->setFooterData(array(0, 0, 0), array(array(0, 0, 0)));
 
         // set header and footer fonts
-        $this->tcpdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', 8));
+        $this->tcpdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', 7));
         $this->tcpdf->setFooterFont(array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
 
         // set default monospaced font

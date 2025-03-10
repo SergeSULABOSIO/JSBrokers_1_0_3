@@ -185,7 +185,7 @@ class EtatsController extends AbstractController
         );
 
 
-        $pdf = $serviceTcpdf->getTcpdf($entreprise, $note->getNom());
+        $pdf = $serviceTcpdf->getTcpdf($entreprise, $note->getNom(), true, true);
         
         // set text shadow effect
         // $pdf->setTextShadow(array('enabled' => true, 'depth_w' => 0.2, 'depth_h' => 0.2, 'color' => array(196, 196, 196), 'opacity' => 1, 'blend_mode' => 'Normal'));
