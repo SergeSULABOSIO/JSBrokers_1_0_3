@@ -17,6 +17,7 @@ use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\ServiceTcpdf;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -54,7 +55,7 @@ class EtatsController extends AbstractController
             'currentURL' => Requirement::CATCH_ALL
         ]
     )]
-    public function imprimerNote($currentURL, $idEntreprise, $idNote, Request $request): Response
+    public function imprimerNote($currentURL, $idEntreprise, $idNote, Request $request, ServiceTcpdf $serviceTcpdf): Response
     {
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
@@ -80,7 +81,8 @@ class EtatsController extends AbstractController
             //     ]
             // );
 
-            return $this->executerNoteDomPDF($entreprise, $utilisateur, $note);
+            // return $this->executerNoteDomPDF($entreprise, $utilisateur, $note);
+            return $this->executerNoteTCPDF($serviceTcpdf, $entreprise, $utilisateur, $note);
         } else {
             $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
             return $this->redirect($currentURL);
@@ -131,7 +133,7 @@ class EtatsController extends AbstractController
     }
 
 
-    
+
 
     public function executerNoteDomPDF(Entreprise $entreprise, Utilisateur $utilisateur, Note $note): Response
     {
@@ -164,6 +166,41 @@ class EtatsController extends AbstractController
         ]);
         return new Response("", 200, [
             "Content-Type" => "application/pdf",
+        ]);
+    }
+
+    public function executerNoteTCPDF(ServiceTcpdf $serviceTcpdf, Entreprise $entreprise, Utilisateur $utilisateur, Note $note): Response
+    {
+        $html = $this->renderView(
+            'admin/etats/note/tcpdf_index.html.twig',
+            [
+                'entreprise' => $entreprise,
+                'utilisateur' => $utilisateur,
+                'note' => $note,
+                'constante' => $this->constante,
+                'serviceMonnaie' => $this->serviceMonnaies,
+                'serviceTaxe' => $this->serviceTaxes,
+                'date' => new DateTimeImmutable("now"),
+            ]
+        );
+
+
+        $pdf = $serviceTcpdf->getTcpdf($entreprise, $note->getNom());
+        
+        // set text shadow effect
+        // $pdf->setTextShadow(array('enabled' => true, 'depth_w' => 0.2, 'depth_h' => 0.2, 'color' => array(196, 196, 196), 'opacity' => 1, 'blend_mode' => 'Normal'));
+
+        // $html = '<h1>Bienvenue sur TCPDF</h1><p>Ceci est un exemple de génération de PDF avec TCPDF.</p>';
+
+
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        $fileName = "Note-" . $note->getId() . ".pdf";
+        $pdfData = $pdf->Output($fileName, 'S'); // 'S' pour récupérer le contenu du PDF
+
+        return new Response($pdfData, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
         ]);
     }
 
