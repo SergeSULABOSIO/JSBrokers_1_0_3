@@ -4,19 +4,20 @@ namespace App\Controller\Admin;
 
 // namespace App\Controller;
 
+use Exception;
 use Dompdf\Dompdf;
 use Dompdf\Options;
-use App\Constantes\Constante;
+use App\Entity\Note;
+use DateTimeImmutable;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use App\Constantes\Constante;
 use App\Services\ServiceTaxes;
 use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
-use Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -79,44 +80,12 @@ class EtatsController extends AbstractController
             //     ]
             // );
 
-
-            $html = $this->renderView(
-                'admin/etats/note/index.html.twig',
-                [
-                    'entreprise' => $entreprise,
-                    'utilisateur' => $utilisateur,
-                    'note' => $note,
-                    'constante' => $this->constante,
-                    'serviceMonnaie' => $this->serviceMonnaies,
-                    'serviceTaxe' => $this->serviceTaxes,
-                    'date' => new DateTimeImmutable("now"),
-                ]
-            );
-            $options = new Options();
-            $options->set('defaultFont', 'Arial');
-            $options->set('isHtml5ParserEnabled', true);
-            $options->set('isRemoteEnabled', true);
-            // instantiate and use the dompdf class
-            $dompdf = new Dompdf($options);
-            $dompdf->loadHtml($html);
-            // (Optional) Setup the paper size and orientation
-            // $dompdf->setPaper('A4', 'portrait'); //landscape
-            // Render the HTML as PDF
-            $dompdf->render();
-            // Output the generated PDF to Browser
-            $dompdf->stream("Note-" . $note->getId() . ".pdf", [
-                'Attachment' => false,
-            ]);
-            return new Response("", 200, [
-                "Content-Type" => "application/pdf",
-            ]);
+            return $this->executerNoteDomPDF($entreprise, $utilisateur, $note);
         } else {
             $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
             return $this->redirect($currentURL);
         }
     }
-
-
 
     #[Route(
         '/imprimerBordereauNote/{idEntreprise}/{idNote}/{currentURL}',
@@ -139,57 +108,99 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-                // return $this->renderView(
-                //     'admin/etats/note/bordereau_test.html.twig',
-                //     [
-                //         'entreprise' => $entreprise,
-                //         'utilisateur' => $utilisateur,
-                //         'note' => $note,
-                //         'tbody' => $this->buildTable(),
-                //         'constante' => $this->constante,
-                //         'serviceMonnaie' => $this->serviceMonnaies,
-                //         'serviceTaxe' => $this->serviceTaxes,
-                //         'date' => new DateTimeImmutable("now"),
-                //     ]
-                // );
+            // return $this->renderView(
+            //     'admin/etats/note/bordereau_test.html.twig',
+            //     [
+            //         'entreprise' => $entreprise,
+            //         'utilisateur' => $utilisateur,
+            //         'note' => $note,
+            //         'tbody' => $this->buildTable(),
+            //         'constante' => $this->constante,
+            //         'serviceMonnaie' => $this->serviceMonnaies,
+            //         'serviceTaxe' => $this->serviceTaxes,
+            //         'date' => new DateTimeImmutable("now"),
+            //     ]
+            // );
 
-                // dd($tr);
-                $html = $this->renderView(
-                    'admin/etats/note/bordereau.html.twig',
-                    [
-                        'entreprise' => $entreprise,
-                        'utilisateur' => $utilisateur,
-                        'note' => $note,
-                        'constante' => $this->constante,
-                        'serviceMonnaie' => $this->serviceMonnaies,
-                        'serviceTaxe' => $this->serviceTaxes,
-                        'date' => new DateTimeImmutable("now"),
-                    ]
-                );
-                $options = new Options();
-                $options->set('defaultFont', 'Arial');
-                $options->set('isHtml5ParserEnabled', true);
-                $options->set('isRemoteEnabled', true);
-
-                // instantiate and use the dompdf class
-                $dompdf = new Dompdf($options);
-                $dompdf->loadHtml($html);
-                $dompdf->setPaper('A4', 'landscape');
-                $dompdf->render();
-                $fileName = "Borderaunote-" . $note->getId() . ".pdf";
-                $dompdf->stream($fileName, [
-                    'Attachment' => false,
-                ]);
-                return new Response(
-                    $dompdf->output(),
-                    200,
-                    [
-                        "Content-Type" => "application/pdf",
-                    ]
-                );
+            // dd($tr);
+            return $this->executerBordereauDomPDF($entreprise, $utilisateur, $note);
         } else {
             $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
             return $this->redirect($currentURL);
         }
+    }
+
+
+    
+
+    public function executerNoteDomPDF(Entreprise $entreprise, Utilisateur $utilisateur, Note $note): Response
+    {
+        $html = $this->renderView(
+            'admin/etats/note/index.html.twig',
+            [
+                'entreprise' => $entreprise,
+                'utilisateur' => $utilisateur,
+                'note' => $note,
+                'constante' => $this->constante,
+                'serviceMonnaie' => $this->serviceMonnaies,
+                'serviceTaxe' => $this->serviceTaxes,
+                'date' => new DateTimeImmutable("now"),
+            ]
+        );
+        $options = new Options();
+        $options->set('defaultFont', 'Arial');
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        // instantiate and use the dompdf class
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        // (Optional) Setup the paper size and orientation
+        // $dompdf->setPaper('A4', 'portrait'); //landscape
+        // Render the HTML as PDF
+        $dompdf->render();
+        // Output the generated PDF to Browser
+        $dompdf->stream("Note-" . $note->getId() . ".pdf", [
+            'Attachment' => false,
+        ]);
+        return new Response("", 200, [
+            "Content-Type" => "application/pdf",
+        ]);
+    }
+
+    public function executerBordereauDomPDF(Entreprise $entreprise, Utilisateur $utilisateur, Note $note): Response
+    {
+        $html = $this->renderView(
+            'admin/etats/note/bordereau.html.twig',
+            [
+                'entreprise' => $entreprise,
+                'utilisateur' => $utilisateur,
+                'note' => $note,
+                'constante' => $this->constante,
+                'serviceMonnaie' => $this->serviceMonnaies,
+                'serviceTaxe' => $this->serviceTaxes,
+                'date' => new DateTimeImmutable("now"),
+            ]
+        );
+        $options = new Options();
+        $options->set('defaultFont', 'Arial');
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+
+        // instantiate and use the dompdf class
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->render();
+        $fileName = "Borderaunote-" . $note->getId() . ".pdf";
+        $dompdf->stream($fileName, [
+            'Attachment' => false,
+        ]);
+        return new Response(
+            $dompdf->output(),
+            200,
+            [
+                "Content-Type" => "application/pdf",
+            ]
+        );
     }
 }
