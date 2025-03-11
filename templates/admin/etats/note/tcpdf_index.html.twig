@@ -124,20 +124,22 @@
                         {% if note.addressedto == 0 %}
                             {# Client #}
                             <span class="gras">{{ note.client.nom }}</span><br/>
+                            {% if note.client.adresse != null %}
                                 • Adresse: <span class="gras">{{ note.client.adresse }}</span><br/>
-                            {% if note.client.numimpot %}
+                            {% endif %}
+                            {% if note.client.numimpot != null %}
                                 • Nif: <span class="gras">{{ note.client.numimpot }}</span><br/>
                             {% endif %}
-                            {% if note.client.rccm %}
+                            {% if note.client.rccm != null %}
                                 • Rccm: <span class="gras">{{ note.client.rccm }}</span><br/>
                             {% endif %}
-                            {% if  note.client.idnat %}
+                            {% if  note.client.idnat != null %}
                                 • Idnat: <span class="gras">{{ note.client.idnat }}</span><br/>
                             {% endif %}
-                            {% if  note.client.telephone %}
+                            {% if  note.client.telephone != null %}
                                 • Téléphone: <span class="gras">{{ note.client.telephone }}</span><br/>
                             {% endif %}
-                            {% if  note.client.email %}
+                            {% if  note.client.email != null %}
                                 • Email: <span class="gras">{{ note.client.email }}</span><br/>
                             {% endif %}
                         {% endif %}
