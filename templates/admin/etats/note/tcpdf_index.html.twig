@@ -40,22 +40,23 @@
                 font-size: 10px;
                 color: black;
             }
-            .tableau_vaste{
+            /* .tableau_vaste{
                 width: 100%;
                 border-collapse: collapse;
-            }
-            table{
+            } */
+            /* table{
                 border-collapse: collapse;
-            }
-            th, td{
+                border: none;
+            } */
+            /* th, td{
                 border: 1px solid darkgray;
                 padding: 3px;
                 text-align: left;
                 font-size: 12px;
-            }
-            thead{
+            } */
+            /* thead{
                 background-color: lightgray;
-            }
+            } */
             .gras {
                 font-weight: bold;
             }
@@ -88,13 +89,12 @@
             a:active {
                 text-decoration: underline;
             }
-            .bas-de-page {
+            /* .bas-de-page {
                 position: fixed;
                 bottom: 0;
                 right: 0;
                 width: 100%;
-                /* border: 3px solid #73AD21; */
-            }
+            } */
         </style>
     </head>
     <body>
@@ -102,77 +102,88 @@
         <p class="grand_titre">{{ constante.Note_getNameOfTypeNote(note) }}</p>
         
         {# Détails sur le bénéficiaire de la note = AddressedTo #}
-        <table class="droite" style="width: 60%;">
-            <tr>
-                <td style = "width: 25%; border: 0px;">
+        <table class="droite" style="border: none;">
+            {# {% for item in 1..10 %}
+                <tr>
+                    <td>
+                        SERGE SULA BOSIO
+                    </td>
+                    <td>
+                        SERGE SULA BOSIO
+                    </td>
+                </tr>
+            {% endfor %} #}
+            <tr style="border: none;">
+                <td class="texte-droite" style="border: none;">
                     <span class="normal_texte">
-                        Adressée à 
+                        Note adressée à 
                     </span>    
                 </td>
-                <td style = "border: 0px;">
+                <td style="border: none;">
                     <span class="normal_texte">
-                    {% if note.addressedto == 0 %}
-                        {# Client #}
-                        <span class="gras">{{ note.client.nom }}</span><br/>
-                            • Adresse: <span class="gras">{{ note.client.adresse }}</span><br/>
-                        {% if note.client.numimpot %}
-                                • Nif: <span class="gras">{{ note.client.numimpot }}</span><br/>
+                        {% if note.addressedto == 0 %}
+                            {# Client #}
+                            <span class="gras">
+                            {{ note.client.nom }}</span><br/>
+                                • Adresse: <span class="gras">{{ note.client.adresse }}</span><br/>
+                            {% if note.client.numimpot %}
+                                    • Nif: <span class="gras">{{ note.client.numimpot }}</span><br/>
+                            {% endif %}
+                            {% if note.client.rccm %}
+                                    • Rccm: <span class="gras">{{ note.client.rccm }}</span><br/>
+                            {% endif %}
+                            {% if  note.client.idnat %}
+                                    • Idnat: <span class="gras">{{ note.client.idnat }}</span><br/>
+                            {% endif %}
+                            {% if  note.client.telephone %}
+                                • Téléphone: <span class="gras">{{ note.client.telephone }}</span><br/>
+                            {% endif %}
+                            {% if  note.client.email %}
+                                • Email: <span class="gras">{{ note.client.email }}</span><br/>
+                            {% endif %}
                         {% endif %}
-                        {% if note.client.rccm %}
-                                • Rccm: <span class="gras">{{ note.client.rccm }}</span><br/>
+                        {% if note.addressedto == 1 %}
+                            {# Assureur #}
+                            <span class="gras">{{ note.assureur.nom }}</span><br/>
+                                • Adresse: <span class="gras">{{ note.assureur.adressePhysique }}</span><br/>
+                            {% if note.assureur.numimpot %}
+                                • Nif: <span class="gras">{{ note.assureur.numimpot }}</span><br/>
+                            {% endif %}
+                            {% if note.assureur.rccm %}
+                                • Rccm: <span class="gras">{{ note.assureur.rccm }}</span><br/>
+                            {% endif %}
+                            {% if note.assureur.idnat %}
+                                • Idnat: <span class="gras">{{ note.assureur.idnat }}</span><br/>
+                            {% endif %}
+                            {% if note.assureur.url %}
+                                • Site web: <span class="gras">{{ note.assureur.url }}</span><br/>
+                            {% endif %}
+                            {% if note.assureur.email %}
+                                • Email: <span class="gras">{{ note.assureur.email }}</span><br/>
+                            {% endif %}
                         {% endif %}
-                        {% if  note.client.idnat %}
-                                • Idnat: <span class="gras">{{ note.client.idnat }}</span><br/>
+                        {% if note.addressedto == 2 %}
+                            {# Partenaire #}
+                            <span class="gras">{{ note.partenaire.nom }}</span><br/>
+                                • Adresse: <span class="gras">{{ note.partenaire.adressePhysique }}</span><br/>
+                            {% if note.partenaire.numimpot != null %}
+                                    • Nif: <span class="gras">{{ note.partenaire.numimpot }}</span><br/>
+                            {% endif %}
+                            {% if note.partenaire.rccm %}
+                                    • Rccm: <span class="gras">{{ note.partenaire.rccm }}</span><br/>
+                            {% endif %}
+                            {% if note.partenaire.idnat %}
+                                    • Idnat: <span class="gras">{{ note.partenaire.idnat }}</span><br/>
+                            {% endif %}
+                                • Téléphone: <span class="gras">{{ note.partenaire.telephone }}</span><br/>
+                                • Email: <span class="gras">{{ note.partenaire.email }}</span><br/>
                         {% endif %}
-                        {% if  note.client.telephone %}
-                            • Téléphone: <span class="gras">{{ note.client.telephone }}</span><br/>
+                        {% if note.addressedto == 3 %}
+                            {# Autorité fiscale #}
+                            <span class="gras">{{ note.autoritefiscale.abreviation }}</span><br/>
+                                • <span class="gras">{{ note.autoritefiscale.nom }}</span><br/>
+                                • Taxe: <span class="gras">{{ note.autoritefiscale.taxe.description }} - {{ note.autoritefiscale.taxe.code }}</span><br/>
                         {% endif %}
-                        {% if  note.client.email %}
-                            • Email: <span class="gras">{{ note.client.email }}</span><br/>
-                        {% endif %}
-                    {% endif %}
-                    {% if note.addressedto == 1 %}
-                        {# Assureur #}
-                        <span class="gras">{{ note.assureur.nom }}</span><br/>
-                            • Adresse: <span class="gras">{{ note.assureur.adressePhysique }}</span><br/>
-                        {% if note.assureur.numimpot %}
-                            • Nif: <span class="gras">{{ note.assureur.numimpot }}</span><br/>
-                        {% endif %}
-                        {% if note.assureur.rccm %}
-                            • Rccm: <span class="gras">{{ note.assureur.rccm }}</span><br/>
-                        {% endif %}
-                        {% if note.assureur.idnat %}
-                            • Idnat: <span class="gras">{{ note.assureur.idnat }}</span><br/>
-                        {% endif %}
-                        {% if note.assureur.url %}
-                            • Site web: <span class="gras">{{ note.assureur.url }}</span><br/>
-                        {% endif %}
-                        {% if note.assureur.email %}
-                            • Email: <span class="gras">{{ note.assureur.email }}</span><br/>
-                        {% endif %}
-                    {% endif %}
-                    {% if note.addressedto == 2 %}
-                        {# Partenaire #}
-                        <span class="gras">{{ note.partenaire.nom }}</span><br/>
-                            • Adresse: <span class="gras">{{ note.partenaire.adressePhysique }}</span><br/>
-                        {% if note.partenaire.numimpot != null %}
-                                • Nif: <span class="gras">{{ note.partenaire.numimpot }}</span><br/>
-                        {% endif %}
-                        {% if note.partenaire.rccm %}
-                                • Rccm: <span class="gras">{{ note.partenaire.rccm }}</span><br/>
-                        {% endif %}
-                        {% if note.partenaire.idnat %}
-                                • Idnat: <span class="gras">{{ note.partenaire.idnat }}</span><br/>
-                        {% endif %}
-                            • Téléphone: <span class="gras">{{ note.partenaire.telephone }}</span><br/>
-                            • Email: <span class="gras">{{ note.partenaire.email }}</span><br/>
-                    {% endif %}
-                    {% if note.addressedto == 3 %}
-                        {# Autorité fiscale #}
-                        <span class="gras">{{ note.autoritefiscale.abreviation }}</span><br/>
-                            • <span class="gras">{{ note.autoritefiscale.nom }}</span><br/>
-                            • Taxe: <span class="gras">{{ note.autoritefiscale.taxe.description }} - {{ note.autoritefiscale.taxe.code }}</span><br/>
-                    {% endif %}
                     </span>
                 </td>
             </tr>

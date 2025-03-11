@@ -17,7 +17,10 @@ class ServiceTcpdf
     public function __construct(
         private Security $security,
     ) {
-        $this->tcpdf = new MyCustomTCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        //Portrait = PDF_PAGE_ORIENTATION ou "P"
+        //Landscape = "L"
+        $page_orientation = PDF_PAGE_ORIENTATION; 
+        $this->tcpdf = new MyCustomTCPDF($page_orientation, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         /** @var Utilisateur $utilisateur */
         $this->utilisateur = $this->security->getUser();
     }
