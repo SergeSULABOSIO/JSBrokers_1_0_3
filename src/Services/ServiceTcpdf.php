@@ -17,12 +17,12 @@ class ServiceTcpdf
     public function __construct(
         private Security $security,
     ) {
-        //Portrait = PDF_PAGE_ORIENTATION ou "P"
-        //Landscape = "L"
-        $page_orientation = PDF_PAGE_ORIENTATION; 
-        $this->tcpdf = new MyCustomTCPDF($page_orientation, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        $portrait = "P"; //Portrait = "P", Landscape = "L"
+        /** @var MyCustomTCPDF */
+        $this->tcpdf = new MyCustomTCPDF($portrait, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
         /** @var Utilisateur $utilisateur */
         $this->utilisateur = $this->security->getUser();
+        $this->tcpdf->setEntreprise($this->utilisateur->getConnectedTo());
     }
 
     public function getTcpdf(Entreprise $entreprise, ?string $titre, bool $withHeader = true, bool $withFooter = true): TCPDF

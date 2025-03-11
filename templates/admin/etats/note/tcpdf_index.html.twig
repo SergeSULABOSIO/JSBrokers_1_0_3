@@ -115,8 +115,9 @@
             Modalité et conditions de paiement: <span class="gras">sans échéance.</span><br/>         
         </p>
         
-        {# Détails sur le bénéficiaire de la note = AddressedTo #}
 
+        <br/><br/><br/>
+        {# Détails sur le bénéficiaire de la note = AddressedTo #}
         <p class="texte-centre">
             <table>
                 {# {% for item in 1..10 %}
@@ -217,6 +218,8 @@
             </table>
         </p>
         <br/>
+        <br/>
+        <br/>
 
 
 
@@ -266,34 +269,37 @@
                 </table>
             {% else %}
                 {# Tableau sans TVA #}
-                <table  style="width: 40%;">
-                    <tr class="thead texte-centre">
-                        <td>Description</td>
-                        <td>Valeur</td>
+                <table style="width: 100%;">
+                    <tr class="texte-centre">
+                        <td></td>
+                        <td class="thead bordure">Description</td>
+                        <td class="thead bordure">Valeur</td>
+                        <td></td>
                     </tr>
                     <tr>
-                        <td>Montant Payable</td>
-                        <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                        <td class="texte-gauche bordure">Montant Payable</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
                     </tr>
                     <tr>
-                        <td>Montant Payé</td>
-                        <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                        <td class="texte-gauche bordure">Montant Payé</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
                     </tr>
-                    <tr class="thead">
-                        <td>
-                            {% if note.type == 1 %}
-                                Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
-                            {% endif %}
-                        </td>
-                        <td class="texte-droite">
-                            {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}
-                        </td>
+                    <tr>
+                        <td></td>
+                        <td class="thead texte-gauche bordure">Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}</td>
+                        <td class="thead texte-droite bordure">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
                     </tr>
                 </table>
             {% endif %}
         </div>
 
 
+        <br/><br/><br/>
         {# Signature #}
         <table style="width: 100%;">
             <tr>
@@ -311,9 +317,32 @@
 
 
 
+        {# Liste des comptes banciares #}
+        {% if note.type == 0 and note.comptes | length != 0 %}
+            {# Note de débit #}
+            <span class="normal_texte">Payez cash ou par virement à l'un des comptes ci-dessous:
+                <ol>
+                    {% for compte in note.comptes %}
+                        <li>
+                            <span class="petit_texte">
+                                <span class="gras">{{ compte.banque }}</span>
+                                • Nom: <span class="gras">{{ compte.intitule }}</span>
+                                • N°.:<span class="gras">{{ compte.numero }}</span>
+                                • Swift:<span class="gras">{{ compte.codeSwift }}</span>
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </span>
+        {% else %}
+            {% for item in 1..5 %}
+                <br/>
+            {% endfor %}
+        {% endif %}
+
 
         {# Bas de page #}
-        <p class="petit_texte texte-centre bas-de-page">
+        {# <p class="petit_texte texte-centre bas-de-page">
             <span class="gras">{{ entreprise.nom }}</span>
             <br/>
             Adresse: <span class="gras">{{ entreprise.adresse }}</span>
@@ -326,6 +355,6 @@
                 • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span>
             <br/>
             <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a>
-        </p>
+        </p> #}
     </body>
 </html>

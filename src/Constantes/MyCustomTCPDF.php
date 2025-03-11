@@ -1,9 +1,19 @@
 <?php
+
 namespace App\Constantes;
 
+use App\Entity\Entreprise;
+use App\Entity\Monnaie;
 use TCPDF;
 
-class MyCustomTCPDF extends TCPDF {
+class MyCustomTCPDF extends TCPDF
+{
+    private ?Entreprise $entreprise;
+
+    public function setEntreprise(?Entreprise $ese)
+    {
+        $this->entreprise = $ese;
+    }
 
     // //Page header
     // public function Header() {
@@ -17,14 +27,46 @@ class MyCustomTCPDF extends TCPDF {
     // }
 
     // Page footer
-    // public function Footer() {
-    //     // Position at 15 mm from bottom
-    //     $this->SetY(-15);
-    //     // Set font
-    //     $this->SetFont('helvetica', 'I', 8);
-    //     // Page number
-    //     $basDePage = "Ici bas de page\n";
+    public function Footer()
+    {
+        $pageHeight = $this->getPageHeight();
+        $footerHeight = 10; // Hauteur du pied de page
+        $noPage = $this->getAliasNumPage();
+        $nbPage = $this->getAliasNbPages();
+        
+        $this->SetFont('Times', 'N', 8);
+        $ligne1 = '<div style="font-weight: bold;text-align:center;">' . $this->entreprise->getNom() . '</div>';
+        
+        $codeMonnaieLocale = "";
+        /** @var Monnaie $monnaie */
+        foreach ($this->entreprise->getMonnaies() as $monnaie) {
+            if ($monnaie->isLocale() == true) {
+                $codeMonnaieLocale = $monnaie->getCode();
+                break;
+            }
+        }
 
-    //     $this->Cell(0, 10, 'Page '.$this->getAliasNumPage().'/'.$this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
-    // }
+        $ligne2 = '<div style="text-align:center;">';
+        $ligne2 = $ligne2 . 'Adresse: <span style="font-weight: bold;">' . $this->entreprise->getAdresse() . '</span>';
+        $ligne2 = $ligne2 . ' • Tél.: <span style="font-weight: bold;">' . $this->entreprise->getTelephone() . '</span>';
+        $ligne2 = $ligne2 . ' • Licence: <span style="font-weight: bold;">' . $this->entreprise->getLicence() . '</span>';
+        $ligne2 = $ligne2 . ' • Capital Social: <span style="font-weight: bold;">' . $codeMonnaieLocale . ' ' . $this->entreprise->getCapitalSociale() . '</span>';
+        $ligne2 = $ligne2 . '</div>';
+
+        $ligne3 = '<div style="text-align:center;">';
+        $ligne3 .= 'Rccm: <span style="font-weight: bold;">' . $this->entreprise->getRccm() . '</span>';
+        $ligne3 .= ' • Id.Nat: <span style="font-weight: bold;">' . $this->entreprise->getIdnat() . '</span>';
+        $ligne3 .= ' • N°.Impôt: <span style="font-weight: bold;">' . $this->entreprise->getNumimpot() . '</span>';
+        $ligne3 .= '</div>';
+        
+        $ligne4 = '<a href="'.$this->entreprise->getSiteweb().'" style="text-align:center;">' . $this->entreprise->getSiteweb() . '</a>';
+        
+        
+        $numeroDeBasePage = '<div style="font-weight: bold;text-align:right;">Page ' . $noPage . '/' . $nbPage . '</div>';
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 14, $ligne1, 0, 1, 0, true, 'C', true);
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 11, $ligne2, 0, 1, 0, true, 'C', false);
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 8, $ligne3, 0, 1, 0, true, 'C', true);
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 5, $ligne4, 0, 1, 0, true, 'C', true);
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 2, $numeroDeBasePage, 0, 1, 0, true, 'R', true);
+    }
 }
