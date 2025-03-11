@@ -48,12 +48,9 @@
                 border-collapse: collapse;
                 border: none;
             } */
-            /* th, td{
-                border: 1px solid darkgray;
-                padding: 3px;
-                text-align: left;
-                font-size: 12px;
-            } */
+            table, th, td{
+                border: none;
+            }
             /* thead{
                 background-color: lightgray;
             } */
@@ -101,8 +98,16 @@
         {# Titre de la note #}
         <p class="grand_titre">{{ constante.Note_getNameOfTypeNote(note) }}</p>
         
+        {# Date de création et description de la note #}
+        <p class="normal_texte">Référence: <span class="gras">{{ note.reference }}</span><br/>
+            Date: <span class="gras">{{ date|format_datetime('short', 'none', locale: utilisateur.locale)}}</span><br/>
+            Utilisateur: <span class="gras">{{ utilisateur.nom }}</span><br/>
+            Description: <span class="gras">{{ note.description }}</span><br/>
+            Modalité et conditions de paiement: <span class="gras">sans échéance.</span><br/>         
+        </p>
+        
         {# Détails sur le bénéficiaire de la note = AddressedTo #}
-        <table class="droite" style="border: none;">
+        <table class="droite">
             {# {% for item in 1..10 %}
                 <tr>
                     <td>
@@ -113,13 +118,13 @@
                     </td>
                 </tr>
             {% endfor %} #}
-            <tr style="border: none;">
-                <td class="texte-droite" style="border: none;">
+            <tr>
+                <td class="texte-droite">
                     <span class="normal_texte">
                         Note adressée à 
                     </span>    
                 </td>
-                <td style="border: none;">
+                <td>
                     <span class="normal_texte">
                         {% if note.addressedto == 0 %}
                             {# Client #}
@@ -199,7 +204,7 @@
 
         {# Bas de page #}
         <p class="petit_texte texte-centre bas-de-page">
-            <span class="gras normal_texte">{{ entreprise.nom }}</span>
+            <span class="gras">{{ entreprise.nom }}</span>
             <br/>
             Adresse: <span class="gras">{{ entreprise.adresse }}</span>
                 • Téléphone: <span class="gras">{{ entreprise.telephone }}</span>
