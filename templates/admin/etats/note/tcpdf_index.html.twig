@@ -51,10 +51,15 @@
             table, th, td{
                 border-collapse: collapse;
                 border: none;
+                /* margin: auto; Ceci ne marche pas */
             }
-            /* thead{
+            .bordure {
+                border: 1px solid darkgray;
+            }
+            .thead{
                 background-color: lightgray;
-            } */
+                font-weight: bold;
+            }
             .gras {
                 font-weight: bold;
             }
@@ -67,6 +72,9 @@
             }
             .texte-droite {
                 text-align: right;
+            }
+            .texte-gauche {
+                text-align: left;
             }
             .center {
                 margin: auto;
@@ -108,28 +116,29 @@
         </p>
         
         {# Détails sur le bénéficiaire de la note = AddressedTo #}
-        <table class="droite">
-            {# {% for item in 1..10 %}
+
+        <p class="texte-centre">
+            <table>
+                {# {% for item in 1..10 %}
+                    <tr>
+                        <td>
+                            SERGE SULA BOSIO
+                        </td>
+                        <td>
+                            SERGE SULA BOSIO
+                        </td>
+                    </tr>
+                {% endfor %} #}
                 <tr>
-                    <td>
-                        SERGE SULA BOSIO
-                    </td>
-                    <td>
-                        SERGE SULA BOSIO
-                    </td>
-                </tr>
-            {% endfor %} #}
-            <tr>
-                <td class="texte-droite">
-                    <span class="normal_texte">
+                    <td class="texte-droite normal_texte">
                         Note adressée à 
-                    </span>    
-                </td>
-                <td>
-                    <span class="normal_texte">
+                    </td>
+                    <td class="texte-gauche normal_texte">
                         {% if note.addressedto == 0 %}
                             {# Client #}
-                            <span class="gras">{{ note.client.nom }}</span><br/>
+                            {% if note.client.nom != null %}
+                                <span class="gras">{{ note.client.nom }}</span><br/>
+                            {% endif %}
                             {% if note.client.adresse != null %}
                                 • Adresse: <span class="gras">{{ note.client.adresse }}</span><br/>
                             {% endif %}
@@ -151,8 +160,10 @@
                         {% endif %}
                         {% if note.addressedto == 1 %}
                             {# Assureur #}
-                            <span class="gras">{{ note.assureur.nom }}</span><br/>
-                            {% if note.assureur.numimpot != null %}
+                            {% if note.assureur.nom != null %}
+                                <span class="gras">{{ note.assureur.nom }}</span><br/>
+                            {% endif %}
+                            {% if note.assureur.adressePhysique != null %}
                                 • Adresse: <span class="gras">{{ note.assureur.adressePhysique }}</span><br/>
                             {% endif %}
                             {% if note.assureur.numimpot != null %}
@@ -173,7 +184,9 @@
                         {% endif %}
                         {% if note.addressedto == 2 %}
                             {# Partenaire #}
-                            <span class="gras">{{ note.partenaire.nom }}</span><br/>
+                            {% if note.partenaire.nom != null %}
+                                <span class="gras">{{ note.partenaire.nom }}</span><br/>
+                            {% endif %}
                             {% if note.partenaire.adressePhysique != null %}
                                 • Adresse: <span class="gras">{{ note.partenaire.adressePhysique }}</span><br/>
                             {% endif %}
@@ -186,83 +199,115 @@
                             {% if note.partenaire.idnat != null %}
                                 • Idnat: <span class="gras">{{ note.partenaire.idnat }}</span><br/>
                             {% endif %}
+                            {% if note.partenaire.telephone != null %}
                                 • Téléphone: <span class="gras">{{ note.partenaire.telephone }}</span><br/>
+                            {% endif %}
+                            {% if note.partenaire.email != null %}
                                 • Email: <span class="gras">{{ note.partenaire.email }}</span><br/>
+                            {% endif %}
                         {% endif %}
                         {% if note.addressedto == 3 %}
                             {# Autorité fiscale #}
                             <span class="gras">{{ note.autoritefiscale.abreviation }}</span><br/>
-                                • <span class="gras">{{ note.autoritefiscale.nom }}</span><br/>
-                                • Taxe: <span class="gras">{{ note.autoritefiscale.taxe.description }} - {{ note.autoritefiscale.taxe.code }}</span><br/>
+                            • <span class="gras">{{ note.autoritefiscale.nom }}</span><br/>
+                            • Taxe: <span class="gras">{{ note.autoritefiscale.taxe.description }} - {{ note.autoritefiscale.taxe.code }}</span><br/>
                         {% endif %}
-                    </span>
-                </td>
-            </tr>
-        </table>
+                    </td>
+                </tr>
+            </table>
+        </p>
         <br/>
 
 
 
         {# Tableau de synthèse #}
-        <p>
-            Synthèse
+        <div class="normal_texte texte-centre">
+            <span class="normal_texte texte-centre">Synthèse</span><br/>
             {# Note de débit vers l'Assureur: il faut afficher le montant Ht et sa Tva #}
             {% if note.addressedto == 1 %}
                 {# Tableau avec TVA #}
-                <table>
-                    {# <thead>
-                        <th>Description</th>
-                        <th>Valeur</th>
-                    </thead> #}
-                    <tr>
-                        <td>Montant hors taxe</td>
-                        <td>{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                <table style="width: 100%;">
+                    <tr class="texte-centre">
+                        <td></td>
+                        <td class="thead bordure bordure">Description</td>
+                        <td class="thead bordure bordure">Valeur</td>
+                        <td></td>
                     </tr>
                     <tr>
-                        <td>{{ constante.Note_getNames_taxes_assureur() }}</td>
-                        <td>{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                        <td class="texte-gauche bordure">Montant hors taxe</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
                     </tr>
                     <tr>
-                        <td>Montant Payable</td>
-                        <td>{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                        <td class="texte-gauche bordure">{{ constante.Note_getNames_taxes_assureur() }}</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
                     </tr>
                     <tr>
-                        <td>Montant Payé</td>
-                        <td>{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                        <td class="texte-gauche bordure">Montant Payable</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
                     </tr>
-                    {# <thead>
-                        <th>Solde restant dû</th>
-                        <td>{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
-                    </thead> #}
+                    <tr>
+                        <td></td>
+                        <td class="texte-gauche bordure">Montant Payé</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>  
+                        <td></td>
+                        <td class="thead texte-gauche bordure">Solde restant dû</td>
+                        <td class="thead texte-droite bordure">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
                 </table>
             {% else %}
                 {# Tableau sans TVA #}
-                <table>
-                    {# <thead>
-                        <th>Description</th>
-                        <th>Valeur</th>
-                    </thead> #}
+                <table  style="width: 40%;">
+                    <tr class="thead texte-centre">
+                        <td>Description</td>
+                        <td>Valeur</td>
+                    </tr>
                     <tr>
                         <td>Montant Payable</td>
-                        <td >{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                     </tr>
                     <tr>
                         <td>Montant Payé</td>
-                        <td>{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-droite">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                     </tr>
-                    {# <thead>
-                        <th>
+                    <tr class="thead">
+                        <td>
                             {% if note.type == 1 %}
                                 Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}
                             {% endif %}
-                        </th>
-                        <th>
+                        </td>
+                        <td class="texte-droite">
                             {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}
-                        </th>
-                    </thead> #}
+                        </td>
+                    </tr>
                 </table>
             {% endif %}
-        </p>
+        </div>
+
+
+        {# Signature #}
+        <table style="width: 100%;">
+            <tr>
+                <td>
+                    <p class="normal_texte texte-droite" style="padding:5px;">
+                        <span>Signature</span>
+                    </p>
+                    <p class="normal_texte texte-droite" style="padding:5px;">
+                        <span class="normal_titre gras">{{ note.signedBy }}</span><br/>
+                        <span class="">{{ note.titleSignedBy }}</span>
+                    </p>
+                </td>
+            </tr>
+        </table>
 
 
 
