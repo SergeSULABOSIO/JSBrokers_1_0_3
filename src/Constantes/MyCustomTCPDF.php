@@ -50,7 +50,7 @@ class MyCustomTCPDF extends TCPDF
         $ligne2 = $ligne2 . 'Adresse: <span style="font-weight: bold;">' . $this->entreprise->getAdresse() . '</span>';
         $ligne2 = $ligne2 . ' • Tél.: <span style="font-weight: bold;">' . $this->entreprise->getTelephone() . '</span>';
         $ligne2 = $ligne2 . ' • Licence: <span style="font-weight: bold;">' . $this->entreprise->getLicence() . '</span>';
-        $ligne2 = $ligne2 . ' • Capital Social: <span style="font-weight: bold;">' . $codeMonnaieLocale . ' ' . $this->entreprise->getCapitalSociale() . '</span>';
+        $ligne2 = $ligne2 . ' • Capital Social: <span style="font-weight: bold;">' . $codeMonnaieLocale . ' ' . number_format($this->entreprise->getCapitalSociale(), 2, ',', ".") . '</span>';
         $ligne2 = $ligne2 . '</div>';
 
         $ligne3 = '<div style="text-align:center;">';
@@ -63,8 +63,9 @@ class MyCustomTCPDF extends TCPDF
         
         
         $numeroDeBasePage = '<div style="font-weight: bold;text-align:right;">Page ' . $noPage . '/' . $nbPage . '</div>';
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 15, '<hr/>', 0, 1, 0, true, 'L', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 14, $ligne1, 0, 1, 0, true, 'C', true);
-        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 11, $ligne2, 0, 1, 0, true, 'C', false);
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 11, $ligne2, 0, 1, 0, true, 'C', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 8, $ligne3, 0, 1, 0, true, 'C', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 5, $ligne4, 0, 1, 0, true, 'C', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 2, $numeroDeBasePage, 0, 1, 0, true, 'R', true);

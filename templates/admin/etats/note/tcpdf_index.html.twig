@@ -318,6 +318,7 @@
 
 
         {# Liste des comptes banciares #}
+        <br/><br/><br/>
         {% if note.type == 0 and note.comptes | length != 0 %}
             {# Note de débit #}
             <span class="normal_texte">Payez cash ou par virement à l'un des comptes ci-dessous:
@@ -339,22 +340,5 @@
                 <br/>
             {% endfor %}
         {% endif %}
-
-
-        {# Bas de page #}
-        {# <p class="petit_texte texte-centre bas-de-page">
-            <span class="gras">{{ entreprise.nom }}</span>
-            <br/>
-            Adresse: <span class="gras">{{ entreprise.adresse }}</span>
-                • Téléphone: <span class="gras">{{ entreprise.telephone }}</span>
-                • Licence: <span class="gras">{{ entreprise.licence }}</span>
-                • Capital Social: <span class="gras">{{ entreprise.capitalSociale|format_currency(serviceMonnaie.codeMonnaieLocale, locale: 'en') }}</span>
-            <br/>
-            RCCM: <span class="gras">{{ entreprise.rccm }}</span>
-                • Id. Nat: <span class="gras">{{ entreprise.idnat }}</span>
-                • Num. Impôt: <span class="gras">{{ entreprise.numimpot }}</span>
-            <br/>
-            <a href="{{ entreprise.siteweb }}"><span class="">{{ entreprise.siteweb }}</span></a>
-        </p> #}
     </body>
 </html>
