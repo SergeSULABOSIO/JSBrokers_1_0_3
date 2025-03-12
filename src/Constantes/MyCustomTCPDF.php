@@ -19,7 +19,7 @@ class MyCustomTCPDF extends TCPDF
     public function Header() {
         // Logo
         // $image_file = K_PATH_IMAGES . 'logo_example.jpg';
-        $image_file = "./images/entreprises/default_entreprise.jpg";
+        $image_file = "./images/entreprises/logo.jpg";
         $image_x = 15;
         $image_y = 8;
         $image_width = 22;

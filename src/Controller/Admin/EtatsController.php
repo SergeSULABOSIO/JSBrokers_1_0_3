@@ -30,6 +30,12 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class EtatsController extends AbstractController
 {
+    //Note (débit ou crédit)
+    public const TYPE_OUTPUT_NOTE = 0;
+    //Note (débit ou crédit)
+    public const TYPE_OUTPUT_BORDEREAU = 1;   
+
+
     public function __construct(
         private MailerInterface $mailer,
         private EntrepriseRepository $entrepriseRepository,
@@ -52,7 +58,7 @@ class EtatsController extends AbstractController
             'currentURL' => Requirement::CATCH_ALL
         ]
     )]
-    public function imprimerNote($currentURL, $idEntreprise, $idNote, Request $request, ServiceTcpdf $serviceTcpdf): Response
+    public function imprimerNote($currentURL, $idEntreprise, $idNote, ServiceTcpdf $serviceTcpdf): Response
     {
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
@@ -64,7 +70,7 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-            return $this->executerNoteTCPDF($serviceTcpdf, $entreprise, $utilisateur, $note);
+            return $this->produirePDF($serviceTcpdf, $entreprise, $utilisateur, $note, self::TYPE_OUTPUT_NOTE);
         } else {
             $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
             return $this->redirect($currentURL);
@@ -80,7 +86,7 @@ class EtatsController extends AbstractController
             'currentURL' => Requirement::CATCH_ALL
         ]
     )]
-    public function imprimerBordereauNote($currentURL, $idEntreprise, $idNote, Request $request): Response
+    public function imprimerBordereauNote($currentURL, $idEntreprise, $idNote, ServiceTcpdf $serviceTcpdf): Response
     {
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
@@ -92,18 +98,19 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-            // return $this->executerBordereauDomPDF($entreprise, $utilisateur, $note);
-            return new Response();
+            return $this->produirePDF($serviceTcpdf, $entreprise, $utilisateur, $note, self::TYPE_OUTPUT_BORDEREAU);
         } else {
             $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
             return $this->redirect($currentURL);
         }
     }
 
-    public function executerNoteTCPDF(ServiceTcpdf $serviceTcpdf, Entreprise $entreprise, Utilisateur $utilisateur, Note $note): Response
+    public function produirePDF(ServiceTcpdf $serviceTcpdf, Entreprise $entreprise, Utilisateur $utilisateur, Note $note, $typeOutPut): Response
     {
+        $twig_note = 'admin/etats/note/tcpdf_note.html.twig';
+        $twig_bordereau = 'admin/etats/note/tcpdf_bordereau.html.twig';
         $html = $this->renderView(
-            'admin/etats/note/tcpdf_index.html.twig',
+            $typeOutPut == self::TYPE_OUTPUT_NOTE ? $twig_note : $twig_bordereau,
             [
                 'entreprise' => $entreprise,
                 'utilisateur' => $utilisateur,
@@ -114,9 +121,11 @@ class EtatsController extends AbstractController
                 'date' => new DateTimeImmutable("now"),
             ]
         );
-        $pdf = $serviceTcpdf->getTcpdf("P", $note->getNom(), true, true);
+        $pdf = $serviceTcpdf->getTcpdf($typeOutPut == self::TYPE_OUTPUT_NOTE ? "P" : "L", $note->getNom(), true, true);
         $pdf->writeHTML($html, true, false, true, false, '');
-        $fileName = "Note-" . $note->getId() . ".pdf";
+
+        $fileName = $typeOutPut == self::TYPE_OUTPUT_NOTE ? "Note-" : "Bordereau-" . $note->getId() . ".pdf";
+
         $pdfData = $pdf->Output($fileName, 'S'); // 'S' pour récupérer le contenu du PDF
 
         return new Response($pdfData, 200, [
