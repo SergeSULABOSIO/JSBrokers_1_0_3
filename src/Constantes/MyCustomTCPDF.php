@@ -18,12 +18,26 @@ class MyCustomTCPDF extends TCPDF
     // //Page header
     public function Header() {
         // Logo
-        $image_file = K_PATH_IMAGES . 'logo_example.jpg';
-        $this->Image($image_file, 10, 10, 15, '', 'JPG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+        // $image_file = K_PATH_IMAGES . 'logo_example.jpg';
+        $image_file = "./images/entreprises/default_entreprise.jpg";
+        $image_x = 15;
+        $image_y = 8;
+        $image_width = 22;
+        $image_height = 20;
+        $image_type = 'JPG';
+        $image_link = 'http://www.aib-brokers.com';
+        $image_align = "N"; //$align Indicates the alignment of the pointer next to image insertion relative to image height. The value can be:<ul><li>T: top-right for LTR or top-left for RTL</li><li>M: middle-right for LTR or middle-left for RTL</li><li>B: bottom-right for LTR or bottom-left for RTL</li><li>N: next line</li></ul>
+        $image_resize = false;
+        $image_dpi = 300;
+        $image_palign = "C"; //$palign Allows to center or align the image on the current line. Possible values are:<ul><li>L : left align</li><li>C : center</li><li>R : right align</li><li>'' : empty string : left for LTR or right for RTL</li></ul>
+        $this->Image($image_file, $image_x, $image_y, $image_width, $image_height, $image_type, $image_link, $image_align, $image_resize, $image_dpi, $image_palign, false, false, 0, false, false, false);
+        
         // Set font
         $this->SetFont('helvetica', 'B', 10);
+        
         // Title
-        $this->Cell(0, 15, '<< TCPDF Example 003 >>', 0, false, 'C', 0, '', 0, false, 'M', 'M');
+        // $this->Cell(0, "", '<< TCPDF Example 003 >>', 0, false, 'C', 0, '', 0, false, 'M', 'M');
+        $this->writeHTMLCell(0, 0, PDF_MARGIN_LEFT, PDF_MARGIN_TOP + 3, $this->entreprise->getNom(), 1, 1, 0, true, 'C', true);
     }
 
     // Page footer
