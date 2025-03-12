@@ -33,11 +33,22 @@ class MyCustomTCPDF extends TCPDF
         $this->Image($image_file, $image_x, $image_y, $image_width, $image_height, $image_type, $image_link, $image_align, $image_resize, $image_dpi, $image_palign, false, false, 0, false, false, false);
         
         // Set font
-        $this->SetFont('helvetica', 'B', 10);
+        $font_family = 'helvetica';
+        $font_style = "N";
+        $font_size = 10;
+        $this->SetFont($font_family, $font_style, $font_size);
         
         // Title
         // $this->Cell(0, "", '<< TCPDF Example 003 >>', 0, false, 'C', 0, '', 0, false, 'M', 'M');
-        $this->writeHTMLCell(0, 0, PDF_MARGIN_LEFT, PDF_MARGIN_TOP + 3, $this->entreprise->getNom(), 1, 1, 0, true, 'C', true);
+        $title_width = 0;
+        $title_height = 0;
+        $title_html_text = '<span style="font-weight: bold;">' . $this->entreprise->getNom() . '</span>';
+        $title_cell_border = 0;
+        $title_x = PDF_MARGIN_LEFT;
+        $title_y = PDF_MARGIN_TOP + 2;
+        $title_align = "C";
+        $this->writeHTMLCell($title_width, $title_height, $title_x, $title_y, $title_html_text, $title_cell_border, 1, 0, true, $title_align, true);
+        $this->writeHTML('<hr style="border: 1px solid black;">', true, false, true, false, '');
     }
 
     // Page footer
@@ -67,7 +78,7 @@ class MyCustomTCPDF extends TCPDF
         $ligne2 .= ' • Licence: <span style="font-weight: bold;">' . $this->entreprise->getLicence() . '</span>';
         $ligne2 .= ' • Capital Social: <span style="font-weight: bold;">' . $codeMonnaieLocale . ' ' . number_format($this->entreprise->getCapitalSociale(), 2, ',', ".") . '</span>';
         $ligne2 .= '</div>';
-
+        
         $ligne3 = '<div style="text-align:center;">';
         $ligne3 .= 'Rccm: <span style="font-weight: bold;">' . $this->entreprise->getRccm() . '</span>';
         $ligne3 .= ' • Id.Nat: <span style="font-weight: bold;">' . $this->entreprise->getIdnat() . '</span>';
@@ -78,7 +89,7 @@ class MyCustomTCPDF extends TCPDF
         
         $numeroDeBasePage = '<div style="font-weight: bold;text-align:right;">Page ' . $noPage . '/' . $nbPage . '</div>';
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 15, '<hr/>', 0, 1, 0, true, 'L', true);
-        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 14, $ligne1, 0, 1, 0, true, 'C', true);
+        $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 14, $ligne1, 0, 1, 0, true, 'N', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 11, $ligne2, 0, 1, 0, true, 'C', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 8, $ligne3, 0, 1, 0, true, 'C', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 5, $ligne4, 0, 1, 0, true, 'C', true);

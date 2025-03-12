@@ -110,15 +110,15 @@
         
         {# Date de création et description de la note #}
         <p class="normal_texte">Référence: <span class="gras">{{ note.reference }}</span><br/>
-            Date: <span class="gras">{{ date|format_datetime('short', 'none', locale: utilisateur.locale)}}</span><br/>
-            Utilisateur: <span class="gras">{{ utilisateur.nom }}</span><br/>
+            Date: <span class="gras">{{ date|format_datetime('short', 'short', locale: utilisateur.locale)}}</span><br/>
+            Utilisateur: <span class="gras">{{ utilisateur.nom }} - {{ utilisateur.email }}</span><br/>
             Description: <span class="gras">{{ note.description }}</span><br/>
             Modalité et conditions de paiement: <span class="gras">sans échéance.</span><br/>         
         </p>
         
 
-        <br/><br/><br/>
         {# Détails sur le bénéficiaire de la note = AddressedTo #}
+        <br/>
         <p class="texte-centre">
             <table>
                 <tr>
@@ -208,12 +208,7 @@
                 </tr>
             </table>
         </p>
-        <br/>
-        <br/>
-        <br/>
-
-
-
+        
         {# Tableau de synthèse #}
         <div class="normal_texte texte-centre">
             <span class="normal_texte texte-centre">Synthèse</span><br/>
@@ -290,8 +285,8 @@
         </div>
 
 
-        <br/><br/><br/>
         {# Signature #}
+        <br/>
         <table style="width: 100%;">
             <tr>
                 <td>
