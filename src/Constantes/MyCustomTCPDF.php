@@ -61,7 +61,6 @@ class MyCustomTCPDF extends TCPDF
         
         $ligne4 = '<a href="'.$this->entreprise->getSiteweb().'" style="text-align:center;">' . $this->entreprise->getSiteweb() . '</a>';
         
-        
         $numeroDeBasePage = '<div style="font-weight: bold;text-align:right;">Page ' . $noPage . '/' . $nbPage . '</div>';
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 15, '<hr/>', 0, 1, 0, true, 'L', true);
         $this->writeHTMLCell(0, 0, 15, $pageHeight - $footerHeight - 14, $ligne1, 0, 1, 0, true, 'C', true);
