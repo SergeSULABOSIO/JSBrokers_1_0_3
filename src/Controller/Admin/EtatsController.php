@@ -183,18 +183,8 @@ class EtatsController extends AbstractController
                 'date' => new DateTimeImmutable("now"),
             ]
         );
-
-
         $pdf = $serviceTcpdf->getTcpdf($entreprise, $note->getNom(), true, true);
-        
-        // set text shadow effect
-        // $pdf->setTextShadow(array('enabled' => true, 'depth_w' => 0.2, 'depth_h' => 0.2, 'color' => array(196, 196, 196), 'opacity' => 1, 'blend_mode' => 'Normal'));
-
-        // $html = '<h1>Bienvenue sur TCPDF</h1><p>Ceci est un exemple de génération de PDF avec TCPDF.</p>';
-
-
         $pdf->writeHTML($html, true, false, true, false, '');
-
         $fileName = "Note-" . $note->getId() . ".pdf";
         $pdfData = $pdf->Output($fileName, 'S'); // 'S' pour récupérer le contenu du PDF
 

@@ -40,12 +40,12 @@ class ServiceTcpdf
             "", //header image logo
             0,  //header image logo width in mm
             $entreprise->getNom(),  //string to print as title on document header
-            "Adresse: " . $entreprise->getAdresse() . " • Site: " . $entreprise->getSiteweb() . "\n". 
-            "Tél.: " . $entreprise->getTelephone().
-            " • Licence.: " . $entreprise->getLicence().
-            " • RCCM.: " . $entreprise->getRccm().
-            " • IDNAT.: " . $entreprise->getIdnat().
-            " • N.Impôt.: " . $entreprise->getNumimpot()
+            "Adresse: " . $entreprise->getAdresse() . " • Site: " . $entreprise->getSiteweb()
+            // "Tél.: " . $entreprise->getTelephone()
+            // " • Licence.: " . $entreprise->getLicence().
+            // " • RCCM.: " . $entreprise->getRccm().
+            // " • IDNAT.: " . $entreprise->getIdnat().
+            // " • N.Impôt.: " . $entreprise->getNumimpot()
             ,   //string to print on document header
             array(0, 0, 0), //Text color (RGB)
             array(0, 0, 0)  //Line color (RGB)
