@@ -29,7 +29,8 @@
                 font-weight: normal;
                 font-family: Georgia, Arial;
                 font-style: normal;
-                font-size: 12px;
+                text-transform: capitalize;
+                font-size: 10px;
             }
             .texte_petit {
                 text-align: left;
@@ -88,7 +89,13 @@
     <body>
         {# Titre de la note #}
         <br/>
-        <p class="texte_moyen">BOREDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} n°{{note.reference}}</p>
+        <p class="texte_moyen">
+            BOREDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} n°{{note.reference}}<br/>
+            <span class="texte_normal">
+                Description: {{note.description}}
+            </span>
+        </p>
+        
 
 
 
