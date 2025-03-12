@@ -4,9 +4,6 @@ namespace App\Controller\Admin;
 
 // namespace App\Controller;
 
-use Exception;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 use App\Entity\Note;
 use DateTimeImmutable;
 use App\Entity\Entreprise;
@@ -67,21 +64,6 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-
-            // return $this->render(
-            //     'admin/etats/note/index.html.twig',
-            //     [
-            //         'entreprise' => $entreprise,
-            //         'utilisateur' => $utilisateur,
-            //         'note' => $note,
-            //         'constante' => $this->constante,
-            //         'serviceMonnaie' => $this->serviceMonnaies,
-            //         'serviceTaxe' => $this->serviceTaxes,
-            //         'date' => new DateTimeImmutable("now"),
-            //     ]
-            // );
-
-            // return $this->executerNoteDomPDF($entreprise, $utilisateur, $note);
             return $this->executerNoteTCPDF($serviceTcpdf, $entreprise, $utilisateur, $note);
         } else {
             $this->addFlash("danger", "Désolé " . $utilisateur->getNom() . ", la note est introuvable dans la base de données.");
@@ -110,21 +92,6 @@ class EtatsController extends AbstractController
         $note = $this->noteRepository->find($idNote);
 
         if ($note != null) {
-            // return $this->renderView(
-            //     'admin/etats/note/bordereau_test.html.twig',
-            //     [
-            //         'entreprise' => $entreprise,
-            //         'utilisateur' => $utilisateur,
-            //         'note' => $note,
-            //         'tbody' => $this->buildTable(),
-            //         'constante' => $this->constante,
-            //         'serviceMonnaie' => $this->serviceMonnaies,
-            //         'serviceTaxe' => $this->serviceTaxes,
-            //         'date' => new DateTimeImmutable("now"),
-            //     ]
-            // );
-
-            // dd($tr);
             // return $this->executerBordereauDomPDF($entreprise, $utilisateur, $note);
             return new Response();
         } else {
