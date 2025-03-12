@@ -35,6 +35,7 @@ class MyCustomTCPDF extends TCPDF
         $nbPage = $this->getAliasNbPages();
         
         $this->SetFont('Times', 'N', 8);
+        
         $ligne1 = '<div style="font-weight: bold;text-align:center;">' . $this->entreprise->getNom() . '</div>';
         
         $codeMonnaieLocale = "";
