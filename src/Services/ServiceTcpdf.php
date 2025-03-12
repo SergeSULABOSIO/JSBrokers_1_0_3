@@ -50,15 +50,7 @@ class ServiceTcpdf
             array(0, 0, 0), //Text color (RGB)
             array(0, 0, 0)  //Line color (RGB)
         );
-        $this->tcpdf->setFooterData(array(0, 0, 0), array(array(0, 0, 0)));
-
-        // set header and footer fonts
-        $this->tcpdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', 7));
-        $this->tcpdf->setFooterFont(array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
-
-        // set default monospaced font
-        $this->tcpdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
-
+        
         // set margins
         $this->tcpdf->SetMargins(PDF_MARGIN_LEFT, 20, PDF_MARGIN_RIGHT);
         $this->tcpdf->SetHeaderMargin(PDF_MARGIN_HEADER);
@@ -70,25 +62,9 @@ class ServiceTcpdf
         // set image scale factor
         $this->tcpdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
 
-        // set some language-dependent strings (optional)
-        if (@file_exists(dirname(__FILE__) . '/lang/eng.php')) {
-            require_once(dirname(__FILE__) . '/lang/eng.php');
-            $this->tcpdf->setLanguageArray($l);
-        }
-
-        // ---------------------------------------------------------
-
-        // set default font subsetting mode
-        $this->tcpdf->setFontSubsetting(true);
-        // Set font
-        // dejavusans is a UTF-8 Unicode font, if you only need to
-        // print standard ASCII chars, you can use core fonts like
-        // helvetica or times to reduce file size.
-        $this->tcpdf->SetFont('times', '', 14, '', true);
-
         // Add a page
-        // This method has several options, check the source code documentation for more information.
         $this->tcpdf->AddPage();
+        
         return $this->tcpdf;
     }
 }
