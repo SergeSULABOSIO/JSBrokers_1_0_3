@@ -47,11 +47,11 @@ class MyCustomTCPDF extends TCPDF
         }
 
         $ligne2 = '<div style="text-align:center;">';
-        $ligne2 = $ligne2 . 'Adresse: <span style="font-weight: bold;">' . $this->entreprise->getAdresse() . '</span>';
-        $ligne2 = $ligne2 . ' • Tél.: <span style="font-weight: bold;">' . $this->entreprise->getTelephone() . '</span>';
-        $ligne2 = $ligne2 . ' • Licence: <span style="font-weight: bold;">' . $this->entreprise->getLicence() . '</span>';
-        $ligne2 = $ligne2 . ' • Capital Social: <span style="font-weight: bold;">' . $codeMonnaieLocale . ' ' . number_format($this->entreprise->getCapitalSociale(), 2, ',', ".") . '</span>';
-        $ligne2 = $ligne2 . '</div>';
+        $ligne2 .= 'Adresse: <span style="font-weight: bold;">' . $this->entreprise->getAdresse() . '</span>';
+        $ligne2 .= ' • Tél.: <span style="font-weight: bold;">' . $this->entreprise->getTelephone() . '</span>';
+        $ligne2 .= ' • Licence: <span style="font-weight: bold;">' . $this->entreprise->getLicence() . '</span>';
+        $ligne2 .= ' • Capital Social: <span style="font-weight: bold;">' . $codeMonnaieLocale . ' ' . number_format($this->entreprise->getCapitalSociale(), 2, ',', ".") . '</span>';
+        $ligne2 .= '</div>';
 
         $ligne3 = '<div style="text-align:center;">';
         $ligne3 .= 'Rccm: <span style="font-weight: bold;">' . $this->entreprise->getRccm() . '</span>';
