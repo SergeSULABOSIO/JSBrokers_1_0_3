@@ -93,11 +93,40 @@
             BOREDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} n°{{note.reference}}<br/>
             <span class="texte_normal">
                 Description: <span class="gras">{{note.description}}</span>
+                {% if note.addressedto == 0 %}{# Client #}
+                    {% if note.client.nom != null %}
+                        • Client: <span class="gras">{{ note.client.nom }}</span>
+                    {% endif %}
+                {% endif %}
+                {% if note.addressedto == 1 %}{# Assureur #}
+                    {% if note.assureur.nom != null %}
+                        • Assureur: <span class="gras">{{ note.assureur.nom }}</span>
+                    {% endif %}
+                {% endif %}
+                {% if note.addressedto == 2 %}{# Partenaire #}
+                    {% if note.partenaire.nom != null %}
+                        • Client: <span class="gras">{{ note.partenaire.nom }}</span>
+                    {% endif %}
+                {% endif %}
+                {% if note.addressedto == 3 %}{# Autorité fiscale #}
+                    {% if note.partenaire.nom != null %}
+                        • Autorité: <span class="gras">{{ note.autoritefiscale.nom }}</span>
+                    {% endif %}
+                {% endif %}
+                  • Date: <span class="gras">{{ date|format_datetime('short', 'short', locale: utilisateur.locale)}}</span>
             </span>
         </p>
         
-
-
+        {# Contenu du tableau détailés du bordereau #}
+        <p class="texte_petit">
+            <table>
+                <tr>
+                    <td>
+                        N°
+                    </td>
+                </tr>
+            </table>
+        </p>
 
 
     </body>
