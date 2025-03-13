@@ -88,11 +88,9 @@
     </head>
     <body>
         {# Titre de la note #}
-        <br/>
-        <p class="texte_moyen">
-            BOREDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} n°{{note.reference}}<br/>
-            <span class="texte_normal">
-                Description: <span class="gras">{{note.description}}</span>
+        <div class="texte_moyen" style=''>
+        BOREDEREAU DE LA {{ constante.Note_getNameOfTypeNote(note) }} n°{{note.reference}}<br/>
+            <span class="texte_normal">Description: <span class="gras">{{note.description}}</span>
                 {% if note.addressedto == 0 %}{# Client #}
                     {% if note.client.nom != null %}
                         • Client: <span class="gras">{{ note.client.nom }}</span>
@@ -115,15 +113,63 @@
                 {% endif %}
                   • Date: <span class="gras">{{ date|format_datetime('short', 'short', locale: utilisateur.locale)}}</span>
             </span>
-        </p>
+        </div>
         
         {# Contenu du tableau détailés du bordereau #}
         <p class="texte_petit">
             <table>
+                {# Barre des titres #}
                 <tr>
-                    <td>
-                        N°
-                    </td>
+                    <td class="thead" style=''>N°</td>
+                    <td class="thead">REF. POLICE</td>
+                    <td class="thead">TRANCHE</td>
+                    <td class="thead">PRODUIT</td>
+                    <td class="thead">AVENANT</td>
+                    <td class="thead">PERIODE</td>
+                    <td class="thead">CLIENT</td>
+                    <td class="thead">PRIME TTC</td>
+                    <td class="thead">PRIME NETTE</td>
+                    <td class="thead">FRONTING</td>
+                    <td class="thead">TAUX</td>
+                    <td class="thead">COM. HT</td>
+                    <td class="thead">TVA</td>
+                    <td class="thead">COM. TTC</td>
+                </tr>
+                {# Contenu ou corps du tableau #}
+                {% for item in 1..45 %}
+                    <tr>
+                        <td class="" style=''>{{ item }}</td>
+                        <td class="">REF. POLICE</td>
+                        <td class="">TRANCHE</td>
+                        <td class="">PRODUIT</td>
+                        <td class="">AVENANT</td>
+                        <td class="">PERIODE</td>
+                        <td class="">CLIENT</td>
+                        <td class="">PRIME TTC</td>
+                        <td class="">PRIME NETTE</td>
+                        <td class="">FRONTING</td>
+                        <td class="">TAUX</td>
+                        <td class="">COM. HT</td>
+                        <td class="">TVA</td>
+                        <td class="">COM. TTC</td>
+                    </tr>
+                {% endfor %}
+                {# Barre des totaux #}
+                <tr>
+                    <td class="thead" style=''></td>
+                    <td class="thead">TOTAL</td>
+                    <td class="thead"></td>
+                    <td class="thead"></td>
+                    <td class="thead"></td>
+                    <td class="thead"></td>
+                    <td class="thead"></td>
+                    <td class="thead">100000000</td>
+                    <td class="thead">100000000</td>
+                    <td class="thead">100000000</td>
+                    <td class="thead"></td>
+                    <td class="thead">100000000</td>
+                    <td class="thead">100000000</td>
+                    <td class="thead">100000000</td>
                 </tr>
             </table>
         </p>
