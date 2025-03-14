@@ -39,9 +39,17 @@
                 font-style: normal;
                 font-size: 10px;
             }
+            .texte_tres_petit {
+                text-align: left;
+                font-weight: normal;
+                font-family: Georgia, Arial;
+                font-style: normal;
+                font-size: 8px;
+            }
             table, th, td{
                 border-collapse: collapse;
-                border: none;
+                /* border: none; */
+                border: 1px solid darkgray;
             }
             .bordure {
                 border: 1px solid darkgray;
@@ -116,33 +124,34 @@
         </div>
         
         {# Contenu du tableau détailés du bordereau #}
-        <div class="texte_petit">
+        <div class="texte_tres_petit">
             <table>
                 {# Barre des titres #}
                 <tr>
-                    <td class="thead" style=''>N°</td>
-                    <td class="thead">REF. POLICE</td>
-                    <td class="thead">TRANCHE</td>
-                    <td class="thead">PRODUIT</td>
-                    <td class="thead">AVENANT</td>
-                    <td class="thead">PERIODE</td>
-                    <td class="thead">CLIENT</td>
-                    <td class="thead">PRIME TTC</td>
-                    <td class="thead">PRIME NETTE</td>
-                    <td class="thead">FRONTING</td>
-                    <td class="thead">TAUX</td>
-                    <td class="thead">COM. HT</td>
-                    <td class="thead">TVA</td>
-                    <td class="thead">COM. TTC</td>
+                    <td class="thead" style="width: 3%;">N°</td>
+                    <td class="thead" style="width: 12%;">REF. POLICE</td>
+                    <td class="thead" style="width: 5%;">TRANCHE</td>
+                    <td class="thead" style="width: 8%;">PRODUIT</td>
+                    <td class="thead" style="width: 5%;">AVENANT</td>
+                    <td class="thead" style="width: 9%;">PERIODE</td>
+                    <td class="thead" style="width: 12%;">CLIENT</td>
+                    <td class="thead" style="width: 7%;">PRIME TTC</td>
+                    <td class="thead" style="width: 7%;">PRIME NETTE</td>
+                    <td class="thead" style="width: 7%;">FRONTING</td>
+                    <td class="thead" style="width: 5%;">TAUX</td>
+                    <td class="thead" style="width: 6%;">COM. HT</td>
+                    <td class="thead" style="width: 6%;">TVA</td>
+                    <td class="thead" style="width: 6%;">COM. TTC</td>
                 </tr>
                 {# Contenu ou corps du tableau #}
-                {% for item in 1..20 %}
+                {% set item = 1 %}
+                {% for article in note.articles %}
                     <tr>
                         <td class="" style=''>{{ item }}</td>
-                        <td class="">REF. POLICE</td>
-                        <td class="">TRANCHE</td>
-                        <td class="">PRODUIT</td>
-                        <td class="">AVENANT</td>
+                        <td class="">{{ constante.Piste_getReferencePolice(article.tranche.cotation.piste) }}</td>
+                        <td class="">{{ article.tranche.nom }}</td>
+                        <td class="">{{ article.tranche.cotation.piste.risque.code }}</td>
+                        <td class="">{{ constante.Piste_getAvenant(article.tranche.cotation.piste) }}</td>
                         <td class="">PERIODE</td>
                         <td class="">CLIENT</td>
                         <td class="">PRIME TTC</td>
@@ -153,6 +162,7 @@
                         <td class="">TVA</td>
                         <td class="">COM. TTC</td>
                     </tr>
+                    {% set item = item + 1 %}
                 {% endfor %}
                 {# Barre des totaux #}
                 <tr>

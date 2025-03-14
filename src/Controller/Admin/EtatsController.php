@@ -121,6 +121,9 @@ class EtatsController extends AbstractController
                 'date' => new DateTimeImmutable("now"),
             ]
         );
+
+        // dd($note);
+
         $withHeader = false;
         $withFooter = true;
         $pdf = $serviceTcpdf->getTcpdf($typeOutPut == self::TYPE_OUTPUT_NOTE ? "P" : "L", $note->getNom(), $withHeader, $withFooter);

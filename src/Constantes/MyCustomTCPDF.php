@@ -17,38 +17,7 @@ class MyCustomTCPDF extends TCPDF
 
     // //Page header
     public function Header() {
-        // Logo
-        // $image_file = K_PATH_IMAGES . 'logo_example.jpg';
-        // $image_file = "./images/entreprises/logo.jpg";
-        // $image_width = 10;
-        $image_height = 10;
-        // $image_x = 15;
-        // $image_y = 4;
-        // $image_type = 'JPG';
-        // $image_link = 'http://www.aib-brokers.com';
-        // $image_align = "N"; //$align Indicates the alignment of the pointer next to image insertion relative to image height. The value can be:<ul><li>T: top-right for LTR or top-left for RTL</li><li>M: middle-right for LTR or middle-left for RTL</li><li>B: bottom-right for LTR or bottom-left for RTL</li><li>N: next line</li></ul>
-        // $image_resize = false;
-        // $image_dpi = 300;
-        // $image_palign = "C"; //$palign Allows to center or align the image on the current line. Possible values are:<ul><li>L : left align</li><li>C : center</li><li>R : right align</li><li>'' : empty string : left for LTR or right for RTL</li></ul>
-        // $this->Image($image_file, $image_x, $image_y, $image_width, $image_height, $image_type, $image_link, $image_align, $image_resize, $image_dpi, $image_palign, false, false, 0, false, false, false);
         
-        // Set font
-        $font_family = 'helvetica';
-        $font_style = "N";
-        $font_size = 10;
-        $this->SetFont($font_family, $font_style, $font_size);
-        
-        // Title
-        // $this->Cell(0, "", '<< TCPDF Example 003 >>', 0, false, 'C', 0, '', 0, false, 'M', 'M');
-        $title_width = 0;
-        $title_height = 0;
-        $title_html_text = '<span style="font-weight: bold;">' . $this->entreprise->getNom() . '</span>';
-        $title_cell_border = 0;
-        $title_x = PDF_MARGIN_LEFT;
-        $title_y = $image_height + 5;
-        $title_align = "C";
-        $this->writeHTMLCell($title_width, $title_height, $title_x, $title_y, $title_html_text, $title_cell_border, 1, 0, true, $title_align, true);
-        $this->writeHTML('<hr style="border: 1px solid black;">', true, false, true, false, '');
     }
 
     // Page footer

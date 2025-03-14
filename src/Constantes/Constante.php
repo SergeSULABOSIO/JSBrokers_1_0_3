@@ -2912,6 +2912,40 @@ class Constante
         }
         return $tot;
     }
+    public function Piste_getReferencePolice(?Piste $piste)
+    {
+        $reference = "";
+        if ($piste != null) {
+            /** @var Cotation $cotation */
+            foreach ($piste->getCotations() as $cotation) {
+                if($this->Cotation_isBound($cotation)){
+                    if (count($cotation->getAvenants()) != 0) {
+                        /** @var Avenant $avenant */
+                        $avenant = $cotation->getAvenants()[0];
+                        $reference = $avenant->getReferencePolice();
+                    }
+                }
+            }
+        }
+        return $reference;
+    }
+    public function Piste_getAvenant(?Piste $piste)
+    {
+        $num_avenant = "";
+        if ($piste != null) {
+            /** @var Cotation $cotation */
+            foreach ($piste->getCotations() as $cotation) {
+                if($this->Cotation_isBound($cotation)){
+                    if (count($cotation->getAvenants()) != 0) {
+                        /** @var Avenant $avenant */
+                        $avenant = $cotation->getAvenants()[0];
+                        $num_avenant = $avenant->getNumero();
+                    }
+                }
+            }
+        }
+        return $num_avenant;
+    }
     public function Piste_getMontant_prime_payable_par_client_solde(?Piste $piste)
     {
         $tot = 0;
