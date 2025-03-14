@@ -27,6 +27,7 @@ class ChargementType extends AbstractType
             ->add('fonction', ChoiceType::class, [
                 'label' => "Quelle est la fonction de ce type de chargement?",
                 'expanded' => true,
+                'required' => true,
                 'choices'  => [
                     "C'est une prime nette" => Chargement::FONCTION_PRIME_NETTE,
                     "C'est un fronting (commisson de cession pour le cédant)" => Chargement::FONCTION_FRONTING,
