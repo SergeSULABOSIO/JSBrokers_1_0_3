@@ -136,7 +136,7 @@
                     <td class="thead" style="width: 10%;">PERIODE</td>
                     <td class="thead" style="width: 11%;">CLIENT</td>
                     <td class="thead" style="width: 8%;">PRIME TTC</td>
-                    <td class="thead" style="width: 8%;">PRIME NETTE</td>
+                    <td class="thead" style="width: 8%;">PRIME HT</td>
                     <td class="thead" style="width: 7%;">FRONTING</td>
                     <td class="thead" style="width: 5%;">TAUX</td>
                     <td class="thead" style="width: 7%;">COM. HT</td>
@@ -155,8 +155,8 @@
                         <td class="">{{ constante.ARTICLE_getPeriode(article) }}</td>
                         <td class="">{{ constante.ARTICLE_getNomClient(article) }}</td>
                         <td class="texte_droite">{{ constante.ARTICLE_getPrimeTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
-                        <td class="texte_droite">PRIME NETTE</td>
-                        <td class="texte_droite">FRONTING</td>
+                        <td class="texte_droite">{{ constante.ARTICLE_getPrimeHT(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte_droite">{{ constante.ARTICLE_getFronting(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td class="texte_droite">100,00%</td>
                         <td class="texte_droite">COM. HT</td>
                         <td class="texte_droite">TVA</td>
@@ -173,13 +173,13 @@
                     <td class="thead"></td>
                     <td class="thead"></td>
                     <td class="thead"></td>
-                    <td class="thead texte_droite">100000000</td>
-                    <td class="thead texte_droite">100000000</td>
-                    <td class="thead texte_droite">100000000</td>
+                    <td class="thead texte_droite">{{100000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{100000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
                     <td class="thead texte_droite"></td>
-                    <td class="thead texte_droite">100000000</td>
-                    <td class="thead texte_droite">100000000</td>
-                    <td class="thead texte_droite">100000000</td>
+                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
                 </tr>
             </table>
         </div>

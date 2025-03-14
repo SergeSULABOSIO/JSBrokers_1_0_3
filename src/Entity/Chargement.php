@@ -45,6 +45,15 @@ class Chargement
     #[ORM\OneToMany(targetEntity: TypeRevenu::class, mappedBy: 'typeChargement')]
     private Collection $typeRevenus;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $fonction = null;
+
+    public const FONCTION_PRIME_NETTE = 1;
+    public const FONCTION_FRONTING = 2;
+    public const FONCTION_FRAIS_ADMIN = 3;
+    public const FONCTION_TAXE = 4;
+
+
     public function __construct()
     {
         $this->chargementPourPrimes = new ArrayCollection();
@@ -190,6 +199,18 @@ class Chargement
                 $typeRevenu->setTypeChargement(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getFonction(): ?int
+    {
+        return $this->fonction;
+    }
+
+    public function setFonction(?int $fonction): static
+    {
+        $this->fonction = $fonction;
 
         return $this;
     }

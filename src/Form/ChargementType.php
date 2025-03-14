@@ -24,6 +24,16 @@ class ChargementType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
+            ->add('fonction', ChoiceType::class, [
+                'label' => "Quelle est la fonction de ce type de chargement?",
+                'expanded' => true,
+                'choices'  => [
+                    "C'est une prime nette" => Chargement::FONCTION_PRIME_NETTE,
+                    "C'est un fronting (commisson de cession pour le cédant)" => Chargement::FONCTION_FRONTING,
+                    "C'est un frais administratif" => Chargement::FONCTION_FRAIS_ADMIN,
+                    "C'est une taxe" => Chargement::FONCTION_TAXE,
+                ],
+            ])
             ->add('description', TextareaType::class, [
                 'label' => "Description",
                 'attr' => [

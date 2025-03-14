@@ -3461,4 +3461,38 @@ class Constante
         }
         return $primeTTC;
     }
+
+    public function ARTICLE_getPrimeHT(Article $article){
+        $primeHT = 0;
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            if (count($cotation->getChargements()) != 0) {
+                /** @var ChargementPourPrime $chargementPourPrime */
+                foreach ($cotation->getChargements() as $chargementPourPrime) {
+                    if ($chargementPourPrime->getType()->getFonction() == Chargement::FONCTION_PRIME_NETTE) {
+                        $primeHT += $chargementPourPrime->getMontantFlatExceptionel();
+                    }
+                }
+            }
+        }
+        return $primeHT;
+    }
+
+    public function ARTICLE_getFronting(Article $article){
+        $primeHT = 0;
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            if (count($cotation->getChargements()) != 0) {
+                /** @var ChargementPourPrime $chargementPourPrime */
+                foreach ($cotation->getChargements() as $chargementPourPrime) {
+                    if ($chargementPourPrime->getType()->getFonction() == Chargement::FONCTION_FRONTING) {
+                        $primeHT += $chargementPourPrime->getMontantFlatExceptionel();
+                    }
+                }
+            }
+        }
+        return $primeHT;
+    }
 }
