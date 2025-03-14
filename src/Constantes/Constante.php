@@ -36,6 +36,7 @@ use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\CompteBancaire;
 use App\Entity\Groupe;
 use App\Entity\ReportSet\PartnerReportSet;
+use App\Services\ServiceDates;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -45,6 +46,7 @@ class Constante
     public function __construct(
         private TranslatorInterface $translator,
         private ServiceTaxes $serviceTaxes,
+        private ServiceDates $serviceDates,
         private Security $security,
         private CotationRepository $cotationRepository,
         private AutoriteFiscaleRepository $autoriteFiscaleRepository,
@@ -3408,5 +3410,55 @@ class Constante
      */
     public function ARTICLE_getReferencePolice(Article $article){
         return $this->Piste_getReferencePolice($article->getTranche()->getCotation()->getPiste());
+    }
+
+    public function ARTICLE_getNomTranche(Article $article){
+        return $article->getTranche()->getNom();
+    }
+
+    public function ARTICLE_getCodeRisque(Article $article){
+        return $article->getTranche()->getCotation()->getPiste()->getRisque()->getCode();
+    }
+
+    public function ARTICLE_getNumAvenant(Article $article){
+        return $this->Piste_getAvenant($article->getTranche()->getCotation()->getPiste());
+    }
+
+    public function ARTICLE_getPeriode(Article $article){
+        $periode = "";
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            if (count($cotation->getAvenants()) != 0) {
+                /** @var Avenant $avenant */
+                $avenant = $cotation->getAvenants()[0];
+                $dateEffet = $avenant->getStartingAt();
+                $dateEcheance = $avenant->getEndingAt();
+                $periode = $this->serviceDates->getTexteSimple($dateEffet) . "-" . $this->serviceDates->getTexteSimple($dateEcheance);
+            }
+        }
+        return $periode;
+    }
+
+    public function ARTICLE_getNomClient(Article $article){
+        $nomClient = "";
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            if (count($cotation->getAvenants()) != 0) {
+                $nomClient = $cotation->getPiste()->getClient()->getNom();
+            }
+        }
+        return $nomClient;
+    }
+
+    public function ARTICLE_getPrimeTTC(Article $article){
+        $primeTTC = 0;
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            $primeTTC = $this->Cotation_getMontant_prime_payable_par_client($cotation);
+        }
+        return $primeTTC;
     }
 }

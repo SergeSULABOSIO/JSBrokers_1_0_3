@@ -127,21 +127,21 @@
         <div class="texte_tres_petit">
             <table>
                 {# Barre des titres #}
-                <tr>
+                <tr class="texte_centre">
                     <td class="thead" style="width: 3%;">N°</td>
-                    <td class="thead" style="width: 12%;">REF. POLICE</td>
+                    <td class="thead" style="width: 11%;">REF. POLICE</td>
                     <td class="thead" style="width: 5%;">TRANCHE</td>
-                    <td class="thead" style="width: 8%;">PRODUIT</td>
-                    <td class="thead" style="width: 5%;">AVENANT</td>
-                    <td class="thead" style="width: 9%;">PERIODE</td>
-                    <td class="thead" style="width: 12%;">CLIENT</td>
-                    <td class="thead" style="width: 7%;">PRIME TTC</td>
-                    <td class="thead" style="width: 7%;">PRIME NETTE</td>
+                    <td class="thead" style="width: 6%;">PRODUIT</td>
+                    <td class="thead" style="width: 5%;">AVEN.</td>
+                    <td class="thead" style="width: 10%;">PERIODE</td>
+                    <td class="thead" style="width: 11%;">CLIENT</td>
+                    <td class="thead" style="width: 8%;">PRIME TTC</td>
+                    <td class="thead" style="width: 8%;">PRIME NETTE</td>
                     <td class="thead" style="width: 7%;">FRONTING</td>
                     <td class="thead" style="width: 5%;">TAUX</td>
-                    <td class="thead" style="width: 6%;">COM. HT</td>
-                    <td class="thead" style="width: 6%;">TVA</td>
-                    <td class="thead" style="width: 6%;">COM. TTC</td>
+                    <td class="thead" style="width: 7%;">COM. HT</td>
+                    <td class="thead" style="width: 7%;">TVA</td>
+                    <td class="thead" style="width: 7%;">COM. TTC</td>
                 </tr>
                 {# Contenu ou corps du tableau #}
                 {% set item = 1 %}
@@ -149,18 +149,18 @@
                     <tr>
                         <td class="" style=''>{{ item }}</td>
                         <td class="">{{ constante.ARTICLE_getReferencePolice(article) }}</td>
-                        <td class="">{{ article.tranche.nom }}</td>
-                        <td class="">{{ article.tranche.cotation.piste.risque.code }}</td>
-                        <td class="">{{ constante.Piste_getAvenant(article.tranche.cotation.piste) }}</td>
-                        <td class="">PERIODE</td>
-                        <td class="">CLIENT</td>
-                        <td class="">PRIME TTC</td>
-                        <td class="">PRIME NETTE</td>
-                        <td class="">FRONTING</td>
-                        <td class="">TAUX</td>
-                        <td class="">COM. HT</td>
-                        <td class="">TVA</td>
-                        <td class="">COM. TTC</td>
+                        <td class="">{{ constante.ARTICLE_getNomTranche(article) }}</td>
+                        <td class="">{{ constante.ARTICLE_getCodeRisque(article) }}</td>
+                        <td class="">{{ constante.ARTICLE_getNumAvenant(article) }}</td>
+                        <td class="">{{ constante.ARTICLE_getPeriode(article) }}</td>
+                        <td class="">{{ constante.ARTICLE_getNomClient(article) }}</td>
+                        <td class="texte_droite">{{ constante.ARTICLE_getPrimeTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte_droite">PRIME NETTE</td>
+                        <td class="texte_droite">FRONTING</td>
+                        <td class="texte_droite">100,00%</td>
+                        <td class="texte_droite">COM. HT</td>
+                        <td class="texte_droite">TVA</td>
+                        <td class="texte_droite">COM. TTC</td>
                     </tr>
                     {% set item = item + 1 %}
                 {% endfor %}
@@ -173,13 +173,13 @@
                     <td class="thead"></td>
                     <td class="thead"></td>
                     <td class="thead"></td>
-                    <td class="thead">100000000</td>
-                    <td class="thead">100000000</td>
-                    <td class="thead">100000000</td>
-                    <td class="thead"></td>
-                    <td class="thead">100000000</td>
-                    <td class="thead">100000000</td>
-                    <td class="thead">100000000</td>
+                    <td class="thead texte_droite">100000000</td>
+                    <td class="thead texte_droite">100000000</td>
+                    <td class="thead texte_droite">100000000</td>
+                    <td class="thead texte_droite"></td>
+                    <td class="thead texte_droite">100000000</td>
+                    <td class="thead texte_droite">100000000</td>
+                    <td class="thead texte_droite">100000000</td>
                 </tr>
             </table>
         </div>
