@@ -148,7 +148,7 @@
                 {% for article in note.articles %}
                     <tr>
                         <td class="" style=''>{{ item }}</td>
-                        <td class="">{{ constante.Piste_getReferencePolice(article.tranche.cotation.piste) }}</td>
+                        <td class="">{{ constante.ARTICLE_getReferencePolice(article) }}</td>
                         <td class="">{{ article.tranche.nom }}</td>
                         <td class="">{{ article.tranche.cotation.piste.risque.code }}</td>
                         <td class="">{{ constante.Piste_getAvenant(article.tranche.cotation.piste) }}</td>

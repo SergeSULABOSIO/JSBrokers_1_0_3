@@ -3401,4 +3401,12 @@ class Constante
         }
         return $montant;
     }
+
+
+    /**
+     * ARTICLE
+     */
+    public function ARTICLE_getReferencePolice(Article $article){
+        return $this->Piste_getReferencePolice($article->getTranche()->getCotation()->getPiste());
+    }
 }
