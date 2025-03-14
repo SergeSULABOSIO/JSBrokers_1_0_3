@@ -140,7 +140,7 @@
                     <td class="thead" style="width: 7%;">FRONTING</td>
                     <td class="thead" style="width: 5%;">TAUX</td>
                     <td class="thead" style="width: 7%;">COM. HT</td>
-                    <td class="thead" style="width: 7%;">TVA</td>
+                    <td class="thead" style="width: 7%;">{{ constante.Taxe_getNomTaxeAssureur }}</td>
                     <td class="thead" style="width: 7%;">COM. TTC</td>
                 </tr>
                 {# Contenu ou corps du tableau #}
@@ -157,10 +157,10 @@
                         <td class="texte_droite">{{ constante.ARTICLE_getPrimeTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td class="texte_droite">{{ constante.ARTICLE_getPrimeHT(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td class="texte_droite">{{ constante.ARTICLE_getFronting(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
-                        <td class="texte_droite">100,00%</td>
-                        <td class="texte_droite">COM. HT</td>
-                        <td class="texte_droite">TVA</td>
-                        <td class="texte_droite">COM. TTC</td>
+                        <td class="texte_droite">{{ constante.ARTICLE_getTauxComHT(article) }}</td>
+                        <td class="texte_droite">{{ constante.ARTICLE_getComHT(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte_droite">{{ constante.ARTICLE_getTaxeAssureur(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte_droite">{{ constante.ARTICLE_getComTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                     </tr>
                     {% set item = item + 1 %}
                 {% endfor %}
@@ -173,13 +173,13 @@
                     <td class="thead"></td>
                     <td class="thead"></td>
                     <td class="thead"></td>
-                    <td class="thead texte_droite">{{100000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
-                    <td class="thead texte_droite">{{100000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
-                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{ constante.Note_getMontant_prime_ttc(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{ constante.Note_getMontant_prime_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{ constante.Note_getMontant_fronting(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
                     <td class="thead texte_droite"></td>
-                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
-                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
-                    <td class="thead texte_droite">{{10000000|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+                    <td class="thead texte_droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
                 </tr>
             </table>
         </div>

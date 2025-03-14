@@ -1063,6 +1063,36 @@ class Constante
         }
         return $montant;
     }
+    public function Note_getMontant_fronting(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                $montant += $this->ARTICLE_getFronting($article);
+            }
+        }
+        return $montant;
+    }
+    public function Note_getMontant_prime_ht(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                $montant += $this->ARTICLE_getPrimeHT($article);
+            }
+        }
+        return $montant;
+    }
+    public function Note_getMontant_prime_ttc(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                $montant += $this->ARTICLE_getPrimeTTC($article);
+            }
+        }
+        return $montant;
+    }
 
 
 
@@ -3459,7 +3489,7 @@ class Constante
         if ($this->Cotation_isBound($cotation)) {
             $primeTTC = $this->Cotation_getMontant_prime_payable_par_client($cotation);
         }
-        return $primeTTC;
+        return $primeTTC * $article->getTranche()->getPourcentage();
     }
 
     public function ARTICLE_getPrimeHT(Article $article){
@@ -3476,7 +3506,7 @@ class Constante
                 }
             }
         }
-        return $primeHT;
+        return $primeHT * $article->getTranche()->getPourcentage();
     }
 
     public function ARTICLE_getFronting(Article $article){
@@ -3493,6 +3523,68 @@ class Constante
                 }
             }
         }
-        return $primeHT;
+        return $primeHT * $article->getTranche()->getPourcentage();
+    }
+
+    public function ARTICLE_getComHT(Article $article){
+        $comHT = 0;
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            $comHT = $this->Cotation_getMontant_commission_ht($cotation);
+        }
+        return $comHT * $article->getTranche()->getPourcentage();
+    }
+
+    public function ARTICLE_getTauxComHT(Article $article){
+        return round(($this->ARTICLE_getComHT($article) / $this->ARTICLE_getPrimeHT($article)) * 100, 2) . "%";
+    }
+
+    public function ARTICLE_getTaxeAssureur(Article $article){
+        $taxe = 0;
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            $taxe = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation);
+        }
+        return $taxe * $article->getTranche()->getPourcentage();
+    }
+
+    public function ARTICLE_getComTTC(Article $article){
+        $taxe = 0;
+        /** @var Cotation $cotation */
+        $cotation = $article->getTranche()->getCotation();
+        if ($this->Cotation_isBound($cotation)) {
+            $taxe = $this->Cotation_getMontant_commission_ttc($cotation);
+        }
+        return $taxe * $article->getTranche()->getPourcentage();
+    }
+
+    public function Taxe_getNomTaxeAssureur()
+    {
+        $taxe = $this->serviceTaxes->getTaxesPayableParAssureur()[0];
+        if ($taxe != null) {
+            $codeTaxe = $taxe->getCode();
+            if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
+                return $codeTaxe . " (" . (round($taxe->getTauxIARD() * 100, 2)) . "%)";
+            }else{
+                return $codeTaxe;
+            }
+        }
+        return "Null";
+    }
+
+    public function Taxe_getNomTaxeCourtier()
+    {
+        $taxe = $this->serviceTaxes->getTaxesPayableParCourtier()[0];
+        if ($taxe != null) {
+            $codeTaxe = $taxe->getCode();
+            if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
+                return $codeTaxe . " (" . (round($taxe->getTauxIARD() * 100, 2)) . "%)";
+            }else{
+                return $codeTaxe;
+            }
+        }
+        return "Null";
     }
 }
