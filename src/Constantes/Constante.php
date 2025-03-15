@@ -1501,6 +1501,7 @@ class Constante
                 }
             }
         }
+        // dd($Tabpartenaires);
         return $Tabpartenaires;
     }
     public function Risque_getNomBranche($branche)

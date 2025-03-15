@@ -45,18 +45,21 @@ class ClientType extends AbstractType
             ])
             ->add('adresse', TextType::class, [
                 'label' => "Adresse physique",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Adresse physique",
                 ],
             ])
             ->add('telephone', TextType::class, [
                 'label' => "Téléphone",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Téléphone",
                 ],
             ])
             ->add('email', EmailType::class, [
                 'label' => "Email",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Email",
                 ],
@@ -72,18 +75,21 @@ class ClientType extends AbstractType
             ])
             ->add('numimpot', TextType::class, [
                 'label' => "Nunméro Impôt (Nif)",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "NIF",
                 ],
             ])
             ->add('rccm', TextType::class, [
                 'label' => "Nunméro RCCM (Rccm)",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "RCCM",
                 ],
             ])
             ->add('idnat', TextType::class, [
                 'label' => "Nunméro d'Id. nationale (Idnat)",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Idnat",
                 ],

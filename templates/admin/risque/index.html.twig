@@ -101,15 +101,18 @@
                                 {% endfor %}
                                 {% for partenaire in constante.Risque_getPartenaires(risque) %}
                                     {# Retro-commission #}
-                                    <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier(risque, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier_payee(risque, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        {% set couleur = "text-secondary" %}
-										{% if constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire) != 0 %}
-                                    		{% set couleur = "text-danger" %}
-										{% endif %}
-										<span class="{{couleur}}"> • Solde dû: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                    </small><br>
+                                    {% if partenaire != null %}
+                                        <small class="m-2">
+                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier(risque, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier_payee(risque, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {% set couleur = "text-secondary" %}
+                                            {% if constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire) != 0 %}
+                                                {% set couleur = "text-danger" %}
+                                            {% endif %}
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        </small><br>
+                                    {% endif %}
+                                    
                                 {% endfor %}
                             </td>
                             <td>
