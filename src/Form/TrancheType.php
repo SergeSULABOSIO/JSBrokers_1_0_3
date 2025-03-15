@@ -24,6 +24,9 @@ class TrancheType extends AbstractType
     
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        // if ($options['tranche'] != null) {
+        //     dd($options['tranche']);
+        // }
         $builder
             ->add('nom', TextType::class, [
                 'label' => "Nom",
@@ -90,6 +93,7 @@ class TrancheType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Tranche::class,
+            'tranche' => null,
         ]);
     }
 }
