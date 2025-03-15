@@ -1998,6 +1998,27 @@ class Constante
         }
         return $montant;
     }
+    public function Tranche_getPanierStatus(Tranche $tranche, PanierNotes $panier)
+    {
+        /**
+         * -1 = N'est pas eligible pour le panier
+         * 0 = est éligible pour le panier et peut y être ajouté
+         * 1 = est éligible pour le panier et mais ne peut plys y être ajouté car déjà dans le panier
+         */
+        if ($panier != null) {
+            $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier);
+            if (count($tabPosteFacturables) != 0) {
+                foreach ($tabPosteFacturables as $posteFacturable) {
+                    if ($panier->isInvoiced($tranche->getId(), $posteFacturable['montantPayable'], $posteFacturable['poste']) == true) {
+                        return 1;
+                    } else if ($this->Tranche_isAlreadyInADifferentNote($tranche, $posteFacturable) == false) {
+                        return 0;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
     public function Tranche_getMontant_commission_ttc_collectee(?Tranche $tranche): float
     {
         $montant = 0;
@@ -2951,7 +2972,7 @@ class Constante
         if ($piste != null) {
             /** @var Cotation $cotation */
             foreach ($piste->getCotations() as $cotation) {
-                if($this->Cotation_isBound($cotation)){
+                if ($this->Cotation_isBound($cotation)) {
                     if (count($cotation->getAvenants()) != 0) {
                         /** @var Avenant $avenant */
                         $avenant = $cotation->getAvenants()[0];
@@ -2968,7 +2989,7 @@ class Constante
         if ($piste != null) {
             /** @var Cotation $cotation */
             foreach ($piste->getCotations() as $cotation) {
-                if($this->Cotation_isBound($cotation)){
+                if ($this->Cotation_isBound($cotation)) {
                     if (count($cotation->getAvenants()) != 0) {
                         /** @var Avenant $avenant */
                         $avenant = $cotation->getAvenants()[0];
@@ -3439,23 +3460,28 @@ class Constante
     /**
      * ARTICLE
      */
-    public function ARTICLE_getReferencePolice(Article $article){
+    public function ARTICLE_getReferencePolice(Article $article)
+    {
         return $this->Piste_getReferencePolice($article->getTranche()->getCotation()->getPiste());
     }
 
-    public function ARTICLE_getNomTranche(Article $article){
+    public function ARTICLE_getNomTranche(Article $article)
+    {
         return $article->getTranche()->getNom();
     }
 
-    public function ARTICLE_getCodeRisque(Article $article){
+    public function ARTICLE_getCodeRisque(Article $article)
+    {
         return $article->getTranche()->getCotation()->getPiste()->getRisque()->getCode();
     }
 
-    public function ARTICLE_getNumAvenant(Article $article){
+    public function ARTICLE_getNumAvenant(Article $article)
+    {
         return $this->Piste_getAvenant($article->getTranche()->getCotation()->getPiste());
     }
 
-    public function ARTICLE_getPeriode(Article $article){
+    public function ARTICLE_getPeriode(Article $article)
+    {
         $periode = "";
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3471,7 +3497,8 @@ class Constante
         return $periode;
     }
 
-    public function ARTICLE_getNomClient(Article $article){
+    public function ARTICLE_getNomClient(Article $article)
+    {
         $nomClient = "";
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3483,7 +3510,8 @@ class Constante
         return $nomClient;
     }
 
-    public function ARTICLE_getPrimeTTC(Article $article){
+    public function ARTICLE_getPrimeTTC(Article $article)
+    {
         $primeTTC = 0;
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3493,7 +3521,8 @@ class Constante
         return $primeTTC * $article->getTranche()->getPourcentage();
     }
 
-    public function ARTICLE_getPrimeHT(Article $article){
+    public function ARTICLE_getPrimeHT(Article $article)
+    {
         $primeHT = 0;
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3510,7 +3539,8 @@ class Constante
         return $primeHT * $article->getTranche()->getPourcentage();
     }
 
-    public function ARTICLE_getFronting(Article $article){
+    public function ARTICLE_getFronting(Article $article)
+    {
         $primeHT = 0;
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3527,7 +3557,8 @@ class Constante
         return $primeHT * $article->getTranche()->getPourcentage();
     }
 
-    public function ARTICLE_getComHT(Article $article){
+    public function ARTICLE_getComHT(Article $article)
+    {
         $comHT = 0;
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3537,11 +3568,13 @@ class Constante
         return $comHT * $article->getTranche()->getPourcentage();
     }
 
-    public function ARTICLE_getTauxComHT(Article $article){
+    public function ARTICLE_getTauxComHT(Article $article)
+    {
         return round(($this->ARTICLE_getComHT($article) / $this->ARTICLE_getPrimeHT($article)) * 100, 2) . "%";
     }
 
-    public function ARTICLE_getTaxeAssureur(Article $article){
+    public function ARTICLE_getTaxeAssureur(Article $article)
+    {
         $taxe = 0;
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3551,7 +3584,8 @@ class Constante
         return $taxe * $article->getTranche()->getPourcentage();
     }
 
-    public function ARTICLE_getComTTC(Article $article){
+    public function ARTICLE_getComTTC(Article $article)
+    {
         $taxe = 0;
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
@@ -3568,7 +3602,7 @@ class Constante
             $codeTaxe = $taxe->getCode();
             if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
                 return $codeTaxe . " (" . (round($taxe->getTauxIARD() * 100, 2)) . "%)";
-            }else{
+            } else {
                 return $codeTaxe;
             }
         }
@@ -3582,7 +3616,7 @@ class Constante
             $codeTaxe = $taxe->getCode();
             if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
                 return $codeTaxe . " (" . (round($taxe->getTauxIARD() * 100, 2)) . "%)";
-            }else{
+            } else {
                 return $codeTaxe;
             }
         }
