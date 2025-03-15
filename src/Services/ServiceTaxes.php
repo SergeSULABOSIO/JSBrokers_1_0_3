@@ -65,21 +65,21 @@ class ServiceTaxes
         return $tab;
     }
 
-    public function getMontantTaxe($montant, bool $tauxIARD, bool $taxeAssureur)
+    public function getMontantTaxe($montantNet, bool $tauxIARD, bool $taxeAssureur)
     {
         $gross = 0;
         if ($taxeAssureur == true) {
             foreach ($this->getTaxesPayableParAssureur() as $taxeAss) {
                 $gross += match ($tauxIARD) {
-                    true => $montant * $taxeAss->getTauxIARD(),
-                    false => $montant * $taxeAss->getTauxVIE(),
+                    true => $montantNet * $taxeAss->getTauxIARD(),
+                    false => $montantNet * $taxeAss->getTauxVIE(),
                 };
             }
         } else {
             foreach ($this->getTaxesPayableParCourtier() as $taxeCou) {
                 $gross += match ($tauxIARD) {
-                    true => $montant * $taxeCou->getTauxIARD(),
-                    false => $montant * $taxeCou->getTauxVIE(),
+                    true => $montantNet * $taxeCou->getTauxIARD(),
+                    false => $montantNet * $taxeCou->getTauxVIE(),
                 };
             }
         }

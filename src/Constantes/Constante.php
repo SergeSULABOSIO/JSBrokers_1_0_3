@@ -962,7 +962,7 @@ class Constante
         if ($note) {
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
-                    $montant += $this->Tranche_getMontant_commission_ht($article->getTranche());
+                    $montant += $this->ARTICLE_getComHT($article);
                 }
             }
         }
@@ -974,7 +974,7 @@ class Constante
         if ($note) {
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
-                    $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
+                    $montant += $this->ARTICLE_getTaxeAssureur($article);
                 }
             }
         }
@@ -3559,13 +3559,24 @@ class Constante
 
     public function ARTICLE_getComHT(Article $article)
     {
-        $comHT = 0;
-        /** @var Cotation $cotation */
-        $cotation = $article->getTranche()->getCotation();
-        if ($this->Cotation_isBound($cotation)) {
-            $comHT = $this->Cotation_getMontant_commission_ht($cotation);
+        $comTTC = $this->ARTICLE_getComTTC($article);
+        $res = ($comTTC / ($this->getTauxTaxe($article->getTranche()->getCotation(), true) + 1));
+        return round($res);
+    }
+
+    public function getTauxTaxe(?Cotation $cotation, bool $forAssureur)
+    {
+        $tauxTaxe = 0;
+        if ($forAssureur == true) {
+            foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAssureur) {
+                $tauxTaxe += $this->isIARD($cotation) ? $taxeAssureur->getTauxIARD() : $taxeAssureur->getTauxVIE();
+            }
+        }else{
+            foreach ($this->serviceTaxes->getTaxesPayableParCourtier() as $taxeCourtier) {
+                $tauxTaxe += $this->isIARD($cotation) ? $taxeCourtier->getTauxIARD() : $taxeCourtier->getTauxVIE();
+            }
         }
-        return $comHT * $article->getTranche()->getPourcentage();
+        return $tauxTaxe;
     }
 
     public function ARTICLE_getTauxComHT(Article $article)
@@ -3575,13 +3586,13 @@ class Constante
 
     public function ARTICLE_getTaxeAssureur(Article $article)
     {
-        $taxe = 0;
-        /** @var Cotation $cotation */
-        $cotation = $article->getTranche()->getCotation();
-        if ($this->Cotation_isBound($cotation)) {
-            $taxe = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation);
-        }
-        return $taxe * $article->getTranche()->getPourcentage();
+        $taxe = $this->ARTICLE_getComHT($article) * $this->getTauxTaxe($article->getTranche()->getCotation(), true);
+        return round($taxe, 2);
+    }
+    public function ARTICLE_getTaxeCourtier(Article $article)
+    {
+        $taxe = $this->ARTICLE_getComHT($article) * $this->getTauxTaxe($article->getTranche()->getCotation(), false);
+        return round($taxe, 2);
     }
 
     public function ARTICLE_getComTTC(Article $article)
@@ -3590,7 +3601,8 @@ class Constante
         /** @var Cotation $cotation */
         $cotation = $article->getTranche()->getCotation();
         if ($this->Cotation_isBound($cotation)) {
-            $taxe = $this->Cotation_getMontant_commission_ttc($cotation);
+            // $taxe = $this->Cotation_getMontant_commission_ttc($cotation);
+            $taxe = $article->getMontant();
         }
         return $taxe * $article->getTranche()->getPourcentage();
     }
