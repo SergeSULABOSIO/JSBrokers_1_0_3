@@ -22,7 +22,7 @@ class CompteBancaireAutocompleteField extends AbstractType
         $resolver->setDefaults([
             'class' => CompteBancaire::class,
             'placeholder' => "Séléctionnez le compte",
-            'choice_label' => 'intitule',
+            'choice_label' => 'nom',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
 
             // choose which fields to use in the search

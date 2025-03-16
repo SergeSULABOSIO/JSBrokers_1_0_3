@@ -106,7 +106,7 @@ class PaiementType extends AbstractType
                 'label' => "Compte bancaire",
                 'required' => true,
                 'class' => CompteBancaire::class,
-                'choice_label' => 'intitule',
+                'choice_label' => 'nom',
             ])
             ->add('preuves', CollectionType::class, [
                 'label' => "Documents ou preuve de paiement",

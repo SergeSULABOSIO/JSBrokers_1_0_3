@@ -156,7 +156,7 @@
                                         {# </button> #}
                                     {# </form> #}
                                     {% if panier != null %}
-                                        {% if constante.Tranche_getPostesFacturables(tranche, panier)|length != 0 %}
+                                        {% if constante.Tranche_getPostesFacturables(tranche, panier) is not empty %}
                                             <div class="dropdown">
                                                 <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                                     {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
@@ -164,26 +164,24 @@
                                                 </a>
                                                 <ul class="dropdown-menu">
                                                     {% if panier != null %}
-                                                        {% if constante.Tranche_getPostesFacturables(tranche, panier) is not empty %}
-                                                            {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-                                                            {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier) %}
-                                                                <li>
-                                                                    {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
-                                                                        <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+                                                        {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+                                                        {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier) %}
+                                                            <li>
+                                                                {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
+                                                                    <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+                                                                        {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
+                                                                        Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
+                                                                    </a>
+                                                                {% else %}
+                                                                    {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
+                                                                        <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idPoste':posteFacturable['idPoste'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
                                                                             {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
-                                                                            Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
+                                                                            Insérer <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> dans la note
                                                                         </a>
-                                                                    {% else %}
-                                                                        {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
-                                                                            <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idPoste':posteFacturable['idPoste'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-                                                                                {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
-                                                                                Insérer <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> dans la note
-                                                                            </a>
-                                                                        {% endif %}
                                                                     {% endif %}
-                                                                </li>
-                                                            {% endfor %}
-                                                        {% endif %}
+                                                                {% endif %}
+                                                            </li>
+                                                        {% endfor %}
                                                     {% endif %}
                                                 </ul>
                                             </div>
