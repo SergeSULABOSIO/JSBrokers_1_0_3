@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Constantes\MyCustomTCPDF;
 use App\Constantes\MyPDFHeaderAndFooter;
+use App\Controller\Admin\EtatsController;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -40,7 +41,13 @@ class ServiceTcpdf
         $this->tcpdf->setPrintFooter($withFooter);
 
         // set margins
-        $this->tcpdf->SetMargins(PDF_MARGIN_LEFT, 20, PDF_MARGIN_RIGHT);
+        // dd("MARGIN LEFT: " . PDF_MARGIN_LEFT, "MARGIN RIGHT: " . PDF_MARGIN_RIGHT);
+        
+        if (EtatsController::TYPE_OUTPUT_BORDEREAU) {
+            $this->tcpdf->SetMargins(PDF_MARGIN_LEFT-5, 20, PDF_MARGIN_RIGHT-5);
+        }else{
+            $this->tcpdf->SetMargins(PDF_MARGIN_LEFT, 20, PDF_MARGIN_RIGHT);
+        }
         $this->tcpdf->SetHeaderMargin(PDF_MARGIN_HEADER);
         $this->tcpdf->SetFooterMargin(PDF_MARGIN_FOOTER);
 

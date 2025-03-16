@@ -133,6 +133,11 @@
                                 <small class="m-2">
                                     <span class="text-secondary">{{ tranche.cotation }} • {{ tranche.cotation.assureur }}</span> 
                                 </small>
+                                {% if panier != null %}
+                                    {% if constante.Tranche_getPostesFacturables(tranche, panier)|length != 0 %}
+                                        {{ constante.Tranche_getPostesFacturablesText(tranche, panier)|raw }}
+                                    {% endif %}
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

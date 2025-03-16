@@ -212,7 +212,7 @@
         <div class="normal_texte texte-centre">
             <span class="normal_texte texte-centre">Synthèse</span><br/>
             {# Note de débit vers l'Assureur: il faut afficher le montant Ht et sa Tva #}
-            {% if note.addressedto == 1 %}
+            {% if note.addressedto == 1 or note.addressedto == 0 %}
                 {# Tableau avec TVA #}
                 <table style="width: 100%;">
                     <tr class="texte-centre">

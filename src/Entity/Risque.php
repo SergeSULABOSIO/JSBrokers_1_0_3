@@ -41,7 +41,7 @@ class Risque
     /**
      * @var Collection<int, Piste>
      */
-    #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'risque')]
+    #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'risque', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $pistes;
 
     /**

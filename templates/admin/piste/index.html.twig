@@ -49,9 +49,10 @@
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.piste.edit', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}">
                                     {% if constante.Piste_isBound(piste) %}
-                                        (bound)
+                                        (bound) 
                                     {% endif %}{{ piste.nom }}
                                 </a><br/>
+                                {{ constante.Piste_getTrancheDiagnostic(piste)|raw }}
                                 {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Piste_getMontant_prime_payable_par_client(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 

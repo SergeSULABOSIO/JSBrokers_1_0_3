@@ -360,6 +360,29 @@ class Constante
     /**
      * PARTENAIRE
      */
+    public function Cotation_getTrancheDiagnostic(?Cotation $cotation)
+    {
+        $totPourcTranches = 0;
+        /**@var Tranche $tranche */
+        foreach ($cotation->getTranches() as $tranche) {
+            $totPourcTranches += $tranche->getPourcentage();
+        }
+        $txt = "";
+        if ($totPourcTranches != 1) {
+            $txt = '<span class="badge text-bg-danger m-2">La somme des tranches n\'est pas égale à 100% (il reste une tranche équivalant à ' . round(((1-$totPourcTranches)*100), 2) . '%)</span><br/>';
+        }
+        return $txt;
+    }
+    public function Piste_getTrancheDiagnostic(?Piste $piste)
+    {
+        /**@var Cotation $cotation */
+        foreach ($piste->getCotations() as $cotation) {
+            if ($this->Cotation_isBound($cotation)) {
+                return $this->Cotation_getTrancheDiagnostic($cotation);
+            }
+        }
+        return "";
+    }
     public function Tranche_getPartenaire(?Tranche $tranche)
     {
         if ($tranche != null) {
@@ -962,6 +985,7 @@ class Constante
         if ($note) {
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
+                    // $montant += $this->Tranche_getMontant_commission_ht($article->getTranche());
                     $montant += $this->ARTICLE_getComHT($article);
                 }
             }
@@ -974,6 +998,7 @@ class Constante
         if ($note) {
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
+                    // $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
                     $montant += $this->ARTICLE_getTaxeAssureur($article);
                 }
             }
@@ -1689,6 +1714,7 @@ class Constante
                                     //On doit s'assurer que l'assureur sur la liste est bien celui qui est dans le panier
                                     if ($tranche->getCotation()->getAssureur()->getId() == $panier->getIdAssureur()) {
                                         $montant = $this->Revenu_getMontant_ttc_tranche($revenu, $tranche);
+                                        // $montant = $this->Tranche_getMontant_commission_ttc($tranche);
                                         if ($montant != 0) {
                                             $tabPostesFacturables[] = [
                                                 "poste" => $revenu->getNom(),
@@ -1712,6 +1738,7 @@ class Constante
                                     //On doit s'assurer que le client sur la liste est bien celui qui est dans le panier
                                     if ($tranche->getCotation()->getPiste()->getClient()->getId() == $panier->getIdClient()) {
                                         $montant = $this->Revenu_getMontant_ttc_tranche($revenu, $tranche);
+                                        // $montant = $this->Tranche_getMontant_commission_ttc($tranche);
                                         if ($montant != 0) {
                                             $tabPostesFacturables[] = [
                                                 "poste" => $revenu->getNom(),
@@ -1783,6 +1810,16 @@ class Constante
         }
         return $tabPostesFacturables;
     }
+    public function Tranche_getPostesFacturablesText(?Tranche $tranche, ?PanierNotes $panier){
+        $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier);
+        // dd($tabPosteFacturables);
+        $str = "<br/><small class='text-secondary m-2'>Postes: ";
+        foreach ($tabPosteFacturables as $posteFacturable) {
+            $str .= '<span class="badge text-bg-secondary m-2">' . $posteFacturable['poste'] . " @ " . number_format($posteFacturable['montantPayable'], 2, ',', ".") . " " . $this->serviceMonnaies->getMonnaieAffichage()->getCode() . '</span>';
+        }
+        return $str . '</small>';
+    }
+
     public function Tranche_isAlreadyInADifferentNote(?Tranche $tranche, $posteFacturable)
     {
         $rep = false;
@@ -3467,7 +3504,9 @@ class Constante
 
     public function ARTICLE_getNomTranche(Article $article)
     {
-        return $article->getTranche()->getNom();
+        /** @var Tranche $tranche */
+        $tranche = $article->getTranche();
+        return $tranche->getNom() . " (" . $tranche->getPourcentage()*100 . "%)";
     }
 
     public function ARTICLE_getCodeRisque(Article $article)
@@ -3518,8 +3557,11 @@ class Constante
         if ($this->Cotation_isBound($cotation)) {
             $primeTTC = $this->Cotation_getMontant_prime_payable_par_client($cotation);
         }
+        // dd($primeTTC);
         return $primeTTC * $article->getTranche()->getPourcentage();
     }
+
+
 
     public function ARTICLE_getPrimeHT(Article $article)
     {
@@ -3597,14 +3639,7 @@ class Constante
 
     public function ARTICLE_getComTTC(Article $article)
     {
-        $taxe = 0;
-        /** @var Cotation $cotation */
-        $cotation = $article->getTranche()->getCotation();
-        if ($this->Cotation_isBound($cotation)) {
-            // $taxe = $this->Cotation_getMontant_commission_ttc($cotation);
-            $taxe = $article->getMontant();
-        }
-        return $taxe * $article->getTranche()->getPourcentage();
+        return $article->getMontant();
     }
 
     public function Taxe_getNomTaxeAssureur()

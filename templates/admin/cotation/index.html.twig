@@ -54,6 +54,7 @@
                                     {% endif %}
                                     {{ constante.Cotation_getRisque(cotation).nomComplet }} de {{ constante.Cotation_getAssureur(cotation).nom }} pour {{ constante.Cotation_getClient(cotation).nom }}<br/>
                                 </a>
+                                {{ constante.Cotation_getTrancheDiagnostic(cotation)|raw }}
                                 {# Section prime #}
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
