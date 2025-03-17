@@ -369,7 +369,7 @@ class Constante
         }
         $txt = "";
         if ($totPourcTranches != 1) {
-            $txt = '<span class="badge text-bg-danger m-2">La somme des tranches n\'est pas égale à 100% (il reste une tranche équivalant à ' . round(((1-$totPourcTranches)*100), 2) . '%)</span><br/>';
+            $txt = '<span class="badge text-bg-danger m-2">La somme des tranches n\'est pas égale à 100% (il reste une tranche équivalant à ' . round(((1 - $totPourcTranches) * 100), 2) . '%)</span><br/>';
         }
         return $txt;
     }
@@ -1721,6 +1721,10 @@ class Constante
                                                 "addressedTo" => Note::TO_ASSUREUR,
                                                 "pourcentage" => $tranche->getPourcentage(),
                                                 "montantPayable" => $montant,
+                                                "montantPaye" => null,
+                                                "montantFacturé" => null,
+                                                "isInvoiced" => null,
+                                                "canInvoice" => null,
                                                 "idCible" => $panier->getIdAssureur(),
                                                 "idPoste" => $revenu->getId(),
                                                 "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
@@ -1745,6 +1749,10 @@ class Constante
                                                 "addressedTo" => Note::TO_CLIENT,
                                                 "pourcentage" => $tranche->getPourcentage(),
                                                 "montantPayable" => $montant,
+                                                "montantPaye" => null,
+                                                "montantFacturé" => null,
+                                                "isInvoiced" => null,
+                                                "canInvoice" => null,
                                                 "idCible" => $panier->getIdClient(),
                                                 "idPoste" => $revenu->getId(),
                                                 "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
@@ -1766,6 +1774,10 @@ class Constante
                                         "addressedTo" => Note::TO_PARTENAIRE,
                                         "pourcentage" => $tranche->getPourcentage(),
                                         "montantPayable" => $montant,
+                                        "montantPaye" => null,
+                                        "montantFacturé" => null,
+                                        "isInvoiced" => null,
+                                        "canInvoice" => null,
                                         "idCible" => $panier->getIdPartenaire(),
                                         "idPoste" => $panier->getIdPartenaire(),
                                         "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
@@ -1785,17 +1797,61 @@ class Constante
                                     Risque::BRANCHE_VIE => false,
                                 };
                                 $montant = $this->serviceTaxes->getMontantTaxeAutorite($net, $isIARD, $autorite);
-                                $tabPostesFacturables[] = [
-                                    "poste" => $autorite->getTaxe()->getCode(),
-                                    "addressedTo" => Note::TO_AUTORITE_FISCALE,
-                                    "pourcentage" => $tranche->getPourcentage(),
-                                    "montantPayable" => $montant,
-                                    "idCible" => $panier->getIdAutoriteFiscale(),
-                                    "idPoste" => $autorite->getTaxe()->getId(),
-                                    "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
-                                    // "idNote" => $panier->getIdNote(),
-                                    "idTranche" => $tranche->getId(),
-                                ];
+
+                                /**
+                                 * Analyse des possibles paiements antérieurs et éventuellement des montants payés
+                                 */
+                                $montantPaye = match ($autorite->getTaxe()->getRedevable()) {
+                                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche),
+                                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche),
+                                };
+                                $isInvoiced = false;
+                                $montantInvoiced = 0;
+                                /** @var Article $article */
+                                foreach ($tranche->getArticles() as $article) {
+                                    $addressedToAutFiscale = $article->getNote()->getAddressedTo() == Note::TO_AUTORITE_FISCALE;
+                                    $samePoste = $autorite->getTaxe()->getId() == $article->getIdPoste();
+                                    
+                                    if ($addressedToAutFiscale == true & $samePoste == true) {
+                                        $isInvoiced = true;
+                                        $montantInvoiced += $article->getMontant();
+                                    }
+                                }
+                                $canInvoice = $montant != $montantInvoiced;
+                                if ($montantInvoiced != 0) {
+                                    // dd(
+                                    //     "poste = " . $autorite->getTaxe()->getCode(),
+                                    //     "addressedTo = " . Note::TO_AUTORITE_FISCALE,
+                                    //     "pourcentage = " . $tranche->getPourcentage(),
+                                    //     "montantPayable = " . $montant,
+                                    //     "montantPaye = " . $montantPaye,
+                                    //     "montantFacturé = " . $montantInvoiced,
+                                    //     "isInvoiced = " . $isInvoiced,
+                                    //     "canInvoice = " . $canInvoice,
+                                    //     "idCible = " . $panier->getIdAutoriteFiscale(),
+                                    //     "idPoste = " . $autorite->getTaxe()->getId(),
+                                    //     "idNote = " . $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                    //     "idTranche = " . $tranche->getId(),
+                                    // );
+                                }
+                                
+
+                                if ($canInvoice == true) {
+                                    $tabPostesFacturables[] = [
+                                        "poste" => $autorite->getTaxe()->getCode(),
+                                        "addressedTo" => Note::TO_AUTORITE_FISCALE,
+                                        "pourcentage" => $tranche->getPourcentage(),
+                                        "montantPayable" => $montant,
+                                        "montantPaye" => $montantPaye,
+                                        "montantFacturé" => $montantInvoiced,
+                                        "isInvoiced" => $isInvoiced,
+                                        "canInvoice" => $canInvoice,
+                                        "idCible" => $panier->getIdAutoriteFiscale(),
+                                        "idPoste" => $autorite->getTaxe()->getId(),
+                                        "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                        "idTranche" => $tranche->getId(),
+                                    ];
+                                }
                             }
                             break;
 
@@ -1810,7 +1866,8 @@ class Constante
         }
         return $tabPostesFacturables;
     }
-    public function Tranche_getPostesFacturablesText(?Tranche $tranche, ?PanierNotes $panier){
+    public function Tranche_getPostesFacturablesText(?Tranche $tranche, ?PanierNotes $panier)
+    {
         $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier);
         // dd($tabPosteFacturables);
         $str = "<br/><small class='text-secondary m-2'>Postes: ";
@@ -3506,7 +3563,7 @@ class Constante
     {
         /** @var Tranche $tranche */
         $tranche = $article->getTranche();
-        return $tranche->getNom() . " (" . $tranche->getPourcentage()*100 . "%)";
+        return $tranche->getNom() . " (" . $tranche->getPourcentage() * 100 . "%)";
     }
 
     public function ARTICLE_getCodeRisque(Article $article)
@@ -3613,7 +3670,7 @@ class Constante
             foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAssureur) {
                 $tauxTaxe += $this->isIARD($cotation) ? $taxeAssureur->getTauxIARD() : $taxeAssureur->getTauxVIE();
             }
-        }else{
+        } else {
             foreach ($this->serviceTaxes->getTaxesPayableParCourtier() as $taxeCourtier) {
                 $tauxTaxe += $this->isIARD($cotation) ? $taxeCourtier->getTauxIARD() : $taxeCourtier->getTauxVIE();
             }
