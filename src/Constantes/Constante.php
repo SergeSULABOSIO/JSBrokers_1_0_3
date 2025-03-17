@@ -1716,20 +1716,39 @@ class Constante
                                         $montant = $this->Revenu_getMontant_ttc_tranche($revenu, $tranche);
                                         // $montant = $this->Tranche_getMontant_commission_ttc($tranche);
                                         if ($montant != 0) {
-                                            $tabPostesFacturables[] = [
-                                                "poste" => $revenu->getNom(),
-                                                "addressedTo" => Note::TO_ASSUREUR,
-                                                "pourcentage" => $tranche->getPourcentage(),
-                                                "montantPayable" => $montant,
-                                                "montantPaye" => null,
-                                                "montantFacturé" => null,
-                                                "isInvoiced" => null,
-                                                "canInvoice" => null,
-                                                "idCible" => $panier->getIdAssureur(),
-                                                "idPoste" => $revenu->getId(),
-                                                "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
-                                                "idTranche" => $tranche->getId(),
-                                            ];
+                                            /**
+                                             * Analyse des possibles paiements antérieurs et éventuellement des montants payés
+                                             */
+                                            $montantPaye = $this->Revenu_getMontant_ttc_collecte($revenu, $tranche);
+                                            $isInvoiced = false;
+                                            $montantInvoiced = 0;
+                                            /** @var Article $article */
+                                            foreach ($tranche->getArticles() as $article) {
+                                                $addressedToAssureur = $article->getNote()->getAddressedTo() == Note::TO_ASSUREUR;
+                                                $samePoste = $revenu->getId() == $article->getIdPoste();
+                                                $inADiffrentNote = $article->getNote()->getId() != $panier->getIdNote();
+                                                if ($addressedToAssureur == true & $samePoste == true && $inADiffrentNote) {
+                                                    $isInvoiced = true;
+                                                    $montantInvoiced += $article->getMontant();
+                                                }
+                                            }
+                                            $canInvoice = $montant != $montantInvoiced;
+                                            if ($canInvoice == true) {
+                                                $tabPostesFacturables[] = [
+                                                    "poste" => $revenu->getNom(),
+                                                    "addressedTo" => Note::TO_ASSUREUR,
+                                                    "pourcentage" => $tranche->getPourcentage(),
+                                                    "montantPayable" => $montant,
+                                                    "montantPaye" => $montantPaye,
+                                                    "montantFacturé" => $montantInvoiced,
+                                                    "isInvoiced" => $isInvoiced,
+                                                    "canInvoice" => $canInvoice,
+                                                    "idCible" => $panier->getIdAssureur(),
+                                                    "idPoste" => $revenu->getId(),
+                                                    "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                                    "idTranche" => $tranche->getId(),
+                                                ];
+                                            }
                                         }
                                     }
                                 }
@@ -1744,21 +1763,39 @@ class Constante
                                         $montant = $this->Revenu_getMontant_ttc_tranche($revenu, $tranche);
                                         // $montant = $this->Tranche_getMontant_commission_ttc($tranche);
                                         if ($montant != 0) {
-                                            $tabPostesFacturables[] = [
-                                                "poste" => $revenu->getNom(),
-                                                "addressedTo" => Note::TO_CLIENT,
-                                                "pourcentage" => $tranche->getPourcentage(),
-                                                "montantPayable" => $montant,
-                                                "montantPaye" => null,
-                                                "montantFacturé" => null,
-                                                "isInvoiced" => null,
-                                                "canInvoice" => null,
-                                                "idCible" => $panier->getIdClient(),
-                                                "idPoste" => $revenu->getId(),
-                                                "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
-                                                // "idNote" => $panier->getIdNote(),
-                                                "idTranche" => $tranche->getId(),
-                                            ];
+                                            /**
+                                             * Analyse des possibles paiements antérieurs et éventuellement des montants payés
+                                             */
+                                            $montantPaye = $this->Revenu_getMontant_ttc_collecte($revenu, $tranche);
+                                            $isInvoiced = false;
+                                            $montantInvoiced = 0;
+                                            /** @var Article $article */
+                                            foreach ($tranche->getArticles() as $article) {
+                                                $addressedToClient = $article->getNote()->getAddressedTo() == Note::TO_CLIENT;
+                                                $samePoste = $revenu->getId() == $article->getIdPoste();
+                                                $inADiffrentNote = $article->getNote()->getId() != $panier->getIdNote();
+                                                if ($addressedToClient == true & $samePoste == true && $inADiffrentNote) {
+                                                    $isInvoiced = true;
+                                                    $montantInvoiced += $article->getMontant();
+                                                }
+                                            }
+                                            $canInvoice = $montant != $montantInvoiced;
+                                            if ($canInvoice == true) {
+                                                $tabPostesFacturables[] = [
+                                                    "poste" => $revenu->getNom(),
+                                                    "addressedTo" => Note::TO_CLIENT,
+                                                    "pourcentage" => $tranche->getPourcentage(),
+                                                    "montantPayable" => $montant,
+                                                    "montantPaye" => $montantPaye,
+                                                    "montantFacturé" => $montantInvoiced,
+                                                    "isInvoiced" => $isInvoiced,
+                                                    "canInvoice" => $canInvoice,
+                                                    "idCible" => $panier->getIdClient(),
+                                                    "idPoste" => $revenu->getId(),
+                                                    "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                                    "idTranche" => $tranche->getId(),
+                                                ];
+                                            }
                                         }
                                     }
                                 }
@@ -1769,21 +1806,39 @@ class Constante
                             if ($this->Tranche_getPartenaire($tranche)->getId() == $panier->getIdPartenaire()) {
                                 $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche);
                                 if ($montant != 0) {
-                                    $tabPostesFacturables[] = [
-                                        "poste" => "Rétrocommission",
-                                        "addressedTo" => Note::TO_PARTENAIRE,
-                                        "pourcentage" => $tranche->getPourcentage(),
-                                        "montantPayable" => $montant,
-                                        "montantPaye" => null,
-                                        "montantFacturé" => null,
-                                        "isInvoiced" => null,
-                                        "canInvoice" => null,
-                                        "idCible" => $panier->getIdPartenaire(),
-                                        "idPoste" => $panier->getIdPartenaire(),
-                                        "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
-                                        // "idNote" => $panier->getIdNote(),
-                                        "idTranche" => $tranche->getId(),
-                                    ];
+                                    /**
+                                     * Analyse des possibles paiements antérieurs et éventuellement des montants payés
+                                     */
+                                    $montantPaye = $this->Tranche_getMontant_retrocommissions_payable_par_courtier_payee($tranche);
+                                    $isInvoiced = false;
+                                    $montantInvoiced = 0;
+                                    /** @var Article $article */
+                                    foreach ($tranche->getArticles() as $article) {
+                                        $addressedToPartenaire = $article->getNote()->getAddressedTo() == Note::TO_PARTENAIRE;
+                                        $samePoste = $panier->getIdPartenaire() == $article->getIdPoste();
+                                        $inADiffrentNote = $article->getNote()->getId() != $panier->getIdNote();
+                                        if ($addressedToPartenaire == true & $samePoste == true && $inADiffrentNote) {
+                                            $isInvoiced = true;
+                                            $montantInvoiced += $article->getMontant();
+                                        }
+                                    }
+                                    $canInvoice = $montant != $montantInvoiced;
+                                    if ($canInvoice == true) {
+                                        $tabPostesFacturables[] = [
+                                            "poste" => "Rétrocommission",
+                                            "addressedTo" => Note::TO_PARTENAIRE,
+                                            "pourcentage" => $tranche->getPourcentage(),
+                                            "montantPayable" => $montant,
+                                            "montantPaye" => $montantPaye,
+                                            "montantFacturé" => $montantInvoiced,
+                                            "isInvoiced" => $isInvoiced,
+                                            "canInvoice" => $canInvoice,
+                                            "idCible" => $panier->getIdPartenaire(),
+                                            "idPoste" => $panier->getIdPartenaire(),
+                                            "idNote" => $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
+                                            "idTranche" => $tranche->getId(),
+                                        ];
+                                    }
                                 }
                             }
                             break;
@@ -1811,30 +1866,13 @@ class Constante
                                 foreach ($tranche->getArticles() as $article) {
                                     $addressedToAutFiscale = $article->getNote()->getAddressedTo() == Note::TO_AUTORITE_FISCALE;
                                     $samePoste = $autorite->getTaxe()->getId() == $article->getIdPoste();
-                                    
-                                    if ($addressedToAutFiscale == true & $samePoste == true) {
+                                    $inADiffrentNote = $article->getNote()->getId() != $panier->getIdNote();
+                                    if ($addressedToAutFiscale == true & $samePoste == true && $inADiffrentNote) {
                                         $isInvoiced = true;
                                         $montantInvoiced += $article->getMontant();
                                     }
                                 }
                                 $canInvoice = $montant != $montantInvoiced;
-                                if ($montantInvoiced != 0) {
-                                    // dd(
-                                    //     "poste = " . $autorite->getTaxe()->getCode(),
-                                    //     "addressedTo = " . Note::TO_AUTORITE_FISCALE,
-                                    //     "pourcentage = " . $tranche->getPourcentage(),
-                                    //     "montantPayable = " . $montant,
-                                    //     "montantPaye = " . $montantPaye,
-                                    //     "montantFacturé = " . $montantInvoiced,
-                                    //     "isInvoiced = " . $isInvoiced,
-                                    //     "canInvoice = " . $canInvoice,
-                                    //     "idCible = " . $panier->getIdAutoriteFiscale(),
-                                    //     "idPoste = " . $autorite->getTaxe()->getId(),
-                                    //     "idNote = " . $panier->getIdNote() == null ? -1 : $panier->getIdNote(),
-                                    //     "idTranche = " . $tranche->getId(),
-                                    // );
-                                }
-                                
 
                                 if ($canInvoice == true) {
                                     $tabPostesFacturables[] = [
