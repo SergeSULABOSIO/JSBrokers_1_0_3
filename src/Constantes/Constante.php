@@ -1023,6 +1023,8 @@ class Constante
         return $nomsTaxesAssureurs;
     }
 
+
+
     public function Note_getMontant_solde(?Note $note): float
     {
         $solde = $this->Note_getMontant_payable($note) - $this->Note_getMontant_paye($note);
@@ -1043,6 +1045,51 @@ class Constante
         }
         return $montant;
     }
+    public function Note_getMontant_commissions_ht(?Note $note)
+    {
+        $com_ht = 0;
+        if ($note != null) {
+            /** @var Article $article */
+            foreach ($note->getArticles() as $article) {
+                $com_ht += $this->Tranche_getMontant_commission_ht($article->getTranche());
+                // dd($article);
+            }
+        }
+        return round($com_ht, 2);
+    }
+
+    public function Note_toStringTaxeFacturee(?Note $note)
+    {
+        /**@var Taxe $taxe */
+        $taxe = $this->Note_getTaxeFacturee($note);
+        if ($taxe != null) {
+            $txt = "";
+            if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
+                $txt = $taxe->getCode() . " (" . ($taxe->getTauxIARD() * 100) . "%)";
+            } else {
+                $txt = $taxe->getCode() . " (Iard@" . ($taxe->getTauxIARD() * 100) . "%) & (Vie@" . ($taxe->getTauxVIE() * 100) . "%)";
+            }
+            return $txt;
+        } else {
+            return null;
+        }
+    }
+
+    public function Note_getTaxeFacturee(?Note $note): Taxe
+    {
+        /** @var Taxe $taxe */
+        $taxe = null;
+        if ($note->getAddressedTo() == note::TO_AUTORITE_FISCALE) {
+            /** @var Article $article */
+            foreach ($note->getArticles() as $article) {
+                $taxe = $this->taxeRepository->find($article->getIdPoste());
+                // dd($article, $taxe);
+                break;
+            }
+        }
+        return $taxe;
+    }
+
     public function Note_getNameOfAddressedTo(?Note $note): string
     {
         if ($note) {
