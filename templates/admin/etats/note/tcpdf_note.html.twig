@@ -295,6 +295,47 @@
                     </tr>
                 </table>
             {% endif %}
+            {% if note.addressedto == 2 %}
+                {# VERS INTERMEDIAIRE OU PARTENAIRE OU APPORTEUR D'AFFAIRES #}
+                <table style="width: 100%;">
+                    <tr class="texte-centre">
+                        <td></td>
+                        <td class="thead bordure">Description</td>
+                        <td class="thead bordure">Valeur</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td class="texte-gauche bordure">Commission Hors Taxe</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_commissions_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td class="texte-gauche bordure">{{ constante.Note_toStringPartenaireFacture(note) }}</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_Retrocom(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td class="texte-gauche bordure gras">Montant prêt à payer</td>
+                        <td class="texte-droite bordure gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td class="texte-gauche bordure">Montant Payé</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td class="thead texte-gauche bordure">Solde dû à {{ constante.Note_getNameOfAddressedTo(note) }}</td>
+                        <td class="thead texte-droite bordure">{{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                </table>
+            {% endif %}
         </div>
 
 
