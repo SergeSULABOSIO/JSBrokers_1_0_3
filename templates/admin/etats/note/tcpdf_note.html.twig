@@ -265,19 +265,19 @@
                     </tr>
                     <tr>
                         <td></td>
-                        <td class="texte-gauche bordure">Commission HT</td>
+                        <td class="texte-gauche bordure">Commission Hors Taxe</td>
                         <td class="texte-droite bordure">{{ constante.Note_getMontant_commissions_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>
                         <td></td>
-                        <td class="texte-gauche bordure">{{ constante.Note_toStringTaxeFacturee(note) }}</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-gauche bordure">{{ constante.Note_toStringTaxeFacturee(note) }} dûe</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_taxe_facturee(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>
                         <td></td>
-                        <td class="texte-gauche bordure gras">Montant Payable</td>
+                        <td class="texte-gauche bordure gras">Montant prêt à payer</td>
                         <td class="texte-droite bordure gras">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>

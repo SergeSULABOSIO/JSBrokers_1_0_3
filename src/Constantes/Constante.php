@@ -1058,6 +1058,23 @@ class Constante
         return round($com_ht, 2);
     }
 
+    public function Note_getMontant_taxe_facturee(?Note $note)
+    {
+        $montantTaxe = 0;
+        /** @var Taxe $taxe */
+        $taxe = $this->Note_getTaxeFacturee($note);
+        if ($note != null && $taxe != null) {
+            /** @var Article $article */
+            foreach ($note->getArticles() as $article) {
+                $montantTaxe += match ($taxe->getRedevable()) {
+                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche()),
+                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche()),
+                };
+            }
+        }
+        return round($montantTaxe, 2);
+    }
+
     public function Note_toStringTaxeFacturee(?Note $note)
     {
         /**@var Taxe $taxe */
