@@ -62,7 +62,7 @@ class Note
     /**
      * @var Collection<int, Paiement>
      */
-    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'note', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'note', cascade: ['detach', 'refresh', 'persist', 'remove'], orphanRemoval: true)]
     private Collection $paiements;
 
     #[ORM\Column(length: 255)]
