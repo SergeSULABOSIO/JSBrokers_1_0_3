@@ -989,6 +989,8 @@ class Constante
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     // $montant += $this->Tranche_getMontant_commission_ht($article->getTranche());
                     $montant += $this->ARTICLE_getComHT($article);
+                }else if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
+                    $montant += $this->ARTICLE_getComHT($article);
                 }
             }
         }
@@ -1002,6 +1004,9 @@ class Constante
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     // $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
                     $montant += $this->ARTICLE_getTaxeAssureur($article);
+                } else if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
+                    // $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
+                    $montant += $this->ARTICLE_getMontantTaxeFacturee($article);
                 }
             }
         }
@@ -3811,8 +3816,21 @@ class Constante
 
     public function ARTICLE_getComHT(Article $article)
     {
-        $comTTC = $this->ARTICLE_getComTTC($article);
-        $res = ($comTTC / ($this->getTauxTaxe($article->getTranche()->getCotation(), true) + 1));
+        /** @var Note $note */
+        $note = $article->getNote();
+        $res = 0;
+        if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
+            /** @var Taxe $taxeFacturee */
+            $taxeFacturee = $this->Note_getTaxeFacturee($article->getNote());
+            $res = match ($article->getTranche()->getCotation()->getPiste()->getRisque()->getBranche()) {
+                Risque::BRANCHE_IARD_OU_NON_VIE => ($article->getMontant() / $taxeFacturee->getTauxIARD()),
+                Risque::BRANCHE_VIE => ($article->getMontant() / $taxeFacturee->getTauxVIE()),
+            };
+        } else if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
+            $comTTC = $this->ARTICLE_getComTTC($article);
+            $res = ($comTTC / ($this->getTauxTaxe($article->getTranche()->getCotation(), true) + 1));
+        }
+
         return round($res);
     }
 
@@ -3855,7 +3873,7 @@ class Constante
             $note = $article->getNote();
             /** @var Taxe $taxe */
             $taxe = $this->Note_getTaxeFacturee($note);
-            
+
             if ($note != null && $taxe != null) {
                 $montantTaxe = match ($taxe->getRedevable()) {
                     Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche()),
