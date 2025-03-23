@@ -34,7 +34,7 @@
                 <td class="texte_droite">{{ constante.ARTICLE_getFronting(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                 <td class="texte_droite">{{ constante.ARTICLE_getTauxComHT(article) }}</td>
                 <td class="texte_droite">{{ constante.ARTICLE_getComHT(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
-                <td class="texte_droite">{{ constante.ARTICLE_getTaxeAssureur(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                <td class="texte_droite">{{ constante.ARTICLE_getMontantTaxeFacturee(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                 {# <td class="texte_droite">{{ constante.ARTICLE_getComTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td> #}
             </tr>
             {% set item = item + 1 %}
