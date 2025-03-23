@@ -1113,7 +1113,7 @@ class Constante
         /** @var Partenaire $partenaire */
         $partenaire = $this->Note_getPartenaireFacture($note);
         if ($partenaire != null) {
-            $txt = "Rétrocom. " . $partenaire->getNom() . " " . ($partenaire->getPart() != 0 ? "(". ($partenaire->getPart()*100) . "%)" : "");
+            $txt = "Rétrocom. " . $partenaire->getNom() . " " . ($partenaire->getPart() != 0 ? "(" . ($partenaire->getPart() * 100) . "%)" : "");
             return $txt;
         } else {
             return null;
@@ -3845,6 +3845,29 @@ class Constante
     {
         $taxe = $this->ARTICLE_getComHT($article) * $this->getTauxTaxe($article->getTranche()->getCotation(), false);
         return round($taxe, 2);
+    }
+
+    public function ARTICLE_getMontantTaxeFacturee(Article $article)
+    {
+        $montantTaxe = 0;
+        if ($article != null) {
+            /** @var Note $note */
+            $note = $article->getNote();
+            /** @var Taxe $taxe */
+            $taxe = $this->Note_getTaxeFacturee($note);
+
+            if ($note != null && $taxe != null) {
+                /** @var Article $article */
+                foreach ($note->getArticles() as $article) {
+                    $montantTaxe += match ($taxe->getRedevable()) {
+                        Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche()),
+                        Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche()),
+                    };
+                }
+            }
+        }
+
+        return round($montantTaxe, 2);
     }
 
     public function ARTICLE_getComTTC(Article $article)
