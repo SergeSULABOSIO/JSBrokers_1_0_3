@@ -130,6 +130,9 @@
         {% if note.addressedto == 3 %}{# Client #}
             {% include 'admin/etats/note/tabs/tab_tax.html.twig' %}
         {% endif %}
+        {% if note.addressedto == 2 %}{# Partenaire #}
+            {% include 'admin/etats/note/tabs/tab_retrocom.html.twig' %}
+        {% endif %}
 
     </body>
 </html>

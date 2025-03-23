@@ -4,18 +4,18 @@
         <tr class="texte_centre">
             <td class="thead" style="width: 3%;">N°</td>
             <td class="thead" style="width: 11%;">REF. POLICE</td>
-            <td class="thead" style="width: 8%;">TRANCHE</td>
+            <td class="thead" style="width: 7.5%;">TRANCHE</td>
             <td class="thead" style="width: 6%;">PRODUIT</td>
             <td class="thead" style="width: 4%;">AVEN.</td>
             <td class="thead" style="width: 9.5%;">PERIODE</td>
-            <td class="thead" style="width: 13%;">CLIENT</td>
+            <td class="thead" style="width: 11%;">CLIENT</td>
             <td class="thead" style="width: 8%;">PRIME TTC</td>
             <td class="thead" style="width: 8%;">PRIME HT</td>
-            <td class="thead" style="width: 8%;">FRONTING</td>
             <td class="thead" style="width: 4%;">TAUX</td>
-            <td class="thead" style="width: 8%;">COM. HT</td>
-            <td class="thead" style="width: 8%;">{{ constante.Note_toStringTaxeFacturee(note) }}</td>
-            {# <td class="thead" style="width: 8%;">{{ constante.Taxe_getNomTaxeAssureur }}</td> #}
+            <td class="thead" style="width: 7%;">COM. HT</td>
+            <td class="thead" style="width: 7%;">{{ constante.Note_getNames_taxes_courtier }}</td>
+            <td class="thead" style="width: 7%;">ASSIETTE</td>
+            <td class="thead" style="width: 7%;">{{ constante.Note_getPartenaireFacture(note).nom }}</td>
             {# <td class="thead" style="width: 7%;">COM. TTC</td> #}
         </tr>
         {# Contenu ou corps du tableau #}
@@ -31,11 +31,11 @@
                 <td class="">{{ constante.ARTICLE_getNomClient(article) }}</td>
                 <td class="texte_droite">{{ constante.ARTICLE_getPrimeTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                 <td class="texte_droite">{{ constante.ARTICLE_getPrimeHT(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
-                <td class="texte_droite">{{ constante.ARTICLE_getFronting(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                 <td class="texte_droite">{{ constante.ARTICLE_getTauxComHT(article) }}</td>
                 <td class="texte_droite">{{ constante.ARTICLE_getComHT(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
-                <td class="thead texte_droite">{{ constante.ARTICLE_getMontantTaxeFacturee(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
-                {# <td class="texte_droite">{{ constante.ARTICLE_getComTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td> #}
+                <td class="texte_droite">{{ constante.ARTICLE_getTaxeCourtier(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                <td class="texte_droite">{{ constante.ARTICLE_getAssiette(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                <td class="thead texte_droite">{{ constante.ARTICLE_getComTTC(article)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
             </tr>
             {% set item = item + 1 %}
         {% endfor %}
@@ -50,11 +50,11 @@
             <td class="thead"></td>
             <td class="thead texte_droite">{{ constante.Note_getMontant_prime_ttc(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
             <td class="thead texte_droite">{{ constante.Note_getMontant_prime_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
-            <td class="thead texte_droite">{{ constante.Note_getMontant_fronting(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
             <td class="thead texte_droite"></td>
             <td class="thead texte_droite">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
             <td class="thead texte_droite">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
-            {# <td class="thead texte_droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td> #}
+            <td class="thead texte_droite">{{ constante.Note_getAssiette(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
+            <td class="thead texte_droite">{{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en')}}</td>
         </tr>
     </table>
 </div>
