@@ -2249,7 +2249,7 @@ class Constante
      */
     public function Tranche_getMontant_commission_pure(?Tranche $tranche, $addressedTo, bool $onlySharable): float
     {
-        dd($onlySharable);
+        // dd($onlySharable);
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
