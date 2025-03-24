@@ -451,12 +451,12 @@ class Constante
         }
         return $partenaires;
     }
-    public function Groupe_getMontant_retrocommissions_payable_par_courtier(?Groupe $groupe, ?Partenaire $partenaireCible): float
+    public function Groupe_getMontant_retrocommissions_payable_par_courtier(?Groupe $groupe, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
     {
         $tot = 0;
         if ($groupe != null) {
             foreach ($groupe->getClients() as $client) {
-                $tot += $this->Client_getMontant_retrocommissions_payable_par_courtier($client, $partenaireCible);
+                $tot += $this->Client_getMontant_retrocommissions_payable_par_courtier($client, $partenaireCible, $addressedTo, $onlySharable);
             }
         }
         return $tot;
@@ -471,9 +471,9 @@ class Constante
         }
         return $tot;
     }
-    public function Groupe_getMontant_retrocommissions_payable_par_courtier_solde(?Groupe $groupe, ?Partenaire $partenaireCible): float
+    public function Groupe_getMontant_retrocommissions_payable_par_courtier_solde(?Groupe $groupe, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
     {
-        $tot = $this->Groupe_getMontant_retrocommissions_payable_par_courtier($groupe, $partenaireCible) - $this->Groupe_getMontant_retrocommissions_payable_par_courtier_payee($groupe, $partenaireCible);
+        $tot = $this->Groupe_getMontant_retrocommissions_payable_par_courtier($groupe, $partenaireCible, $addressedTo, $onlySharable) - $this->Groupe_getMontant_retrocommissions_payable_par_courtier_payee($groupe, $partenaireCible);
         return round($tot, 4);
     }
     public function Groupe_getMontant_prime_payable_par_client(?Groupe $groupe): float
@@ -521,12 +521,12 @@ class Constante
         }
         return $tot;
     }
-    public function Groupe_getMontant_commission_ttc(?Groupe $groupe): float
+    public function Groupe_getMontant_commission_ttc(?Groupe $groupe, $addressedTo, bool $onlySharable): float
     {
         $tot = 0;
         if ($groupe != null) {
             foreach ($groupe->getClients() as $client) {
-                $tot += $this->Client_getMontant_commission_ttc($client);
+                $tot += $this->Client_getMontant_commission_ttc($client, $addressedTo, $onlySharable);
             }
         }
         return $tot;
@@ -541,17 +541,17 @@ class Constante
         }
         return $tot;
     }
-    public function Groupe_getMontant_commission_ttc_solde(?Groupe $groupe): float
+    public function Groupe_getMontant_commission_ttc_solde(?Groupe $groupe, $addressedTo, bool $onlySharable): float
     {
-        $tot = $this->Groupe_getMontant_commission_ttc($groupe) - $this->Groupe_getMontant_commission_ttc_collectee($groupe);
+        $tot = $this->Groupe_getMontant_commission_ttc($groupe, $addressedTo, $onlySharable) - $this->Groupe_getMontant_commission_ttc_collectee($groupe);
         return round($tot, 4);
     }
-    public function Groupe_getMontant_taxe_payable_par_assureur(?Groupe $groupe): float
+    public function Groupe_getMontant_taxe_payable_par_assureur(?Groupe $groupe, bool $onlySharable): float
     {
         $tot = 0;
         if ($groupe != null) {
             foreach ($groupe->getClients() as $client) {
-                $tot += $this->Client_getMontant_taxe_payable_par_assureur($client);
+                $tot += $this->Client_getMontant_taxe_payable_par_assureur($client, $onlySharable);
             }
         }
         return $tot;
@@ -566,17 +566,17 @@ class Constante
         }
         return $tot;
     }
-    public function Groupe_getMontant_taxe_payable_par_assureur_solde(?Groupe $groupe): float
+    public function Groupe_getMontant_taxe_payable_par_assureur_solde(?Groupe $groupe, bool $onlySharable): float
     {
-        $tot = $this->Groupe_getMontant_taxe_payable_par_assureur($groupe) - $this->Groupe_getMontant_taxe_payable_par_assureur_payee($groupe);
+        $tot = $this->Groupe_getMontant_taxe_payable_par_assureur($groupe, $onlySharable) - $this->Groupe_getMontant_taxe_payable_par_assureur_payee($groupe);
         return round($tot, 4);
     }
-    public function Groupe_getMontant_taxe_payable_par_courtier(?Groupe $groupe): float
+    public function Groupe_getMontant_taxe_payable_par_courtier(?Groupe $groupe, bool $onlySharable): float
     {
         $tot = 0;
         if ($groupe != null) {
             foreach ($groupe->getClients() as $client) {
-                $tot += $this->Client_getMontant_taxe_payable_par_courtier($client);
+                $tot += $this->Client_getMontant_taxe_payable_par_courtier($client, $onlySharable);
             }
         }
         return $tot;
@@ -591,9 +591,9 @@ class Constante
         }
         return $tot;
     }
-    public function Groupe_getMontant_taxe_payable_par_courtier_solde(?Groupe $groupe): float
+    public function Groupe_getMontant_taxe_payable_par_courtier_solde(?Groupe $groupe, bool $onlySharable): float
     {
-        $tot = $this->Groupe_getMontant_taxe_payable_par_courtier($groupe) - $this->Groupe_getMontant_taxe_payable_par_courtier_payee($groupe);
+        $tot = $this->Groupe_getMontant_taxe_payable_par_courtier($groupe, $onlySharable) - $this->Groupe_getMontant_taxe_payable_par_courtier_payee($groupe);
         return round($tot, 4);
     }
 
