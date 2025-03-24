@@ -2249,7 +2249,7 @@ class Constante
      */
     public function Tranche_getMontant_commission_pure(?Tranche $tranche, $addressedTo, bool $onlySharable): float
     {
-        // dd($onlySharable);
+        dd($onlySharable);
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
@@ -3324,7 +3324,7 @@ class Constante
         }
         return $tot;
     }
-    public function Piste_getMontant_commission_pure(?Piste $piste)
+    public function Piste_getMontant_commission_pure(?Piste $piste, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3332,14 +3332,14 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_pure($cotation);
+                        $tot += $this->Cotation_getMontant_commission_pure($cotation, $addressedTo, $onlySharable);
                     }
                 }
             }
         }
         return $tot;
     }
-    public function Piste_getMontant_commission_ht(?Piste $piste)
+    public function Piste_getMontant_commission_ht(?Piste $piste, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3347,14 +3347,14 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_ht($cotation);
+                        $tot += $this->Cotation_getMontant_commission_ht($cotation, $addressedTo, $onlySharable);
                     }
                 }
             }
         }
         return $tot;
     }
-    public function Piste_getMontant_commission_ttc(?Piste $piste)
+    public function Piste_getMontant_commission_ttc(?Piste $piste, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3362,7 +3362,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_ttc($cotation);
+                        $tot += $this->Cotation_getMontant_commission_ttc($cotation, $addressedTo, $onlySharable);
                     }
                 }
             }
@@ -3384,7 +3384,7 @@ class Constante
         }
         return $tot;
     }
-    public function Piste_getMontant_commission_ttc_solde(?Piste $piste)
+    public function Piste_getMontant_commission_ttc_solde(?Piste $piste, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3392,14 +3392,14 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_ttc_solde($cotation);
+                        $tot += $this->Cotation_getMontant_commission_ttc_solde($cotation, $addressedTo, $onlySharable);
                     }
                 }
             }
         }
         return $tot;
     }
-    public function Piste_getMontant_taxe_payable_par_assureur(?Piste $piste)
+    public function Piste_getMontant_taxe_payable_par_assureur(?Piste $piste, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3407,7 +3407,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur($cotation);
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur($cotation, $onlySharable);
                     }
                 }
             }
@@ -3429,7 +3429,7 @@ class Constante
         }
         return $tot;
     }
-    public function Piste_getMontant_taxe_payable_par_assureur_solde(?Piste $piste)
+    public function Piste_getMontant_taxe_payable_par_assureur_solde(?Piste $piste, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3437,14 +3437,14 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_solde($cotation);
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_solde($cotation, $onlySharable);
                     }
                 }
             }
         }
         return $tot;
     }
-    public function Piste_getMontant_taxe_payable_par_courtier(?Piste $piste)
+    public function Piste_getMontant_taxe_payable_par_courtier(?Piste $piste, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3452,7 +3452,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier($cotation);
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, $onlySharable);
                     }
                 }
             }
@@ -3474,7 +3474,7 @@ class Constante
         }
         return $tot;
     }
-    public function Piste_getMontant_taxe_payable_par_courtier_solde(?Piste $piste)
+    public function Piste_getMontant_taxe_payable_par_courtier_solde(?Piste $piste, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3482,14 +3482,14 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_solde($cotation);
+                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_solde($cotation, $onlySharable);
                     }
                 }
             }
         }
         return $tot;
     }
-    public function Piste_getMontant_retrocommissions_payable_par_courtier(?Piste $piste, ?Partenaire $partenaire = null)
+    public function Piste_getMontant_retrocommissions_payable_par_courtier(?Piste $piste, ?Partenaire $partenaire, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3497,7 +3497,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaire);
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaire, $addressedTo, $onlySharable);
                     }
                 }
             }
@@ -3519,7 +3519,7 @@ class Constante
         }
         return $tot;
     }
-    public function Piste_getMontant_retrocommissions_payable_par_courtier_solde(?Piste $piste, ?Partenaire $partenaireCible)
+    public function Piste_getMontant_retrocommissions_payable_par_courtier_solde(?Piste $piste, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($piste) {
@@ -3527,7 +3527,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_solde($cotation, $partenaireCible);
+                        $tot += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_solde($cotation, $partenaireCible, $addressedTo, $onlySharable);
                     }
                 }
             }

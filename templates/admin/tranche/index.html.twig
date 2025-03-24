@@ -118,7 +118,8 @@
                                 {% if partenaire %}
                                     {# Retro-commission #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire }}: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier(tranche, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Assiette: {{ constante.Tranche_getMontant_commission_pure(tranche, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier(tranche, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_payee(tranche, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
 										{% if constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche, partenaire, -1, true) != 0 %}
