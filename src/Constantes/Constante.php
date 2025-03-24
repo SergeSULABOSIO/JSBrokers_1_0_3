@@ -1331,7 +1331,7 @@ class Constante
         }
         return $tot;
     }
-    public function Type_revenu_getMontant_pure(?TypeRevenu $typeRevenu): float
+    public function Type_revenu_getMontant_pure(?TypeRevenu $typeRevenu, bool $onlySharable): float
     {
         // dd($typeRevenu);
         $tot = 0;
@@ -1341,7 +1341,7 @@ class Constante
                 // dd("Jai du contenu");
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_pure($revenu);
+                    $tot += $this->Revenu_getMontant_pure($revenu, $onlySharable);
                 }
             }
         }
@@ -1569,10 +1569,20 @@ class Constante
         return $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
     }
 
-    public function Revenu_getMontant_pure(?RevenuPourCourtier $revenu): float
+    public function Revenu_getMontant_pure(?RevenuPourCourtier $revenu, bool $onlySharable): float
     {
-        $comNette = $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
-        $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $this->isIARD($revenu->getCotation()), false);
+        $comNette = 0;
+        $taxeCourtier = 0;
+
+        if ($onlySharable == true) {
+            if ($revenu->getTypeRevenu()->isShared() == true) {
+                $comNette = $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
+                $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $this->isIARD($revenu->getCotation()), false);
+            }
+        } else {
+            $comNette = $this->Cotation_getMontant_commission($revenu->getTypeRevenu(), $revenu, $revenu->getCotation());
+            $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $this->isIARD($revenu->getCotation()), false);
+        }
         return $comNette - $taxeCourtier;
     }
     public function Revenu_getMontant_taxe_payable_par_assureur(?RevenuPourCourtier $revenu): float
@@ -1634,7 +1644,13 @@ class Constante
         $montant = 0;
         if ($revenu != null) {
             if ($revenu->getCotation() != null) {
-                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+                if ($onlySharable == true) {
+                    if ($revenu->getTypeRevenu()->isShared() == true) {
+                        $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+                    }
+                } else {
+                    $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+                }
             }
         }
         return $montant;
@@ -2260,7 +2276,7 @@ class Constante
     }
 
 
-    
+
     public function Tranche_getMontant_commission_ttc(?Tranche $tranche, ?int $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
@@ -2281,16 +2297,16 @@ class Constante
         }
         return $montant;
     }
-    public function Tranche_getPanierStatus(Tranche $tranche, PanierNotes $panier, $addressedTo, bool $onlySharable)
+    public function Tranche_getPanierStatus(Tranche $tranche, PanierNotes $panier)
     {
         /**
          * -1 = N'est pas eligible pour le panier
          * 0 = est éligible pour le panier et peut y être ajouté
          * 1 = est éligible pour le panier et mais ne peut plys y être ajouté car déjà dans le panier
          */
-        // dd($panier, $tranche);
+        // dd($panier);
         if ($panier != null && $tranche != null) {
-            $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier, $addressedTo, $onlySharable);
+            $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier, -1, false);
 
             if (count($tabPosteFacturables) != 0) {
                 foreach ($tabPosteFacturables as $posteFacturable) {

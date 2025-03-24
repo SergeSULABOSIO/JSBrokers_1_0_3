@@ -57,7 +57,7 @@
                                 </a><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Revenu_getMontant_pure(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">Com. pure: {{ constante.Revenu_getMontant_pure(revenucourtier, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Com. ht: {{ constante.Revenu_getMontant_ht(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary fw-bold"> • C. totale: {{ constante.Revenu_getMontant_ttc(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Payée: {{ constante.Revenu_getMontant_ttc_collecte(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
@@ -97,13 +97,14 @@
                                 {% if partenaire != null %}
                                     {# Retro-commission #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Assiette: {{ constante.Revenu_getMontant_pure(revenucourtier, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_payee(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
-										{% if constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire, -1, false) != 0 %}
+										{% if constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire, -1, true) != 0 %}
                                     		{% set couleur = "text-danger" %}
 										{% endif %}
-										<span class="{{couleur}}"> • Solde dû: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+										<span class="{{couleur}}"> • Solde dû: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         {% if constante.Cotation_hasConditionsSpeciales(revenucourtier.cotation) %}
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(revenucourtier.cotation) }}).</span>
                                         {% endif %}

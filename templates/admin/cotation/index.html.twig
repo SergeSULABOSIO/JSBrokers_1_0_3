@@ -107,6 +107,7 @@
                                 {% if partenaire != null %}
                                     {# Retro-commission #}
                                     <small class="m-2">
+                                        <span class="text-secondary">Assiette: {{ constante.Cotation_getMontant_commission_pure(cotation, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary">Rétro-com dûe à {{ partenaire }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(cotation, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(cotation, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}

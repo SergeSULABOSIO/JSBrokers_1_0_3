@@ -120,13 +120,14 @@
                                     {# Retro-commission #}
                                     {% if partenaire != null %}
                                         <small class="m-2">
-                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier(client, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">Assiette: {{ constante.Client_getMontant_commission_pure(client, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier(client, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • Rétro-com payée: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_payee(client, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, false) != 0 %}
+                                            {% if constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, true) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         </small><br>
                                     {% endif %}
                                 {% endfor %}

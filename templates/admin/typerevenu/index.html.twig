@@ -75,7 +75,7 @@
                                 </small><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Type_revenu_getMontant_pure(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">Com. pure: {{ constante.Type_revenu_getMontant_pure(typerevenu, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Com. ht: {{ constante.Type_revenu_getMontant_ht(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary fw-bold"> • C. totale: {{ constante.Type_revenu_getMontant_ttc(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Payée: {{ constante.Type_revenu_getMontant_ttc_collecte(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
@@ -115,13 +115,14 @@
                                     {# Retro-commission #}
                                     {% if partenaire != null %}
                                         <small class="m-2">
-                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier(typerevenu, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">Assiette: {{ constante.Type_revenu_getMontant_pure(typerevenu, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier(typerevenu, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • Rétro-com payée: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(typerevenu, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu, partenaire, -1, false) != 0 %}
+                                            {% if constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu, partenaire, -1, true) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         </small><br>
                                     {% endif %}
                                 {% endfor %}
