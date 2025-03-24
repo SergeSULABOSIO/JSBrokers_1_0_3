@@ -981,36 +981,36 @@ class Constante
     /**
      * NOTE - NOTE DE DEBIT OU NOTE DE CREDIT
      */
-    public function Note_getMontant_ht(?Note $note): float
+    public function Note_getMontant_ht(?Note $note, $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     // $montant += $this->Tranche_getMontant_commission_ht($article->getTranche());
-                    $montant += $this->ARTICLE_getComHT($article);
+                    $montant += $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable);
                 } else if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
-                    $montant += $this->ARTICLE_getComHT($article);
+                    $montant += $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable);
                 } else if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $this->ARTICLE_getComHT($article);
+                    $montant += $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable);
                 }
             }
         }
         return $montant;
     }
-    public function Note_getMontant_taxes(?Note $note): float
+    public function Note_getMontant_taxes(?Note $note, $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     // $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
-                    $montant += $this->ARTICLE_getTaxeAssureur($article);
+                    $montant += $this->ARTICLE_getTaxeAssureur($article, $addressedTo, $onlySharable);
                 } else if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
                     // $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
-                    $montant += $this->ARTICLE_getMontantTaxeFacturee($article);
+                    $montant += $this->ARTICLE_getMontantTaxeFacturee($article, $onlySharable);
                 } else if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $this->ARTICLE_getTaxeCourtier($article);
+                    $montant += $this->ARTICLE_getTaxeCourtier($article, $addressedTo, $onlySharable);
                 }
             }
         }
@@ -1074,20 +1074,20 @@ class Constante
         }
         return $montant;
     }
-    public function Note_getMontant_commissions_ht(?Note $note)
+    public function Note_getMontant_commissions_ht(?Note $note, $addressedTo, bool $onlySharable)
     {
         $com_ht = 0;
         if ($note != null) {
             /** @var Article $article */
             foreach ($note->getArticles() as $article) {
-                $com_ht += $this->Tranche_getMontant_commission_ht($article->getTranche());
+                $com_ht += $this->Tranche_getMontant_commission_ht($article->getTranche(), $addressedTo, $onlySharable);
                 // dd($article);
             }
         }
         return round($com_ht, 2);
     }
 
-    public function Note_getMontant_taxe_facturee(?Note $note)
+    public function Note_getMontant_taxe_facturee(?Note $note, $addressedTo, bool $onlySharable)
     {
         $montantTaxe = 0;
         /** @var Taxe $taxe */
@@ -1096,8 +1096,8 @@ class Constante
             /** @var Article $article */
             foreach ($note->getArticles() as $article) {
                 $montantTaxe += match ($taxe->getRedevable()) {
-                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche()),
-                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche()),
+                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche(), $addressedTo, $onlySharable),
+                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche(), $addressedTo, $onlySharable),
                 };
             }
         }
@@ -1162,13 +1162,13 @@ class Constante
         return $taxe;
     }
 
-    public function Note_getAssiette(?Note $note)
+    public function Note_getAssiette(?Note $note, $addressedTo, bool $onlySharable)
     {
         $assiette = 0;
         if ($note->getAddressedTo() == note::TO_PARTENAIRE) {
             /** @var Article $article */
             foreach ($note->getArticles() as $article) {
-                $assiette += $this->ARTICLE_getAssiette($article);
+                $assiette += $this->ARTICLE_getAssiette($article, $addressedTo, $onlySharable);
             }
         }
         return round($assiette, 2);
@@ -1709,32 +1709,32 @@ class Constante
         $tot = $this->Risque_getMontant_prime_payable_par_client($risque) - $this->Risque_getMontant_prime_payable_par_client_payee($risque);
         return round($tot, 4);
     }
-    public function Risque_getMontant_commission_pure(?Risque $risque)
+    public function Risque_getMontant_commission_pure(?Risque $risque, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($risque) {
             foreach ($risque->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_commission_pure($piste);
+                $tot += $this->Piste_getMontant_commission_pure($piste, $addressedTo, $onlySharable);
             }
         }
         return $tot;
     }
-    public function Risque_getMontant_commission_ht(?Risque $risque)
+    public function Risque_getMontant_commission_ht(?Risque $risque, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($risque) {
             foreach ($risque->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_commission_ht($piste);
+                $tot += $this->Piste_getMontant_commission_ht($piste, $addressedTo, $onlySharable);
             }
         }
         return $tot;
     }
-    public function Risque_getMontant_commission_ttc(?Risque $risque)
+    public function Risque_getMontant_commission_ttc(?Risque $risque, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($risque) {
             foreach ($risque->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_commission_ttc($piste);
+                $tot += $this->Piste_getMontant_commission_ttc($piste, $addressedTo, $onlySharable);
             }
         }
         return $tot;
@@ -1749,17 +1749,17 @@ class Constante
         }
         return $tot;
     }
-    public function Risque_getMontant_commission_ttc_solde(?Risque $risque)
+    public function Risque_getMontant_commission_ttc_solde(?Risque $risque, $addressedTo, bool $onlySharable)
     {
-        $tot = $this->Risque_getMontant_commission_ttc($risque) - $this->Risque_getMontant_commission_collectee($risque);
+        $tot = $this->Risque_getMontant_commission_ttc($risque, $addressedTo, $onlySharable) - $this->Risque_getMontant_commission_collectee($risque);
         return round($tot, 4);
     }
-    public function Risque_getMontant_taxe_payable_par_assureur(?Risque $risque)
+    public function Risque_getMontant_taxe_payable_par_assureur(?Risque $risque, bool $onlySharable)
     {
         $tot = 0;
         if ($risque) {
             foreach ($risque->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_taxe_payable_par_assureur($piste);
+                $tot += $this->Piste_getMontant_taxe_payable_par_assureur($piste, $onlySharable);
             }
         }
         return $tot;
@@ -1774,12 +1774,12 @@ class Constante
         }
         return $tot;
     }
-    public function Risque_getMontant_taxe_payable_par_courtier(?Risque $risque)
+    public function Risque_getMontant_taxe_payable_par_courtier(?Risque $risque, bool $onlySharable)
     {
         $tot = 0;
         if ($risque) {
             foreach ($risque->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_taxe_payable_par_courtier($piste);
+                $tot += $this->Piste_getMontant_taxe_payable_par_courtier($piste, $onlySharable);
             }
         }
         return $tot;
@@ -1794,28 +1794,28 @@ class Constante
         }
         return $tot;
     }
-    public function Risque_getMontant_taxe_payable_par_assureur_solde(?Risque $risque)
+    public function Risque_getMontant_taxe_payable_par_assureur_solde(?Risque $risque, bool $onlySharable)
     {
-        $tot = $this->Risque_getMontant_taxe_payable_par_assureur($risque) - $this->Risque_getMontant_taxe_payable_par_assureur_payee($risque);
+        $tot = $this->Risque_getMontant_taxe_payable_par_assureur($risque, $onlySharable) - $this->Risque_getMontant_taxe_payable_par_assureur_payee($risque);
         return round($tot, 4);
     }
-    public function Risque_getMontant_taxe_payable_par_courtier_solde(?Risque $risque)
+    public function Risque_getMontant_taxe_payable_par_courtier_solde(?Risque $risque, bool $onlySharable)
     {
-        $tot = $this->Risque_getMontant_taxe_payable_par_courtier($risque) - $this->Risque_getMontant_taxe_payable_par_courtier_payee($risque);
+        $tot = $this->Risque_getMontant_taxe_payable_par_courtier($risque, $onlySharable) - $this->Risque_getMontant_taxe_payable_par_courtier_payee($risque);
         return round($tot, 4);
     }
-    public function Risque_getMontant_retrocommissions_payable_par_courtier(?Risque $risque, ?Partenaire $partenaire = null)
+    public function Risque_getMontant_retrocommissions_payable_par_courtier(?Risque $risque, ?Partenaire $partenaire, $addressedTo, bool $onlySharable)
     {
         // dd($risque, $partenaire);
         $tot = 0;
         if ($risque) {
             foreach ($risque->getPistes() as $piste) {
-                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier($piste, $partenaire);
+                $tot += $this->Piste_getMontant_retrocommissions_payable_par_courtier($piste, $partenaire, $addressedTo, $onlySharable);
             }
         }
         return $tot;
     }
-    public function Risque_getMontant_retrocommissions_payable_par_courtier_payee(?Risque $risque, ?Partenaire $partenaire = null)
+    public function Risque_getMontant_retrocommissions_payable_par_courtier_payee(?Risque $risque, ?Partenaire $partenaire)
     {
         // dd($risque, $partenaire);
         $tot = 0;
@@ -1826,9 +1826,9 @@ class Constante
         }
         return $tot;
     }
-    public function Risque_getMontant_retrocommissions_payable_par_courtier_solde(?Risque $risque, ?Partenaire $partenaireCible)
+    public function Risque_getMontant_retrocommissions_payable_par_courtier_solde(?Risque $risque, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
-        $tot = $this->Risque_getMontant_retrocommissions_payable_par_courtier($risque, $partenaireCible) - $this->Risque_getMontant_retrocommissions_payable_par_courtier_payee($risque, $partenaireCible);
+        $tot = $this->Risque_getMontant_retrocommissions_payable_par_courtier($risque, $partenaireCible, $addressedTo, $onlySharable) - $this->Risque_getMontant_retrocommissions_payable_par_courtier_payee($risque, $partenaireCible);
         return round($tot, 4);
     }
 
@@ -1992,7 +1992,7 @@ class Constante
                             /** @var AutoriteFiscale $autorite */
                             $autorite = $this->autoriteFiscaleRepository->find($panier->getIdAutoriteFiscale());
                             if ($autorite != null) {
-                                $net = $this->Tranche_getMontant_commission_ht($tranche);
+                                $net = $this->Tranche_getMontant_commission_ht($tranche, $addressedTo, $onlySharable);
                                 $isIARD = match ($tranche->getCotation()->getPiste()->getRisque()->getBranche()) {
                                     Risque::BRANCHE_IARD_OU_NON_VIE => true,
                                     Risque::BRANCHE_VIE => false,
@@ -2051,9 +2051,9 @@ class Constante
         // dd($tabPostesFacturables);
         return $tabPostesFacturables;
     }
-    public function Tranche_getPostesFacturablesText(?Tranche $tranche, ?PanierNotes $panier)
+    public function Tranche_getPostesFacturablesText(?Tranche $tranche, ?PanierNotes $panier, $addressedTo, bool $onlySharable)
     {
-        $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier);
+        $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier, $addressedTo, $onlySharable);
         // dd($tabPosteFacturables);
         $str = "<br/><small class='text-secondary m-2'>Postes: ";
         foreach ($tabPosteFacturables as $posteFacturable) {
@@ -2278,7 +2278,7 @@ class Constante
         }
         return $montant;
     }
-    public function Tranche_getPanierStatus(Tranche $tranche, PanierNotes $panier)
+    public function Tranche_getPanierStatus(Tranche $tranche, PanierNotes $panier, $addressedTo, bool $onlySharable)
     {
         /**
          * -1 = N'est pas eligible pour le panier
@@ -2287,7 +2287,7 @@ class Constante
          */
         // dd($panier, $tranche);
         if ($panier != null && $tranche != null) {
-            $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier);
+            $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier, $addressedTo, $onlySharable);
 
             if (count($tabPosteFacturables) != 0) {
                 foreach ($tabPosteFacturables as $posteFacturable) {
@@ -2642,14 +2642,14 @@ class Constante
         }
         return $somme;
     }
-    private function Cotation_getSommeCommissionPurePartenaire(?Cotation $cotation): float
+    private function Cotation_getSommeCommissionPurePartenaire(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
         $somme = 0;
         /** @var Entreprise $entreprise */
         $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
         $cotationsDuPartenaire = $this->cotationRepository->loadCotationsWithPartnerAll($cotation->getPiste()->getExercice(), $entreprise, $this->Cotation_getPartenaire($cotation));
         foreach ($cotationsDuPartenaire as $proposition) {
-            $somme += $this->Cotation_getMontant_commission_pure($proposition);
+            $somme += $this->Cotation_getMontant_commission_pure($proposition, $addressedTo, $onlySharable);
         }
         return $somme;
     }
@@ -2664,7 +2664,7 @@ class Constante
         $uniteMesure = match ($conditionPartage->getUniteMesure()) {
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $this->Cotation_getSommeCommissionPureRisque($cotation, $addressedTo, $onlySharable),
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $this->Cotation_getSommeCommissionPureClient($cotation, $addressedTo, $onlySharable),
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->Cotation_getSommeCommissionPurePartenaire($cotation),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->Cotation_getSommeCommissionPurePartenaire($cotation, $addressedTo, $onlySharable),
         };
 
         // dd("Unité de mésure: " . $uniteMesure);
@@ -3871,7 +3871,7 @@ class Constante
         return $primeHT * $article->getTranche()->getPourcentage();
     }
 
-    public function ARTICLE_getComHT(Article $article)
+    public function ARTICLE_getComHT(Article $article, $addressedTo, bool $onlySharable)
     {
         /** @var Note $note */
         $note = $article->getNote();
@@ -3889,7 +3889,7 @@ class Constante
         } else if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
             // dd("Ici");
             $onlySharable = true;
-            $res += $this->Tranche_getMontant_commission_ht($article->getTranche(), $onlySharable);
+            $res += $this->Tranche_getMontant_commission_ht($article->getTranche(), $addressedTo, $onlySharable);
         }
 
         return round($res);
@@ -3910,30 +3910,30 @@ class Constante
         return $tauxTaxe;
     }
 
-    public function ARTICLE_getTauxComHT(Article $article)
+    public function ARTICLE_getTauxComHT(Article $article, $addressedTo, bool $onlySharable)
     {
-        return round(($this->ARTICLE_getComHT($article) / $this->ARTICLE_getPrimeHT($article)) * 100, 2) . "%";
+        return round(($this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) / $this->ARTICLE_getPrimeHT($article)) * 100, 2) . "%";
     }
 
-    public function ARTICLE_getTaxeAssureur(Article $article)
+    public function ARTICLE_getTaxeAssureur(Article $article, $addressedTo, bool $onlySharable)
     {
-        $taxe = $this->ARTICLE_getComHT($article) * $this->getTauxTaxe($article->getTranche()->getCotation(), true);
+        $taxe = $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) * $this->getTauxTaxe($article->getTranche()->getCotation(), true);
         return round($taxe, 2);
     }
 
-    public function ARTICLE_getAssiette(Article $article)
+    public function ARTICLE_getAssiette(Article $article, $addressedTo, bool $onlySharable)
     {
-        $taxe = $this->ARTICLE_getComHT($article) - $this->ARTICLE_getTaxeCourtier($article);
+        $taxe = $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) - $this->ARTICLE_getTaxeCourtier($article, $addressedTo, $onlySharable);
         return round($taxe, 2);
     }
 
-    public function ARTICLE_getTaxeCourtier(Article $article)
+    public function ARTICLE_getTaxeCourtier(Article $article, $addressedTo, bool $onlySharable)
     {
-        $taxe = $this->ARTICLE_getComHT($article) * $this->getTauxTaxe($article->getTranche()->getCotation(), false);
+        $taxe = $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) * $this->getTauxTaxe($article->getTranche()->getCotation(), false);
         return round($taxe, 2);
     }
 
-    public function ARTICLE_getMontantTaxeFacturee(Article $article)
+    public function ARTICLE_getMontantTaxeFacturee(Article $article, bool $onlySharable)
     {
         $montantTaxe = 0;
         if ($article != null) {
@@ -3944,8 +3944,8 @@ class Constante
 
             if ($note != null && $taxe != null) {
                 $montantTaxe = match ($taxe->getRedevable()) {
-                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche()),
-                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche()),
+                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche(), $onlySharable),
+                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche(), $onlySharable),
                 };
                 // dd($montantTaxe);
             }
