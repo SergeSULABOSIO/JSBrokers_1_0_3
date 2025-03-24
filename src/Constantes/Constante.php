@@ -2258,6 +2258,9 @@ class Constante
         }
         return $montant;
     }
+
+
+    
     public function Tranche_getMontant_commission_ttc(?Tranche $tranche, ?int $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
