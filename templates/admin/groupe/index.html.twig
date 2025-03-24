@@ -106,7 +106,7 @@
                                     {% if partenaire != null %}
                                         <small class="m-2">
                                             <span class="text-secondary">Assiette: {{ constante.Groupe_getMontant_commission_pure(groupe, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier(groupe, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier(groupe, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • Rétro-com payée: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_payee(groupe, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
                                             {% if constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire, -1, true) != 0 %}
@@ -114,6 +114,13 @@
                                             {% endif %}
                                             <span class="{{couleur}}"> • Solde dû: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         </small><br>
+                                        {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                            <small class="m-2">
+                                                {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                    <span class="text-danger"> • {{ condition }}</span>
+                                                {% endfor %}
+                                            </small><br>
+                                        {% endif %}
                                     {% endif %}
                                 {% endfor %}
                             </td>

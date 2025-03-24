@@ -101,16 +101,24 @@
                                 {% endfor %}
                                 {% for partenaire in constante.Risque_getPartenaires(risque) %}
                                     {# Retro-commission #}
-                                    {% if partenaire != null %}
+                                    {% if partenaire != null and constante.Risque_getMontant_commission_pure(risque, -1, true) != 0 %}
                                         <small class="m-2">
-                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier(risque, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">Assiette: {{ constante.Risque_getMontant_commission_pure(risque, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier(risque, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • Rétro-com payée: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier_payee(risque, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire, -1, false) != 0 %}
+                                            {% if constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire, -1, true) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Risque_getMontant_retrocommissions_payable_par_courtier_solde(risque, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         </small><br>
+                                        {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                            <small class="m-2">
+                                                {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                    <span class="text-danger"> • {{ condition }}</span>
+                                                {% endfor %}
+                                            </small><br>
+                                        {% endif %}
                                     {% endif %}
                                     
                                 {% endfor %}

@@ -119,6 +119,13 @@
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(cotation, partenaire) }}).</span>
                                         {% endif %}
                                     </small><br>
+                                    {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                        <small class="m-2">
+                                            {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                <span class="text-danger"> • {{ condition }}</span>
+                                            {% endfor %}
+                                        </small><br>
+                                    {% endif %}
                                 {% endif %}
                                 <small class="m-2">
                                     <span class="text-secondary">Piste: {{ cotation.piste }}</span> 

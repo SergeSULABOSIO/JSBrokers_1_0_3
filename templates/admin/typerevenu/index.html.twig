@@ -124,6 +124,13 @@
                                             {% endif %}
                                             <span class="{{couleur}}"> • Solde dû: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         </small><br>
+                                        {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                            <small class="m-2">
+                                                {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                    <span class="text-danger"> • {{ condition }}</span>
+                                                {% endfor %}
+                                            </small><br>
+                                        {% endif %}
                                     {% endif %}
                                 {% endfor %}
                             </td>
