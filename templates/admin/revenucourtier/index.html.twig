@@ -94,7 +94,7 @@
                                      {% endif %}
                                 {% endfor %}
                                 {% set partenaire = constante.Cotation_getPartenaire(revenucourtier.cotation) %}
-                                {% if partenaire != null %}
+                                {% if partenaire != null and constante.Revenu_getMontant_pure(revenucourtier, true) != 0 %}
                                     {# Retro-commission #}
                                     <small class="m-2">
                                         <span class="text-secondary">Assiette: {{ constante.Revenu_getMontant_pure(revenucourtier, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
