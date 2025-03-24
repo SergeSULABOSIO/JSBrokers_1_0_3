@@ -113,7 +113,7 @@
                                 {% if constante.Partenaire_getMontant_commission_pure(partenaire, -1, true) != 0 %}
                                     <small class="m-2">
                                         <span class="text-secondary">Assiette: {{ constante.Partenaire_getMontant_commission_pure(partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary fw-bold">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Partenaire_getMontant_retrocommissions_payable_par_courtier(partenaire, 1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary fw-bold"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Partenaire_getMontant_retrocommissions_payable_par_courtier(partenaire, 1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary fw-bold"> • Rétro-com payée: {{ constante.Partenaire_getMontant_retrocommissions_payable_par_courtier_payee(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
                                         {% if constante.Partenaire_getMontant_retrocommissions_payable_par_courtier_solde(partenaire, -1, true) != 0 %}
