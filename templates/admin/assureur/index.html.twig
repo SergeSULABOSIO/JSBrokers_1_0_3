@@ -66,39 +66,39 @@
                                 </small><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Assureur_getMontant_commission_pure(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Assureur_getMontant_commission_ht(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Assureur_getMontant_commission_ttc(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">Com. pure: {{ constante.Assureur_getMontant_commission_pure(assureur, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Com. ht: {{ constante.Assureur_getMontant_commission_ht(assureur, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • C. totale: {{ constante.Assureur_getMontant_commission_ttc(assureur, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • C. collectée: {{ constante.Assureur_getMontant_commission_ttc_collectee(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
-                                    {% if constante.Assureur_getMontant_commission_ttc_solde(assureur) != 0 %}
+                                    {% if constante.Assureur_getMontant_commission_ttc_solde(assureur, -1, false) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Assureur_getMontant_commission_ttc_solde(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="{{couleur}}"> • Solde: {{ constante.Assureur_getMontant_commission_ttc_solde(assureur, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {% for taxe in serviceTaxe.taxes %}
                                      {% if taxe.redevable == 0 %}
                                         {# Section Taxes : TVA#}
                                         <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Assureur_getMontant_taxe_payable_par_assureur(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Assureur_getMontant_taxe_payable_par_assureur(assureur, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Assureur_getMontant_taxe_payable_par_assureur_payee(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Assureur_getMontant_taxe_payable_par_assureur_solde(assureur) != 0 %}
+                                            {% if constante.Assureur_getMontant_taxe_payable_par_assureur_solde(assureur, false) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde: {{ constante.Assureur_getMontant_taxe_payable_par_assureur_solde(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="{{couleur}}"> • Solde: {{ constante.Assureur_getMontant_taxe_payable_par_assureur_solde(assureur, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         </small><br/>
                                      {% endif %}
                                      {% if taxe.redevable == 1 %}
                                         {# Section Taxe: ARCA #}
                                         <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Assureur_getMontant_taxe_payable_par_courtier(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Assureur_getMontant_taxe_payable_par_courtier(assureur, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Assureur_getMontant_taxe_payable_par_courtier_payee(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Assureur_getMontant_taxe_payable_par_courtier_solde(assureur) != 0 %}
+                                            {% if constante.Assureur_getMontant_taxe_payable_par_courtier_solde(assureur, false) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Assureur_getMontant_taxe_payable_par_courtier_solde(assureur)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Assureur_getMontant_taxe_payable_par_courtier_solde(assureur, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         </small><br/>
                                      {% endif %}
                                 {% endfor %}
@@ -106,13 +106,13 @@
                                     {# Retro-commission #}
                                     {% if partenaire != null %}
                                         <small class="m-2">
-                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier(assureur, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier(assureur, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • Rétro-com payée: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_payee(assureur, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
-                                            {% if constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur, partenaire) != 0 %}
+                                            {% if constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur, partenaire, -1, false) != 0 %}
                                                 {% set couleur = "text-danger" %}
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Assureur_getMontant_retrocommissions_payable_par_courtier_solde(assureur, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         </small><br>
                                     {% endif %}
                                 {% endfor %}
