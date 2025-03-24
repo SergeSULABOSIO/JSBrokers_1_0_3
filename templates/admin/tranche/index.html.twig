@@ -142,8 +142,8 @@
                                     <span class="text-secondary">{{ tranche.cotation }} • {{ tranche.cotation.assureur }}</span> 
                                 </small>
                                 {% if panier != null %}
-                                    {% if constante.Tranche_getPostesFacturables(tranche, panier)|length != 0 %}
-                                        {{ constante.Tranche_getPostesFacturablesText(tranche, panier)|raw }}
+                                    {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length != 0 %}
+                                        {{ constante.Tranche_getPostesFacturablesText(tranche, panier, -1, false)|raw }}
                                     {% endif %}
                                 {% endif %}
                             </td>
@@ -164,7 +164,7 @@
                                         {# </button> #}
                                     {# </form> #}
                                     {% if panier != null %}
-                                        {% if constante.Tranche_getPostesFacturables(tranche, panier) is not empty %}
+                                        {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false) is not empty %}
                                             <div class="dropdown">
                                                 <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                                     {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}

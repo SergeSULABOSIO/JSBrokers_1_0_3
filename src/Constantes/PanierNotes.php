@@ -18,11 +18,11 @@ class PanierNotes
     private Collection $idTranches;
     private Collection $checkList;
     private int $type;
-    private int $addressedTo;
-    private int $idAssureur;
-    private int $idPartenaire;
-    private int $idClient;
-    private int $idAutoriteFiscale;
+    private int $addressedTo = -1;
+    private int $idAssureur = -1;
+    private int $idPartenaire = -1;
+    private int $idClient = -1;
+    private int $idAutoriteFiscale = -1;
     private DateTimeImmutable $createdAt;
 
 

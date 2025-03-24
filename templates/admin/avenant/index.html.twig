@@ -111,14 +111,22 @@
                                 {% if partenaire != null %}
                                     {# Retro-commission #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(avenant.cotation, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Assiette: {{ constante.Cotation_getMontant_commission_pure(avenant.cotation, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(avenant.cotation, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(avenant.cotation, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
-                                        {% if constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(avenant.cotation, partenaire, -1, false) != 0 %}
+                                        {% if constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(avenant.cotation, partenaire, -1, true) != 0 %}
                                             {% set couleur = "text-danger" %}
                                         {% endif %}
-                                        <span class="{{couleur}}"> • Solde dû: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(avenant.cotation, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                        <span class="{{couleur}}"> • Solde dû: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(avenant.cotation, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                     </small><br>
+                                    {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                        <small class="m-2">
+                                            {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                <span class="text-danger"> • {{ condition }}</span>
+                                            {% endfor %}
+                                        </small><br>
+                                    {% endif %}
                                 {% endif %}
                                 <small class="m-2">
                                     <span class="text-secondary">Piste: {{ avenant.cotation.piste.nom }}</span>

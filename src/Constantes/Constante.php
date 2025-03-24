@@ -2304,7 +2304,7 @@ class Constante
          * 0 = est éligible pour le panier et peut y être ajouté
          * 1 = est éligible pour le panier et mais ne peut plys y être ajouté car déjà dans le panier
          */
-        // dd($panier);
+        // dd($panier->getAddressedTo());
         if ($panier != null && $tranche != null) {
             $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier, -1, false);
 
