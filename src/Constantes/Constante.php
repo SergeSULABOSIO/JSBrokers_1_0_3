@@ -1286,7 +1286,7 @@ class Constante
         // dd($partenaires);
         return $partenaires;
     }
-    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible = null)
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($typeRevenu != null) {
@@ -1295,7 +1295,7 @@ class Constante
                 // dd("Jai du contenu");
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible);
+                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo, $onlySharable);
                 }
             }
         }
@@ -1316,7 +1316,7 @@ class Constante
         }
         return $tot;
     }
-    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible = null)
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($typeRevenu != null) {
@@ -1325,7 +1325,7 @@ class Constante
                 // dd("Jai du contenu");
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_solde($revenu, $partenaireCible);
+                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_solde($revenu, $partenaireCible, $addressedTo, $onlySharable);
                 }
             }
         }
@@ -1629,23 +1629,23 @@ class Constante
         $solde = $this->Revenu_getMontant_taxe_payable_par_courtier($revenu) - $this->Revenu_getMontant_taxe_payable_par_courtier_payee($revenu);
         return round($solde, 4);
     }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible): float
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
         if ($revenu != null) {
             if ($revenu->getCotation() != null) {
-                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible);
+                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
             }
         }
         return $montant;
     }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible = null): float
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible): float
     {
         return $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($revenu->getCotation(), $partenaireCible);
     }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier_solde(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible = null)
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier_solde(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
-        $solde = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible) - $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
+        $solde = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo, $onlySharable) - $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
         return round($solde, 4);
     }
 

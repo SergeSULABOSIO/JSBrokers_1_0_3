@@ -97,13 +97,13 @@
                                 {% if partenaire != null %}
                                     {# Retro-commission #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Rétro-com dûe à {{ partenaire }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_payee(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
-										{% if constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire) != 0 %}
+										{% if constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire, -1, false) != 0 %}
                                     		{% set couleur = "text-danger" %}
 										{% endif %}
-										<span class="{{couleur}}"> • Solde dû: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+										<span class="{{couleur}}"> • Solde dû: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
                                         {% if constante.Cotation_hasConditionsSpeciales(revenucourtier.cotation) %}
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(revenucourtier.cotation) }}).</span>
                                         {% endif %}
