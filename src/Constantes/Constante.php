@@ -3610,32 +3610,32 @@ class Constante
         }
         return "";
     }
-    public function Taxe_getMontant_commission_pure(?Taxe $taxe): float
+    public function Taxe_getMontant_commission_pure(?Taxe $taxe, $addressedTo, bool $onlySharable): float
     {
         $tot = 0;
         if ($taxe != null) {
             foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
-                $tot += $this->Groupe_getMontant_commission_pure($groupe);
+                $tot += $this->Groupe_getMontant_commission_pure($groupe, $addressedTo, $onlySharable);
             }
         }
         return $tot;
     }
-    public function Taxe_getMontant_commission_ht(?Taxe $taxe): float
+    public function Taxe_getMontant_commission_ht(?Taxe $taxe, $addressedTo, bool $onlySharable): float
     {
         $tot = 0;
         if ($taxe != null) {
             foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
-                $tot += $this->Groupe_getMontant_commission_ht($groupe);
+                $tot += $this->Groupe_getMontant_commission_ht($groupe, $addressedTo, $onlySharable);
             }
         }
         return $tot;
     }
-    public function Taxe_getMontant_commission_ttc(?Taxe $taxe): float
+    public function Taxe_getMontant_commission_ttc(?Taxe $taxe, $addressedTo, bool $onlySharable): float
     {
         $tot = 0;
         if ($taxe != null) {
             foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
-                $tot += $this->Groupe_getMontant_commission_ttc($groupe);
+                $tot += $this->Groupe_getMontant_commission_ttc($groupe, $addressedTo, $onlySharable);
             }
         }
         return $tot;
@@ -3650,17 +3650,17 @@ class Constante
         }
         return $tot;
     }
-    public function Taxe_getMontant_commission_ttc_solde(?Taxe $taxe): float
+    public function Taxe_getMontant_commission_ttc_solde(?Taxe $taxe, $addressedTo, bool $onlySharable): float
     {
-        $tot = $this->Taxe_getMontant_commission_ttc($taxe) - $this->Taxe_getMontant_commission_ttc_collectee($taxe);
+        $tot = $this->Taxe_getMontant_commission_ttc($taxe, $addressedTo, $onlySharable) - $this->Taxe_getMontant_commission_ttc_collectee($taxe);
         return round($tot, 4);
     }
-    public function Taxe_getMontant_taxe_payable_par_assureur(?Taxe $taxe): float
+    public function Taxe_getMontant_taxe_payable_par_assureur(?Taxe $taxe, bool $onlySharable): float
     {
         $tot = 0;
         if ($taxe != null) {
             foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
-                $tot += $this->Groupe_getMontant_taxe_payable_par_assureur($groupe);
+                $tot += $this->Groupe_getMontant_taxe_payable_par_assureur($groupe, $onlySharable);
             }
         }
         return $tot;
@@ -3675,18 +3675,18 @@ class Constante
         }
         return $tot;
     }
-    public function Taxe_getMontant_taxe_payable_par_assureur_solde(?Taxe $taxe): float
+    public function Taxe_getMontant_taxe_payable_par_assureur_solde(?Taxe $taxe, bool $onlySharable): float
     {
-        $tot = $this->Taxe_getMontant_taxe_payable_par_assureur($taxe) - $this->Taxe_getMontant_taxe_payable_par_assureur_payee($taxe);
+        $tot = $this->Taxe_getMontant_taxe_payable_par_assureur($taxe, $onlySharable) - $this->Taxe_getMontant_taxe_payable_par_assureur_payee($taxe);
         return round($tot, 4);
     }
 
-    public function Taxe_getMontant_taxe_payable_par_courtier(?Taxe $taxe): float
+    public function Taxe_getMontant_taxe_payable_par_courtier(?Taxe $taxe, bool $onlySharable): float
     {
         $tot = 0;
         if ($taxe != null) {
             foreach ($taxe->getEntreprise()->getGroupes() as $groupe) {
-                $tot += $this->Groupe_getMontant_taxe_payable_par_courtier($groupe);
+                $tot += $this->Groupe_getMontant_taxe_payable_par_courtier($groupe, $onlySharable);
             }
         }
         return $tot;
@@ -3701,9 +3701,9 @@ class Constante
         }
         return $tot;
     }
-    public function Taxe_getMontant_taxe_payable_par_courtier_solde(?Taxe $taxe): float
+    public function Taxe_getMontant_taxe_payable_par_courtier_solde(?Taxe $taxe, bool $onlySharable): float
     {
-        $tot = $this->Taxe_getMontant_taxe_payable_par_courtier($taxe) - $this->Taxe_getMontant_taxe_payable_par_courtier_payee($taxe);
+        $tot = $this->Taxe_getMontant_taxe_payable_par_courtier($taxe, $onlySharable) - $this->Taxe_getMontant_taxe_payable_par_courtier_payee($taxe);
         return round($tot, 4);
     }
 
