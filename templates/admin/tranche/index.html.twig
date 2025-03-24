@@ -53,10 +53,10 @@
                                     {# On fait signe si cette tranche peut entrer dans le panier #}
                                     {% if panier != null %}
                                         {% if constante.Tranche_getPanierStatus(tranche, panier) == 0 %}
-                                            <span class="text-success fw-bold">(+{{ constante.Tranche_getPostesFacturables(tranche, panier)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
+                                            <span class="text-success fw-bold">(+{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
                                         {% endif %}
                                         {% if constante.Tranche_getPanierStatus(tranche, panier) == 1 %}
-                                            <span class="text-danger fw-bold">(-{{ constante.Tranche_getPostesFacturables(tranche, panier)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
+                                            <span class="text-danger fw-bold">(-{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
                                         {% endif %}
                                     {% endif %}
                                     {% if constante.Cotation_isBound(tranche.cotation) %}
@@ -173,7 +173,7 @@
                                                 <ul class="dropdown-menu">
                                                     {% if panier != null %}
                                                         {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-                                                        {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier) %}
+                                                        {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier, -1, false) %}
                                                             <li>
                                                                 {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
                                                                     <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
