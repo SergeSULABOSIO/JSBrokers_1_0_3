@@ -2741,7 +2741,7 @@ class Constante
         }
         return $montant;
     }
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation, ?Partenaire $partenaireCible = null): float
+    public function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation, ?Partenaire $partenaireCible): float
     {
         $montant = 0;
         if ($cotation != null) {
@@ -3189,7 +3189,7 @@ class Constante
                             if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
                                 if ($this->Cotation_isBound($cotation)) {
                                     // dd("J'ai trouvé quelques chose", $cotation);
-                                    $montant += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation);
+                                    $montant += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation, $partenaire);
                                 }
                             }
                         }
