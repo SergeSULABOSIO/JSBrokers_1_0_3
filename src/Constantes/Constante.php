@@ -996,6 +996,7 @@ class Constante
                 }
             }
         }
+        // dd("ici", $montant);
         return $montant;
     }
     public function Note_getMontant_taxes(?Note $note, $addressedTo, bool $onlySharable): float
@@ -3904,14 +3905,14 @@ class Constante
             };
         } else if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
             $comTTC = $this->ARTICLE_getComTTC($article);
-            $res = ($comTTC / ($this->getTauxTaxe($article->getTranche()->getCotation(), true) + 1));
+            $taxe = $this->getTauxTaxe($article->getTranche()->getCotation(), true);
+            $res = ($comTTC / ($taxe + 1));
         } else if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-            // dd("Ici");
             $onlySharable = true;
             $res += $this->Tranche_getMontant_commission_ht($article->getTranche(), $addressedTo, $onlySharable);
         }
-
-        return round($res);
+        // dd($res);
+        return round($res, 2);
     }
 
     public function getTauxTaxe(?Cotation $cotation, bool $forAssureur)

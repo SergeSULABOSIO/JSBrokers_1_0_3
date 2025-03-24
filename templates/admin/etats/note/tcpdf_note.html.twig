@@ -225,13 +225,13 @@
                     <tr>
                         <td></td>
                         <td class="texte-gauche bordure">Montant hors taxe</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_ht(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_ht(note, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>
                         <td></td>
                         <td class="texte-gauche bordure">{{ constante.Note_getNames_taxes_assureur() }}</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_taxes(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_taxes(note, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>
