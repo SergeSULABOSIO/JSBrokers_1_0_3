@@ -1232,30 +1232,64 @@ class Constante
     }
     public function Note_getMontant_fronting(?Note $note): float
     {
+        $tabCotation = new ArrayCollection();
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
-                $montant += $this->ARTICLE_getFronting($article);
+                // $montant += $this->ARTICLE_getFronting($article);
+                if (!$tabCotation->contains($article->getTranche()->getCotation())) {
+                    $tabCotation->add($article->getTranche()->getCotation());
+                }
+            }
+            /** @var Cotation $cotation */
+            foreach ($tabCotation as $cotation) {
+                foreach ($cotation->getChargements() as $chargement) {
+                    if ($chargement->getType()->getFonction() == Chargement::FONCTION_FRONTING) {
+                        // dd($chargement->getMontantFlatExceptionel());
+                        $montant += $chargement->getMontantFlatExceptionel();
+                    }
+                }
             }
         }
         return $montant;
     }
     public function Note_getMontant_prime_ht(?Note $note): float
     {
+        $tabCotation = new ArrayCollection();
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
-                $montant += $this->ARTICLE_getPrimeHT($article);
+                // $montant += $this->ARTICLE_getPrimeHT($article);
+                if (!$tabCotation->contains($article->getTranche()->getCotation())) {
+                    $tabCotation->add($article->getTranche()->getCotation());
+                }
+            }
+            /** @var Cotation $cotation */
+            foreach ($tabCotation as $cotation) {
+                foreach ($cotation->getChargements() as $chargement) {
+                    if ($chargement->getType()->getFonction() == Chargement::FONCTION_PRIME_NETTE) {
+                        // dd($chargement->getMontantFlatExceptionel());
+                        $montant += $chargement->getMontantFlatExceptionel();
+                    }
+                }
             }
         }
         return $montant;
     }
     public function Note_getMontant_prime_ttc(?Note $note): float
     {
+        $tabTranches = new ArrayCollection();
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
-                $montant += $this->ARTICLE_getPrimeTTC($article);
+                // $montant += $this->ARTICLE_getPrimeTTC($article);
+                if (!$tabTranches->contains($article->getTranche())) {
+                    $tabTranches->add($article->getTranche());
+                }
+            }
+            foreach ($tabTranches as $tranche) {
+                $montant += $this->Tranche_getMontant_prime_payable_par_client($tranche);
+                # code...
             }
         }
         return $montant;
