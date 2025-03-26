@@ -1085,6 +1085,21 @@ class Constante
                 // dd($article);
             }
         }
+        // dd($com_ht);
+        return round($com_ht, 2);
+    }
+
+    public function Note_getMontant_commission_assiette(?Note $note)
+    {
+        $com_ht = 0;
+        if ($note != null) {
+            /** @var Article $article */
+            foreach ($note->getArticles() as $article) {
+                $com_ht += $this->Tranche_getMontant_commission_pure($article->getTranche(), -1, true);
+                // dd($article);
+            }
+        }
+        // dd($com_ht);
         return round($com_ht, 2);
     }
 
@@ -1097,8 +1112,8 @@ class Constante
             /** @var Article $article */
             foreach ($note->getArticles() as $article) {
                 $montantTaxe += match ($taxe->getRedevable()) {
-                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche(), $addressedTo, $onlySharable),
-                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche(), $addressedTo, $onlySharable),
+                    Taxe::REDEVABLE_ASSUREUR => $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche(), $onlySharable),
+                    Taxe::REDEVABLE_COURTIER => $this->Tranche_getMontant_taxe_payable_par_courtier($article->getTranche(), $onlySharable),
                 };
             }
         }
@@ -2000,7 +2015,7 @@ class Constante
                             $partenaire = $this->Tranche_getPartenaire($tranche);
                             if ($partenaire != null) {
                                 if ($partenaire->getId() == $panier->getIdPartenaire()) {
-                                    $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche, $partenaire, $addressedTo, $onlySharable);
+                                    $montant = $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche, $partenaire, -1, true);
                                     if ($montant != 0) {
                                         /**
                                          * Analyse des possibles paiements antérieurs et éventuellement des montants payés
@@ -2330,6 +2345,7 @@ class Constante
                 $montant = $this->Cotation_getMontant_commission_ht($tranche->getCotation(), $addressedTo, $onlySharable) * $tranche->getPourcentage();
             }
         }
+        // dd($montant);
         return $montant;
     }
     public function Tranche_getPanierStatus(Tranche $tranche, PanierNotes $panier)
@@ -2394,6 +2410,7 @@ class Constante
     {
         $comTTC = $this->Cotation_getMontant_commission_ttc($cotation, $addressedTo, $onlySharable);
         $taxeAssureur = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation, $onlySharable);
+        // dd($comTTC - $taxeAssureur);
         return $comTTC - $taxeAssureur;
     }
     public function Tranche_getMontant_commission_ttc_solde(?Tranche $tranche, $addressedTo, bool $onlySharable): float
@@ -2426,11 +2443,17 @@ class Constante
             case Note::TO_CLIENT:
                 return $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation, $onlySharable);
                 break;
+            case Note::TO_PARTENAIRE:
+                $comTTCAssureur = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation, true);
+                $comTTCClient = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation, true);
+                return round($comTTCAssureur + $comTTCClient, 2);
+                break;
 
             default:
                 $comTTCAssureur = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation, $onlySharable);
+                // dd("Ici", $onlySharable, round($comTTCAssureur, 2));
                 $comTTCClient = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation, $onlySharable);
-                return $comTTCAssureur + $comTTCClient;
+                return round($comTTCAssureur + $comTTCClient, 2);
                 break;
         }
     }
