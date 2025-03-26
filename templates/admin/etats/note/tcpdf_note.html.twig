@@ -70,6 +70,9 @@
             .texte-centre {
                 text-align: center;
             }
+            .texte-rouge {
+                color: red;
+            }
             .texte-droite {
                 text-align: right;
             }
@@ -306,6 +309,18 @@
                     </tr>
                     <tr>
                         <td></td>
+                        <td class="texte-gauche bordure">Commission ht</td>
+                        <td class="texte-droite bordure">{{ constante.Note_getMontant_ht(note, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td class="texte-gauche texte-rouge bordure">{{ constante.Note_getNames_taxes_courtier }}</td>
+                        <td class="texte-droite texte-rouge bordure">- {{ constante.Note_getMontant_taxes(note, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
                         <td class="texte-gauche bordure">Assiette partageable</td>
                         <td class="texte-droite bordure">{{ constante.Note_getMontant_commission_assiette(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
@@ -324,8 +339,8 @@
                     </tr>
                     <tr>
                         <td></td>
-                        <td class="texte-gauche bordure">Montant Payé</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-gauche texte-rouge bordure">Montant Payé</td>
+                        <td class="texte-droite texte-rouge bordure">- {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>

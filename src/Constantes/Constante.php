@@ -1178,13 +1178,13 @@ class Constante
         return $taxe;
     }
 
-    public function Note_getAssiette(?Note $note, $addressedTo, bool $onlySharable)
+    public function Note_getAssiette(?Note $note)
     {
         $assiette = 0;
         if ($note->getAddressedTo() == note::TO_PARTENAIRE) {
             /** @var Article $article */
             foreach ($note->getArticles() as $article) {
-                $assiette += $this->ARTICLE_getAssiette($article, $addressedTo, $onlySharable);
+                $assiette += $this->ARTICLE_getAssiette($article, -1, true);
             }
         }
         return round($assiette, 2);
@@ -3948,7 +3948,7 @@ class Constante
         return $primeHT * $article->getTranche()->getPourcentage();
     }
 
-    public function ARTICLE_getComHT(Article $article, $addressedTo, bool $onlySharable)
+    public function ARTICLE_getComHT(Article $article)
     {
         /** @var Note $note */
         $note = $article->getNote();
@@ -3960,13 +3960,16 @@ class Constante
                 Risque::BRANCHE_IARD_OU_NON_VIE => ($article->getMontant() / $taxeFacturee->getTauxIARD()),
                 Risque::BRANCHE_VIE => ($article->getMontant() / $taxeFacturee->getTauxVIE()),
             };
-        } else if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
+        }
+        if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
             $comTTC = $this->ARTICLE_getComTTC($article);
             $taxe = $this->getTauxTaxe($article->getTranche()->getCotation(), true);
             $res = ($comTTC / ($taxe + 1));
-        } else if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-            $onlySharable = true;
-            $res += $this->Tranche_getMontant_commission_ht($article->getTranche(), $addressedTo, $onlySharable);
+        }
+        if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
+            // dd("ici");
+            $res = $this->Tranche_getMontant_commission_ht($article->getTranche(), -1, true);
+            // dd($res);
         }
         // dd($res);
         return round($res, 2);
@@ -3998,9 +4001,9 @@ class Constante
         return round($taxe, 2);
     }
 
-    public function ARTICLE_getAssiette(Article $article, $addressedTo, bool $onlySharable)
+    public function ARTICLE_getAssiette(Article $article)
     {
-        $taxe = $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) - $this->ARTICLE_getTaxeCourtier($article, $addressedTo, $onlySharable);
+        $taxe = $this->ARTICLE_getComHT($article, -1, true) - $this->ARTICLE_getTaxeCourtier($article, -1, true);
         return round($taxe, 2);
     }
 
