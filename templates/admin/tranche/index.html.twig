@@ -138,6 +138,10 @@
                                         </small><br>
                                     {% endif %}
                                 {% endif %}
+                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                <small class="m-2">
+                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Tranche_getReserve(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br>
                                 <small class="m-2">
                                     <span class="text-secondary">{{ tranche.cotation }} • {{ tranche.cotation.assureur }}</span> 
                                 </small>

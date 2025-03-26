@@ -129,7 +129,10 @@
                                         </small><br>
                                     {% endif %}
                                 {% endif %}
-                                
+                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                <small class="m-2">
+                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Partenaire_getReserve(partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

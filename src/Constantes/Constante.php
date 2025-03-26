@@ -36,6 +36,7 @@ use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\CompteBancaire;
 use App\Entity\Groupe;
 use App\Entity\ReportSet\PartnerReportSet;
+use App\Entity\Utilisateur;
 use App\Repository\PartenaireRepository;
 use App\Services\ServiceDates;
 use phpDocumentor\Reflection\Types\Integer;
@@ -1351,18 +1352,39 @@ class Constante
         }
         return $tot;
     }
-    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible = null)
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, bool $onlySharable)
     {
         $tot = 0;
         if ($typeRevenu != null) {
             // dd($typeRevenu->getId());
             if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
-                // dd("Jai du contenu");
-                /** @var RevenuPourCourtier $revenu */
-                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
+                if ($onlySharable == true) {
+                    if ($typeRevenu->isShared() == true) {
+                        // /** @var RevenuPourCourtier $revenu */
+                        // foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                        //     $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
+                        // }
+                        $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible);
+                        dd("Ici");
+                    }
+                } else {
+                    // /** @var RevenuPourCourtier $revenu */
+                    // foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    //     $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
+                    // }
+                    $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible);
                 }
+                // dd("Jai du contenu");
             }
+        }
+        return $tot;
+    }
+    private function loadRetrocomPaid(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible)
+    {
+        $tot = 0;
+        /** @var RevenuPourCourtier $revenu */
+        foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+            $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
         }
         return $tot;
     }
@@ -2347,6 +2369,128 @@ class Constante
         }
         // dd($montant);
         return $montant;
+    }
+    public function Tranche_getReserve(Tranche $tranche)
+    {
+        return round(($this->Tranche_getMontant_commission_pure($tranche, -1, false) - $this->Tranche_getMontant_retrocommissions_payable_par_courtier($tranche, $this->Tranche_getPartenaire($tranche), -1, true)), 2);
+    }
+    public function Cotation_getReserve(Cotation $cotation)
+    {
+        $reserve = 0;
+        foreach ($cotation->getTranches() as $tranche) {
+            $reserve += $this->Tranche_getReserve($tranche);
+        }
+        return round($reserve, 2);
+    }
+    public function Piste_getReserve(Piste $piste)
+    {
+        $reserve = 0;
+        /** @var Cotation $cotation */
+        foreach ($piste->getCotations() as $cotation) {
+            if ($this->Cotation_isBound($cotation)) {
+                foreach ($cotation->getTranches() as $tranche) {
+                    $reserve += $this->Tranche_getReserve($tranche);
+                }
+            }
+        }
+        return round($reserve, 2);
+    }
+    public function Client_getReserve(Client $client)
+    {
+        $reserve = 0;
+        /** @var Piste $piste */
+        foreach ($client->getPistes() as $piste) {
+            if ($this->Piste_isBound($piste)) {
+                $reserve += $this->Piste_getReserve($piste);
+            }
+        }
+        return round($reserve, 2);
+    }
+    public function Groupe_getReserve(Groupe $groupe)
+    {
+        $reserve = 0;
+        /** @var Client $client */
+        foreach ($groupe->getClients() as $client) {
+            $reserve += $this->Client_getReserve($client);
+        }
+        return round($reserve, 2);
+    }
+    public function Assureur_getReserve(Assureur $assureur)
+    {
+        $reserve = 0;
+        /** @var Cotation $cotation */
+        foreach ($assureur->getCotations() as $cotation) {
+            if ($this->Cotation_isBound($cotation)) {
+                foreach ($cotation->getTranches() as $tranche) {
+                    $reserve += $this->Tranche_getReserve($tranche);
+                }
+            }
+        }
+        return round($reserve, 2);
+    }
+    public function Partenaire_getReserve(Partenaire $partenaire)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+
+        /** @var Entreprise $ese */
+        $ese = $user->getConnectedTo();
+
+        $reserve = 0;
+
+        /** @var Piste $piste */
+        foreach ($ese->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    foreach ($piste->getCotations() as $cotation) {
+                        if ($this->Cotation_getPartenaire($cotation) == $partenaire) {
+                            $reserve += $this->Cotation_getReserve($cotation);
+                        }
+                    }
+                }
+            }
+        }
+        return round($reserve, 2);
+    }
+    public function Avenant_getReserve(Avenant $avenant)
+    {
+        return round($this->Cotation_getReserve($avenant->getCotation()), 2);
+    }
+    public function TypeRevenu_getReserve(TypeRevenu $typeRevenu)
+    {
+        $reserve = 0;
+        /** @var RevenuPourCourtier $revenu */
+        foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+            $reserve += $this->Revenu_getReserve($revenu);
+        }
+        return round($reserve, 2);
+    }
+    public function Revenu_getReserve(RevenuPourCourtier $revenu)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+
+        /** @var Entreprise $ese */
+        $ese = $user->getConnectedTo();
+
+        $comPure = $this->Revenu_getMontant_pure($revenu, false);
+        $retrocomGlobale = 0;
+        foreach ($ese->getPartenaires() as $partenaire) {
+            $retrocomGlobale = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaire, -1, true);
+        }
+        return round($comPure - $retrocomGlobale, 2);
+    }
+    public function Risque_getReserve(Risque $risque)
+    {
+        $reserve = 0;
+        foreach ($risque->getPistes() as $piste) {
+            if ($this->Piste_isBound($piste)) {
+                foreach ($piste->getCotations() as $cotation) {
+                    $reserve += $this->Cotation_getReserve($cotation);
+                }
+            }
+        }
+        return round($reserve, 2);
     }
     public function Tranche_getPanierStatus(Tranche $tranche, PanierNotes $panier)
     {

@@ -99,7 +99,7 @@
                                     <small class="m-2">
                                         <span class="text-secondary">Assiette: {{ constante.Revenu_getMontant_pure(revenucourtier, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_payee(revenucourtier, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_payee(revenucourtier, partenaire, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
 										{% if constante.Revenu_getMontant_retrocommissions_payable_par_courtier_solde(revenucourtier, partenaire, -1, true) != 0 %}
                                     		{% set couleur = "text-danger" %}
@@ -110,6 +110,10 @@
                                         {% endif %}
                                     </small><br>
                                 {% endif %}
+                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                <small class="m-2">
+                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Revenu_getReserve(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br>
                                 <small class="m-2">
                                     <span class="text-secondary">Prop: {{ revenucourtier.cotation.nom }} • {{ revenucourtier.cotation.piste.client }} • {{ revenucourtier.cotation.piste.risque }} • {{ revenucourtier.cotation.assureur }}</span> 
                                 </small><br>
@@ -117,14 +121,6 @@
                                     <span class="text-secondary">Piste: {{ revenucourtier.cotation.piste }}</span> 
                                 </small>
                             </td>
-
-
-
-
-
-
-
-
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
                                     {# Les actions sur l element de la liste #}

@@ -217,7 +217,7 @@
             {# Note de débit vers l'Assureur: il faut afficher le montant Ht et sa Tva #}
             {# VERS ASSUREUR OU CLIENT #}
             {% if note.addressedto == 1 or note.addressedto == 0 %}
-                {# Tableau avec TVA #}
+                {# Tableau des commmissions #}
                 <table style="width: 100%;">
                     <tr class="texte-centre">
                         <td></td>
@@ -234,7 +234,7 @@
                     <tr>
                         <td></td>
                         <td class="texte-gauche bordure">{{ constante.Note_getNames_taxes_assureur() }}</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_taxes(note, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-droite texte-rouge bordure">- {{ constante.Note_getMontant_taxes(note, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>
@@ -246,7 +246,7 @@
                     <tr>
                         <td></td>
                         <td class="texte-gauche bordure">Montant Payé</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-droite texte-rouge bordure">- {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>  
@@ -274,8 +274,8 @@
                     </tr>
                     <tr>
                         <td></td>
-                        <td class="texte-gauche bordure">{{ constante.Note_toStringTaxeFacturee(note) }} dûe</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_taxe_facturee(note, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-gauche texte-rouge bordure">{{ constante.Note_toStringTaxeFacturee(note) }} dûe</td>
+                        <td class="texte-droite texte-rouge bordure">- {{ constante.Note_getMontant_taxe_facturee(note, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>
@@ -286,8 +286,8 @@
                     </tr>
                     <tr>
                         <td></td>
-                        <td class="texte-gauche bordure">Montant Payé</td>
-                        <td class="texte-droite bordure">{{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
+                        <td class="texte-gauche texte-rouge bordure">Montant Payé</td>
+                        <td class="texte-droite texte-rouge bordure">- {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: 'en') }}</td>
                         <td></td>
                     </tr>
                     <tr>

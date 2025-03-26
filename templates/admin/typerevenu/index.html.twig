@@ -117,7 +117,7 @@
                                         <small class="m-2">
                                             <span class="text-secondary">Assiette: {{ constante.Type_revenu_getMontant_pure(typerevenu, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier(typerevenu, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(typerevenu, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(typerevenu, partenaire, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
                                             {% if constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu, partenaire, -1, true) != 0 %}
                                                 {% set couleur = "text-danger" %}
@@ -133,6 +133,10 @@
                                         {% endif %}
                                     {% endif %}
                                 {% endfor %}
+                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                <small class="m-2">
+                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.TypeRevenu_getReserve(typerevenu)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

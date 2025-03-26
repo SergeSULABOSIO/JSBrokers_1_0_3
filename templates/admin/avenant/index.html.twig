@@ -128,6 +128,10 @@
                                         </small><br>
                                     {% endif %}
                                 {% endif %}
+                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                <small class="m-2">
+                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Avenant_getReserve(avenant)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br>
                                 <small class="m-2">
                                     <span class="text-secondary">Piste: {{ avenant.cotation.piste.nom }}</span>
                                     <span class="text-secondary"> • Créée le {{ avenant.cotation.piste.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}</span>
