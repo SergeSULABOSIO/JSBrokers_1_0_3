@@ -1356,25 +1356,14 @@ class Constante
     {
         $tot = 0;
         if ($typeRevenu != null) {
-            // dd($typeRevenu->getId());
             if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
                 if ($onlySharable == true) {
                     if ($typeRevenu->isShared() == true) {
-                        // /** @var RevenuPourCourtier $revenu */
-                        // foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                        //     $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
-                        // }
                         $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible);
-                        dd("Ici");
                     }
                 } else {
-                    // /** @var RevenuPourCourtier $revenu */
-                    // foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    //     $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
-                    // }
                     $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible);
                 }
-                // dd("Jai du contenu");
             }
         }
         return $tot;
