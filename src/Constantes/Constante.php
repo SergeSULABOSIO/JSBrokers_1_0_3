@@ -3050,12 +3050,12 @@ class Constante
             switch ($conditionPartage->getFormule()) {
                 case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
                     if ($conditionPartage->getSeuil()) {
-                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure " . $unite . " si l'assiette est au moins égale à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                        $texte = ($conditionPartage->getTaux() * 100) . "% de l'assiette " . $unite . " si celle-ci est au moins égale à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
                     }
                     break;
                 case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
                     if ($conditionPartage->getSeuil()) {
-                        $texte = ($conditionPartage->getTaux() * 100) . "% de la commission pure " . $unite . " si l'assiette est inférieur au seuil à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                        $texte = ($conditionPartage->getTaux() * 100) . "% de l'assiette " . $unite . " si celle-ci est inférieur au seuil à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
                     }
                     break;
                 case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
