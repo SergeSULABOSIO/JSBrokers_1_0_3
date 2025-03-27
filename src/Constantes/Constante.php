@@ -1339,41 +1339,49 @@ class Constante
     }
     public function Type_revenu_getMontant_retrocommissions_payable_par_courtier(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
-        $tot = 0;
-        if ($typeRevenu != null) {
-            // dd($typeRevenu->getId());
-            if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
-                // dd("Jai du contenu");
-                /** @var RevenuPourCourtier $revenu */
-                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo, $onlySharable);
-                }
+        $assietteMicro = 0;
+        $assiette100 = 0;
+        $retro100 = 0;
+        $tabCotations = new ArrayCollection();
+        /** @var RevenuPourCourtier $revenu */
+        foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+            if (!$tabCotations->contains($revenu->getCotation()) && $this->Cotation_isBound($revenu->getCotation())) {
+                $tabCotations->add($revenu->getCotation());
+                $retro100 += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+                $assiette100 += $this->Cotation_getMontant_commission_pure($revenu->getCotation(), $addressedTo, $onlySharable);
             }
+            $assietteMicro += $this->Revenu_getMontant_pure($revenu, $onlySharable);
         }
-        return $tot;
+        if ($assiette100 != 0) {
+            $tauxMicro = $retro100 / $assiette100;
+            $retroMicro = $tauxMicro * $assietteMicro;
+        }
+
+        // dd($onlySharable, "Assiette 100%: " . $assiette100, "Retro 100%: " . $retro100, "Taux micro: " . $tauxMicro, "Assiette Micro: " . $assietteMicro, "Retro Micro: " . $retroMicro);
+        return $retroMicro;
     }
-    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, bool $onlySharable)
+    public function Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         if ($typeRevenu != null) {
             if (count($typeRevenu->getRevenuPourCourtiers()) != 0) {
                 if ($onlySharable == true) {
                     if ($typeRevenu->isShared() == true) {
-                        $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible);
+                        $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible, $addressedTo, $onlySharable);
                     }
                 } else {
-                    $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible);
+                    $tot += $this->loadRetrocomPaid($typeRevenu, $partenaireCible, $addressedTo, $onlySharable);
                 }
             }
         }
         return $tot;
     }
-    private function loadRetrocomPaid(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible)
+    private function loadRetrocomPaid(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
         $tot = 0;
         /** @var RevenuPourCourtier $revenu */
         foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-            $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
+            $tot += $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible, $addressedTo, $onlySharable);
         }
         return $tot;
     }
@@ -1498,7 +1506,9 @@ class Constante
                 // dd("Jai du contenu");
                 /** @var RevenuPourCourtier $revenu */
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $tot += $this->Revenu_getMontant_taxe_payable_par_assureur_payee($revenu);
+                    $taxeRevPayee = $this->Revenu_getMontant_taxe_payable_par_assureur_payee($revenu);
+                    // dd($revenu, $taxeRevPayee);
+                    $tot += $taxeRevPayee;
                 }
             }
         }
@@ -1656,39 +1666,41 @@ class Constante
         $netRev = $this->Revenu_getMontant_ht($revenu);
         return $this->serviceTaxes->getMontantTaxe($netRev, $this->isIARD($revenu->getCotation()), false);
     }
-    public function Revenu_getMontant_taxe_payable_par_assureur_payee(?RevenuPourCourtier $revenu): float
+    public function Revenu_getMontant_taxe_payable_par_assureur_payee(RevenuPourCourtier $revenu): float
     {
-        $montantPaye = 0;
+        /** @var Cotation $cotation */
+        $cotation = $revenu->getCotation();
+        $txAssCotPaye = 0;
+        $txAssCotDue = 0;
         if ($revenu != null) {
-            if ($revenu->getCotation() != null) {
-                if (count($revenu->getCotation()->getTranches()) != 0) {
-                    /** @var Tranche $tranche */
-                    // dd($revenu->getCotation()->getTranches());
-                    foreach ($revenu->getCotation()->getTranches() as $tranche) {
-                        $montantPaye += $this->Tranche_getMontant_taxe_payable_par_assureur_payee($tranche);
-                        // dd($tranche);
-                    }
+            if ($cotation != null) {
+                if ($this->Cotation_isBound($cotation) == true) {
+                    $txAssCotDue = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation, false);
+                    $txAssCotPaye = $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
                 }
             }
         }
-        return $montantPaye;
+        $prop = $txAssCotPaye / $txAssCotDue;
+        // dd("Tx de ". $revenu->getNom() .": " . $txAssRevDue, "Tx due: " . $txAssCotDue, "Tx payée: " . $txAssCotPaye, "Prop: " . $prop);
+        return $this->Revenu_getMontant_taxe_payable_par_assureur($revenu) * $prop;
     }
     public function Revenu_getMontant_taxe_payable_par_courtier_payee(?RevenuPourCourtier $revenu): float
     {
-        $montantPaye = 0;
+        /** @var Cotation $cotation */
+        $cotation = $revenu->getCotation();
+        $txAssCotPaye = 0;
+        $txAssCotDue = 0;
         if ($revenu != null) {
-            if ($revenu->getCotation() != null) {
-                if (count($revenu->getCotation()->getTranches()) != 0) {
-                    /** @var Tranche $tranche */
-                    // dd($revenu->getCotation()->getTranches());
-                    foreach ($revenu->getCotation()->getTranches() as $tranche) {
-                        $montantPaye += $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche);
-                        // dd($tranche);
-                    }
+            if ($cotation != null) {
+                if ($this->Cotation_isBound($cotation) == true) {
+                    $txAssCotDue = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, false);
+                    $txAssCotPaye = $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
                 }
             }
         }
-        return $montantPaye;
+        $prop = $txAssCotPaye / $txAssCotDue;
+        // dd("Tx de ". $revenu->getNom() .": " . $txAssRevDue, "Tx due: " . $txAssCotDue, "Tx payée: " . $txAssCotPaye, "Prop: " . $prop);
+        return $this->Revenu_getMontant_taxe_payable_par_courtier($revenu) * $prop;
     }
     public function Revenu_getMontant_taxe_payable_par_assureur_solde(?RevenuPourCourtier $revenu)
     {
@@ -1702,12 +1714,28 @@ class Constante
     }
     public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
     {
+        // $montant = 0;
+        // if ($revenu != null) {
+        //     if ($revenu->getCotation() != null) {
+        //         if ($onlySharable == true) {
+        //             if ($revenu->getTypeRevenu()->isShared() == true) {
+        //                 $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+        //             }
+        //         } else {
+        //             $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+        //         }
+        //     }
+        // }
+        // return $montant;
+
         $montant = 0;
         if ($revenu != null) {
             if ($revenu->getCotation() != null) {
                 if ($onlySharable == true) {
                     if ($revenu->getTypeRevenu()->isShared() == true) {
-                        $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+                        // dd("Ici");
+                        // $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
+                        
                     }
                 } else {
                     $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($revenu->getCotation(), $partenaireCible, $addressedTo, $onlySharable);
@@ -1716,13 +1744,29 @@ class Constante
         }
         return $montant;
     }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible): float
+    public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
     {
-        return $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($revenu->getCotation(), $partenaireCible);
+        // return $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($revenu->getCotation(), $partenaireCible);
+
+        $retCotPaye = 0;
+        $retCotDue = 0;
+        if ($revenu != null) {
+            /** @var Cotation $cotation */
+            $cotation = $revenu->getCotation();
+            if ($cotation != null) {
+                if ($this->Cotation_isBound($cotation) == true) {
+                    $retCotDue = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaireCible, $addressedTo, $onlySharable);
+                    $retCotPaye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation, $partenaireCible);
+                }
+            }
+        }
+        $prop = $retCotPaye / $retCotDue;
+        // dd("Retro due: " . $retCotDue, "Retro payee: " . $retCotPaye, "Prop: " . $prop);
+        return $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo, $onlySharable) * $prop;
     }
     public function Revenu_getMontant_retrocommissions_payable_par_courtier_solde(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
     {
-        $solde = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo, $onlySharable) - $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible);
+        $solde = $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo, $onlySharable) - $this->Revenu_getMontant_retrocommissions_payable_par_courtier_payee($revenu, $partenaireCible, $addressedTo, $onlySharable);
         return round($solde, 4);
     }
 
@@ -2276,7 +2320,9 @@ class Constante
                 //Quelle proportion de la note a-t-elle été payée (100%?)
                 $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
 
-                //Qu'est-ce qu'on a facturé?
+
+
+                //Qui est-ce qu'on a facturé?
                 if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
                     /** @var Taxe $taxe */
                     $taxe = $this->taxeRepository->find($article->getIdPoste());
@@ -2284,6 +2330,7 @@ class Constante
                         if ($taxe->getRedevable() == Taxe::REDEVABLE_ASSUREUR) {
                             // dd("Paiement Tax", $article);
                             $montant += $proportionPaiement * $article->getMontant();
+                            // dd("Prop payée: " . $proportionPaiement, "Taxe: ", "Montant Article: ", $proportionPaiement * $article->getMontant());
                         }
                     }
                 }
@@ -2955,7 +3002,10 @@ class Constante
     {
         $montant = 0;
         if ($cotation != null) {
-            $partenaire = $cotation->getPiste()->getPartenaires()[0];
+            // $partenaire = $cotation->getPiste()->getPartenaires()[0];
+            $partenaire = $this->Cotation_getPartenaire($cotation);
+
+
             if ($partenaire) {
                 //On doit d'abord s'assurer que nous parlons du même partenaire
                 if ($this->isSamePartenaire($partenaire, $partenaireCible)) {
@@ -2966,6 +3016,7 @@ class Constante
                 }
             }
         }
+        // dd($montant, $partenaire, $partenaireCible);
         return $montant;
     }
     public function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
@@ -2973,7 +3024,8 @@ class Constante
         $montant = 0;
         if (count($tranche->getArticles())) {
             //On doit d'abord s'assurer que nous parlons du même partenaire
-            if ($this->isSamePartenaire($tranche->getCotation()->getPiste()->getPartenaires()[0], $partenaireCible)) {
+            // if ($this->isSamePartenaire($tranche->getCotation()->getPiste()->getPartenaires()[0], $partenaireCible)) {
+            if ($this->isSamePartenaire($this->Tranche_getPartenaire($tranche), $partenaireCible)) {
                 /** @var Article $article */
                 foreach ($tranche->getArticles() as $articleTranche) {
 

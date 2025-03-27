@@ -117,7 +117,7 @@
                                         <small class="m-2">
                                             <span class="text-secondary">Assiette: {{ constante.Type_revenu_getMontant_pure(typerevenu, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier(typerevenu, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(typerevenu, partenaire, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_payee(typerevenu, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
                                             {% if constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier_solde(typerevenu, partenaire, -1, true) != 0 %}
                                                 {% set couleur = "text-danger" %}
