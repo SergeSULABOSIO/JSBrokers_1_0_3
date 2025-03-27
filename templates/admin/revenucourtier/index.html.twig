@@ -52,12 +52,15 @@
                                     {% if constante.RevenuPourCourtier_isBound(revenucourtier) %}
                                         (bound)
                                     {% endif %}
-                                    {{ revenucourtier.nom }} • {{ revenucourtier.typeRevenu.nom }}, payable par {{ constante.Revenu_getNomPayable(revenucourtier) }}  
+                                    {{ revenucourtier.nom }}, payable par {{ constante.Revenu_getNomPayable(revenucourtier) }}  
                                     en {{ revenucourtier.cotation.tranches|length }} Tranches               
                                 </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">Type: {{ revenucourtier.typeRevenu.nom }}</span> 
+                                </small><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Revenu_getMontant_pure(revenucourtier, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">Com. pure: {{ constante.Revenu_getMontant_pure(revenucourtier, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Com. ht: {{ constante.Revenu_getMontant_ht(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary fw-bold"> • C. totale: {{ constante.Revenu_getMontant_ttc(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Payée: {{ constante.Revenu_getMontant_ttc_collecte(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
@@ -94,10 +97,10 @@
                                      {% endif %}
                                 {% endfor %}
                                 {% set partenaire = constante.Cotation_getPartenaire(revenucourtier.cotation) %}
-                                {% if partenaire != null and constante.Revenu_getMontant_pure(revenucourtier, true) != 0 %}
+                                {% if partenaire != null and constante.Revenu_getMontant_pure(revenucourtier, -1, true) != 0 and revenucourtier.typeRevenu.shared == true %}
                                     {# Retro-commission #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Assiette: {{ constante.Revenu_getMontant_pure(revenucourtier, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">Assiette: {{ constante.Revenu_getMontant_pure(revenucourtier, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier(revenucourtier, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • Rétro-com payée: {{ constante.Revenu_getMontant_retrocommissions_payable_par_courtier_payee(revenucourtier, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
@@ -109,10 +112,17 @@
                                             <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Cotation_getTauxConditionsSpecialePiste(revenucourtier.cotation) }}).</span>
                                         {% endif %}
                                     </small><br>
+                                    {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                        <small class="m-2">
+                                            {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                <span class="text-danger"> • {{ condition }}</span>
+                                            {% endfor %}
+                                        </small><br>
+                                    {% endif %}
                                 {% endif %}
                                 {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
                                 <small class="m-2">
-                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Revenu_getReserve(revenucourtier)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Revenu_getReserve(revenucourtier, -1)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br>
                                 <small class="m-2">
                                     <span class="text-secondary">Prop: {{ revenucourtier.cotation.nom }} • {{ revenucourtier.cotation.piste.client }} • {{ revenucourtier.cotation.piste.risque }} • {{ revenucourtier.cotation.assureur }}</span> 
