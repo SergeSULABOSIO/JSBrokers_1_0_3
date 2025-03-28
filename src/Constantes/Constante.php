@@ -6,6 +6,7 @@ use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Entity\Piste;
 use App\Entity\Client;
+use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\Risque;
 use App\Entity\Article;
@@ -18,6 +19,9 @@ use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
+use App\Entity\Utilisateur;
+use App\Entity\CompteBancaire;
+use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\AutoriteFiscale;
 use App\Entity\ConditionPartage;
@@ -27,20 +31,17 @@ use App\Repository\NoteRepository;
 use App\Repository\TaxeRepository;
 use App\Entity\ChargementPourPrime;
 use App\Repository\ArticleRepository;
+use Proxies\__CG__\App\Entity\Revenu;
 use App\Repository\CotationRepository;
+use App\Entity\ReportSet\ReportSummary;
+use App\Repository\PartenaireRepository;
+use App\Entity\ReportSet\PartnerReportSet;
+use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Bundle\SecurityBundle\Security;
 use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
-use App\Entity\CompteBancaire;
-use App\Entity\Groupe;
-use App\Entity\ReportSet\PartnerReportSet;
-use App\Entity\Utilisateur;
-use App\Repository\PartenaireRepository;
-use App\Services\ServiceDates;
-use phpDocumentor\Reflection\Types\Integer;
-use Proxies\__CG__\App\Entity\Revenu;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 
@@ -4258,5 +4259,64 @@ class Constante
             }
         }
         return "Null";
+    }
+
+
+
+
+    /**
+     * ENTREPRISE
+     */
+    public function Entreprise_getSynthesePolices()
+    {
+        $chargementsPrimesGroupes = [];
+        $chargementsPrimes = [];
+        $primeTTC = 0;
+
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+
+        /** @var Entreprise $ese */
+        $ese = $user->getConnectedTo();
+
+        // dd(count($ese->getInvites()));
+
+        /** @var Invite $invite */
+        foreach ($ese->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    foreach ($piste->getCotations() as $cotation) {
+                        if ($this->Cotation_isBound($cotation)) {
+                            foreach ($cotation->getChargements() as $chargement) {
+                                $chargementsPrimes[] = $chargement;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // dd($chargementsPrimesGroupes, $chargementsPrimes);
+        foreach ($ese->getChargements() as $typeChargement) {
+            $montant = 0;
+            foreach ($chargementsPrimes as $chargementExistant) {
+                if ($chargementExistant->getType() == $typeChargement) {
+                    $montant += $chargementExistant->getMontantFlatExceptionel();
+                    // dd($chargementExistant);
+                }
+            }
+            $chargementsPrimesGroupes[] = [
+                ReportSummary::RUBRIQUE => $typeChargement->getNom(),
+                ReportSummary::VALEUR => $montant,
+            ];
+            $primeTTC += $montant;
+        }
+        $chargementsPrimesGroupes[] = [
+            ReportSummary::RUBRIQUE => "Prime TTC",
+            ReportSummary::VALEUR => $primeTTC,
+        ];
+        // dd($chargementsPrimesGroupes);
+
+        return $chargementsPrimesGroupes;
     }
 }

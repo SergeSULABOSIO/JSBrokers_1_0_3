@@ -49,7 +49,7 @@ class EntrepriseDashbordController extends AbstractController
         // dd($user);
 
         //Initialisation du formulaire de recherche
-        /** @var CriteresRechercheDashBordDTO */
+        /** @var CriteresRechercheDashBordDTO $criteres */
         $criteres = (new CriteresRechercheDashBordDTO())
             ->setDateDebut(new DateTimeImmutable("1/1/" . date('Y') . " 00:00"))
             ->setDateFin(new DateTimeImmutable("12/31/" . date('Y') . " 23:59"));
@@ -57,8 +57,8 @@ class EntrepriseDashbordController extends AbstractController
         $formulaire_recherche = $this->createForm(RechercheDashBordType::class, $criteres);
 
         $formulaire_recherche->handleRequest($request);
-        
-        // Pas important de vérifier si le formulaire est soumis
+
+        // Très important de vérifier si le formulaire est soumis
         if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
             $jSBTableauDeBordBuilder->build($formulaire_recherche->getData());
             return $this->render('admin/dashbord/index.html.twig', [
