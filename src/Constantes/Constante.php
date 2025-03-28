@@ -1403,7 +1403,7 @@ class Constante
     }
     public function Type_revenu_getMontant_pure(?TypeRevenu $typeRevenu, $addressedTo, bool $onlySharable): float
     {
-        // dd($typeRevenu);
+        // dd($typeRevenu->isShared(), $typeRevenu);
         $tot = 0;
         if ($typeRevenu != null) {
             // dd($typeRevenu->getId());
@@ -1652,17 +1652,24 @@ class Constante
     {
         $taxeCourtier = 0;
         $taxeAssureur = false;
-        $comNette = $this->Revenu_getMontant_ht($revenu);
+        $comNette = 0;
         $isIARD = $this->isIARD($revenu->getCotation());
+        $commissionPure = 0;
+
 
         if ($onlySharable == true) {
             if ($revenu->getTypeRevenu()->isShared() == true) {
+                // dd($revenu->getTypeRevenu()->isShared(), $revenu);
+                $comNette = $this->Revenu_getMontant_ht($revenu);
                 $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $isIARD, $taxeAssureur);
+                $commissionPure = $comNette - $taxeCourtier;
             }
         } else {
+            $comNette = $this->Revenu_getMontant_ht($revenu);
             $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $isIARD, $taxeAssureur);
+            $commissionPure = $comNette - $taxeCourtier;
         }
-        return $comNette - $taxeCourtier;
+        return $commissionPure;
     }
     public function Revenu_getMontant_taxe_payable_par_assureur(?RevenuPourCourtier $revenu): float
     {
@@ -2609,13 +2616,7 @@ class Constante
         $taxeCourtier = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, $onlySharable);
         return $comHT - $taxeCourtier;
     }
-    // public function Cotation_getMontant_commission_ht(?Cotation $cotation, $addressedTo, bool $onlySharable): float
-    // {
-    //     $comTTC = $this->Cotation_getMontant_commission_ttc($cotation, $addressedTo, $onlySharable);
-    //     $taxeAssureur = $this->Cotation_getMontant_taxe_payable_par_assureur($cotation, $onlySharable);
-    //     // dd($comTTC - $taxeAssureur);
-    //     return $comTTC - $taxeAssureur;
-    // }
+
     public function Tranche_getMontant_commission_ttc_solde(?Tranche $tranche, $addressedTo, bool $onlySharable): float
     {
         $solde = $this->Tranche_getMontant_commission_ttc($tranche, $addressedTo, $onlySharable) - $this->Tranche_getMontant_commission_ttc_collectee($tranche);
