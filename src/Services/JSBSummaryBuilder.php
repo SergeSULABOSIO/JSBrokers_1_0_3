@@ -25,44 +25,16 @@ class JSBSummaryBuilder
     {
         $items = [];
         $data = $this->constante->Entreprise_getSynthesePolices();
-
-        // dd("Je suis ici...", $this->constante->Entreprise_getSynthesePolices());
-
         for ($i = 0; $i < count($data) - 1; $i++) {
             $items[] = $data[$i];
         }
-
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_net_prem"),
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-        //Ici ces valeurs seront chargées automatiquement ce sont des chargements des factures client
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => 'Arca:',
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => 'Fronting:',
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => 'Facility:',
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-
         $summary = (new ReportSummary())
             ->setIcone("emojione-monotone:umbrella-with-rain-drops")
             ->setIcone_color("text-primary")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_policies_titre"))
             ->setPrincipal($data[count($data)-1])
-            // ->setPrincipal([
-            //     ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"),
-            //     ReportSummary::VALEUR => 100000000.45,
-            // ])
             ->setItems($items);
-
-        // dd($summary);
         return $summary;
     }
 
