@@ -113,7 +113,7 @@
                                 {% endfor %}
                                 {% for partenaire in constante.Type_revenu_getPartenaires(typerevenu) %}
                                     {# Retro-commission #}
-                                    {% if partenaire != null and constante.Type_revenu_getMontant_pure(typerevenu, -1, true) != 0  %} {# and typerevenu.shared == true #}
+                                    {% if partenaire != null and constante.Type_revenu_getMontant_pure(typerevenu, -1, true) != 0 and typerevenu.shared == true %}
                                         <small class="m-2">
                                             <span class="text-secondary">Assiette: {{ constante.Type_revenu_getMontant_pure(typerevenu, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Type_revenu_getMontant_retrocommissions_payable_par_courtier(typerevenu, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
