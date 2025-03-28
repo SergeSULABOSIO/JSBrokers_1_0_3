@@ -4279,8 +4279,6 @@ class Constante
         /** @var Entreprise $ese */
         $ese = $user->getConnectedTo();
 
-        // dd(count($ese->getInvites()));
-
         /** @var Invite $invite */
         foreach ($ese->getInvites() as $invite) {
             foreach ($invite->getPistes() as $piste) {
@@ -4296,13 +4294,11 @@ class Constante
             }
         }
 
-        // dd($chargementsPrimesGroupes, $chargementsPrimes);
         foreach ($ese->getChargements() as $typeChargement) {
             $montant = 0;
             foreach ($chargementsPrimes as $chargementExistant) {
                 if ($chargementExistant->getType() == $typeChargement) {
                     $montant += $chargementExistant->getMontantFlatExceptionel();
-                    // dd($chargementExistant);
                 }
             }
             $chargementsPrimesGroupes[] = [
@@ -4315,8 +4311,6 @@ class Constante
             ReportSummary::RUBRIQUE => "Prime TTC",
             ReportSummary::VALEUR => $primeTTC,
         ];
-        // dd($chargementsPrimesGroupes);
-
         return $chargementsPrimesGroupes;
     }
 }
