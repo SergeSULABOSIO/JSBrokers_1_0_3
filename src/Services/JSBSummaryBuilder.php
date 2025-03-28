@@ -34,7 +34,7 @@ class JSBSummaryBuilder
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_policies_titre"))
             ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
-                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"), //"Prime TTC",
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"),
                 ReportSummary::VALEUR => 0,
             ])
             ->setItems($items);
