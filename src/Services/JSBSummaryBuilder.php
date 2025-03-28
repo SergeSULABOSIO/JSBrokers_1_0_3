@@ -24,7 +24,7 @@ class JSBSummaryBuilder
     public function newPoliciesSummary(): ReportSummary
     {
         $items = [];
-        $data = $this->constante->Entreprise_getSynthesePolices();
+        $data = $this->constante->Entreprise_getSynthesePrimes();
         for ($i = 0; $i < count($data) - 1; $i++) {
             $items[] = $data[$i];
         }
@@ -33,7 +33,10 @@ class JSBSummaryBuilder
             ->setIcone_color("text-primary")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_policies_titre"))
-            ->setPrincipal($data[count($data)-1])
+            ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
+                ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"), //"Prime TTC",
+                ReportSummary::VALEUR => 0,
+            ])
             ->setItems($items);
         return $summary;
     }
@@ -46,31 +49,18 @@ class JSBSummaryBuilder
     public function newRevenuesSummary(): ReportSummary
     {
         $items = [];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_revenues_net"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => 'Arca (2%):',
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => 'Vat (16%):',
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_revenues_pur"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-
+        $data = $this->constante->Entreprise_getSynthseRevenus();
+        for ($i = 0; $i < count($data) - 1; $i++) {
+            $items[] = $data[$i];
+        }
         $summary = (new ReportSummary())
             ->setIcone("healthicons:money-bag")
             ->setIcone_color("text-success")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_revenues_titre"))
-            ->setPrincipal([
+            ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
                 ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_revenues_ttc"),
-                ReportSummary::VALEUR => 100000000.45,
+                ReportSummary::VALEUR => 0
             ])
             ->setItems($items);
 

@@ -4267,7 +4267,14 @@ class Constante
     /**
      * ENTREPRISE
      */
-    public function Entreprise_getSynthesePolices()
+    public function Entreprise_getSynthseRevenus()
+    {
+        $syntheseRevenu = [];
+
+        return $syntheseRevenu;
+    }
+
+    public function Entreprise_getSynthesePrimes()
     {
         $chargementsPrimesGroupes = [];
         $chargementsPrimes = [];
@@ -4308,7 +4315,7 @@ class Constante
             $primeTTC += $montant;
         }
         $chargementsPrimesGroupes[] = [
-            ReportSummary::RUBRIQUE => "Prime TTC",
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"), //"Prime TTC",
             ReportSummary::VALEUR => $primeTTC,
         ];
         return $chargementsPrimesGroupes;
