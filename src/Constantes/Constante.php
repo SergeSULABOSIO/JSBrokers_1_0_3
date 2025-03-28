@@ -4270,7 +4270,7 @@ class Constante
     public function Entreprise_getSynthseRevenus()
     {
         $syntheseRevenu = [];
-
+        
         return $syntheseRevenu;
     }
 
