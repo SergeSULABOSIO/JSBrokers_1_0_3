@@ -4262,6 +4262,14 @@ class Constante
     }
 
 
+    public function getEnterprise():Entreprise
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+
+        return $user->getConnectedTo();
+    }
+
 
 
     /**
@@ -4270,7 +4278,7 @@ class Constante
     public function Entreprise_getSynthseRevenus()
     {
         $syntheseRevenu = [];
-        
+
         return $syntheseRevenu;
     }
 
@@ -4280,14 +4288,8 @@ class Constante
         $chargementsPrimes = [];
         $primeTTC = 0;
 
-        /** @var Utilisateur $user */
-        $user = $this->security->getUser();
-
-        /** @var Entreprise $ese */
-        $ese = $user->getConnectedTo();
-
         /** @var Invite $invite */
-        foreach ($ese->getInvites() as $invite) {
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
             foreach ($invite->getPistes() as $piste) {
                 if ($this->Piste_isBound($piste)) {
                     foreach ($piste->getCotations() as $cotation) {
@@ -4301,7 +4303,7 @@ class Constante
             }
         }
 
-        foreach ($ese->getChargements() as $typeChargement) {
+        foreach ($this->getEnterprise()->getChargements() as $typeChargement) {
             $montant = 0;
             foreach ($chargementsPrimes as $chargementExistant) {
                 if ($chargementExistant->getType() == $typeChargement) {
@@ -4315,7 +4317,7 @@ class Constante
             $primeTTC += $montant;
         }
         $chargementsPrimesGroupes[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"), //"Prime TTC",
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"),
             ReportSummary::VALEUR => $primeTTC,
         ];
         return $chargementsPrimesGroupes;
