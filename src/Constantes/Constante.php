@@ -42,6 +42,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use PhpParser\Node\Expr\Cast\Array_;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 
@@ -60,7 +61,14 @@ class Constante
         private TaxeRepository $taxeRepository,
         private PartenaireRepository $partenaireRepository,
         private ServiceMonnaies $serviceMonnaies,
+        // private ChargementsLoader $chargementsLoader,
     ) {}
+
+    public const STATUS_DUE = "AmountDue";
+    public const STATUS_INVOICED = "AmountInvoiced";
+    public const STATUS_PAID = "AmountPaid";
+    public const STATUS_NOT_INVOICED = "AmountNotInvoiced";
+    public const STATUS_BALANCE_DUE = "BalanceDue";
 
 
     public function getTabTypeAvenants(): array
@@ -2653,10 +2661,8 @@ class Constante
                 $comTTCClient = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation, true);
                 return round($comTTCAssureur + $comTTCClient, 2);
                 break;
-
             default:
                 $comTTCAssureur = $this->Cotation_getMontant_commission_ttc_payable_par_assureur($cotation, $onlySharable);
-                // dd("Ici", $onlySharable, round($comTTCAssureur, 2));
                 $comTTCClient = $this->Cotation_getMontant_commission_ttc_payable_par_client($cotation, $onlySharable);
                 return round($comTTCAssureur + $comTTCClient, 2);
                 break;
@@ -3641,6 +3647,65 @@ class Constante
         }
         return $tot;
     }
+    public function Revenu_getInvoicingStatus(?RevenuPourCourtier $revenu): array
+    {
+        $statusCollection = [
+            "Revenu" => $revenu,
+            self::STATUS_DUE => 0,
+            self::STATUS_INVOICED => 0,
+            self::STATUS_PAID => 0,
+            self::STATUS_NOT_INVOICED => 0,
+            self::STATUS_BALANCE_DUE => 0,
+        ];
+
+        /** @var Cotation $cotation */
+        $cotation = $revenu->getCotation();
+        if ($cotation) {
+            if ($this->Cotation_isBound($cotation)) {
+                foreach ($cotation->getTranches() as $tranche) {
+                    /** @var Article $article */
+                    foreach ($tranche->getArticles() as $article) {
+                        if ($article->getIdPoste() == $revenu->getId()) {
+                            // dd("j'ai trouvé l'article", $article);
+                            $statusCollection[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenu);
+                            $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenu);
+                            $statusCollection[self::STATUS_BALANCE_DUE] = $this->Revenu_getMontant_ttc_solde($revenu);
+                            $statusCollection[self::STATUS_INVOICED] += $article->getMontant();
+                        }
+                    }
+                }
+            }
+        }
+        $statusCollection[self::STATUS_NOT_INVOICED] = $statusCollection[self::STATUS_DUE] - $statusCollection[self::STATUS_INVOICED];
+        return $statusCollection;
+    }
+    public function Piste_getCommissionsInvoicingStatus(?Piste $piste): array
+    {
+        $status = [
+            self::STATUS_DUE => 0,
+            self::STATUS_INVOICED => 0,
+            self::STATUS_PAID => 0,
+            self::STATUS_NOT_INVOICED => 0,
+            self::STATUS_BALANCE_DUE => 0,
+        ];
+
+        /** @var TypeRevenu $typeRevenu */
+        foreach ($this->getEnterprise()->getTypeRevenus() as $typeRevenu) {
+            if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR or $typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                // dd("Redevable par l'assureur ou par le client:", $typeRevenu);
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
+                    $revenuStatus = $this->Revenu_getInvoicingStatus($revenu);
+                    $status[self::STATUS_DUE] += $revenuStatus[self::STATUS_DUE];
+                    $status[self::STATUS_INVOICED] += $revenuStatus[self::STATUS_INVOICED];
+                    $status[self::STATUS_PAID] += $revenuStatus[self::STATUS_PAID];
+                    $status[self::STATUS_NOT_INVOICED] += $revenuStatus[self::STATUS_NOT_INVOICED];
+                    $status[self::STATUS_BALANCE_DUE] += $revenuStatus[self::STATUS_BALANCE_DUE];
+                    // dd($this->Revenu_getInvoicingStatus($revenu));
+                }
+            }
+        }
+        return $status;
+    }
     public function Piste_getMontant_commission_collectee(?Piste $piste)
     {
         $tot = 0;
@@ -4262,7 +4327,7 @@ class Constante
     }
 
 
-    public function getEnterprise():Entreprise
+    public function getEnterprise(): Entreprise
     {
         /** @var Utilisateur $user */
         $user = $this->security->getUser();
@@ -4275,10 +4340,86 @@ class Constante
     /**
      * ENTREPRISE
      */
+    public function Entreprise_getSynthseCollecteRevenus()
+    {
+        $status = [];
+        $syntheseRevenu = [];
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    $status = $this->Piste_getCommissionsInvoicingStatus($piste);
+
+                    // dd($status);
+
+                    // $comInvoiced += $this->Piste_getMontant_commission_ttc($piste, -1, false);
+                    // $comReceived += $this->Piste_getMontant_commission_collectee($piste, -1, false);
+                    // $comBalanceDue += $this->Piste_getMontant_commission_ttc_solde($piste, -1, false);
+                    // $comNotInvoiced += $this->Piste_getInvoicingStatus($piste);
+                }
+            }
+        }
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_invoiced"),
+            ReportSummary::VALEUR => $status[self::STATUS_INVOICED],
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_received"),
+            ReportSummary::VALEUR => $status[self::STATUS_PAID],
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_balance"),
+            ReportSummary::VALEUR => $status[self::STATUS_BALANCE_DUE],
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_not_invoiced"),
+            ReportSummary::VALEUR => $status[self::STATUS_NOT_INVOICED],
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_not_invoiced"),
+            ReportSummary::VALEUR => $status[self::STATUS_NOT_INVOICED],
+        ];
+
+        return $syntheseRevenu;
+    }
     public function Entreprise_getSynthseRevenus()
     {
+        $assiette = 0;
+        $commPure = 0;
+        $commHT = 0;
+        $commTTC = 0;
         $syntheseRevenu = [];
-
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    $assiette += $this->Piste_getMontant_commission_pure($piste, -1, true);
+                    $commPure += $this->Piste_getMontant_commission_pure($piste, -1, false);
+                    $commHT += $this->Piste_getMontant_commission_ht($piste, -1, false);
+                    $commTTC += $this->Piste_getMontant_commission_ttc($piste, -1, false);
+                }
+            }
+        }
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => "Assiette",
+            ReportSummary::VALEUR => $assiette,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => "Com. pure",
+            ReportSummary::VALEUR => $commPure,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => "Com. ht",
+            ReportSummary::VALEUR => $commHT,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => "Com. ttc",
+            ReportSummary::VALEUR => $commTTC,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => "Com. ttc",
+            ReportSummary::VALEUR => $commTTC,
+        ];
         return $syntheseRevenu;
     }
 
@@ -4316,6 +4457,7 @@ class Constante
             ];
             $primeTTC += $montant;
         }
+
         $chargementsPrimesGroupes[] = [
             ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_policies_gross_prem"),
             ReportSummary::VALEUR => $primeTTC,
