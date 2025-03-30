@@ -4349,13 +4349,7 @@ class Constante
             foreach ($invite->getPistes() as $piste) {
                 if ($this->Piste_isBound($piste)) {
                     $status = $this->Piste_getCommissionsInvoicingStatus($piste);
-
                     // dd($status);
-
-                    // $comInvoiced += $this->Piste_getMontant_commission_ttc($piste, -1, false);
-                    // $comReceived += $this->Piste_getMontant_commission_collectee($piste, -1, false);
-                    // $comBalanceDue += $this->Piste_getMontant_commission_ttc_solde($piste, -1, false);
-                    // $comNotInvoiced += $this->Piste_getInvoicingStatus($piste);
                 }
             }
         }
