@@ -4417,6 +4417,58 @@ class Constante
         return $syntheseRevenu;
     }
 
+
+    public function Entreprise_getSynthseRetrocommission()
+    {
+        $assiette = 0;
+        $retrocommission = 0;
+        $retrocommissionPayee = 0;
+        $soldeRestant = 0;
+
+        $syntheseRevenu = [];
+
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    $assiette += $this->Piste_getMontant_commission_pure($piste, -1, true);
+                    $partenaires = $this->Piste_getPartenaires($piste);
+                    if (count($partenaires) != 0) {
+                        // dd($partenaires);
+                        foreach ($partenaires as $partenaire) {
+                            // dd($partenaire);
+                            $retrocommission += $this->Piste_getMontant_retrocommissions_payable_par_courtier($piste, $partenaire, -1, true);
+                            $retrocommissionPayee += $this->Piste_getMontant_retrocommissions_payable_par_courtier_payee($piste, $partenaire);
+                            $soldeRestant += $this->Piste_getMontant_retrocommissions_payable_par_courtier_solde($piste, $partenaire, -1, true);
+                        }
+                    }
+                }
+            }
+        }
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_revenu_assiette"),
+            ReportSummary::VALEUR => $assiette,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due_partenaire"),
+            ReportSummary::VALEUR => $retrocommission,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_payee"),
+            ReportSummary::VALEUR => $retrocommissionPayee,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due"),
+            ReportSummary::VALEUR => $soldeRestant,
+        ];
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due"),
+            ReportSummary::VALEUR => $soldeRestant,
+        ];
+        // dd($syntheseRevenu);
+        return $syntheseRevenu;
+    }
+
     public function Entreprise_getSynthesePrimes()
     {
         $chargementsPrimesGroupes = [];

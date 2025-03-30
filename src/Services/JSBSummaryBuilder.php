@@ -75,35 +75,7 @@ class JSBSummaryBuilder
      */
     public function newRevenueCollectionsSummary(): ReportSummary
     {
-        // $items = [];
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_invoiced"),
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_received"),
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_balance"),
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-        // $items[] = [
-        //     ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_not_invoiced"),
-        //     ReportSummary::VALEUR => 100000000.45,
-        // ];
-        // $summary = (new ReportSummary())
-        //     ->setIcone("game-icons:receive-money")
-        //     ->setIcone_color("text-black")
-        //     ->setCurrency_code("$")
-        //     ->setTitre($this->translator->trans("company_dashboard_summary_collecte_revenues_titre"))
-        //     ->setPrincipal([
-        //         ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_due"),
-        //         ReportSummary::VALEUR => 100000000.45,
-        //     ])
-        //     ->setItems($items);
-
-
+        $items = [];
         $data = $this->constante->Entreprise_getSynthseCollecteRevenus();
         for ($i = 0; $i < count($data) - 1; $i++) {
             $items[] = $data[$i];
@@ -130,31 +102,18 @@ class JSBSummaryBuilder
     public function newCoBrokerageSummary(): ReportSummary
     {
         $items = [];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_revenu_assiette"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due_partenaire"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_payee"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-
+        $data = $this->constante->Entreprise_getSynthseRetrocommission();
+        for ($i = 0; $i < count($data) - 1; $i++) {
+            $items[] = $data[$i];
+        }
         $summary = (new ReportSummary())
             ->setIcone("carbon:partnership")
             ->setIcone_color("text-secondary")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_retrocom_titre"))
-            ->setPrincipal([
+            ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
                 ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_retrocom_due"),
-                ReportSummary::VALEUR => 100000000.45,
+                ReportSummary::VALEUR => 0
             ])
             ->setItems($items);
 
