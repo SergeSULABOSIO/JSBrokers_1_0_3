@@ -108,6 +108,12 @@
                                     {% set index = index + 1 %}
                                     {% endfor %}
                                 {% endif %}
+                                {% if constante.Notification_Sinistre_getDureeReglement(notificationsinistre)|length > 0 %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">Sinistre indemnisé en {{ constante.Notification_Sinistre_getDureeReglement(notificationsinistre) }} jours</span> 
+                                        <span class="text-secondary"> • entre le {{ notificationsinistre.notifiedAt|format_datetime('short', 'none', locale: utilisateur.locale) }} et le {{ constante.Notification_Sinistre_getDateDernierRgelement(notificationsinistre)|format_datetime('short', 'none', locale: utilisateur.locale) }}, jour du dernier reglèment.</span> 
+                                    </small><br/>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

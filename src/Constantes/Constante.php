@@ -44,6 +44,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
+use DateTimeImmutable;
 use PhpParser\Node\Expr\Cast\Array_;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -4702,5 +4703,28 @@ class Constante
             // dd($tabDocuments, count($tabDocuments['Docs_attendus']), count($tabDocuments['Docs_fournis']));
         }
         return $tabDocuments;
+    }
+    public function Notification_Sinistre_getDureeReglement(?NotificationSinistre $notification_sinistre)
+    {
+        $duree = -1;
+        $dateNotfication = $notification_sinistre->getNotifiedAt();
+        $dateRgelement = null;
+        if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
+            $offres = $notification_sinistre->getOffreIndemnisationSinistres();
+            $reglements = ($offres[count($offres)-1])->getPaiements();
+            $dateRgelement = ($reglements[count($reglements)-1])->getPaidAt();
+            $duree = $this->serviceDates->daysEntre($dateNotfication, $dateRgelement);
+        }
+        return $duree;
+    }
+    public function Notification_Sinistre_getDateDernierRgelement(?NotificationSinistre $notification_sinistre)
+    {
+        $dateDernierRgelement = null;
+        if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
+            $offres = $notification_sinistre->getOffreIndemnisationSinistres();
+            $reglements = ($offres[count($offres)-1])->getPaiements();
+            $dateDernierRgelement = ($reglements[count($reglements)-1])->getPaidAt();
+        }
+        return $dateDernierRgelement;
     }
 }

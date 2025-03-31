@@ -64,11 +64,24 @@
                                             {% endif %}
                                         </span>
                                     </small><br/>
+                                {% else %}
+                                    <small class ="m-2">
+                                        {% set coleur = 'text-success' %}
+                                        <span class="{{coleur}} fw-bold">
+                                            Payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                        </span>
+                                    </small><br/>
                                 {% endif %}
                                 <small class ="m-2">
-                                    <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% if paiement.note != null %}
+                                        <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% else %}
+                                        <span class="text-secondary fw-bold">Montant dû: {{ paiement.offreIndemnisationSinistre.montantPayable|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Solde: {{ (paiement.offreIndemnisationSinistre.montantPayable - paiement.montant)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% endif %}
                                 </small><br/>
                                 {% if paiement.note != null %}
                                     <small class ="m-2">
