@@ -48,12 +48,17 @@
                         <tr id="row_notificationsinistre_{{ notificationsinistre.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ notificationsinistre.assure.nom }} • {{ notificationsinistre.descriptionDeFait }} [...] • {{ notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }} • {{ notificationsinistre.lieu }}
+                                    {{ notificationsinistre.assure.nom }} • {{ notificationsinistre.descriptionDeFait }} [...] • {{ notificationsinistre.occuredAt|format_datetime('short', 'none', locale: utilisateur.locale) }} • {{ notificationsinistre.lieu }}
                                 </a><br/>
                                 <small class="m-2">
                                     {% if notificationsinistre.referenceSinistre != null %}
                                         <span class="text-secondary">
-                                            Réf.: {{ notificationsinistre.referenceSinistre }}
+                                            Déclaré le {{ notificationsinistre.notifiedAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+                                        </span>
+                                    {% endif %}
+                                    {% if notificationsinistre.referenceSinistre != null %}
+                                        <span class="text-secondary">
+                                            • Réf.: {{ notificationsinistre.referenceSinistre }}
                                         </span>
                                     {% endif %}
                                     {% if notificationsinistre.referencePolice != null %}

@@ -55,6 +55,11 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
+            ->add('notifiedAt', DateType::class, [
+                'label' => "Date de la notification",
+                'required' => true,
+                'widget' => 'single_text',
+            ])
             ->add('occuredAt', DateType::class, [
                 'label' => "Date de la survénance",
                 'required' => true,

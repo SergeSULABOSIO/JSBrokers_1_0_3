@@ -75,6 +75,9 @@ class NotificationSinistre
     #[ORM\Column(nullable: true)]
     private ?float $evaluationChiffree = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $notifiedAt = null;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();
@@ -348,6 +351,18 @@ class NotificationSinistre
     public function setEvaluationChiffree(?float $evaluationChiffree): static
     {
         $this->evaluationChiffree = $evaluationChiffree;
+
+        return $this;
+    }
+
+    public function getNotifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->notifiedAt;
+    }
+
+    public function setNotifiedAt(?\DateTimeImmutable $notifiedAt): static
+    {
+        $this->notifiedAt = $notifiedAt;
 
         return $this;
     }
