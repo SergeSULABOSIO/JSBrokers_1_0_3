@@ -4,22 +4,23 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invite;
 use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
-use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Utilisateur;
-use App\Form\NotificationSinistreType;
-use App\Form\OffreIndemnisationSinistreType;
 use App\Repository\InviteRepository;
+use App\Form\NotificationSinistreType;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\OffreIndemnisationSinistre;
+use App\Form\OffreIndemnisationSinistreType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Repository\OffreIndemnisationSinistreRepository;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use App\Repository\OffreIndemnisationSinistreRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -38,6 +39,7 @@ class OffreIndemnisationController extends AbstractController
         private InviteRepository $inviteRepository,
         private OffreIndemnisationSinistreRepository $offreIndemnisationSinistreRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
     }
@@ -58,6 +60,7 @@ class OffreIndemnisationController extends AbstractController
             'offreindemnisations' => $this->offreIndemnisationSinistreRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
         ]);
     }

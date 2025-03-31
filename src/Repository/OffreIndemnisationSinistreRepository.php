@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use Doctrine\Persistence\ManagerRegistry;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Services\ServiceMonnaies;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Knp\Component\Pager\Pagination\PaginationInterface;
@@ -15,9 +16,9 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 class OffreIndemnisationSinistreRepository extends ServiceEntityRepository
 {
     public function __construct(
-        ManagerRegistry $registry,
+        private ManagerRegistry $registry,
         private PaginatorInterface $paginator,
-        private Security $security
+        private Security $security,
     )
     {
         parent::__construct($registry, OffreIndemnisationSinistre::class);
