@@ -4662,6 +4662,17 @@ class Constante
         return $montant;
     }
 
+    public function Notification_Sinistre_getFranchise(?NotificationSinistre $notification_sinistre)
+    {
+        $montant = 0;
+        if ($notification_sinistre != null) {
+            foreach ($notification_sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $montant += $offre_indemnisation->getFranchiseAppliquee();
+            }
+        }
+        return $montant;
+    }
+
     public function Notification_Sinistre_getStatusDocumentsAttendus(?NotificationSinistre $notification_sinistre)
     {
         $tabDocuments = [
