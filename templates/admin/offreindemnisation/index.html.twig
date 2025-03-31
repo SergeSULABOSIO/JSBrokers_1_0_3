@@ -70,15 +70,19 @@
                                         </span>
                                     {% endif %} #}
                                 </small><br/>
-                                <small class="m-2">
+                                <small class="m-2 fw-bold">
                                     <span class="text-secondary">Franchise: {{ offreindemnisation.franchiseAppliquee|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Compensation: {{ offreindemnisation.notificationsinistre.dommage|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Comp. versée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Compensation: {{ offreindemnisation.montantPayable|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Comp. versée: {{ constante.Offre_Indemnisation_getCompensationVersee(offreindemnisation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
-                                    {% if true %}
+                                    {% if constante.Offre_Indemnisation_getSoldeAVerser(offreindemnisation) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde à regler: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="{{couleur}}"> • Solde à regler: {{ constante.Offre_Indemnisation_getSoldeAVerser(offreindemnisation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">Bénéficiaire: {{ offreindemnisation.beneficiaire }}</span> 
+                                    <span class="text-secondary"> • Réf. Bancaire: {{ offreindemnisation.referenceBancaire }}</span> 
                                 </small><br/>
                             </td>
                             <td>

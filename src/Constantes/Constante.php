@@ -42,6 +42,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\OffreIndemnisationSinistre;
 use PhpParser\Node\Expr\Cast\Array_;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -4597,5 +4598,32 @@ class Constante
         ];
         // dd($syntheseRevenu);
         return $syntheseTaxes;
+    }
+
+    public function Offre_Indemnisation_getCompensationVersee(?OffreIndemnisationSinistre $offre_indemnisation)
+    {
+        $montant = 0;
+        if ($offre_indemnisation != null) {
+            // dd("Ici: ", $offre_indemnisation);
+            foreach ($offre_indemnisation->getPaiements() as $paiement) {
+                $montant += $paiement->getMontant();
+            }
+        }
+        return $montant;
+    }
+
+    public function Offre_Indemnisation_getSoldeAVerser(?OffreIndemnisationSinistre $offre_indemnisation)
+    {
+        $montant = 0;
+        if ($offre_indemnisation != null) {
+            $compensation = 0;
+            if($offre_indemnisation->getNotificationSinistre() != null){
+                $compensation = $offre_indemnisation->getMontantPayable();
+                // dd($compensation);
+            }
+            $compensationVersee = $this->Offre_Indemnisation_getCompensationVersee($offre_indemnisation);
+            $montant = $compensation - $compensationVersee;
+        }
+        return $montant;
     }
 }
