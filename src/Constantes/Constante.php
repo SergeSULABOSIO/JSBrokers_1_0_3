@@ -4469,6 +4469,50 @@ class Constante
         return $syntheseRevenu;
     }
 
+    public function Entreprise_getSynthseTaxes()
+    {
+        $comht = 0;
+        $taxeDue = 0;
+        $taxePayee = 0;
+        $soldeRestant = 0;
+
+        $syntheseTaxes = [];
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    $comht += $this->Piste_getMontant_commission_ht($piste, -1, false);
+                    $taxeDue += $this->Piste_getMontant_taxe_payable_par_assureur($piste, false) + $this->Piste_getMontant_taxe_payable_par_courtier($piste, false);
+                    $taxePayee += $this->Piste_getMontant_taxe_payable_par_assureur_payee($piste, false) + $this->Piste_getMontant_taxe_payable_par_courtier_payee($piste, false);
+                    $soldeRestant += $this->Piste_getMontant_taxe_payable_par_assureur_solde($piste, false) + $this->Piste_getMontant_taxe_payable_par_courtier_solde($piste, false);
+                    // dd($partenaire);
+                }
+            }
+        }
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_revenu_net"),
+            ReportSummary::VALEUR => $comht,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_payable"),
+            ReportSummary::VALEUR => $taxeDue,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_payee"),
+            ReportSummary::VALEUR => $taxePayee,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_due"),
+            ReportSummary::VALEUR => $soldeRestant,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_due"),
+            ReportSummary::VALEUR => $soldeRestant,
+        ];
+        // dd($syntheseRevenu);
+        return $syntheseTaxes;
+    }
+
     public function Entreprise_getSynthesePrimes()
     {
         $chargementsPrimesGroupes = [];

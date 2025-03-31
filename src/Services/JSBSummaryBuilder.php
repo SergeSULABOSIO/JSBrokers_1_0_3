@@ -129,31 +129,18 @@ class JSBSummaryBuilder
     public function newTaxSummary(): ReportSummary
     {
         $items = [];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_revenu_net"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_payable"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_payee"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-        $items[] = [
-            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_due"),
-            ReportSummary::VALEUR => 100000000.45,
-        ];
-
+        $data = $this->constante->Entreprise_getSynthseTaxes();
+        for ($i = 0; $i < count($data) - 1; $i++) {
+            $items[] = $data[$i];
+        }
         $summary = (new ReportSummary())
             ->setIcone("carbon:finance")
             ->setIcone_color("text-warning")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_tax_titre"))
-            ->setPrincipal([
+            ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
                 ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_tax_due"),
-                ReportSummary::VALEUR => 100000000.45,
+                ReportSummary::VALEUR => 0
             ])
             ->setItems($items);
 
