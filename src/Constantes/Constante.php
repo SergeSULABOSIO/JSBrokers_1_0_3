@@ -4661,4 +4661,35 @@ class Constante
         }
         return $montant;
     }
+
+    public function Notification_Sinistre_getStatusDocumentsAttendus(?NotificationSinistre $notification_sinistre)
+    {
+        $tabDocuments = [
+            "Docs_attendus" => [], 
+            "Docs_fournis" => [], 
+            "Docs_manquants" => [], 
+        ];
+        if ($notification_sinistre != null) {
+            $tabDocuments['Docs_attendus'] = $this->getEnterprise()->getModelePieceSinistres();
+            $tabDocuments['Docs_fournis'] = $notification_sinistre->getPieces();
+            
+            $manquants = new ArrayCollection();
+            foreach ($this->getEnterprise()->getModelePieceSinistres() as $typePiece) {
+                $isFournis = false;
+                foreach ($notification_sinistre->getPieces() as $pieceSinistre) {
+                    if ($pieceSinistre->getType() == $typePiece) {
+                        $isFournis = true;
+                    }
+                }
+                if ($isFournis == false) {
+                    if (!$manquants->contains($typePiece)) {
+                        $manquants->add($typePiece);
+                    }
+                }
+            }
+            $tabDocuments['Docs_manquants'] = $manquants;
+            // dd($tabDocuments, count($tabDocuments['Docs_attendus']), count($tabDocuments['Docs_fournis']));
+        }
+        return $tabDocuments;
+    }
 }

@@ -81,6 +81,28 @@
                                     {% endif %}
                                     <span class="{{couleur}}"> • Solde à regler: {{ constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
+                                {% set statusDoc = constante.Notification_Sinistre_getStatusDocumentsAttendus(notificationsinistre) %}
+                                <small class="m-2">
+                                    <span class="text-secondary">Documents recquis ({{ statusDoc['Docs_attendus']|length }})</span> 
+                                    <span class="text-secondary"> • Documents fournis ({{ statusDoc['Docs_fournis']|length }})</span> 
+                                    <span class="text-secondary"> • Documents manquants ({{ statusDoc['Docs_manquants']|length }})</span> 
+                                </small><br/>
+                                {% if statusDoc['Docs_manquants']|length != 0 %}
+                                    <small class="m-2">
+                                        <span class="text-danger">Documents manquants:</span>
+                                    </small><br/>
+                                    {% set index = 1 %}
+                                    {% for manquant in statusDoc['Docs_manquants'] %}
+                                        <small class="m-2">
+                                            <span class="text-danger"> {{ index}}) {{ manquant.nom }}
+                                            {% if manquant.obligatoire == true %}
+                                                <span class="fw-bold">(obligatoire)</span>
+                                            {% endif %}
+                                            : {{ manquant.description }}</span><br/>
+                                        </small>
+                                    {% set index = index + 1 %}
+                                    {% endfor %}
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
