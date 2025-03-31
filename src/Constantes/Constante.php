@@ -42,6 +42,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use PhpParser\Node\Expr\Cast\Array_;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -4623,6 +4624,40 @@ class Constante
             }
             $compensationVersee = $this->Offre_Indemnisation_getCompensationVersee($offre_indemnisation);
             $montant = $compensation - $compensationVersee;
+        }
+        return $montant;
+    }
+
+    public function Notification_Sinistre_getCompensation(?NotificationSinistre $notification_sinistre)
+    {
+        $compensation = 0;
+        if ($notification_sinistre != null) {
+            foreach ($notification_sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $compensation += $offre_indemnisation->getMontantPayable();
+            }
+        }
+        return $compensation;
+    }
+
+    public function Notification_Sinistre_getCompensationVersee(?NotificationSinistre $notification_sinistre)
+    {
+        $montant = 0;
+        if ($notification_sinistre != null) {
+            // dd("Ici: ", $offre_indemnisation);
+            foreach ($notification_sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $montant += $this->Offre_Indemnisation_getCompensationVersee($offre_indemnisation);
+            }
+        }
+        return $montant;
+    }
+
+    public function Notification_Sinistre_getSoldeAVerser(?NotificationSinistre $notification_sinistre)
+    {
+        $montant = 0;
+        if ($notification_sinistre != null) {
+            foreach ($notification_sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $montant += $this->Offre_Indemnisation_getSoldeAVerser($offre_indemnisation);
+            }
         }
         return $montant;
     }

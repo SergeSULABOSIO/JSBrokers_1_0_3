@@ -72,14 +72,14 @@
                                     <span class="text-secondary"> • Evaluation de l'expert: {{ notificationsinistre.evaluationChiffree|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Franchise: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
-                                <small class="m-2">
-                                    <span class="text-secondary">Compensation: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Comp. versée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                <small class="m-2 fw-bold">
+                                    <span class="text-secondary">Compensation: {{ constante.Notification_Sinistre_getCompensation(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Comp. versée: {{ constante.Notification_Sinistre_getCompensationVersee(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
-                                    {% if true %}
+                                    {% if constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde à regler: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="{{couleur}}"> • Solde à regler: {{ constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                             </td>
                             <td>
