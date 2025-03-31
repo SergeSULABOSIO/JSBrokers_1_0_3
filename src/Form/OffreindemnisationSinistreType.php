@@ -47,7 +47,7 @@ class OffreIndemnisationSinistreType extends AbstractType
                 ],
             ])
             ->add('montantPayable', MoneyType::class, [
-                'label' => "Montant payable",
+                'label' => "Montant payable / Compensation",
                 'help' => "Solde payable après application de la franchise au coût / valeure totale de reparation.",
                 'currency' => "USD",
                 'grouping' => true,

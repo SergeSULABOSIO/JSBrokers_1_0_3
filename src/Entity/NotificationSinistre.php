@@ -72,6 +72,9 @@ class NotificationSinistre
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $taches;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $evaluationChiffree = null;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();
@@ -333,6 +336,18 @@ class NotificationSinistre
                 $tach->setNotificationSinistre(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getEvaluationChiffree(): ?float
+    {
+        return $this->evaluationChiffree;
+    }
+
+    public function setEvaluationChiffree(?float $evaluationChiffree): static
+    {
+        $this->evaluationChiffree = $evaluationChiffree;
 
         return $this;
     }

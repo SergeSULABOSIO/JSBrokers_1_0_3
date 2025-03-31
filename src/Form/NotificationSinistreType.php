@@ -82,6 +82,15 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Dommage",
                 ],
             ])
+            ->add('evaluationChiffree', MoneyType::class, [
+                'label' => "Evaluation chiffrée",
+                'help' => "Il s'agit d'une confirmation chiffré du dommage après évaluation.",
+                'currency' => "USD",
+                'grouping' => true,
+                'attr' => [
+                    'placeholder' => "Evaluation ciffrée",
+                ],
+            ])
             ->add('assure', EntityType::class, [
                 'label' => "Assuré(e) ou Client(e)",
                 'autocomplete' => true,
