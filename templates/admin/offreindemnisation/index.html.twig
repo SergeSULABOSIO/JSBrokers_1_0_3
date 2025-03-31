@@ -56,19 +56,9 @@
                                 <small class="m-2">
                                     {% if offreindemnisation.notificationsinistre.referenceSinistre != null %}
                                         <span class="text-secondary">
-                                            Réf. Sinistre: {{ offreindemnisation.notificationsinistre.referenceSinistre }}
+                                            Réf. Sinistre: {{ offreindemnisation.notificationsinistre.referenceSinistre }}, évènement du {{ offreindemnisation.notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }}
                                         </span>
                                     {% endif %}
-                                    {# {% if notificationsinistre.referencePolice != null %}
-                                        <span class="text-secondary">
-                                             • Police: {{ notificationsinistre.referencePolice }}
-                                        </span>
-                                    {% endif %}
-                                    {% if notificationsinistre.risque != null %}
-                                        <span class="text-secondary">
-                                             • Risque: {{ notificationsinistre.risque.code }}
-                                        </span>
-                                    {% endif %} #}
                                 </small><br/>
                                 <small class="m-2 fw-bold">
                                     <span class="text-secondary">Franchise: {{ offreindemnisation.franchiseAppliquee|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
@@ -78,7 +68,7 @@
                                     {% if constante.Offre_Indemnisation_getSoldeAVerser(offreindemnisation) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde à regler: {{ constante.Offre_Indemnisation_getSoldeAVerser(offreindemnisation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="{{couleur}}"> • Solde: {{ constante.Offre_Indemnisation_getSoldeAVerser(offreindemnisation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">Bénéficiaire: {{ offreindemnisation.beneficiaire }}</span> 
