@@ -22,6 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\NotificationSinistreRepository;
+use App\Services\ServiceMonnaies;
 use DateTimeImmutable;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -43,6 +44,7 @@ class NotificationSinistreController extends AbstractController
         private InviteRepository $inviteRepository,
         private NotificationSinistreRepository $notificationSinistreRepository,
         private Constante $constante,
+        private ServiceMonnaies $serviceMonnaies,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
     }
@@ -63,6 +65,7 @@ class NotificationSinistreController extends AbstractController
             'notificationsinistres' => $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
         ]);
     }
@@ -130,10 +133,12 @@ class NotificationSinistreController extends AbstractController
             $this->addFlash("success", $this->translator->trans("notificationsinistre_edition_ok", [
                 ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),
             ]));
-            return $this->redirectToRoute("admin.notificationsinistre.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // //On par sur la page index
+            // return $this->redirectToRoute("admin.notificationsinistre.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
         }
+        //On se dirie vers la page le formulaire d'édition
         return $this->render('admin/notificationsinistre/edit.html.twig', [
             'pageName' => $this->translator->trans("notificationsinistre_page_name_update", [
                 ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),

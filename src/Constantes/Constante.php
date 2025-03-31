@@ -4567,7 +4567,7 @@ class Constante
         foreach ($this->getEnterprise()->getInvites() as $invite) {
             foreach ($invite->getPistes() as $piste) {
                 if ($this->Piste_isBound($piste)) {
-                    dd("Suis ici.");
+                    // dd("Suis ici.");
                     $montDommage += 0;
                     $montDommagePayable += 0;
                     $montDommagePaye += 0;

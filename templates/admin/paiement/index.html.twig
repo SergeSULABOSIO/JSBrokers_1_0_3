@@ -51,26 +51,30 @@
                                     {# {{ paiement.description }} #}
                                     Réf.: {{ paiement.reference }} • {{ paiement.description }}
                                 </a><br/>
-                                <small class ="m-2">
-                                    {% set coleur = 'text-danger' %}
-                                    {% if paiement.note.getType == 0 %}
-                                        {% set coleur = 'text-success' %}
-                                    {% endif %}
-                                    <span class="{{coleur}} fw-bold">
-                                        {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
-                                        {% if paiement.comptebancaire != null %}
-                                             dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}
+                                {% if paiement.note != null %}
+                                    <small class ="m-2">
+                                        {% set coleur = 'text-danger' %}
+                                        {% if paiement.note.getType == 0 %}
+                                            {% set coleur = 'text-success' %}
                                         {% endif %}
-                                    </span>
-                                </small><br/>
+                                        <span class="{{coleur}} fw-bold">
+                                            {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                            {% if paiement.comptebancaire != null %}
+                                                dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}
+                                            {% endif %}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
                                 <small class ="m-2">
                                     <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
-                                <small class ="m-2">
-                                    <span class="text-secondary">{{ constante.Note_getNameOfTypeNote(paiement.note) }} • {{ paiement.note.nom }} • {{ paiement.note.reference }}</span>
-                                </small>
+                                {% if paiement.note != null %}
+                                    <small class ="m-2">
+                                        <span class="text-secondary">{{ constante.Note_getNameOfTypeNote(paiement.note) }} • {{ paiement.note.nom }} • {{ paiement.note.reference }}</span>
+                                    </small>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

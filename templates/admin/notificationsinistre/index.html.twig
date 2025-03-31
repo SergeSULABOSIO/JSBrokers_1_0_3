@@ -47,18 +47,40 @@
                     {% for notificationsinistre in notificationsinistres %}
                         <tr id="row_notificationsinistre_{{ notificationsinistre.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ notificationsinistre.descriptionDeFait }}
-                                </a>, survenu le {{ notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }}
-                                {% if notificationsinistre.assure != null %}
-                                     | {{ notificationsinistre.assure.nom }}
-                                {% endif %}
-                                {% if notificationsinistre.referencePolice != null %}
-                                     | Police: {{ notificationsinistre.referencePolice }}
-                                {% endif %}
-                                {% if notificationsinistre.referenceSinistre != null %}
-                                     | Sinistre: {{ notificationsinistre.referenceSinistre }}
-                                {% endif %}
+                                <a class="m-2 fw-bold" href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ notificationsinistre.assure.nom }} • {{ notificationsinistre.descriptionDeFait }} [...] • {{ notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }} • {{ notificationsinistre.lieu }}
+                                </a><br/>
+                                <small class="m-2">
+                                    {% if notificationsinistre.referenceSinistre != null %}
+                                        <span class="text-secondary">
+                                            Réf.: {{ notificationsinistre.referenceSinistre }}
+                                        </span>
+                                    {% endif %}
+                                    {% if notificationsinistre.referencePolice != null %}
+                                        <span class="text-secondary">
+                                             • Police: {{ notificationsinistre.referencePolice }}
+                                        </span>
+                                    {% endif %}
+                                    {% if notificationsinistre.risque != null %}
+                                        <span class="text-secondary">
+                                             • Risque: {{ notificationsinistre.risque.code }}
+                                        </span>
+                                    {% endif %}
+                                </small><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">Dommage: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Evaluation de l'expert: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Franchise: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">Compensation: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Comp. versée: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if true %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Solde à regler: {{ 0|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

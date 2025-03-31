@@ -101,12 +101,12 @@
           {{ "entreprise_bouton_new_notificationsinistre" | trans }}
         </a>
     {% endif %}
-    {% if app.current_route starts with 'admin.offreindemnisation' %}
+    {# {% if app.current_route starts with 'admin.offreindemnisation' %}
         <a href="{{ path('admin.offreindemnisation.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
           {{ "entreprise_bouton_new_offreindemnisation" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {% if app.current_route starts with 'admin.feedback' %}
         <a href="{{ path('admin.feedback.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
