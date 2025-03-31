@@ -4554,4 +4554,48 @@ class Constante
         ];
         return $chargementsPrimesGroupes;
     }
+
+    public function Entreprise_getSynthesSinistres()
+    {
+        $montDommage = 0;
+        $montDommagePayable = 0;
+        $montDommagePaye = 0;
+        $montDommageSolde = 0;
+
+        $syntheseTaxes = [];
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    dd("Suis ici.");
+                    $montDommage += 0;
+                    $montDommagePayable += 0;
+                    $montDommagePaye += 0;
+                    $montDommageSolde += 0;
+                }
+            }
+        }
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_domage"),
+            ReportSummary::VALEUR => $montDommage,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_compensation"),
+            ReportSummary::VALEUR => $montDommagePayable,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_paye"),
+            ReportSummary::VALEUR => $montDommagePaye,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_due"),
+            ReportSummary::VALEUR => $montDommageSolde,
+        ];
+        $syntheseTaxes[] = [
+            ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_claims_due"),
+            ReportSummary::VALEUR => $montDommageSolde,
+        ];
+        // dd($syntheseRevenu);
+        return $syntheseTaxes;
+    }
 }
