@@ -48,9 +48,20 @@
                     {% for modelepiecesinistre in modelepiecesinistres %}
                         <tr id="row_modelepiecesinistre_{{ modelepiecesinistre.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.modelepiecesinistre.edit', {'idModelepiecesinistre':modelepiecesinistre.id, 'idEntreprise': entreprise.id})}}">
+                                <a class="m-2 fw-bold" href="{{ path('admin.modelepiecesinistre.edit', {'idModelepiecesinistre':modelepiecesinistre.id, 'idEntreprise': entreprise.id})}}">
                                     {{ modelepiecesinistre.nom }}
-                                </a>
+                                    {% if modelepiecesinistre.obligatoire == true %}
+                                         • Obligatoire
+                                    {% endif %}
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">
+                                        {{ modelepiecesinistre.description }}
+                                    </span>
+                                    <span class="text-secondary">
+                                         • Documents ({{ modelepiecesinistre.pieceSinistres|length }})
+                                    </span>
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

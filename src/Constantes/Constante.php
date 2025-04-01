@@ -46,6 +46,7 @@ use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use DateTimeImmutable;
 use PhpParser\Node\Expr\Cast\Array_;
+use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 
@@ -4568,14 +4569,12 @@ class Constante
         $syntheseTaxes = [];
         /** @var Invite $invite */
         foreach ($this->getEnterprise()->getInvites() as $invite) {
-            foreach ($invite->getPistes() as $piste) {
-                if ($this->Piste_isBound($piste)) {
-                    // dd("Suis ici.");
-                    $montDommage += 0;
-                    $montDommagePayable += 0;
-                    $montDommagePaye += 0;
-                    $montDommageSolde += 0;
-                }
+            foreach ($invite->getNotificationSinistres() as $notification) {
+                // dd("Suis ici.");
+                $montDommage += $notification->getDommage();
+                $montDommagePayable += $this->Notification_Sinistre_getCompensation($notification);
+                $montDommagePaye += $this->Notification_Sinistre_getCompensationVersee($notification);
+                $montDommageSolde += $this->Notification_Sinistre_getSoldeAVerser($notification);
             }
         }
         $syntheseTaxes[] = [
@@ -4619,7 +4618,7 @@ class Constante
         $montant = 0;
         if ($offre_indemnisation != null) {
             $compensation = 0;
-            if($offre_indemnisation->getNotificationSinistre() != null){
+            if ($offre_indemnisation->getNotificationSinistre() != null) {
                 $compensation = $offre_indemnisation->getMontantPayable();
                 // dd($compensation);
             }
@@ -4677,14 +4676,14 @@ class Constante
     public function Notification_Sinistre_getStatusDocumentsAttendus(?NotificationSinistre $notification_sinistre)
     {
         $tabDocuments = [
-            "Docs_attendus" => [], 
-            "Docs_fournis" => [], 
-            "Docs_manquants" => [], 
+            "Docs_attendus" => [],
+            "Docs_fournis" => [],
+            "Docs_manquants" => [],
         ];
         if ($notification_sinistre != null) {
             $tabDocuments['Docs_attendus'] = $this->getEnterprise()->getModelePieceSinistres();
             $tabDocuments['Docs_fournis'] = $notification_sinistre->getPieces();
-            
+
             $manquants = new ArrayCollection();
             foreach ($this->getEnterprise()->getModelePieceSinistres() as $typePiece) {
                 $isFournis = false;
@@ -4711,8 +4710,8 @@ class Constante
         $dateRgelement = null;
         if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
             $offres = $notification_sinistre->getOffreIndemnisationSinistres();
-            $reglements = ($offres[count($offres)-1])->getPaiements();
-            $dateRgelement = ($reglements[count($reglements)-1])->getPaidAt();
+            $reglements = ($offres[count($offres) - 1])->getPaiements();
+            $dateRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
             $duree = $this->serviceDates->daysEntre($dateNotfication, $dateRgelement);
         }
         return $duree;
@@ -4722,8 +4721,8 @@ class Constante
         $dateDernierRgelement = null;
         if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
             $offres = $notification_sinistre->getOffreIndemnisationSinistres();
-            $reglements = ($offres[count($offres)-1])->getPaiements();
-            $dateDernierRgelement = ($reglements[count($reglements)-1])->getPaidAt();
+            $reglements = ($offres[count($offres) - 1])->getPaiements();
+            $dateDernierRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
         }
         return $dateDernierRgelement;
     }
