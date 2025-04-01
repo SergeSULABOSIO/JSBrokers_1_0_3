@@ -24,27 +24,12 @@ class JSBChartBuilder
         $chart = $this->chartBuilder->createChart(Chart::TYPE_BAR);
         $chart->setData([
             'labels' => $data['Mois'],
-            // 'labels' => [
-            //     'January',
-            //     'February',
-            //     'March',
-            //     'April',
-            //     'May',
-            //     'June',
-            //     'July',
-            //     'August',
-            //     'September',
-            //     'October',
-            //     'November',
-            //     'December',
-            // ],
             'datasets' => [
                 [
-                    'label' => 'Revenu',
+                    'label' => $data['Titre'],
                     'backgroundColor' => "gray", //'rgb(255, 99, 132)',
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => $data['Montants'],
-                    // 'data' => [0, 10, 50, 2, 20, 90, 45, 25, 15, 60, 5, 90],
                 ],
             ],
         ]);

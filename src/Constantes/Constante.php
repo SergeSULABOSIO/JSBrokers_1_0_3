@@ -4633,6 +4633,7 @@ class Constante
                 'suggestedMin' => 0,
                 'suggestedMax' => 0,
             ],
+            "Titre" => "Commission ttc",
         ];
         for ($i = 0; $i < count($data['Mois']); $i++) {
             /** @var Avenant $avenant */
