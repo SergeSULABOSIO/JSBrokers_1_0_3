@@ -20,7 +20,7 @@ class JSBChartBuilder
     public function newChartProductionPerMonth()
     {
         //Construction de l'histogramme
-        $data = $this->constante->Entreprise_getRevenueChartsData();
+        $data = $this->constante->Entreprise_getDataProductionPerMonth();
         $chart = $this->chartBuilder->createChart(Chart::TYPE_BAR);
         $chart->setData([
             'labels' => $data['Mois'],

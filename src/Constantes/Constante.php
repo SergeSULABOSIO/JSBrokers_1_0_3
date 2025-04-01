@@ -4624,7 +4624,7 @@ class Constante
         return $avenants;
     }
 
-    public function Entreprise_getRevenueChartsData()
+    public function Entreprise_getDataProductionPerMonth()
     {
         $data = [
             "Mois" => ['Janvier', 'Février', 'Mars', 'Avril', 'Mais', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
