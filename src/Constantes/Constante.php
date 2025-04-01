@@ -4628,18 +4628,25 @@ class Constante
     {
         $data = [
             "Mois" => ['Janvier', 'Février', 'Mars', 'Avril', 'Mais', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
-            "Montants" => [85, 10, 50, 2, 20, 90, 45, 25, 15, 60, 5, 90],
+            "Montants" => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             'MinAndMax' => [
                 'suggestedMin' => 0,
-                'suggestedMax' => 100,
+                'suggestedMax' => 0,
             ],
         ];
         for ($i = 0; $i < count($data['Mois']); $i++) {
+            /** @var Avenant $avenant */
             foreach ($this->Entreprise_getAvenants() as $avenant) {
-                dd($avenant, $data['Mois'][$i], $i);
+                $mois = $this->serviceDates->getMois($avenant->getStartingAt()) - 1;
+                if ($mois == $i) {
+                    $revenu = $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
+                    $data['Montants'][$i] += $revenu;
+                    if ($data['MinAndMax']['suggestedMax'] < $revenu) {
+                        $data['MinAndMax']['suggestedMax'] = $revenu;
+                    }
+                }
             }
         }
-
         return $data;
     }
 

@@ -45,6 +45,11 @@ class ServiceDates
         return $date->format('d/m/Y');
     }
 
+    public function getMois(DateTimeImmutable $date)
+    {
+        return $date->format('n');
+    }
+
     public function aujourdhui(): DateTimeImmutable
     {
         return new \DateTimeImmutable("now");
