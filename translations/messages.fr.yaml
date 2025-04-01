@@ -299,7 +299,7 @@ company_dashboard_search_advanced_filter_link: "Définir d'autres critères de f
 company_dashboard_search_button_filter: "Charger les données"
 company_dashboard_summary_policies_net_prem: "Prime nette:"
 company_dashboard_summary_policies_gross_prem: "Prime TTC:"
-company_dashboard_summary_policies_titre: "Synthèse des polices en générées"
+company_dashboard_summary_policies_titre: "Synthèse des polices générées"
 company_dashboard_summary_revenues_titre: "Synthèse des revenus générés"
 company_dashboard_summary_revenues_net: "Rev. net:"
 company_dashboard_summary_revenues_pur: "Rev. pur:"

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Constantes\Constante;
 use Symfony\UX\Chartjs\Model\Chart;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\UX\Chartjs\Builder\ChartBuilderInterface;
@@ -13,42 +14,43 @@ class JSBChartBuilder
     public function __construct(
         private Security $security,
         private ChartBuilderInterface $chartBuilder,
+        private Constante $constante,
     ) {}
 
     public function newChartProductionPerMonth()
     {
         //Construction de l'histogramme
+        $data = $this->constante->Entreprise_getRevenueChartsData();
         $chart = $this->chartBuilder->createChart(Chart::TYPE_BAR);
         $chart->setData([
-            'labels' => [
-                'January',
-                'February',
-                'March',
-                'April',
-                'May',
-                'June',
-                'July',
-                'August',
-                'September',
-                'October',
-                'November',
-                'December',
-            ],
+            'labels' => $data['Mois'],
+            // 'labels' => [
+            //     'January',
+            //     'February',
+            //     'March',
+            //     'April',
+            //     'May',
+            //     'June',
+            //     'July',
+            //     'August',
+            //     'September',
+            //     'October',
+            //     'November',
+            //     'December',
+            // ],
             'datasets' => [
                 [
-                    'label' => 'Revenue',
+                    'label' => 'Revenu',
                     'backgroundColor' => "gray", //'rgb(255, 99, 132)',
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
-                    'data' => [0, 10, 50, 2, 20, 90, 45, 25, 15, 60, 5, 90],
+                    'data' => $data['Montants'],
+                    // 'data' => [0, 10, 50, 2, 20, 90, 45, 25, 15, 60, 5, 90],
                 ],
             ],
         ]);
         $chart->setOptions([
             'scales' => [
-                'y' => [
-                    'suggestedMin' => 0,
-                    'suggestedMax' => 100,
-                ],
+                'y' => $data['MinAndMax'],
             ],
         ]);
 

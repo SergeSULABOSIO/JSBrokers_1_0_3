@@ -46,6 +46,7 @@ use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use DateTimeImmutable;
 use PhpParser\Node\Expr\Cast\Array_;
+use PhpParser\Node\Expr\FuncCall;
 use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -4599,6 +4600,47 @@ class Constante
         ];
         // dd($syntheseRevenu);
         return $syntheseTaxes;
+    }
+
+    public function Entreprise_getAvenants()
+    {
+        $avenants = new ArrayCollection();
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    foreach ($piste->getCotations() as $cotation) {
+                        if ($this->Cotation_isBound($cotation)) {
+                            foreach ($cotation->getAvenants() as $avenant) {
+                                if (!$avenants->contains($avenant)) {
+                                    $avenants->add($avenant);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $avenants;
+    }
+
+    public function Entreprise_getRevenueChartsData()
+    {
+        $data = [
+            "Mois" => ['Janvier', 'Février', 'Mars', 'Avril', 'Mais', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
+            "Montants" => [85, 10, 50, 2, 20, 90, 45, 25, 15, 60, 5, 90],
+            'MinAndMax' => [
+                'suggestedMin' => 0,
+                'suggestedMax' => 100,
+            ],
+        ];
+        for ($i = 0; $i < count($data['Mois']); $i++) {
+            foreach ($this->Entreprise_getAvenants() as $avenant) {
+                dd($avenant, $data['Mois'][$i], $i);
+            }
+        }
+
+        return $data;
     }
 
     public function Offre_Indemnisation_getCompensationVersee(?OffreIndemnisationSinistre $offre_indemnisation)
