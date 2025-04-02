@@ -39,7 +39,12 @@ class JSBChartBuilder
             ],
         ]);
 
-        return $chart;
+        return [
+            'chart' => $chart,
+            'notes' => $data['Notes'],
+            'titre' => $data['Titre'],
+        ];
+        // return $chart;
     }
 
     public function newChartProductionPerInsurer()

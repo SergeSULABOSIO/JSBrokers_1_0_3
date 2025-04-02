@@ -202,11 +202,21 @@
                         <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Revenue graphs per month
+                                    {# Revenue graphs per month #}
+                                    <small class="m-2 text-secondary ">
+                                        <span class="fw-bold">
+                                            {{ dashboard.productionCharts['chartPerMonth']['titre'] }}
+                                        </span>
+                                    </small>
                                 </div>
-                                {{ render_chart(dashboard.productionCharts['chartPerMonth'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerMonth']['chart'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
-                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                    <p class="card-text">
+                                        <small class="m-2 text-secondary ">
+                                            <span class="fw-bold">Remarque:</span> 
+                                            {{ dashboard.productionCharts['chartPerMonth']['notes'] }}
+                                        </small>
+                                    </p>
                                 </div>
                             </div>
                         </div>

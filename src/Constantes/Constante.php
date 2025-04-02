@@ -4632,6 +4632,7 @@ class Constante
 
     public function Entreprise_getDataProductionPerMonth()
     {
+        $total = 0;
         $data = [
             "Mois" => ['Janvier', 'Février', 'Mars', 'Avril', 'Mais', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
             "Montants" => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -4639,7 +4640,8 @@ class Constante
                 'suggestedMin' => 0,
                 'suggestedMax' => 0,
             ],
-            "Titre" => "Commission ttc",
+            "Titre" => "REVENUS TTC PAR MOIS",
+            "Notes" => "",
         ];
         for ($i = 0; $i < count($data['Mois']); $i++) {
             /** @var Avenant $avenant */
@@ -4651,9 +4653,29 @@ class Constante
                     if ($data['MinAndMax']['suggestedMax'] < $revenu) {
                         $data['MinAndMax']['suggestedMax'] = $revenu;
                     }
+                    $total += $revenu;
                 }
             }
         }
+        //Ecritures des notes
+        $codeMonnaie = $this->serviceMonnaies->getMonnaieAffichage()->getCode();
+        $data['Notes'] = "Le revenu total de " . $codeMonnaie . " " . number_format($total, 2, ",", ".") . " se reparti par mois comme suit : ";
+        for ($i=0; $i < count($data['Mois']); $i++) { 
+            if ($i == count($data['Mois'])-1) {
+                $et = " et ";
+                $suffixe = ".";
+            }else{
+                $et = "";
+                if ($i == count($data['Mois'])-2) {
+                    $suffixe = "";
+                }else{
+                    $suffixe = ", ";
+                }
+            }
+            $pourcentage = round(($data['Montants'][$i]/$total)*100, 2);
+            $data['Notes'] .= $et . $data['Mois'][$i] . " (" . $codeMonnaie . " " . number_format($data['Montants'][$i], 2, ",", ".") . " soit " . $pourcentage . "%)" . $suffixe;
+        }
+        // dd($data);
         return $data;
     }
 
