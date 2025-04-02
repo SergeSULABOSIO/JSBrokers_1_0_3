@@ -4383,6 +4383,7 @@ class Constante
     }
     public function Entreprise_getSynthseRevenus()
     {
+        $reserve = 0;
         $assiette = 0;
         $commPure = 0;
         $commHT = 0;
@@ -4396,9 +4397,14 @@ class Constante
                     $commPure += $this->Piste_getMontant_commission_pure($piste, -1, false);
                     $commHT += $this->Piste_getMontant_commission_ht($piste, -1, false);
                     $commTTC += $this->Piste_getMontant_commission_ttc($piste, -1, false);
+                    $reserve += $this->Piste_getReserve($piste);
                 }
             }
         }
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => "Réserve",
+            ReportSummary::VALEUR => $reserve,
+        ];
         $syntheseRevenu[] = [
             ReportSummary::RUBRIQUE => "Assiette",
             ReportSummary::VALEUR => $assiette,
@@ -4648,6 +4654,92 @@ class Constante
                 }
             }
         }
+        return $data;
+    }
+
+    public function Entreprise_getDataProductionPerInsurer()
+    {
+        $data = [
+            "Assureurs" => [],
+            "Montants" => [],
+            "Titre" => "Assureurs",
+        ];
+        foreach ($this->getEnterprise()->getAssureurs() as $assureur) {
+            $data['Assureurs'][] = $assureur->getNom();
+        }
+        for ($i = 0; $i < count($data['Assureurs']); $i++) {
+            /** @var Avenant $avenant */
+            foreach ($this->Entreprise_getAvenants() as $avenant) {
+                $revenu = 0;
+                if ($avenant->getCotation() != null) {
+                    if ($avenant->getCotation()->getAssureur()->getNom() == $data['Assureurs'][$i]) {
+                        $revenu += $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
+                    }
+                }
+                $data['Montants'][] = $revenu;
+            }
+        }
+        // dd($data);
+        return $data;
+    }
+
+    public function Entreprise_getDataProductionPerPartner()
+    {
+        $data = [
+            "Partners" => [],
+            "Montants" => [],
+            "Titre" => "Broker Partners",
+        ];
+        /** @var Avenant $avenant */
+        foreach ($this->getEnterprise()->getPartenaires() as $partenaire) {
+            $data['Partners'][] = $partenaire->getNom();
+        }
+
+        for ($i = 0; $i < count($data['Partners']); $i++) {
+            /** @var Avenant $avenant */
+            foreach ($this->Entreprise_getAvenants() as $avenant) {
+                $revenu = 0;
+                $cotation = $avenant->getCotation();
+                if ($cotation != null) {
+                    $partenaireCotation = $this->Cotation_getPartenaire($cotation);
+                    if ($partenaireCotation->getNom() == $data['Partners'][$i]) {
+                        $revenu += $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
+                    }
+                }
+                $data['Montants'][] = $revenu;
+            }
+        }
+        // dd($data);
+        return $data;
+    }
+
+    public function Entreprise_getDataProductionPerRisk()
+    {
+        $data = [
+            "Risks" => [],
+            "Montants" => [],
+            "Titre" => "Line Of Business",
+        ];
+        /** @var Avenant $avenant */
+        foreach ($this->getEnterprise()->getRisques() as $risque) {
+            $data['Risks'][] = $risque->getCode();
+        }
+
+        for ($i = 0; $i < count($data['Risks']); $i++) {
+            /** @var Avenant $avenant */
+            foreach ($this->Entreprise_getAvenants() as $avenant) {
+                $revenu = 0;
+                $cotation = $avenant->getCotation();
+                if ($cotation != null) {
+                    $risqueCotation = $cotation->getPiste()->getRisque();
+                    if ($risqueCotation->getCode() == $data['Risks'][$i]) {
+                        $revenu += $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
+                    }
+                }
+                $data['Montants'][] = $revenu;
+            }
+        }
+        // dd($data);
         return $data;
     }
 

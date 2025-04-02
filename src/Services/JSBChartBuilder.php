@@ -45,18 +45,13 @@ class JSBChartBuilder
     public function newChartProductionPerInsurer()
     {
         //Construction de l'histogramme
+        $data = $this->constante->Entreprise_getDataProductionPerInsurer();
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
         $chart->setData([
-            'labels' => [
-                'SFA Congo SA (10%)',
-                'SUNU ASSURANCE IARD (50%)',
-                'ACTIVA  (20%)',
-                'RAWSUR',
-                'MAYFAIRE'
-            ],
+            'labels' => $data['Assureurs'],
             'datasets' => [
                 [
-                    'label' => 'Insurers',
+                    'label' => $data['Titre'],
                     'backgroundColor' => [
                         'Red',
                         'Blue',
@@ -65,7 +60,8 @@ class JSBChartBuilder
                         'Orange'
                     ], //'rgb(255, 99, 132)',
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
-                    'data' => [1, 5, 2, 2, 9],
+                    'data' => $data['Montants'],
+                    // 'data' => [1, 5, 2, 2, 9],
                     'hoverOffset' => 30,
                 ],
             ],
@@ -109,21 +105,13 @@ class JSBChartBuilder
     public function newChartProductionPerPartner()
     {
         //Construction de l'histogramme
+        $data = $this->constante->Entreprise_getDataProductionPerPartner();
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
         $chart->setData([
-            'labels' => [
-                'OURSELVES',
-                'OLEA',
-                'MARSH',
-                'MONT-BLANC',
-                'AFINBRO',
-                'AGL',
-                "O'NEILS",
-                "MERCER",
-            ],
+            'labels' => $data['Partners'],
             'datasets' => [
                 [
-                    'label' => 'Broker Partners',
+                    'label' => $data['Titre'],
                     'backgroundColor' => [
                         'Red',
                         'Blue',
@@ -135,7 +123,7 @@ class JSBChartBuilder
                         'Yellow',
                     ], //'rgb(255, 99, 132)',
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
-                    'data' => [1, 5, 2, 2, 9, 5, 8, 2],
+                    'data' => $data['Montants'],
                     'hoverOffset' => 30,
                 ],
             ],
@@ -147,21 +135,14 @@ class JSBChartBuilder
     public function newChartProductionPerRisk()
     {
         //Construction de l'histogramme
+        $data = $this->constante->Entreprise_getDataProductionPerRisk();
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
         $chart->setData([
-            'labels' => [
-                'FAP',
-                'PVT',
-                'PDBI',
-                'MOTOR TPL',
-                'CIT',
-                'GIT',
-                "GPA",
-                "MEDICAL",
-            ],
+            'labels' => $data['Risks'],
             'datasets' => [
                 [
-                    'label' => 'Line Of Business',
+                    'label' => $data['Titre'],
+                    // 'label' => 'Line Of Business',
                     'backgroundColor' => [
                         'Red',
                         'Blue',
@@ -173,7 +154,7 @@ class JSBChartBuilder
                         'Yellow',
                     ], //'rgb(255, 99, 132)',
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
-                    'data' => [1, 5, 2, 2, 9, 5, 8, 2],
+                    'data' => $data['Montants'],
                     'hoverOffset' => 30,
                 ],
             ],
