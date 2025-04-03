@@ -46,7 +46,7 @@ class PisteType extends AbstractType
 
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",
-                'expanded' => true,
+                'expanded' => false,
                 'choices'  => [
                     "SOUSCRIPTION"      => Piste::AVENANT_SOUSCRIPTION,
                     "INCORPORATION"     => Piste::AVENANT_INCORPORATION,
