@@ -196,7 +196,9 @@ class PisteController extends AbstractController
             /** @var Piste $piste */
             $pisteAvenant = $cotationAvenant->getPiste();
 
-            $nomPiste = "Avenant n°" . ($avenant->getNumero() + 1) . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $avenant->getReferencePolice() . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
+            $referencePolice = $avenant->getReferencePolice();
+
+            $nomPiste = "Avenant n°" . ($avenant->getNumero() + 1) . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $referencePolice . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
 
             /** @var Piste $piste */
             $piste = new Piste();
@@ -259,7 +261,6 @@ class PisteController extends AbstractController
                         ->setMontantFlatExceptionel($revenu->getMontantFlatExceptionel())
                 );
             }
-
 
             //Défini la cotation
             $piste->addCotation($newCotation);
