@@ -213,7 +213,7 @@
                                 <div class="card-body text-center">
                                     <p class="card-text">
                                         <small class="m-2 text-secondary ">
-                                            <span class="fw-bold">Remarque:</span> 
+                                            <span class="fw-bold">Notes:</span> 
                                             {{ dashboard.productionCharts['chartPerMonth']['notes'] }}
                                         </small>
                                     </p>
@@ -225,23 +225,44 @@
                         <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Revenue graphs per insurer
+                                    <small class="m-2 text-secondary ">
+                                        <span class="fw-bold">
+                                            {{ dashboard.productionCharts['chartPerInsurer']['titre'] }}
+                                        </span>
+                                    </small>
                                 </div>
-                                {{ render_chart(dashboard.productionCharts['chartPerInsurer'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerInsurer']['chart'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
-                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                    <p class="card-text">
+                                        <small class="m-2 text-secondary ">
+                                            <span class="fw-bold">Notes:</span> 
+                                            {{ dashboard.productionCharts['chartPerInsurer']['notes'] }}
+                                        </small>
+                                        {# Some quick example text to build on the card title and make up the bulk of the card's content. #}
+                                    </p>
                                 </div>
                             </div>
                         </div>
                          <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Revenue graphs per risk or cover
+                                    <small class="m-2 text-secondary ">
+                                        <span class="fw-bold">
+                                            {{ dashboard.productionCharts['chartPerRisks']['titre'] }}
+                                        </span>
+                                    </small>
+                                    {# Revenue graphs per risk or cover #}
                                 </div>
-                                {{ render_chart(dashboard.productionCharts['chartPerRisks'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerRisks']['chart'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
                                 <div class="card-body text-center">
-                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                    <p class="card-text">
+                                        <small class="m-2 text-secondary ">
+                                            <span class="fw-bold">Notes:</span> 
+                                            {{ dashboard.productionCharts['chartPerRisks']['notes'] }}
+                                        </small>
+                                    {# Some quick example text to build on the card title and make up the bulk of the card's content. #}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -250,23 +271,45 @@
                         <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Revenue graphs per renewal status
+                                    <small class="m-2 text-secondary ">
+                                        <span class="fw-bold">
+                                            {# {{ dashboard.productionCharts['chartPerRenewalStatus']['titre'] }} #}
+                                            Revenue graphs per renewal status
+                                        </span>
+                                    </small>
                                 </div>
-                                {{ render_chart(dashboard.productionCharts['chartPerRenewalStatus'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerRenewalStatus']['chart'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
-                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                    <p class="card-text">
+                                        {# <small class="m-2 text-secondary ">
+                                            <span class="fw-bold">Notes:</span> 
+                                            {{ dashboard.productionCharts['chartPerRenewalStatus']['notes'] }}
+                                        </small> #}
+                                        Some quick example text to build on the card title and make up the bulk of the card's content.
+                                    </p>
                                 </div>
                             </div>
                         </div>
                          <div class="col">
                             <div class="card m-2">
                                 <div class="card-header text-center">
-                                    Revenue graphs per partner
+                                    <small class="m-2 text-secondary ">
+                                        <span class="fw-bold">
+                                            {{ dashboard.productionCharts['chartPerPartners']['titre'] }}
+                                        </span>
+                                    </small>
+                                    {# Revenue graphs per partner #}
                                 </div>
-                                {{ render_chart(dashboard.productionCharts['chartPerPartners'], {'class': 'my-chart'}) }}
+                                {{ render_chart(dashboard.productionCharts['chartPerPartners']['chart'], {'class': 'my-chart'}) }}
                                 {# <img src="..." class="card-img-top" alt="..."> #}
                                 <div class="card-body text-center">
-                                    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                    <p class="card-text">
+                                        <small class="m-2 text-secondary ">
+                                            <span class="fw-bold">Notes:</span> 
+                                            {{ dashboard.productionCharts['chartPerPartners']['notes'] }}
+                                        </small>
+                                        {# quick example text to build on the card title and make up the bulk of the card's content. #}
+                                    </p>
                                 </div>
                             </div>
                         </div>

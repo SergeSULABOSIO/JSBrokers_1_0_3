@@ -72,7 +72,12 @@ class JSBChartBuilder
             ],
         ]);
 
-        return $chart;
+        return [
+            'chart' => $chart,
+            'notes' => $data['Notes'],
+            'titre' => $data['Titre'],
+        ];
+        // return $chart;
     }
 
     public function newChartProductionPerRenewalStatus()
@@ -103,8 +108,12 @@ class JSBChartBuilder
                 ],
             ],
         ]);
-
-        return $chart;
+        return [
+            'chart' => $chart,
+            // 'notes' => $data['Notes'],
+            // 'titre' => $data['Titre'],
+        ];
+        // return $chart;
     }
 
     public function newChartProductionPerPartner()
@@ -134,7 +143,12 @@ class JSBChartBuilder
             ],
         ]);
 
-        return $chart;
+        return [
+            'chart' => $chart,
+            'notes' => $data['Notes'],
+            'titre' => $data['Titre'],
+        ];
+        // return $chart;
     }
 
     public function newChartProductionPerRisk()
@@ -164,8 +178,12 @@ class JSBChartBuilder
                 ],
             ],
         ]);
-
-        return $chart;
+        return [
+            'chart' => $chart,
+            'notes' => $data['Notes'],
+            'titre' => $data['Titre'],
+        ];
+        // return $chart;
     }
 
     public function getProductionCharts(): array

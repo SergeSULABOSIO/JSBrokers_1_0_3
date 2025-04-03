@@ -4630,9 +4630,29 @@ class Constante
         return $avenants;
     }
 
+    public function getPrefixeEtSuffixe($iterateur, $tailleTableau)
+    {
+        $prefixe = "";
+        $suffixe = "";
+        if ($iterateur == ($tailleTableau - 1)) {
+            $prefixe = " et ";
+            $suffixe = ".";
+        } else {
+            $prefixe = "";
+            if ($iterateur == ($tailleTableau - 2)) {
+                $suffixe = "";
+            } else {
+                $suffixe = ", ";
+            }
+        }
+        return [
+            "prefixe" => $prefixe,
+            "suffixe" => $suffixe,
+        ];
+    }
+
     public function Entreprise_getDataProductionPerMonth()
     {
-        $total = 0;
         $data = [
             "Mois" => ['Janvier', 'Février', 'Mars', 'Avril', 'Mais', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
             "Montants" => [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -4640,8 +4660,9 @@ class Constante
                 'suggestedMin' => 0,
                 'suggestedMax' => 0,
             ],
-            "Titre" => "REVENUS TTC PAR MOIS",
+            "Titre" => "Revenu par mois",
             "Notes" => "",
+            "Total" => 0,
         ];
         for ($i = 0; $i < count($data['Mois']); $i++) {
             /** @var Avenant $avenant */
@@ -4653,27 +4674,29 @@ class Constante
                     if ($data['MinAndMax']['suggestedMax'] < $revenu) {
                         $data['MinAndMax']['suggestedMax'] = $revenu;
                     }
-                    $total += $revenu;
+                    $data['Total'] += $revenu;
                 }
             }
         }
-        //Ecritures des notes
+        $data = $this->Graphs_writeNotes($data['Montants'], $data['Mois'], "par mois", $data);
+        // dd($data);
+        return $data;
+    }
+
+    public function Graphs_writeNotes($tableauMontants, $tableauUnite, $strParUnite, $data)
+    {
         $codeMonnaie = $this->serviceMonnaies->getMonnaieAffichage()->getCode();
-        $data['Notes'] = "Le revenu total de " . $codeMonnaie . " " . number_format($total, 2, ",", ".") . " se reparti par mois comme suit : ";
-        for ($i=0; $i < count($data['Mois']); $i++) { 
-            if ($i == count($data['Mois'])-1) {
-                $et = " et ";
-                $suffixe = ".";
-            }else{
-                $et = "";
-                if ($i == count($data['Mois'])-2) {
-                    $suffixe = "";
-                }else{
-                    $suffixe = ", ";
-                }
-            }
-            $pourcentage = round(($data['Montants'][$i]/$total)*100, 2);
-            $data['Notes'] .= $et . $data['Mois'][$i] . " (" . $codeMonnaie . " " . number_format($data['Montants'][$i], 2, ",", ".") . " soit " . $pourcentage . "%)" . $suffixe;
+        try {
+            $data['Titre'] .= " (en moyenne " . $codeMonnaie . " " . number_format(($data['Total'] / count($tableauMontants)), 2, ",", ".") . ").";
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+        //Ecritures des notes
+        $data['Notes'] = "Le revenu total de " . $codeMonnaie . " " . number_format($data['Total'], 2, ",", ".") . " se reparti ". $strParUnite ." comme suit : ";
+        for ($i = 0; $i < count($tableauMontants); $i++) {
+            $separateur = $this->getPrefixeEtSuffixe($i, count($tableauMontants));
+            $pourcentage = round(($tableauMontants[$i] / $data['Total']) * 100, 2);
+            $data['Notes'] .= $separateur['prefixe'] . $tableauUnite[$i] . " " . $codeMonnaie . " " . number_format($tableauMontants[$i], 2, ",", ".") . " (soit " . $pourcentage . "%)" . $separateur['suffixe'];
         }
         // dd($data);
         return $data;
@@ -4684,7 +4707,9 @@ class Constante
         $data = [
             "Assureurs" => [],
             "Montants" => [],
-            "Titre" => "Assureurs",
+            "Titre" => "Revenu par Assureur",
+            "Notes" => "",
+            "Total" => 0,
         ];
         foreach ($this->getEnterprise()->getAssureurs() as $assureur) {
             $data['Assureurs'][] = $assureur->getNom();
@@ -4699,8 +4724,10 @@ class Constante
                     }
                 }
                 $data['Montants'][] = $revenu;
+                $data['Total'] += $revenu;
             }
         }
+        $data = $this->Graphs_writeNotes($data['Montants'], $data['Assureurs'], "par assureur", $data);
         // dd($data);
         return $data;
     }
@@ -4710,7 +4737,8 @@ class Constante
         $data = [
             "Partners" => [],
             "Montants" => [],
-            "Titre" => "Broker Partners",
+            "Titre" => "Revenu par Intemédiaire",
+            "Total" => 0,
         ];
         /** @var Avenant $avenant */
         foreach ($this->getEnterprise()->getPartenaires() as $partenaire) {
@@ -4729,8 +4757,10 @@ class Constante
                     }
                 }
                 $data['Montants'][] = $revenu;
+                $data['Total'] += $revenu;
             }
         }
+        $data = $this->Graphs_writeNotes($data['Montants'], $data['Partners'], "par intermédiaire", $data);
         // dd($data);
         return $data;
     }
@@ -4740,7 +4770,8 @@ class Constante
         $data = [
             "Risks" => [],
             "Montants" => [],
-            "Titre" => "Line Of Business",
+            "Titre" => "Revenu par Risque",
+            "Total" => 0,
         ];
         /** @var Avenant $avenant */
         foreach ($this->getEnterprise()->getRisques() as $risque) {
@@ -4759,8 +4790,10 @@ class Constante
                     }
                 }
                 $data['Montants'][] = $revenu;
+                $data['Total'] += $revenu;
             }
         }
+        $data = $this->Graphs_writeNotes($data['Montants'], $data['Risks'], "par risque", $data);
         // dd($data);
         return $data;
     }
