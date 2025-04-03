@@ -167,4 +167,43 @@ class PisteController extends AbstractController
             'idEntreprise' => $idEntreprise,
         ]);
     }
+
+    #[Route('/endorse/{mouvement}/{idPiste}', name: 'endorse', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function endorse($mouvement, $idPiste, Request $request)
+    {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Piste $piste */
+        $piste = $this->pisteRepository->find($idPiste);
+
+        $form = $this->createForm(PisteType::class, $piste);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->flush();
+            $this->addFlash("success", $this->translator->trans("piste_edition_ok", [
+                ":piste" => $piste->getNom(),
+            ]));
+
+            //On doit rester sur la page d'édition
+            // return $this->redirectToRoute("admin.piste.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+        }
+        return $this->render('admin/piste/edit.html.twig', [
+            'pageName' => $this->translator->trans("piste_page_name_update", [
+                ":piste" => $piste->getNom(),
+            ]),
+            'utilisateur' => $user,
+            'piste' => $piste,
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
+            'form' => $form,
+        ]);
+    }
 }
