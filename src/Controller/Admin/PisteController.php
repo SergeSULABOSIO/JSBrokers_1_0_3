@@ -25,6 +25,7 @@ use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
 use App\Repository\AvenantRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\ServiceDates;
 use Doctrine\ORM\EntityManagerInterface;
 use Proxies\__CG__\App\Entity\Revenu;
 use Symfony\Component\HttpFoundation\Request;
@@ -53,6 +54,7 @@ class PisteController extends AbstractController
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
         private ServiceTaxes $serviceTaxes,
+        private ServiceDates $serviceDates,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
     }
@@ -100,14 +102,9 @@ class PisteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($piste);
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("piste_creation_ok", [
+            $this->save($piste, $this->translator->trans("piste_creation_ok", [
                 ":piste" => $piste->getNom(),
             ]));
-            return $this->redirectToRoute("admin.piste.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
         }
         return $this->render('admin/piste/create.html.twig', [
             'pageName' => $this->translator->trans("piste_page_name_new"),
@@ -135,16 +132,9 @@ class PisteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("piste_edition_ok", [
+            $this->save($piste, $this->translator->trans("piste_edition_ok", [
                 ":piste" => $piste->getNom(),
             ]));
-
-            //On doit rester sur la page d'édition
-            // return $this->redirectToRoute("admin.piste.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
         }
         return $this->render('admin/piste/edit.html.twig', [
             'pageName' => $this->translator->trans("piste_page_name_update", [
@@ -198,15 +188,33 @@ class PisteController extends AbstractController
 
             $referencePolice = $avenant->getReferencePolice();
 
-            $nomPiste = "Avenant n°" . ($avenant->getNumero() + 1) . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $referencePolice . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
+
+            //calcul du numéro de l'avenant
+            $numAvenant = 0;
+            $newEffectDate = null;
+            $newExpiryDate = null;
+            /** @var Avenant $avenantExistant */
+            foreach ($this->constante->Entreprise_getAvenants() as $avenantExistant) {
+                if ($avenantExistant->getReferencePolice() == $referencePolice) {
+                    $numAvenant = $avenantExistant->getNumero();
+                    $newEffectDate = $avenantExistant->getStartingAt();
+                    $newExpiryDate = $avenantExistant->getEndingAt();
+                }
+            }
+            $numAvenant++;
+            $newEffectDate = $this->serviceDates->ajouterJours($newExpiryDate, 1);
+            $newExpiryDate = $this->serviceDates->ajouterJours($newEffectDate, 364);
+            // dd("Last numéro d'Avenant: " . $numAvenant, $newEffectDate, $newExpiryDate);
+
+            $nomPiste = "Avenant n°" . $numAvenant . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $referencePolice . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
 
             /** @var Piste $piste */
             $piste = new Piste();
             //Paramètres par défaut
             $piste->setNom($nomPiste);
+            $piste->setDescriptionDuRisque($this->constante->getTypeAvenant($mouvement) . " • " . $avenant->getDescription());
             $piste->setPrimePotentielle($pisteAvenant->getPrimePotentielle());
             $piste->setCommissionPotentielle($pisteAvenant->getCommissionPotentielle());
-            $piste->setDescriptionDuRisque($nomPiste);
             $piste->setClient($pisteAvenant->getClient());
             $piste->setRisque($pisteAvenant->getRisque());
             //Chargements des partenaires éventuels
@@ -225,7 +233,7 @@ class PisteController extends AbstractController
             $newCotation = new Cotation();
             $newCotation->setDuree($cotationAvenant->getDuree());
             $newCotation->setAssureur($cotationAvenant->getAssureur());
-            $newCotation->setNom("Proposition • " . $cotationAvenant->getAssureur()->getNom() . " • " . $this->constante->getTypeAvenant($mouvement) . " • Av. n°" . ($avenant->getNumero() + 1) . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom());
+            $newCotation->setNom("Proposition • " . $cotationAvenant->getAssureur()->getNom() . " • " . $this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $numAvenant . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom());
             //On défini les chargements par défaut
             foreach ($cotationAvenant->getChargements() as $chargement) {
                 $newCotation->addChargement(
@@ -242,8 +250,8 @@ class PisteController extends AbstractController
                 $newCotation->addTranch(
                     (new Tranche())
                         ->setNom($tranche->getNom())
-                        ->setPayableAt($tranche->getPayableAt())
-                        ->setEcheanceAt($tranche->getEcheanceAt())
+                        ->setPayableAt($newEffectDate)
+                        ->setEcheanceAt($newExpiryDate)
                         ->setMontantFlat($tranche->getMontantFlat())
                         ->setCreatedAt($tranche->getCreatedAt())
                         ->setUpdatedAt($tranche->getUpdatedAt())
@@ -262,13 +270,28 @@ class PisteController extends AbstractController
                 );
             }
 
+            $newCotation->addAvenant(
+                (new Avenant())
+                    ->setNumero($numAvenant)
+                    ->setStartingAt($newEffectDate)
+                    ->setEndingAt($newExpiryDate)
+                    ->setReferencePolice($referencePolice)
+                    ->setDescription($this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $numAvenant . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom())
+            );
+
             //Défini la cotation
             $piste->addCotation($newCotation);
-
             // dd("Je suis ici", $avenant, $mouvement);
 
             $form = $this->createForm(PisteType::class, $piste);
-            // $form->handleRequest($request);
+            $form->handleRequest($request);
+
+            if ($form->isSubmitted() && $form->isValid()) {
+                dd("je suis !", $piste);
+                $this->save($piste, $this->translator->trans("piste_creation_ok", [
+                    ":piste" => $piste->getNom(),
+                ]));
+            }
             return $this->render('admin/piste/create.html.twig', [
                 'pageName' => $this->translator->trans("piste_page_name_new"),
                 'utilisateur' => $user,
@@ -281,5 +304,17 @@ class PisteController extends AbstractController
                 'idEntreprise' => $idEntreprise,
             ]);
         }
+    }
+
+    private function save(?Piste $piste, $message)
+    {
+        $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
+        $this->manager->flush();
+        $this->addFlash("success", $message);
+
+        //On doit rester sur la page d'édition
+        // return $this->redirectToRoute("admin.piste.index", [
+        //     'idEntreprise' => $idEntreprise,
+        // ]);
     }
 }
