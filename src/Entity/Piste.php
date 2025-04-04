@@ -85,6 +85,9 @@ class Piste
     #[ORM\Column]
     private ?int $exercice = null;
 
+    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
+    private ?Avenant $avenantDeBase = null;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
@@ -377,6 +380,18 @@ class Piste
     public function setExercice(int $exercice): static
     {
         $this->exercice = $exercice;
+
+        return $this;
+    }
+
+    public function getAvenantDeBase(): ?Avenant
+    {
+        return $this->avenantDeBase;
+    }
+
+    public function setAvenantDeBase(?Avenant $avenantDeBase): static
+    {
+        $this->avenantDeBase = $avenantDeBase;
 
         return $this;
     }

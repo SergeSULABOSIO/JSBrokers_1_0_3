@@ -170,124 +170,21 @@ class PisteController extends AbstractController
     #[Route('/endorse/{idEntreprise}/{idAvenant}/{mouvement}', name: 'endorse', requirements: ['idAvenant' => Requirement::DIGITS, 'mouvement' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function endorse($idEntreprise, $idAvenant, $mouvement, Request $request)
     {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
         /** @var Avenant $avenant */
-        $avenant = $this->avenantRepository->find($idAvenant);
-        if ($avenant != null) {
+        $avenantDeBase = $this->avenantRepository->find($idAvenant);
 
-            /** @var Utilisateur $user */
-            $user = $this->getUser();
+        if ($avenantDeBase != null) {
 
-            /** @var Invite $invite */
-            $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+            $newPiste = $this->buildNewPisteFromAvenant($user, $avenantDeBase, $mouvement);
 
-            /** @var Cotation $cotation */
-            $cotationAvenant = $avenant->getCotation();
-
-            /** @var Piste $piste */
-            $pisteAvenant = $cotationAvenant->getPiste();
-
-            $referencePolice = $avenant->getReferencePolice();
-
-
-            //calcul du numéro de l'avenant
-            $numAvenant = 0;
-            $newEffectDate = null;
-            $newExpiryDate = null;
-            /** @var Avenant $avenantExistant */
-            foreach ($this->constante->Entreprise_getAvenants() as $avenantExistant) {
-                if ($avenantExistant->getReferencePolice() == $referencePolice) {
-                    $numAvenant = $avenantExistant->getNumero();
-                    $newEffectDate = $avenantExistant->getStartingAt();
-                    $newExpiryDate = $avenantExistant->getEndingAt();
-                }
-            }
-            $numAvenant++;
-            $newEffectDate = $this->serviceDates->ajouterJours($newExpiryDate, 1);
-            $newExpiryDate = $this->serviceDates->ajouterJours($newEffectDate, 364);
-            // dd("Last numéro d'Avenant: " . $numAvenant, $newEffectDate, $newExpiryDate);
-
-            $nomPiste = "Avenant n°" . $numAvenant . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $referencePolice . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
-
-            /** @var Piste $piste */
-            $piste = new Piste();
-            //Paramètres par défaut
-            $piste->setNom($nomPiste);
-            $piste->setDescriptionDuRisque($this->constante->getTypeAvenant($mouvement) . " • " . $avenant->getDescription());
-            $piste->setPrimePotentielle($pisteAvenant->getPrimePotentielle());
-            $piste->setCommissionPotentielle($pisteAvenant->getCommissionPotentielle());
-            $piste->setClient($pisteAvenant->getClient());
-            $piste->setRisque($pisteAvenant->getRisque());
-            //Chargements des partenaires éventuels
-            foreach ($pisteAvenant->getPartenaires() as $partenaire) {
-                $piste->addPartenaire($partenaire);
-            }
-            //Chargements des conditions de partage éventuelles
-            foreach ($pisteAvenant->getConditionsPartageExceptionnelles() as $condition) {
-                $piste->addConditionsPartageExceptionnelle($condition);
-            }
-            $piste->setTypeAvenant($mouvement);
-            $piste->setInvite($invite);
-            $piste->setExercice((new DateTimeImmutable("now"))->format('Y'));
-
-            /** @var Cotation $newCotation */
-            $newCotation = new Cotation();
-            $newCotation->setDuree($cotationAvenant->getDuree());
-            $newCotation->setAssureur($cotationAvenant->getAssureur());
-            $newCotation->setNom("Proposition • " . $cotationAvenant->getAssureur()->getNom() . " • " . $this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $numAvenant . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom());
-            //On défini les chargements par défaut
-            foreach ($cotationAvenant->getChargements() as $chargement) {
-                $newCotation->addChargement(
-                    (new ChargementPourPrime())
-                        ->setNom($chargement->getNom())
-                        ->setCreatedAt(new DateTimeImmutable("now"))
-                        ->setUpdatedAt(new DateTimeImmutable("now"))
-                        ->setType($chargement->getType())
-                        ->setMontantFlatExceptionel($chargement->getMontantFlatExceptionel())
-                );
-            }
-            //On défini les tranches par défaut
-            foreach ($cotationAvenant->getTranches() as $tranche) {
-                $newCotation->addTranch(
-                    (new Tranche())
-                        ->setNom($tranche->getNom())
-                        ->setPayableAt($newEffectDate)
-                        ->setEcheanceAt($newExpiryDate)
-                        ->setMontantFlat($tranche->getMontantFlat())
-                        ->setCreatedAt($tranche->getCreatedAt())
-                        ->setUpdatedAt($tranche->getUpdatedAt())
-                        ->setPourcentage($tranche->getPourcentage())
-                );
-            }
-            //On défini les revenus par défaut
-            foreach ($cotationAvenant->getRevenus() as $revenu) {
-                $newCotation->addRevenu(
-                    (new RevenuPourCourtier)
-                        ->setNom($revenu->getNom())
-                        ->setTypeRevenu($revenu->getTypeRevenu())
-                        ->setCreatedAt(new DateTimeImmutable("now"))
-                        ->setUpdatedAt(new DateTimeImmutable("now"))
-                        ->setMontantFlatExceptionel($revenu->getMontantFlatExceptionel())
-                );
-            }
-
-            $newCotation->addAvenant(
-                (new Avenant())
-                    ->setNumero($numAvenant)
-                    ->setStartingAt($newEffectDate)
-                    ->setEndingAt($newExpiryDate)
-                    ->setReferencePolice($referencePolice)
-                    ->setDescription($this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $numAvenant . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom())
-            );
-
-            //Défini la cotation
-            $piste->addCotation($newCotation);
-            // dd("Je suis ici", $avenant, $mouvement);
-
-            $form = $this->createForm(PisteType::class, $piste);
+            $form = $this->createForm(PisteType::class, $newPiste);
             $form->handleRequest($request);
 
             if ($form->isSubmitted() && $form->isValid()) {
-                dd("je suis !", $piste);
+                dd("je suis !", $newPiste);
                 $this->save($piste, $this->translator->trans("piste_creation_ok", [
                     ":piste" => $piste->getNom(),
                 ]));
@@ -316,5 +213,132 @@ class PisteController extends AbstractController
         // return $this->redirectToRoute("admin.piste.index", [
         //     'idEntreprise' => $idEntreprise,
         // ]);
+    }
+
+    private function buildNewPisteFromAvenant(Utilisateur $user, Avenant $avenantDeBase, $mouvement): Piste
+    {
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var Cotation $cotation */
+        $cotationAvenantDeBase = $avenantDeBase->getCotation();
+
+        /** @var Piste $piste */
+        $pisteAvenant = $cotationAvenantDeBase->getPiste();
+
+        $referencePolice = $avenantDeBase->getReferencePolice();
+
+        //calcul du numéro de l'avenant
+        // $numAvenant = 0;
+        // $existingEffectDate = null;
+        // $existingExpiryDate = null;
+        // /** @var Avenant $avenantExistant */
+        // foreach ($this->constante->Entreprise_getAvenants() as $avenantExistant) {
+        //     if ($avenantExistant->getReferencePolice() == $referencePolice) {
+        //         $numAvenant = $avenantExistant->getNumero();
+        //         $existingEffectDate = $avenantExistant->getStartingAt();
+        //         $existingExpiryDate = $avenantExistant->getEndingAt();
+        //     }
+        // }
+        // $numAvenant++;
+
+        //fixation de la période de couverture par défaut en fonction du type d'avenant
+        // if ($mouvement == Piste::AVENANT_PROROGATION || $mouvement == Piste::AVENANT_RENOUVELLEMENT) {
+        //     $newEffectDate = $this->serviceDates->ajouterAnnees($newEffectDate, 1);
+        //     $newExpiryDate = $this->serviceDates->ajouterAnnees($newExpiryDate, 1);
+        // } else if ($mouvement == Piste::AVENANT_INCORPORATION || $mouvement == Piste::AVENANT_SOUSCRIPTION) {
+        //     $newEffectDate = new DateTimeImmutable("now");
+        //     if ($mouvement == Piste::AVENANT_SOUSCRIPTION) {
+        //         $newExpiryDate = $this->serviceDates->ajouterJours($newEffectDate, 364);
+        //     }else{
+        //         //On maintien la dernière date d'expiration trouvé, puisqu'il ne s'agit que d'une incorporation
+        //         $newExpiryDate = $newExpiryDate;
+        //     }
+            
+        // } else if ($mouvement == Piste::AVENANT_ANNULATION || $mouvement == Piste::AVENANT_RESILIATION) {
+        //     $newEffectDate = new DateTimeImmutable("now");
+        //     $newExpiryDate = new DateTimeImmutable("now");
+        // }
+        $newCalculatedPeriod = $this->constante->calculerPeriodeCouverture($mouvement, $avenantDeBase);
+        
+        // dd("Last numéro d'Avenant: " . $numAvenant, $newEffectDate, $newExpiryDate);
+
+        $nomPiste = "Avenant n°" . $newCalculatedPeriod['New Numero Avenant'] . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $referencePolice . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
+
+        /** @var Piste $piste */
+        $piste = new Piste();
+        //Paramètres par défaut
+        $piste->setNom($nomPiste);
+        $piste->setDescriptionDuRisque($this->constante->getTypeAvenant($mouvement) . " • " . $avenantDeBase->getDescription());
+        $piste->setPrimePotentielle($pisteAvenant->getPrimePotentielle());
+        $piste->setCommissionPotentielle($pisteAvenant->getCommissionPotentielle());
+        $piste->setClient($pisteAvenant->getClient());
+        $piste->setRisque($pisteAvenant->getRisque());
+        //Chargements des partenaires éventuels
+        foreach ($pisteAvenant->getPartenaires() as $partenaire) {
+            $piste->addPartenaire($partenaire);
+        }
+        //Chargements des conditions de partage éventuelles
+        foreach ($pisteAvenant->getConditionsPartageExceptionnelles() as $condition) {
+            $piste->addConditionsPartageExceptionnelle($condition);
+        }
+        $piste->setTypeAvenant($mouvement);
+        $piste->setInvite($invite);
+        $piste->setExercice((new DateTimeImmutable("now"))->format('Y'));
+
+        /** @var Cotation $newCotation */
+        $newCotation = new Cotation();
+        $newCotation->setDuree($cotationAvenantDeBase->getDuree());
+        $newCotation->setAssureur($cotationAvenantDeBase->getAssureur());
+        $newCotation->setNom("Proposition • " . $cotationAvenantDeBase->getAssureur()->getNom() . " • " . $this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $newCalculatedPeriod['New Numero Avenant'] . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom());
+        //On défini les chargements par défaut
+        foreach ($cotationAvenantDeBase->getChargements() as $chargement) {
+            $newCotation->addChargement(
+                (new ChargementPourPrime())
+                    ->setNom($chargement->getNom())
+                    ->setCreatedAt(new DateTimeImmutable("now"))
+                    ->setUpdatedAt(new DateTimeImmutable("now"))
+                    ->setType($chargement->getType())
+                    ->setMontantFlatExceptionel($chargement->getMontantFlatExceptionel())
+            );
+        }
+        //On défini les tranches par défaut
+        foreach ($cotationAvenantDeBase->getTranches() as $tranche) {
+            $newCotation->addTranch(
+                (new Tranche())
+                    ->setNom($tranche->getNom())
+                    ->setPayableAt($newCalculatedPeriod['Effect Date'])
+                    ->setEcheanceAt($newCalculatedPeriod['Expiry Date'])
+                    ->setMontantFlat($tranche->getMontantFlat())
+                    ->setCreatedAt($tranche->getCreatedAt())
+                    ->setUpdatedAt($tranche->getUpdatedAt())
+                    ->setPourcentage($tranche->getPourcentage())
+            );
+        }
+        //On défini les revenus par défaut
+        foreach ($cotationAvenantDeBase->getRevenus() as $revenu) {
+            $newCotation->addRevenu(
+                (new RevenuPourCourtier)
+                    ->setNom($revenu->getNom())
+                    ->setTypeRevenu($revenu->getTypeRevenu())
+                    ->setCreatedAt(new DateTimeImmutable("now"))
+                    ->setUpdatedAt(new DateTimeImmutable("now"))
+                    ->setMontantFlatExceptionel($revenu->getMontantFlatExceptionel())
+            );
+        }
+
+        //On ne charge pas encore l'avenant car à ce stade on n'est pas encore sur que c'est cofirmé.
+        $newCotation->addAvenant(
+            (new Avenant())
+                ->setNumero($newCalculatedPeriod['New Numero Avenant'])
+                ->setStartingAt($newCalculatedPeriod['Effect Date'])
+                ->setEndingAt($newCalculatedPeriod['Expiry Date'])
+                ->setReferencePolice($referencePolice)
+                ->setDescription($this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $newCalculatedPeriod['New Numero Avenant'] . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom())
+        );
+
+        //Défini la cotation
+        $piste->addCotation($newCotation);
+        return $piste;
     }
 }
