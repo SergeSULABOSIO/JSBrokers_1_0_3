@@ -4698,6 +4698,7 @@ class Constante
             $pourcentage = round(($tableauMontants[$i] / $data['Total']) * 100, 2);
             $data['Notes'] .= $separateur['prefixe'] . $tableauUnite[$i] . " " . $codeMonnaie . " " . number_format($tableauMontants[$i], 2, ",", ".") . " (soit " . $pourcentage . "%)" . $separateur['suffixe'];
         }
+        // dd($tableauMontants);
         // dd($data);
         return $data;
     }
@@ -4715,6 +4716,7 @@ class Constante
             $data['Assureurs'][] = $assureur->getNom();
         }
         for ($i = 0; $i < count($data['Assureurs']); $i++) {
+            $revenuCumul = 0;
             /** @var Avenant $avenant */
             foreach ($this->Entreprise_getAvenants() as $avenant) {
                 $revenu = 0;
@@ -4723,10 +4725,12 @@ class Constante
                         $revenu += $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
                     }
                 }
-                $data['Montants'][] = $revenu;
+                $revenuCumul += $revenu;
                 $data['Total'] += $revenu;
             }
+            $data['Montants'][] = $revenuCumul;
         }
+        // dd("Je suis ici.", $data['Montants'], $data['Assureurs']);
         $data = $this->Graphs_writeNotes($data['Montants'], $data['Assureurs'], "par assureur", $data);
         // dd($data);
         return $data;
@@ -4746,6 +4750,7 @@ class Constante
         }
 
         for ($i = 0; $i < count($data['Partners']); $i++) {
+            $revenuCumul = 0;
             /** @var Avenant $avenant */
             foreach ($this->Entreprise_getAvenants() as $avenant) {
                 $revenu = 0;
@@ -4756,9 +4761,10 @@ class Constante
                         $revenu += $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
                     }
                 }
-                $data['Montants'][] = $revenu;
+                $revenuCumul += $revenu;
                 $data['Total'] += $revenu;
             }
+            $data['Montants'][] = $revenuCumul;
         }
         $data = $this->Graphs_writeNotes($data['Montants'], $data['Partners'], "par intermédiaire", $data);
         // dd($data);
@@ -4779,6 +4785,7 @@ class Constante
         }
 
         for ($i = 0; $i < count($data['Risks']); $i++) {
+            $revenuCumul = 0;
             /** @var Avenant $avenant */
             foreach ($this->Entreprise_getAvenants() as $avenant) {
                 $revenu = 0;
@@ -4789,9 +4796,10 @@ class Constante
                         $revenu += $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
                     }
                 }
-                $data['Montants'][] = $revenu;
+                $revenuCumul += $revenu;
                 $data['Total'] += $revenu;
             }
+            $data['Montants'][] = $revenuCumul;
         }
         $data = $this->Graphs_writeNotes($data['Montants'], $data['Risks'], "par risque", $data);
         // dd($data);
