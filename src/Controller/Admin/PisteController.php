@@ -184,9 +184,9 @@ class PisteController extends AbstractController
             $form->handleRequest($request);
 
             if ($form->isSubmitted() && $form->isValid()) {
-                dd("je suis !", $newPiste);
-                $this->save($piste, $this->translator->trans("piste_creation_ok", [
-                    ":piste" => $piste->getNom(),
+                // dd("je suis !", $newPiste);
+                $this->save($newPiste, $this->translator->trans("piste_creation_ok", [
+                    ":piste" => $newPiste->getNom(),
                 ]));
             }
             return $this->render('admin/piste/create.html.twig', [
