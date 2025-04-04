@@ -228,40 +228,7 @@ class PisteController extends AbstractController
 
         $referencePolice = $avenantDeBase->getReferencePolice();
 
-        //calcul du numéro de l'avenant
-        // $numAvenant = 0;
-        // $existingEffectDate = null;
-        // $existingExpiryDate = null;
-        // /** @var Avenant $avenantExistant */
-        // foreach ($this->constante->Entreprise_getAvenants() as $avenantExistant) {
-        //     if ($avenantExistant->getReferencePolice() == $referencePolice) {
-        //         $numAvenant = $avenantExistant->getNumero();
-        //         $existingEffectDate = $avenantExistant->getStartingAt();
-        //         $existingExpiryDate = $avenantExistant->getEndingAt();
-        //     }
-        // }
-        // $numAvenant++;
-
-        //fixation de la période de couverture par défaut en fonction du type d'avenant
-        // if ($mouvement == Piste::AVENANT_PROROGATION || $mouvement == Piste::AVENANT_RENOUVELLEMENT) {
-        //     $newEffectDate = $this->serviceDates->ajouterAnnees($newEffectDate, 1);
-        //     $newExpiryDate = $this->serviceDates->ajouterAnnees($newExpiryDate, 1);
-        // } else if ($mouvement == Piste::AVENANT_INCORPORATION || $mouvement == Piste::AVENANT_SOUSCRIPTION) {
-        //     $newEffectDate = new DateTimeImmutable("now");
-        //     if ($mouvement == Piste::AVENANT_SOUSCRIPTION) {
-        //         $newExpiryDate = $this->serviceDates->ajouterJours($newEffectDate, 364);
-        //     }else{
-        //         //On maintien la dernière date d'expiration trouvé, puisqu'il ne s'agit que d'une incorporation
-        //         $newExpiryDate = $newExpiryDate;
-        //     }
-            
-        // } else if ($mouvement == Piste::AVENANT_ANNULATION || $mouvement == Piste::AVENANT_RESILIATION) {
-        //     $newEffectDate = new DateTimeImmutable("now");
-        //     $newExpiryDate = new DateTimeImmutable("now");
-        // }
         $newCalculatedPeriod = $this->constante->calculerPeriodeCouverture($mouvement, $avenantDeBase);
-        
-        // dd("Last numéro d'Avenant: " . $numAvenant, $newEffectDate, $newExpiryDate);
 
         $nomPiste = "Avenant n°" . $newCalculatedPeriod['New Numero Avenant'] . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $referencePolice . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
 
