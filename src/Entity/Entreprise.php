@@ -123,7 +123,7 @@ class Entreprise
     private Collection $risques;
 
     /**
-     * @var Collection<int, Revenu>
+     * @var Collection<int, TypeRevenu>
      */
     #[ORM\OneToMany(targetEntity: TypeRevenu::class, mappedBy: 'entreprise', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $typerevenus;
@@ -456,7 +456,7 @@ class Entreprise
     }
 
     /**
-     * @return Collection<int, Revenu>
+     * @return Collection<int, TypeRevenu>
      */
     public function getTypeRevenus(): Collection
     {

@@ -175,6 +175,7 @@ class PisteController extends AbstractController
 
         /** @var Avenant $avenant */
         $avenantDeBase = $this->avenantRepository->find($idAvenant);
+        // dd($avenantDeBase);
 
         if ($avenantDeBase != null) {
 

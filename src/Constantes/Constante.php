@@ -3663,6 +3663,7 @@ class Constante
             self::STATUS_BALANCE_DUE => 0,
         ];
 
+
         /** @var Cotation $cotation */
         $cotation = $revenu->getCotation();
         if ($cotation) {
@@ -3671,20 +3672,21 @@ class Constante
                     /** @var Article $article */
                     foreach ($tranche->getArticles() as $article) {
                         if ($article->getIdPoste() == $revenu->getId()) {
-                            // dd("j'ai trouvé l'article", $article);
-                            $statusCollection[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenu);
+                            // dd("j'ai trouvé l'article", $article, $revenu, $article->getMontant());
+                            $statusCollection[self::STATUS_INVOICED] += $article->getMontant();
                             $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenu);
                             $statusCollection[self::STATUS_BALANCE_DUE] = $this->Revenu_getMontant_ttc_solde($revenu);
-                            $statusCollection[self::STATUS_INVOICED] += $article->getMontant();
+                            $statusCollection[self::STATUS_DUE] += $this->Revenu_getMontant_ttc($revenu);
                         }
                     }
                 }
             }
         }
         $statusCollection[self::STATUS_NOT_INVOICED] = $statusCollection[self::STATUS_DUE] - $statusCollection[self::STATUS_INVOICED];
+        // dd("Ici", $statusCollection);
         return $statusCollection;
     }
-    public function Piste_getCommissionsInvoicingStatus(?Piste $piste): array
+    public function TypeRevennu_getCommissionsInvoicingStatus(?TypeRevenu $typeRevenu): array
     {
         $status = [
             self::STATUS_DUE => 0,
@@ -3694,21 +3696,22 @@ class Constante
             self::STATUS_BALANCE_DUE => 0,
         ];
 
-        /** @var TypeRevenu $typeRevenu */
-        foreach ($this->getEnterprise()->getTypeRevenus() as $typeRevenu) {
+        if ($typeRevenu != null) {
             if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR or $typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
                 // dd("Redevable par l'assureur ou par le client:", $typeRevenu);
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
                     $revenuStatus = $this->Revenu_getInvoicingStatus($revenu);
+                    // dd($revenuStatus);
                     $status[self::STATUS_DUE] += $revenuStatus[self::STATUS_DUE];
                     $status[self::STATUS_INVOICED] += $revenuStatus[self::STATUS_INVOICED];
                     $status[self::STATUS_PAID] += $revenuStatus[self::STATUS_PAID];
-                    $status[self::STATUS_NOT_INVOICED] += $revenuStatus[self::STATUS_NOT_INVOICED];
                     $status[self::STATUS_BALANCE_DUE] += $revenuStatus[self::STATUS_BALANCE_DUE];
+                    $status[self::STATUS_NOT_INVOICED] += $revenuStatus[self::STATUS_NOT_INVOICED];
                     // dd($this->Revenu_getInvoicingStatus($revenu));
                 }
             }
         }
+        // dd($status, $piste);
         return $status;
     }
     public function Piste_getMontant_commission_collectee(?Piste $piste)
@@ -4347,17 +4350,24 @@ class Constante
      */
     public function Entreprise_getSynthseCollecteRevenus()
     {
-        $status = [];
+        $status = [
+            self::STATUS_DUE => 0,
+            self::STATUS_INVOICED => 0,
+            self::STATUS_PAID => 0,
+            self::STATUS_NOT_INVOICED => 0,
+            self::STATUS_BALANCE_DUE => 0,
+        ];
         $syntheseRevenu = [];
         /** @var Invite $invite */
-        foreach ($this->getEnterprise()->getInvites() as $invite) {
-            foreach ($invite->getPistes() as $piste) {
-                if ($this->Piste_isBound($piste)) {
-                    $status = $this->Piste_getCommissionsInvoicingStatus($piste);
-                    // dd($status);
-                }
-            }
+        foreach ($this->getEnterprise()->getTypeRevenus() as $typeRevenu) {
+            $statusTempo = $this->TypeRevennu_getCommissionsInvoicingStatus($typeRevenu);
+            $status[self::STATUS_DUE] += $statusTempo[self::STATUS_DUE];
+            $status[self::STATUS_INVOICED] += $statusTempo[self::STATUS_INVOICED];
+            $status[self::STATUS_PAID] += $statusTempo[self::STATUS_PAID];
+            $status[self::STATUS_BALANCE_DUE] += $statusTempo[self::STATUS_BALANCE_DUE];
+            $status[self::STATUS_NOT_INVOICED] += $statusTempo[self::STATUS_NOT_INVOICED];
         }
+        // dd($status);
         $syntheseRevenu[] = [
             ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_invoiced"),
             ReportSummary::VALEUR => $status[self::STATUS_INVOICED],
