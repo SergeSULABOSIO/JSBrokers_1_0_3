@@ -62,9 +62,9 @@ class PisteType extends AbstractType
                 'expanded' => false,
                 'required' => true,
                 'choices'  => [
-                    "ASSURANCE A TERME RENOUVELLABLE"       => Piste::RENEWAL_CONDITION_RENEWABLE,
-                    "ASSURANCE AVEC AJUSTEMENT"             => Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY,
-                    "ASSURANCE TEMPORAIRE"                  => Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE,
+                    "ASSURANCE A TERME RENOUVELLABLE"           => Piste::RENEWAL_CONDITION_RENEWABLE,
+                    "ASSURANCE AVEC AJUSTEMENT"                 => Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY,
+                    "ASSURANCE TEMPORAIRE NON RENOUVELLABLE"    => Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE,
                 ],
             ])
 
