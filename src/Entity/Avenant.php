@@ -33,7 +33,7 @@ class Avenant
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'avenant', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
 
-    #[ORM\ManyToOne(inversedBy: 'avenant', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\ManyToOne(inversedBy: 'avenant', cascade: ['persist', 'remove'])]
     private ?Cotation $cotation = null;
 
     #[ORM\Column(length: 255)]

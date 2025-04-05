@@ -54,7 +54,7 @@ class Cotation
     #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $tranches;
 
-    #[ORM\ManyToOne(inversedBy: 'cotations', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\ManyToOne(inversedBy: 'cotations', cascade: ['persist', 'remove'])]
     private ?Piste $piste = null;
 
     /**
