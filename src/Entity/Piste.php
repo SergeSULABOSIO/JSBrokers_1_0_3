@@ -88,6 +88,9 @@ class Piste
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     private ?Avenant $avenantDeBase = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $renewalCondition = null;
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
@@ -392,6 +395,18 @@ class Piste
     public function setAvenantDeBase(?Avenant $avenantDeBase): static
     {
         $this->avenantDeBase = $avenantDeBase;
+
+        return $this;
+    }
+
+    public function getRenewalCondition(): ?int
+    {
+        return $this->renewalCondition;
+    }
+
+    public function setRenewalCondition(?int $renewalCondition): static
+    {
+        $this->renewalCondition = $renewalCondition;
 
         return $this;
     }
