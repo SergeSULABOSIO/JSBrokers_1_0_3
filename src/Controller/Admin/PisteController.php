@@ -237,6 +237,7 @@ class PisteController extends AbstractController
         $piste = new Piste();
         //Paramètres par défaut
         $piste->setAvenantDeBase($avenantDeBase);
+        $piste->setRenewalCondition($avenantDeBase->getCotation()->getPiste()->getRenewalCondition());
         $piste->setNom($nomPiste);
         $piste->setDescriptionDuRisque($this->constante->getTypeAvenant($mouvement) . " • " . $avenantDeBase->getDescription());
         $piste->setPrimePotentielle($pisteAvenant->getPrimePotentielle());
