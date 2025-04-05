@@ -3769,11 +3769,7 @@ class Constante
         };
         return $strRenewalCondition;
     }
-    public function Avenant_canMouvement(Avenant $avenant, $mouvement):bool
-    {
-        dd($avenant->getCotation()->getPiste()->getRenewalCondition());
-        return true;
-    }
+    
     public function Piste_getMontant_taxe_payable_par_assureur_payee(?Piste $piste)
     {
         $tot = 0;
