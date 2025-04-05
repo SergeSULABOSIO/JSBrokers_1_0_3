@@ -128,6 +128,10 @@
                                 <small class="m-2">
                                     <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Piste_getReserve(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br>
+                                <small class="m-2">
+                                    <span class="text-secondary">Condition: {{ constante.Piste_getTexteRenewalCondition(piste) }}</span> 
+                                    <span class="text-secondary"> • Type d'avenant: {{ constante.getTypeAvenant(piste.typeAvenant) }}</span> 
+                                </small><br>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

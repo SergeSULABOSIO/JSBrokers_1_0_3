@@ -136,6 +136,10 @@
                                     <span class="text-secondary">Piste: {{ avenant.cotation.piste.nom }}</span>
                                     <span class="text-secondary"> • Créée le {{ avenant.cotation.piste.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}</span>
                                 </small><br>
+                                <small class="m-2">
+                                    <span class="text-secondary">Condition: {{ constante.Piste_getTexteRenewalCondition(avenant.cotation.piste) }}</span> 
+                                    <span class="text-secondary"> • Type d'avenant: {{ constante.getTypeAvenant(avenant.cotation.piste.typeAvenant) }}</span> 
+                                </small><br>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
@@ -166,7 +170,7 @@
                                             <li>
                                                 <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 1, 'idEntreprise': entreprise.id}) }}">
                                                     {{ ux_icon('material-symbols:add-ad-outline-rounded', {height: '18px', width: '18px'}) }}
-                                                    Incorporation
+                                                    Incorporation "{{constante.Avenant_canMouvement(avenant, 1) }}"
                                                 </a>
                                             </li>
                                             <li>

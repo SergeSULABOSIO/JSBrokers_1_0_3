@@ -3760,6 +3760,20 @@ class Constante
         }
         return $tot;
     }
+    public function Piste_getTexteRenewalCondition(Piste $piste)
+    {
+        $strRenewalCondition = match ($piste->getRenewalCondition()) {
+            Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY => "Assurance avec ajustement",
+            Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE => "Assurance Temporaire non renouvellable",
+            Piste::RENEWAL_CONDITION_RENEWABLE => "Assurance à terme renouvellable",
+        };
+        return $strRenewalCondition;
+    }
+    public function Avenant_canMouvement(Avenant $avenant, $mouvement):bool
+    {
+        dd($avenant->getCotation()->getPiste()->getRenewalCondition());
+        return true;
+    }
     public function Piste_getMontant_taxe_payable_par_assureur_payee(?Piste $piste)
     {
         $tot = 0;
