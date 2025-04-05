@@ -10,12 +10,18 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: PisteRepository::class)]
 class Piste
 {
+    //Type d'Avenant
     public const AVENANT_SOUSCRIPTION = 0;
     public const AVENANT_INCORPORATION = 1;
     public const AVENANT_PROROGATION = 2;
     public const AVENANT_ANNULATION = 3;
     public const AVENANT_RESILIATION = 4;
     public const AVENANT_RENOUVELLEMENT = 5;
+
+    //Conditions de renouvellement
+    public const RENEWAL_CONDITION_RENEWABLE = 0;
+    public const RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY = 1;
+    public const RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE = 2;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
