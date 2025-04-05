@@ -1705,6 +1705,7 @@ class Constante
             if ($cotation != null) {
                 if ($this->Cotation_isBound($cotation) == true) {
                     $txAssCotDue = $this->Cotation_getMontant_taxe_payable_par_assureur($revenu->getCotation(), false);
+                    // dd("ici");
                     $txAssCotPaye = $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
                     // dd("Txt100: " . $txAssCotDue, "Txt100 paid: " . $txAssCotPaye);
 
@@ -3652,10 +3653,10 @@ class Constante
         }
         return $tot;
     }
-    public function Revenu_getInvoicingStatus(?RevenuPourCourtier $revenu): array
+    public function Revenu_getInvoicingStatus(?RevenuPourCourtier $revenuPourCourtier): array
     {
         $statusCollection = [
-            "Revenu" => $revenu,
+            "Revenu" => $revenuPourCourtier,
             self::STATUS_DUE => 0,
             self::STATUS_INVOICED => 0,
             self::STATUS_PAID => 0,
@@ -3665,23 +3666,23 @@ class Constante
 
 
         /** @var Cotation $cotation */
-        $cotation = $revenu->getCotation();
+        $cotation = $revenuPourCourtier->getCotation();
         if ($cotation) {
             if ($this->Cotation_isBound($cotation)) {
                 foreach ($cotation->getTranches() as $tranche) {
                     /** @var Article $article */
                     foreach ($tranche->getArticles() as $article) {
-                        if ($article->getIdPoste() == $revenu->getId()) {
+                        if ($article->getIdPoste() == $revenuPourCourtier->getId()) {
                             // dd("j'ai trouvé l'article", $article, $revenu, $article->getMontant());
                             $statusCollection[self::STATUS_INVOICED] += $article->getMontant();
-                            $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenu);
-                            $statusCollection[self::STATUS_BALANCE_DUE] = $this->Revenu_getMontant_ttc_solde($revenu);
-                            $statusCollection[self::STATUS_DUE] += $this->Revenu_getMontant_ttc($revenu);
                         }
                     }
                 }
             }
         }
+        $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenuPourCourtier);
+        $statusCollection[self::STATUS_BALANCE_DUE] = $this->Revenu_getMontant_ttc_solde($revenuPourCourtier);
+        $statusCollection[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenuPourCourtier);
         $statusCollection[self::STATUS_NOT_INVOICED] = $statusCollection[self::STATUS_DUE] - $statusCollection[self::STATUS_INVOICED];
         // dd("Ici", $statusCollection);
         return $statusCollection;
@@ -3699,8 +3700,8 @@ class Constante
         if ($typeRevenu != null) {
             if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR or $typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
                 // dd("Redevable par l'assureur ou par le client:", $typeRevenu);
-                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenu) {
-                    $revenuStatus = $this->Revenu_getInvoicingStatus($revenu);
+                foreach ($typeRevenu->getRevenuPourCourtiers() as $revenuPourCourtier) {
+                    $revenuStatus = $this->Revenu_getInvoicingStatus($revenuPourCourtier);
                     // dd($revenuStatus);
                     $status[self::STATUS_DUE] += $revenuStatus[self::STATUS_DUE];
                     $status[self::STATUS_INVOICED] += $revenuStatus[self::STATUS_INVOICED];
