@@ -273,19 +273,19 @@
                                 <div class="card-header text-center">
                                     <small class="m-2 text-secondary ">
                                         <span class="fw-bold">
-                                            {# {{ dashboard.productionCharts['chartPerRenewalStatus']['titre'] }} #}
-                                            Revenue graphs per renewal status
+                                            {{ dashboard.productionCharts['chartPerRenewalStatus']['titre'] }}
+                                            {# Revenue graphs per renewal status #}
                                         </span>
                                     </small>
                                 </div>
                                 {{ render_chart(dashboard.productionCharts['chartPerRenewalStatus']['chart'], {'class': 'my-chart'}) }}
                                 <div class="card-body text-center">
                                     <p class="card-text">
-                                        {# <small class="m-2 text-secondary ">
+                                        <small class="m-2 text-secondary ">
                                             <span class="fw-bold">Notes:</span> 
                                             {{ dashboard.productionCharts['chartPerRenewalStatus']['notes'] }}
-                                        </small> #}
-                                        Some quick example text to build on the card title and make up the bulk of the card's content.
+                                        </small>
+                                        {# Some quick example text to build on the card title and make up the bulk of the card's content. #}
                                     </p>
                                 </div>
                             </div>

@@ -83,18 +83,20 @@ class JSBChartBuilder
     public function newChartProductionPerRenewalStatus()
     {
         //Construction de l'histogramme
+        $data = $this->constante->Entreprise_getDataProductionPerRenewalStatus();
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
         $chart->setData([
-            'labels' => [
-                'LOST',
-                'ONCE-OFF',
-                'RENEWED',
-                'EXTENDED',
-                'RUNNING'
-            ],
+            'labels' => $data['Renewal Status'],
+            // 'labels' => [
+            //     'LOST',
+            //     'ONCE-OFF',
+            //     'RENEWED',
+            //     'EXTENDED',
+            //     'RUNNING'
+            // ],
             'datasets' => [
                 [
-                    'label' => 'Renewal Status',
+                    'label' => $data['Titre'],
                     'backgroundColor' => [
                         'Red',
                         'Blue',
@@ -103,15 +105,16 @@ class JSBChartBuilder
                         'Orange'
                     ], //'rgb(255, 99, 132)',
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
-                    'data' => [1, 5, 2, 2, 9],
+                    'data' => $data['Montants'],
+                    // 'data' => [1, 5, 2, 2, 9],
                     'hoverOffset' => 30,
                 ],
             ],
         ]);
         return [
             'chart' => $chart,
-            // 'notes' => $data['Notes'],
-            // 'titre' => $data['Titre'],
+            'notes' => $data['Notes'],
+            'titre' => $data['Titre'],
         ];
         // return $chart;
     }

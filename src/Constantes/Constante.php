@@ -4846,7 +4846,7 @@ class Constante
             "Titre" => "Revenu par Intemédiaire",
             "Total" => 0,
         ];
-        /** @var Avenant $avenant */
+        /** @var Partenaire $partenaire */
         foreach ($this->getEnterprise()->getPartenaires() as $partenaire) {
             $data['Partners'][] = $partenaire->getNom();
         }
@@ -4871,6 +4871,41 @@ class Constante
             $data['Montants'][] = $revenuCumul;
         }
         $data = $this->Graphs_writeNotes($data['Montants'], $data['Partners'], "par intermédiaire", $data);
+        // dd($data);
+        return $data;
+    }
+
+
+    public function Entreprise_getDataProductionPerRenewalStatus()
+    {
+        $data = [
+            "Renewal Status" => [
+                Avenant::RENEWAL_STATUS_CANCELLED,
+                Avenant::RENEWAL_STATUS_EXTENDED,
+                Avenant::RENEWAL_STATUS_LOST,
+                Avenant::RENEWAL_STATUS_ONCE_OFF,
+                Avenant::RENEWAL_STATUS_RENEWED,
+                Avenant::RENEWAL_STATUS_RENEWING,
+                Avenant::RENEWAL_STATUS_RUNNING,
+            ],
+            "Montants" => [],
+            "Titre" => "Revenu par status de renouvellement",
+            "Total" => 0,
+        ];
+
+        for ($i = 0; $i < count($data['Renewal Status']); $i++) {
+            $revenu = 0;
+            /** @var Avenant $avenant */
+            foreach ($this->Entreprise_getAvenants() as $avenant) {
+                $status = $this->Avenant_getRenewalStatus($avenant);
+                if ($status['code'] == $data['Renewal Status'][$i]) {
+                    $revenu += $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
+                }
+            }
+            $data['Montants'][] = $revenu;
+            $data['Total'] += $revenu;
+        }
+        $data = $this->Graphs_writeNotes($data['Montants'], $data['Renewal Status'], "par status de renouvellement", $data);
         // dd($data);
         return $data;
     }
