@@ -3782,19 +3782,23 @@ class Constante
         $renewalStatus['effect date'] = $avenantEncours->getStartingAt();
         $renewalStatus['expiry date'] = $avenantEncours->getEndingAt();
         $renewalStatus['remaining days'] = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $avenantEncours->getEndingAt());
-        $renewalStatus['text'] = "Expire dans " . $renewalStatus['remaining days'] . " jour(s)";
         
         if ($renewalStatus['remaining days'] >= 0) {
             //En cours de couverture
+            $renewalStatus['text'] = "Expire dans " . $renewalStatus['remaining days'] . " jrs";
             $renewalStatus['code'] = Avenant::RENEWAL_STATUS_RUNNING;
         }else{
+            $renewalStatus['text'] = "Expiré il y " . (-1 * $renewalStatus['remaining days']) . " jrs";
             if ($avenantEncours->getCotation()->getPiste()->getRenewalCondition() == Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE) {
                 $renewalStatus['code'] = Avenant::RENEWAL_STATUS_ONCE_OFF;
             }else{
+                /**
+                 * Cherche des pistes (bound ou non), qui sont liés à cet avénant "AvenantEncours"
+                 */
                 $foundPiste = false;
                 /** @var Piste $pisteExistante */
                 foreach ($this->Entreprise_getPistes() as $pisteExistante) {
-                    if ($pisteExistante->getAvenantDeBase() == $avenantEncours) { 
+                    if ($pisteExistante->getAvenantDeBase() == $avenantEncours) {
                         $renewalStatus['code'] = match ($pisteExistante->getTypeAvenant()) {
                             Piste::AVENANT_RENOUVELLEMENT => $this->Piste_isBound($pisteExistante) == true ? Avenant::RENEWAL_STATUS_RENEWED : Avenant::RENEWAL_STATUS_RENEWING,
                             Piste::AVENANT_ANNULATION => Avenant::RENEWAL_STATUS_CANCELLED,
@@ -3810,7 +3814,16 @@ class Constante
             }
             
         }
-        dd($renewalStatus);
+        $renewalStatus['text'] .= match ($renewalStatus['code']) {
+            Avenant::RENEWAL_STATUS_CANCELLED => " (Résilié)",
+            Avenant::RENEWAL_STATUS_EXTENDED => " (Prorogé)",
+            Avenant::RENEWAL_STATUS_LOST => " (Perdu)",
+            Avenant::RENEWAL_STATUS_ONCE_OFF => " (Temporaire)",
+            Avenant::RENEWAL_STATUS_RENEWED => " (Renouvellé)",
+            Avenant::RENEWAL_STATUS_RENEWING => " (En cours de renouvellement)",
+            Avenant::RENEWAL_STATUS_RUNNING => " (En cours...)",
+        };
+        // dd($renewalStatus);
         return $renewalStatus;
     }
     

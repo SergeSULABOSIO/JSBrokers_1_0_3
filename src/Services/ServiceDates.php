@@ -78,10 +78,12 @@ class ServiceDates
     public function daysEntre(DateTimeImmutable $dateA, DateTimeImmutable $dateB):int
     {
         /** @var DateInterval */
-        $interval = $dateA->diff($dateB);
+        $interval = $dateA->diff($dateB, true);
         $days = $interval->format("%a");
         // dd($interval->h);
-        return $days;
+        // dd($dateA > $dateB, $dateA, $dateB);
+
+        return $dateA > $dateB == true ? -1 * $days : $days;
     }
 
     public function hoursEntre(DateTimeImmutable $dateA, DateTimeImmutable $dateB):int
