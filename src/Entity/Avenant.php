@@ -10,6 +10,15 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: AvenantRepository::class)]
 class Avenant
 {
+    //Renewal status
+    public const RENEWAL_STATUS_LOST        = 0;
+    public const RENEWAL_STATUS_ONCE_OFF    = 1;
+    public const RENEWAL_STATUS_RENEWED     = 2;
+    public const RENEWAL_STATUS_EXTENDED    = 3;
+    public const RENEWAL_STATUS_RUNNING     = 4;
+    public const RENEWAL_STATUS_RENEWING    = 5;
+    public const RENEWAL_STATUS_CANCELLED   = 6;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

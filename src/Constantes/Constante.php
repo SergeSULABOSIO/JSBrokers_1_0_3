@@ -3769,6 +3769,50 @@ class Constante
         };
         return $strRenewalCondition;
     }
+
+    public function Avenant_getRenewalStatus(Avenant $avenantEncours)
+    {
+        $renewalStatus = [
+            'text' => "Default status",
+            'code' => -1,
+            'remaining days' => 0,
+            'effect date' => null,
+            'expiry date' => null,
+        ];
+        $renewalStatus['effect date'] = $avenantEncours->getStartingAt();
+        $renewalStatus['expiry date'] = $avenantEncours->getEndingAt();
+        $renewalStatus['remaining days'] = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $avenantEncours->getEndingAt());
+        $renewalStatus['text'] = "Expire dans " . $renewalStatus['remaining days'] . " jour(s)";
+        
+        if ($renewalStatus['remaining days'] >= 0) {
+            //En cours de couverture
+            $renewalStatus['code'] = Avenant::RENEWAL_STATUS_RUNNING;
+        }else{
+            if ($avenantEncours->getCotation()->getPiste()->getRenewalCondition() == Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE) {
+                $renewalStatus['code'] = Avenant::RENEWAL_STATUS_ONCE_OFF;
+            }else{
+                $foundPiste = false;
+                /** @var Piste $pisteExistante */
+                foreach ($this->Entreprise_getPistes() as $pisteExistante) {
+                    if ($pisteExistante->getAvenantDeBase() == $avenantEncours) { 
+                        $renewalStatus['code'] = match ($pisteExistante->getTypeAvenant()) {
+                            Piste::AVENANT_RENOUVELLEMENT => $this->Piste_isBound($pisteExistante) == true ? Avenant::RENEWAL_STATUS_RENEWED : Avenant::RENEWAL_STATUS_RENEWING,
+                            Piste::AVENANT_ANNULATION => Avenant::RENEWAL_STATUS_CANCELLED,
+                            Piste::AVENANT_RESILIATION => Avenant::RENEWAL_STATUS_CANCELLED,
+                            Piste::AVENANT_PROROGATION => Avenant::RENEWAL_STATUS_EXTENDED,
+                        };
+                        $foundPiste = true;
+                    }
+                }
+                if ($foundPiste == false) {
+                    $renewalStatus['code'] = Avenant::RENEWAL_STATUS_LOST;
+                }
+            }
+            
+        }
+        dd($renewalStatus);
+        return $renewalStatus;
+    }
     
     public function Piste_getMontant_taxe_payable_par_assureur_payee(?Piste $piste)
     {
@@ -4650,6 +4694,30 @@ class Constante
         }
         return $avenants;
     }
+
+    public function Entreprise_getPistes(bool $onlyBound = false)
+    {
+        $pistes = new ArrayCollection();
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($onlyBound == true) {
+                    if ($this->Piste_isBound($piste)) {
+                        if (!$pistes->contains($piste)) {
+                            $pistes->add($piste);
+                        }
+                    }
+                }else{
+                    if (!$pistes->contains($piste)) {
+                        $pistes->add($piste);
+                    }
+                }
+                
+            }
+        }
+        return $pistes;
+    }
+
 
     public function getPrefixeEtSuffixe($iterateur, $tailleTableau)
     {

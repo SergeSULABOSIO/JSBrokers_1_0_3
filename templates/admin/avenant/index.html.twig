@@ -139,6 +139,7 @@
                                 <small class="m-2">
                                     <span class="text-secondary">Condition: {{ constante.Piste_getTexteRenewalCondition(avenant.cotation.piste) }}</span> 
                                     <span class="text-secondary"> • Type d'avenant: {{ constante.getTypeAvenant(avenant.cotation.piste.typeAvenant) }}</span> 
+                                    <span class="text-secondary"> • Renewal status: {{ constante.Avenant_getRenewalStatus(avenant)['text'] }}</span> 
                                 </small><br>
                             </td>
                             <td>
