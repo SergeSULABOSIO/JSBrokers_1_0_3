@@ -4859,8 +4859,10 @@ class Constante
                 $cotation = $avenant->getCotation();
                 if ($cotation != null) {
                     $partenaireCotation = $this->Cotation_getPartenaire($cotation);
-                    if ($partenaireCotation->getNom() == $data['Partners'][$i]) {
-                        $revenu += $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
+                    if ($partenaireCotation) {
+                        if ($partenaireCotation->getNom() == $data['Partners'][$i]) {
+                            $revenu += $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
+                        }
                     }
                 }
                 $revenuCumul += $revenu;
@@ -5053,7 +5055,7 @@ class Constante
         $newEffectDate = null;
         $newExpiryDate = null;
         if ($mouvement == Piste::AVENANT_PROROGATION || $mouvement == Piste::AVENANT_RENOUVELLEMENT) {
-            $newEffectDate = $this->serviceDates->ajouterAnnees($lastEffectDate, 1);
+            $newEffectDate = $lastExpiryDate;
             $newExpiryDate = $this->serviceDates->ajouterAnnees($lastExpiryDate, 1);
         } else if ($mouvement == Piste::AVENANT_INCORPORATION || $mouvement == Piste::AVENANT_SOUSCRIPTION) {
             $newEffectDate = new DateTimeImmutable("now");
