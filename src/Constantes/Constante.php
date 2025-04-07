@@ -4889,7 +4889,7 @@ class Constante
                 Avenant::RENEWAL_STATUS_RUNNING,
             ],
             "Montants" => [],
-            "Titre" => "Revenu par status de renouvellement",
+            "Titre" => "Revenu par status de renouv.",
             "Total" => 0,
         ];
 
@@ -4905,7 +4905,7 @@ class Constante
             $data['Montants'][] = $revenu;
             $data['Total'] += $revenu;
         }
-        $data = $this->Graphs_writeNotes($data['Montants'], $data['Renewal Status'], "par status de renouvellement", $data);
+        $data = $this->Graphs_writeNotes($data['Montants'], $data['Renewal Status'], "par status de renouv.", $data);
         // dd($data);
         return $data;
     }
