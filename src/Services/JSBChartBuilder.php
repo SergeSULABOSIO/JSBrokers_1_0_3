@@ -12,15 +12,15 @@ class JSBChartBuilder
 {
 
     public $backgroundColors = [
-        'Grey',
-        'Blue',
-        'Chocolate',
-        'Red',
-        'Purple',
-        'Orange',
-        'Green',
-        'Brown',
-        'Pink',
+        'rgb(166,166,166)', //'Grey',
+        'rgb(77,77,255)', //'Blue',
+        'rgb(231,146,86)', //'Chocolate',
+        'rgb(255,77,77)', //'Red',
+        'rgb(205,0,205)', //'Purple',
+        'rgb(255,192,77)', //'Orange',
+        'rgb(209,74,74)', //'Brown',
+        'rgb(255,243,245)', //'Pink',
+        'rgb(77,255,77)', //'Green',
         //'rgb(255, 99, 132)'
     ];
 
