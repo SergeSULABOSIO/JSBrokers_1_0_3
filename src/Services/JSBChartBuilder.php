@@ -11,6 +11,19 @@ use Symfony\UX\Chartjs\Builder\ChartBuilderInterface;
 class JSBChartBuilder
 {
 
+    public $backgroundColors = [
+        'Grey',
+        'Blue',
+        'Chocolate',
+        'Red',
+        'Purple',
+        'Orange',
+        'Green',
+        'Brown',
+        'Pink',
+        //'rgb(255, 99, 132)'
+    ];
+
     public function __construct(
         private Security $security,
         private ChartBuilderInterface $chartBuilder,
@@ -57,13 +70,7 @@ class JSBChartBuilder
             'datasets' => [
                 [
                     'label' => $data['Titre'],
-                    'backgroundColor' => [
-                        'Red',
-                        'Blue',
-                        'Green',
-                        'Grey',
-                        'Orange'
-                    ], //'rgb(255, 99, 132)',
+                    'backgroundColor' => $this->backgroundColors,
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => $data['Montants'],
                     // 'data' => [1, 5, 2, 2, 9],
@@ -86,24 +93,11 @@ class JSBChartBuilder
         $data = $this->constante->Entreprise_getDataProductionPerRenewalStatus();
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
         $chart->setData([
-            'labels' => $data['Renewal Status'],
-            // 'labels' => [
-            //     'LOST',
-            //     'ONCE-OFF',
-            //     'RENEWED',
-            //     'EXTENDED',
-            //     'RUNNING'
-            // ],
+            'labels' => $data['Renewal Status Definitions'],
             'datasets' => [
                 [
                     'label' => $data['Titre'],
-                    'backgroundColor' => [
-                        'Red',
-                        'Blue',
-                        'Green',
-                        'Grey',
-                        'Orange'
-                    ], //'rgb(255, 99, 132)',
+                    'backgroundColor' => $this->backgroundColors,
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => $data['Montants'],
                     // 'data' => [1, 5, 2, 2, 9],
@@ -129,16 +123,7 @@ class JSBChartBuilder
             'datasets' => [
                 [
                     'label' => $data['Titre'],
-                    'backgroundColor' => [
-                        'Red',
-                        'Blue',
-                        'Green',
-                        'Grey',
-                        'Orange',
-                        'Pink',
-                        'Magenta',
-                        'Yellow',
-                    ], //'rgb(255, 99, 132)',
+                    'backgroundColor' => $this->backgroundColors,
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => $data['Montants'],
                     'hoverOffset' => 30,
@@ -164,17 +149,7 @@ class JSBChartBuilder
             'datasets' => [
                 [
                     'label' => $data['Titre'],
-                    // 'label' => 'Line Of Business',
-                    'backgroundColor' => [
-                        'Red',
-                        'Blue',
-                        'Green',
-                        'Grey',
-                        'Orange',
-                        'Pink',
-                        'Magenta',
-                        'Yellow',
-                    ], //'rgb(255, 99, 132)',
+                    'backgroundColor' => $this->backgroundColors,
                     'borderColor' => 'white', //'rgb(255, 99, 132)',
                     'data' => $data['Montants'],
                     'hoverOffset' => 30,

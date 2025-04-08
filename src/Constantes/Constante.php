@@ -4888,6 +4888,15 @@ class Constante
                 Avenant::RENEWAL_STATUS_RENEWING,
                 Avenant::RENEWAL_STATUS_RUNNING,
             ],
+            "Renewal Status Definitions" => [
+                "ANNULE",
+                "PROROGE",
+                "PERDU",
+                "TEMPORAIRE",
+                "RENOUVELLE",
+                "RENOUV. EN COURS",
+                "VALIDE",
+            ],
             "Montants" => [],
             "Titre" => "Revenu par status de renouv.",
             "Total" => 0,
@@ -4905,7 +4914,7 @@ class Constante
             $data['Montants'][] = $revenu;
             $data['Total'] += $revenu;
         }
-        $data = $this->Graphs_writeNotes($data['Montants'], $data['Renewal Status'], "par status de renouv.", $data);
+        $data = $this->Graphs_writeNotes($data['Montants'], $data['Renewal Status Definitions'], "par status de renouvellement", $data);
         // dd($data);
         return $data;
     }
