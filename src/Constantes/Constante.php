@@ -3788,7 +3788,7 @@ class Constante
             $renewalStatus['text'] = "Expire dans " . $renewalStatus['remaining days'] . " jrs";
             $renewalStatus['code'] = Avenant::RENEWAL_STATUS_RUNNING;
         }else{
-            $renewalStatus['text'] = "Expiré il y " . (-1 * $renewalStatus['remaining days']) . " jrs";
+            $renewalStatus['text'] = "Expiré il y a " . (-1 * $renewalStatus['remaining days']) . " jrs";
             if ($avenantEncours->getCotation()->getPiste()->getRenewalCondition() == Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE) {
                 $renewalStatus['code'] = Avenant::RENEWAL_STATUS_ONCE_OFF;
             }else{
