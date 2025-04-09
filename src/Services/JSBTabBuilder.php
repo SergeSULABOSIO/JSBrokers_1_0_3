@@ -30,7 +30,7 @@ class JSBTabBuilder
     public function newTabProductionPerInsurerPerMonth(): array
     {
         $data = $this->constante->Entreprise_getDataTabProductionPerInsurerPerMonth();
-        dd($data);
+        // dd($data);
         $tabAssureurs = [
             "SFA Congo",
             "SUNU Assurance IARD",

@@ -5132,6 +5132,15 @@ class Constante
             }
         }
 
+        $ligneDernierSubTotal = -1;
+        $ligne = 0;
+
+        $primeGd = 0;
+        $netComGd = 0;
+        $taxeGd = 0;
+        $grossComGd = 0;
+        $comReceivedGd = 0;
+        $comBalanceGd = 0;
 
         //Chargement de la liste des assureurs
         for ($moisEncours = 1; $moisEncours <= 12; $moisEncours++) {
@@ -5155,6 +5164,9 @@ class Constante
                 ->setCommission_received(0)
                 ->setBalance_due(0);
             $data['ReportSet'][] = $subTotal;
+
+            $ligneDernierSubTotal = $ligne;
+            $ligne += 1;
 
             //Pour chaque assureur
             foreach ($data['Assureurs'] as $assureur) {
@@ -5190,28 +5202,51 @@ class Constante
                     ->setCommission_received($comReceivedAss)
                     ->setBalance_due($comBalanceAss);
                 $data['ReportSet'][] = $assureurReportSet;
+                $ligne += 1;
 
+                //On cumule le total du mois
                 $primeMo += $primeAss;
-                $netComMo += $netComMo;
-                $taxeMo += $taxeMo;
-                $grossComMo += $grossComMo;
+                $netComMo += $netComAss;
+                $taxeMo += $taxeAss;
+                $grossComMo += $grossComAss;
                 $comReceivedMo += $comReceivedAss;
                 $comBalanceMo += $comBalanceAss;
 
-                $subTotal = (new InsurerReportSet())
-                    ->setType(PartnerReportSet::TYPE_SUBTOTAL)
-                    ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-                    ->setLabel($monthName)
-                    ->setGw_premium($primeMo)
-                    ->setNet_com($netComMo)
-                    ->setTaxes($taxeMo)
-                    ->setGros_commission($grossComMo)
-                    ->setCommission_received($comReceivedMo)
-                    ->setBalance_due($comBalanceMo);
-
-                // $data['ReportSet'][$moisEncours + count($data['Assureurs'])] = $subTotal;
+                //On cumul aussi le grand total
+                $primeGd += $primeAss;
+                $netComGd += $netComAss;
+                $taxeGd += $taxeAss;
+                $grossComGd += $grossComAss;
+                $comReceivedGd += $comReceivedAss;
+                $comBalanceGd += $comBalanceAss;
             }
+
+            $subTotal = (new InsurerReportSet())
+                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
+                ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+                ->setLabel($monthName)
+                ->setGw_premium($primeMo)
+                ->setNet_com($netComMo)
+                ->setTaxes($taxeMo)
+                ->setGros_commission($grossComMo)
+                ->setCommission_received($comReceivedMo)
+                ->setBalance_due($comBalanceMo);
+
+            $data['ReportSet'][$ligneDernierSubTotal] = $subTotal;
         }
+        $grandTotal = (new InsurerReportSet())
+            ->setType(PartnerReportSet::TYPE_TOTAL)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setLabel("TOTAL")
+            ->setGw_premium($primeGd)
+            ->setNet_com($netComGd)
+            ->setTaxes($taxeGd)
+            ->setGros_commission($grossComGd)
+            ->setCommission_received($comReceivedGd)
+            ->setBalance_due($comBalanceGd);
+
+        $data['ReportSet'][] = $grandTotal;
+
         dd($data);
         return $data;
     }
