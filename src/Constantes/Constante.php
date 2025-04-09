@@ -9,6 +9,7 @@ use App\Entity\Client;
 use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\Risque;
+use DateTimeImmutable;
 use App\Entity\Article;
 use App\Entity\Avenant;
 use App\Entity\Tranche;
@@ -26,15 +27,20 @@ use App\Services\ServiceTaxes;
 use App\Entity\AutoriteFiscale;
 use App\Entity\ConditionPartage;
 use App\Services\ServiceMonnaies;
+use PhpParser\Node\Expr\FuncCall;
 use App\Entity\RevenuPourCourtier;
 use App\Repository\NoteRepository;
 use App\Repository\TaxeRepository;
 use App\Entity\ChargementPourPrime;
+use App\Entity\NotificationSinistre;
+use PhpParser\Node\Expr\Cast\Array_;
 use App\Repository\ArticleRepository;
 use Proxies\__CG__\App\Entity\Revenu;
 use App\Repository\CotationRepository;
 use App\Entity\ReportSet\ReportSummary;
 use App\Repository\PartenaireRepository;
+use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\ReportSet\InsurerReportSet;
 use App\Entity\ReportSet\PartnerReportSet;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -42,13 +48,8 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
-use App\Entity\NotificationSinistre;
-use App\Entity\OffreIndemnisationSinistre;
-use DateTimeImmutable;
-use PhpParser\Node\Expr\Cast\Array_;
-use PhpParser\Node\Expr\FuncCall;
-use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Notifier\Notification\Notification;
 
 
 class Constante
@@ -3782,16 +3783,16 @@ class Constante
         $renewalStatus['effect date'] = $avenantEncours->getStartingAt();
         $renewalStatus['expiry date'] = $avenantEncours->getEndingAt();
         $renewalStatus['remaining days'] = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $avenantEncours->getEndingAt());
-        
+
         if ($renewalStatus['remaining days'] >= 0) {
             //En cours de couverture
             $renewalStatus['text'] = "Expire dans " . $renewalStatus['remaining days'] . " jrs";
             $renewalStatus['code'] = Avenant::RENEWAL_STATUS_RUNNING;
-        }else{
+        } else {
             $renewalStatus['text'] = "Expiré il y a " . (-1 * $renewalStatus['remaining days']) . " jrs";
             if ($avenantEncours->getCotation()->getPiste()->getRenewalCondition() == Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE) {
                 $renewalStatus['code'] = Avenant::RENEWAL_STATUS_ONCE_OFF;
-            }else{
+            } else {
                 /**
                  * Cherche des pistes (bound ou non), qui sont liés à cet avénant "AvenantEncours"
                  */
@@ -3812,7 +3813,6 @@ class Constante
                     $renewalStatus['code'] = Avenant::RENEWAL_STATUS_LOST;
                 }
             }
-            
         }
         $renewalStatus['text'] .= match ($renewalStatus['code']) {
             Avenant::RENEWAL_STATUS_CANCELLED => " (Résilié)",
@@ -3826,7 +3826,7 @@ class Constante
         // dd($renewalStatus);
         return $renewalStatus;
     }
-    
+
     public function Piste_getMontant_taxe_payable_par_assureur_payee(?Piste $piste)
     {
         $tot = 0;
@@ -4720,12 +4720,11 @@ class Constante
                             $pistes->add($piste);
                         }
                     }
-                }else{
+                } else {
                     if (!$pistes->contains($piste)) {
                         $pistes->add($piste);
                     }
                 }
-                
             }
         }
         return $pistes;
@@ -5118,5 +5117,107 @@ class Constante
             'Expiry Date' => $newExpiryDate,
             'New Numero Avenant' => $numAvenant,
         ];
+    }
+
+
+    public function Entreprise_getDataTabProductionPerInsurerPerMonth()
+    {
+        $data = [
+            "Assureurs" => new ArrayCollection(),
+            "ReportSet" => [],
+        ];
+        foreach ($this->Entreprise_getAssureurs() as $assureur) {
+            if (!$data['Assureurs']->contains($assureur->getNom())) {
+                $data['Assureurs'][] = $assureur;
+            }
+        }
+
+
+        //Chargement de la liste des assureurs
+        for ($moisEncours = 1; $moisEncours <= 12; $moisEncours++) {
+            $monthName = date('F', mktime(0, 0, 0, $moisEncours, 1, date('Y')));
+
+            $primeMo = 0;
+            $netComMo = 0;
+            $taxeMo = 0;
+            $grossComMo = 0;
+            $comReceivedMo = 0;
+            $comBalanceMo = 0;
+
+            $subTotal = (new InsurerReportSet())
+                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
+                ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+                ->setLabel($monthName)
+                ->setGw_premium(0)
+                ->setNet_com(0)
+                ->setTaxes(0)
+                ->setGros_commission(0)
+                ->setCommission_received(0)
+                ->setBalance_due(0);
+            $data['ReportSet'][] = $subTotal;
+
+            //Pour chaque assureur
+            foreach ($data['Assureurs'] as $assureur) {
+                $primeAss = 0;
+                $netComAss = 0;
+                $taxeAss = 0;
+                $grossComAss = 0;
+                $comReceivedAss = 0;
+                $comBalanceAss = 0;
+
+                /** @var Avenant $avenant */
+                foreach ($this->Entreprise_getAvenants() as $avenant) {
+                    //On ne traite que les avenant du mois "moisEncours" en cours
+                    if ($moisEncours == $avenant->getStartingAt()->format('n') && $avenant->getCotation()->getAssureur() == $assureur) {
+                        // dd($monthName, $avenant, $assureur);
+                        //retire de la base de données les vraies valeurs
+                        $primeAss += $this->Cotation_getMontant_prime_payable_par_client($avenant->getCotation());
+                        $netComAss += $this->Cotation_getMontant_commission_ht($avenant->getCotation(), -1, false);
+                        $taxeAss += $this->Cotation_getMontant_taxe_payable_par_assureur($avenant->getCotation(), false);
+                        $grossComAss += $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
+                        $comReceivedAss += $this->Cotation_getMontant_commission_ttc_collectee($avenant->getCotation());
+                        $comBalanceAss += $this->Cotation_getMontant_commission_ttc_solde($avenant->getCotation(), -1, false);
+                    }
+                }
+                $assureurReportSet = (new InsurerReportSet())
+                    ->setType(PartnerReportSet::TYPE_ELEMENT)
+                    ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+                    ->setLabel($assureur->getNom())
+                    ->setGw_premium($primeAss)
+                    ->setNet_com($netComAss)
+                    ->setTaxes($taxeAss)
+                    ->setGros_commission($grossComAss)
+                    ->setCommission_received($comReceivedAss)
+                    ->setBalance_due($comBalanceAss);
+                $data['ReportSet'][] = $assureurReportSet;
+
+                $primeMo += $primeAss;
+                $netComMo += $netComMo;
+                $taxeMo += $taxeMo;
+                $grossComMo += $grossComMo;
+                $comReceivedMo += $comReceivedAss;
+                $comBalanceMo += $comBalanceAss;
+
+                $subTotal = (new InsurerReportSet())
+                    ->setType(PartnerReportSet::TYPE_SUBTOTAL)
+                    ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+                    ->setLabel($monthName)
+                    ->setGw_premium($primeMo)
+                    ->setNet_com($netComMo)
+                    ->setTaxes($taxeMo)
+                    ->setGros_commission($grossComMo)
+                    ->setCommission_received($comReceivedMo)
+                    ->setBalance_due($comBalanceMo);
+
+                // $data['ReportSet'][$moisEncours + count($data['Assureurs'])] = $subTotal;
+            }
+        }
+        dd($data);
+        return $data;
+    }
+
+    public function Entreprise_getAssureurs()
+    {
+        return $this->getEnterprise()->getAssureurs();
     }
 }

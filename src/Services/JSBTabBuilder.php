@@ -2,17 +2,18 @@
 
 namespace App\Services;
 
-use App\Entity\ReportSet\CashflowReportSet;
+use DateInterval;
+use DateTimeImmutable;
+use App\Entity\Utilisateur;
+use App\Constantes\Constante;
+use App\Entity\ReportSet\TaskReportSet;
 use App\Entity\ReportSet\ClaimReportSet;
 use App\Entity\ReportSet\InsurerReportSet;
 use App\Entity\ReportSet\PartnerReportSet;
 use App\Entity\ReportSet\RenewalReportSet;
-use App\Entity\ReportSet\TaskReportSet;
-use App\Entity\ReportSet\Top20ClientReportSet;
-use App\Entity\Utilisateur;
-use DateInterval;
-use DateTimeImmutable;
+use App\Entity\ReportSet\CashflowReportSet;
 use Symfony\Bundle\SecurityBundle\Security;
+use App\Entity\ReportSet\Top20ClientReportSet;
 use Symfony\Component\Validator\Constraints\Range;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -23,10 +24,13 @@ class JSBTabBuilder
         private Security $security,
         private ServiceDates $serviceDates,
         private TranslatorInterface $translatorInterface,
+        private Constante $constante,
     ) {}
 
     public function newTabProductionPerInsurerPerMonth(): array
     {
+        $data = $this->constante->Entreprise_getDataTabProductionPerInsurerPerMonth();
+        dd($data);
         $tabAssureurs = [
             "SFA Congo",
             "SUNU Assurance IARD",
