@@ -5152,7 +5152,7 @@ class Constante
             $grossComMo = 0;
             $comReceivedMo = 0;
             $comBalanceMo = 0;
-            
+
             $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, 0, 0, 0, 0, 0, 0);
 
             $ligneDernierSubTotal = $ligne;
@@ -5203,8 +5203,7 @@ class Constante
             $data['ReportSet'][$ligneDernierSubTotal] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $primeMo, $netComMo, $taxeMo, $grossComMo, $comReceivedMo, $comBalanceMo);
         }
         $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $primeGd, $netComGd, $taxeGd, $grossComGd, $comReceivedGd, $comBalanceGd);
-
-        dd($data);
+        // dd($data);
         return $data;
     }
 

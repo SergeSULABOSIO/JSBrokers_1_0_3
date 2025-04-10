@@ -31,59 +31,7 @@ class JSBTabBuilder
     {
         $data = $this->constante->Entreprise_getDataTabProductionPerInsurerPerMonth();
         // dd($data);
-        $tabAssureurs = [
-            "SFA Congo",
-            "SUNU Assurance IARD",
-            "RAWSUR SA",
-            "ACTIVA",
-            "MAYFAIR",
-        ];
-        $tabReportSets = [];
-        for ($m = 1; $m <= 12; $m++) {
-            $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
-            // echo $month . '<br>';
-            $datasetMois = (new InsurerReportSet())
-                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
-                ->setCurrency_code("$")
-                ->setLabel($month)
-                ->setGw_premium(rand(1, 100000000))
-                ->setNet_com(rand(1, 100000000))
-                ->setTaxes(rand(1, 100000000))
-                ->setGros_commission(rand(1, 100000000))
-                ->setCommission_received(rand(1, 100000000))
-                ->setBalance_due(rand(1, 100000000));
-
-            $tabReportSets[] = $datasetMois;
-            foreach ($tabAssureurs as $assureur) {
-                $datasetAssureur = (new InsurerReportSet())
-                    ->setType(PartnerReportSet::TYPE_ELEMENT)
-                    ->setCurrency_code("$")
-                    ->setLabel($assureur)
-                    ->setGw_premium(rand(1, 100000000))
-                    ->setNet_com(rand(1, 100000000))
-                    ->setTaxes(rand(1, 100000000))
-                    ->setGros_commission(rand(1, 100000000))
-                    ->setCommission_received(rand(1, 100000000))
-                    ->setBalance_due(rand(1, 100000000));
-
-                $tabReportSets[] = $datasetAssureur;
-            }
-        }
-        $datasetTotal = (new InsurerReportSet())
-            ->setType(PartnerReportSet::TYPE_TOTAL)
-            ->setCurrency_code("$")
-            ->setLabel("TOTAL")
-            ->setGw_premium(rand(1, 100000000))
-            ->setNet_com(rand(1, 100000000))
-            ->setTaxes(rand(1, 100000000))
-            ->setGros_commission(rand(1, 100000000))
-            ->setCommission_received(rand(1, 100000000))
-            ->setBalance_due(rand(1, 100000000));
-
-        $tabReportSets[] = $datasetTotal;
-        // dd($tabReportSets);
-
-        return $tabReportSets;
+        return $data['ReportSet'];
     }
 
     public function newTabProductionPerPartnerPerMonth(): array
