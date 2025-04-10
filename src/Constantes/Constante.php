@@ -1390,6 +1390,7 @@ class Constante
                 }
             }
         }
+
         return $tot;
     }
     private function loadRetrocomPaid(?TypeRevenu $typeRevenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable)
@@ -1702,20 +1703,22 @@ class Constante
         $cotation = $revenu->getCotation();
         $txAssRevPaye = 0;
         $txAssRevDue = 0;
+        $prop = 0;
         if ($revenu != null) {
             if ($cotation != null) {
                 if ($this->Cotation_isBound($cotation) == true) {
                     $txAssCotDue = $this->Cotation_getMontant_taxe_payable_par_assureur($revenu->getCotation(), false);
-                    // dd("ici");
+                    // dd("ici", $txAssCotDue);
                     $txAssCotPaye = $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
                     // dd("Txt100: " . $txAssCotDue, "Txt100 paid: " . $txAssCotPaye);
 
                     $txAssRevDue = $this->Revenu_getMontant_taxe_payable_par_assureur($revenu);
                     $txAssRevPaye = $txAssRevDue * ($txAssCotPaye / $txAssCotDue);
+                    $prop = $txAssRevPaye / $txAssRevDue;
                 }
             }
         }
-        $prop = $txAssRevPaye / $txAssRevDue;
+        // dd('Ici');
         // dd("Taxe due: " . $txAssRevDue, "Taxe payée: " . $txAssRevPaye, "Prop: " . $prop);
         return $this->Revenu_getMontant_taxe_payable_par_assureur($revenu) * $prop;
     }
@@ -1725,15 +1728,16 @@ class Constante
         $cotation = $revenu->getCotation();
         $txAssCotPaye = 0;
         $txAssCotDue = 0;
+        $prop = 0;
         if ($revenu != null) {
             if ($cotation != null) {
                 if ($this->Cotation_isBound($cotation) == true) {
                     $txAssCotDue = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, false);
                     $txAssCotPaye = $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
+                    $prop = $txAssCotPaye / $txAssCotDue;
                 }
             }
         }
-        $prop = $txAssCotPaye / $txAssCotDue;
         // dd("Tx de ". $revenu->getNom() .": " . $txAssRevDue, "Tx due: " . $txAssCotDue, "Tx payée: " . $txAssCotPaye, "Prop: " . $prop);
         return $this->Revenu_getMontant_taxe_payable_par_courtier($revenu) * $prop;
     }
@@ -1789,6 +1793,7 @@ class Constante
     {
         $retCotPaye = 0;
         $retCotDue = 0;
+        $prop = 0;
         if ($revenu != null) {
             /** @var Cotation $cotation */
             $cotation = $revenu->getCotation();
@@ -1796,10 +1801,20 @@ class Constante
                 if ($this->Cotation_isBound($cotation) == true) {
                     $retCotDue = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaireCible, $addressedTo, $onlySharable);
                     $retCotPaye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation, $partenaireCible);
+                    
+                    if ($retCotDue != 0) {
+                        $prop = $retCotPaye / $retCotDue;
+                    }
+                    
+                    // try {
+                    //     $prop = $retCotPaye / $retCotDue;
+                    // } catch (\Throwable $th) {
+                    //     //throw $th;
+                    //     dd($th, $retCotDue, $retCotPaye);
+                    // }
                 }
             }
         }
-        $prop = $retCotPaye / $retCotDue;
         // dd("Retro due: " . $retCotDue, "Retro payee: " . $retCotPaye, "Prop: " . $prop);
         return $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo, $onlySharable) * $prop;
     }
@@ -3060,6 +3075,7 @@ class Constante
 
                     //Quelle proportion de la note a-t-elle été payée (100%?)
                     $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
+                    // dd("Ici");
 
                     //Qu'est-ce qu'on a facturé?
                     if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
@@ -3681,10 +3697,17 @@ class Constante
                 }
             }
         }
+        // $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenuPourCourtier);
+        // $statusCollection[self::STATUS_BALANCE_DUE] = $this->Revenu_getMontant_ttc_solde($revenuPourCourtier);
+        // $statusCollection[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenuPourCourtier);
+        // $statusCollection[self::STATUS_NOT_INVOICED] = $statusCollection[self::STATUS_DUE] - $statusCollection[self::STATUS_INVOICED];
+
         $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenuPourCourtier);
-        $statusCollection[self::STATUS_BALANCE_DUE] = $this->Revenu_getMontant_ttc_solde($revenuPourCourtier);
+        $statusCollection[self::STATUS_BALANCE_DUE] = $statusCollection[self::STATUS_INVOICED] - $statusCollection[self::STATUS_PAID];
         $statusCollection[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenuPourCourtier);
         $statusCollection[self::STATUS_NOT_INVOICED] = $statusCollection[self::STATUS_DUE] - $statusCollection[self::STATUS_INVOICED];
+
+
         // dd("Ici", $statusCollection);
         return $statusCollection;
     }
@@ -3713,7 +3736,7 @@ class Constante
                 }
             }
         }
-        // dd($status, $piste);
+        // dd($status);
         return $status;
     }
     public function Piste_getMontant_commission_collectee(?Piste $piste)
@@ -4435,7 +4458,11 @@ class Constante
             $status[self::STATUS_BALANCE_DUE] += $statusTempo[self::STATUS_BALANCE_DUE];
             $status[self::STATUS_NOT_INVOICED] += $statusTempo[self::STATUS_NOT_INVOICED];
         }
-        // dd($status);
+        dd($status);
+        $syntheseRevenu[] = [
+            ReportSummary::RUBRIQUE => "Comm. ttc:",
+            ReportSummary::VALEUR => $status[self::STATUS_DUE],
+        ];
         $syntheseRevenu[] = [
             ReportSummary::RUBRIQUE => $this->translator->trans("company_dashboard_summary_collecte_revenues_invoiced"),
             ReportSummary::VALEUR => $status[self::STATUS_INVOICED],

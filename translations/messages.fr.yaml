@@ -334,7 +334,7 @@ company_dashboard_section_principale_insurers_header: "Production mensuelle par 
 company_dashboard_section_principale_insurers_caption: ""
 company_dashboard_section_principale_insurers_colonne_assureur: "ASSUREUR"
 company_dashboard_section_principale_insurers_colonne_prime: "PRIME TTC"
-company_dashboard_section_principale_insurers_colonne_net_com: "COM. NETTE"
+company_dashboard_section_principale_insurers_colonne_net_com: "COM. HT"
 company_dashboard_section_principale_insurers_colonne_taxes: "TAXES"
 company_dashboard_section_principale_insurers_colonne_gross_com: "COM. TTC"
 company_dashboard_section_principale_insurers_colonne_received: "ENCAISSEE"
