@@ -5152,18 +5152,8 @@ class Constante
             $grossComMo = 0;
             $comReceivedMo = 0;
             $comBalanceMo = 0;
-
-            $subTotal = (new InsurerReportSet())
-                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
-                ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-                ->setLabel($monthName)
-                ->setGw_premium(0)
-                ->setNet_com(0)
-                ->setTaxes(0)
-                ->setGros_commission(0)
-                ->setCommission_received(0)
-                ->setBalance_due(0);
-            $data['ReportSet'][] = $subTotal;
+            
+            $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, 0, 0, 0, 0, 0, 0);
 
             $ligneDernierSubTotal = $ligne;
             $ligne += 1;
@@ -5191,17 +5181,7 @@ class Constante
                         $comBalanceAss += $this->Cotation_getMontant_commission_ttc_solde($avenant->getCotation(), -1, false);
                     }
                 }
-                $assureurReportSet = (new InsurerReportSet())
-                    ->setType(PartnerReportSet::TYPE_ELEMENT)
-                    ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-                    ->setLabel($assureur->getNom())
-                    ->setGw_premium($primeAss)
-                    ->setNet_com($netComAss)
-                    ->setTaxes($taxeAss)
-                    ->setGros_commission($grossComAss)
-                    ->setCommission_received($comReceivedAss)
-                    ->setBalance_due($comBalanceAss);
-                $data['ReportSet'][] = $assureurReportSet;
+                $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $primeAss, $netComAss, $taxeAss, $grossComAss, $comReceivedAss, $comBalanceAss);
                 $ligne += 1;
 
                 //On cumule le total du mois
@@ -5220,35 +5200,26 @@ class Constante
                 $comReceivedGd += $comReceivedAss;
                 $comBalanceGd += $comBalanceAss;
             }
-
-            $subTotal = (new InsurerReportSet())
-                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
-                ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-                ->setLabel($monthName)
-                ->setGw_premium($primeMo)
-                ->setNet_com($netComMo)
-                ->setTaxes($taxeMo)
-                ->setGros_commission($grossComMo)
-                ->setCommission_received($comReceivedMo)
-                ->setBalance_due($comBalanceMo);
-
-            $data['ReportSet'][$ligneDernierSubTotal] = $subTotal;
+            $data['ReportSet'][$ligneDernierSubTotal] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $primeMo, $netComMo, $taxeMo, $grossComMo, $comReceivedMo, $comBalanceMo);
         }
-        $grandTotal = (new InsurerReportSet())
-            ->setType(PartnerReportSet::TYPE_TOTAL)
-            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-            ->setLabel("TOTAL")
-            ->setGw_premium($primeGd)
-            ->setNet_com($netComGd)
-            ->setTaxes($taxeGd)
-            ->setGros_commission($grossComGd)
-            ->setCommission_received($comReceivedGd)
-            ->setBalance_due($comBalanceGd);
-
-        $data['ReportSet'][] = $grandTotal;
+        $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $primeGd, $netComGd, $taxeGd, $grossComGd, $comReceivedGd, $comBalanceGd);
 
         dd($data);
         return $data;
+    }
+
+    public function createInsurerReportSet(int $type, string $label, $prime, $netcom, $taxe, $grosscom, $comreceived, $combalance): InsurerReportSet
+    {
+        return (new InsurerReportSet())
+            ->setType($type)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setLabel($label)
+            ->setGw_premium($prime)
+            ->setNet_com($netcom)
+            ->setTaxes($taxe)
+            ->setGros_commission($grosscom)
+            ->setCommission_received($comreceived)
+            ->setBalance_due($combalance);
     }
 
     public function Entreprise_getAssureurs()
