@@ -1649,7 +1649,10 @@ class Constante
     }
     public function Revenu_getMontant_ttc_solde(?RevenuPourCourtier $revenu): float
     {
-        $solde = $this->Revenu_getMontant_ttc($revenu) - $this->Revenu_getMontant_ttc_collecte($revenu);
+        $solde = 0;
+        if ($this->Cotation_isBound($revenu->getCotation())) {
+            $solde = $this->Revenu_getMontant_ttc($revenu) - $this->Revenu_getMontant_ttc_collecte($revenu);
+        }
         return round($solde, 4);
     }
 
@@ -1801,11 +1804,11 @@ class Constante
                 if ($this->Cotation_isBound($cotation) == true) {
                     $retCotDue = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($cotation, $partenaireCible, $addressedTo, $onlySharable);
                     $retCotPaye = $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($cotation, $partenaireCible);
-                    
+
                     if ($retCotDue != 0) {
                         $prop = $retCotPaye / $retCotDue;
                     }
-                    
+
                     // try {
                     //     $prop = $retCotPaye / $retCotDue;
                     // } catch (\Throwable $th) {
@@ -3553,9 +3556,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_prime_payable_par_client($cotation);
-                    }
+                    // }
                 }
             }
         }
@@ -3617,9 +3620,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_prime_payable_par_client_solde($cotation);
-                    }
+                    // }
                 }
             }
         }
@@ -3632,9 +3635,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_commission_pure($cotation, $addressedTo, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
@@ -3647,9 +3650,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_commission_ht($cotation, $addressedTo, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
@@ -3662,26 +3665,21 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_commission_ttc($cotation, $addressedTo, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
         return $tot;
     }
-    public function Revenu_getInvoicingStatus(?RevenuPourCourtier $revenuPourCourtier): array
+    public function Revenu_getMiniInvoicingStatus(?RevenuPourCourtier $revenuPourCourtier): array
     {
-        $statusCollection = [
-            "Revenu" => $revenuPourCourtier,
+        $data = [
             self::STATUS_DUE => 0,
             self::STATUS_INVOICED => 0,
-            self::STATUS_PAID => 0,
             self::STATUS_NOT_INVOICED => 0,
-            self::STATUS_BALANCE_DUE => 0,
         ];
-
-
         /** @var Cotation $cotation */
         $cotation = $revenuPourCourtier->getCotation();
         if ($cotation) {
@@ -3691,53 +3689,38 @@ class Constante
                     foreach ($tranche->getArticles() as $article) {
                         if ($article->getIdPoste() == $revenuPourCourtier->getId()) {
                             // dd("j'ai trouvé l'article", $article, $revenu, $article->getMontant());
-                            $statusCollection[self::STATUS_INVOICED] += $article->getMontant();
+                            $data[self::STATUS_INVOICED] += $article->getMontant();
                         }
                     }
                 }
+                $data[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenuPourCourtier);
+                $data[self::STATUS_NOT_INVOICED] = $data[self::STATUS_DUE] - $data[self::STATUS_INVOICED];
             }
         }
-        // $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenuPourCourtier);
-        // $statusCollection[self::STATUS_BALANCE_DUE] = $this->Revenu_getMontant_ttc_solde($revenuPourCourtier);
-        // $statusCollection[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenuPourCourtier);
-        // $statusCollection[self::STATUS_NOT_INVOICED] = $statusCollection[self::STATUS_DUE] - $statusCollection[self::STATUS_INVOICED];
-
-        $statusCollection[self::STATUS_PAID] = $this->Revenu_getMontant_ttc_collecte($revenuPourCourtier);
-        $statusCollection[self::STATUS_BALANCE_DUE] = $statusCollection[self::STATUS_INVOICED] - $statusCollection[self::STATUS_PAID];
-        $statusCollection[self::STATUS_DUE] = $this->Revenu_getMontant_ttc($revenuPourCourtier);
-        $statusCollection[self::STATUS_NOT_INVOICED] = $statusCollection[self::STATUS_DUE] - $statusCollection[self::STATUS_INVOICED];
-
-
         // dd("Ici", $statusCollection);
-        return $statusCollection;
+        return $data;
     }
-    public function TypeRevennu_getCommissionsInvoicingStatus(?TypeRevenu $typeRevenu): array
+    public function TypeRevennu_getMiniInvoicingStatus(?TypeRevenu $typeRevenu): array
     {
-        $status = [
+        $miniStatus = [
             self::STATUS_DUE => 0,
             self::STATUS_INVOICED => 0,
-            self::STATUS_PAID => 0,
             self::STATUS_NOT_INVOICED => 0,
-            self::STATUS_BALANCE_DUE => 0,
         ];
-
         if ($typeRevenu != null) {
-            if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR or $typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+            if ($typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR || $typeRevenu->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
                 // dd("Redevable par l'assureur ou par le client:", $typeRevenu);
                 foreach ($typeRevenu->getRevenuPourCourtiers() as $revenuPourCourtier) {
-                    $revenuStatus = $this->Revenu_getInvoicingStatus($revenuPourCourtier);
                     // dd($revenuStatus);
-                    $status[self::STATUS_DUE] += $revenuStatus[self::STATUS_DUE];
-                    $status[self::STATUS_INVOICED] += $revenuStatus[self::STATUS_INVOICED];
-                    $status[self::STATUS_PAID] += $revenuStatus[self::STATUS_PAID];
-                    $status[self::STATUS_BALANCE_DUE] += $revenuStatus[self::STATUS_BALANCE_DUE];
-                    $status[self::STATUS_NOT_INVOICED] += $revenuStatus[self::STATUS_NOT_INVOICED];
-                    // dd($this->Revenu_getInvoicingStatus($revenu));
+                    $miniStatusTempo = $this->Revenu_getMiniInvoicingStatus($revenuPourCourtier);
+                    $miniStatus[self::STATUS_DUE] += $miniStatusTempo[self::STATUS_DUE];
+                    $miniStatus[self::STATUS_INVOICED] += $miniStatusTempo[self::STATUS_INVOICED];
+                    $miniStatus[self::STATUS_NOT_INVOICED] += $miniStatusTempo[self::STATUS_NOT_INVOICED];
                 }
             }
         }
         // dd($status);
-        return $status;
+        return $miniStatus;
     }
     public function Piste_getMontant_commission_collectee(?Piste $piste)
     {
@@ -3746,9 +3729,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_commission_ttc_collectee($cotation);
-                    }
+                    // }
                 }
             }
         }
@@ -3761,9 +3744,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_commission_ttc_solde($cotation, $addressedTo, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
@@ -3776,9 +3759,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_taxe_payable_par_assureur($cotation, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
@@ -3857,9 +3840,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
-                    }
+                    // }
                 }
             }
         }
@@ -3872,9 +3855,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_solde($cotation, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
@@ -3887,9 +3870,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
@@ -3902,9 +3885,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
-                    }
+                    // }
                 }
             }
         }
@@ -3917,9 +3900,9 @@ class Constante
             if (count($piste->getCotations()) != 0) {
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
-                    if ($this->Cotation_isBound($cotation)) {
+                    // if ($this->Cotation_isBound($cotation)) {
                         $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_solde($cotation, $onlySharable);
-                    }
+                    // }
                 }
             }
         }
@@ -4449,16 +4432,17 @@ class Constante
             self::STATUS_BALANCE_DUE => 0,
         ];
         $syntheseRevenu = [];
-        /** @var Invite $invite */
-        foreach ($this->getEnterprise()->getTypeRevenus() as $typeRevenu) {
-            $statusTempo = $this->TypeRevennu_getCommissionsInvoicingStatus($typeRevenu);
-            $status[self::STATUS_DUE] += $statusTempo[self::STATUS_DUE];
-            $status[self::STATUS_INVOICED] += $statusTempo[self::STATUS_INVOICED];
-            $status[self::STATUS_PAID] += $statusTempo[self::STATUS_PAID];
-            $status[self::STATUS_BALANCE_DUE] += $statusTempo[self::STATUS_BALANCE_DUE];
-            $status[self::STATUS_NOT_INVOICED] += $statusTempo[self::STATUS_NOT_INVOICED];
+        $tabTypeRevenus = $this->getEnterprise()->getTypeRevenus();
+        foreach ($tabTypeRevenus as $typeRevenu) {
+            $miniInvoicingStatus = $this->TypeRevennu_getMiniInvoicingStatus($typeRevenu);
+            //Nouvel algorithme
+            $status[self::STATUS_DUE] += $miniInvoicingStatus[self::STATUS_DUE];
+            $status[self::STATUS_INVOICED] += $miniInvoicingStatus[self::STATUS_INVOICED];
+            $status[self::STATUS_NOT_INVOICED] += $miniInvoicingStatus[self::STATUS_NOT_INVOICED];
+            $status[self::STATUS_PAID] += $this->Type_revenu_getMontant_ttc_collecte($typeRevenu);
+            $status[self::STATUS_BALANCE_DUE] += $this->Type_revenu_getMontant_ttc_solde($typeRevenu);
         }
-        dd($status);
+        // dd($status);
         $syntheseRevenu[] = [
             ReportSummary::RUBRIQUE => "Comm. ttc:",
             ReportSummary::VALEUR => $status[self::STATUS_DUE],
@@ -4823,7 +4807,10 @@ class Constante
         $data['Notes'] = "Le revenu total de " . $codeMonnaie . " " . number_format($data['Total'], 2, ",", ".") . " se reparti " . $strParUnite . " comme suit : ";
         for ($i = 0; $i < count($tableauMontants); $i++) {
             $separateur = $this->getPrefixeEtSuffixe($i, count($tableauMontants));
-            $pourcentage = round(($tableauMontants[$i] / $data['Total']) * 100, 2);
+            $pourcentage = 0;
+            if ($data['Total'] != 0) {
+                $pourcentage = round(($tableauMontants[$i] / $data['Total']) * 100, 2);
+            }
             $data['Notes'] .= $separateur['prefixe'] . $tableauUnite[$i] . " " . $codeMonnaie . " " . number_format($tableauMontants[$i], 2, ",", ".") . " (soit " . $pourcentage . "%)" . $separateur['suffixe'];
         }
         // dd($tableauMontants);
@@ -5089,9 +5076,11 @@ class Constante
         $dateRgelement = null;
         if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
             $offres = $notification_sinistre->getOffreIndemnisationSinistres();
-            $reglements = ($offres[count($offres) - 1])->getPaiements();
-            $dateRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
-            $duree = $this->serviceDates->daysEntre($dateNotfication, $dateRgelement);
+            if (count($offres) != 0) {
+                $reglements = ($offres[count($offres) - 1])->getPaiements();
+                $dateRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
+                $duree = $this->serviceDates->daysEntre($dateNotfication, $dateRgelement);
+            }
         }
         return $duree;
     }
@@ -5100,8 +5089,10 @@ class Constante
         $dateDernierRgelement = null;
         if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
             $offres = $notification_sinistre->getOffreIndemnisationSinistres();
-            $reglements = ($offres[count($offres) - 1])->getPaiements();
-            $dateDernierRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
+            if (count($offres) != 0) {
+                $reglements = ($offres[count($offres) - 1])->getPaiements();
+                $dateDernierRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
+            }
         }
         return $dateDernierRgelement;
     }
