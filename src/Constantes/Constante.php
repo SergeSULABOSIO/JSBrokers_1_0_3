@@ -3557,7 +3557,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_prime_payable_par_client($cotation);
+                    $tot += $this->Cotation_getMontant_prime_payable_par_client($cotation);
                     // }
                 }
             }
@@ -3621,7 +3621,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_prime_payable_par_client_solde($cotation);
+                    $tot += $this->Cotation_getMontant_prime_payable_par_client_solde($cotation);
                     // }
                 }
             }
@@ -3636,7 +3636,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_pure($cotation, $addressedTo, $onlySharable);
+                    $tot += $this->Cotation_getMontant_commission_pure($cotation, $addressedTo, $onlySharable);
                     // }
                 }
             }
@@ -3651,7 +3651,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_ht($cotation, $addressedTo, $onlySharable);
+                    $tot += $this->Cotation_getMontant_commission_ht($cotation, $addressedTo, $onlySharable);
                     // }
                 }
             }
@@ -3666,7 +3666,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_ttc($cotation, $addressedTo, $onlySharable);
+                    $tot += $this->Cotation_getMontant_commission_ttc($cotation, $addressedTo, $onlySharable);
                     // }
                 }
             }
@@ -3730,7 +3730,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_ttc_collectee($cotation);
+                    $tot += $this->Cotation_getMontant_commission_ttc_collectee($cotation);
                     // }
                 }
             }
@@ -3745,7 +3745,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_commission_ttc_solde($cotation, $addressedTo, $onlySharable);
+                    $tot += $this->Cotation_getMontant_commission_ttc_solde($cotation, $addressedTo, $onlySharable);
                     // }
                 }
             }
@@ -3760,7 +3760,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur($cotation, $onlySharable);
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_assureur($cotation, $onlySharable);
                     // }
                 }
             }
@@ -3841,7 +3841,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_payee($cotation);
                     // }
                 }
             }
@@ -3856,7 +3856,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_solde($cotation, $onlySharable);
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_assureur_solde($cotation, $onlySharable);
                     // }
                 }
             }
@@ -3871,7 +3871,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, $onlySharable);
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, $onlySharable);
                     // }
                 }
             }
@@ -3886,7 +3886,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_payee($cotation);
                     // }
                 }
             }
@@ -3901,7 +3901,7 @@ class Constante
                 /** @var Cotation $cotation */
                 foreach ($piste->getCotations() as $cotation) {
                     // if ($this->Cotation_isBound($cotation)) {
-                        $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_solde($cotation, $onlySharable);
+                    $tot += $this->Cotation_getMontant_taxe_payable_par_courtier_solde($cotation, $onlySharable);
                     // }
                 }
             }
@@ -5143,77 +5143,62 @@ class Constante
         $data = [];
         $ligneDernierSubTotal = -1;
         $ligne = 0;
-
-        $primeGd = 0;
-        $netComGd = 0;
-        $taxeGd = 0;
-        $grossComGd = 0;
-        $comReceivedGd = 0;
-        $comBalanceGd = 0;
-
+        $grandTotal = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
+        
         //Chargement de la liste des assureurs
         for ($moisEncours = 1; $moisEncours <= 12; $moisEncours++) {
             $monthName = date('F', mktime(0, 0, 0, $moisEncours, 1, date('Y')));
-
-            $primeMo = 0;
-            $netComMo = 0;
-            $taxeMo = 0;
-            $grossComMo = 0;
-            $comReceivedMo = 0;
-            $comBalanceMo = 0;
-
-            $data[] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, 0, 0, 0, 0, 0, 0);
-
+            $totalMois = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
+            $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
             $ligneDernierSubTotal = $ligne;
             $ligne += 1;
 
             //Pour chaque assureur
             foreach ($this->Entreprise_getAssureurs() as $assureur) {
-                $primeAss = 0;
-                $netComAss = 0;
-                $taxeAss = 0;
-                $grossComAss = 0;
-                $comReceivedAss = 0;
-                $comBalanceAss = 0;
-
+                $totalAssureur = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
+                
                 /** @var Avenant $avenant */
                 foreach ($this->Entreprise_getAvenants() as $avenant) {
                     //On ne traite que les avenant du mois "moisEncours" en cours
                     if ($moisEncours == $avenant->getStartingAt()->format('n') && $avenant->getCotation()->getAssureur() == $assureur) {
-                        // dd($monthName, $avenant, $assureur);
                         //retire de la base de données les vraies valeurs
-                        $primeAss += $this->Cotation_getMontant_prime_payable_par_client($avenant->getCotation());
-                        $netComAss += $this->Cotation_getMontant_commission_ht($avenant->getCotation(), -1, false);
-                        $taxeAss += $this->Cotation_getMontant_taxe_payable_par_assureur($avenant->getCotation(), false);
-                        $grossComAss += $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
-                        $comReceivedAss += $this->Cotation_getMontant_commission_ttc_collectee($avenant->getCotation());
-                        $comBalanceAss += $this->Cotation_getMontant_commission_ttc_solde($avenant->getCotation(), -1, false);
+                        $totalAssureur['prime'] += $this->Cotation_getMontant_prime_payable_par_client($avenant->getCotation());
+                        $totalAssureur['comHT'] += $this->Cotation_getMontant_commission_ht($avenant->getCotation(), -1, false);
+                        $totalAssureur['taxe'] += $this->Cotation_getMontant_taxe_payable_par_assureur($avenant->getCotation(), false);
+                        $totalAssureur['comTTC'] += $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
+                        $totalAssureur['comReceived'] += $this->Cotation_getMontant_commission_ttc_collectee($avenant->getCotation());
+                        $totalAssureur['comBalance'] += $this->Cotation_getMontant_commission_ttc_solde($avenant->getCotation(), -1, false);
                     }
                 }
-                $data[] = $this->createInsurerReportSet(InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $primeAss, $netComAss, $taxeAss, $grossComAss, $comReceivedAss, $comBalanceAss);
+                $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $totalAssureur);
                 $ligne += 1;
-
+                
                 //On cumule le total du mois
-                $primeMo += $primeAss;
-                $netComMo += $netComAss;
-                $taxeMo += $taxeAss;
-                $grossComMo += $grossComAss;
-                $comReceivedMo += $comReceivedAss;
-                $comBalanceMo += $comBalanceAss;
+                $totalMois['prime'] += $totalAssureur['prime'];
+                $totalMois['comHT'] += $totalAssureur['comHT'];
+                $totalMois['taxe'] += $totalAssureur['taxe'];
+                $totalMois['comTTC'] += $totalAssureur['comTTC'];
+                $totalMois['comReceived'] += $totalAssureur['comReceived'];
+                $totalMois['comBalance'] += $totalAssureur['comBalance'];
 
                 //On cumul aussi le grand total
-                $primeGd += $primeAss;
-                $netComGd += $netComAss;
-                $taxeGd += $taxeAss;
-                $grossComGd += $grossComAss;
-                $comReceivedGd += $comReceivedAss;
-                $comBalanceGd += $comBalanceAss;
+                $grandTotal['prime'] += $totalAssureur['prime'];
+                $grandTotal['comHT'] += $totalAssureur['comHT'];
+                $grandTotal['taxe'] += $totalAssureur['taxe'];
+                $grandTotal['comTTC'] += $totalAssureur['comTTC'];
+                $grandTotal['comReceived'] += $totalAssureur['comReceived'];
+                $grandTotal['comBalance'] += $totalAssureur['comBalance'];
             }
-            $data[$ligneDernierSubTotal] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $primeMo, $netComMo, $taxeMo, $grossComMo, $comReceivedMo, $comBalanceMo);
+            $data[$ligneDernierSubTotal] = $this->loadDataToReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
         }
-        $data[] = $this->createInsurerReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $primeGd, $netComGd, $taxeGd, $grossComGd, $comReceivedGd, $comBalanceGd);
+        $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $grandTotal);
         // dd($data);
         return $data;
+    }
+
+    private function loadDataToReportSet($type, string $label, $dataTab)
+    {
+        return $this->createInsurerReportSet($type, $label, $dataTab['prime'], $dataTab['comHT'], $dataTab['taxe'], $dataTab['comTTC'], $dataTab['comReceived'], $dataTab['comBalance']);
     }
 
     public function createInsurerReportSet(int $type, string $label, $prime, $netcom, $taxe, $grosscom, $comreceived, $combalance): InsurerReportSet
