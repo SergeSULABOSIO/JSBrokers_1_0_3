@@ -36,73 +36,77 @@ class JSBTabBuilder
 
     public function newTabProductionPerPartnerPerMonth(): array
     {
-        $tabPartners = [
-            "MARSH",
-            "AFINBRO",
-            "AGL",
-            "O'NEILS",
-            "OLEA",
-            "MONT-BLANC",
-            "WP BROKERS",
-        ];
+        $data = $this->constante->Entreprise_getDataTabProductionPerPartnerPerMonth();
+        // dd($data);
+        return $data;
 
-        $tabPartnerRates = [
-            "MARSH" => 35,
-            "AFINBRO" => 50,
-            "AGL" => 45,
-            "O'NEILS" => 50,
-            "OLEA" => 35,
-            "MONT-BLANC" => 50,
-            "WP BROKERS" => 35,
-        ];
+        // $tabPartners = [
+        //     "MARSH",
+        //     "AFINBRO",
+        //     "AGL",
+        //     "O'NEILS",
+        //     "OLEA",
+        //     "MONT-BLANC",
+        //     "WP BROKERS",
+        // ];
 
-        $tabReportSets = [];
-        for ($m = 1; $m <= 12; $m++) {
-            $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
-            // echo $month . '<br>';
-            $datasetMois = (new PartnerReportSet())
-                ->setType(PartnerReportSet::TYPE_SUBTOTAL)
-                ->setCurrency_code("$")
-                ->setLabel($month)
-                ->setGw_premium(rand(1, 100000000))
-                ->setNet_com(rand(1, 100000000))
-                ->setTaxes(rand(1, 100000000))
-                ->setCo_brokerage(rand(1, 100000000))
-                ->setAmount_paid(rand(1, 100000000))
-                ->setBalance_due(rand(1, 100000000));
+        // $tabPartnerRates = [
+        //     "MARSH" => 35,
+        //     "AFINBRO" => 50,
+        //     "AGL" => 45,
+        //     "O'NEILS" => 50,
+        //     "OLEA" => 35,
+        //     "MONT-BLANC" => 50,
+        //     "WP BROKERS" => 35,
+        // ];
 
-            $tabReportSets[] = $datasetMois;
-            foreach ($tabPartners as $partner) {
-                $datasetAssureur = (new PartnerReportSet())
-                    ->setType(PartnerReportSet::TYPE_ELEMENT)
-                    ->setCurrency_code("$")
-                    ->setLabel($partner)
-                    // ->setPartner_rate(rand(0, count($tabPartnerRates) - 1))
-                    ->setPartner_rate($tabPartnerRates[$partner])
-                    ->setGw_premium(rand(1, 100000000))
-                    ->setNet_com(rand(1, 100000000))
-                    ->setTaxes(rand(1, 100000000))
-                    ->setCo_brokerage(rand(1, 100000000))
-                    ->setAmount_paid(rand(1, 100000000))
-                    ->setBalance_due(rand(1, 100000000));
-                $tabReportSets[] = $datasetAssureur;
-            }
-        }
-        $datasetTotal = (new PartnerReportSet())
-            ->setType(PartnerReportSet::TYPE_TOTAL)
-            ->setCurrency_code("$")
-            ->setLabel("TOTAL")
-            ->setGw_premium(rand(1, 100000000))
-            ->setNet_com(rand(1, 100000000))
-            ->setTaxes(rand(1, 100000000))
-            ->setCo_brokerage(rand(1, 100000000))
-            ->setAmount_paid(rand(1, 100000000))
-            ->setBalance_due(rand(1, 100000000));
+        // $tabReportSets = [];
+        // for ($m = 1; $m <= 12; $m++) {
+        //     $month = date('F', mktime(0, 0, 0, $m, 1, date('Y')));
+        //     // echo $month . '<br>';
+        //     $datasetMois = (new PartnerReportSet())
+        //         ->setType(PartnerReportSet::TYPE_SUBTOTAL)
+        //         ->setCurrency_code("$")
+        //         ->setLabel($month)
+        //         ->setGw_premium(rand(1, 100000000))
+        //         ->setNet_com(rand(1, 100000000))
+        //         ->setTaxes(rand(1, 100000000))
+        //         ->setCo_brokerage(rand(1, 100000000))
+        //         ->setAmount_paid(rand(1, 100000000))
+        //         ->setBalance_due(rand(1, 100000000));
 
-        $tabReportSets[] = $datasetTotal;
-        // dd($tabReportSets);
+        //     $tabReportSets[] = $datasetMois;
+        //     foreach ($tabPartners as $partner) {
+        //         $datasetAssureur = (new PartnerReportSet())
+        //             ->setType(PartnerReportSet::TYPE_ELEMENT)
+        //             ->setCurrency_code("$")
+        //             ->setLabel($partner)
+        //             // ->setPartner_rate(rand(0, count($tabPartnerRates) - 1))
+        //             ->setPartner_rate($tabPartnerRates[$partner])
+        //             ->setGw_premium(rand(1, 100000000))
+        //             ->setNet_com(rand(1, 100000000))
+        //             ->setTaxes(rand(1, 100000000))
+        //             ->setCo_brokerage(rand(1, 100000000))
+        //             ->setAmount_paid(rand(1, 100000000))
+        //             ->setBalance_due(rand(1, 100000000));
+        //         $tabReportSets[] = $datasetAssureur;
+        //     }
+        // }
+        // $datasetTotal = (new PartnerReportSet())
+        //     ->setType(PartnerReportSet::TYPE_TOTAL)
+        //     ->setCurrency_code("$")
+        //     ->setLabel("TOTAL")
+        //     ->setGw_premium(rand(1, 100000000))
+        //     ->setNet_com(rand(1, 100000000))
+        //     ->setTaxes(rand(1, 100000000))
+        //     ->setCo_brokerage(rand(1, 100000000))
+        //     ->setAmount_paid(rand(1, 100000000))
+        //     ->setBalance_due(rand(1, 100000000));
 
-        return $tabReportSets;
+        // $tabReportSets[] = $datasetTotal;
+        // // dd($tabReportSets);
+
+        // return $tabReportSets;
     }
 
     public function newTabTop20Clients(): array

@@ -5144,19 +5144,19 @@ class Constante
         $ligneDernierSubTotal = -1;
         $ligne = 0;
         $grandTotal = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
-        
+
         //Chargement de la liste des assureurs
         for ($moisEncours = 1; $moisEncours <= 12; $moisEncours++) {
             $monthName = date('F', mktime(0, 0, 0, $moisEncours, 1, date('Y')));
             $totalMois = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
-            $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
+            $data[] = $this->loadDataToReportSet(0, InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
             $ligneDernierSubTotal = $ligne;
             $ligne += 1;
 
             //Pour chaque assureur
             foreach ($this->Entreprise_getAssureurs() as $assureur) {
                 $totalAssureur = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
-                
+
                 /** @var Avenant $avenant */
                 foreach ($this->Entreprise_getAvenants() as $avenant) {
                     //On ne traite que les avenant du mois "moisEncours" en cours
@@ -5170,7 +5170,7 @@ class Constante
                         $totalAssureur['comBalance'] += $this->Cotation_getMontant_commission_ttc_solde($avenant->getCotation(), -1, false);
                     }
                 }
-                $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $totalAssureur);
+                $data[] = $this->loadDataToReportSet(0, InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $totalAssureur);
                 $ligne += 1;
 
                 //On cumule le total du mois
@@ -5189,9 +5189,9 @@ class Constante
                 $grandTotal['comReceived'] += $totalAssureur['comReceived'];
                 $grandTotal['comBalance'] += $totalAssureur['comBalance'];
             }
-            $data[$ligneDernierSubTotal] = $this->loadDataToReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
+            $data[$ligneDernierSubTotal] = $this->loadDataToReportSet(0, InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
         }
-        $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $grandTotal);
+        $data[] = $this->loadDataToReportSet(0, InsurerReportSet::TYPE_TOTAL, "TOTAL", $grandTotal);
         // dd($data);
         return $data;
     }
@@ -5201,62 +5201,70 @@ class Constante
         $data = [];
         $ligneDernierSubTotal = -1;
         $ligne = 0;
-        $grandTotal = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
-        
+        $grandTotal = ['partnerRate' => 0, 'prime' => 0, 'comPURE' => 0, 'taxe' => 0, 'retroCom' => 0, 'retroComPaid' => 0, 'retroComBalance' => 0];
+
         //Chargement de la liste des assureurs
         for ($moisEncours = 1; $moisEncours <= 12; $moisEncours++) {
             $monthName = date('F', mktime(0, 0, 0, $moisEncours, 1, date('Y')));
-            $totalMois = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
-            $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
+            $totalMois = ['partnerRate' => 0, 'prime' => 0, 'comPURE' => 0, 'taxe' => 0, 'retroCom' => 0, 'retroComPaid' => 0, 'retroComBalance' => 0];
+            $data[] = $this->loadDataToReportSet(1, PartnerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
             $ligneDernierSubTotal = $ligne;
             $ligne += 1;
 
-            //Pour chaque assureur
-            foreach ($this->Entreprise_getAssureurs() as $assureur) {
-                $totalAssureur = ['prime' => 0, 'comHT' => 0, 'taxe' => 0, 'comTTC' => 0, 'comReceived' => 0, 'comBalance' => 0];
-                
+            //Pour chaque intermédiaire partenaire
+            foreach ($this->Entreprise_getPartenaires() as $partenaire) {
+                $totalPartenaire = ['partnerRate' => 0, 'prime' => 0, 'comPURE' => 0, 'taxe' => 0, 'retroCom' => 0, 'retroComPaid' => 0, 'retroComBalance' => 0];
+
                 /** @var Avenant $avenant */
                 foreach ($this->Entreprise_getAvenants() as $avenant) {
                     //On ne traite que les avenant du mois "moisEncours" en cours
-                    if ($moisEncours == $avenant->getStartingAt()->format('n') && $avenant->getCotation()->getAssureur() == $assureur) {
+                    if ($moisEncours == $avenant->getStartingAt()->format('n') && $this->Cotation_getPartenaire($avenant->getCotation()) == $partenaire) {
                         //retire de la base de données les vraies valeurs
-                        $totalAssureur['prime'] += $this->Cotation_getMontant_prime_payable_par_client($avenant->getCotation());
-                        $totalAssureur['comHT'] += $this->Cotation_getMontant_commission_ht($avenant->getCotation(), -1, false);
-                        $totalAssureur['taxe'] += $this->Cotation_getMontant_taxe_payable_par_assureur($avenant->getCotation(), false);
-                        $totalAssureur['comTTC'] += $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), -1, false);
-                        $totalAssureur['comReceived'] += $this->Cotation_getMontant_commission_ttc_collectee($avenant->getCotation());
-                        $totalAssureur['comBalance'] += $this->Cotation_getMontant_commission_ttc_solde($avenant->getCotation(), -1, false);
+                        $totalPartenaire['prime'] += $this->Cotation_getMontant_prime_payable_par_client($avenant->getCotation());
+                        $totalPartenaire['comPURE'] += $this->Cotation_getMontant_commission_pure($avenant->getCotation(), -1, true);
+                        $totalPartenaire['taxe'] += $this->Cotation_getMontant_taxe_payable_par_courtier($avenant->getCotation(), true) + $this->Cotation_getMontant_taxe_payable_par_assureur($avenant->getCotation(), true);
+                        $totalPartenaire['retroCom'] += $this->Cotation_getMontant_retrocommissions_payable_par_courtier($avenant->getCotation(), $partenaire, -1, true);
+                        $totalPartenaire['retroComPaid'] += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_payee($avenant->getCotation(), $partenaire);
+                        $totalPartenaire['retroComBalance'] += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_solde($avenant->getCotation(), $partenaire, -1, false);
                     }
                 }
-                $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $totalAssureur);
+                $totalPartenaire['partnerRate'] = $partenaire->getPart() * 100;
+                $data[] = $this->loadDataToReportSet(1, PartnerReportSet::TYPE_ELEMENT, $partenaire->getNom(), $totalPartenaire);
                 $ligne += 1;
-                
+
                 //On cumule le total du mois
-                $totalMois['prime'] += $totalAssureur['prime'];
-                $totalMois['comHT'] += $totalAssureur['comHT'];
-                $totalMois['taxe'] += $totalAssureur['taxe'];
-                $totalMois['comTTC'] += $totalAssureur['comTTC'];
-                $totalMois['comReceived'] += $totalAssureur['comReceived'];
-                $totalMois['comBalance'] += $totalAssureur['comBalance'];
+                $totalMois['partnerRate'] = $totalPartenaire['partnerRate'];
+                $totalMois['prime'] += $totalPartenaire['prime'];
+                $totalMois['comPURE'] += $totalPartenaire['comPURE'];
+                $totalMois['taxe'] += $totalPartenaire['taxe'];
+                $totalMois['retroCom'] += $totalPartenaire['retroCom'];
+                $totalMois['retroComPaid'] += $totalPartenaire['retroComPaid'];
+                $totalMois['retroComBalance'] += $totalPartenaire['retroComBalance'];
 
                 //On cumul aussi le grand total
-                $grandTotal['prime'] += $totalAssureur['prime'];
-                $grandTotal['comHT'] += $totalAssureur['comHT'];
-                $grandTotal['taxe'] += $totalAssureur['taxe'];
-                $grandTotal['comTTC'] += $totalAssureur['comTTC'];
-                $grandTotal['comReceived'] += $totalAssureur['comReceived'];
-                $grandTotal['comBalance'] += $totalAssureur['comBalance'];
+                $grandTotal['partnerRate'] += $totalPartenaire['partnerRate'];
+                $grandTotal['prime'] += $totalPartenaire['prime'];
+                $grandTotal['comPURE'] += $totalPartenaire['comPURE'];
+                $grandTotal['taxe'] += $totalPartenaire['taxe'];
+                $grandTotal['retroCom'] += $totalPartenaire['retroCom'];
+                $grandTotal['retroComPaid'] += $totalPartenaire['retroComPaid'];
+                $grandTotal['retroComBalance'] += $totalPartenaire['retroComBalance'];
             }
-            $data[$ligneDernierSubTotal] = $this->loadDataToReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
+            $data[$ligneDernierSubTotal] = $this->loadDataToReportSet(1, PartnerReportSet::TYPE_SUBTOTAL, $monthName, $totalMois);
         }
-        $data[] = $this->loadDataToReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $grandTotal);
+        $data[] = $this->loadDataToReportSet(1, PartnerReportSet::TYPE_TOTAL, "TOTAL", $grandTotal);
         // dd($data);
         return $data;
     }
 
-    private function loadDataToReportSet($type, string $label, $dataTab)
+    private function loadDataToReportSet($reportSet, $type, string $label, $dataTab)
     {
-        return $this->createInsurerReportSet($type, $label, $dataTab['prime'], $dataTab['comHT'], $dataTab['taxe'], $dataTab['comTTC'], $dataTab['comReceived'], $dataTab['comBalance']);
+        $data = null;
+        $data = match ($reportSet) {
+            0 => $this->createInsurerReportSet($type, $label, $dataTab['prime'], $dataTab['comHT'], $dataTab['taxe'], $dataTab['comTTC'], $dataTab['comReceived'], $dataTab['comBalance']),
+            1 => $this->createPartnerReportSet($type, $label, $dataTab['partnerRate'], $dataTab['prime'], $dataTab['comPURE'], $dataTab['taxe'], $dataTab['retroCom'], $dataTab['retroComPaid'], $dataTab['retroComBalance']),
+        };
+        return $data;
     }
 
     public function createInsurerReportSet(int $type, string $label, $prime, $netcom, $taxe, $grosscom, $comreceived, $combalance): InsurerReportSet
@@ -5273,8 +5281,28 @@ class Constante
             ->setBalance_due($combalance);
     }
 
+    public function createPartnerReportSet(int $type, string $label, $partnerRate, $prime, $netcom, $taxe, $retroCom, $retroComPaid, $retroComBalance): PartnerReportSet
+    {
+        return (new PartnerReportSet())
+            ->setType($type)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setLabel($label)
+            ->setPartner_rate($partnerRate)
+            ->setGw_premium($prime)
+            ->setNet_com($netcom)
+            ->setTaxes($taxe)
+            ->setCo_brokerage($retroCom)
+            ->setAmount_paid($retroComPaid)
+            ->setBalance_due($retroComBalance);
+    }
+
     public function Entreprise_getAssureurs()
     {
         return $this->getEnterprise()->getAssureurs();
+    }
+
+    public function Entreprise_getPartenaires()
+    {
+        return $this->getEnterprise()->getPartenaires();
     }
 }
