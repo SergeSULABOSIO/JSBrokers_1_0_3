@@ -5140,16 +5140,7 @@ class Constante
 
     public function Entreprise_getDataTabProductionPerInsurerPerMonth()
     {
-        $data = [
-            "Assureurs" => new ArrayCollection(),
-            "ReportSet" => [],
-        ];
-        foreach ($this->Entreprise_getAssureurs() as $assureur) {
-            if (!$data['Assureurs']->contains($assureur->getNom())) {
-                $data['Assureurs'][] = $assureur;
-            }
-        }
-
+        $data = [];
         $ligneDernierSubTotal = -1;
         $ligne = 0;
 
@@ -5171,13 +5162,13 @@ class Constante
             $comReceivedMo = 0;
             $comBalanceMo = 0;
 
-            $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, 0, 0, 0, 0, 0, 0);
+            $data[] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, 0, 0, 0, 0, 0, 0);
 
             $ligneDernierSubTotal = $ligne;
             $ligne += 1;
 
             //Pour chaque assureur
-            foreach ($data['Assureurs'] as $assureur) {
+            foreach ($this->Entreprise_getAssureurs() as $assureur) {
                 $primeAss = 0;
                 $netComAss = 0;
                 $taxeAss = 0;
@@ -5199,7 +5190,7 @@ class Constante
                         $comBalanceAss += $this->Cotation_getMontant_commission_ttc_solde($avenant->getCotation(), -1, false);
                     }
                 }
-                $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $primeAss, $netComAss, $taxeAss, $grossComAss, $comReceivedAss, $comBalanceAss);
+                $data[] = $this->createInsurerReportSet(InsurerReportSet::TYPE_ELEMENT, $assureur->getNom(), $primeAss, $netComAss, $taxeAss, $grossComAss, $comReceivedAss, $comBalanceAss);
                 $ligne += 1;
 
                 //On cumule le total du mois
@@ -5218,9 +5209,9 @@ class Constante
                 $comReceivedGd += $comReceivedAss;
                 $comBalanceGd += $comBalanceAss;
             }
-            $data['ReportSet'][$ligneDernierSubTotal] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $primeMo, $netComMo, $taxeMo, $grossComMo, $comReceivedMo, $comBalanceMo);
+            $data[$ligneDernierSubTotal] = $this->createInsurerReportSet(InsurerReportSet::TYPE_SUBTOTAL, $monthName, $primeMo, $netComMo, $taxeMo, $grossComMo, $comReceivedMo, $comBalanceMo);
         }
-        $data['ReportSet'][] = $this->createInsurerReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $primeGd, $netComGd, $taxeGd, $grossComGd, $comReceivedGd, $comBalanceGd);
+        $data[] = $this->createInsurerReportSet(InsurerReportSet::TYPE_TOTAL, "TOTAL", $primeGd, $netComGd, $taxeGd, $grossComGd, $comReceivedGd, $comBalanceGd);
         // dd($data);
         return $data;
     }

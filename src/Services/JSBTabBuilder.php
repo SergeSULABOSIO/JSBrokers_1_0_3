@@ -31,7 +31,7 @@ class JSBTabBuilder
     {
         $data = $this->constante->Entreprise_getDataTabProductionPerInsurerPerMonth();
         // dd($data);
-        return $data['ReportSet'];
+        return $data;
     }
 
     public function newTabProductionPerPartnerPerMonth(): array
