@@ -5291,21 +5291,17 @@ class Constante
                 }
             }
 
-            $data[] = [
-                $client->getNom() => $elementClient['primeTTC'],
-            ];
-            $dataCopie[] = [
-                $client->getNom() => $this->loadDataToReportSet(2, Top20ClientReportSet::TYPE_ELEMENT, $client->getNom(), $elementClient),
-            ];
+            $data[$client->getNom()] = $elementClient['primeTTC'];
+            $dataCopie[$client->getNom()] = $this->loadDataToReportSet(2, Top20ClientReportSet::TYPE_ELEMENT, $client->getNom(), $elementClient);
         }
         //Exécution du tri
-        asort($data);
+        arsort($data);
 
         /**
          * SELECTION DES 20 PREMIERS REPORTSET
          */
         // dd($dataCopie);
-        dd($data);
+        dd($data, $dataCopie);
         $newOrderedData = [];
         for ($i = 0; $i < 20; $i++) {
             foreach ($data[$i] as $client => $primeTTC) {
