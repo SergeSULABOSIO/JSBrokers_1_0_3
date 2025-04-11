@@ -48,6 +48,7 @@ use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\ReportSet\Top20ClientReportSet;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -5257,12 +5258,86 @@ class Constante
         return $data;
     }
 
+    public function Entreprise_getDataTabTop20Clients()
+    {
+        $data = [];
+        $dataCopie = [];
+        $grandTotal = ['primeTTC' => 0, 'autresChargements' => 0, 'primeHT' => 0, 'comTTC' => 0];
+
+        /**
+         * TRI PAR ORDRE DECROISSANT
+         */
+        //Pour chaque client
+        foreach ($this->getEnterprise()->getClients() as $client) {
+            $elementClient = ['primeTTC' => 0, 'autresChargements' => 0, 'primeHT' => 0, 'comTTC' => 0];
+
+            foreach ($client->getPistes() as $piste) {
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->Cotation_isBound($cotation)) {
+                        $primeHt = 0;
+                        $autresChargements = 0;
+                        foreach ($cotation->getChargements() as $chargementPourPrime) {
+                            if ($chargementPourPrime->getType()->getFonction() == Chargement::FONCTION_PRIME_NETTE) {
+                                $primeHt += $chargementPourPrime->getMontantFlatExceptionel();
+                            } else {
+                                $autresChargements += $chargementPourPrime->getMontantFlatExceptionel();
+                            }
+                        }
+                        $elementClient['primeHT'] = $autresChargements;
+                        $elementClient['autresChargements'] = $autresChargements;
+                        $elementClient['primeTTC'] = $this->Cotation_getMontant_prime_payable_par_client($cotation);
+                        $elementClient['comTTC'] = $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
+                    }
+                }
+            }
+
+            $data[] = [
+                $client->getNom() => $elementClient['primeTTC'],
+            ];
+            $dataCopie[] = [
+                $client->getNom() => $this->loadDataToReportSet(2, Top20ClientReportSet::TYPE_ELEMENT, $client->getNom(), $elementClient),
+            ];
+        }
+        //Exécution du tri
+        asort($data);
+
+        /**
+         * SELECTION DES 20 PREMIERS REPORTSET
+         */
+        // dd($dataCopie);
+        dd($data);
+        $newOrderedData = [];
+        for ($i = 0; $i < 20; $i++) {
+            foreach ($data[$i] as $client => $primeTTC) {
+                $newOrderedData[] = $dataCopie[$client];
+            }
+            
+            //On cumul aussi le grand total
+            // $grandTotal['primeHT'] += $data[$i]['primeHT'];
+            // $grandTotal['autresChargements'] += $elementClient['autresChargements'];
+            // $grandTotal['primeTTC'] += $elementClient['primeTTC'];
+            // $grandTotal['comTTC'] += $elementClient['comTTC'];
+        }
+        dd($newOrderedData);
+
+
+
+        // $data[] = [
+        //     $this->loadDataToReportSet(2, Top20ClientReportSet::TYPE_TOTAL, "TOTAL", $grandTotal) => $grandTotal['primeTTC'],
+        // ];
+
+
+        // dd($data);
+        return $data;
+    }
+
     private function loadDataToReportSet($reportSet, $type, string $label, $dataTab)
     {
         $data = null;
         $data = match ($reportSet) {
             0 => $this->createInsurerReportSet($type, $label, $dataTab['prime'], $dataTab['comHT'], $dataTab['taxe'], $dataTab['comTTC'], $dataTab['comReceived'], $dataTab['comBalance']),
             1 => $this->createPartnerReportSet($type, $label, $dataTab['partnerRate'], $dataTab['prime'], $dataTab['comPURE'], $dataTab['taxe'], $dataTab['retroCom'], $dataTab['retroComPaid'], $dataTab['retroComBalance']),
+            2 => $this->createTop20ClientsReportSet($type, $label, $dataTab['primeTTC'], $dataTab['primeHT'], $dataTab['autresChargements'], $dataTab['comTTC']),
         };
         return $data;
     }
@@ -5294,6 +5369,18 @@ class Constante
             ->setCo_brokerage($retroCom)
             ->setAmount_paid($retroComPaid)
             ->setBalance_due($retroComBalance);
+    }
+
+    public function createTop20ClientsReportSet(int $type, string $label, $primeTTC, $primeHT, $autresChargements, $comTTC): Top20ClientReportSet
+    {
+        return (new Top20ClientReportSet())
+            ->setType($type)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setLabel($label)
+            ->setGw_premium($primeTTC)
+            ->setOther_loadings($autresChargements)
+            ->setNet_premium($primeHT)
+            ->setG_commission($comTTC);
     }
 
     public function Entreprise_getAssureurs()
