@@ -42,6 +42,7 @@ class JSBTabBuilder
     public function newTabTop20Clients(): array
     {
         $data = $this->constante->Entreprise_getDataTabTop20Clients();
+        // dd($data['data']);
         return $data;
 
         // $tabClients = [

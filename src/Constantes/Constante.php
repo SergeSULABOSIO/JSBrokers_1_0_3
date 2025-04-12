@@ -5283,9 +5283,9 @@ class Constante
                                 $autresChargements += $chargementPourPrime->getMontantFlatExceptionel();
                             }
                         }
-                        $elementClient['primeHT'] = $autresChargements;
+                        $elementClient['primeHT'] = $primeHt;
                         $elementClient['autresChargements'] = $autresChargements;
-                        $elementClient['primeTTC'] = $this->Cotation_getMontant_prime_payable_par_client($cotation);
+                        $elementClient['primeTTC'] = $primeHt + $autresChargements;
                         $elementClient['comTTC'] = $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
                     }
                 }
@@ -5300,31 +5300,38 @@ class Constante
         /**
          * SELECTION DES 20 PREMIERS REPORTSET
          */
-        // dd($dataCopie);
-        dd($data, $dataCopie);
         $newOrderedData = [];
-        for ($i = 0; $i < 20; $i++) {
-            foreach ($data[$i] as $client => $primeTTC) {
-                $newOrderedData[] = $dataCopie[$client];
+        $nbMax = 20;
+        // for ($i = 0; $i < 20; $i++) {
+        foreach ($data as $client => $valeur) {
+            /** @var Top20ClientReportSet $reportSet */
+            $reportSet = $dataCopie[$client];
+
+            // dd($client, $valeur, $dataCopie[$client]);
+            $newOrderedData[] = $reportSet;
+
+            //On cumul aussi pour avoir le grand total
+            $grandTotal['primeHT'] += $reportSet->getNet_premium();
+            $grandTotal['autresChargements'] += $reportSet->getOther_loadings();
+            $grandTotal['primeTTC'] += $reportSet->getGw_premium();
+            $grandTotal['comTTC'] += $reportSet->getG_commission();
+
+            $nbMax--;
+            if ($nbMax == 0) {
+                break;
             }
-            
-            //On cumul aussi le grand total
-            // $grandTotal['primeHT'] += $data[$i]['primeHT'];
-            // $grandTotal['autresChargements'] += $elementClient['autresChargements'];
-            // $grandTotal['primeTTC'] += $elementClient['primeTTC'];
-            // $grandTotal['comTTC'] += $elementClient['comTTC'];
         }
-        dd($newOrderedData);
+        $newOrderedData[] = $this->loadDataToReportSet(2, Top20ClientReportSet::TYPE_TOTAL, "TOTAL", $grandTotal);
 
+        /** @var Top20ClientReportSet $reportPlusGrand */
+        $reportPlusGrand = $newOrderedData[0];
 
-
-        // $data[] = [
-        //     $this->loadDataToReportSet(2, Top20ClientReportSet::TYPE_TOTAL, "TOTAL", $grandTotal) => $grandTotal['primeTTC'],
-        // ];
-
-
-        // dd($data);
-        return $data;
+        // dd($newOrderedData[0]);
+        return [
+            'data' => $newOrderedData,
+            'notes' => "<span class='fw-bold'>" . $reportPlusGrand->getLabel() . "</span> est le plus grand client avec une prime annuelle de <span class='fw-bold'>" . number_format($reportPlusGrand->getGw_premium(), 2, ",", ".") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span> qui a généré un revenu totale de <span class='fw-bold'>" . number_format($reportPlusGrand->getG_commission(), 2, ",", ".") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span>",
+        ];
+        // return $newOrderedData;
     }
 
     private function loadDataToReportSet($reportSet, $type, string $label, $dataTab)

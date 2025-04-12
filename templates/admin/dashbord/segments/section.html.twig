@@ -320,10 +320,13 @@
                         <div class="card-header text-center">
                             {{ "company_dashboard_section_principale_clients_header" | trans() | raw}}
                         </div>
-                        {# Tableau de production par assureur #}
+                        {# Tableau de top 20 clients #}
                         <table class="table table-hover table-sm">
                             <caption class="text-center">
-                                {{ "company_dashboard_section_principale_clients_caption" | trans() | raw}}
+                                <small>
+                                    {{ dashboard.productionTabs.tabTop20Clients['notes'] | raw }}
+                                    {# ICI{{ "company_dashboard_section_principale_clients_caption" | trans() | raw}} #}
+                                </small>
                             </caption>
                             <thead class="table-secondary">
                                 <tr>
@@ -335,7 +338,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for reposertSet in dashboard.productionTabs['tabTop20Clients'] %}
+                                {% for reposertSet in dashboard.productionTabs.tabTop20Clients['data'] %}
                                     {% if reposertSet.type == 0 %}
                                         <tr>
                                             <td>&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></td>
@@ -358,7 +361,7 @@
                             </tbody>
                             <thead class="table-secondary">
                                 <tr>
-                                    {% for reposertSet in dashboard.productionTabs['tabTop20Clients'] %}
+                                    {% for reposertSet in dashboard.productionTabs.tabTop20Clients['data'] %}
                                         {% if reposertSet.type == 2 %}
                                             <th scope="col"><small>{{ reposertSet.label }}</small></th>
                                             <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
