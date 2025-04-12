@@ -42,60 +42,7 @@ class JSBTabBuilder
     public function newTabTop20Clients(): array
     {
         $data = $this->constante->Entreprise_getDataTabTop20Clients();
-        // dd($data);
         return $data;
-
-        // $tabClients = [
-        //     "GLENCORE / KCC",
-        //     "GLENCORE / MUMI",
-        //     "IVANHOE / KAMOA",
-        //     "ERG / METALKOL",
-        //     "ERG / BOSS MINING",
-        //     "ERG / FRONTIER",
-        //     "ERG / COMIDE",
-        //     "TENKE FUNGURUME",
-        //     "CHEMAF / ETOILE",
-        //     "CHEMAF / MUTOSHI",
-        //     "RUASHI MINING",
-        //     "TRANS AIR CARGO",
-        //     "KIBALI GOLD MINES",
-        //     "CAA RDC SA",
-        //     "LEREXCOM",
-        //     "BGFIBANK",
-        //     "GSA",
-        //     "MALU AVIATION",
-        //     "STANDARD BANK",
-        //     "HELIOS TOWERS",
-        // ];
-        // $tabReportSets = [];
-        // $index = 1;
-        // foreach ($tabClients as $client) {
-        //     $dataSet = (new Top20ClientReportSet())
-        //         ->setType(Top20ClientReportSet::TYPE_ELEMENT)
-        //         ->setCurrency_code("$")
-        //         ->setLabel($index . ". " . $client)
-        //         ->setGw_premium(rand(0, 1000000))
-        //         ->setOther_loadings(rand(0, 1000000))
-        //         ->setNet_premium(rand(0, 1000000))
-        //         ->setG_commission(rand(0, 1000000));
-
-        //     $tabReportSets[] = $dataSet;
-        //     $index++;
-        // }
-
-        // $datasetTotal = (new Top20ClientReportSet())
-        //     ->setType(Top20ClientReportSet::TYPE_TOTAL)
-        //     ->setCurrency_code("$")
-        //     ->setLabel("TOTAL")
-        //     ->setGw_premium(rand(0, 1000000))
-        //     ->setOther_loadings(rand(0, 1000000))
-        //     ->setNet_premium(rand(0, 1000000))
-        //     ->setG_commission(rand(0, 1000000));
-
-        // $tabReportSets[] = $datasetTotal;
-        // // dd($tabReportSets);
-
-        // return $tabReportSets;
     }
 
 

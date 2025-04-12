@@ -5302,12 +5302,10 @@ class Constante
          */
         $newOrderedData = [];
         $nbMax = 20;
-        // for ($i = 0; $i < 20; $i++) {
         foreach ($data as $client => $valeur) {
             /** @var Top20ClientReportSet $reportSet */
             $reportSet = $dataCopie[$client];
 
-            // dd($client, $valeur, $dataCopie[$client]);
             $newOrderedData[] = $reportSet;
 
             //On cumul aussi pour avoir le grand total
@@ -5326,12 +5324,10 @@ class Constante
         /** @var Top20ClientReportSet $reportPlusGrand */
         $reportPlusGrand = $newOrderedData[0];
 
-        // dd($newOrderedData[0]);
         return [
             'data' => $newOrderedData,
             'notes' => "<span class='fw-bold'>" . $reportPlusGrand->getLabel() . "</span> est le plus grand client avec une prime annuelle de <span class='fw-bold'>" . number_format($reportPlusGrand->getGw_premium(), 2, ",", " ") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span> qui a généré un revenu totale de <span class='fw-bold'>" . number_format($reportPlusGrand->getG_commission(), 2, ",", " ") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span>",
         ];
-        // return $newOrderedData;
     }
 
     private function loadDataToReportSet($reportSet, $type, string $label, $dataTab)
