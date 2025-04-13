@@ -5521,16 +5521,23 @@ class Constante
         $executionStatus['expiry date'] = $tache->getToBeEndedAt();
         $executionStatus['remaining days'] = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $tache->getToBeEndedAt());
 
-        if ($executionStatus['remaining days'] >= 0) {
-            $executionStatus['text'] = "Expire dans " . $executionStatus['remaining days'] . " jrs";
-            $executionStatus['code'] = Tache::EXECUTION_STATUS_STILL_VALID;
+        if ($tache->isClosed() == true) {
+            $executionStatus['text'] = "Clôturée";
+            $executionStatus['code'] = Tache::EXECUTION_STATUS_COMPLETED;
         } else {
-            $executionStatus['text'] = "Expiré il y a " . (-1 * $executionStatus['remaining days']) . " jrs";
-            $executionStatus['code'] = Tache::EXECUTION_STATUS_EXPIRED;
+            if ($executionStatus['remaining days'] >= 0) {
+                $executionStatus['text'] = "Expire dans " . $executionStatus['remaining days'] . " jrs";
+                $executionStatus['code'] = Tache::EXECUTION_STATUS_STILL_VALID;
+            } else {
+                $executionStatus['text'] = "Expiré il y a " . (-1 * $executionStatus['remaining days']) . " jrs";
+                $executionStatus['code'] = Tache::EXECUTION_STATUS_EXPIRED;
+            }
         }
+
         $executionStatus['text'] .= match ($executionStatus['code']) {
             Tache::EXECUTION_STATUS_STILL_VALID => " (Valide)",
             Tache::EXECUTION_STATUS_EXPIRED => " (Expirée)",
+            Tache::EXECUTION_STATUS_COMPLETED => " (Clotrée)",
         };
         // dd($executionStatus);
         return $executionStatus;
