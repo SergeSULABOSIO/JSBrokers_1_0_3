@@ -48,9 +48,44 @@
                     {% for tache in taches %}
                         <tr id="row_tache_{{ tache.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ tache.description }}
-                                </a>
+                                <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
+                                    {% if tache.closed == true %}
+                                        (Achevée)
+                                    {% endif %}{{ tache.description }}
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary fw-bold">Tache créée le {{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold"> • Echéance: {{ tache.toBeEndedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Modifiée le {{ tache.updatedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                </small><br/>
+                                {% if tache.piste != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary fw-bold">Piste: {{ tache.piste }}</span> 
+                                    </small><br/>
+                                {% endif %}
+                                {% if tache.cotation != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">Proposition: {{ tache.cotation }}</span> 
+                                    </small><br/>
+                                {% endif %}
+                                {% if tache.notificationSinistre != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">Déclaration sinistre: {{ tache.notificationSinistre }}</span> 
+                                    </small><br/>
+                                {% endif %}
+                                {% if tache.offreIndemnisationSinistre != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">Offre de réglèment sinistre: {{ tache.offreIndemnisationSinistre }}</span> 
+                                    </small><br/>
+                                {% endif %}
+                                <small class="m-2 fw-bold">
+                                    <span class="text-secondary">Tâche attribuée à {{ tache.executor }}</span> 
+                                    {% set couleur = "text-secondary" %}
+                                    {% if tache.feedbacks|length == 0 %}
+                                        {% set couleur = "text-danger" %}
+                                    {% endif %}
+                                    <span class="{{couleur}}"> • Réponses ({{ tache.feedbacks|length }})</span> 
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

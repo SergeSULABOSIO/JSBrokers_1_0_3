@@ -5405,71 +5405,60 @@ class Constante
     public function Entreprise_getTaches()
     {
         $tabTaches = [];
-        // dd($this->getEnterprise()->getInvites());
-        try {
-            foreach ($this->getEnterprise()->getInvites() as $invite) {
-                foreach ($invite->getTaches() as $tache) {
-                    $tabTaches[] = $tache;
-                }
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getTaches() as $tache) {
+                $tabTaches[] = $tache;
             }
-        } catch (\Throwable $th) {
-            //throw $th;
-            dd($th);
         }
-        
         return $tabTaches;
     }
 
     public function Entreprise_getDataTabTasks()
     {
-        dd($this->Entreprise_getTaches()[0]);
-        $tabUsersAM = [
-            (new Utilisateur())
-                ->setNom("SERGE SULA")
-                ->setEmail("ssula@gmail.com"),
-            (new Utilisateur())
-                ->setNom("ANDY SAMBI")
-                ->setEmail("asambi@gmail.com"),
-            (new Utilisateur())
-                ->setNom("JULIEN MVUMU")
-                ->setEmail("jmpukuta@gmail.com"),
-        ];
+        // $tabUsersAM = [
+        //     (new Utilisateur())
+        //         ->setNom("SERGE SULA")
+        //         ->setEmail("ssula@gmail.com"),
+        //     (new Utilisateur())
+        //         ->setNom("ANDY SAMBI")
+        //         ->setEmail("asambi@gmail.com"),
+        //     (new Utilisateur())
+        //         ->setNom("JULIEN MVUMU")
+        //         ->setEmail("jmpukuta@gmail.com"),
+        // ];
 
-        $tabUsersASS = [
-            (new Utilisateur())
-                ->setNom("VICTOR ESAFE")
-                ->setEmail("vesafe@gmail.com"),
-            (new Utilisateur())
-                ->setNom("ARMANDE ISAMENE")
-                ->setEmail("isamene@gmail.com"),
-            (new Utilisateur())
-                ->setNom("TYCHIQUE LUNDA")
-                ->setEmail("tlunda@gmail.com"),
-        ];
+        // $tabUsersASS = [
+        //     (new Utilisateur())
+        //         ->setNom("VICTOR ESAFE")
+        //         ->setEmail("vesafe@gmail.com"),
+        //     (new Utilisateur())
+        //         ->setNom("ARMANDE ISAMENE")
+        //         ->setEmail("isamene@gmail.com"),
+        //     (new Utilisateur())
+        //         ->setNom("TYCHIQUE LUNDA")
+        //         ->setEmail("tlunda@gmail.com"),
+        // ];
 
-        $tabTasks = [
-            "Récupérer le formulaire de proposition rempli et produire la cotation",
-            "Collecter la prime",
-            "Relancer pour le renouvellement",
-            "Suivre le client pour avoir la binding instruction",
-        ];
+        // $tabTasks = [
+        //     "Récupérer le formulaire de proposition rempli et produire la cotation",
+        //     "Collecter la prime",
+        //     "Relancer pour le renouvellement",
+        //     "Suivre le client pour avoir la binding instruction",
+        // ];
 
-        $tabEndrosements = [
-            "Incorporation",
-            "Prorogation",
-            "Annulation",
-            "Résiliation",
-            "Renouvellement",
-            "Autre modification"
-        ];
+        // $tabEndrosements = [
+        //     "Incorporation",
+        //     "Prorogation",
+        //     "Annulation",
+        //     "Résiliation",
+        //     "Renouvellement",
+        //     "Autre modification"
+        // ];
 
         $tabReportSets = [];
         $index = 1;
-        foreach ($this->Entreprise_getClients() as $client) {
-            //On doit extraire les tâches liées à ce client
-
-
-
+        foreach ($this->Entreprise_getTaches() as $tache) {
+            dd($tache);
             $dataSet = (new TaskReportSet())
                 ->setType(TaskReportSet::TYPE_ELEMENT)
                 ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
