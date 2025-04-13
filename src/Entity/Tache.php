@@ -10,6 +10,12 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: TacheRepository::class)]
 class Tache
 {
+    //Execution status
+    public const EXECUTION_STATUS_STILL_VALID      = 0;
+    public const EXECUTION_STATUS_EXPIRED          = 1;
+    public const EXECUTION_STATUS_COMPLETED        = 2;
+
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

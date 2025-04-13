@@ -50,6 +50,7 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\Tache;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -5505,5 +5506,33 @@ class Constante
         // dd($tabReportSets);
 
         return $tabReportSets;
+    }
+
+    public function Tache_getExecutionStatus(Tache $tache)
+    {
+        $executionStatus = [
+            'text' => "Default status",
+            'code' => -1,
+            'remaining days' => 0,
+            'effect date' => null,
+            'expiry date' => null,
+        ];
+        $executionStatus['effect date'] = $tache->getCreatedAt();
+        $executionStatus['expiry date'] = $tache->getToBeEndedAt();
+        $executionStatus['remaining days'] = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $tache->getToBeEndedAt());
+
+        if ($executionStatus['remaining days'] >= 0) {
+            $executionStatus['text'] = "Expire dans " . $executionStatus['remaining days'] . " jrs";
+            $executionStatus['code'] = Tache::EXECUTION_STATUS_STILL_VALID;
+        } else {
+            $executionStatus['text'] = "Expiré il y a " . (-1 * $executionStatus['remaining days']) . " jrs";
+            $executionStatus['code'] = Tache::EXECUTION_STATUS_EXPIRED;
+        }
+        $executionStatus['text'] .= match ($executionStatus['code']) {
+            Tache::EXECUTION_STATUS_STILL_VALID => " (Valide)",
+            Tache::EXECUTION_STATUS_EXPIRED => " (Expirée)",
+        };
+        // dd($executionStatus);
+        return $executionStatus;
     }
 }
