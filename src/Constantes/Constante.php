@@ -38,6 +38,7 @@ use App\Repository\ArticleRepository;
 use Proxies\__CG__\App\Entity\Revenu;
 use App\Repository\CotationRepository;
 use App\Entity\ReportSet\ReportSummary;
+use App\Entity\ReportSet\TaskReportSet;
 use App\Repository\PartenaireRepository;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\ReportSet\InsurerReportSet;
@@ -45,10 +46,10 @@ use App\Entity\ReportSet\PartnerReportSet;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Bundle\SecurityBundle\Security;
 use App\Repository\AutoriteFiscaleRepository;
+use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
-use App\Entity\ReportSet\Top20ClientReportSet;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -5324,9 +5325,13 @@ class Constante
         /** @var Top20ClientReportSet $reportPlusGrand */
         $reportPlusGrand = $newOrderedData[0];
 
+        $notes = "Aucun client.";
+        if (count($newOrderedData) != 0) {
+            $notes = "<span class='fw-bold'>" . $reportPlusGrand->getLabel() . "</span> est le plus grand client avec une prime annuelle de <span class='fw-bold'>" . number_format($reportPlusGrand->getGw_premium(), 2, ",", " ") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span>, qui a généré un revenu total de <span class='fw-bold'>" . number_format($reportPlusGrand->getG_commission(), 2, ",", " ") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span>";
+        }
         return [
             'data' => $newOrderedData,
-            'notes' => "<span class='fw-bold'>" . $reportPlusGrand->getLabel() . "</span> est le plus grand client avec une prime annuelle de <span class='fw-bold'>" . number_format($reportPlusGrand->getGw_premium(), 2, ",", " ") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span> qui a généré un revenu totale de <span class='fw-bold'>" . number_format($reportPlusGrand->getG_commission(), 2, ",", " ") . " " . $this->serviceMonnaies->getCodeMonnaieAffichage() . "</span>",
+            'notes' => $notes,
         ];
     }
 
@@ -5390,5 +5395,126 @@ class Constante
     public function Entreprise_getPartenaires()
     {
         return $this->getEnterprise()->getPartenaires();
+    }
+
+    public function Entreprise_getClients()
+    {
+        return $this->getEnterprise()->getClients();
+    }
+
+    public function Entreprise_getTaches()
+    {
+        $tabTaches = [];
+        // dd($this->getEnterprise()->getInvites());
+        try {
+            foreach ($this->getEnterprise()->getInvites() as $invite) {
+                foreach ($invite->getTaches() as $tache) {
+                    $tabTaches[] = $tache;
+                }
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+            dd($th);
+        }
+        
+        return $tabTaches;
+    }
+
+    public function Entreprise_getDataTabTasks()
+    {
+        dd($this->Entreprise_getTaches()[0]);
+        $tabUsersAM = [
+            (new Utilisateur())
+                ->setNom("SERGE SULA")
+                ->setEmail("ssula@gmail.com"),
+            (new Utilisateur())
+                ->setNom("ANDY SAMBI")
+                ->setEmail("asambi@gmail.com"),
+            (new Utilisateur())
+                ->setNom("JULIEN MVUMU")
+                ->setEmail("jmpukuta@gmail.com"),
+        ];
+
+        $tabUsersASS = [
+            (new Utilisateur())
+                ->setNom("VICTOR ESAFE")
+                ->setEmail("vesafe@gmail.com"),
+            (new Utilisateur())
+                ->setNom("ARMANDE ISAMENE")
+                ->setEmail("isamene@gmail.com"),
+            (new Utilisateur())
+                ->setNom("TYCHIQUE LUNDA")
+                ->setEmail("tlunda@gmail.com"),
+        ];
+
+        $tabTasks = [
+            "Récupérer le formulaire de proposition rempli et produire la cotation",
+            "Collecter la prime",
+            "Relancer pour le renouvellement",
+            "Suivre le client pour avoir la binding instruction",
+        ];
+
+        $tabEndrosements = [
+            "Incorporation",
+            "Prorogation",
+            "Annulation",
+            "Résiliation",
+            "Renouvellement",
+            "Autre modification"
+        ];
+
+        $tabReportSets = [];
+        $index = 1;
+        foreach ($this->Entreprise_getClients() as $client) {
+            //On doit extraire les tâches liées à ce client
+
+
+
+            $dataSet = (new TaskReportSet())
+                ->setType(TaskReportSet::TYPE_ELEMENT)
+                ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+                ->setLead("Piste RC Auto pour agents")
+                ->setTask_description("<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks) - 1)] . "</strong>")
+                ->setClient($client)
+                ->setContacts(
+                    [
+                        "Olivier MUTOMBO",
+                        "Olivier OBE",
+                        "Serge SULA",
+                        "Julien MVUMU",
+                    ]
+                )
+                ->setOwner($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+                ->setEndorsement($tabEndrosements[rand(0, count($tabEndrosements) - 1)])
+                ->setExcutor($tabUsersASS[rand(0, count($tabUsersASS) - 1)])
+                ->setEffect_date(new DateTimeImmutable("now"))
+                ->setPotential_premium(rand(0, 1000000))
+                ->setPotential_commission(rand(0, 150))
+                ->setDays_passed(rand(-3, 10));
+
+            if ($dataSet->getDays_passed() == 0) {
+                $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_today"));
+            }
+            if ($dataSet->getDays_passed() < 0) {
+                $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_in") . ($dataSet->getDays_passed() * (-1)) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
+            }
+            if ($dataSet->getDays_passed() > 0) {
+                $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_since") . ($dataSet->getDays_passed()) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
+            }
+            // dd($dataSet);
+            $tabReportSets[] = $dataSet;
+            $index++;
+        }
+
+        $tabReportSets[] = (new TaskReportSet())
+            ->setType(TaskReportSet::TYPE_TOTAL)
+            ->setCurrency_code("$")
+            ->setTask_description("TOTAL")
+            ->setPotential_premium(rand(0, 1000000))
+            ->setPotential_commission(rand(0, 150));
+
+        // dd($tabReportSets);
+
+        return $tabReportSets;
     }
 }

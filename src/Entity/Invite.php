@@ -35,7 +35,7 @@ class Invite
     /**
      * @var Collection<int, Tache>
      */
-    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'invite')]
+    #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'executor')]
     private Collection $taches;
 
     /**
