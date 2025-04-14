@@ -24,7 +24,8 @@ class TaskReportSet
     public ?string $effect_date_comment = "";
     public float $potential_premium = 0;
     public float $potential_commission = 0;
-    public float $days_passed = 0;
+    public float $nbFeedbacks = 0;
+    public float $days_remaining = 0;
 
     public function __construct()
     {
@@ -238,9 +239,9 @@ class TaskReportSet
     /**
      * Get the value of days_passed
      */ 
-    public function getDays_passed()
+    public function getNBFeedbacks()
     {
-        return $this->days_passed;
+        return $this->nbFeedbacks;
     }
 
     /**
@@ -248,12 +249,33 @@ class TaskReportSet
      *
      * @return  self
      */ 
-    public function setDays_passed($days_passed)
+    public function setNBFeedbacks($nbFeedbacks)
     {
-        $this->days_passed = $days_passed;
+        $this->nbFeedbacks = $nbFeedbacks;
 
         return $this;
     }
+
+    /**
+     * Get the value of days_remaining
+     */ 
+    public function getDays_remaining()
+    {
+        return $this->days_remaining;
+    }
+
+    /**
+     * Set the value of days_remaining
+     *
+     * @return  self
+     */ 
+    public function setDays_remaining($days_remaining)
+    {
+        $this->days_remaining = $days_remaining;
+
+        return $this;
+    }
+
 
     /**
      * Get the value of endorsement

@@ -428,23 +428,23 @@
                                             <td>
                                                 <small>
                                                     {{ reposertSet.excutor.nom }}</br>
-                                                    <span class="text-muted">Feedbacks (10XXXX)</span>
+                                                    <span class="text-muted">Feedbacks ({{ reposertSet.nbfeedbacks }})</span>
                                                 </small>
                                             </td>
                                             <td>
                                                 <small>
                                                     <strong>
-                                                        {{ reposertSet.effect_date|format_date("short", locale: app.user.locale) }}<br>
+                                                        Cette tâche doit être accomplie au plus tard le {{ reposertSet.effect_date|format_date("short", locale: app.user.locale) }}<br>
                                                     </strong>
                                                     {% set couleur = "text-dark" %}
-                                                    {% if reposertSet.days_passed == 0 %}
+                                                    {% if reposertSet.days_remaining == 0 %}
                                                         <span class="p-1 rounded text-bg-primary">{{ reposertSet.effect_date_comment }}</span>
                                                     {% endif %}
-                                                    {% if reposertSet.days_passed < 0 %}
-                                                        <span class="p-1 rounded text-bg-success">{{ reposertSet.effect_date_comment }}</span>
-                                                    {% endif %}
-                                                    {% if reposertSet.days_passed > 0 %}
+                                                    {% if reposertSet.days_remaining < 0 %}
                                                         <span class="p-1 rounded text-bg-danger">{{ reposertSet.effect_date_comment }}</span>
+                                                    {% endif %}
+                                                    {% if reposertSet.days_remaining > 0 %}
+                                                        <span class="p-1 rounded text-bg-success">{{ reposertSet.effect_date_comment }}</span>
                                                     {% endif %}
                                                 </small>
                                             </td>
