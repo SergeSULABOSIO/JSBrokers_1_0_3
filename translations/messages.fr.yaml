@@ -363,7 +363,7 @@ company_dashboard_section_principale_tasks_caption: "Quelques explications en ba
 company_dashboard_section_principale_tasks_colonne_tache: "TACHE A EXECUTER"
 company_dashboard_section_principale_tasks_colonne_client: "CLIENT"
 company_dashboard_section_principale_tasks_colonne_executor: "EXECUTEUR"
-company_dashboard_section_principale_tasks_colonne_date: "DATE PLANIFIEE"
+company_dashboard_section_principale_tasks_colonne_date: "DATE"
 company_dashboard_section_principale_tasks_colonne_prime: "PRIME"
 company_dashboard_section_principale_tasks_colonne_revenu: "REVENU"
 company_dashboard_section_principale_tasks_by: "Par "
