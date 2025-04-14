@@ -5505,7 +5505,7 @@ class Constante
                 ->setType(TaskReportSet::TYPE_ELEMENT)
                 ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
                 ->setLead($this->Tache_getPiste($tache))
-                ->setTask_description("<strong>(No" . $index . "): \"" . $tache->getDescription() . "\"</strong>")
+                ->setTask_description("<strong>(" . $index . ") \"" . $tache->getDescription() . "\"</strong>")
                 ->setClient($this->Tache_getClient($tache))
                 ->setContacts($this->Tache_getContacts($tache))
                 ->setOwner($this->Utilisateur_getUtilisateurByInvite($this->Tache_getInvite($tache)))
