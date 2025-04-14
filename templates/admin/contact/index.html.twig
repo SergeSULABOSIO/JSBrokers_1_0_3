@@ -48,15 +48,22 @@
                     {% for contact in contacts %}
                         <tr id="row_contact_{{ contact.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.contact.edit', {'idContact':contact.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ contact.nom }}, {{ contact.fonction }} 
+                                <a class="m-2 fw-bold" href="{{ path('admin.contact.edit', {'idContact':contact.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ contact.nom }}
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">{{ contact.fonction }}</span> 
                                     {% if contact.client != null %}
-                                        | client: {{ contact.client.nom }}
+                                        <span class="text-secondary"> chez {{ contact.client.nom }}</span> 
                                     {% endif %}
-                                    {% if contact.notificationSinistre != null %}
-                                        | Sinistre: {{ contact.notificationSinistre.referenceSinistre }}
-                                    {% endif %}
-                                </a>
+                                    <span class="text-secondary"> • Tél: {{ contact.telephone }}</span> 
+                                    <span class="text-secondary"> • Email: {{ contact.email }}</span> 
+                                </small><br/>
+                                {% if contact.notificationSinistre != null %}
+                                    <small class="m-2">
+                                        Sinistre: {{ contact.notificationSinistre.referenceSinistre }}
+                                    </small><br/>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
