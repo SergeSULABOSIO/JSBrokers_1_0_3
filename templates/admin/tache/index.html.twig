@@ -51,7 +51,7 @@
                                 <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
                                     {% if tache.closed == true %}
                                         (Achevée)
-                                    {% endif %}{{ tache.description }}
+                                    {% endif %}"{{ tache.description }}"
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Tache créée le {{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
