@@ -50,7 +50,7 @@
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
                                     {% if tache.closed == true %}
-                                        (Achevée)
+                                        (Accomplie)
                                     {% endif %}"{{ tache.description }}"
                                 </a><br/>
                                 <small class="m-2">
@@ -85,14 +85,12 @@
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
                                     <span class="{{couleur}}"> • Réponses ({{ tache.feedbacks|length }})</span> 
-                                </small><br/>
-                                <small class="m-2">
                                     {% set couleur = "text-success" %}
                                     {% if constante.Tache_getExecutionStatus(tache)['remaining days'] < 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{ couleur }}">Status d'exécution: {{ constante.Tache_getExecutionStatus(tache)['text'] }}</span> 
-                                </small><br>
+                                    <span class="{{ couleur }}"> • Status d'exécution: {{ constante.Tache_getExecutionStatus(tache)['text'] }}</span> 
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

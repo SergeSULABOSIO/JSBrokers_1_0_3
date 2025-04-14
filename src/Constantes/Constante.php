@@ -5535,9 +5535,9 @@ class Constante
         }
 
         $executionStatus['text'] .= match ($executionStatus['code']) {
-            Tache::EXECUTION_STATUS_STILL_VALID => " (Valide)",
+            Tache::EXECUTION_STATUS_STILL_VALID => " (En cours)",
             Tache::EXECUTION_STATUS_EXPIRED => " (Expirée)",
-            Tache::EXECUTION_STATUS_COMPLETED => " (Classée)",
+            Tache::EXECUTION_STATUS_COMPLETED => " (Accomplie)",
         };
         // dd($executionStatus);
         return $executionStatus;
