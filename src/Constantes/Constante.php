@@ -50,7 +50,11 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\Contact;
 use App\Entity\Tache;
+use App\Repository\UtilisateurRepository;
+use Doctrine\Common\Collections\Collection;
+use PhpParser\ErrorHandler\Collecting;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -69,6 +73,7 @@ class Constante
         private ArticleRepository $articleRepository,
         private TaxeRepository $taxeRepository,
         private PartenaireRepository $partenaireRepository,
+        private UtilisateurRepository $utilisateurRepository,
         private ServiceMonnaies $serviceMonnaies,
         // private ChargementsLoader $chargementsLoader,
     ) {}
@@ -5414,73 +5419,108 @@ class Constante
         return $tabTaches;
     }
 
+    public function Tache_getClient(Tache $tache): ?Client
+    {
+        if ($tache != null) {
+            if ($this->Tache_getPiste($tache) != null) {
+                return $this->Tache_getPiste($tache)->getClient();
+            }
+        }
+        return null;
+    }
+
+    public function Tache_getInvite(Tache $tache): ?Invite
+    {
+        if ($tache != null) {
+            if ($this->Tache_getPiste($tache) != null) {
+                return $this->Tache_getPiste($tache)->getInvite();
+            }
+        }
+        return null;
+    }
+
+    public function Utilisateur_getUtilisateurByInvite(?Invite $invite):?Utilisateur
+    {
+        $users = $this->utilisateurRepository->findBy([
+            'email' => $invite->getEmail(),
+        ]);
+        return count($users) != 0 ? $users[0] : null;
+    }
+
+    public function Utilisateur_getUtilisateurByEmail($email):?Utilisateur
+    {
+        $users = $this->utilisateurRepository->findBy([
+            'email' => $email,
+        ]);
+        return count($users) != 0 ? $users[0] : null;
+    }
+
+    public function Tache_getContacts(Tache $tache)
+    {
+        if ($tache != null) {
+            if ($this->Tache_getClient($tache) != null) {
+                return $this->Tache_getClient($tache)->getContacts()->toArray();
+            }
+        }
+        return null;
+    }
+
+    public function Tache_getPiste(Tache $tache): ?Piste
+    {
+        if ($tache != null) {
+            if ($this->Tache_getCotation($tache) != null) {
+                return $this->Tache_getCotation($tache)->getPiste();
+            }
+        }
+        return null;
+    }
+
+    public function Tache_getTypeAvenant(Tache $tache)
+    {
+        if ($tache != null) {
+            if ($this->Tache_getPiste($tache) != null) {
+                return match ($this->Tache_getPiste($tache)->getTypeAvenant()) {
+                    Piste::AVENANT_ANNULATION => "ANNULATION",
+                    Piste::AVENANT_INCORPORATION => "INCORPORATION",
+                    Piste::AVENANT_PROROGATION => "PROROGATION",
+                    Piste::AVENANT_RENOUVELLEMENT => "RENOUVELLEMENT",
+                    Piste::AVENANT_RESILIATION => "RESILIATION",
+                    Piste::AVENANT_SOUSCRIPTION => "SOUSCRIPTION",
+                };
+            }
+        }
+        return null;
+    }
+
+
+
+    public function Tache_getCotation(Tache $tache): ?Cotation
+    {
+        return $tache->getCotation();
+    }
+
     public function Entreprise_getDataTabTasks()
     {
-        // $tabUsersAM = [
-        //     (new Utilisateur())
-        //         ->setNom("SERGE SULA")
-        //         ->setEmail("ssula@gmail.com"),
-        //     (new Utilisateur())
-        //         ->setNom("ANDY SAMBI")
-        //         ->setEmail("asambi@gmail.com"),
-        //     (new Utilisateur())
-        //         ->setNom("JULIEN MVUMU")
-        //         ->setEmail("jmpukuta@gmail.com"),
-        // ];
-
-        // $tabUsersASS = [
-        //     (new Utilisateur())
-        //         ->setNom("VICTOR ESAFE")
-        //         ->setEmail("vesafe@gmail.com"),
-        //     (new Utilisateur())
-        //         ->setNom("ARMANDE ISAMENE")
-        //         ->setEmail("isamene@gmail.com"),
-        //     (new Utilisateur())
-        //         ->setNom("TYCHIQUE LUNDA")
-        //         ->setEmail("tlunda@gmail.com"),
-        // ];
-
-        // $tabTasks = [
-        //     "Récupérer le formulaire de proposition rempli et produire la cotation",
-        //     "Collecter la prime",
-        //     "Relancer pour le renouvellement",
-        //     "Suivre le client pour avoir la binding instruction",
-        // ];
-
-        // $tabEndrosements = [
-        //     "Incorporation",
-        //     "Prorogation",
-        //     "Annulation",
-        //     "Résiliation",
-        //     "Renouvellement",
-        //     "Autre modification"
-        // ];
-
         $tabReportSets = [];
         $index = 1;
+        /** @var Tache $tache */
         foreach ($this->Entreprise_getTaches() as $tache) {
-            dd($tache);
             $dataSet = (new TaskReportSet())
                 ->setType(TaskReportSet::TYPE_ELEMENT)
                 ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-                ->setLead("Piste RC Auto pour agents")
-                ->setTask_description("<strong>Task #" . $index . ":<br>" . $tabTasks[rand(0, count($tabTasks) - 1)] . "</strong>")
-                ->setClient($client)
-                ->setContacts(
-                    [
-                        "Olivier MUTOMBO",
-                        "Olivier OBE",
-                        "Serge SULA",
-                        "Julien MVUMU",
-                    ]
-                )
-                ->setOwner($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
-                ->setEndorsement($tabEndrosements[rand(0, count($tabEndrosements) - 1)])
-                ->setExcutor($tabUsersASS[rand(0, count($tabUsersASS) - 1)])
-                ->setEffect_date(new DateTimeImmutable("now"))
-                ->setPotential_premium(rand(0, 1000000))
-                ->setPotential_commission(rand(0, 150))
-                ->setDays_passed(rand(-3, 10));
+                ->setLead($this->Tache_getPiste($tache))
+                ->setTask_description("<strong>Task #" . $index . ":<br>" . $tache->getDescription() . "</strong>")
+                ->setClient($this->Tache_getClient($tache))
+                ->setContacts($this->Tache_getContacts($tache))
+                ->setOwner($this->Utilisateur_getUtilisateurByInvite($this->Tache_getInvite($tache)))
+                ->setEndorsement($this->Tache_getTypeAvenant($tache))
+                ->setExcutor($this->Utilisateur_getUtilisateurByInvite($tache->getExecutor()))
+                ->setEffect_date($tache->getCreatedAt())
+                ->setPotential_premium($this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache)))
+                ->setPotential_commission($this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false))
+                ->setDays_passed($this->Tache_getExecutionStatus($tache)['remaining days']);
+
+            dd($tache, $dataSet);
 
             if ($dataSet->getDays_passed() == 0) {
                 $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_today"));
