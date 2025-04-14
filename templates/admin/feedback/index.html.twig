@@ -48,18 +48,16 @@
                         <tr id="row_feedback_{{ feedback.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.feedback.edit', {'idFeedback':feedback.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ feedback.description }}
+                                    "{{ feedback.description }}"
                                 </a><br/>
-                                <small class="m-2">
-                                    <span class="text-secondary fw-bold">Réponse créée le {{ feedback.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Modifiée le {{ feedback.updatedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
-                                    {% if feedback.tache != null %}
-                                        <span class="text-secondary"> par {{ feedback.tache.executor }}</span> 
-                                    {% endif %}
-                                </small><br/>
                                 {% if feedback.tache != null %}
                                     <small class="m-2">
-                                        <span class="text-secondary fw-bold">Tâche: {{ feedback.tache.description }}</span> 
+                                        <span class="text-secondary fw-bold">Tâche: "{{ feedback.tache.description }}"</span> 
+                                        {% set couleur = "text-success" %}
+                                        {% if constante.Tache_getExecutionStatus(feedback.tache)['remaining days'] < 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{ couleur }}"> • Status: {{ constante.Tache_getExecutionStatus(feedback.tache)['text'] }}</span> 
                                     </small><br/>
                                 {% endif %}
                                 {% if feedback.tache.piste != null %}
@@ -82,6 +80,13 @@
                                         <span class="text-secondary">Offre de réglèment sinistre: {{ feedback.tache.offreIndemnisationSinistre }}</span> 
                                     </small><br/>
                                 {% endif %}
+                                <small class="m-2">
+                                    <span class="text-secondary fw-bold">Réponse créée le {{ feedback.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Modifiée le {{ feedback.updatedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                    {% if feedback.tache != null %}
+                                        <span class="text-secondary"> par {{ feedback.tache.executor }}</span> 
+                                    {% endif %}
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
