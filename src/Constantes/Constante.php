@@ -5499,17 +5499,13 @@ class Constante
         return $tache->getCotation();
     }
 
-    public function Entreprise_getDataTabTasks()
+    public function createTaskReportSet($index, Tache $tache)
     {
-        $tabReportSets = [];
-        $index = 1;
-        /** @var Tache $tache */
-        foreach ($this->Entreprise_getTaches() as $tache) {
-            $dataSet = (new TaskReportSet())
+        return (new TaskReportSet())
                 ->setType(TaskReportSet::TYPE_ELEMENT)
                 ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
                 ->setLead($this->Tache_getPiste($tache))
-                ->setTask_description("<strong>Task #" . $index . ":<br>" . $tache->getDescription() . "</strong>")
+                ->setTask_description("<strong>Tâche #" . $index . ":<br>" . $tache->getDescription() . "</strong>")
                 ->setClient($this->Tache_getClient($tache))
                 ->setContacts($this->Tache_getContacts($tache))
                 ->setOwner($this->Utilisateur_getUtilisateurByInvite($this->Tache_getInvite($tache)))
@@ -5520,8 +5516,20 @@ class Constante
                 ->setPotential_commission($this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false))
                 ->setDays_passed($this->Tache_getExecutionStatus($tache)['remaining days']);
 
-            dd($tache, $dataSet);
+    }
 
+    public function Entreprise_getDataTabTasks()
+    {
+        $cumulPrime = 0;
+        $cumulCom = 0;
+        $tabReportSets = [];
+        $index = 1;
+        /** @var Tache $tache */
+        foreach ($this->Entreprise_getTaches() as $tache) {
+            $dataSet = $this->createTaskReportSet($index, $tache);
+            $cumulPrime += $this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache));
+            $cumulCom += $this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false);
+            // dd($tache, $dataSet);
             if ($dataSet->getDays_passed() == 0) {
                 $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_today"));
             }
@@ -5535,15 +5543,12 @@ class Constante
             $tabReportSets[] = $dataSet;
             $index++;
         }
-
         $tabReportSets[] = (new TaskReportSet())
             ->setType(TaskReportSet::TYPE_TOTAL)
-            ->setCurrency_code("$")
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
             ->setTask_description("TOTAL")
-            ->setPotential_premium(rand(0, 1000000))
-            ->setPotential_commission(rand(0, 150));
-
-        // dd($tabReportSets);
+            ->setPotential_premium($cumulPrime)
+            ->setPotential_commission($cumulCom);
 
         return $tabReportSets;
     }

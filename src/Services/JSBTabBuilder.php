@@ -49,7 +49,7 @@ class JSBTabBuilder
     public function newTabTasks(): array
     {
         $data = $this->constante->Entreprise_getDataTabTasks();
-        dd($data);
+        // dd($data);
         return $data;
 
         // $tabClients = [

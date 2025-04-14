@@ -391,8 +391,8 @@
                                     <th scope="col" width="170">{{ "company_dashboard_section_principale_tasks_colonne_client" | trans() | raw }}</th>
                                     <th scope="col" width="150">{{ "company_dashboard_section_principale_tasks_colonne_executor" | trans() | raw }}</th>
                                     <th scope="col" width="150">{{ "company_dashboard_section_principale_tasks_colonne_date" | trans() | raw }}</th>
-                                    <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_tasks_colonne_prime" | trans() | raw }}</th>
-                                    <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_tasks_colonne_revenu" | trans() | raw }}</th>
+                                    <th scope="col" width="150" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_tasks_colonne_prime" | trans() | raw }}</th>
+                                    <th scope="col" width="150" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_tasks_colonne_revenu" | trans() | raw }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -434,7 +434,7 @@
                                             <td>
                                                 <small>
                                                     <strong>
-                                                        {{ reposertSet.effect_date|format_date("full", locale: app.user.locale) }}<br>
+                                                        {{ reposertSet.effect_date|format_date("short", locale: app.user.locale) }}<br>
                                                     </strong>
                                                     {% set couleur = "text-dark" %}
                                                     {% if reposertSet.days_passed == 0 %}
@@ -448,8 +448,8 @@
                                                     {% endif %}
                                                 </small>
                                             </td>
-                                            <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.potential_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
-                                            <td class="text-end" style="color: #198754;"><small>{{ reposertSet.potential_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                            <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_premium|number_format(2, ',', '.') }}</small></td>
+                                            <td class="text-end" style="color: #198754;"><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_commission|number_format(2, ',', '.') }}</small></td>
                                         </tr>
                                     {% endif %}
                                 {% endfor %}
@@ -462,8 +462,8 @@
                                             <th scope="col"><small><strong></strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
                                             <th scope="col"><small><strong></strong></small></th>
-                                            <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.potential_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
-                                            <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.potential_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                            <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_premium|number_format(2, ',', '.') }}</small></strong></th>
+                                            <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_commission|number_format(2, ',', '.') }}</small></strong></th>
                                         {% endif %}
                                     {% endfor %}
                                 </tr>
