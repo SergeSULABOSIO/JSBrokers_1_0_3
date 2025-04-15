@@ -5710,15 +5710,15 @@ class Constante
         // return $tabReportSets;
 
         dd("ICI");
-        
+
         $cumulPrime = 0;
         $cumulCom = 0;
         $tabReportSets = [];
         $index = 1;
-        /** @var Tache $tache */
-        foreach ($this->Entreprise_getTaches() as $tache) {
+        /** @var Avenant $avenant */
+        foreach ($this->Entreprise_getAvenants() as $avenant) {
             //On n'affiche que les tâches qui ne sont pas encore accomplies
-            if ($this->Tache_getExecutionStatus($tache)['code'] != Tache::EXECUTION_STATUS_COMPLETED) {
+            if ($this->Avenant_getRenewalStatus($avenant)['code'] != Avenant::RENEWAL_STATUS_RUNNING) {
                 $dataSet = $this->createTaskReportSet($index, $tache);
                 $cumulPrime += $this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache));
                 $cumulCom += $this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false);

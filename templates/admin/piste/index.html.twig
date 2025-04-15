@@ -50,7 +50,9 @@
                                 <a class="m-2 fw-bold" href="{{ path('admin.piste.edit', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}">
                                     {{ ux_icon('fa-solid:road', {height: '20px', width: '20px'}) }} 
                                     {% if constante.Piste_isBound(piste) %}
-                                        {{ ux_icon('fluent-mdl2:completed', {height: '20px', width: '20px'}) }} 
+                                        <span class="text-success fw-bold">
+                                            {{ ux_icon('fluent-mdl2:completed', {height: '20px', width: '20px'}) }} 
+                                        </span>
                                     {% endif %}
                                     {{ piste.nom }}
                                 </a><br/>
