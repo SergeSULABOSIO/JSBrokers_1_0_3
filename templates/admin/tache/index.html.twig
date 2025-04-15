@@ -50,7 +50,9 @@
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
                                     {% if tache.closed == true %}
-                                        (Accomplie)
+                                        {{ ux_icon('fluent-mdl2:completed', {height: '20px', width: '20px'}) }}
+                                    {% else %}
+                                        {{ ux_icon('mdi:progress-download', {height: '20px', width: '20px'}) }}
                                     {% endif %}"{{ tache.description }}"
                                 </a><br/>
                                 <small class="m-2">

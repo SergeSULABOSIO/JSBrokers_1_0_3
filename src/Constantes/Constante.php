@@ -3993,11 +3993,13 @@ class Constante
     public function Cotation_getMontant_prime_payable_par_client(?Cotation $cotation): float
     {
         $montant = 0;
-        foreach ($cotation->getChargements() as $loading) {
-            /** @var ChargementPourPrime $chargement */
-            $chargement = $loading;
-            $montant += $chargement->getMontantFlatExceptionel();
-            // dd("ici", $loading);
+        if ($cotation != null) {
+            foreach ($cotation->getChargements() as $loading) {
+                /** @var ChargementPourPrime $chargement */
+                $chargement = $loading;
+                $montant += $chargement->getMontantFlatExceptionel();
+                // dd("ici", $loading);
+            }
         }
         return $montant;
     }
@@ -5470,6 +5472,8 @@ class Constante
         if ($tache != null) {
             if ($this->Tache_getCotation($tache) != null) {
                 return $this->Tache_getCotation($tache)->getPiste();
+            } else if ($tache->getPiste() != null) {
+                return $tache->getPiste();
             }
         }
         return null;

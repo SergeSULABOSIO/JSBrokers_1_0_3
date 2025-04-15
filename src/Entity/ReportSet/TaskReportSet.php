@@ -334,7 +334,11 @@ class TaskReportSet
      */ 
     public function setLead($lead)
     {
-        $this->lead = $lead;
+        if ($lead == null) {
+            $this->lead = "Aucune piste";
+        }else{
+            $this->lead = $lead;
+        }
 
         return $this;
     }
