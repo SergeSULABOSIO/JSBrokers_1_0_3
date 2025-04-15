@@ -48,9 +48,11 @@
                         <tr id="row_piste_{{ piste.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.piste.edit', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ ux_icon('fa-solid:road', {height: '20px', width: '20px'}) }} 
                                     {% if constante.Piste_isBound(piste) %}
-                                        (bound) 
-                                    {% endif %}{{ piste.nom }}
+                                        {{ ux_icon('fluent-mdl2:completed', {height: '20px', width: '20px'}) }} 
+                                    {% endif %}
+                                    {{ piste.nom }}
                                 </a><br/>
                                 {{ constante.Piste_getTrancheDiagnostic(piste)|raw }}
                                 {# Section prime #}

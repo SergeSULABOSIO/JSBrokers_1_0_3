@@ -49,12 +49,13 @@
                         <tr id="row_tache_{{ tache.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ ux_icon('mingcute:task-2-fill', {height: '20px', width: '20px'}) }} 
                                     {% if tache.closed == true %}
-                                        {{ ux_icon('fluent-mdl2:completed', {height: '20px', width: '20px'}) }}
+                                        {{ ux_icon('fluent-mdl2:completed', {height: '20px', width: '20px'}) }} 
                                     {% else %}
-                                        {{ ux_icon('mdi:progress-download', {height: '20px', width: '20px'}) }}
+                                        {{ ux_icon('mdi:progress-download', {height: '20px', width: '20px'}) }} 
                                     {% endif %}
-                                    {{ ux_icon('mingcute:task-2-fill', {height: '20px', width: '20px'}) }}"{{ tache.description }}"
+                                    "{{ tache.description }}"
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary fw-bold">Tache créée le {{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
