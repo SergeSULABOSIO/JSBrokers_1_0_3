@@ -55,8 +55,8 @@ class JSBTabBuilder
 
     public function newTabRenewals(): array
     {
-        $data = $this->constante->Entreprise_getDataTabTasks();
-        dd($data);
+        $data = $this->constante->Entreprise_getDataTabRenewals();
+        // dd($data);
         return $data;
     }
 

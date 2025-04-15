@@ -5578,7 +5578,7 @@ class Constante
     {
         if ($avenant != null) {
             if ($avenant->getCotation() != null) {
-                if($avenant->getCotation()->getPiste() != null){
+                if ($avenant->getCotation()->getPiste() != null) {
                     if ($avenant->getCotation()->getPiste()->getClient() != null) {
                         return $avenant->getCotation()->getPiste()->getClient()->getNom();
                     }
@@ -5592,7 +5592,7 @@ class Constante
     {
         if ($avenant != null) {
             if ($avenant->getCotation() != null) {
-                if($avenant->getCotation()->getPiste() != null){
+                if ($avenant->getCotation()->getPiste() != null) {
                     return $this->getTypeAvenant($avenant->getCotation()->getPiste()->getTypeAvenant());
                 }
             }
@@ -5604,7 +5604,7 @@ class Constante
     {
         if ($avenant != null) {
             if ($avenant->getCotation() != null) {
-                if($avenant->getCotation()->getPiste() != null){
+                if ($avenant->getCotation()->getPiste() != null) {
                     if ($avenant->getCotation()->getPiste()->getRisque() != null) {
                         return $avenant->getCotation()->getPiste()->getRisque()->getCode();
                     }
@@ -5618,9 +5618,9 @@ class Constante
     {
         if ($avenant != null) {
             if ($avenant->getCotation() != null) {
-                if($avenant->getCotation()->getPiste() != null){
+                if ($avenant->getCotation()->getPiste() != null) {
                     if ($avenant->getCotation()->getPiste()->getInvite() != null) {
-                        return $avenant->getCotation()->getPiste()->getInvite()->getNom();
+                        return $this->Utilisateur_getUtilisateurByEmail($avenant->getCotation()->getPiste()->getInvite()->getEmail());
                     }
                 }
             }
@@ -5628,7 +5628,27 @@ class Constante
         return "Non défini";
     }
 
-    public function createRenewalReportSet($index, Avenant $avenant)
+    public function Avenant_getPrimeTTC(Avenant $avenant): float
+    {
+        if ($avenant != null) {
+            if ($avenant->getCotation() != null) {
+                return $this->Cotation_getMontant_prime_payable_par_client($avenant->getCotation());
+            }
+        }
+        return 0;
+    }
+
+    public function Avenant_getCommissionTTC(Avenant $avenant, int $addressedTo, bool $onlySharable): float
+    {
+        if ($avenant != null) {
+            if ($avenant->getCotation() != null) {
+                return $this->Cotation_getMontant_commission_ttc($avenant->getCotation(), $addressedTo, $onlySharable);
+            }
+        }
+        return 0;
+    }
+
+    public function createRenewalReportSet(Avenant $avenant)
     {
         return (new RenewalReportSet())
             ->setType(RenewalReportSet::TYPE_ELEMENT)
@@ -5640,193 +5660,62 @@ class Constante
             ->setEndorsement($this->Avenant_getStringTypeAvenant($avenant))
             ->setCover($this->Avenant_getCodeCover($avenant))
             ->setAccount_manager($this->Avenant_getNomAccountManager($avenant))
-            ->setGw_premium(rand(1000, 100000))
-            ->setG_commission(rand(100, 10000))
-            ->setEffect_date(new DateTimeImmutable("now - " . ($i + 365) . " days"))
-            ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
+            ->setGw_premium($this->Avenant_getPrimeTTC($avenant))
+            ->setG_commission($this->Avenant_getCommissionTTC($avenant, -1, false))
+            ->setEffect_date($avenant->getStartingAt())
+            ->setExpiry_date($avenant->getEndingAt());
     }
 
     public function Entreprise_getDataTabRenewals()
     {
-
-        // $tabClients = [
-        //     "GLENCORE / KCC",
-        //     "GLENCORE / MUMI",
-        //     "IVANHOE / KAMOA",
-        //     "ERG / METALKOL",
-        //     "ERG / BOSS MINING",
-        //     "ERG / FRONTIER",
-        //     "ERG / COMIDE",
-        //     "TENKE FUNGURUME",
-        //     "CHEMAF / ETOILE",
-        //     "CHEMAF / MUTOSHI",
-        //     "RUASHI MINING",
-        //     "TRANS AIR CARGO",
-        //     "KIBALI GOLD MINES",
-        //     "CAA RDC SA",
-        //     "LEREXCOM",
-        //     "BGFIBANK",
-        //     "GSA",
-        //     "MALU AVIATION",
-        //     "STANDARD BANK",
-        //     "HELIOS TOWERS",
-        // ];
-
-        // $tabUsersAM = [
-        //     (new Utilisateur())
-        //         ->setNom("SERGE SULA")
-        //         ->setEmail("ssula@gmail.com"),
-        //     (new Utilisateur())
-        //         ->setNom("ANDY SAMBI")
-        //         ->setEmail("asambi@gmail.com"),
-        //     (new Utilisateur())
-        //         ->setNom("JULIEN MVUMU")
-        //         ->setEmail("jmpukuta@gmail.com"),
-        // ];
-
-        // $tabCovers = [
-        //     "Motor TPL",
-        //     "Motor Comp",
-        //     "GPA",
-        //     "PI",
-        //     "GL",
-        //     "BBB",
-        //     "PDBI",
-        //     "GIT"
-        // ];
-
-        // $tabInsurers = [
-        //     "SFA Congo",
-        //     "ACTIVA",
-        //     "SUNU",
-        //     "MAYFAIR",
-        //     "RAWSUR",
-        //     "GPA"
-        // ];
-
-        // $tabPolicies = [
-        //     "W12457878-200-2024",
-        //     "012457878-200-2024",
-        //     "012457555-200-2024",
-        //     "012457525-125-2024",
-        //     "012457556-222-2024",
-        //     "012457546-222-2024",
-        //     "012400000-222-2024"
-        // ];
-
-        // $tabEndrosements = [
-        //     "Incorporation",
-        //     "Prorogation",
-        //     "Annulation",
-        //     "Résiliation",
-        //     "Renouvellement",
-        //     "Autre modification"
-        // ];
-
-        // $tabStatus = [
-        //     "Renewal Ongoing...",
-        //     "Renewed",
-        //     "Cancelled",
-        //     "Once-off",
-        //     "Extended",
-        //     "Still running"
-        // ];
-
-        // $tabReportSets = [];
-        // for ($i = 0; $i < 20; $i++) {
-        //     $dataSet = (new RenewalReportSet())
-        //         ->setType(RenewalReportSet::TYPE_ELEMENT)
-        //         ->setCurrency_code("$")
-        //         ->setEndorsement_id(rand(0, 15))
-        //         ->setLabel($tabPolicies[rand(0, count($tabPolicies) - 1)])
-        //         ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
-        //         ->setClient($tabClients[rand(0, count($tabClients) - 1)])
-        //         ->setEndorsement($tabEndrosements[rand(0, count($tabEndrosements) - 1)])
-        //         ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
-        //         ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
-        //         ->setGw_premium(rand(1000, 100000))
-        //         ->setG_commission(rand(100, 10000))
-        //         ->setEffect_date(new DateTimeImmutable("now - " . ($i + 365) . " days"))
-        //         ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
-
-        //     $diff = $this->serviceDates->daysEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
-        //     $hours = $this->serviceDates->hoursEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
-        //     $minutes = $this->serviceDates->minutesEntre($dataSet->getExpiry_date(), new DateTimeImmutable("now"));
-
-        //     $txt = "";
-        //     if ($diff == 0) {
-        //         if ($hours == 0 && $minutes == 0) {
-        //             $txt = "Expired.";
-        //         } else {
-        //             $txt = "Expiring in " . $hours . ":" . $minutes;
-        //         }
-        //     } else if ($diff == 1) {
-        //         $txt = "Expiring in " . $diff . " day.";
-        //     } else if ($diff > 1) {
-        //         $txt = "Expiring in " . $diff . " days.";
-        //     }
-        //     $dataSet->setRemaining_days($txt);
-
-        //     if ($diff == 0) {
-        //         $dataSet->setStatus($tabStatus[rand(0, count($tabStatus) - 1)]);
-        //     } else {
-        //         $dataSet->setStatus("Still Running");
-        //     }
-        //     if ($diff == 0) {
-        //         $dataSet->setBg_color("text-bg-danger");
-        //     } else {
-        //         $dataSet->setBg_color("text-bg-success");
-        //     }
-        //     $tabReportSets[] = $dataSet;
-        // }
-
-        // //Ligne totale
-        // $dataSet = (new RenewalReportSet())
-        //     ->setType(RenewalReportSet::TYPE_TOTAL)
-        //     ->setCurrency_code("$")
-        //     ->setLabel("TOTAL")
-        //     ->setGw_premium(rand(1000, 100000))
-        //     ->setG_commission(rand(100, 10000));
-        // $tabReportSets[] = $dataSet;
-        // // dd($tabReportSets);
-
-        // return $tabReportSets;
-
-        dd("ICI");
-
         $cumulPrime = 0;
         $cumulCom = 0;
         $tabReportSets = [];
-        $index = 1;
+
         /** @var Avenant $avenant */
         foreach ($this->Entreprise_getAvenants() as $avenant) {
-            //On n'affiche que les tâches qui ne sont pas encore accomplies
-            if ($this->Avenant_getRenewalStatus($avenant)['code'] != Avenant::RENEWAL_STATUS_RUNNING) {
-                $dataSet = $this->createTaskReportSet($index, $tache);
-                $cumulPrime += $this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache));
-                $cumulCom += $this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false);
-                // dd($tache, $dataSet);
-                if ($dataSet->getDays_remaining() == 0) {
-                    $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_today"));
-                }
-                if ($dataSet->getDays_remaining() < 0) {
-                    $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_since") . ($dataSet->getDays_remaining() * (-1)) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
-                }
-                if ($dataSet->getDays_remaining() > 0) {
-                    $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_in") . ($dataSet->getDays_remaining()) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
-                }
-                // dd($dataSet);
-                $tabReportSets[] = $dataSet;
-                $index++;
-            }
-        }
-        $tabReportSets[] = (new TaskReportSet())
-            ->setType(TaskReportSet::TYPE_TOTAL)
-            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-            ->setTask_description("TOTAL")
-            ->setPotential_premium($cumulPrime)
-            ->setPotential_commission($cumulCom);
+            //On n'affiche que les Avenant qui ont expiré
+            // if ($this->Avenant_getRenewalStatus($avenant)['code'] != Avenant::RENEWAL_STATUS_RUNNING) {
+            $dataSet = $this->createRenewalReportSet($avenant);
+            $cumulPrime += $this->Avenant_getPrimeTTC($avenant);
+            $cumulCom += $this->Avenant_getCommissionTTC($avenant, -1, false);
+            // dd($tache, $dataSet);
+            $remainingDays = $this->Avenant_getRenewalStatus($avenant)['remaining days'];
+            $dataSet->setRemaining_days($remainingDays);
+            $dataSet->setStatus($this->Avenant_getRenewalStatus($avenant)['text']);
 
+            if ($remainingDays <= 30) {
+                $dataSet->setBg_color("text-danger");
+            } else if ($remainingDays > 30 && $remainingDays <= 60) {
+                $dataSet->setBg_color("text-warning");
+            } else {
+                $dataSet->setBg_color("text-success");
+            }
+
+            $tabReportSets[] = $dataSet;
+            // }
+        }
+
+
+        /**
+         * TRI PAR ORDRE CROISSANT PAR RAPPORT 
+         * AU NB DE JOUR RESTANT AVANT EXPIRATION
+         */
+
+
+
+
+
+
+        // //Ligne totale
+        $dataSetTotal = (new RenewalReportSet())
+            ->setType(RenewalReportSet::TYPE_TOTAL)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setLabel("TOTAL")
+            ->setGw_premium($cumulPrime)
+            ->setG_commission($cumulCom);
+        $tabReportSets[] = $dataSetTotal;
+        // dd("ICI");
         return $tabReportSets;
     }
 
