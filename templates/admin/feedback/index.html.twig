@@ -48,6 +48,7 @@
                         <tr id="row_feedback_{{ feedback.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.feedback.edit', {'idFeedback':feedback.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ ux_icon('fluent-mdl2:feedback', {height: '20px', width: '20px'}) }}
                                     "{{ feedback.description }}"
                                 </a><br/>
                                 {% if feedback.tache != null %}

@@ -415,14 +415,16 @@
                                             <td>
                                                 <small>
                                                     {{ reposertSet.client }}
-                                                    <span class="text-muted">
-                                                        {{ "company_dashboard_section_principale_tasks_contacts" | trans() | raw }} </br>
-                                                        <ul>
-                                                            {% for contact in reposertSet.contacts %}
-                                                                <li>{{ contact }}</li>
-                                                            {% endfor %}
-                                                        </ul>
-                                                    </span>
+                                                    {% if reposertSet.contacts|length != 0 %}
+                                                        <span class="text-muted">
+                                                            {{ "company_dashboard_section_principale_tasks_contacts" | trans() | raw }} </br>
+                                                            <ul>
+                                                                {% for contact in reposertSet.contacts %}
+                                                                    <li>{{ contact }}</li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </span>
+                                                    {% endif %}
                                                 </small>
                                             </td>
                                             {# <td><small>{{ reposertSet.owner.nom }}</small></td> #}
