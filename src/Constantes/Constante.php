@@ -5439,7 +5439,7 @@ class Constante
         return null;
     }
 
-    public function Utilisateur_getUtilisateurByInvite(?Invite $invite):?Utilisateur
+    public function Utilisateur_getUtilisateurByInvite(?Invite $invite): ?Utilisateur
     {
         $users = $this->utilisateurRepository->findBy([
             'email' => $invite->getEmail(),
@@ -5447,7 +5447,7 @@ class Constante
         return count($users) != 0 ? $users[0] : null;
     }
 
-    public function Utilisateur_getUtilisateurByEmail($email):?Utilisateur
+    public function Utilisateur_getUtilisateurByEmail($email): ?Utilisateur
     {
         $users = $this->utilisateurRepository->findBy([
             'email' => $email,
@@ -5502,21 +5502,22 @@ class Constante
     public function createTaskReportSet($index, Tache $tache)
     {
         return (new TaskReportSet())
-                ->setType(TaskReportSet::TYPE_ELEMENT)
-                ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-                ->setLead($this->Tache_getPiste($tache))
-                ->setTask_description("<strong>(" . $index . ") \"" . $tache->getDescription() . "\"</strong>")
-                ->setClient($this->Tache_getClient($tache))
-                ->setContacts($this->Tache_getContacts($tache))
-                ->setOwner($this->Utilisateur_getUtilisateurByInvite($this->Tache_getInvite($tache)))
-                ->setEndorsement($this->Tache_getTypeAvenant($tache))
-                ->setExcutor($this->Utilisateur_getUtilisateurByInvite($tache->getExecutor()))
-                ->setEffect_date($tache->getToBeEndedAt())
-                ->setPotential_premium($this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache)))
-                ->setPotential_commission($this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false))
-                ->setNBFeedbacks(count($tache->getFeedbacks()))
-                ->setDays_remaining($this->Tache_getExecutionStatus($tache)['remaining days']);
-                // ->setDays_passed($this->Tache_getExecutionStatus($tache)['remaining days']);
+            ->setType(TaskReportSet::TYPE_ELEMENT)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setLead($this->Tache_getPiste($tache))
+            ->setTask_description("<strong>(" . $index . ") \"" . $tache->getDescription() . "\"</strong>")
+            ->setClient($this->Tache_getClient($tache))
+            ->setContacts($this->Tache_getContacts($tache))
+            ->setOwner($this->Utilisateur_getUtilisateurByInvite($this->Tache_getInvite($tache)))
+            ->setEndorsement($this->Tache_getTypeAvenant($tache))
+            ->setExcutor($this->Utilisateur_getUtilisateurByInvite($tache->getExecutor()))
+            ->setEffect_date($tache->getToBeEndedAt())
+            ->setPotential_premium($this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache)))
+            ->setPotential_commission($this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false))
+            ->setNBFeedbacks(count($tache->getFeedbacks()))
+            ->setStatusExecution($this->Tache_getExecutionStatus($tache)['text'])
+            ->setDays_remaining($this->Tache_getExecutionStatus($tache)['remaining days']);
+        // ->setDays_passed($this->Tache_getExecutionStatus($tache)['remaining days']);
 
     }
 
@@ -5528,22 +5529,25 @@ class Constante
         $index = 1;
         /** @var Tache $tache */
         foreach ($this->Entreprise_getTaches() as $tache) {
-            $dataSet = $this->createTaskReportSet($index, $tache);
-            $cumulPrime += $this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache));
-            $cumulCom += $this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false);
-            // dd($tache, $dataSet);
-            if ($dataSet->getDays_remaining() == 0) {
-                $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_today"));
+            //On n'affiche que les tâches qui ne sont pas encore accomplies
+            if ($this->Tache_getExecutionStatus($tache)['code'] != Tache::EXECUTION_STATUS_COMPLETED) {
+                $dataSet = $this->createTaskReportSet($index, $tache);
+                $cumulPrime += $this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache));
+                $cumulCom += $this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false);
+                // dd($tache, $dataSet);
+                if ($dataSet->getDays_remaining() == 0) {
+                    $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_today"));
+                }
+                if ($dataSet->getDays_remaining() < 0) {
+                    $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_since") . ($dataSet->getDays_remaining() * (-1)) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
+                }
+                if ($dataSet->getDays_remaining() > 0) {
+                    $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_in") . ($dataSet->getDays_remaining()) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
+                }
+                // dd($dataSet);
+                $tabReportSets[] = $dataSet;
+                $index++;
             }
-            if ($dataSet->getDays_remaining() < 0) {
-                $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_since") . ($dataSet->getDays_remaining() * (-1)) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
-            }
-            if ($dataSet->getDays_remaining() > 0) {
-                $dataSet->setEffect_date_comment($this->translator->trans("company_dashboard_section_principale_tasks_in") . ($dataSet->getDays_remaining()) . $this->translator->trans("company_dashboard_section_principale_tasks_days"));
-            }
-            // dd($dataSet);
-            $tabReportSets[] = $dataSet;
-            $index++;
         }
         $tabReportSets[] = (new TaskReportSet())
             ->setType(TaskReportSet::TYPE_TOTAL)

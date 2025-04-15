@@ -26,6 +26,7 @@ class TaskReportSet
     public float $potential_commission = 0;
     public float $nbFeedbacks = 0;
     public float $days_remaining = 0;
+    public string $statusExecution = "";
 
     public function __construct()
     {
@@ -192,6 +193,27 @@ class TaskReportSet
     public function setEffect_date($effect_date)
     {
         $this->effect_date = $effect_date;
+
+        return $this;
+    }
+
+
+    /**
+     * Get the value of statusExecution
+     */ 
+    public function getStatusExecution()
+    {
+        return $this->statusExecution;
+    }
+
+    /**
+     * Set the value of statusExecution
+     *
+     * @return  self
+     */ 
+    public function setStatusExecution($statusExecution)
+    {
+        $this->statusExecution = $statusExecution;
 
         return $this;
     }

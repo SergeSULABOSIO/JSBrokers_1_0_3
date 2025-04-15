@@ -446,6 +446,7 @@
                                                     {% if reposertSet.days_remaining > 0 %}
                                                         <span class="p-1 rounded text-bg-success">{{ reposertSet.effect_date_comment }}</span>
                                                     {% endif %}
+                                                    <br>Status: {{ reposertSet.statusExecution }}
                                                 </small>
                                             </td>
                                             <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_premium|number_format(2, ',', '.') }}</small></td>
