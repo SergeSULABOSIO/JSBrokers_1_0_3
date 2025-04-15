@@ -5,6 +5,7 @@ namespace App\Constantes;
 use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Entity\Piste;
+use App\Entity\Tache;
 use App\Entity\Client;
 use App\Entity\Groupe;
 use App\Entity\Invite;
@@ -12,6 +13,7 @@ use App\Entity\Risque;
 use DateTimeImmutable;
 use App\Entity\Article;
 use App\Entity\Avenant;
+use App\Entity\Contact;
 use App\Entity\Tranche;
 use App\Entity\Assureur;
 use App\Entity\Cotation;
@@ -37,12 +39,16 @@ use PhpParser\Node\Expr\Cast\Array_;
 use App\Repository\ArticleRepository;
 use Proxies\__CG__\App\Entity\Revenu;
 use App\Repository\CotationRepository;
+use PhpParser\ErrorHandler\Collecting;
 use App\Entity\ReportSet\ReportSummary;
 use App\Entity\ReportSet\TaskReportSet;
 use App\Repository\PartenaireRepository;
+use App\Repository\UtilisateurRepository;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\ReportSet\InsurerReportSet;
 use App\Entity\ReportSet\PartnerReportSet;
+use App\Entity\ReportSet\RenewalReportSet;
+use Doctrine\Common\Collections\Collection;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Bundle\SecurityBundle\Security;
 use App\Repository\AutoriteFiscaleRepository;
@@ -50,11 +56,6 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
-use App\Entity\Contact;
-use App\Entity\Tache;
-use App\Repository\UtilisateurRepository;
-use Doctrine\Common\Collections\Collection;
-use PhpParser\ErrorHandler\Collecting;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -5521,9 +5522,9 @@ class Constante
             ->setNBFeedbacks(count($tache->getFeedbacks()))
             ->setStatusExecution($this->Tache_getExecutionStatus($tache)['text'])
             ->setDays_remaining($this->Tache_getExecutionStatus($tache)['remaining days']);
-        // ->setDays_passed($this->Tache_getExecutionStatus($tache)['remaining days']);
-
     }
+
+
 
     public function Entreprise_getDataTabTasks()
     {
@@ -5561,6 +5562,88 @@ class Constante
             ->setPotential_commission($cumulCom);
 
         return $tabReportSets;
+    }
+
+    public function Avenant_getNomAssureur(Avenant $avenant)
+    {
+        if ($avenant != null) {
+            if ($avenant->getCotation() != null) {
+                return $avenant->getCotation()->getAssureur()->getNom();
+            }
+        }
+        return "Non défini";
+    }
+
+    public function Avenant_getNomClient(Avenant $avenant)
+    {
+        if ($avenant != null) {
+            if ($avenant->getCotation() != null) {
+                if($avenant->getCotation()->getPiste() != null){
+                    if ($avenant->getCotation()->getPiste()->getClient() != null) {
+                        return $avenant->getCotation()->getPiste()->getClient()->getNom();
+                    }
+                }
+            }
+        }
+        return "Non défini";
+    }
+
+    public function Avenant_getStringTypeAvenant(Avenant $avenant)
+    {
+        if ($avenant != null) {
+            if ($avenant->getCotation() != null) {
+                if($avenant->getCotation()->getPiste() != null){
+                    return $this->getTypeAvenant($avenant->getCotation()->getPiste()->getTypeAvenant());
+                }
+            }
+        }
+        return "Non défini";
+    }
+
+    public function Avenant_getCodeCover(Avenant $avenant)
+    {
+        if ($avenant != null) {
+            if ($avenant->getCotation() != null) {
+                if($avenant->getCotation()->getPiste() != null){
+                    if ($avenant->getCotation()->getPiste()->getRisque() != null) {
+                        return $avenant->getCotation()->getPiste()->getRisque()->getCode();
+                    }
+                }
+            }
+        }
+        return "Non défini";
+    }
+
+    public function Avenant_getNomAccountManager(Avenant $avenant)
+    {
+        if ($avenant != null) {
+            if ($avenant->getCotation() != null) {
+                if($avenant->getCotation()->getPiste() != null){
+                    if ($avenant->getCotation()->getPiste()->getInvite() != null) {
+                        return $avenant->getCotation()->getPiste()->getInvite()->getNom();
+                    }
+                }
+            }
+        }
+        return "Non défini";
+    }
+
+    public function createRenewalReportSet($index, Avenant $avenant)
+    {
+        return (new RenewalReportSet())
+            ->setType(RenewalReportSet::TYPE_ELEMENT)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setEndorsement_id($avenant->getNumero())
+            ->setLabel($avenant->getReferencePolice())
+            ->setInsurer($this->Avenant_getNomAssureur($avenant))
+            ->setClient($this->Avenant_getNomClient($avenant))
+            ->setEndorsement($this->Avenant_getStringTypeAvenant($avenant))
+            ->setCover($this->Avenant_getCodeCover($avenant))
+            ->setAccount_manager($this->Avenant_getNomAccountManager($avenant))
+            ->setGw_premium(rand(1000, 100000))
+            ->setG_commission(rand(100, 10000))
+            ->setEffect_date(new DateTimeImmutable("now - " . ($i + 365) . " days"))
+            ->setExpiry_date(new DateTimeImmutable("now + " . ($i) . " days"));
     }
 
     public function Entreprise_getDataTabRenewals()
