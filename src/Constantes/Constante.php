@@ -2,6 +2,7 @@
 
 namespace App\Constantes;
 
+use DateTime;
 use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Entity\Piste;
@@ -5653,6 +5654,7 @@ class Constante
     {
         return (new RenewalReportSet())
             ->setType(RenewalReportSet::TYPE_ELEMENT)
+            ->setIdAvenant($avenant->getId())
             ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
             ->setEndorsement_id($avenant->getNumero())
             ->setLabel($avenant->getReferencePolice())
@@ -5667,11 +5669,23 @@ class Constante
             ->setExpiry_date($avenant->getEndingAt());
     }
 
+    // public function compareDates($dateA, $dateB)
+    // {
+    //     $date_a = DateTime::createFromFormat('d/m/Y', $dateA);
+    //     $date_b = DateTime::createFromFormat('d/m/Y', $dateB);
+
+    //     if ($date_a == $date_b) {
+    //         return 0;
+    //     }
+    //     return ($date_a < $date_b) ? -1 : 1;
+    // }
+
     public function Entreprise_getDataTabRenewals()
     {
         $cumulPrime = 0;
         $cumulCom = 0;
         $tabReportSets = [];
+        $tabAOrdonner = [];
 
         /** @var Avenant $avenant */
         foreach ($this->Entreprise_getAvenants() as $avenant) {
@@ -5693,7 +5707,9 @@ class Constante
                 $dataSet->setBg_color("text-success");
             }
 
-            $tabReportSets[] = $dataSet;
+            $tabReportSets[$avenant->getId()] = $dataSet;
+            //on doit transformer la date en String afinque la fonction uasort de tri fasse bien son travail
+            $tabAOrdonner[$avenant->getId()] = date_format($avenant->getEndingAt(), 'd/m/Y');
             // }
         }
 
@@ -5702,22 +5718,32 @@ class Constante
          * TRI PAR ORDRE CROISSANT PAR RAPPORT 
          * AU NB DE JOUR RESTANT AVANT EXPIRATION
          */
+        // Trie le tableau associatif en utilisant la fonction de comparaison
+        uasort($tabAOrdonner, function ($dateA, $dateB) {
+            $date_a = DateTime::createFromFormat('d/m/Y', $dateA);
+            $date_b = DateTime::createFromFormat('d/m/Y', $dateB);
+            if ($date_a == $date_b) {
+                return 0;
+            }
+            return ($date_a < $date_b) ? -1 : 1;
+        });
 
+        $tabFinaleOrdonne = [];
+        foreach ($tabAOrdonner as $key => $value) {
+            $tabFinaleOrdonne[] = $tabReportSets[$key];
+        }
 
-
-
-
-
-        // //Ligne totale
+        //Après le tri on ajoute la Ligne de totale
         $dataSetTotal = (new RenewalReportSet())
             ->setType(RenewalReportSet::TYPE_TOTAL)
             ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
             ->setLabel("TOTAL")
             ->setGw_premium($cumulPrime)
             ->setG_commission($cumulCom);
-        $tabReportSets[] = $dataSetTotal;
+        $tabFinaleOrdonne[] = $dataSetTotal;
+
         // dd("ICI");
-        return $tabReportSets;
+        return $tabFinaleOrdonne;
     }
 
     public function Tache_getExecutionStatus(Tache $tache)
@@ -5746,11 +5772,14 @@ class Constante
             }
         }
 
-        $executionStatus['text'] .= match ($executionStatus['code']) {
-            Tache::EXECUTION_STATUS_STILL_VALID => " (En cours)",
-            Tache::EXECUTION_STATUS_EXPIRED => " (Expirée)",
-            Tache::EXECUTION_STATUS_COMPLETED => " (Accomplie)",
+        $statusDescription = match ($executionStatus['code']) {
+            Tache::EXECUTION_STATUS_STILL_VALID => "En cours",
+            Tache::EXECUTION_STATUS_EXPIRED => "Expirée",
+            Tache::EXECUTION_STATUS_COMPLETED => "Accomplie",
         };
+
+        $executionStatus['text'] = $statusDescription . ": " . $executionStatus['text'];
+
         // dd($executionStatus);
         return $executionStatus;
     }

@@ -12,6 +12,7 @@ class RenewalReportSet
     public const TYPE_TOTAL = 2;
 
     public int $type;
+    public int $idAvenant;
     public string $currency_code;
     public string $label;
     public string $insurer;
@@ -50,6 +51,26 @@ class RenewalReportSet
     public function setType($type)
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    /**
+     * Get the value of type
+     */ 
+    public function getIdAvenant()
+    {
+        return $this->idAvenant;
+    }
+
+    /**
+     * Set the value of type
+     *
+     * @return  self
+     */ 
+    public function setIdAvenant($idAvenant)
+    {
+        $this->idAvenant = $idAvenant;
 
         return $this;
     }
