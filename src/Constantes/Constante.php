@@ -3829,15 +3829,16 @@ class Constante
                 }
             }
         }
-        $renewalStatus['text'] .= match ($renewalStatus['code']) {
-            Avenant::RENEWAL_STATUS_CANCELLED => " (Résilié)",
-            Avenant::RENEWAL_STATUS_EXTENDED => " (Prorogé)",
-            Avenant::RENEWAL_STATUS_LOST => " (Perdu)",
-            Avenant::RENEWAL_STATUS_ONCE_OFF => " (Temporaire)",
-            Avenant::RENEWAL_STATUS_RENEWED => " (Renouvellé)",
-            Avenant::RENEWAL_STATUS_RENEWING => " (En cours de renouvellement)",
-            Avenant::RENEWAL_STATUS_RUNNING => " (En cours...)",
+        $statusDescription = match ($renewalStatus['code']) {
+            Avenant::RENEWAL_STATUS_CANCELLED => "Résilié",
+            Avenant::RENEWAL_STATUS_EXTENDED => "Prorogé",
+            Avenant::RENEWAL_STATUS_LOST => "Perdu",
+            Avenant::RENEWAL_STATUS_ONCE_OFF => "Temporaire",
+            Avenant::RENEWAL_STATUS_RENEWED => "Renouvellé",
+            Avenant::RENEWAL_STATUS_RENEWING => "En cours de renouvellement",
+            Avenant::RENEWAL_STATUS_RUNNING => "En cours...",
         };
+        $renewalStatus['text'] = $statusDescription . ": " . $renewalStatus['text'];
         // dd($renewalStatus);
         return $renewalStatus;
     }
