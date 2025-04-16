@@ -5669,17 +5669,6 @@ class Constante
             ->setExpiry_date($avenant->getEndingAt());
     }
 
-    // public function compareDates($dateA, $dateB)
-    // {
-    //     $date_a = DateTime::createFromFormat('d/m/Y', $dateA);
-    //     $date_b = DateTime::createFromFormat('d/m/Y', $dateB);
-
-    //     if ($date_a == $date_b) {
-    //         return 0;
-    //     }
-    //     return ($date_a < $date_b) ? -1 : 1;
-    // }
-
     public function Entreprise_getDataTabRenewals()
     {
         $cumulPrime = 0;
@@ -5690,27 +5679,27 @@ class Constante
         /** @var Avenant $avenant */
         foreach ($this->Entreprise_getAvenants() as $avenant) {
             //On n'affiche que les Avenant qui ont expiré
-            // if ($this->Avenant_getRenewalStatus($avenant)['code'] != Avenant::RENEWAL_STATUS_RUNNING) {
-            $dataSet = $this->createRenewalReportSet($avenant);
-            $cumulPrime += $this->Avenant_getPrimeTTC($avenant);
-            $cumulCom += $this->Avenant_getCommissionTTC($avenant, -1, false);
-            // dd($tache, $dataSet);
-            $remainingDays = $this->Avenant_getRenewalStatus($avenant)['remaining days'];
-            $dataSet->setRemaining_days($remainingDays);
-            $dataSet->setStatus($this->Avenant_getRenewalStatus($avenant)['text']);
+            if ($this->Avenant_getRenewalStatus($avenant)['code'] != Avenant::RENEWAL_STATUS_RUNNING) {
+                $dataSet = $this->createRenewalReportSet($avenant);
+                $cumulPrime += $this->Avenant_getPrimeTTC($avenant);
+                $cumulCom += $this->Avenant_getCommissionTTC($avenant, -1, false);
+                // dd($tache, $dataSet);
+                $remainingDays = $this->Avenant_getRenewalStatus($avenant)['remaining days'];
+                $dataSet->setRemaining_days($remainingDays);
+                $dataSet->setStatus($this->Avenant_getRenewalStatus($avenant)['text']);
 
-            if ($remainingDays <= 30) {
-                $dataSet->setBg_color("text-danger");
-            } else if ($remainingDays > 30 && $remainingDays <= 60) {
-                $dataSet->setBg_color("text-warning");
-            } else {
-                $dataSet->setBg_color("text-success");
+                if ($remainingDays <= 30) {
+                    $dataSet->setBg_color("text-danger");
+                } else if ($remainingDays > 30 && $remainingDays <= 60) {
+                    $dataSet->setBg_color("text-warning");
+                } else {
+                    $dataSet->setBg_color("text-success");
+                }
+
+                $tabReportSets[$avenant->getId()] = $dataSet;
+                //on doit transformer la date en String afinque la fonction uasort de tri fasse bien son travail
+                $tabAOrdonner[$avenant->getId()] = date_format($avenant->getEndingAt(), 'd/m/Y');
             }
-
-            $tabReportSets[$avenant->getId()] = $dataSet;
-            //on doit transformer la date en String afinque la fonction uasort de tri fasse bien son travail
-            $tabAOrdonner[$avenant->getId()] = date_format($avenant->getEndingAt(), 'd/m/Y');
-            // }
         }
 
 

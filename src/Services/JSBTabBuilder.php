@@ -199,6 +199,7 @@ class JSBTabBuilder
         // dd($tabReportSets);
 
         return $tabReportSets;
+        // return [];
     }
 
 
