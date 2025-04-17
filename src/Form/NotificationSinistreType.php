@@ -67,6 +67,13 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
+            ->add('descriptionVictimes', TextareaType::class, [
+                'label' => "Description ou détails sur les victimes",
+                'required' => true,
+                'attr' => [
+                    'placeholder' => "Victimes",
+                ],
+            ])
             ->add('notifiedAt', DateType::class, [
                 'label' => "Date de la notification",
                 'required' => true,
