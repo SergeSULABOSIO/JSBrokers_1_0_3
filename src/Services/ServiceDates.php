@@ -75,7 +75,7 @@ class ServiceDates
         return new \DateTimeImmutable("+7 days");
     }
 
-    public function daysEntre(DateTimeImmutable $dateA, DateTimeImmutable $dateB):int
+    public function daysEntre(?DateTimeImmutable $dateA, ?DateTimeImmutable $dateB):int
     {
         /** @var DateInterval */
         $interval = $dateA->diff($dateB, true);

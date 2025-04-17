@@ -5786,10 +5786,44 @@ class Constante
         return $executionStatus;
     }
 
+    public function Claim_getClaimStatus(NotificationSinistre $notification): array
+    {
+        $status = [
+            'code' => -1,
+            'speed' => -1,
+            'pastDays' => -1,
+            'status' => -1,
+            'texte' => "",
+            'limite' => 0,
+            'primeTTC' => 0,
+            'franchise' => 0,
+            'compensationPaid' => 0,
+            'compensationBalance' => 0,
+            'settlementDernièreDate' => null,
+            'dateDebutPolice' => null,
+            'dateEchéancePolice' => null,
+        ];
+        if ($status['settlementDernièreDate'] != null && $notification->getNotifiedAt() != null) {
+            $status['speed'] = $this->serviceDates->daysEntre($notification->getNotifiedAt(), $status['settlementDernièreDate']);
+        }
+        if ($notification->getNotifiedAt() != null) {
+            $status['pastDays'] = $this->serviceDates->daysEntre($notification->getNotifiedAt(), new DateTimeImmutable("now"));
+        }
+
+        foreach ($notification->getOffreIndemnisationSinistres() as $offreIndemnisation) {
+            # code...
+        }
+
+        return $status;
+    }
+
     public function createClaimReportSet($number, NotificationSinistre $notification): ClaimReportSet
     {
+        $status = $this->Claim_getClaimStatus($notification);
+        dd($status);
         return (new ClaimReportSet())
             ->setType(ClaimReportSet::TYPE_ELEMENT)
+            ->setIdNotification($notification->getId())
             ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
             ->setNumber($number)
             ->setPolicy_reference($notification->getReferencePolice())
@@ -5801,62 +5835,23 @@ class Constante
             ->setClaim_reference($notification->getReferenceSinistre())
             ->setVictim($notification->getDescriptionVictimes())
             ->setAccount_manager($this->Utilisateur_getUtilisateurByInvite($notification->getInvite()))
-
-            ->setGw_premium(rand(1000, 100000))
-            ->setPolicy_limit(rand(1000, 100000))
-            ->setPolicy_deductible(rand(10, 1000))
-            ->setEffect_date(new DateTimeImmutable("now - 20 days"))
-            ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
-            ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
-            ->setCompensation_paid(rand(0, 100000))
-            ->setCompensation_balance(rand(0, 100000))
-            ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
+            ->setGw_premium($status['primeTTC'])
+            ->setPolicy_limit($status['limite'])
+            ->setPolicy_deductible($status['franchise'])
+            ->setEffect_date($status['dateDebutPolice'])
+            ->setExpiry_date($status['dateEchéancePolice'])
+            ->setClaims_status($status['texte'])
+            ->setCompensation_paid($status['compensationPaid'])
+            ->setCompensation_balance($status['compensationBalance'])
+            ->setSettlement_date($status['settlementDernièreDate'])
+            ->setCompensation_speed("Reglé en " . $status['speed'] . " jours.")
+            ->setDays_passed($status['pastDays'] . " jours depuis la notification.")
+            ->setBg_color("bg-secondary")
+        ;
     }
 
     public function Entreprise_getDataTabClaims()
     {
-        // $tabReportSets = [];
-        // $number = 1;
-        // foreach ($tabClaims as $claim_reference) {
-        //     $dataSet = (new ClaimReportSet())
-        //         ->setType(ClaimReportSet::TYPE_ELEMENT)
-        //         ->setCurrency_code("$")
-        //         ->setNumber($number)
-        //         ->setPolicy_reference($tabPolicies[rand(0, count($tabPolicies) - 1)])
-        //         ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
-        //         ->setClient($tabClients[rand(0, count($tabClients) - 1)])
-        //         ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
-        //         ->setGw_premium(rand(1000, 100000))
-        //         ->setPolicy_limit(rand(1000, 100000))
-        //         ->setPolicy_deductible(rand(10, 1000))
-        //         ->setEffect_date(new DateTimeImmutable("now - 20 days"))
-        //         ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
-        //         ->setClaim_reference($claim_reference)
-        //         ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
-        //         ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
-        //         ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
-        //         ->setDamage_cost(rand(1000, 100000))
-        //         // ->setCompensation_paid(rand(0, 100000))
-        //         // ->setCompensation_balance(rand(0, 100000))
-        //         ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
-        //         ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
-
-        //     $dataSet->setCompensation_paid(rand(0, ($dataSet->getDamage_cost())));
-        //     $dataSet->setCompensation_balance($dataSet->getDamage_cost() - $dataSet->getCompensation_paid());
-
-        //     $speed_settlement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
-        //     $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));
-
-        //     $dataSet->setCompensation_speed("Done in " . $speed_settlement_days . " days.");
-        //     $dataSet->setDays_passed($days_past . " days passed since the notification date.");
-        //     $dataSet->setBg_color("bg-secondary");
-
-        //     // $dataSet->setBg_color("text-bg-danger");
-
-        //     $tabReportSets[] = $dataSet;
-        //     $number++;
-        // }
-
         // //Ligne totale
         // $dataSet = (new ClaimReportSet())
         //     ->setType(ClaimReportSet::TYPE_TOTAL)
@@ -5879,28 +5874,22 @@ class Constante
         $tabAOrdonner = [];
 
         /** @var Avenant $avenant */
-        foreach ($this->Entreprise_getClaimsNotifications() as $tabClaimNotification) {
-            //On n'affiche que les Avenant dont le remainingDays est inférieur ou égale à 60 jours.
-            $remainingDays = $this->Avenant_getRenewalStatus($avenant)['remaining days'];
-            if ($remainingDays <= 60) {
-                $dataSet = $this->createRenewalReportSet($avenant);
-                $cumulPrime += $this->Avenant_getPrimeTTC($avenant);
-                $cumulCom += $this->Avenant_getCommissionTTC($avenant, -1, false);
-                // dd($tache, $dataSet);
-                $dataSet->setRemaining_days($remainingDays);
-                $dataSet->setStatus($this->Avenant_getRenewalStatus($avenant)['text']);
+        foreach ($this->Entreprise_getClaimsNotifications() as $claimNotification) {
+            //On n'affiche ici que ceux qui ne sont pas encore renouvellé
+            $claimStatus = $this->Claim_getClaimStatus($claimNotification);
+            $settlementSpeed = $claimStatus['speed'];
+            if ($settlementSpeed == -1) {
+                $dataSet = $this->createClaimReportSet($number, $claimNotification);
+                $cumulDamagrCost += $dataSet->getDamage_cost();
+                $cumulCompaPaid += $dataSet->getCompensation_paid();
+                $cumulCompaBalance += $dataSet->getCompensation_balance();
+                $tabReportSets[] = $dataSet;
+                $number++;
 
-                if ($remainingDays <= 30) {
-                    $dataSet->setBg_color("text-danger");
-                } else if ($remainingDays > 30 && $remainingDays <= 60) {
-                    $dataSet->setBg_color("text-warning");
-                } else {
-                    $dataSet->setBg_color("text-success");
-                }
-
-                $tabReportSets[$avenant->getId()] = $dataSet;
-                //on doit transformer la date en String afinque la fonction uasort de tri fasse bien son travail
-                $tabAOrdonner[$avenant->getId()] = date_format($avenant->getEndingAt(), 'd/m/Y');
+                //Préparation des tableaux pour faire le tri
+                // $tabReportSets[$avenant->getId()] = $dataSet;
+                // //on doit transformer la date en String afinque la fonction uasort de tri fasse bien son travail
+                // $tabAOrdonner[$avenant->getId()] = date_format($avenant->getEndingAt(), 'd/m/Y');
             }
         }
 
@@ -5925,13 +5914,13 @@ class Constante
         }
 
         //Après le tri on ajoute la Ligne de totale
-        $dataSetTotal = (new RenewalReportSet())
-            ->setType(RenewalReportSet::TYPE_TOTAL)
-            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-            ->setLabel("TOTAL")
-            ->setGw_premium($cumulPrime)
-            ->setG_commission($cumulCom);
-        $tabFinaleOrdonne[] = $dataSetTotal;
+        // $dataSetTotal = (new RenewalReportSet())
+        //     ->setType(RenewalReportSet::TYPE_TOTAL)
+        //     ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+        //     ->setLabel("TOTAL")
+        //     ->setGw_premium($cumulPrime)
+        //     ->setG_commission($cumulCom);
+        // $tabFinaleOrdonne[] = $dataSetTotal;
 
         // dd("ICI");
         return $tabFinaleOrdonne;

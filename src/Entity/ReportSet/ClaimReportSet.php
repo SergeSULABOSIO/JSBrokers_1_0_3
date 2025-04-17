@@ -12,6 +12,7 @@ class ClaimReportSet
     public const TYPE_TOTAL = 2;
 
     public int $type;
+    public int $idNotification;
     public int $number;
     public string $currency_code;
     //Policy
@@ -60,6 +61,27 @@ class ClaimReportSet
     public function setType($type)
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+
+    /**
+     * Get the value of type
+     */ 
+    public function getIdNotification()
+    {
+        return $this->idNotification;
+    }
+
+    /**
+     * Set the value of type
+     *
+     * @return  self
+     */ 
+    public function setIdNotification($idNotification)
+    {
+        $this->idNotification = $idNotification;
 
         return $this;
     }
