@@ -304,7 +304,7 @@ class ClaimReportSet
      */ 
     public function setClaim_reference($claim_reference)
     {
-        $this->claim_reference = $claim_reference;
+        $this->claim_reference = $claim_reference == null ? "Nulle" : $claim_reference;
 
         return $this;
     }

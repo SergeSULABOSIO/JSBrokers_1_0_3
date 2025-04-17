@@ -5793,7 +5793,7 @@ class Constante
             'speed' => -1,
             'pastDays' => -1,
             'status' => -1,
-            'texte' => "",
+            'texte' => "Blabla!!!",
             'limite' => 0,
             'primeTTC' => 0,
             'franchise' => 0,
@@ -5823,8 +5823,11 @@ class Constante
             $status['pastDays'] = $this->serviceDates->daysEntre($notification->getNotifiedAt(), new DateTimeImmutable("now"));
         }
 
-        
+        $statusPieces = $this->Notification_Sinistre_getStatusDocumentsAttendus($notification);
+        $status['texte'] = "Pièces (" . count($statusPieces['Docs_fournis']) . "/" . count($statusPieces['Docs_attendus']) . ")";//" . count($statusPieces['Docs_manquants']);
 
+        //extraction d'informations sur la police d'assurance se basant sur la référence fournie
+        dd("Extraction d'infos sur la police grâce à sa référence fournie:", $notification->getReferencePolice(), $notification);
         return $status;
     }
 
@@ -5841,7 +5844,7 @@ class Constante
             ->setInsurer($notification->getAssureur()->getNom())
             ->setClient($notification->getAssure()->getNom())
             ->setCover($notification->getRisque()->getCode())
-            ->setNotification_date($notification->getCreatedAt())
+            ->setNotification_date($notification->getNotifiedAt())
             ->setDamage_cost($notification->getDommage())
             ->setClaim_reference($notification->getReferenceSinistre())
             ->setVictim($notification->getDescriptionVictimes())
@@ -5855,8 +5858,8 @@ class Constante
             ->setCompensation_paid($status['compensationPaid'])
             ->setCompensation_balance($status['compensationBalance'])
             ->setSettlement_date($status['settlementDernièreDate'])
-            ->setCompensation_speed("Reglé en " . $status['speed'] . " jours.")
-            ->setDays_passed($status['pastDays'] . " jours depuis la notification.")
+            ->setCompensation_speed($status['speed'] != -1 ? "Reglé en " . $status['speed'] . " jr." : "Pas encore reglé.")
+            ->setDays_passed("Déclaré il y a " . $status['pastDays'] . " jr.")
             ->setBg_color("bg-secondary")
         ;
     }
@@ -5875,7 +5878,7 @@ class Constante
             //On n'affiche ici que ceux qui ne sont pas encore renouvellé
             $claimStatus = $this->Claim_getClaimStatus($claimNotification);
             $settlementSpeed = $claimStatus['speed'];
-            if ($settlementSpeed == -1) {
+            if ($settlementSpeed != -1) {
                 $dataSet = $this->createClaimReportSet($number, $claimNotification);
                 $cumulDamagrCost += $dataSet->getDamage_cost();
                 $cumulCompaPaid += $dataSet->getCompensation_paid();
@@ -5890,6 +5893,7 @@ class Constante
             }
         }
 
+        // dd($tabAOrdonner);
 
         /**
          * TRI PAR ORDRE CROISSANT PAR RAPPORT 
@@ -5921,7 +5925,7 @@ class Constante
 
         $tabFinaleOrdonne[] = $dataSetTotal;
 
-        // dd("ICI");
+        // dd($tabFinaleOrdonne);
         return $tabFinaleOrdonne;
     }
 }

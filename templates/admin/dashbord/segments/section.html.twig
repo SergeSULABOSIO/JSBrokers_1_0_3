@@ -616,7 +616,7 @@
                                         <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_claims_colonne_damage" | trans() | raw }}</th>
                                         <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_claims_colonne_payment" | trans() | raw }}</th>
                                         <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_claims_colonne_balance" | trans() | raw }}</th>
-                                        <th scope="col" class="text-center" width="230">{{ "company_dashboard_section_principale_claims_colonne_status" | trans() | raw }}</th>
+                                        <th scope="col" class="text-center" width="280">{{ "company_dashboard_section_principale_claims_colonne_status" | trans() | raw }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -636,8 +636,20 @@
                                                         </strong>
                                                         <span class="text-muted">
                                                         <ul>
-                                                            <li>{{ "company_dashboard_section_principale_claims_notifcation_date" | trans() | raw }}{{ reposertSet.notification_date|date("d/m/Y H:i") }}</li>
-                                                            <li>{{ "company_dashboard_section_principale_claims_settlement_date" | trans() | raw }}{{ reposertSet.settlement_date|date("d/m/Y H:i") }}</li>
+                                                            <li>{{ "company_dashboard_section_principale_claims_notifcation_date" | trans() | raw }}
+                                                                {% if reposertSet.notification_date != null %}
+                                                                    {{ reposertSet.notification_date|date("d/m/Y") }}
+                                                                {% else %}
+                                                                    Non définie.
+                                                                {% endif %}
+                                                            </li>
+                                                            <li>{{ "company_dashboard_section_principale_claims_settlement_date" | trans() | raw }}
+                                                                {% if reposertSet.settlement_date != null %}
+                                                                    {{ reposertSet.settlement_date|date("d/m/Y") }}
+                                                                {% else %}
+                                                                    Non définie.
+                                                                {% endif %}
+                                                            </li>
                                                             <li>{{ "company_dashboard_section_principale_claims_from_client" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.client }}</a></li>
                                                             <li>{{ "company_dashboard_section_principale_claims_by_account_manager" | trans() | raw }}<a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
                                                             <li>{{ "company_dashboard_section_principale_claims_victim" | trans() | raw }}<a href="#" class="text-secondary">{{ reposertSet.victim }}</a></li>
@@ -655,8 +667,20 @@
                                                         </strong>
                                                         <span class="text-muted">
                                                         <ul>
-                                                            <li>{{ "company_dashboard_section_principale_renewals_policy_effect" | trans() | raw }}{{ reposertSet.effect_date|date("d/m/Y H:i") }}</li>
-                                                            <li>{{ "company_dashboard_section_principale_renewals_policy_expiry" | trans() | raw }}{{ reposertSet.expiry_date|date("d/m/Y H:i") }}</li>
+                                                            <li>{{ "company_dashboard_section_principale_renewals_policy_effect" | trans() | raw }}
+                                                                {% if reposertSet.effect_date != null %}
+                                                                    {{ reposertSet.effect_date|date("d/m/Y") }}
+                                                                {% else %}
+                                                                    Non définie.
+                                                                {% endif %}
+                                                            </li>
+                                                            <li>{{ "company_dashboard_section_principale_renewals_policy_expiry" | trans() | raw }}
+                                                                {% if reposertSet.expiry_date != null %}
+                                                                    {{ reposertSet.expiry_date|date("d/m/Y") }}
+                                                                {% else %}
+                                                                    Non définie.
+                                                                {% endif %}
+                                                            </li>
                                                             <li>{{ "company_dashboard_section_principale_renewals_policy_by" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
                                                             <li>{{ "company_dashboard_section_principale_renewals_policy_name" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.cover }}</a></li>
                                                             <li>{{ "company_dashboard_section_principale_claims_policy_prem" | trans() | raw }}{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
