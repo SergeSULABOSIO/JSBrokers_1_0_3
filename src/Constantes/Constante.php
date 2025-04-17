@@ -5793,9 +5793,12 @@ class Constante
             ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
             ->setNumber($number)
             ->setPolicy_reference($notification->getReferencePolice())
-            ->setInsurer($notification->getAssureur())
-            ->setClient($tabClients[rand(0, count($tabClients) - 1)])
-            ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
+            ->setInsurer($notification->getAssureur()->getNom())
+            ->setClient($notification->getAssure()->getNom())
+            ->setCover($notification->getRisque()->getCode())
+            ->setNotification_date($notification->getCreatedAt())
+            ->setDamage_cost($notification->getDommage())
+
             ->setGw_premium(rand(1000, 100000))
             ->setPolicy_limit(rand(1000, 100000))
             ->setPolicy_deductible(rand(10, 1000))
@@ -5805,10 +5808,8 @@ class Constante
             ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
             ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
             ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
-            ->setDamage_cost(rand(1000, 100000))
-            // ->setCompensation_paid(rand(0, 100000))
-            // ->setCompensation_balance(rand(0, 100000))
-            ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
+            ->setCompensation_paid(rand(0, 100000))
+            ->setCompensation_balance(rand(0, 100000))
             ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
     }
 
