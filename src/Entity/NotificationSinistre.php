@@ -78,6 +78,9 @@ class NotificationSinistre
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $notifiedAt = null;
 
+    #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
+    private ?Assureur $assureur = null;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();
@@ -363,6 +366,18 @@ class NotificationSinistre
     public function setNotifiedAt(?\DateTimeImmutable $notifiedAt): static
     {
         $this->notifiedAt = $notifiedAt;
+
+        return $this;
+    }
+
+    public function getAssureur(): ?Assureur
+    {
+        return $this->assureur;
+    }
+
+    public function setAssureur(?Assureur $assureur): static
+    {
+        $this->assureur = $assureur;
 
         return $this;
     }

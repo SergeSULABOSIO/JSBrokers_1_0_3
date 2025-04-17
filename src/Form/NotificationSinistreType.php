@@ -2,6 +2,7 @@
 
 namespace App\Form;
 
+use App\Entity\Assureur;
 use App\Entity\Client;
 use App\Entity\Invite;
 use App\Entity\Risque;
@@ -38,6 +39,17 @@ class NotificationSinistreType extends AbstractType
                 'required' => true,
                 'attr' => [
                     'placeholder' => "Réf. Police",
+                ],
+            ])
+            ->add('assureur', EntityType::class, [
+                'help' => "L'assureur concerné par le sinistre",
+                'label' => "Assureur",
+                'autocomplete' => true,
+                'required' => false,
+                'class' => Assureur::class,
+                'choice_label' => 'nom',
+                'attr' => [
+                    'placeholder' => "Séléctionnez l'assureur",
                 ],
             ])
             ->add('referenceSinistre', TextType::class, [

@@ -57,11 +57,18 @@ class Assureur
     #[ORM\Column(length: 255)]
     private ?string $rccm = null;
 
+    /**
+     * @var Collection<int, NotificationSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'assureur')]
+    private Collection $notificationSinistres;
+
     public function __construct()
     {
         $this->cotations = new ArrayCollection();
         $this->bordereaus = new ArrayCollection();
         $this->notes = new ArrayCollection();
+        $this->notificationSinistres = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -256,6 +263,36 @@ class Assureur
     public function setRccm(string $rccm): static
     {
         $this->rccm = $rccm;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, NotificationSinistre>
+     */
+    public function getNotificationSinistres(): Collection
+    {
+        return $this->notificationSinistres;
+    }
+
+    public function addNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if (!$this->notificationSinistres->contains($notificationSinistre)) {
+            $this->notificationSinistres->add($notificationSinistre);
+            $notificationSinistre->setAssureur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNotificationSinistre(NotificationSinistre $notificationSinistre): static
+    {
+        if ($this->notificationSinistres->removeElement($notificationSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($notificationSinistre->getAssureur() === $this) {
+                $notificationSinistre->setAssureur(null);
+            }
+        }
 
         return $this;
     }

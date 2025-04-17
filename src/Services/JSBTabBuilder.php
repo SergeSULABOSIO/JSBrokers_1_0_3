@@ -63,142 +63,146 @@ class JSBTabBuilder
 
     public function newTabClaims(): array
     {
-        $tabInsurers = [
-            "SFA Congo",
-            "ACTIVA",
-            "SUNU",
-            "MAYFAIR",
-            "RAWSUR",
-            "GPA"
-        ];
+        $data = $this->constante->Entreprise_getDataTabClaims();
+        // dd($data);
+        return $data;
 
-        $tabClients = [
-            "GLENCORE / KCC",
-            "GLENCORE / MUMI",
-            "IVANHOE / KAMOA",
-            "ERG / METALKOL",
-            "ERG / BOSS MINING",
-            "ERG / FRONTIER",
-            "ERG / COMIDE",
-            "TENKE FUNGURUME",
-            "CHEMAF / ETOILE",
-            "CHEMAF / MUTOSHI",
-            "RUASHI MINING",
-            "TRANS AIR CARGO",
-            "KIBALI GOLD MINES",
-            "CAA RDC SA",
-            "LEREXCOM",
-            "BGFIBANK",
-            "GSA",
-            "MALU AVIATION",
-            "STANDARD BANK",
-            "HELIOS TOWERS",
-        ];
+        // $tabInsurers = [
+        //     "SFA Congo",
+        //     "ACTIVA",
+        //     "SUNU",
+        //     "MAYFAIR",
+        //     "RAWSUR",
+        //     "GPA"
+        // ];
 
-        $tabUsersAM = [
-            (new Utilisateur())
-                ->setNom("SERGE SULA")
-                ->setEmail("ssula@gmail.com"),
-            (new Utilisateur())
-                ->setNom("ANDY SAMBI")
-                ->setEmail("asambi@gmail.com"),
-            (new Utilisateur())
-                ->setNom("JULIEN MVUMU")
-                ->setEmail("jmpukuta@gmail.com"),
-        ];
+        // $tabClients = [
+        //     "GLENCORE / KCC",
+        //     "GLENCORE / MUMI",
+        //     "IVANHOE / KAMOA",
+        //     "ERG / METALKOL",
+        //     "ERG / BOSS MINING",
+        //     "ERG / FRONTIER",
+        //     "ERG / COMIDE",
+        //     "TENKE FUNGURUME",
+        //     "CHEMAF / ETOILE",
+        //     "CHEMAF / MUTOSHI",
+        //     "RUASHI MINING",
+        //     "TRANS AIR CARGO",
+        //     "KIBALI GOLD MINES",
+        //     "CAA RDC SA",
+        //     "LEREXCOM",
+        //     "BGFIBANK",
+        //     "GSA",
+        //     "MALU AVIATION",
+        //     "STANDARD BANK",
+        //     "HELIOS TOWERS",
+        // ];
 
-        $tabCovers = [
-            "Motor TPL",
-            "Motor Comp",
-            "GPA",
-            "PI",
-            "GL",
-            "BBB",
-            "PDBI",
-            "GIT"
-        ];
+        // $tabUsersAM = [
+        //     (new Utilisateur())
+        //         ->setNom("SERGE SULA")
+        //         ->setEmail("ssula@gmail.com"),
+        //     (new Utilisateur())
+        //         ->setNom("ANDY SAMBI")
+        //         ->setEmail("asambi@gmail.com"),
+        //     (new Utilisateur())
+        //         ->setNom("JULIEN MVUMU")
+        //         ->setEmail("jmpukuta@gmail.com"),
+        // ];
 
-        $tabClaims = [
-            "W12457878-CLM-2024",
-            "012457555-CLM-2024",
-            "012457525-CLM-2024",
-            "012457556-CLM-2024",
-            "012457546-CLM-2024",
-            "012400000-CLM-2024"
-        ];
+        // $tabCovers = [
+        //     "Motor TPL",
+        //     "Motor Comp",
+        //     "GPA",
+        //     "PI",
+        //     "GL",
+        //     "BBB",
+        //     "PDBI",
+        //     "GIT"
+        // ];
 
-        $tabPolicies = [
-            "W12457878-200-2024",
-            "012457878-200-2024",
-            "012457555-200-2024",
-            "012457525-125-2024",
-            "012457556-222-2024",
-            "012457546-222-2024",
-            "012400000-222-2024"
-        ];
+        // $tabClaims = [
+        //     "W12457878-CLM-2024",
+        //     "012457555-CLM-2024",
+        //     "012457525-CLM-2024",
+        //     "012457556-CLM-2024",
+        //     "012457546-CLM-2024",
+        //     "012400000-CLM-2024"
+        // ];
 
-        $tabClaimStatus = [
-            "Processing...",
-            "Settled",
-            "Cancelled",
-            "Awaiting docs."
-        ];
+        // $tabPolicies = [
+        //     "W12457878-200-2024",
+        //     "012457878-200-2024",
+        //     "012457555-200-2024",
+        //     "012457525-125-2024",
+        //     "012457556-222-2024",
+        //     "012457546-222-2024",
+        //     "012400000-222-2024"
+        // ];
 
-        $tabReportSets = [];
-        $number = 1;
-        foreach ($tabClaims as $claim_reference) {
-            $dataSet = (new ClaimReportSet())
-                ->setType(ClaimReportSet::TYPE_ELEMENT)
-                ->setCurrency_code("$")
-                ->setNumber($number)
-                ->setPolicy_reference($tabPolicies[rand(0, count($tabPolicies) - 1)])
-                ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
-                ->setClient($tabClients[rand(0, count($tabClients) - 1)])
-                ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
-                ->setGw_premium(rand(1000, 100000))
-                ->setPolicy_limit(rand(1000, 100000))
-                ->setPolicy_deductible(rand(10, 1000))
-                ->setEffect_date(new DateTimeImmutable("now - 20 days"))
-                ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
-                ->setClaim_reference($claim_reference)
-                ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
-                ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
-                ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
-                ->setDamage_cost(rand(1000, 100000))
-                // ->setCompensation_paid(rand(0, 100000))
-                // ->setCompensation_balance(rand(0, 100000))
-                ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
-                ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
+        // $tabClaimStatus = [
+        //     "Processing...",
+        //     "Settled",
+        //     "Cancelled",
+        //     "Awaiting docs."
+        // ];
 
-            $dataSet->setCompensation_paid(rand(0, ($dataSet->getDamage_cost())));
-            $dataSet->setCompensation_balance($dataSet->getDamage_cost() - $dataSet->getCompensation_paid());
+        // $tabReportSets = [];
+        // $number = 1;
+        // foreach ($tabClaims as $claim_reference) {
+        //     $dataSet = (new ClaimReportSet())
+        //         ->setType(ClaimReportSet::TYPE_ELEMENT)
+        //         ->setCurrency_code("$")
+        //         ->setNumber($number)
+        //         ->setPolicy_reference($tabPolicies[rand(0, count($tabPolicies) - 1)])
+        //         ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
+        //         ->setClient($tabClients[rand(0, count($tabClients) - 1)])
+        //         ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
+        //         ->setGw_premium(rand(1000, 100000))
+        //         ->setPolicy_limit(rand(1000, 100000))
+        //         ->setPolicy_deductible(rand(10, 1000))
+        //         ->setEffect_date(new DateTimeImmutable("now - 20 days"))
+        //         ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
+        //         ->setClaim_reference($claim_reference)
+        //         ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
+        //         ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
+        //         ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+        //         ->setDamage_cost(rand(1000, 100000))
+        //         // ->setCompensation_paid(rand(0, 100000))
+        //         // ->setCompensation_balance(rand(0, 100000))
+        //         ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
+        //         ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
 
-            $speed_settlement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
-            $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));
+        //     $dataSet->setCompensation_paid(rand(0, ($dataSet->getDamage_cost())));
+        //     $dataSet->setCompensation_balance($dataSet->getDamage_cost() - $dataSet->getCompensation_paid());
 
-            $dataSet->setCompensation_speed("Done in " . $speed_settlement_days . " days.");
-            $dataSet->setDays_passed($days_past . " days passed since the notification date.");
-            $dataSet->setBg_color("bg-secondary");
+        //     $speed_settlement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
+        //     $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));
 
-            // $dataSet->setBg_color("text-bg-danger");
+        //     $dataSet->setCompensation_speed("Done in " . $speed_settlement_days . " days.");
+        //     $dataSet->setDays_passed($days_past . " days passed since the notification date.");
+        //     $dataSet->setBg_color("bg-secondary");
 
-            $tabReportSets[] = $dataSet;
-            $number++;
-        }
+        //     // $dataSet->setBg_color("text-bg-danger");
 
-        //Ligne totale
-        $dataSet = (new ClaimReportSet())
-            ->setType(ClaimReportSet::TYPE_TOTAL)
-            ->setCurrency_code("$")
-            ->setPolicy_reference("TOTAL")
-            ->setDamage_cost(rand(1000, 100000))
-            ->setCompensation_paid(rand(1000, 10000))
-            ->setCompensation_balance(rand(1000, 10000));
+        //     $tabReportSets[] = $dataSet;
+        //     $number++;
+        // }
 
-        $tabReportSets[] = $dataSet;
-        // dd($tabReportSets);
+        // //Ligne totale
+        // $dataSet = (new ClaimReportSet())
+        //     ->setType(ClaimReportSet::TYPE_TOTAL)
+        //     ->setCurrency_code("$")
+        //     ->setPolicy_reference("TOTAL")
+        //     ->setDamage_cost(rand(1000, 100000))
+        //     ->setCompensation_paid(rand(1000, 10000))
+        //     ->setCompensation_balance(rand(1000, 10000));
 
-        return $tabReportSets;
+        // $tabReportSets[] = $dataSet;
+        // // dd($tabReportSets);
+
+        // return $tabReportSets;
         // return [];
     }
 

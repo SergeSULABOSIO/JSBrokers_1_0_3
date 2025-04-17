@@ -43,6 +43,7 @@ use App\Repository\CotationRepository;
 use PhpParser\ErrorHandler\Collecting;
 use App\Entity\ReportSet\ReportSummary;
 use App\Entity\ReportSet\TaskReportSet;
+use App\Entity\ReportSet\ClaimReportSet;
 use App\Repository\PartenaireRepository;
 use App\Repository\UtilisateurRepository;
 use App\Entity\OffreIndemnisationSinistre;
@@ -4668,6 +4669,18 @@ class Constante
         return $chargementsPrimesGroupes;
     }
 
+    public function Entreprise_getClaimsNotifications()
+    {
+        $tabClaimsNotifications = [];
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getNotificationSinistres() as $notification) {
+                $tabClaimsNotifications[] = $notification;
+            }
+        }
+        return $tabClaimsNotifications;
+    }
+
     public function Entreprise_getSynthesSinistres()
     {
         $montDommage = 0;
@@ -5771,5 +5784,155 @@ class Constante
 
         // dd($executionStatus);
         return $executionStatus;
+    }
+
+    public function createClaimReportSet($number, NotificationSinistre $notification): ClaimReportSet
+    {
+        return (new ClaimReportSet())
+            ->setType(ClaimReportSet::TYPE_ELEMENT)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setNumber($number)
+            ->setPolicy_reference($notification->getReferencePolice())
+            ->setInsurer($notification->getAssureur())
+            ->setClient($tabClients[rand(0, count($tabClients) - 1)])
+            ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
+            ->setGw_premium(rand(1000, 100000))
+            ->setPolicy_limit(rand(1000, 100000))
+            ->setPolicy_deductible(rand(10, 1000))
+            ->setEffect_date(new DateTimeImmutable("now - 20 days"))
+            ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
+            ->setClaim_reference($claim_reference)
+            ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
+            ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
+            ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+            ->setDamage_cost(rand(1000, 100000))
+            // ->setCompensation_paid(rand(0, 100000))
+            // ->setCompensation_balance(rand(0, 100000))
+            ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
+            ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
+    }
+
+    public function Entreprise_getDataTabClaims()
+    {
+        // $tabReportSets = [];
+        // $number = 1;
+        // foreach ($tabClaims as $claim_reference) {
+        //     $dataSet = (new ClaimReportSet())
+        //         ->setType(ClaimReportSet::TYPE_ELEMENT)
+        //         ->setCurrency_code("$")
+        //         ->setNumber($number)
+        //         ->setPolicy_reference($tabPolicies[rand(0, count($tabPolicies) - 1)])
+        //         ->setInsurer($tabInsurers[rand(0, count($tabInsurers) - 1)])
+        //         ->setClient($tabClients[rand(0, count($tabClients) - 1)])
+        //         ->setCover($tabCovers[rand(0, count($tabCovers) - 1)])
+        //         ->setGw_premium(rand(1000, 100000))
+        //         ->setPolicy_limit(rand(1000, 100000))
+        //         ->setPolicy_deductible(rand(10, 1000))
+        //         ->setEffect_date(new DateTimeImmutable("now - 20 days"))
+        //         ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
+        //         ->setClaim_reference($claim_reference)
+        //         ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
+        //         ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
+        //         ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
+        //         ->setDamage_cost(rand(1000, 100000))
+        //         // ->setCompensation_paid(rand(0, 100000))
+        //         // ->setCompensation_balance(rand(0, 100000))
+        //         ->setNotification_date(new DateTimeImmutable("now - " . (rand(0, 30)) . " days"))
+        //         ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
+
+        //     $dataSet->setCompensation_paid(rand(0, ($dataSet->getDamage_cost())));
+        //     $dataSet->setCompensation_balance($dataSet->getDamage_cost() - $dataSet->getCompensation_paid());
+
+        //     $speed_settlement_days = $this->serviceDates->daysEntre($dataSet->getNotification_date(), $dataSet->getSettlement_date());
+        //     $days_past = $this->serviceDates->daysEntre($dataSet->getNotification_date(), new DateTimeImmutable("now"));
+
+        //     $dataSet->setCompensation_speed("Done in " . $speed_settlement_days . " days.");
+        //     $dataSet->setDays_passed($days_past . " days passed since the notification date.");
+        //     $dataSet->setBg_color("bg-secondary");
+
+        //     // $dataSet->setBg_color("text-bg-danger");
+
+        //     $tabReportSets[] = $dataSet;
+        //     $number++;
+        // }
+
+        // //Ligne totale
+        // $dataSet = (new ClaimReportSet())
+        //     ->setType(ClaimReportSet::TYPE_TOTAL)
+        //     ->setCurrency_code("$")
+        //     ->setPolicy_reference("TOTAL")
+        //     ->setDamage_cost(rand(1000, 100000))
+        //     ->setCompensation_paid(rand(1000, 10000))
+        //     ->setCompensation_balance(rand(1000, 10000));
+
+        // $tabReportSets[] = $dataSet;
+        // // dd($tabReportSets);
+
+        // return $tabReportSets;
+
+        $number = 1;
+        $cumulDamagrCost = 0;
+        $cumulCompaPaid = 0;
+        $cumulCompaBalance = 0;
+        $tabReportSets = [];
+        $tabAOrdonner = [];
+
+        /** @var Avenant $avenant */
+        foreach ($this->Entreprise_getClaimsNotifications() as $tabClaimNotification) {
+            //On n'affiche que les Avenant dont le remainingDays est inférieur ou égale à 60 jours.
+            $remainingDays = $this->Avenant_getRenewalStatus($avenant)['remaining days'];
+            if ($remainingDays <= 60) {
+                $dataSet = $this->createRenewalReportSet($avenant);
+                $cumulPrime += $this->Avenant_getPrimeTTC($avenant);
+                $cumulCom += $this->Avenant_getCommissionTTC($avenant, -1, false);
+                // dd($tache, $dataSet);
+                $dataSet->setRemaining_days($remainingDays);
+                $dataSet->setStatus($this->Avenant_getRenewalStatus($avenant)['text']);
+
+                if ($remainingDays <= 30) {
+                    $dataSet->setBg_color("text-danger");
+                } else if ($remainingDays > 30 && $remainingDays <= 60) {
+                    $dataSet->setBg_color("text-warning");
+                } else {
+                    $dataSet->setBg_color("text-success");
+                }
+
+                $tabReportSets[$avenant->getId()] = $dataSet;
+                //on doit transformer la date en String afinque la fonction uasort de tri fasse bien son travail
+                $tabAOrdonner[$avenant->getId()] = date_format($avenant->getEndingAt(), 'd/m/Y');
+            }
+        }
+
+
+        /**
+         * TRI PAR ORDRE CROISSANT PAR RAPPORT 
+         * AU NB DE JOUR RESTANT AVANT EXPIRATION
+         */
+        // Trie le tableau associatif en utilisant la fonction de comparaison
+        uasort($tabAOrdonner, function ($dateA, $dateB) {
+            $date_a = DateTime::createFromFormat('d/m/Y', $dateA);
+            $date_b = DateTime::createFromFormat('d/m/Y', $dateB);
+            if ($date_a == $date_b) {
+                return 0;
+            }
+            return ($date_a < $date_b) ? -1 : 1;
+        });
+
+        $tabFinaleOrdonne = [];
+        foreach ($tabAOrdonner as $key => $value) {
+            $tabFinaleOrdonne[] = $tabReportSets[$key];
+        }
+
+        //Après le tri on ajoute la Ligne de totale
+        $dataSetTotal = (new RenewalReportSet())
+            ->setType(RenewalReportSet::TYPE_TOTAL)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setLabel("TOTAL")
+            ->setGw_premium($cumulPrime)
+            ->setG_commission($cumulCom);
+        $tabFinaleOrdonne[] = $dataSetTotal;
+
+        // dd("ICI");
+        return $tabFinaleOrdonne;
     }
 }
