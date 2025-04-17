@@ -5893,7 +5893,7 @@ class Constante
 
         /**
          * TRI PAR ORDRE CROISSANT PAR RAPPORT 
-         * AU NB DE JOUR RESTANT AVANT EXPIRATION
+         * AU NB DE JOUR DEPUIS LA DATE DE NOTIFICATION DU SINISTRE
          */
         // Trie le tableau associatif en utilisant la fonction de comparaison
         uasort($tabAOrdonner, function ($dateA, $dateB) {
