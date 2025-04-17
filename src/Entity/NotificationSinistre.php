@@ -81,6 +81,9 @@ class NotificationSinistre
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Assureur $assureur = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $descriptionVictimes = null;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();
@@ -378,6 +381,18 @@ class NotificationSinistre
     public function setAssureur(?Assureur $assureur): static
     {
         $this->assureur = $assureur;
+
+        return $this;
+    }
+
+    public function getDescriptionVictimes(): ?string
+    {
+        return $this->descriptionVictimes;
+    }
+
+    public function setDescriptionVictimes(?string $descriptionVictimes): static
+    {
+        $this->descriptionVictimes = $descriptionVictimes;
 
         return $this;
     }
