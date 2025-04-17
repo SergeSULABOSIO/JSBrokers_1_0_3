@@ -5831,7 +5831,7 @@ class Constante
     public function createClaimReportSet($number, NotificationSinistre $notification): ClaimReportSet
     {
         $status = $this->Claim_getClaimStatus($notification);
-        dd($status);
+        // dd($status);
         return (new ClaimReportSet())
             ->setType(ClaimReportSet::TYPE_ELEMENT)
             ->setIdNotification($notification->getId())
