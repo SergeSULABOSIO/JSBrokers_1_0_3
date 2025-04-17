@@ -5678,13 +5678,13 @@ class Constante
 
         /** @var Avenant $avenant */
         foreach ($this->Entreprise_getAvenants() as $avenant) {
-            //On n'affiche que les Avenant qui ont expiré
-            if ($this->Avenant_getRenewalStatus($avenant)['code'] != Avenant::RENEWAL_STATUS_RUNNING) {
+            //On n'affiche que les Avenant dont le remainingDays est inférieur ou égale à 60 jours.
+            $remainingDays = $this->Avenant_getRenewalStatus($avenant)['remaining days'];
+            if ($remainingDays <= 60) {
                 $dataSet = $this->createRenewalReportSet($avenant);
                 $cumulPrime += $this->Avenant_getPrimeTTC($avenant);
                 $cumulCom += $this->Avenant_getCommissionTTC($avenant, -1, false);
                 // dd($tache, $dataSet);
-                $remainingDays = $this->Avenant_getRenewalStatus($avenant)['remaining days'];
                 $dataSet->setRemaining_days($remainingDays);
                 $dataSet->setStatus($this->Avenant_getRenewalStatus($avenant)['text']);
 
