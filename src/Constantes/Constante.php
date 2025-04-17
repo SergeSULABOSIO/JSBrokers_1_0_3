@@ -5803,6 +5803,19 @@ class Constante
             'dateDebutPolice' => null,
             'dateEchéancePolice' => null,
         ];
+
+        foreach ($notification->getOffreIndemnisationSinistres() as $offreIndemnisation) {
+            $status['limite'] += $offreIndemnisation->getMontantPayable();
+            $status['franchise'] += $offreIndemnisation->getFranchiseAppliquee();
+            $reglements = 0;
+            foreach ($offreIndemnisation->getPaiements() as $paiement) {
+                $reglements += $paiement->getMontant();
+                $status['settlementDernièreDate'] = $paiement->getPaidAt();
+            }
+            $status['compensationPaid'] += $reglements;
+            $status['compensationBalance'] += $offreIndemnisation->getMontantPayable() - $reglements;
+        }
+
         if ($status['settlementDernièreDate'] != null && $notification->getNotifiedAt() != null) {
             $status['speed'] = $this->serviceDates->daysEntre($notification->getNotifiedAt(), $status['settlementDernièreDate']);
         }
@@ -5810,9 +5823,7 @@ class Constante
             $status['pastDays'] = $this->serviceDates->daysEntre($notification->getNotifiedAt(), new DateTimeImmutable("now"));
         }
 
-        foreach ($notification->getOffreIndemnisationSinistres() as $offreIndemnisation) {
-            # code...
-        }
+        
 
         return $status;
     }
@@ -5852,20 +5863,6 @@ class Constante
 
     public function Entreprise_getDataTabClaims()
     {
-        // //Ligne totale
-        // $dataSet = (new ClaimReportSet())
-        //     ->setType(ClaimReportSet::TYPE_TOTAL)
-        //     ->setCurrency_code("$")
-        //     ->setPolicy_reference("TOTAL")
-        //     ->setDamage_cost(rand(1000, 100000))
-        //     ->setCompensation_paid(rand(1000, 10000))
-        //     ->setCompensation_balance(rand(1000, 10000));
-
-        // $tabReportSets[] = $dataSet;
-        // // dd($tabReportSets);
-
-        // return $tabReportSets;
-
         $number = 1;
         $cumulDamagrCost = 0;
         $cumulCompaPaid = 0;
@@ -5883,13 +5880,13 @@ class Constante
                 $cumulDamagrCost += $dataSet->getDamage_cost();
                 $cumulCompaPaid += $dataSet->getCompensation_paid();
                 $cumulCompaBalance += $dataSet->getCompensation_balance();
-                $tabReportSets[] = $dataSet;
+                // $tabReportSets[] = $dataSet;
                 $number++;
 
                 //Préparation des tableaux pour faire le tri
-                // $tabReportSets[$avenant->getId()] = $dataSet;
-                // //on doit transformer la date en String afinque la fonction uasort de tri fasse bien son travail
-                // $tabAOrdonner[$avenant->getId()] = date_format($avenant->getEndingAt(), 'd/m/Y');
+                $tabReportSets[$claimNotification->getId()] = $dataSet;
+                // //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
+                $tabAOrdonner[$claimNotification->getId()] = date_format($claimNotification->getNotifiedAt(), 'd/m/Y');
             }
         }
 
@@ -5914,13 +5911,15 @@ class Constante
         }
 
         //Après le tri on ajoute la Ligne de totale
-        // $dataSetTotal = (new RenewalReportSet())
-        //     ->setType(RenewalReportSet::TYPE_TOTAL)
-        //     ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-        //     ->setLabel("TOTAL")
-        //     ->setGw_premium($cumulPrime)
-        //     ->setG_commission($cumulCom);
-        // $tabFinaleOrdonne[] = $dataSetTotal;
+        $dataSetTotal = (new ClaimReportSet())
+            ->setType(ClaimReportSet::TYPE_TOTAL)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setPolicy_reference("TOTAL")
+            ->setDamage_cost($cumulDamagrCost)
+            ->setCompensation_paid($cumulCompaPaid)
+            ->setCompensation_balance($cumulCompaBalance);
+
+        $tabFinaleOrdonne[] = $dataSetTotal;
 
         // dd("ICI");
         return $tabFinaleOrdonne;
