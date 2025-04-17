@@ -5799,15 +5799,15 @@ class Constante
             ->setNotification_date($notification->getCreatedAt())
             ->setDamage_cost($notification->getDommage())
             ->setClaim_reference($notification->getReferenceSinistre())
+            ->setVictim($notification->getDescriptionVictimes())
+            ->setAccount_manager($this->Utilisateur_getUtilisateurByInvite($notification->getInvite()))
 
             ->setGw_premium(rand(1000, 100000))
             ->setPolicy_limit(rand(1000, 100000))
             ->setPolicy_deductible(rand(10, 1000))
             ->setEffect_date(new DateTimeImmutable("now - 20 days"))
             ->setExpiry_date(new DateTimeImmutable("now + 200 days"))
-            ->setVictim($tabClients[rand(0, count($tabClients) - 1)])
             ->setClaims_status($tabClaimStatus[rand(0, count($tabClaimStatus) - 1)])
-            ->setAccount_manager($tabUsersAM[rand(0, count($tabUsersAM) - 1)])
             ->setCompensation_paid(rand(0, 100000))
             ->setCompensation_balance(rand(0, 100000))
             ->setSettlement_date(new DateTimeImmutable("now - " . (rand(0, 3)) . " days"));
