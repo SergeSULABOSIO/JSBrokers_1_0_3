@@ -66,6 +66,11 @@
                                              • Police: {{ notificationsinistre.referencePolice }}
                                         </span>
                                     {% endif %}
+                                    {% if notificationsinistre.assureur != null %}
+                                        <span class="text-secondary">
+                                             • Assureur: {{ notificationsinistre.assureur.nom }}
+                                        </span>
+                                    {% endif %}
                                     {% if notificationsinistre.risque != null %}
                                         <span class="text-secondary">
                                              • Risque: {{ notificationsinistre.risque.code }}
