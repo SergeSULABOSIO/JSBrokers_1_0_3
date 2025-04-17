@@ -101,6 +101,7 @@ class NotificationSinistreType extends AbstractType
                 'label' => "Valeur de la perte",
                 'help' => "Il s'agit d'une estimation chiffrée du coût de reparation des dégats causés et/ou subis lors de l'évènement survenu.",
                 'currency' => "USD",
+                'required' => false,
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Dommage",
@@ -111,6 +112,7 @@ class NotificationSinistreType extends AbstractType
                 'help' => "Il s'agit d'une confirmation chiffré du dommage après évaluation.",
                 'currency' => "USD",
                 'grouping' => true,
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Evaluation ciffrée",
                 ],
