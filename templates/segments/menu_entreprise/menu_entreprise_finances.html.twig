@@ -9,52 +9,52 @@
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="{{ path('admin.monnaie.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.monnaie' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_monnaies" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('tdesign:money-filled', {height: '18px', width: '18px'}) }} {{ "company_menu_monnaies" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.comptebancaire.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.comptebancaire'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_bank_accounts" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('clarity:piggy-bank-solid', {height: '18px', width: '18px'}) }} {{ "company_menu_bank_accounts" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.taxe.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.taxe'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_taxes" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('emojione-monotone:police-car-light', {height: '18px', width: '18px'}) }} {{ "company_menu_taxes" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.typerevenu.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.typerevenu'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_revenus" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('hugeicons:award-01', {height: '18px', width: '18px'}) }} {{ "company_menu_revenus" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.tranche.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.tranche'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_tranches" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('icon-park-solid:chart-proportion', {height: '18px', width: '18px'}) }} {{ "company_menu_tranches" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.chargement.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.chargement'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_chargements" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('tabler:truck-loading', {height: '18px', width: '18px'}) }} {{ "company_menu_chargements" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.note.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.note'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_notes" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('hugeicons:invoice-04', {height: '18px', width: '18px'}) }} {{ "company_menu_notes" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.paiement.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.paiement'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_payments" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('streamline:payment-10-solid', {height: '18px', width: '18px'}) }} {{ "company_menu_payments" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.bordereau.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.bordereau'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_bordereaux" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('gg:list', {height: '18px', width: '18px'}) }} {{ "company_menu_bordereaux" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.revenucourtier.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.revenucourtier'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_revenucourtier" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('hugeicons:money-bag-02', {height: '18px', width: '18px'}) }} {{ "company_menu_revenucourtier" | trans }}</span>
                 </div>
             </a>
         </div>

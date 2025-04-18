@@ -143,7 +143,9 @@
                                     <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Tranche_getReserve(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br>
                                 <small class="m-2">
-                                    <span class="text-secondary">{{ tranche.cotation }} • {{ tranche.cotation.assureur }}</span> 
+                                    <span class="text-secondary">
+                                        {{ ux_icon('streamline:store-computer-solid', {height: '18px', width: '18px'}) }}{{ tranche.cotation }} • {{ tranche.cotation.assureur }}
+                                    </span> 
                                 </small>
                                 {% if panier != null %}
                                     {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length != 0 %}

@@ -68,7 +68,9 @@
                                 {% endif %}
                                 {% if feedback.tache.cotation != null %}
                                     <small class="m-2">
-                                        <span class="text-secondary">Proposition: {{ feedback.tache.cotation }}</span> 
+                                        <span class="text-secondary">
+                                            {{ ux_icon('streamline:store-computer-solid', {height: '18px', width: '18px'}) }}{{ feedback.tache.cotation }}
+                                        </span> 
                                     </small><br/>
                                 {% endif %}
                                 {% if feedback.tache.notificationSinistre != null %}

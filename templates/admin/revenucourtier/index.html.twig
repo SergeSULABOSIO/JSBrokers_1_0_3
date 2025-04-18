@@ -125,7 +125,9 @@
                                     <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Revenu_getReserve(revenucourtier, -1)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br>
                                 <small class="m-2">
-                                    <span class="text-secondary">Prop: {{ revenucourtier.cotation.nom }} • {{ revenucourtier.cotation.piste.client }} • {{ revenucourtier.cotation.piste.risque }} • {{ revenucourtier.cotation.assureur }}</span> 
+                                    <span class="text-secondary">
+                                        {{ ux_icon('streamline:store-computer-solid', {height: '18px', width: '18px'}) }}{{ revenucourtier.cotation.nom }} • {{ revenucourtier.cotation.piste.client }} • {{ revenucourtier.cotation.piste.risque }} • {{ revenucourtier.cotation.assureur }}
+                                    </span> 
                                 </small><br>
                                 <small class="m-2">
                                     <span class="text-secondary">Piste: {{ revenucourtier.cotation.piste }}</span> 

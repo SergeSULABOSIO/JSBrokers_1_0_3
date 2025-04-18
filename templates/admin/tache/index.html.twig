@@ -60,18 +60,22 @@
                                     "{{ tache.description }}"
                                 </a><br/>
                                 <small class="m-2">
-                                    <span class="text-secondary fw-bold">Tache créée le {{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Echéance: {{ tache.toBeEndedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">{{ ux_icon('fluent-mdl2:date-time-mirrored', {height: '18px', width: '18px'}) }}Créée le {{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Echéance: {{ tache.toBeEndedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Modifiée le {{ tache.updatedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {% if tache.piste != null %}
                                     <small class="m-2">
-                                        <span class="text-secondary fw-bold">Piste: {{ tache.piste }}</span> 
+                                        <span class="text-secondary">
+                                            {{ ux_icon('fa-solid:road', {height: '18px', width: '18px'}) }}{{ tache.piste }}
+                                        </span> 
                                     </small><br/>
                                 {% endif %}
                                 {% if tache.cotation != null %}
                                     <small class="m-2">
-                                        <span class="text-secondary">Proposition: {{ tache.cotation }}</span> 
+                                        <span class="text-secondary">
+                                            {{ ux_icon('streamline:store-computer-solid', {height: '18px', width: '18px'}) }}{{ tache.cotation }}
+                                        </span> 
                                     </small><br/>
                                 {% endif %}
                                 {% if tache.notificationSinistre != null %}
