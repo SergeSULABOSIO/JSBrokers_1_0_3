@@ -48,7 +48,7 @@
                         <tr id="row_notificationsinistre_{{ notificationsinistre.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ notificationsinistre.assure.nom }} • {{ notificationsinistre.descriptionDeFait }} [...] • {{ notificationsinistre.occuredAt|format_datetime('short', 'none', locale: utilisateur.locale) }} • {{ notificationsinistre.lieu }}
+                                    {{ ux_icon('emojione-monotone:fire', {height: '20px', width: '20px'}) }} "{{ notificationsinistre.descriptionDeFait }}" •  {{ notificationsinistre.assure.nom }} • {{ notificationsinistre.occuredAt|format_datetime('short', 'none', locale: utilisateur.locale) }} • {{ notificationsinistre.lieu }}
                                 </a><br/>
                                 <small class="m-2">
                                     {% if notificationsinistre.referenceSinistre != null %}
@@ -83,19 +83,31 @@
                                     <span class="text-secondary"> • Franchise: {{ constante.Notification_Sinistre_getFranchise(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 <small class="m-2 fw-bold">
-                                    <span class="text-secondary">Compensation: {{ constante.Notification_Sinistre_getCompensation(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Comp. versée: {{ constante.Notification_Sinistre_getCompensationVersee(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">
+                                        {{ ux_icon('icon-park-outline:funds', {height: '17px', width: '17px'}) }} Compensation: {{ constante.Notification_Sinistre_getCompensation(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                    </span> 
+                                    <span class="text-secondary">
+                                         • {{ ux_icon('icon-park-outline:funds', {height: '17px', width: '17px'}) }} versée: {{ constante.Notification_Sinistre_getCompensationVersee(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                    </span> 
                                     {% set couleur = "text-secondary" %}
                                     {% if constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{couleur}}"> • Solde à regler: {{ constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="{{couleur}}">
+                                         • {{ ux_icon('icon-park-outline:funds', {height: '17px', width: '17px'}) }} Solde: {{ constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                    </span> 
                                 </small><br/>
                                 {% set statusDoc = constante.Notification_Sinistre_getStatusDocumentsAttendus(notificationsinistre) %}
                                 <small class="m-2">
-                                    <span class="text-secondary">Documents recquis ({{ statusDoc['Docs_attendus']|length }})</span> 
-                                    <span class="text-secondary"> • Documents fournis ({{ statusDoc['Docs_fournis']|length }})</span> 
-                                    <span class="text-secondary"> • Documents manquants ({{ statusDoc['Docs_manquants']|length }})</span> 
+                                    <span class="text-secondary">
+                                        {{ ux_icon('codex:file', {height: '17px', width: '17px'}) }} Attendu ({{ statusDoc['Docs_attendus']|length }})
+                                    </span> 
+                                    <span class="text-secondary">
+                                         • {{ ux_icon('codex:file', {height: '17px', width: '17px'}) }} Fournis ({{ statusDoc['Docs_fournis']|length }})
+                                    </span> 
+                                    <span class="text-danger">
+                                         • {{ ux_icon('codex:file', {height: '17px', width: '17px'}) }} Manquants ({{ statusDoc['Docs_manquants']|length }})
+                                    </span> 
                                 </small><br/>
                                 {% if statusDoc['Docs_manquants']|length != 0 %}
                                     <small class="m-2 fw-bold">

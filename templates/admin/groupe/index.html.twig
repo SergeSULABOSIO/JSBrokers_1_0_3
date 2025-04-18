@@ -48,7 +48,7 @@
                         <tr id="row_groupe_{{ groupe.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.groupe.edit', {'idGroupe':groupe.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ groupe.nom }} • {{ groupe.clients|length }} client(s)
+                                    {{ ux_icon('clarity:group-solid', {height: '20px', width: '20px'}) }} {{ groupe.nom }} • {{ groupe.clients|length }} client(s)
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">{{ groupe.description }}</span> 

@@ -49,7 +49,7 @@
                         <tr id="row_client_{{ client.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.client.edit', {'idClient':client.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ client.nom }}
+                                    {{ ux_icon('fa-solid:house-user', {height: '19px', width: '19px'}) }} {{ client.nom }}
                                 </a><br/>
                                 {% if client.rccm != null or client.numimpot != null or client.numimpot != null %}
                                     <small class="m-2 text-secondary">

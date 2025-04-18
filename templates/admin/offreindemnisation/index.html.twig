@@ -47,16 +47,13 @@
                     {% for offreindemnisation in offreindemnisations %}
                         <tr id="row_offreindemnisation_{{ offreindemnisation.id }}">
                             <td>
-                                {# <a class="m-2" href="{{ path('admin.offreindemnisation.edit', {'idOffreindemnisation':offreindemnisation.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ offreindemnisation.nom }}
-                                </a> #}
                                 <a class="m-2 fw-bold" href="{{ path('admin.offreindemnisation.edit', {'idOffreindemnisation':offreindemnisation.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ offreindemnisation.nom }} • {{ offreindemnisation.notificationSinistre.assure.nom }}
+                                    {{ ux_icon('icon-park-outline:funds', {height: '20px', width: '20px'}) }} {{ offreindemnisation.nom }} • {{ offreindemnisation.notificationSinistre.assure.nom }}
                                 </a><br/>
                                 <small class="m-2">
                                     {% if offreindemnisation.notificationsinistre.referenceSinistre != null %}
                                         <span class="text-secondary">
-                                            Réf. Sinistre: {{ offreindemnisation.notificationsinistre.referenceSinistre }}, évènement du {{ offreindemnisation.notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }}
+                                            {{ ux_icon('emojione-monotone:fire', {height: '17px', width: '17px'}) }} {{ offreindemnisation.notificationsinistre.referenceSinistre }}, évènement du {{ offreindemnisation.notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }}
                                         </span>
                                     {% endif %}
                                 </small><br/>

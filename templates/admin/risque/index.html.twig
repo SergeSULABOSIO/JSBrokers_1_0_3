@@ -49,7 +49,7 @@
                         <tr id="row_risque_{{ risque.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.risque.edit', {'idRisque':risque.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ risque.nomComplet }} ({{ risque.code }}) • Branche: {{ constante.Risque_getNomBranche(risque.branche) }} • {{ constante.Risque_getNomImposable(risque.imposable) }}
+                                    {{ ux_icon('ep:goods', {height: '19px', width: '19px'}) }} {{ risque.nomComplet }} ({{ risque.code }}) • Branche: {{ constante.Risque_getNomBranche(risque.branche) }} • {{ constante.Risque_getNomImposable(risque.imposable) }}
                                 </a><br/>
                                 {# Section prime #}
                                 <small class="m-2">

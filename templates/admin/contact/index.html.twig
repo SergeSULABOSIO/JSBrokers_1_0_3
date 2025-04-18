@@ -49,7 +49,7 @@
                         <tr id="row_contact_{{ contact.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.contact.edit', {'idContact':contact.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ contact.nom }}
+                                    {{ ux_icon('hugeicons:contact-01', {height: '19px', width: '19px'}) }} {{ contact.nom }}
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">{{ contact.fonction }}</span> 
