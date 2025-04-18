@@ -4745,6 +4745,26 @@ class Constante
         return $avenants;
     }
 
+    public function Entreprise_getAvenantsByReference(string $reference)
+    {
+        $avenants = new ArrayCollection();
+        /** @var Invite $invite */
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($this->Piste_isBound($piste)) {
+                    foreach ($piste->getCotations() as $cotation) {
+                        foreach ($cotation->getAvenants() as $avenant) {
+                            if (!$avenants->contains($avenant) && $avenant->getReferencePolice() == $reference) {
+                                $avenants->add($avenant);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return $avenants;
+    }
+
     public function Entreprise_getPistes(bool $onlyBound = false)
     {
         $pistes = new ArrayCollection();
@@ -5824,10 +5844,38 @@ class Constante
         }
 
         $statusPieces = $this->Notification_Sinistre_getStatusDocumentsAttendus($notification);
-        $status['texte'] = "Pièces (" . count($statusPieces['Docs_fournis']) . "/" . count($statusPieces['Docs_attendus']) . ")";//" . count($statusPieces['Docs_manquants']);
+        $status['texte'] = "Pièces (" . count($statusPieces['Docs_fournis']) . "/" . count($statusPieces['Docs_attendus']) . ")"; //" . count($statusPieces['Docs_manquants']);
 
         //extraction d'informations sur la police d'assurance se basant sur la référence fournie
-        dd("Extraction d'infos sur la police grâce à sa référence fournie:", $notification->getReferencePolice(), $notification);
+        if ($notification->getReferencePolice() != null) {
+            // dd($notification->getReferencePolice());
+            $effectDates = [];
+            $expiryDates = [];
+            /** @var Avenant $avenant */
+            foreach ($this->Entreprise_getAvenantsByReference($notification->getReferencePolice()) as $avenant) {
+                $status['primeTTC'] += $this->Avenant_getPrimeTTC($avenant);
+                $effectDates[] = $avenant->getStartingAt();
+                $expiryDates[] = $avenant->getEndingAt();
+            }
+            if (count($expiryDates) == 1) {
+                //On n'a trouvé qu'un seul avenant
+                $status['dateDebutPolice'] = $effectDates[0];
+                $status['dateEchéancePolice'] = $expiryDates[0];
+            } else {
+                usort($expiryDates, function ($a, $b) {
+                    if ($a == $b) {
+                        return 0;
+                    }
+                    return ($a < $b) ? -1 : 1;
+                });
+            }
+            // dd($effectDates, $expiryDates);
+        }
+
+
+
+
+        // dd("Extraction d'infos sur la police grâce à sa référence fournie:", $notification->getReferencePolice(), $notification);
         return $status;
     }
 
