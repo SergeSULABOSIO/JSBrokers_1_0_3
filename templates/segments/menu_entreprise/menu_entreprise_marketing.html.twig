@@ -9,17 +9,17 @@
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="{{ path('admin.piste.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.piste' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('fa-solid:road', {height: '18px', width: '18px'}) }} {{ "company_menu_piste" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/piste.html.twig', {'size':'18px'}) }} {{ "company_menu_piste" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.tache.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.tache' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('mingcute:task-2-fill', {height: '18px', width: '18px'}) }} {{ "company_menu_task" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/tache.html.twig', {'size':'18px'}) }} {{ "company_menu_task" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.feedback.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.feedback'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('fluent-mdl2:feedback', {height: '18px', width: '18px'}) }} {{ "company_menu_feedback" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/feedback.html.twig', {'size':'18px'}) }} {{ "company_menu_feedback" | trans }}</span>
                 </div>
             </a>
         </div>
