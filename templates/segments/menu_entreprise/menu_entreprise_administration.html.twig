@@ -9,17 +9,17 @@
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="{{ path('admin.document.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.document' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_documents" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/document.html.twig', {'size':'18px'}) }} {{ "company_menu_documents" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.classeur.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.classeur'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_classeurs" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/classeur.html.twig', {'size':'18px'}) }} {{ "company_menu_classeurs" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.invite.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.invite'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "user_menu_guests" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/invite.html.twig', {'size':'18px'}) }} {{ "user_menu_guests" | trans }}</span>
                 </div>
             </a>
         </div>
