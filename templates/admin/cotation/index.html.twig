@@ -49,6 +49,7 @@
                         <tr id="row_cotation_{{ cotation.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.cotation.edit', {'idCotation':cotation.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ ux_icon('streamline:store-computer-solid', {height: '19px', width: '19px'}) }} 
                                     {% if constante.Cotation_isBound(cotation) %}
                                         (bound)
                                     {% endif %}

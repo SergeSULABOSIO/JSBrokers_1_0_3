@@ -49,7 +49,7 @@
                         <tr id="row_partenaire_{{ partenaire.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.partenaire.edit', {'idPartenaire':partenaire.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ partenaire.nom }}
+                                    {{ ux_icon('carbon:partnership', {height: '19px', width: '19px'}) }} {{ partenaire.nom }}
                                     {% if partenaire.conditionPartages|length != 0 %}
                                          • {{partenaire.conditionPartages|length}} Condition(s)
                                     {% endif %}

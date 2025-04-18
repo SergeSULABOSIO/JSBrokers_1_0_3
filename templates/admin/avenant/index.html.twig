@@ -49,7 +49,7 @@
                         <tr id="row_avenant_{{ avenant.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.avenant.edit', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ constante.getTypeAvenant(avenant.cotation.piste.typeavenant) }} • Avenant n°{{ avenant.numero }} • Police: {{ avenant.referencePolice }} • Du {{ avenant.startingAt|format_datetime('short', 'none', locale: utilisateur.locale) }} au {{ avenant.endingAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+                                    {{ ux_icon('iconamoon:edit-fill', {height: '19px', width: '19px'}) }} {{ constante.getTypeAvenant(avenant.cotation.piste.typeavenant) }} • Avenant n°{{ avenant.numero }} • Police: {{ avenant.referencePolice }} • Du {{ avenant.startingAt|format_datetime('short', 'none', locale: utilisateur.locale) }} au {{ avenant.endingAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
                                 </a><br/>
                                 <small class="m-2 fw-bold">
                                     <span class="text-secondary">Exercice {{ avenant.cotation.piste.exercice }}</span> 
