@@ -28,6 +28,7 @@ class ClaimReportSet
     //Claim
     public string $claim_reference;
     public string $victim;
+    public string $circonstance;
     public string $claims_status;
     public string $bg_color;
     public ?Utilisateur $account_manager;
@@ -426,6 +427,27 @@ class ClaimReportSet
     public function setVictim($victim)
     {
         $this->victim = $victim;
+
+        return $this;
+    }
+
+
+    /**
+     * Get the value of circonstance
+     */ 
+    public function getCirconstance()
+    {
+        return $this->circonstance;
+    }
+
+    /**
+     * Set the value of circonstance
+     *
+     * @return  self
+     */ 
+    public function setCirconstance($circonstance)
+    {
+        $this->circonstance = $circonstance;
 
         return $this;
     }

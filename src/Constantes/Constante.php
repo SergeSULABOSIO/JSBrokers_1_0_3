@@ -58,6 +58,7 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use Doctrine\ORM\Query\Expr\Func;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -5847,36 +5848,59 @@ class Constante
         $status['texte'] = "Pièces (" . count($statusPieces['Docs_fournis']) . "/" . count($statusPieces['Docs_attendus']) . ")"; //" . count($statusPieces['Docs_manquants']);
 
         //extraction d'informations sur la police d'assurance se basant sur la référence fournie
-        if ($notification->getReferencePolice() != null) {
-            // dd($notification->getReferencePolice());
+        $policyDetails = $this->Police_getPolicyArrayDetails($notification->getReferencePolice());
+        // dd($policyDetails);
+        $status['primeTTC'] = $policyDetails['primeTTC'];
+        $status['dateDebutPolice'] = $policyDetails['effectDate'];
+        $status['dateEchéancePolice'] = $policyDetails['expiryDate'];
+
+        return $status;
+    }
+
+    public function Police_getPolicyArrayDetails(?string $referencePolice): array
+    {
+        $tabDetails = [
+            'primeTTC' => 0,
+            'effectDate' => null,
+            'expiryDate' => null,
+        ];
+
+        if ($referencePolice != null) {
             $effectDates = [];
             $expiryDates = [];
+
             /** @var Avenant $avenant */
-            foreach ($this->Entreprise_getAvenantsByReference($notification->getReferencePolice()) as $avenant) {
-                $status['primeTTC'] += $this->Avenant_getPrimeTTC($avenant);
+            foreach ($this->Entreprise_getAvenantsByReference($referencePolice) as $avenant) {
+                $tabDetails['primeTTC'] += $this->Avenant_getPrimeTTC($avenant);
                 $effectDates[] = $avenant->getStartingAt();
                 $expiryDates[] = $avenant->getEndingAt();
             }
             if (count($expiryDates) == 1) {
                 //On n'a trouvé qu'un seul avenant
-                $status['dateDebutPolice'] = $effectDates[0];
-                $status['dateEchéancePolice'] = $expiryDates[0];
+                $tabDetails['effectDate'] = $effectDates[0];
+                $tabDetails['expiryDate'] = $expiryDates[0];
             } else {
-                usort($expiryDates, function ($a, $b) {
-                    if ($a == $b) {
+                //On ordonnes les dates d'effet
+                usort($effectDates, function ($dateA, $dateB) {
+                    if ($dateA == $dateB) {
                         return 0;
                     }
-                    return ($a < $b) ? -1 : 1;
+                    return ($dateA < $dateB) ? -1 : 1;
                 });
+                //On ordonnes les dates d'expiration
+                usort($expiryDates, function ($dateA, $dateB) {
+                    if ($dateA == $dateB) {
+                        return 0;
+                    }
+                    return ($dateA > $dateB) ? -1 : 1;
+                });
+                //On récupère les dates
+                $tabDetails['effectDate'] = $effectDates[0];
+                $tabDetails['expiryDate'] = $expiryDates[0];
             }
             // dd($effectDates, $expiryDates);
         }
-
-
-
-
-        // dd("Extraction d'infos sur la police grâce à sa référence fournie:", $notification->getReferencePolice(), $notification);
-        return $status;
+        return $tabDetails;
     }
 
     public function createClaimReportSet($number, NotificationSinistre $notification): ClaimReportSet
@@ -5895,7 +5919,8 @@ class Constante
             ->setNotification_date($notification->getNotifiedAt())
             ->setDamage_cost($notification->getDommage())
             ->setClaim_reference($notification->getReferenceSinistre())
-            ->setVictim($notification->getDescriptionVictimes())
+            ->setVictim(substr($notification->getDescriptionVictimes(), 0, 15)."[..]")
+            ->setCirconstance(substr($notification->getDescriptionDeFait(), 0, 15)."[..]")
             ->setAccount_manager($this->Utilisateur_getUtilisateurByInvite($notification->getInvite()))
             ->setGw_premium($status['primeTTC'])
             ->setPolicy_limit($status['limite'])
