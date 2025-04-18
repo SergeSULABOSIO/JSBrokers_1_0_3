@@ -9,7 +9,7 @@
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="{{ path('admin.modelepiecesinistre.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.modelepiecesinistre'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_modelepiecesinistre" | trans }}</span>
+                    <span class="mb-0">{{ ux_icon('codex:file', {height: '20px', width: '20px'}) }} {{ "company_menu_modelepiecesinistre" | trans }}</span>
                 </div>
             </a>
             {# <a href="#" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.entreprise.victime' ? 'active' : '' }}">
@@ -24,12 +24,12 @@
             </a> #}
             <a href="{{ path('admin.notificationsinistre.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.notificationsinistre'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_declarations" | trans }}</span>
+                    <span class="mb-0">{{ ux_icon('emojione-monotone:fire', {height: '20px', width: '20px'}) }} {{ "company_menu_declarations" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.offreindemnisation.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.offreindemnisation'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">{{ "company_menu_reglements" | trans }}</span>
+                    <span class="mb-0">{{ ux_icon('icon-park-outline:funds', {height: '20px', width: '20px'}) }} {{ "company_menu_reglements" | trans }}</span>
                 </div>
             </a>
         </div>

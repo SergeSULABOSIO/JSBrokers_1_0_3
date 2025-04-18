@@ -49,6 +49,7 @@
                         <tr id="row_modelepiecesinistre_{{ modelepiecesinistre.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.modelepiecesinistre.edit', {'idModelepiecesinistre':modelepiecesinistre.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ ux_icon('codex:file', {height: '20px', width: '20px'}) }}
                                     {{ modelepiecesinistre.nom }}
                                     {% if modelepiecesinistre.obligatoire == true %}
                                          • Obligatoire
