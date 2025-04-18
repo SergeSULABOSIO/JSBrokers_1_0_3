@@ -5965,9 +5965,6 @@ class Constante
                 $tabAOrdonner[$claimNotification->getId()] = date_format($claimNotification->getNotifiedAt(), 'd/m/Y');
             }
         }
-
-        // dd($tabAOrdonner);
-
         /**
          * TRI PAR ORDRE CROISSANT PAR RAPPORT 
          * AU NB DE JOUR DEPUIS LA DATE DE NOTIFICATION DU SINISTRE
@@ -5986,7 +5983,6 @@ class Constante
         foreach ($tabAOrdonner as $key => $value) {
             $tabFinaleOrdonne[] = $tabReportSets[$key];
         }
-
         //Après le tri on ajoute la Ligne de totale
         $dataSetTotal = (new ClaimReportSet())
             ->setType(ClaimReportSet::TYPE_TOTAL)
