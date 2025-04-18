@@ -9,42 +9,42 @@
         <div class="list-group list-group-flush p-1 border-0 accordion-body">
             <a href="{{ path('admin.groupe.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.groupe' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('clarity:group-solid', {height: '18px', width: '18px'}) }} {{ "company_menu_groupes" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/groupe.html.twig', {'size':'18px'}) }} {{ "company_menu_groupes" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.client.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action  {{ app.current_route starts with 'admin.client' ? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('fa-solid:house-user', {height: '18px', width: '18px'}) }} {{ "company_menu_clients" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/client.html.twig', {'size':'18px'}) }} {{ "company_menu_clients" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.assureur.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.assureur'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('wpf:security-checked', {height: '18px', width: '18px'}) }} {{ "company_menu_insurers" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/assureur.html.twig', {'size':'18px'}) }} {{ "company_menu_insurers" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.contact.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.contact'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('hugeicons:contact-01', {height: '18px', width: '18px'}) }} {{ "company_menu_contacts" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/contact.html.twig', {'size':'18px'}) }} {{ "company_menu_contacts" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.risque.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.risque'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('ep:goods', {height: '18px', width: '18px'}) }} {{ "company_menu_products" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/risque.html.twig', {'size':'18px'}) }} {{ "company_menu_products" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.avenant.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.avenant'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('iconamoon:edit-fill', {height: '18px', width: '18px'}) }} {{ "company_menu_avenants" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/avenant.html.twig', {'size':'18px'}) }} {{ "company_menu_avenants" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.partenaire.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.partenaire'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('carbon:partnership', {height: '18px', width: '18px'}) }} {{ "company_menu_partners" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/partenaire.html.twig', {'size':'18px'}) }} {{ "company_menu_partners" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.cotation.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.cotation'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ ux_icon('streamline:store-computer-solid', {height: '18px', width: '18px'}) }} {{ "company_menu_cotation" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/cotation.html.twig', {'size':'18px'}) }} {{ "company_menu_cotation" | trans }}</span>
                 </div>
             </a>
         </div>
