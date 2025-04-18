@@ -49,7 +49,7 @@
                         <tr id="row_taxe_{{ taxe.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.taxe.edit', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ taxe.code }} • {{ taxe.description }} • {{ constante.Taxe_getNomAutoriteFiscale(taxe) }}
+                                    {{ ux_icon('emojione-monotone:police-car-light', {height: '19px', width: '19px'}) }} {{ taxe.code }} • {{ taxe.description }} • {{ constante.Taxe_getNomAutoriteFiscale(taxe) }}
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">La commission hors taxe est la base du calcul</span> 

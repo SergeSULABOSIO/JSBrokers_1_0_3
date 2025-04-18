@@ -49,7 +49,7 @@
                         <tr id="row_typerevenu_{{ typerevenu.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.typerevenu.edit', {'idTypeRevenu':typerevenu.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ typerevenu.nom }}
+                                    {{ ux_icon('hugeicons:award-01', {height: '19px', width: '19px'}) }} {{ typerevenu.nom }}
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">{{ constante.Revenu_getNomRedevable(typerevenu) }}</span> 

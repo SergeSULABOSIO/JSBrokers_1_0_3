@@ -50,6 +50,8 @@
                         <tr id="row_tranche_{{ tranche.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
+                                    {# {{ ux_icon('icon-park-solid:chart-proportion', {height: '19px', width: '19px'}) }}  #}
+                                    {{ include('segments/icones/tranche.html.twig', {'height':'19px', 'width':'19px'}) }}
                                     {# On fait signe si cette tranche peut entrer dans le panier #}
                                     {% if panier != null %}
                                         {% if constante.Tranche_getPanierStatus(tranche, panier) == 0 %}
