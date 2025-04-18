@@ -29,7 +29,7 @@
             </a>
             <a href="{{ path('admin.tranche.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.tranche'? 'active' : '' }}">
                 <div class="d-flex justify-content-between">
-                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/tranche.html.twig', {'width':'18px'}) }} {{ "company_menu_tranches" | trans }}</span>
+                    <span class="mb-0">&nbsp;&nbsp;{{ include('segments/icones/tranche.html.twig', {'size':'18px'}) }} {{ "company_menu_tranches" | trans }}</span>
                 </div>
             </a>
             <a href="{{ path('admin.chargement.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.chargement'? 'active' : '' }}">
