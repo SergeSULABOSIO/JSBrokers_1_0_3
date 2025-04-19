@@ -18,6 +18,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\PisteRepository;
 use App\Repository\TacheRepository;
+use App\Services\ServiceMonnaies;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -42,6 +43,7 @@ class BordereauController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private BordereauRepository $bordereauRepository,
+        private ServiceMonnaies $serviceMonnaie,
         private Constante $constante,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
@@ -60,6 +62,7 @@ class BordereauController extends AbstractController
             'bordereaux' => $this->bordereauRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaie,
             'activator' => $this->activator,
         ]);
     }

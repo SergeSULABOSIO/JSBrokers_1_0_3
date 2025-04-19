@@ -48,9 +48,14 @@
                         <tr id="row_paiement_{{ paiement.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.paiement.edit', {'idPaiement':paiement.id, 'idEntreprise': entreprise.id})}}">
-                                    {# {{ paiement.description }} #}
-                                    Réf.: {{ paiement.reference }} • {{ paiement.description }}
+                                    {{ include('segments/icones/paiement.html.twig', {size:'18px'}) }}
+                                    {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} • Réf.: {{ paiement.reference }}
                                 </a><br/>
+                                <small class ="m-2">
+                                    <span class="text-secondary">
+                                        {{ paiement.description }}
+                                    </span>
+                                </small><br/>
                                 {% if paiement.note != null %}
                                     <small class ="m-2">
                                         {% set coleur = 'text-danger' %}
@@ -58,7 +63,8 @@
                                             {% set coleur = 'text-success' %}
                                         {% endif %}
                                         <span class="{{coleur}} fw-bold">
-                                            {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                            {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
+                                            {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
                                             {% if paiement.comptebancaire != null %}
                                                 dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}
                                             {% endif %}
@@ -68,7 +74,8 @@
                                     <small class ="m-2">
                                         {% set coleur = 'text-success' %}
                                         <span class="{{coleur}} fw-bold">
-                                            Payé le {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                            {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
+                                            {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
                                         </span>
                                     </small><br/>
                                 {% endif %}
@@ -85,7 +92,10 @@
                                 </small><br/>
                                 {% if paiement.note != null %}
                                     <small class ="m-2">
-                                        <span class="text-secondary">{{ constante.Note_getNameOfTypeNote(paiement.note) }} • {{ paiement.note.nom }} • {{ paiement.note.reference }}</span>
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/note.html.twig', {size:'18px'}) }}
+                                            {{ constante.Note_getNameOfTypeNote(paiement.note) }} • {{ paiement.note.nom }} • {{ paiement.note.reference }}
+                                        </span>
                                     </small>
                                 {% endif %}
                             </td>

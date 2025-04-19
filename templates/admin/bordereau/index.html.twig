@@ -48,9 +48,20 @@
                     {% for bordereau in bordereaux %}
                         <tr id="row_bordereau_{{ bordereau.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.bordereau.edit', {'idBordereau':bordereau.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ bordereau.nom }}
-                                </a>
+                                <a class="m-2 fw-bold" href="{{ path('admin.bordereau.edit', {'idBordereau':bordereau.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ include('segments/icones/bordereau.html.twig', {size:'18px'}) }}
+                                    {{ bordereau.montantTTC|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} • {{ bordereau.nom }}
+                                </a><br/>
+                                <small class ="m-2">
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
+                                        {{ bordereau.receivedat|format_datetime('short', 'short', locale: utilisateur.locale) }}
+                                    </span>
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/assureur.html.twig', {size:'18px'}) }}
+                                        {{ bordereau.assureur.nom }}
+                                    </span>
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">
