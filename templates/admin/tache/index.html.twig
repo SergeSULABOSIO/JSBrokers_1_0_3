@@ -49,32 +49,32 @@
                         <tr id="row_tache_{{ tache.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ ux_icon('mingcute:task-2-fill', {height: '20px', width: '20px'}) }} 
+                                    {{ include('segments/icones/tache.html.twig', {size:'18px'}) }}
                                     {% if tache.closed == true %}
                                         <span class="text-success fw-bold">
-                                            {{ ux_icon('fluent-mdl2:completed', {height: '20px', width: '20px'}) }} 
+                                            {{ include('segments/icones/actions/completed.html.twig', {size:'18px'}) }} 
                                         </span>
                                     {% else %}
-                                        {{ ux_icon('mdi:progress-download', {height: '20px', width: '20px'}) }} 
+                                        {{ include('segments/icones/actions/ongoing.html.twig', {size:'18px'}) }}
                                     {% endif %}
                                     "{{ tache.description }}"
                                 </a><br/>
                                 <small class="m-2">
-                                    <span class="text-secondary">{{ ux_icon('fluent-mdl2:date-time-mirrored', {height: '18px', width: '18px'}) }}Créée le {{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">{{ include("segments/icones/datetime.html.twig", {size:'18px'}) }}{{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Echéance: {{ tache.toBeEndedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
                                     <span class="text-secondary"> • Modifiée le {{ tache.updatedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 {% if tache.piste != null %}
                                     <small class="m-2">
                                         <span class="text-secondary">
-                                            {{ ux_icon('fa-solid:road', {height: '18px', width: '18px'}) }}{{ tache.piste }}
+                                            {{ include("segments/icones/piste.html.twig", {size:'18px'}) }}{{ tache.piste }}
                                         </span> 
                                     </small><br/>
                                 {% endif %}
                                 {% if tache.cotation != null %}
                                     <small class="m-2">
                                         <span class="text-secondary">
-                                            {{ ux_icon('streamline:store-computer-solid', {height: '18px', width: '18px'}) }}{{ tache.cotation }}
+                                            {{ include("segments/icones/cotation.html.twig", {size:'18px'}) }}{{ tache.cotation }}
                                         </span> 
                                     </small><br/>
                                 {% endif %}
@@ -88,7 +88,7 @@
                                         <span class="text-secondary">Offre de réglèment sinistre: {{ tache.offreIndemnisationSinistre }}</span> 
                                     </small><br/>
                                 {% endif %}
-                                <small class="m-2 fw-bold">
+                                <small class="m-2">
                                     <span class="text-secondary">Tâche attribuée à {{ tache.executor }}</span> 
                                     {% set couleur = "text-secondary" %}
                                     {% if tache.feedbacks|length == 0 %}

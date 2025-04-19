@@ -49,7 +49,8 @@
                         <tr id="row_taxe_{{ comptebancaire.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.comptebancaire.edit', {'idCompteBancaire':comptebancaire.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ ux_icon('clarity:piggy-bank-solid', {height: '19px', width: '19px'}) }} {{ comptebancaire.nom }} • N°: {{ comptebancaire.numero }} • Banque: {{ comptebancaire.banque }}
+                                    {{ include('segments/icones/comptebancaire.html.twig', {size:'18px'}) }}
+                                    {{ comptebancaire.nom }} • N°: {{ comptebancaire.numero }} • Banque: {{ comptebancaire.banque }}
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">Intitulé: {{ comptebancaire.intitule }} • Code Swift: {{ comptebancaire.codeSwift }}</span> 
