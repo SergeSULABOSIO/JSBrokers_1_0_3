@@ -58,8 +58,12 @@
                                         {{ bordereau.receivedat|format_datetime('short', 'short', locale: utilisateur.locale) }}
                                     </span>
                                     <span class="text-secondary">
-                                        {{ include('segments/icones/assureur.html.twig', {size:'18px'}) }}
+                                         • {{ include('segments/icones/assureur.html.twig', {size:'18px'}) }}
                                         {{ bordereau.assureur.nom }}
+                                    </span>
+                                    <span class="text-secondary">
+                                         • {{ include('segments/icones/document.html.twig', {size:'18px'}) }}
+                                        ({{ bordereau.documents|length }})
                                     </span>
                                 </small><br/>
                             </td>
