@@ -49,7 +49,8 @@
                         <tr id="row_contact_{{ contact.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.contact.edit', {'idContact':contact.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ ux_icon('hugeicons:contact-01', {height: '19px', width: '19px'}) }} {{ contact.nom }}
+                                    {{ include('segments/icones/contact.html.twig', {size:'18px'}) }}                                    
+                                    {{ contact.nom }}
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">{{ contact.fonction }}</span> 
@@ -61,7 +62,21 @@
                                 </small><br/>
                                 {% if contact.notificationSinistre != null %}
                                     <small class="m-2">
-                                        Sinistre: {{ contact.notificationSinistre.referenceSinistre }}
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/notificationsinistre.html.twig', {size:'16px'}) }}                                    
+                                            {{ contact.notificationSinistre.referenceSinistre }}
+                                        </span>
+                                        <span class="text-secondary">
+                                             • "{{ contact.notificationSinistre.descriptionDeFait|slice('0', '80') }}[...]"
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if contact.client != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/client.html.twig', {size:'16px'}) }}                                    
+                                            {{ contact.client }}
+                                        </span>
                                     </small><br/>
                                 {% endif %}
                             </td>

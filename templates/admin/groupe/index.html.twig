@@ -49,9 +49,7 @@
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.groupe.edit', {'idGroupe':groupe.id, 'idEntreprise': entreprise.id})}}">
                                     {{ include('segments/icones/groupe.html.twig', {size:'18px'}) }}                                    
-                                    {{ groupe.nom }} • 
-                                    {{ include('segments/icones/client.html.twig', {size:'18px'}) }}
-                                    ({{ groupe.clients|length }})
+                                    {{ groupe.nom }} • {{ groupe.clients|length }} client(s)
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">{{ groupe.description }}</span> 
