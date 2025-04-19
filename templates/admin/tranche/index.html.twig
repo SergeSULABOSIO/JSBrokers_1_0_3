@@ -61,7 +61,9 @@
                                         {% endif %}
                                     {% endif %}
                                     {% if constante.Cotation_isBound(tranche.cotation) %}
-                                        (bound)
+                                        <span class="text-success">
+                                            {{ include('segments/icones/actions/completed.html.twig', {size:'18px'}) }}
+                                        </span>
                                     {% endif %}
                                     {{ tranche.nom }}                 
                                     ({{ tranche.pourcentage * 100 }}% à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})

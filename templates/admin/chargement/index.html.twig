@@ -49,6 +49,7 @@
                         <tr id="row_chargement_{{ chargement.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.chargement.edit', {'idChargement':chargement.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ include('segments/icones/typechargement.html.twig', {size:'18px'}) }}
                                     {{ chargement.nom }}
                                 </a><br/>
                                 <small class="m-2">
