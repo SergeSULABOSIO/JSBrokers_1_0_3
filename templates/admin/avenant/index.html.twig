@@ -49,19 +49,40 @@
                         <tr id="row_avenant_{{ avenant.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.avenant.edit', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ ux_icon('iconamoon:edit-fill', {height: '19px', width: '19px'}) }} {{ constante.getTypeAvenant(avenant.cotation.piste.typeavenant) }} • Avenant n°{{ avenant.numero }} • Police: {{ avenant.referencePolice }} • Du {{ avenant.startingAt|format_datetime('short', 'none', locale: utilisateur.locale) }} au {{ avenant.endingAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+                                    {{ include('segments/icones/avenant.html.twig', {size:'18px'}) }}
+                                    {{ constante.getTypeAvenant(avenant.cotation.piste.typeavenant) }} • Avenant n°{{ avenant.numero }} • Police: {{ avenant.referencePolice }} • Du {{ avenant.startingAt|format_datetime('short', 'none', locale: utilisateur.locale) }} au {{ avenant.endingAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
                                 </a><br/>
-                                <small class="m-2 fw-bold">
+                                <small class="m-2">
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                                        {{ avenant.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+                                    </span> 
                                     <span class="text-secondary">Exercice {{ avenant.cotation.piste.exercice }}</span> 
-                                    <span class="text-secondary"> • {{ avenant.cotation.assureur }}</span> 
-                                    <span class="text-secondary"> • {{ avenant.cotation.piste.client }}</span> 
-                                    <span class="text-secondary"> • {{ avenant.cotation.piste.risque.code }}</span> 
-                                    <span class="text-secondary"> • par {{ avenant.cotation.piste.invite.nom }}</span> 
-                                    <span class="text-secondary"> le  {{ avenant.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">
+                                         • 
+                                        {{ include('segments/icones/assureur.html.twig', {size:'16px'}) }}
+                                        {{ avenant.cotation.assureur }}
+                                    </span> 
+                                    <span class="text-secondary">
+                                         • 
+                                        {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                         {{ avenant.cotation.piste.client }}
+                                    </span> 
+                                    <span class="text-secondary">
+                                         • 
+                                        {{ include('segments/icones/risque.html.twig', {size:'16px'}) }}
+                                         {{ avenant.cotation.piste.risque.code }}
+                                    </span> 
+                                    <span class="text-secondary">
+                                         • par {{ avenant.cotation.piste.invite.nom }}
+                                    </span> 
                                 </small><br/>
                                 {# Section prime #}
                                 <small class="m-2">
-                                    <span class="text-secondary fw-bold">Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary fw-bold">
+                                        {{ include('segments/icones/cotation.html.twig', {size:'16px'}) }}
+                                        Prime: {{ constante.Cotation_getMontant_prime_payable_par_client(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                    </span> 
                                     <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Cotation_getMontant_prime_payable_par_client_payee(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
                                     {% if constante.Cotation_getMontant_prime_payable_par_client_solde(avenant.cotation) != 0 %}
@@ -71,21 +92,34 @@
                                 </small><br/>
                                 {# Section commissions #}
                                 <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Cotation_getMontant_commission_pure(avenant.cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Cotation_getMontant_commission_ht(avenant.cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Cotation_getMontant_commission_ttc(avenant.cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/revenu.html.twig', {size:'16px'}) }}
+                                        Com. pure: {{ constante.Cotation_getMontant_commission_pure(avenant.cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                    </span> 
+                                    <span class="text-secondary"> • Ht: {{ constante.Cotation_getMontant_commission_ht(avenant.cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Totale: {{ constante.Cotation_getMontant_commission_ttc(avenant.cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Collectée: {{ constante.Cotation_getMontant_commission_ttc_collectee(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
                                     {% if constante.Cotation_getMontant_commission_ttc_solde(avenant.cotation, -1, false) != 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
                                     <span class="{{couleur}}"> • Solde: {{ constante.Cotation_getMontant_commission_ttc_solde(avenant.cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
+                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                <small class="m-2">
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/revenu.html.twig', {size:'16px'}) }}
+                                        La réserve finale pour {{ entreprise.nom }} est de {{ constante.Avenant_getReserve(avenant)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                    </span> 
+                                </small><br>
                                 {% for taxe in serviceTaxe.taxes %}
                                      {% if taxe.redevable == 0 %}
                                         {# Section Taxes : TVA#}
                                         <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Cotation_getMontant_taxe_payable_par_assureur(avenant.cotation, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/taxe.html.twig', {size:'16px'}) }}
+                                                {{ taxe.code }}: {{ constante.Cotation_getMontant_taxe_payable_par_assureur(avenant.cotation, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                            </span> 
                                             <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Cotation_getMontant_taxe_payable_par_assureur_payee(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
                                             {% if constante.Cotation_getMontant_taxe_payable_par_assureur_solde(avenant.cotation, false) != 0 %}
@@ -97,7 +131,10 @@
                                      {% if taxe.redevable == 1 %}
                                         {# Section Taxe: ARCA #}
                                         <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Cotation_getMontant_taxe_payable_par_courtier(avenant.cotation, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/taxe.html.twig', {size:'16px'}) }}
+                                                {{ taxe.code }}: {{ constante.Cotation_getMontant_taxe_payable_par_courtier(avenant.cotation, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                            </span> 
                                             <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Cotation_getMontant_taxe_payable_par_courtier_payee(avenant.cotation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
                                             {% if constante.Cotation_getMontant_taxe_payable_par_courtier_solde(avenant.cotation, false) != 0 %}
@@ -111,9 +148,12 @@
                                 {% if partenaire != null %}
                                     {# Retro-commission #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Assiette: {{ constante.Cotation_getMontant_commission_pure(avenant.cotation, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(avenant.cotation, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(avenant.cotation, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/partenaire.html.twig', {size:'16px'}) }}
+                                            Assiette: {{ constante.Cotation_getMontant_commission_pure(avenant.cotation, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary"> • Rétro-com {{ partenaire }}: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier(avenant.cotation, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Payée: {{ constante.Cotation_getMontant_retrocommissions_payable_par_courtier_payee(avenant.cotation, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
                                         {% if constante.Cotation_getMontant_retrocommissions_payable_par_courtier_solde(avenant.cotation, partenaire, -1, true) != 0 %}
                                             {% set couleur = "text-danger" %}
@@ -128,13 +168,16 @@
                                         </small><br>
                                     {% endif %}
                                 {% endif %}
-                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
                                 <small class="m-2">
-                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Avenant_getReserve(avenant)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br>
-                                <small class="m-2">
-                                    <span class="text-secondary">Piste: {{ avenant.cotation.piste.nom }}</span>
-                                    <span class="text-secondary"> • Créée le {{ avenant.cotation.piste.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}</span>
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/piste.html.twig', {size:'16px'}) }}
+                                        {{ avenant.cotation.piste.nom }}
+                                    </span>
+                                    <span class="text-secondary">
+                                         • 
+                                        {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                                         {{ avenant.cotation.piste.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+                                    </span>
                                 </small><br>
                                 <small class="m-2">
                                     <span class="text-secondary">Condition: {{ constante.Piste_getTexteRenewalCondition(avenant.cotation.piste) }}</span> 
@@ -143,7 +186,7 @@
                                     {% if constante.Avenant_getRenewalStatus(avenant)['remaining days'] < 0 %}
                                         {% set couleur = "text-danger" %}
                                     {% endif %}
-                                    <span class="{{ couleur }}"> • Status: {{ constante.Avenant_getRenewalStatus(avenant)['text'] }}</span> 
+                                    <span class="{{ couleur }}"> • {{ constante.Avenant_getRenewalStatus(avenant)['text'] }}</span> 
                                 </small><br>
                             </td>
                             <td>
