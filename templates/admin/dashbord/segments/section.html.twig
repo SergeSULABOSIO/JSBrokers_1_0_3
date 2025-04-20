@@ -15,35 +15,35 @@
             <nav>
                 <div class="nav nav-tabs" id="nav-tab" role="tablist">
                     <button class="nav-link active" id="nav-graphs-tab" data-bs-toggle="tab" data-bs-target="#nav-graphs" type="button" role="tab" aria-controls="nav-graphs" aria-selected="true">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/graphic.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_graphs_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-production-insurer-tab" data-bs-toggle="tab" data-bs-target="#nav-production-insurer" type="button" role="tab" aria-controls="nav-production-insurer" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/assureur.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_insurers_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-production-partner-tab" data-bs-toggle="tab" data-bs-target="#nav-production-partner" type="button" role="tab" aria-controls="nav-production-partner" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/partenaire.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_partners_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-topclients-tab" data-bs-toggle="tab" data-bs-target="#nav-topclients" type="button" role="tab" aria-controls="nav-topclients" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/client.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_clients_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-tasks-tab" data-bs-toggle="tab" data-bs-target="#nav-tasks" type="button" role="tab" aria-controls="nav-tasks" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/tache.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_tasks_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-renewals-tab" data-bs-toggle="tab" data-bs-target="#nav-renewals" type="button" role="tab" aria-controls="nav-renewals" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/avenant.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_renewals_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-claims-tab" data-bs-toggle="tab" data-bs-target="#nav-claims" type="button" role="tab" aria-controls="nav-claims" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/notificationsinistre.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_claims_titre" | trans() | raw }}
                     </button>
                     <button class="nav-link" id="nav-cash-tab" data-bs-toggle="tab" data-bs-target="#nav-cash" type="button" role="tab" aria-controls="nav-cash" aria-selected="false">
-                        {{ ux_icon('fluent:tab-desktop-28-regular', {height: '20px', width: '20px'}) }}
+                        {{ include('segments/icones/note.html.twig', {size:'20px'}) }}
                         {{ "company_dashboard_section_principale_cashflow_titre" | trans() | raw }}
                     </button>
                 </div>
@@ -85,7 +85,10 @@
                                                 border-color: black;
                                                 background: #f6f6f6;
                                             ">
-                                                <td><small><strong>{{ ux_icon('mdi-light:plus-box', {height: '16px', width: '16px'}) }}&nbsp;{{ reposertSet.label }}</strong></small></td>
+                                                <td><small><strong class="text-secondary">
+                                                    &nbsp;{{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                                                    {{ reposertSet.label }}</strong></small>
+                                                </td>
                                                 <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                                 <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                                 <td class="text-end" style="color: #e29c1d;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
@@ -96,7 +99,13 @@
                                         {% endif %}
                                         {% if reposertSet.type == 1 %}
                                             <tr>
-                                                <td>&nbsp;&nbsp;&nbsp;&nbsp;<small>{{ reposertSet.label }}</small></td>
+                                                <td>
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                    <small class="text-secondary">
+                                                        {{ include('segments/icones/assureur.html.twig', {size:'16px'}) }}
+                                                        {{ reposertSet.label }}
+                                                    </small>
+                                                </td>
                                                 <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                                 <td class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                                 <td class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
@@ -126,7 +135,7 @@
                         {% else %}
                             <div class="text-center m-2">
                                 <strong class="rounded">
-                                    {{ ux_icon('tabler:mood-empty', {height: '50px', width: '50px'}) }}</br>
+                                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}
                                     Oups! Il n'y a pas d'élément pour l'instant.
                                 </strong>
                             </div>
@@ -167,7 +176,13 @@
                                                 border-color: black;
                                                 background: #f6f6f6;
                                             ">
-                                                <td><small><strong>{{ ux_icon('mdi-light:plus-box', {height: '16px', width: '16px'}) }}&nbsp;{{ reposertSet.label }}</strong></small></td>
+                                                <td><small>
+                                                    <strong class="text-secondary">
+                                                        &nbsp;{{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                                                        {{ reposertSet.label }}
+                                                    </strong>
+                                                    </small>
+                                                </td>
                                                 <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                                 <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                                 <td class="text-end" style="color: #e29c1d;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
@@ -178,7 +193,14 @@
                                         {% endif %}
                                         {% if reposertSet.type == 1 %}
                                             <tr>
-                                                <td>&nbsp;&nbsp;&nbsp;&nbsp;<small>{{ reposertSet.label }}</small> <span class="badge text-bg-secondary">{{ reposertSet.partner_rate }}%</span></td>
+                                                <td>
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                    <small class="text-secondary">
+                                                        {{ include('segments/icones/partenaire.html.twig', {size:'16px'}) }}
+                                                        {{ reposertSet.label }}
+                                                    </small> 
+                                                    <span class="badge text-bg-secondary">{{ reposertSet.partner_rate }}%</span>
+                                                </td>
                                                 <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                                 <td class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                                 <td class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
@@ -208,7 +230,7 @@
                         {% else %}
                             <div class="text-center m-2">
                                 <strong class="rounded">
-                                    {{ ux_icon('tabler:mood-empty', {height: '50px', width: '50px'}) }}</br>
+                                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
                                     Oups! Il n'y a pas d'élément pour l'instant.
                                 </strong>
                             </div>
@@ -349,7 +371,7 @@
                                 </caption>
                                 <thead class="table-secondary">
                                     <tr>
-                                        <th scope="col">{{ "company_dashboard_section_principale_clients_colonne_client" | trans() | raw}} </th>
+                                        <th scope="col">&nbsp;{{ "company_dashboard_section_principale_clients_colonne_client" | trans() | raw}} </th>
                                         <th scope="col" class="text-end">{{ "company_dashboard_section_principale_clients_colonne_prime" | trans() | raw}} </th>
                                         <th scope="col" class="text-end">{{ "company_dashboard_section_principale_clients_colonne_other_laodings" | trans() | raw}} </th>
                                         <th scope="col" class="text-end">{{ "company_dashboard_section_principale_clients_colonne_prime_nette" | trans() | raw}} </th>
@@ -360,7 +382,15 @@
                                     {% for reposertSet in dashboard.productionTabs.tabTop20Clients['data'] %}
                                         {% if reposertSet.type == 0 %}
                                             <tr>
-                                                <td>&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></td>
+                                                <td>
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                    <small class="text-secondary">
+                                                        <strong>
+                                                            {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                                            {{ reposertSet.label }}
+                                                        </strong>
+                                                    </small>
+                                                </td>
                                                 <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                                 <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.other_loadings|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
                                                 <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
@@ -369,7 +399,13 @@
                                         {% endif %}
                                         {% if reposertSet.type == 1 %}
                                             <tr>
-                                                <td>&nbsp;&nbsp;&nbsp;&nbsp;<small>{{ reposertSet.label }}</small></td>
+                                                <td>
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                    <small class="text-secondary">
+                                                        {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                                        {{ reposertSet.label }}
+                                                    </small>
+                                                </td>
                                                 <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                                 <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.other_loadings|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
                                                 <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
@@ -382,7 +418,7 @@
                                     <tr>
                                         {% for reposertSet in dashboard.productionTabs.tabTop20Clients['data'] %}
                                             {% if reposertSet.type == 2 %}
-                                                <th scope="col"><small>{{ reposertSet.label }}</small></th>
+                                                <th scope="col"><small>&nbsp;{{ reposertSet.label }}</small></th>
                                                 <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                                 <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.other_loadings|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
                                                 <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.net_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
@@ -395,7 +431,7 @@
                         {% else %}
                             <div class="text-center m-2">
                                 <strong class="rounded">
-                                    {{ ux_icon('tabler:mood-empty', {height: '50px', width: '50px'}) }}</br>
+                                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
                                     Oups! Il n'y a pas d'élément pour l'instant.
                                 </strong>
                             </div>
@@ -428,14 +464,26 @@
                                         {% if reposertSet.type == 1 %}
                                             <tr>
                                                 <td>
-                                                    <small>
-                                                        {{ ux_icon('mingcute:task-2-fill', {height: '20px', width: '20px'}) }} {{ ux_icon('mdi:progress-download', {height: '20px', width: '20px'}) }}
-                                                        <a href="#" class="text-dark" style="text-decoration: none;">{{ reposertSet.task_description|raw }}</a></br>
+                                                    <small class="text-secondary">
+                                                        {{ include('segments/icones/tache.html.twig', {size:'20px'}) }}
+                                                        {{ include('segments/icones/actions/completed.html.twig', {size:'20px'}) }}
+                                                        <a href="#" class="text-secondary" style="text-decoration: none;">{{ reposertSet.task_description|raw }}</a></br>
                                                         <span class="text-muted">
                                                             <ul>
-                                                                <li>{{ "company_dashboard_section_principale_tasks_by" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.owner.nom }}</a></li>
-                                                                <li>{{ "company_dashboard_section_principale_tasks_lead" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.lead }}</a></li>
-                                                                <li>{{ "company_dashboard_section_principale_tasks_end" | trans() | raw }}{{ reposertSet.endorsement }} </li>
+                                                                <li>
+                                                                    {{ include('segments/icones/invite.html.twig', {size:'12px'}) }}
+                                                                    {{ "company_dashboard_section_principale_tasks_by" | trans() | raw }}
+                                                                    <a href="#" class="link-secondary">{{ reposertSet.owner.nom }}</a>
+                                                                </li>
+                                                                <li>
+                                                                    {{ include('segments/icones/piste.html.twig', {size:'12px'}) }}
+                                                                    {{ "company_dashboard_section_principale_tasks_lead" | trans() | raw }}
+                                                                    <a href="#" class="link-secondary">{{ reposertSet.lead }}</a>
+                                                                </li>
+                                                                <li>
+                                                                    {{ include('segments/icones/avenant.html.twig', {size:'12px'}) }}
+                                                                    {{ "company_dashboard_section_principale_tasks_end" | trans() | raw }}{{ reposertSet.endorsement }} 
+                                                                </li>
                                                             </ul>
                                                         </span>
                                                     </small>
@@ -504,7 +552,7 @@
                         {% else %}
                             <div class="text-center m-2">
                                 <strong class="rounded">
-                                    {{ ux_icon('tabler:mood-empty', {height: '50px', width: '50px'}) }}</br>
+                                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
                                     Oups! Il n'y a pas d'élément pour l'instant.
                                 </strong>
                             </div>
@@ -591,7 +639,7 @@
                         {% else %}
                             <div class="text-center m-2">
                                 <strong class="rounded">
-                                    {{ ux_icon('tabler:mood-empty', {height: '50px', width: '50px'}) }}</br>
+                                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
                                     Oups! Il n'y a pas d'élément pour l'instant.
                                 </strong>
                             </div>
@@ -724,7 +772,7 @@
                         {% else %}
                             <div class="text-center m-2">
                                 <strong class="rounded">
-                                    {{ ux_icon('tabler:mood-empty', {height: '50px', width: '50px'}) }}</br>
+                                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
                                     Oups! Il n'y a pas d'élément pour l'instant.
                                 </strong>
                             </div>
@@ -814,7 +862,7 @@
                         {% else %}
                             <div class="text-center m-2">
                                 <strong class="rounded">
-                                    {{ ux_icon('tabler:mood-empty', {height: '50px', width: '50px'}) }}</br>
+                                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
                                     Oups! Il n'y a pas d'élément pour l'instant.
                                 </strong>
                             </div>
