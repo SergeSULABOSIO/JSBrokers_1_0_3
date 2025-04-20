@@ -245,6 +245,7 @@
                                     {# Revenue graphs per month #}
                                     <small class="m-2 text-secondary ">
                                         <span class="fw-bold">
+                                            {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
                                             {{ dashboard.productionCharts['chartPerMonth']['titre'] }}
                                         </span>
                                     </small>
@@ -267,6 +268,7 @@
                                 <div class="card-header text-center">
                                     <small class="m-2 text-secondary ">
                                         <span class="fw-bold">
+                                            {{ include('segments/icones/assureur.html.twig', {size:'18px'}) }}
                                             {{ dashboard.productionCharts['chartPerInsurer']['titre'] }}
                                         </span>
                                     </small>
@@ -288,6 +290,7 @@
                                 <div class="card-header text-center">
                                     <small class="m-2 text-secondary ">
                                         <span class="fw-bold">
+                                            {{ include('segments/icones/risque.html.twig', {size:'18px'}) }}
                                             {{ dashboard.productionCharts['chartPerRisks']['titre'] }}
                                         </span>
                                     </small>
@@ -313,8 +316,8 @@
                                 <div class="card-header text-center">
                                     <small class="m-2 text-secondary ">
                                         <span class="fw-bold">
+                                            {{ include('segments/icones/avenant.html.twig', {size:'18px'}) }}
                                             {{ dashboard.productionCharts['chartPerRenewalStatus']['titre'] }}
-                                            {# Revenue graphs per renewal status #}
                                         </span>
                                     </small>
                                 </div>
@@ -335,6 +338,7 @@
                                 <div class="card-header text-center">
                                     <small class="m-2 text-secondary ">
                                         <span class="fw-bold">
+                                            {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
                                             {{ dashboard.productionCharts['chartPerPartners']['titre'] }}
                                         </span>
                                     </small>
