@@ -48,19 +48,33 @@
                         <tr id="row_offreindemnisation_{{ offreindemnisation.id }}">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.offreindemnisation.edit', {'idOffreindemnisation':offreindemnisation.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ ux_icon('icon-park-outline:funds', {height: '20px', width: '20px'}) }} {{ offreindemnisation.nom }} • {{ offreindemnisation.notificationSinistre.assure.nom }}
+                                    {{ include('segments/icones/offreindemnisation.html.twig', {size:'18px'}) }}
+                                    {{ offreindemnisation.nom }}
                                 </a><br/>
                                 <small class="m-2">
+                                    {% if offreindemnisation.notificationsinistre.assure != null %}
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                            {{ offreindemnisation.notificationsinistre.assure.nom }}
+                                             • 
+                                            {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                                            {{ offreindemnisation.notificationsinistre.occuredAt|format_datetime('short', 'short', locale: utilisateur.locale) }}
+                                        </span>
+                                    {% endif %}
                                     {% if offreindemnisation.notificationsinistre.referenceSinistre != null %}
                                         <span class="text-secondary">
-                                            {{ ux_icon('emojione-monotone:fire', {height: '17px', width: '17px'}) }} {{ offreindemnisation.notificationsinistre.referenceSinistre }}, évènement du {{ offreindemnisation.notificationsinistre.occuredAt|format_datetime('full', 'short', locale: utilisateur.locale) }}
+                                            {{ include('segments/icones/notificationsinistre.html.twig', {size:'16px'}) }}
+                                            {{ offreindemnisation.notificationsinistre.referenceSinistre }}
                                         </span>
                                     {% endif %}
                                 </small><br/>
                                 <small class="m-2 fw-bold">
-                                    <span class="text-secondary">Franchise: {{ offreindemnisation.franchiseAppliquee|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/offreindemnisation.html.twig', {size:'16px'}) }}
+                                        Franchise: {{ offreindemnisation.franchiseAppliquee|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                    </span> 
                                     <span class="text-secondary"> • Compensation: {{ offreindemnisation.montantPayable|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Comp. versée: {{ constante.Offre_Indemnisation_getCompensationVersee(offreindemnisation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    <span class="text-secondary"> • Versée: {{ constante.Offre_Indemnisation_getCompensationVersee(offreindemnisation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                     {% set couleur = "text-secondary" %}
                                     {% if constante.Offre_Indemnisation_getSoldeAVerser(offreindemnisation) != 0 %}
                                         {% set couleur = "text-danger" %}
@@ -68,8 +82,13 @@
                                     <span class="{{couleur}}"> • Solde: {{ constante.Offre_Indemnisation_getSoldeAVerser(offreindemnisation)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                 </small><br/>
                                 <small class="m-2">
-                                    <span class="text-secondary">Bénéficiaire: {{ offreindemnisation.beneficiaire }}</span> 
-                                    <span class="text-secondary"> • Réf. Bancaire: {{ offreindemnisation.referenceBancaire }}</span> 
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                        Bénéficiaire: {{ offreindemnisation.beneficiaire }}
+                                    </span> 
+                                    <span class="text-secondary">
+                                         • {{ include('segments/icones/comptebancaire.html.twig', {size:'16px'}) }}
+                                        Réf. Bancaire: {{ offreindemnisation.referenceBancaire }}</span> 
                                 </small><br/>
                             </td>
                             <td>

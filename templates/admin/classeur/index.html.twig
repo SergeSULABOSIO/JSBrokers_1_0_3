@@ -48,9 +48,19 @@
                     {% for classeur in classeurs %}
                         <tr id="row_classeur_{{ classeur.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.classeur.edit', {'idClasseur':classeur.id, 'idEntreprise': entreprise.id})}}">
+                                <a class="m-2 fw-bold" href="{{ path('admin.classeur.edit', {'idClasseur':classeur.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ include('segments/icones/classeur.html.twig', {size:'18px'}) }}
                                     {{ classeur.nom }}
-                                </a>
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/document.html.twig', {size:'16px'}) }}
+                                        Documents ({{ classeur.documents|length }})
+                                    </span>
+                                    <span class="text-secondary">
+                                         • {{ classeur.description }}
+                                    </span>
+                                </small><br/>
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

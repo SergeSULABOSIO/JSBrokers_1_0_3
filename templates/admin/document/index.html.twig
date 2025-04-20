@@ -48,9 +48,116 @@
                     {% for document in documents %}
                         <tr id="row_document_{{ document.id }}">
                             <td>
-                                <a class="m-2" href="{{ path('admin.document.edit', {'idDocument':document.id, 'idEntreprise': entreprise.id})}}">
+                                <a class="m-2 fw-bold" href="{{ path('admin.document.edit', {'idDocument':document.id, 'idEntreprise': entreprise.id})}}">
+                                    {{ include('segments/icones/document.html.twig', {size:'18px'}) }}
                                     {{ document.nom }}
-                                </a>
+                                </a><br/>
+                                <small class="m-2">
+                                    <span class="text-secondary">
+                                        {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                                        Le {{ document.createdAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+                                    </span>
+                                    <span class="text-secondary">
+                                         • {{ include('segments/icones/classeur.html.twig', {size:'16px'}) }}
+                                        {{ document.classeur.nom }} ({{ document.classeur.documents|length }})
+                                    </span>
+                                </small><br/>
+                                {% if document.pieceSinistre != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/modelepiecesinistre.html.twig', {size:'16px'}) }}
+                                            {{ document.pieceSinistre }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.offreIndemnisationSinistre != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/offreindemnisation.html.twig', {size:'16px'}) }}
+                                            {{ document.offreIndemnisationSinistre }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.cotation != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/cotation.html.twig', {size:'16px'}) }}
+                                            {{ document.cotation }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.avenant != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/avenant.html.twig', {size:'16px'}) }}
+                                            {{ document.avenant }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.tache != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/tache.html.twig', {size:'16px'}) }}
+                                            {{ document.tache }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.feedback != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/feedback.html.twig', {size:'16px'}) }}
+                                            {{ document.feedback }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.client != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                            {{ document.client }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.bordereau != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/bordereau.html.twig', {size:'16px'}) }}
+                                            {{ document.bordereau }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.compteBancaire != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/comptebancaire.html.twig', {size:'16px'}) }}
+                                            {{ document.compteBancaire }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.piste != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/piste.html.twig', {size:'16px'}) }}
+                                            {{ document.piste }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.partenaire != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/partenaire.html.twig', {size:'16px'}) }}
+                                            {{ document.partenaire }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
+                                {% if document.paiement != null %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/paiement.html.twig', {size:'16px'}) }}
+                                            {{ document.paiement.description }}
+                                        </span>
+                                    </small><br/>
+                                {% endif %}
                             </td>
                             <td>
                                 <div class="d-flex gap-1 d-flex justify-content-end">

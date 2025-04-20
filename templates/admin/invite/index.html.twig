@@ -58,24 +58,26 @@
 					{% for invite in invites %}
 						<tr id="row_invite_{{ invite.id }}">
 							<td>
-								<turbo-frame id="invite_{{ invite.id }}">
-									<a class="m-2" href="{{ path('admin.invite.edit', {'idInvite':invite.id, 'idEntreprise': entreprise.id})}}">
-										{{ invite.nom }}, 
-										{% if invite.isproprietaire == true %}
-											<span class="badge rounded-pill position-relative text-bg-secondary">
-												{{ invite.email }}
-												<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning">
-													Propriétaire
-												</span>
-											</span>
-										{% else %}
+								<a class="m-2 fw-bold" href="{{ path('admin.invite.edit', {'idInvite':invite.id, 'idEntreprise': entreprise.id})}}">
+									{{ include('segments/icones/invite.html.twig', {size:'18px'}) }}
+									{{ invite.nom }}, <br/>
+									{% if invite.isproprietaire == true %}
+										<span class="badge rounded-pill position-relative text-bg-secondary">
 											{{ invite.email }}
-										{% endif %}
-									</a>
-								</turbo-frame>
+											<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-warning">
+												Propriétaire
+											</span>
+										</span>
+									{% else %}
+										{{ invite.email }}
+									{% endif %}
+								</a>
 							</td>
 							<td>
-								{{ invite.createdAt|date('d/m/Y H:i') }}
+								<span class="text-secondary">
+									{{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+									{{ invite.createdAt|date('d/m/Y H:i') }}
+								</span>
 							</td>
 							<td>
 								<div
