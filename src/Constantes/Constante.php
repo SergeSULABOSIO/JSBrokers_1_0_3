@@ -58,6 +58,7 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Entity\ReportSet\CashflowReportSet;
 use Doctrine\ORM\Query\Expr\Func;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
@@ -5903,6 +5904,8 @@ class Constante
         return $tabDetails;
     }
 
+    
+
     public function createClaimReportSet($number, NotificationSinistre $notification): ClaimReportSet
     {
         $status = $this->Claim_getClaimStatus($notification);
@@ -5919,8 +5922,8 @@ class Constante
             ->setNotification_date($notification->getNotifiedAt())
             ->setDamage_cost($notification->getDommage())
             ->setClaim_reference($notification->getReferenceSinistre())
-            ->setVictim(substr($notification->getDescriptionVictimes(), 0, 15)."[..]")
-            ->setCirconstance(substr($notification->getDescriptionDeFait(), 0, 15)."[..]")
+            ->setVictim(substr($notification->getDescriptionVictimes(), 0, 15) . "[..]")
+            ->setCirconstance(substr($notification->getDescriptionDeFait(), 0, 15) . "[..]")
             ->setAccount_manager($this->Utilisateur_getUtilisateurByInvite($notification->getInvite()))
             ->setGw_premium($status['primeTTC'])
             ->setPolicy_limit($status['limite'])
@@ -5996,5 +5999,151 @@ class Constante
 
         // dd($tabFinaleOrdonne);
         return $tabFinaleOrdonne;
+    }
+
+    public function createCashflowReportSet($index, Note $note): CashflowReportSet
+    {
+        return $dataSet = (new CashflowReportSet())
+            ->setIndex($index)
+            ->setType(CashflowReportSet::TYPE_ELEMENT)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setDescription($note->getDescription())
+            ->setDebtor($tabDebtors[rand(0, count($tabDebtors) - 1)])
+            ->setStatus($tabStatus[rand(0, count($tabStatus) - 1)])
+            ->setInvoice_reference($note->getReference())
+            ->setNet_amount(rand(1000, 100000))
+            ->setTaxes(rand(100, 10000))
+            // ->setGross_due(rand(1000, 100000))
+            // ->setAmount_paid(rand(1000, 100000))
+            // ->setBalance_due(rand(0, 100))
+            ->setUser($this->Utilisateur_getUtilisateurByInvite($note->getInvite()))
+            ->setDate_submition(new DateTimeImmutable("now - " . (rand(2, 30)) . " days"))
+            ->setDate_payment(new DateTimeImmutable("now -" . (rand(0, 1)) . " days"));
+    }
+
+    public function Entreprise_getDataTabCashFlow()
+    {
+        // $tabStatus = [
+        //     "Awaiting for POP",
+        //     "Settled"
+        // ];
+
+        // $tabReportSets = [];
+        // $index = 1;
+        // foreach ($tabReferences as $invoice_reference) {
+        //     $dataSet = (new CashflowReportSet())
+        //         ->setIndex($index)
+        //         ->setType(CashflowReportSet::TYPE_ELEMENT)
+        //         ->setCurrency_code("$")
+        //         ->setDescription($tabDescriptions[rand(0, count($tabDescriptions) - 1)])
+        //         ->setDebtor($tabDebtors[rand(0, count($tabDebtors) - 1)])
+        //         ->setStatus($tabStatus[rand(0, count($tabStatus) - 1)])
+        //         ->setInvoice_reference($invoice_reference)
+        //         ->setNet_amount(rand(1000, 100000))
+        //         ->setTaxes(rand(100, 10000))
+        //         // ->setGross_due(rand(1000, 100000))
+        //         // ->setAmount_paid(rand(1000, 100000))
+        //         // ->setBalance_due(rand(0, 100))
+        //         ->setUser($tabUsers[rand(0, count($tabUsers) - 1)])
+        //         ->setDate_submition(new DateTimeImmutable("now - " . (rand(2, 30)) . " days"))
+        //         ->setDate_payment(new DateTimeImmutable("now -" . (rand(0, 1)) . " days"));
+
+        //     $dataSet->setGross_due($dataSet->getNet_amount() + $dataSet->getTaxes());
+        //     $dataSet->setAmount_paid(rand(0, $dataSet->getGross_due()));
+        //     $dataSet->setBalance_due($dataSet->getGross_due() - $dataSet->getAmount_paid());
+        //     $days = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getDate_submition());
+        //     $dataSet->setDays_passed("The invoice was submitted " . $days .  " days ago to " . $dataSet->getDebtor());
+
+        //     $tabReportSets[] = $dataSet;
+        //     $index++;
+        // }
+
+        // //Ligne totale
+        // $dataSet = (new CashflowReportSet())
+        //     ->setType(CashflowReportSet::TYPE_TOTAL)
+        //     ->setCurrency_code("$")
+        //     ->setDescription("TOTAL")
+        //     ->setNet_amount(rand(1000, 100000))
+        //     ->setTaxes(rand(1000, 100000))
+        //     ->setGross_due(rand(1000, 100000))
+        //     ->setAmount_paid(rand(1000, 100000))
+        //     ->setBalance_due(rand(1000, 10000));
+
+        // $tabReportSets[] = $dataSet;
+        // // dd($tabReportSets);
+
+        // return $tabReportSets;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // $number = 1;
+        // $cumulDamagrCost = 0;
+        // $cumulCompaPaid = 0;
+        // $cumulCompaBalance = 0;
+        // $tabReportSets = [];
+        // $tabAOrdonner = [];
+
+        // /** @var Avenant $avenant */
+        // foreach ($this->Entreprise_getClaimsNotifications() as $claimNotification) {
+        //     //On n'affiche ici que ceux qui ne sont pas encore renouvellé
+        //     $claimStatus = $this->Claim_getClaimStatus($claimNotification);
+        //     $settlementSpeed = $claimStatus['speed'];
+        //     if ($settlementSpeed != -1) {
+        //         $dataSet = $this->createClaimReportSet($number, $claimNotification);
+        //         $cumulDamagrCost += $dataSet->getDamage_cost();
+        //         $cumulCompaPaid += $dataSet->getCompensation_paid();
+        //         $cumulCompaBalance += $dataSet->getCompensation_balance();
+        //         // $tabReportSets[] = $dataSet;
+        //         $number++;
+
+        //         //Préparation des tableaux pour faire le tri
+        //         $tabReportSets[$claimNotification->getId()] = $dataSet;
+        //         // //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
+        //         $tabAOrdonner[$claimNotification->getId()] = date_format($claimNotification->getNotifiedAt(), 'd/m/Y');
+        //     }
+        // }
+        // /**
+        //  * TRI PAR ORDRE CROISSANT PAR RAPPORT 
+        //  * AU NB DE JOUR DEPUIS LA DATE DE NOTIFICATION DU SINISTRE
+        //  */
+        // // Trie le tableau associatif en utilisant la fonction de comparaison
+        // uasort($tabAOrdonner, function ($dateA, $dateB) {
+        //     $date_a = DateTime::createFromFormat('d/m/Y', $dateA);
+        //     $date_b = DateTime::createFromFormat('d/m/Y', $dateB);
+        //     if ($date_a == $date_b) {
+        //         return 0;
+        //     }
+        //     return ($date_a < $date_b) ? -1 : 1;
+        // });
+
+        // $tabFinaleOrdonne = [];
+        // foreach ($tabAOrdonner as $key => $value) {
+        //     $tabFinaleOrdonne[] = $tabReportSets[$key];
+        // }
+        // //Après le tri on ajoute la Ligne de totale
+        // $dataSetTotal = (new ClaimReportSet())
+        //     ->setType(ClaimReportSet::TYPE_TOTAL)
+        //     ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+        //     ->setPolicy_reference("TOTAL")
+        //     ->setDamage_cost($cumulDamagrCost)
+        //     ->setCompensation_paid($cumulCompaPaid)
+        //     ->setCompensation_balance($cumulCompaBalance);
+
+        // $tabFinaleOrdonne[] = $dataSetTotal;
+
+        // // dd($tabFinaleOrdonne);
+        // return $tabFinaleOrdonne;
+        return [];
     }
 }
