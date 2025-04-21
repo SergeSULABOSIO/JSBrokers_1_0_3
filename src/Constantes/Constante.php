@@ -5904,7 +5904,7 @@ class Constante
         return $tabDetails;
     }
 
-    
+
 
     public function createClaimReportSet($number, NotificationSinistre $notification): ClaimReportSet
     {
@@ -6003,147 +6003,124 @@ class Constante
 
     public function createCashflowReportSet($index, Note $note): CashflowReportSet
     {
-        return $dataSet = (new CashflowReportSet())
+        $status = $this->Note_getNoteStatus($note);
+        return (new CashflowReportSet())
             ->setIndex($index)
             ->setType(CashflowReportSet::TYPE_ELEMENT)
             ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
             ->setDescription($note->getDescription())
-            ->setDebtor($tabDebtors[rand(0, count($tabDebtors) - 1)])
-            ->setStatus($tabStatus[rand(0, count($tabStatus) - 1)])
+            ->setDebtor($this->Note_getNameOfAddressedTo($note))
+            ->setStatus($status['Texte'])
             ->setInvoice_reference($note->getReference())
-            ->setNet_amount(rand(1000, 100000))
-            ->setTaxes(rand(100, 10000))
-            // ->setGross_due(rand(1000, 100000))
-            // ->setAmount_paid(rand(1000, 100000))
-            // ->setBalance_due(rand(0, 100))
+            ->setNet_amount(0)
+            ->setTaxes(0)
+            ->setGross_due(0)
+            ->setAmount_paid(0)
+            ->setBalance_due(0)
             ->setUser($this->Utilisateur_getUtilisateurByInvite($note->getInvite()))
-            ->setDate_submition(new DateTimeImmutable("now - " . (rand(2, 30)) . " days"))
-            ->setDate_payment(new DateTimeImmutable("now -" . (rand(0, 1)) . " days"));
+            ->setDate_submition(new DateTimeImmutable("now"))
+            ->setDate_payment($status['Date dernier paiement']);
+    }
+
+    public function Note_getNoteStatus(Note $note)
+    {
+        $status = [
+            "Date dernier paiement" => null,
+            "Texte" => "RAS",
+        ];
+
+        if ($note != null) {
+            $totalDu = $this->Note_getMontant_payable($note);
+            $totalPaye = $this->Note_getMontant_paye($note);
+            foreach ($note->getPaiements() as $paiement) {
+                $status['Date dernier paiement'] = $paiement->getPaidAt();
+            }
+            if (($totalDu - $totalPaye) == 0) {
+                $status['Texte'] = "Soldée";
+            } else if ($totalPaye == 0) {
+                $status['Texte'] =  "Impayée";
+            } else {
+                $status['Texte'] = "Payée en partie";
+            }
+        } else {
+            $status['Texte'] = "Null";
+        }
+        return $status;
+    }
+
+    public function Entreprise_getNotes()
+    {
+        $tab = [];
+        foreach ($this->getEnterprise()->getInvites() as $invite) {
+            foreach ($invite->getNotes() as $note) {
+                $tab[] = $note;
+            }
+        }
+        return $tab;
     }
 
     public function Entreprise_getDataTabCashFlow()
     {
-        // $tabStatus = [
-        //     "Awaiting for POP",
-        //     "Settled"
-        // ];
+        $tabAOrdonner = [];
+        $cumulNet = 0;
+        $cumulTaxe = 0;
+        $cumulGross = 0;
+        $cumulPaid = 0;
+        $cumulBalance = 0;
+        $tabReportSets = [];
+        $index = 1;
+        foreach ($this->Entreprise_getNotes() as $note) {
+            $dataSet = $this->createCashflowReportSet($index, $note);
+            $dataSet->setGross_due($dataSet->getNet_amount() + $dataSet->getTaxes());
+            $dataSet->setAmount_paid(rand(0, $dataSet->getGross_due()));
+            $dataSet->setBalance_due($dataSet->getGross_due() - $dataSet->getAmount_paid());
 
-        // $tabReportSets = [];
-        // $index = 1;
-        // foreach ($tabReferences as $invoice_reference) {
-        //     $dataSet = (new CashflowReportSet())
-        //         ->setIndex($index)
-        //         ->setType(CashflowReportSet::TYPE_ELEMENT)
-        //         ->setCurrency_code("$")
-        //         ->setDescription($tabDescriptions[rand(0, count($tabDescriptions) - 1)])
-        //         ->setDebtor($tabDebtors[rand(0, count($tabDebtors) - 1)])
-        //         ->setStatus($tabStatus[rand(0, count($tabStatus) - 1)])
-        //         ->setInvoice_reference($invoice_reference)
-        //         ->setNet_amount(rand(1000, 100000))
-        //         ->setTaxes(rand(100, 10000))
-        //         // ->setGross_due(rand(1000, 100000))
-        //         // ->setAmount_paid(rand(1000, 100000))
-        //         // ->setBalance_due(rand(0, 100))
-        //         ->setUser($tabUsers[rand(0, count($tabUsers) - 1)])
-        //         ->setDate_submition(new DateTimeImmutable("now - " . (rand(2, 30)) . " days"))
-        //         ->setDate_payment(new DateTimeImmutable("now -" . (rand(0, 1)) . " days"));
+            $days = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getDate_submition());
+            
+            if ($days == 0) {
+                $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " today.");
+            }else{
+                $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " " . $days .  " days ago.");
+            }
 
-        //     $dataSet->setGross_due($dataSet->getNet_amount() + $dataSet->getTaxes());
-        //     $dataSet->setAmount_paid(rand(0, $dataSet->getGross_due()));
-        //     $dataSet->setBalance_due($dataSet->getGross_due() - $dataSet->getAmount_paid());
-        //     $days = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getDate_submition());
-        //     $dataSet->setDays_passed("The invoice was submitted " . $days .  " days ago to " . $dataSet->getDebtor());
+            $tabReportSets[] = $dataSet;
 
-        //     $tabReportSets[] = $dataSet;
-        //     $index++;
-        // }
+            $cumulNet += $dataSet->getNet_amount();
+            $cumulTaxe += $dataSet->getTaxes();
+            $cumulGross += $dataSet->getGross_due();
+            $cumulPaid += $dataSet->getAmount_paid();
+            $cumulBalance += $dataSet->getGross_due() - $dataSet->getAmount_paid();
+
+            $index++;
+
+            //Préparation des tableaux pour faire le tri
+            $tabReportSets[$note->getId()] = $dataSet;
+            // //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
+            $tabAOrdonner[$note->getId()] = $days;
+        }
+
+        arsort($tabAOrdonner); //tri décroissante = du plus grand au plus pétit.
+
+        $tabFinaleOrdonne = [];
+        foreach ($tabAOrdonner as $key => $value) {
+            $tabFinaleOrdonne[] = $tabReportSets[$key];
+        }
 
         // //Ligne totale
-        // $dataSet = (new CashflowReportSet())
-        //     ->setType(CashflowReportSet::TYPE_TOTAL)
-        //     ->setCurrency_code("$")
-        //     ->setDescription("TOTAL")
-        //     ->setNet_amount(rand(1000, 100000))
-        //     ->setTaxes(rand(1000, 100000))
-        //     ->setGross_due(rand(1000, 100000))
-        //     ->setAmount_paid(rand(1000, 100000))
-        //     ->setBalance_due(rand(1000, 10000));
+        $dataSet = (new CashflowReportSet())
+            ->setType(CashflowReportSet::TYPE_TOTAL)
+            ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
+            ->setDescription("TOTAL")
+            ->setNet_amount($cumulNet)
+            ->setTaxes($cumulTaxe)
+            ->setGross_due($cumulGross)
+            ->setAmount_paid($cumulPaid)
+            ->setBalance_due($cumulBalance);
 
-        // $tabReportSets[] = $dataSet;
+        $tabFinaleOrdonne[] = $dataSet;
         // // dd($tabReportSets);
 
-        // return $tabReportSets;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // $number = 1;
-        // $cumulDamagrCost = 0;
-        // $cumulCompaPaid = 0;
-        // $cumulCompaBalance = 0;
-        // $tabReportSets = [];
-        // $tabAOrdonner = [];
-
-        // /** @var Avenant $avenant */
-        // foreach ($this->Entreprise_getClaimsNotifications() as $claimNotification) {
-        //     //On n'affiche ici que ceux qui ne sont pas encore renouvellé
-        //     $claimStatus = $this->Claim_getClaimStatus($claimNotification);
-        //     $settlementSpeed = $claimStatus['speed'];
-        //     if ($settlementSpeed != -1) {
-        //         $dataSet = $this->createClaimReportSet($number, $claimNotification);
-        //         $cumulDamagrCost += $dataSet->getDamage_cost();
-        //         $cumulCompaPaid += $dataSet->getCompensation_paid();
-        //         $cumulCompaBalance += $dataSet->getCompensation_balance();
-        //         // $tabReportSets[] = $dataSet;
-        //         $number++;
-
-        //         //Préparation des tableaux pour faire le tri
-        //         $tabReportSets[$claimNotification->getId()] = $dataSet;
-        //         // //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
-        //         $tabAOrdonner[$claimNotification->getId()] = date_format($claimNotification->getNotifiedAt(), 'd/m/Y');
-        //     }
-        // }
-        // /**
-        //  * TRI PAR ORDRE CROISSANT PAR RAPPORT 
-        //  * AU NB DE JOUR DEPUIS LA DATE DE NOTIFICATION DU SINISTRE
-        //  */
-        // // Trie le tableau associatif en utilisant la fonction de comparaison
-        // uasort($tabAOrdonner, function ($dateA, $dateB) {
-        //     $date_a = DateTime::createFromFormat('d/m/Y', $dateA);
-        //     $date_b = DateTime::createFromFormat('d/m/Y', $dateB);
-        //     if ($date_a == $date_b) {
-        //         return 0;
-        //     }
-        //     return ($date_a < $date_b) ? -1 : 1;
-        // });
-
-        // $tabFinaleOrdonne = [];
-        // foreach ($tabAOrdonner as $key => $value) {
-        //     $tabFinaleOrdonne[] = $tabReportSets[$key];
-        // }
-        // //Après le tri on ajoute la Ligne de totale
-        // $dataSetTotal = (new ClaimReportSet())
-        //     ->setType(ClaimReportSet::TYPE_TOTAL)
-        //     ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
-        //     ->setPolicy_reference("TOTAL")
-        //     ->setDamage_cost($cumulDamagrCost)
-        //     ->setCompensation_paid($cumulCompaPaid)
-        //     ->setCompensation_balance($cumulCompaBalance);
-
-        // $tabFinaleOrdonne[] = $dataSetTotal;
-
-        // // dd($tabFinaleOrdonne);
-        // return $tabFinaleOrdonne;
-        return [];
+        return $tabFinaleOrdonne;
+        // return [];
     }
 }
