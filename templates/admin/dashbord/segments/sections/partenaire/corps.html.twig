@@ -1,0 +1,95 @@
+<div class="tab-pane fade table-responsive" id="nav-production-partner" role="tabpanel" aria-labelledby="nav-production-partner-tab" tabindex="0">
+    <div class="card m-2">
+        <div class="card-header text-center">
+            {{ "company_dashboard_section_principale_partners_header" | trans() | raw}}
+        </div>
+        {% if dashboard.productionTabs['tabProductionPerPartnerPerMonth']|length > 13 %}
+            {# Tableau de production par partenaire #}
+            <table class="table table-hover table-sm">
+                <caption class="text-center">
+                    {{ "company_dashboard_section_principale_partners_caption" | trans() | raw }}
+                </caption>
+                <thead class="table-secondary">
+                    <tr>
+                        <th scope="col">{{ "company_dashboard_section_principale_partners_colonne_partenaire" | trans() | raw}} </th>
+                        <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_prime" | trans() | raw}} </th>
+                        <th scope="col" class="text-end"> {{ "company_dashboard_section_principale_partners_colonne_com_nette" | trans() | raw}}</th>
+                        <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_taxes" | trans() | raw}} </th>
+                        <th scope="col" class="text-end"> {{ "company_dashboard_section_principale_partners_colonne_retro_com" | trans() | raw}}</th>
+                        <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_payee" | trans() | raw}} </th>
+                        <th scope="col" class="text-end">{{ "company_dashboard_section_principale_partners_colonne_solde" | trans() | raw}} </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reposertSet in dashboard.productionTabs['tabProductionPerPartnerPerMonth'] %}
+                        {% if reposertSet.type == 0 %}
+                            <tr style="
+                                border-style: solid;
+                                border-top: 0px;
+                                border-left: 0px;
+                                border-right: 0px;
+                                border-width: 1px;
+                                border-color: black;
+                                background: #f6f6f6;
+                            ">
+                                <td><small>
+                                    <strong class="text-secondary">
+                                        &nbsp;{{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                                        {{ reposertSet.label }}
+                                    </strong>
+                                    </small>
+                                </td>
+                                <td class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                <td class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                <td class="text-end" style="color: #e29c1d;"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                <td class="text-end"><strong><small>{{ reposertSet.co_brokerage|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></strong></td>
+                                <td class="text-end"><strong><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                                <td class="text-end text-danger"><strong><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></td>
+                            </tr>
+                        {% endif %}
+                        {% if reposertSet.type == 1 %}
+                            <tr>
+                                <td>
+                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                    <small class="text-secondary">
+                                        {{ include('segments/icones/partenaire.html.twig', {size:'16px'}) }}
+                                        {{ reposertSet.label }}
+                                    </small> 
+                                    <span class="badge text-bg-secondary">{{ reposertSet.partner_rate }}%</span>
+                                </td>
+                                <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end"><small>{{ reposertSet.co_brokerage|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></td>
+                                <td class="text-end"><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <thead class="table-secondary">
+                    <tr>
+                        {% for reposertSet in dashboard.productionTabs['tabProductionPerPartnerPerMonth'] %}
+                            {% if reposertSet.type == 2 %}
+                                <th scope="col"><small>{{ reposertSet.label }}</small></th>
+                                <th scope="col" class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                <th scope="col" class="text-end" style="color: #198754;"><small>{{ reposertSet.net_com|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                <th scope="col" class="text-end" style="color: #e29c1d;"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                <th scope="col" class="text-end"><small>{{ reposertSet.co_brokerage|number_format(2, ',', ' ')  ~ " " ~ reposertSet.currency_code}}</small></th>
+                                <th scope="col" class="text-end"><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                                <th scope="col" class="text-end text-danger"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+            </table>
+        {% else %}
+            <div class="text-center m-2">
+                <strong class="rounded text-secondary">
+                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
+                    Oups! Il n'y a pas d'élément pour l'instant.
+                </strong>
+            </div>
+        {% endif %}
+    </div>
+    </div>

@@ -1,0 +1,133 @@
+<div class="tab-pane fade" id="nav-claims" role="tabpanel" aria-labelledby="nav-claims-tab" tabindex="0">
+    <div class="card m-2">
+        <div class="card-header text-center">
+            {{ "company_dashboard_section_principale_claims_header" | trans() | raw }}
+        </div>
+        {% if dashboard.productionTabs['tabClaims']|length > 1 %}
+            {# Tableau de claims par utilisateur #}
+            <table class="table table-hover table-sm">
+                <caption class="text-center">
+                    {{ "company_dashboard_section_principale_claims_caption" | trans() | raw }}
+                </caption>
+                <thead class="table-secondary">
+                    <tr>
+                        <th scope="col" width="280">{{ "company_dashboard_section_principale_claims_colonne_claims_details" | trans() | raw }}</th>
+                        <th scope="col" width="280">{{ "company_dashboard_section_principale_claims_colonne_cover_details" | trans() | raw }}</th>
+                        <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_claims_colonne_damage" | trans() | raw }}</th>
+                        <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_claims_colonne_payment" | trans() | raw }}</th>
+                        <th scope="col" class="text-end" style="color: #ff0000;">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_claims_colonne_balance" | trans() | raw }}</th>
+                        <th scope="col" class="text-center" width="280">{{ "company_dashboard_section_principale_claims_colonne_status" | trans() | raw }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reposertSet in dashboard.productionTabs['tabClaims'] %}
+                        {% if reposertSet.type == 1 %}
+                            <tr>
+                                <td>
+                                    <small class="text-dark">
+                                        <strong>
+                                            {{ ux_icon('emojione-monotone:fire', {height: '20px', width: '20px'}) }} ({{ reposertSet.number }}) "{{ reposertSet.circonstance }}"</br>
+                                            {{ "company_dashboard_section_principale_claims_ref" | trans() | raw }}
+                                            <a href="#" class="text-dark" style="text-decoration: none;">
+                                                {{ reposertSet.claim_reference }}
+                                            </a>
+                                        </strong>
+                                        <span class="text-muted">
+                                        <ul>
+                                            <li>{{ "company_dashboard_section_principale_claims_notifcation_date" | trans() | raw }}
+                                                {% if reposertSet.notification_date != null %}
+                                                    {{ reposertSet.notification_date|date("d/m/Y") }}
+                                                {% else %}
+                                                    Non définie.
+                                                {% endif %}
+                                            </li>
+                                            <li>{{ "company_dashboard_section_principale_claims_settlement_date" | trans() | raw }}
+                                                {% if reposertSet.settlement_date != null %}
+                                                    {{ reposertSet.settlement_date|date("d/m/Y") }}
+                                                {% else %}
+                                                    Non définie.
+                                                {% endif %}
+                                            </li>
+                                            <li>{{ "company_dashboard_section_principale_claims_from_client" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.client }}</a></li>
+                                            <li>{{ "company_dashboard_section_principale_claims_by_account_manager" | trans() | raw }}<a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
+                                            <li>{{ "company_dashboard_section_principale_claims_event" | trans() | raw }}<a href="#" class="text-secondary">{{ reposertSet.circonstance }}</a></li>
+                                            <li>{{ "company_dashboard_section_principale_claims_victim" | trans() | raw }}<a href="#" class="text-secondary">{{ reposertSet.victim }}</a></li>
+                                        </ul>
+                                        </span>
+                                    </small>
+                                </td>
+                                <td>
+                                    <small class="text-dark">
+                                        <strong>
+                                            {{ "company_dashboard_section_principale_claims_policy_ref" | trans() | raw }}
+                                            <a href="#" class="text-dark" style="text-decoration: none;">
+                                                {{ reposertSet.policy_reference }}
+                                            </a>
+                                        </strong>
+                                        <span class="text-muted">
+                                        <ul>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_effect" | trans() | raw }}
+                                                {% if reposertSet.effect_date != null %}
+                                                    {{ reposertSet.effect_date|date("d/m/Y") }}
+                                                {% else %}
+                                                    Non définie.
+                                                {% endif %}
+                                            </li>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_expiry" | trans() | raw }}
+                                                {% if reposertSet.expiry_date != null %}
+                                                    {{ reposertSet.expiry_date|date("d/m/Y") }}
+                                                {% else %}
+                                                    Non définie.
+                                                {% endif %}
+                                            </li>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_by" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_name" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.cover }}</a></li>
+                                            <li>{{ "company_dashboard_section_principale_claims_policy_prem" | trans() | raw }}{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
+                                            <li>{{ "company_dashboard_section_principale_claims_policy_limit" | trans() | raw }}{{ reposertSet.policy_limit|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
+                                            <li>{{ "company_dashboard_section_principale_claims_policy_deductible" | trans() | raw }}{{ reposertSet.policy_deductible|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</li>
+                                        </ul>
+                                        </span>
+                                    </small>
+                                </td>
+                                <td class="text-end" style="color: #ff0000;"><small>{{ reposertSet.damage_cost|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end" style="color: #ff0000;"><small>{{ reposertSet.compensation_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end" style="color: #ff0000;"><small>{{ reposertSet.compensation_balance|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td>
+                                    <small>
+                                    <ul>
+                                        <li><strong>{{ reposertSet.claims_status }}</strong></li>
+                                        {# <li><strong class="p-1 rounded {{ reposertSet.bg_color }}">{{ reposertSet.claims_status }}</strong></li> #}
+                                        <li><strong class="p-1 rounded {{ reposertSet.bg_color }} text-light">{{ reposertSet.compensation_speed }}</strong></li>
+                                        <li>{{ reposertSet.days_passed }}</li>
+                                    </ul>
+                                    </small>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <thead class="table-secondary">
+                    <tr>
+                        {% for reposertSet in dashboard.productionTabs['tabClaims'] %}
+                            {% if reposertSet.type == 2 %}
+                                <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.policy_reference }}</strong></small></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                                <th scope="col" class="text-end" style="color: #ff0000;"><strong><small>{{ reposertSet.damage_cost|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col" class="text-end" style="color: #ff0000;"><strong><small>{{ reposertSet.compensation_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col" class="text-end" style="color: #ff0000;"><strong><small>{{ reposertSet.compensation_balance|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+            </table>
+        {% else %}
+            <div class="text-center m-2">
+                <strong class="rounded text-secondary">
+                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
+                    Oups! Il n'y a pas d'élément pour l'instant.
+                </strong>
+            </div>
+        {% endif %}
+    </div>
+</div>

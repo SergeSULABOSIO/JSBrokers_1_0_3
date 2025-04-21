@@ -1,0 +1,87 @@
+<div class="tab-pane fade" id="nav-renewals" role="tabpanel" aria-labelledby="nav-renewals-tab" tabindex="0">
+    <div class="card m-2">
+        <div class="card-header text-center">
+            {{ "company_dashboard_section_principale_renewals_header" | trans() | raw}}
+        </div>
+        {% if dashboard.productionTabs['tabRenewals']|length > 1 %}
+            {# Tableau de taches par utilisateur #}
+            <table class="table table-hover table-sm">
+                <caption class="text-center">
+                    {{ "company_dashboard_section_principale_renewals_caption" | trans() | raw}}
+                </caption>
+                <thead class="table-secondary">
+                    <tr>
+                        <th scope="col" width="280">{{ "company_dashboard_section_principale_renewals_colonne_description" | trans() | raw}}</th>
+                        <th scope="col">{{ "company_dashboard_section_principale_renewals_colonne_client_risk_details" | trans() | raw}}</th>
+                        <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_renewals_colonne_premium" | trans() | raw}}</th>
+                        <th scope="col" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_renewals_colonne_revenue" | trans() | raw}}</th>
+                        <th scope="col" class="text-center" width="200">{{ "company_dashboard_section_principale_renewals_colonne_status" | trans() | raw}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reposertSet in dashboard.productionTabs['tabRenewals'] %}
+                        {% if reposertSet.type == 1 %}
+                            <tr>
+                                <td>
+                                    <small class="text-dark">
+                                        <strong>
+                                            {{ "company_dashboard_section_principale_renewals_policy_ref" | trans() | raw }}
+                                            <a href="#" class="text-dark" style="text-decoration: none;">
+                                                {{ reposertSet.label }}
+                                            </a>
+                                        </strong>
+                                        <span class="text-muted">
+                                        <ul>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_effect" | trans() | raw }}<strong>{{ reposertSet.effect_date|date("d/m/Y H:i") }}</strong></li>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_expiry" | trans() | raw }}<strong>{{ reposertSet.expiry_date|date("d/m/Y H:i") }}</strong></li>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_at" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.insurer }}</a></li>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_by" | trans() | raw }}<a href="#" class="text-secondary">{{ reposertSet.account_manager.nom }}</a></li>
+                                        </ul>
+                                        </span>
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>
+                                        <strong><a href="#" class="link-dark" style="text-decoration: none;">{{ reposertSet.client }}</a></strong></br>
+                                        {{ "company_dashboard_section_principale_renewals_policy_name" | trans() | raw }}<a href="#" class="link-secondary">{{ reposertSet.cover }}</a>
+                                        <ul>
+                                            <li>{{ reposertSet.endorsement }}</li>
+                                            <li>{{ "company_dashboard_section_principale_renewals_policy_endorsement_number" | trans() | raw }}{{ reposertSet.endorsement_id }}</li>
+                                        </ul>
+                                    </small>
+                                </td>
+                                <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end" style="color: #198754;"><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td>
+                                    <small>
+                                        <strong class="p-1 rounded {{ reposertSet.bg_color }}">{{ reposertSet.status }}</strong>
+                                    </small>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <thead class="table-secondary">
+                    <tr>
+                        {% for reposertSet in dashboard.productionTabs['tabRenewals'] %}
+                            {% if reposertSet.type == 2 %}
+                                <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.label }}</strong></small></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                                <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.gw_premium|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.g_commission|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+            </table>
+        {% else %}
+            <div class="text-center m-2">
+                <strong class="rounded text-secondary">
+                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
+                    Oups! Il n'y a pas d'élément pour l'instant.
+                </strong>
+            </div>
+        {% endif %}
+    </div>
+</div>

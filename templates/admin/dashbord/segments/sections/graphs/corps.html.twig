@@ -1,0 +1,126 @@
+<div class="tab-pane fade show active" id="nav-graphs" role="tabpanel" aria-labelledby="nav-graphs-tab" tabindex="0">
+    <div class="row">
+        <div class="col">
+            <div class="card m-2">
+                <div class="card-header text-center">
+                    {# Revenue graphs per month #}
+                    <small class="m-2 text-secondary ">
+                        <span class="fw-bold">
+                            {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
+                            {{ dashboard.productionCharts['chartPerMonth']['titre'] }}
+                        </span>
+                    </small>
+                </div>
+                {{ render_chart(dashboard.productionCharts['chartPerMonth']['chart'], {'class': 'my-chart'}) }}
+                <div class="card-body text-center">
+                    <p class="card-text">
+                        <small class="m-2 text-secondary ">
+                            <span class="fw-bold">Notes:</span> 
+                            {{ dashboard.productionCharts['chartPerMonth']['notes'] }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-0">
+        <div class="col">
+            <div class="card m-2">
+                <div class="card-header text-center">
+                    {# Revenue graphs per Assureur #}
+                    <small class="m-2 text-secondary ">
+                        <span class="fw-bold">
+                            {{ include('segments/icones/assureur.html.twig', {size:'18px'}) }}
+                            {{ dashboard.productionCharts['chartPerInsurer']['titre'] }}
+                        </span>
+                    </small>
+                </div>
+                {{ render_chart(dashboard.productionCharts['chartPerInsurer']['chart'], {'class': 'my-chart'}) }}
+                <div class="card-body text-center">
+                    <p class="card-text">
+                        <small class="m-2 text-secondary ">
+                            <span class="fw-bold">Notes:</span> 
+                            {{ dashboard.productionCharts['chartPerInsurer']['notes'] }}
+                        </small>
+                        {# Some quick example text to build on the card title and make up the bulk of the card's content. #}
+                    </p>
+                </div>
+            </div>
+        </div>
+            <div class="col">
+            <div class="card m-2">
+                <div class="card-header text-center">
+                    {# Revenue graphs per Risque #}
+                    <small class="m-2 text-secondary ">
+                        <span class="fw-bold">
+                            {{ include('segments/icones/risque.html.twig', {size:'18px'}) }}
+                            {{ dashboard.productionCharts['chartPerRisks']['titre'] }}
+                        </span>
+                    </small>
+                    {# Revenue graphs per risk or cover #}
+                </div>
+                {{ render_chart(dashboard.productionCharts['chartPerRisks']['chart'], {'class': 'my-chart'}) }}
+                {# <img src="..." class="card-img-top" alt="..."> #}
+                <div class="card-body text-center">
+                    <p class="card-text">
+                        <small class="m-2 text-secondary ">
+                            <span class="fw-bold">Notes:</span> 
+                            {{ dashboard.productionCharts['chartPerRisks']['notes'] }}
+                        </small>
+                    {# Some quick example text to build on the card title and make up the bulk of the card's content. #}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-0">
+        <div class="col">
+            <div class="card m-2">
+                <div class="card-header text-center">
+                    {# Revenue graphs per renewal status #}
+                    <small class="m-2 text-secondary ">
+                        <span class="fw-bold">
+                            {{ include('segments/icones/avenant.html.twig', {size:'18px'}) }}
+                            {{ dashboard.productionCharts['chartPerRenewalStatus']['titre'] }}
+                        </span>
+                    </small>
+                </div>
+                {{ render_chart(dashboard.productionCharts['chartPerRenewalStatus']['chart'], {'class': 'my-chart'}) }}
+                <div class="card-body text-center">
+                    <p class="card-text">
+                        <small class="m-2 text-secondary ">
+                            <span class="fw-bold">Notes:</span> 
+                            {{ dashboard.productionCharts['chartPerRenewalStatus']['notes'] }}
+                        </small>
+                        {# Some quick example text to build on the card title and make up the bulk of the card's content. #}
+                    </p>
+                </div>
+            </div>
+        </div>
+            <div class="col">
+            <div class="card m-2">
+                <div class="card-header text-center">
+                    {# Revenue graphs per partenaire #}
+                    <small class="m-2 text-secondary ">
+                        <span class="fw-bold">
+                            {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
+                            {{ dashboard.productionCharts['chartPerPartners']['titre'] }}
+                        </span>
+                    </small>
+                    {# Revenue graphs per partner #}
+                </div>
+                {{ render_chart(dashboard.productionCharts['chartPerPartners']['chart'], {'class': 'my-chart'}) }}
+                {# <img src="..." class="card-img-top" alt="..."> #}
+                <div class="card-body text-center">
+                    <p class="card-text">
+                        <small class="m-2 text-secondary ">
+                            <span class="fw-bold">Notes:</span> 
+                            {{ dashboard.productionCharts['chartPerPartners']['notes'] }}
+                        </small>
+                        {# quick example text to build on the card title and make up the bulk of the card's content. #}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

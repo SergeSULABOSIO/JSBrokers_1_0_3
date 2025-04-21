@@ -1,0 +1,127 @@
+<div class="tab-pane fade" id="nav-tasks" role="tabpanel" aria-labelledby="nav-tasks-tab" tabindex="0">
+    <div class="card m-2">
+        <div class="card-header text-center">
+            {{ "company_dashboard_section_principale_tasks_header" | trans() | raw }}
+        </div>
+        {% if dashboard.productionTabs['tabTasks']|length > 1 %}
+            {# Tableau de taches par utilisateur #}
+            <table class="table table-hover table-sm">
+                <caption class="text-center">
+                    {{ "company_dashboard_section_principale_tasks_caption" | trans() | raw }}
+                </caption>
+                <thead class="table-secondary">
+                    <tr>
+                        <th scope="col" width="300">{{ "company_dashboard_section_principale_tasks_colonne_tache" | trans() | raw }}</th>
+                        <th scope="col" width="170">{{ "company_dashboard_section_principale_tasks_colonne_client" | trans() | raw }}</th>
+                        <th scope="col" width="150">{{ "company_dashboard_section_principale_tasks_colonne_executor" | trans() | raw }}</th>
+                        <th scope="col" width="150">{{ "company_dashboard_section_principale_tasks_colonne_date" | trans() | raw }}</th>
+                        <th scope="col" width="150" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_tasks_colonne_prime" | trans() | raw }}</th>
+                        <th scope="col" width="130" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_tasks_colonne_revenu" | trans() | raw }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reposertSet in dashboard.productionTabs['tabTasks'] %}
+                        {% if reposertSet.type == 1 %}
+                            <tr>
+                                <td>
+                                    <small class="text-secondary">
+                                        {{ include('segments/icones/tache.html.twig', {size:'20px'}) }}
+                                        {{ include('segments/icones/actions/completed.html.twig', {size:'20px'}) }}
+                                        <a href="#" class="text-secondary" style="text-decoration: none;">{{ reposertSet.task_description|raw }}</a></br>
+                                        <span class="text-muted">
+                                            <ul>
+                                                <li>
+                                                    {{ include('segments/icones/invite.html.twig', {size:'12px'}) }}
+                                                    {{ "company_dashboard_section_principale_tasks_by" | trans() | raw }}
+                                                    <a href="#" class="link-secondary">{{ reposertSet.owner.nom }}</a>
+                                                </li>
+                                                <li>
+                                                    {{ include('segments/icones/piste.html.twig', {size:'12px'}) }}
+                                                    {{ "company_dashboard_section_principale_tasks_lead" | trans() | raw }}
+                                                    <a href="#" class="link-secondary">{{ reposertSet.lead }}</a>
+                                                </li>
+                                                <li>
+                                                    {{ include('segments/icones/avenant.html.twig', {size:'12px'}) }}
+                                                    {{ "company_dashboard_section_principale_tasks_end" | trans() | raw }}{{ reposertSet.endorsement }} 
+                                                </li>
+                                            </ul>
+                                        </span>
+                                    </small>
+                                </td>
+                                <td>
+                                    <small class="text-secondary">
+                                        {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                        {{ reposertSet.client }}
+                                        {% if reposertSet.contacts|length != 0 %}
+                                            <span class="text-muted">
+                                                {{ include('segments/icones/contact.html.twig', {size:'16px'}) }}
+                                                {{ "company_dashboard_section_principale_tasks_contacts" | trans() | raw }} </br>
+                                                <ul>
+                                                    {% for contact in reposertSet.contacts %}
+                                                        <li>{{ contact }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </span>
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                {# <td><small>{{ reposertSet.owner.nom }}</small></td> #}
+                                <td>
+                                    <small class="text-secondary">
+                                        {{ include('segments/icones/invite.html.twig', {size:'16px'}) }}
+                                        {{ reposertSet.excutor.nom }}</br>
+                                        <span class="text-muted">
+                                            {{ include('segments/icones/feedback.html.twig', {size:'16px'}) }}
+                                            Feedbacks ({{ reposertSet.nbfeedbacks }})
+                                        </span>
+                                    </small>
+                                </td>
+                                <td>
+                                    <small class="text-secondary">
+                                        <strong>
+                                            Cette tâche doit être accomplie au plus tard le {{ reposertSet.effect_date|format_date("short", locale: app.user.locale) }}<br>
+                                        </strong>
+                                        {% set couleur = "text-dark" %}
+                                        {% if reposertSet.days_remaining == 0 %}
+                                            <span class="p-1 rounded text-bg-primary">{{ reposertSet.effect_date_comment }}</span>
+                                        {% endif %}
+                                        {% if reposertSet.days_remaining < 0 %}
+                                            <span class="p-1 rounded text-bg-danger">{{ reposertSet.effect_date_comment }}</span>
+                                        {% endif %}
+                                        {% if reposertSet.days_remaining > 0 %}
+                                            <span class="p-1 rounded text-bg-success">{{ reposertSet.effect_date_comment }}</span>
+                                        {% endif %}
+                                        <br>{{ reposertSet.statusExecution }}
+                                    </small>
+                                </td>
+                                <td class="text-end" style="color: #0d6efd;"><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_premium|number_format(2, ',', '.') }}</small></td>
+                                <td class="text-end" style="color: #198754;"><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_commission|number_format(2, ',', '.') }}</small></td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <thead class="table-secondary">
+                    <tr>
+                        {% for reposertSet in dashboard.productionTabs['tabTasks'] %}
+                            {% if reposertSet.type == 2 %}
+                                <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.task_description }}</strong></small></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                                <th scope="col" class="text-end" style="color: #0d6efd;"><strong><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_premium|number_format(2, ',', '.') }}</small></strong></th>
+                                <th scope="col" class="text-end" style="color: #198754;"><strong><small>{{ reposertSet.currency_code ~ " " ~ reposertSet.potential_commission|number_format(2, ',', '.') }}</small></strong></th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+            </table>
+        {% else %}
+            <div class="text-center m-2">
+                <strong class="rounded text-secondary">
+                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
+                    Oups! Il n'y a pas d'élément pour l'instant.
+                </strong>
+            </div>
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,90 @@
+<div class="tab-pane fade" id="nav-cash" role="tabpanel" aria-labelledby="nav-cash-tab" tabindex="0">
+    <div class="card m-2">
+        <div class="card-header text-center">
+            {{ "company_dashboard_section_principale_cashflow_header" | trans() | raw}}
+        </div>
+        {% if dashboard.productionTabs['tabCashflow']|length > 1 %}
+            {# Tableau de cashflow #}
+            <table class="table table-hover table-sm">
+                <caption class="text-center">
+                    {{ "company_dashboard_section_principale_cashflow_caption" | trans() | raw}}
+                </caption>
+                <thead class="table-secondary">
+                    <tr>
+                        <th scope="col" width="230">{{ "company_dashboard_section_principale_cashflow_colonne_description" | trans() | raw}}</th>
+                        <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_net_due" | trans() | raw}}</th>
+                        <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_taxes" | trans() | raw}}</th>
+                        <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_gross" | trans() | raw}}</th>
+                        <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_paid" | trans() | raw}}</th>
+                        <th scope="col" width="100" class="text-end">&nbsp;&nbsp;&nbsp;&nbsp;{{ "company_dashboard_section_principale_cashflow_colonne_balance" | trans() | raw}}</th>
+                        <th scope="col" class="text-center">{{ "company_dashboard_section_principale_cashflow_colonne_status" | trans() | raw}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reposertSet in dashboard.productionTabs['tabCashflow'] %}
+                        {% if reposertSet.type == 1 %}
+                            <tr>
+                                <td>
+                                    <small class="text-dark">
+                                        <span>N°#{{ reposertSet.index }}</span></br>
+                                        <strong>
+                                            {{ "company_dashboard_section_principale_cashflow_invoice_ref" | trans() | raw}}
+                                            <a href="#" class="text-dark" style="text-decoration: none;">
+                                                {{ reposertSet.invoice_reference }}
+                                            </a>
+                                        </strong>
+                                        <span class="text-muted">
+                                        <ul>
+                                            <li><strong>{{ "company_dashboard_section_principale_cashflow_description" | trans() | raw}}{{ reposertSet.description }}</strong></li>
+                                            <li><strong>{{ "company_dashboard_section_principale_cashflow_due_by" | trans() | raw}}{{ reposertSet.debtor }}</strong></li>
+                                            <li>{{ "company_dashboard_section_principale_cashflow_submition_date" | trans() | raw}}{{ reposertSet.date_submition|date("d/m/Y") }}</li>
+                                            <li>{{ "company_dashboard_section_principale_cashflow_payment_date" | trans() | raw}}{{ reposertSet.date_payment|date("d/m/Y") }}</li>
+                                            <li>{{ "company_dashboard_section_principale_cashflow_user_name_by" | trans() | raw}}<a href="#" class="text-secondary">{{ reposertSet.user.nom }}</a></li>
+                                        </ul>
+                                        </span>
+                                    </small>
+                                </td>
+                                <td class="text-end"><small>{{ reposertSet.net_amount|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end"><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end"><small>{{ reposertSet.gross_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end"><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td class="text-end"><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></td>
+                                <td>
+                                    <small>
+                                    <ul>
+                                        <li><strong>{{ reposertSet.status }}</strong></li>
+                                        <li><span>{{ reposertSet.days_passed }}</span></li>
+                                        {# <li>{{ reposertSet.days_passed }}</li> #}
+                                    </ul>
+                                    </small>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+                <thead class="table-secondary">
+                    <tr>
+                        {% for reposertSet in dashboard.productionTabs['tabCashflow'] %}
+                            {% if reposertSet.type == 2 %}
+                                <th scope="col">&nbsp;&nbsp;&nbsp;&nbsp;<small><strong>{{ reposertSet.description }}</strong></small></th>
+                                <th scope="col" class="text-end"><strong><small>{{ reposertSet.net_amount|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col" class="text-end"><strong><small>{{ reposertSet.taxes|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col" class="text-end"><strong><small>{{ reposertSet.gross_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col" class="text-end"><strong><small>{{ reposertSet.amount_paid|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col" class="text-end"><strong><small>{{ reposertSet.balance_due|number_format(2, ',', ' ') ~ " " ~ reposertSet.currency_code }}</small></strong></th>
+                                <th scope="col"><small><strong></strong></small></th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+            </table>
+        {% else %}
+            <div class="text-center m-2">
+                <strong class="rounded text-secondary">
+                    {{ include('segments/icones/empty.html.twig', {size:'50px'}) }}</br>
+                    Oups! Il n'y a pas d'élément pour l'instant.
+                </strong>
+            </div>
+        {% endif %}
+    </div>
+</div>
