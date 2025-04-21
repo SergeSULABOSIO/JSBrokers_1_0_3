@@ -6089,7 +6089,6 @@ class Constante
                 $dataSet->setDays_passed("SVP, veuillez soumettre la note à " . $dataSet->getDebtor());
             }
 
-
             $tabReportSets[] = $dataSet;
 
             $cumulNet += $dataSet->getNet_amount();
