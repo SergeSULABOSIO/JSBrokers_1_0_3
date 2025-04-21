@@ -23,9 +23,9 @@ class CashflowReportSet
     public float $gross_due;
     public float $amount_paid;
     public float $balance_due;
-    public Utilisateur $user;
-    public DateTimeImmutable $date_submition;
-    public DateTimeImmutable $date_payment;
+    public ?Utilisateur $user;
+    public ?DateTimeImmutable $date_submition;
+    public ?DateTimeImmutable $date_payment;
 
     public function __construct()
     {

@@ -83,6 +83,9 @@ class Note
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $titleSignedBy = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $sentAt = null;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
@@ -343,6 +346,18 @@ class Note
     public function setTitleSignedBy(?string $titleSignedBy): static
     {
         $this->titleSignedBy = $titleSignedBy;
+
+        return $this;
+    }
+
+    public function getSentAt(): ?\DateTimeImmutable
+    {
+        return $this->sentAt;
+    }
+
+    public function setSentAt(?\DateTimeImmutable $sentAt): static
+    {
+        $this->sentAt = $sentAt;
 
         return $this;
     }

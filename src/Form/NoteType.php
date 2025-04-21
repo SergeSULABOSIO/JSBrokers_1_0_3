@@ -3,20 +3,20 @@
 namespace App\Form;
 
 use App\Entity\Note;
+use App\Entity\Taxe;
 use App\Entity\Client;
 use App\Entity\Invite;
 use App\Entity\Assureur;
 use App\Entity\Partenaire;
 use App\Entity\CompteBancaire;
 use App\Entity\AutoriteFiscale;
-use App\Entity\Taxe;
 use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\Event\PreSetDataEvent;
 use Symfony\Component\Form\Event\PostSetDataEvent;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -25,6 +25,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 // use Symfony\Component\Form\Extension\Core\Type\CollectionType;
@@ -255,7 +256,12 @@ class NoteType extends AbstractType
                     'class' => Assureur::class,
                     'required' => false,
                     'choice_label' => 'nom',
+                ])
+                ->add('sentAt', DateTimeType::class, [
+                    'label' => "Date de soumission",
+                    'widget' => 'single_text',
                 ]);
+                
                 break;
 
             case Note::TO_CLIENT:
@@ -271,6 +277,10 @@ class NoteType extends AbstractType
                     'class' => Client::class,
                     'required' => false,
                     'choice_label' => 'nom',
+                ])
+                ->add('sentAt', DateTimeType::class, [
+                    'label' => "Date de soumission",
+                    'widget' => 'single_text',
                 ]);
                 break;
 
@@ -287,6 +297,10 @@ class NoteType extends AbstractType
                     'class' => Partenaire::class,
                     'required' => false,
                     'choice_label' => 'nom',
+                ])
+                ->add('sentAt', DateTimeType::class, [
+                    'label' => "Date de soumission",
+                    'widget' => 'single_text',
                 ]);
                 break;
 
@@ -303,6 +317,10 @@ class NoteType extends AbstractType
                     'class' => AutoriteFiscale::class,
                     'required' => false,
                     'choice_label' => 'nom',
+                ])
+                ->add('sentAt', DateTimeType::class, [
+                    'label' => "Date de soumission",
+                    'widget' => 'single_text',
                 ]);
                 break;
 

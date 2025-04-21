@@ -6004,6 +6004,7 @@ class Constante
     public function createCashflowReportSet($index, Note $note): CashflowReportSet
     {
         $status = $this->Note_getNoteStatus($note);
+        // dd($note);
         return (new CashflowReportSet())
             ->setIndex($index)
             ->setType(CashflowReportSet::TYPE_ELEMENT)
@@ -6018,7 +6019,7 @@ class Constante
             ->setAmount_paid(0)
             ->setBalance_due(0)
             ->setUser($this->Utilisateur_getUtilisateurByInvite($note->getInvite()))
-            ->setDate_submition(new DateTimeImmutable("now"))
+            ->setDate_submition($note->getSentAt())
             ->setDate_payment($status['Date dernier paiement']);
     }
 
@@ -6075,13 +6076,19 @@ class Constante
             $dataSet->setAmount_paid(rand(0, $dataSet->getGross_due()));
             $dataSet->setBalance_due($dataSet->getGross_due() - $dataSet->getAmount_paid());
 
-            $days = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getDate_submition());
-            
-            if ($days == 0) {
-                $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " today.");
+            $days = 0;
+            if ($dataSet->getDate_submition() != null) {
+                $days = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getDate_submition());
+                if ($days == 0) {
+                    $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " today.");
+                } else {
+                    $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " " . $days .  " days ago.");
+                }
             }else{
-                $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " " . $days .  " days ago.");
+                $dataSet->setStatus("Imapyé (Non soumise).");
+                $dataSet->setDays_passed("SVP, veuillez soumettre la note à " . $dataSet->getDebtor());
             }
+
 
             $tabReportSets[] = $dataSet;
 
