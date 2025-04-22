@@ -62,6 +62,7 @@ input[type=text], input[type=password], input[type=number], input[type=email], i
 }
 
 .parent-a-options {
+  border-bottom: 1px solid #ccc;
   position: relative; /* Important pour positionner correctement les enfants absolus ou fixes */
   /* Autres styles pour le parent */
 }
