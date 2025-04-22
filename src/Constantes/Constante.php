@@ -5571,8 +5571,9 @@ class Constante
         $index = 1;
         /** @var Tache $tache */
         foreach ($this->Entreprise_getTaches() as $tache) {
+            $taskStatus = $this->Tache_getExecutionStatus($tache);
             //On n'affiche que les tâches qui ne sont pas encore accomplies
-            if ($this->Tache_getExecutionStatus($tache)['code'] != Tache::EXECUTION_STATUS_COMPLETED) {
+            if ($taskStatus['code'] != Tache::EXECUTION_STATUS_COMPLETED) {
                 $dataSet = $this->createTaskReportSet($index, $tache);
                 $cumulPrime += $this->Cotation_getMontant_prime_payable_par_client($this->Tache_getCotation($tache));
                 $cumulCom += $this->Cotation_getMontant_commission_ttc($this->Tache_getCotation($tache), -1, false);
@@ -5953,19 +5954,22 @@ class Constante
         foreach ($this->Entreprise_getClaimsNotifications() as $claimNotification) {
             //On n'affiche ici que ceux qui ne sont pas encore renouvellé
             $claimStatus = $this->Claim_getClaimStatus($claimNotification);
-            $settlementSpeed = $claimStatus['speed'];
-            if ($settlementSpeed != -1) {
-                $dataSet = $this->createClaimReportSet($number, $claimNotification);
-                $cumulDamagrCost += $dataSet->getDamage_cost();
-                $cumulCompaPaid += $dataSet->getCompensation_paid();
-                $cumulCompaBalance += $dataSet->getCompensation_balance();
-                // $tabReportSets[] = $dataSet;
-                $number++;
+            // dd($claimStatus);
+            if ($claimStatus['compensationBalance'] != 0) {
+                $settlementSpeed = $claimStatus['speed'];
+                if ($settlementSpeed != -1) {
+                    $dataSet = $this->createClaimReportSet($number, $claimNotification);
+                    $cumulDamagrCost += $dataSet->getDamage_cost();
+                    $cumulCompaPaid += $dataSet->getCompensation_paid();
+                    $cumulCompaBalance += $dataSet->getCompensation_balance();
+                    // $tabReportSets[] = $dataSet;
+                    $number++;
 
-                //Préparation des tableaux pour faire le tri
-                $tabReportSets[$claimNotification->getId()] = $dataSet;
-                // //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
-                $tabAOrdonner[$claimNotification->getId()] = date_format($claimNotification->getNotifiedAt(), 'd/m/Y');
+                    //Préparation des tableaux pour faire le tri
+                    $tabReportSets[$claimNotification->getId()] = $dataSet;
+                    // //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
+                    $tabAOrdonner[$claimNotification->getId()] = date_format($claimNotification->getNotifiedAt(), 'd/m/Y');
+                }
             }
         }
         /**
