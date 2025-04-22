@@ -6,15 +6,13 @@
             <h6>
                 <strong>
                     &nbsp;
-                    {{ include('segments/icones/dashboard.html.twig', {size:'30px'}) }}
+                    {{ include('segments/icones/dashboard.html.twig', {size:'25px'}) }}
                     {{ "company_menu_dashboard" | trans }}
                 </strong>
             </h6>
-            <small>
-                <span class="badge text-bg-secondary rounded-pill">
-                    Premium
-                </span>
-            </small>
+            <span>
+                {{ include('segments/icones/actions/premium.html.twig', {size:'25px'}) }}
+            </span>
         </div>
     </a>
 </div>
