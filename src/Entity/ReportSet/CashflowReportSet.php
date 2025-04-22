@@ -16,10 +16,10 @@ class CashflowReportSet
     public string $description;
     public string $debtor;
     public string $status;
-    public string $days_passed;
+    public string $days_passed = "";
     public string $invoice_reference;
-    public float $net_amount;
-    public float $taxes;
+    // public float $net_amount;
+    // public float $taxes;
     public float $gross_due;
     public float $amount_paid;
     public float $balance_due;
@@ -116,42 +116,42 @@ class CashflowReportSet
     /**
      * Get the value of net_amount
      */ 
-    public function getNet_amount()
-    {
-        return $this->net_amount;
-    }
+    // public function getNet_amount()
+    // {
+    //     return $this->net_amount;
+    // }
 
     /**
      * Set the value of net_amount
      *
      * @return  self
      */ 
-    public function setNet_amount($net_amount)
-    {
-        $this->net_amount = $net_amount;
+    // public function setNet_amount($net_amount)
+    // {
+    //     $this->net_amount = $net_amount;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     /**
      * Get the value of taxes
      */ 
-    public function getTaxes()
-    {
-        return $this->taxes;
-    }
+    // public function getTaxes()
+    // {
+    //     return $this->taxes;
+    // }
 
     /**
      * Set the value of taxes
      *
      * @return  self
      */ 
-    public function setTaxes($taxes)
-    {
-        $this->taxes = $taxes;
+    // public function setTaxes($taxes)
+    // {
+    //     $this->taxes = $taxes;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     /**
      * Get the value of gross_due

@@ -6013,11 +6013,9 @@ class Constante
             ->setDebtor($this->Note_getNameOfAddressedTo($note))
             ->setStatus($status['Texte'])
             ->setInvoice_reference($note->getReference())
-            ->setNet_amount(0)
-            ->setTaxes(0)
-            ->setGross_due(0)
-            ->setAmount_paid(0)
-            ->setBalance_due(0)
+            ->setGross_due($status['Total due'])
+            ->setAmount_paid($status['Total paid'])
+            ->setBalance_due($status['Total balance'])
             ->setUser($this->Utilisateur_getUtilisateurByInvite($note->getInvite()))
             ->setDate_submition($note->getSentAt())
             ->setDate_payment($status['Date dernier paiement']);
@@ -6028,13 +6026,18 @@ class Constante
         $status = [
             "Date dernier paiement" => null,
             "Texte" => "RAS",
+            "Total due" => 0,
+            "Total paid" => 0,
+            "Total balance" => 0,
         ];
 
         if ($note != null) {
             $totalDu = $this->Note_getMontant_payable($note);
             $totalPaye = $this->Note_getMontant_paye($note);
+            $status['Total due'] = $totalDu;
             foreach ($note->getPaiements() as $paiement) {
                 $status['Date dernier paiement'] = $paiement->getPaidAt();
+                $status['Total paid'] += $paiement->getMontant();
             }
             if (($totalDu - $totalPaye) == 0) {
                 $status['Texte'] = "Soldée";
@@ -6046,6 +6049,8 @@ class Constante
         } else {
             $status['Texte'] = "Null";
         }
+        $status['Total balance'] = $status['Total due'] - $status['Total paid'];
+        // dd($status);
         return $status;
     }
 
@@ -6063,8 +6068,6 @@ class Constante
     public function Entreprise_getDataTabCashFlow()
     {
         $tabAOrdonner = [];
-        $cumulNet = 0;
-        $cumulTaxe = 0;
         $cumulGross = 0;
         $cumulPaid = 0;
         $cumulBalance = 0;
@@ -6072,37 +6075,31 @@ class Constante
         $index = 1;
         foreach ($this->Entreprise_getNotes() as $note) {
             $dataSet = $this->createCashflowReportSet($index, $note);
-            $dataSet->setGross_due($dataSet->getNet_amount() + $dataSet->getTaxes());
-            $dataSet->setAmount_paid(rand(0, $dataSet->getGross_due()));
-            $dataSet->setBalance_due($dataSet->getGross_due() - $dataSet->getAmount_paid());
-
-            $days = 0;
-            if ($dataSet->getDate_submition() != null) {
+            // dd($dataSet->getBalance_due());
+            if ($dataSet->getBalance_due() > 0) {
                 $days = $this->serviceDates->daysEntre(new DateTimeImmutable("now"), $dataSet->getDate_submition());
                 if ($days == 0) {
-                    $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " today.");
+                    $dataSet->setDays_passed($dataSet->getDate_submition() != null ? "Transmise à "  . $dataSet->getDebtor() . " aujourd'hui." : "Note non transmise.");
                 } else {
-                    $dataSet->setDays_passed("Sent to "  . $dataSet->getDebtor() . " " . $days .  " days ago.");
+                    if ($days < 0) {
+                        $days = $days * -1;
+                    }
+                    $dataSet->setDays_passed($dataSet->getDate_submition() != null ? "Transmise à "  . $dataSet->getDebtor() . " il y a " . $days .  " jrs." : "Note non transmise.");
                 }
-            }else{
-                $dataSet->setStatus("Imapyé (Non soumise).");
-                $dataSet->setDays_passed("SVP, veuillez soumettre la note à " . $dataSet->getDebtor());
+                //On charge le tableau désordonné
+                $tabReportSets[] = $dataSet;
+                //On cumul
+                $cumulGross += $dataSet->getGross_due();
+                $cumulPaid += $dataSet->getAmount_paid();
+                $cumulBalance += $dataSet->getGross_due() - $dataSet->getAmount_paid();
+                //On incrémente le compteur
+                $index++;
+
+                //Préparation des tableaux pour faire le tri
+                $tabReportSets[$note->getId()] = $dataSet;
+                //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
+                $tabAOrdonner[$note->getId()] = $days;
             }
-
-            $tabReportSets[] = $dataSet;
-
-            $cumulNet += $dataSet->getNet_amount();
-            $cumulTaxe += $dataSet->getTaxes();
-            $cumulGross += $dataSet->getGross_due();
-            $cumulPaid += $dataSet->getAmount_paid();
-            $cumulBalance += $dataSet->getGross_due() - $dataSet->getAmount_paid();
-
-            $index++;
-
-            //Préparation des tableaux pour faire le tri
-            $tabReportSets[$note->getId()] = $dataSet;
-            // //on doit transformer la date en String afin que la fonction uasort de tri fasse bien son travail
-            $tabAOrdonner[$note->getId()] = $days;
         }
 
         arsort($tabAOrdonner); //tri décroissante = du plus grand au plus pétit.
@@ -6111,22 +6108,17 @@ class Constante
         foreach ($tabAOrdonner as $key => $value) {
             $tabFinaleOrdonne[] = $tabReportSets[$key];
         }
-
-        // //Ligne totale
+        //Ligne totale
         $dataSet = (new CashflowReportSet())
             ->setType(CashflowReportSet::TYPE_TOTAL)
             ->setCurrency_code($this->serviceMonnaies->getCodeMonnaieAffichage())
             ->setDescription("TOTAL")
-            ->setNet_amount($cumulNet)
-            ->setTaxes($cumulTaxe)
             ->setGross_due($cumulGross)
             ->setAmount_paid($cumulPaid)
             ->setBalance_due($cumulBalance);
 
         $tabFinaleOrdonne[] = $dataSet;
-        // // dd($tabReportSets);
 
         return $tabFinaleOrdonne;
-        // return [];
     }
 }

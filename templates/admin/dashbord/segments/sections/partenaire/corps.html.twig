@@ -1,6 +1,7 @@
 <div class="tab-pane fade table-responsive" id="nav-production-partner" role="tabpanel" aria-labelledby="nav-production-partner-tab" tabindex="0">
     <div class="card m-2">
         <div class="card-header text-center">
+            {{ include('segments/icones/partenaire.html.twig', {size:'20px'}) }}
             {{ "company_dashboard_section_principale_partners_header" | trans() | raw}}
         </div>
         {% if dashboard.productionTabs['tabProductionPerPartnerPerMonth']|length > 13 %}

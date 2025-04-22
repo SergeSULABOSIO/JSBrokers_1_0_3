@@ -1,6 +1,7 @@
 <div class="tab-pane fade" id="nav-claims" role="tabpanel" aria-labelledby="nav-claims-tab" tabindex="0">
     <div class="card m-2">
         <div class="card-header text-center">
+            {{ include('segments/icones/notificationsinistre.html.twig', {size:'20px'}) }}
             {{ "company_dashboard_section_principale_claims_header" | trans() | raw }}
         </div>
         {% if dashboard.productionTabs['tabClaims']|length > 1 %}

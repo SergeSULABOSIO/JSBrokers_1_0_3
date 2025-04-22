@@ -2,6 +2,7 @@
     <div class="card m-2">
         <div class="card-header text-center">
             {# Monthly Production per Insurer #}
+            {{ include('segments/icones/assureur.html.twig', {size:'20px'}) }}
             {{ "company_dashboard_section_principale_insurers_header" | trans() | raw }}
         </div>
         {% if dashboard.productionTabs['tabProductionPerInsurerPerMonth'] > 13 %}

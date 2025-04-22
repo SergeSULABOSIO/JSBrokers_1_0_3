@@ -1,6 +1,7 @@
 <div class="tab-pane fade" id="nav-tasks" role="tabpanel" aria-labelledby="nav-tasks-tab" tabindex="0">
     <div class="card m-2">
         <div class="card-header text-center">
+            {{ include('segments/icones/tache.html.twig', {size:'20px'}) }}
             {{ "company_dashboard_section_principale_tasks_header" | trans() | raw }}
         </div>
         {% if dashboard.productionTabs['tabTasks']|length > 1 %}

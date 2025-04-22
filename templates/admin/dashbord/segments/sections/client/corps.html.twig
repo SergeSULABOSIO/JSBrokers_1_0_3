@@ -1,6 +1,7 @@
 <div class="tab-pane fade" id="nav-topclients" role="tabpanel" aria-labelledby="nav-topclients-tab" tabindex="0">
     <div class="card m-2">
         <div class="card-header text-center">
+            {{ include('segments/icones/client.html.twig', {size:'20px'}) }}
             {{ "company_dashboard_section_principale_clients_header" | trans() | raw}}
         </div>
         {% if dashboard.productionTabs.tabTop20Clients['data']|length > 1 %}
