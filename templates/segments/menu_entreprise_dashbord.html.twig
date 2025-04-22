@@ -1,7 +1,7 @@
 {# Le nouveau Menu #}
 <div class="list-group">
     {# <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'active' : '' }}"> #}
-    <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="text-secondary sensible {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'bg-secondary text-white' : '' }} p-3 mb-2">
+    <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="text-secondary sensible {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'bg-secondary text-white' : '' }} p-3 mb-2 shadow-sm">
         <div class="d-flex justify-content-between">
             <h6>
                 <strong>
@@ -16,7 +16,7 @@
         </div>
     </a>
 </div>
-<div class="accordion" id="accMenuEntreprise">
+<div class="accordion shadow-sm" id="accMenuEntreprise">
     {% include 'segments/menu_entreprise/menu_entreprise_finances.html.twig' %}
     {% include 'segments/menu_entreprise/menu_entreprise_marketing.html.twig' %}
     {% include 'segments/menu_entreprise/menu_entreprise_production.html.twig' %}
