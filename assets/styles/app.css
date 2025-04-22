@@ -49,3 +49,16 @@ input[type=text], input[type=password], input[type=number], input[type=email], i
 .gras {
   font-weight: bold;
 }
+
+.element-a-encadrer {
+  border: 1px solid white; /* Bordure grise claire par défaut */
+  /* border-radius: 50px; Arrondi de 5 pixels pour tous les coins */
+  padding: 10px; /* Pour un peu d'espace autour du contenu */
+  transition: border-color 0.3s ease-in-out; /* Animation douce pour la couleur de la bordure */
+}
+
+.element-a-encadrer:hover {
+  /*border: 5px solid darkgray;  Bordure grise claire par défaut */
+  border-radius: 50px; /* Arrondi de 5 pixels pour tous les coins */
+  /*border-color: #333;  Bordure gris sombre au survol */
+}
