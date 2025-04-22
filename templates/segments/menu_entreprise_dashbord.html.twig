@@ -1,12 +1,20 @@
 {# Le nouveau Menu #}
 <div class="list-group">
-    <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'active' : '' }}">
-        <div class="d-flex w-100 justify-content-between">
-            <h6 class="mb-1">
-                {{ ux_icon('ant-design:dashboard-twotone', {height: '25px', width: '25px'}) }}
-                <strong>&nbsp;{{ "company_menu_dashboard" | trans }}&nbsp;</strong>
+    {# <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'active' : '' }}"> #}
+    <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="text-secondary sensible {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'bg-secondary text-white' : '' }} p-3 mb-2">
+        <div class="d-flex justify-content-between">
+            <h6>
+                <strong>
+                    &nbsp;
+                    {{ include('segments/icones/dashboard.html.twig', {size:'30px'}) }}
+                    {{ "company_menu_dashboard" | trans }}
+                </strong>
             </h6>
-            <small><span class="badge text-bg-warning rounded-pill">Professional</span></small>
+            <small>
+                <span class="badge text-bg-secondary rounded-pill">
+                    Premium
+                </span>
+            </small>
         </div>
     </a>
 </div>

@@ -20,16 +20,17 @@ a:active {
 }
 
 .sensible:hover {
-  /* background-color: #f2f2f2; */
-  /* background-color: #ffefc3; */
-  /* background-color: #cfe2ff; */
-  background-color: #ffedb8;
-  /* font-size: 18px; */
+  background-color: lightgray;
+  border: 4px solid darkgray;  /* Bordure grise claire par défaut */
 }
 
 .sensible {
   background-color: white;
-  /* font-size: 18px; */
+  border-radius: 10px;
+  border: 4px solid white; /* Bordure grise claire par défaut */
+  padding: 10px; /* Pour un peu d'espace autour du contenu */
+  margin: 3px; /* Pour un peu d'espace autour du contenu */
+  transition: border-color 0.3s ease-in-out; /* Animation douce pour la couleur de la bordure */
 }
 
 .bg-income {

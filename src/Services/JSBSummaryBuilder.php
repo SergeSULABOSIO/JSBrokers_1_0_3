@@ -30,7 +30,8 @@ class JSBSummaryBuilder
         }
         $summary = (new ReportSummary())
             ->setIcone("emojione-monotone:umbrella-with-rain-drops")
-            ->setIcone_color("text-primary")
+            // ->setIcone_color("text-primary")
+            ->setIcone_color("text-secondary")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_policies_titre"))
             ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
@@ -55,7 +56,8 @@ class JSBSummaryBuilder
         }
         $summary = (new ReportSummary())
             ->setIcone("healthicons:money-bag")
-            ->setIcone_color("text-success")
+            ->setIcone_color("text-secondary")
+            // ->setIcone_color("text-success")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_revenues_titre"))
             ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
@@ -82,7 +84,8 @@ class JSBSummaryBuilder
         }
         $summary = (new ReportSummary())
             ->setIcone("game-icons:receive-money")
-            ->setIcone_color("text-black")
+            ->setIcone_color("text-secondary")
+            // ->setIcone_color("text-black")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_collecte_revenues_titre"))
             ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
@@ -109,6 +112,7 @@ class JSBSummaryBuilder
         $summary = (new ReportSummary())
             ->setIcone("carbon:partnership")
             ->setIcone_color("text-secondary")
+            // ->setIcone_color("text-secondary")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_retrocom_titre"))
             ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
@@ -135,7 +139,8 @@ class JSBSummaryBuilder
         }
         $summary = (new ReportSummary())
             ->setIcone("carbon:finance")
-            ->setIcone_color("text-warning")
+            ->setIcone_color("text-secondary")
+            // ->setIcone_color("text-warning")
             ->setCurrency_code("$")
             ->setTitre($this->translator->trans("company_dashboard_summary_tax_titre"))
             ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
@@ -162,7 +167,8 @@ class JSBSummaryBuilder
         }
         $summary = (new ReportSummary())
             ->setIcone("hugeicons:accident")
-            ->setIcone_color("text-danger")
+            ->setIcone_color("text-secondary")
+            // ->setIcone_color("text-danger")
             ->setTitre($this->translator->trans("company_dashboard_summary_claims_titre"))
             ->setCurrency_code("$")
             ->setPrincipal(count($data) != 0 ? $data[count($data) - 1] : [
