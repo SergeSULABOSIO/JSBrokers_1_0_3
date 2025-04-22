@@ -1,5 +1,5 @@
 {% if panier != null and note != null %}
-  <div class="sensible mt-3 shadow-sm">
+  <div class="sensible mt-2 shadow-sm mb-2">
     {% if panier.idNote != null %}
         {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
         <a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':panier.idnote, 'idEntreprise': entreprise.id})}}">
