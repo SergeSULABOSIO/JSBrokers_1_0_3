@@ -3,9 +3,16 @@
       {% if panier.idNote != null %}
       {# <hr> #}
         {# <p> #}
-          {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}{{ panier }}, créer le {{ panier.createdAt|format_datetime('short', 'short', locale: utilisateur.locale)}}:</br>
+          {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
           <a class="m-2" href="{{ path('admin.note.edit', {'page':1, 'idNote':panier.idnote, 'idEntreprise': entreprise.id})}}">
-            {{ ux_icon('hugeicons:invoice', {height: '18px', width: '18px'}) }}{{ constante.Note_getNameOfTypeNote(note) }} • {{ panier.nomNote }} • {{ panier.reference }} • {{ panier.nbTranche }} tranche(s) • {{ constante.Note_getNameOfAddressedTo(note) }}</br>
+            {{ include('segments/icones/note.html.twig', {size:'18px'}) }}
+            {{ constante.Note_getNameOfTypeNote(note) }} • 
+            {{ include('segments/icones/actions/description.html.twig', {size:'18px'}) }}
+            {{ panier.nomNote }} • 
+            {{ panier.reference }} • 
+            {{ panier.nbTranche }} tranche(s) • 
+            {{ constante.Note_getNameOfAddressedTo(note) }}
+            </br>
           </a>
           <small class ="m-2">
             <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
@@ -14,8 +21,9 @@
           </small></br>
           {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
           <a class="m-2 btn btn-danger border-0 btn-sm" href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-            Vider le panier
+            {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+            {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
+            Vider puis détruire le panier
           </a>
         {# </p> #}
       {# <hr> #}
