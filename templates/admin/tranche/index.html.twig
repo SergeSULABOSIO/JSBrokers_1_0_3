@@ -47,7 +47,7 @@
                 <tbody class="table-group-divider">
                     {# Boucler les donnees #}
                     {% for tranche in tranches %}
-                        <tr id="row_tranche_{{ tranche.id }}">
+                        <tr id="row_tranche_{{ tranche.id }}" class="element-a-encadrer">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
                                     {{ include('segments/icones/tranche.html.twig', {'size':'19px'}) }}
