@@ -8,6 +8,7 @@
           {{ include('segments/icones/actions/description.html.twig', {size:'18px'}) }}
           {{ panier.nomNote }} • 
           {{ panier.reference }} • 
+          {{ include('segments/icones/tranche.html.twig', {size:'18px'}) }}
           {{ panier.nbTranche }} tranche(s) • 
           {{ constante.Note_getNameOfAddressedTo(note) }}
           </br>
