@@ -53,7 +53,7 @@
 										{{ include('segments/icones/note.html.twig', {size:'18px'}) }}
 										{% if panier != null %}
 											{% if panier.containsNote(note.id) == true %}
-												{{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
+												{{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
 											{% endif %}
 										{% endif %}
 										Réf.: {{ note.reference }} • {{ note.description }} • {{ constante.Note_getNameOfAddressedTo(note) }}
@@ -68,10 +68,16 @@
 										<span class="{{couleur}}"> • Solde: {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
 									</small><br/>
 									<small class ="m-2">
-										<span class="text-secondary">{{ constante.Note_getNameOfTypeNote(note) }} - {{ note.nom }}</span>
+										<span class="text-secondary">
+											{{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+											{{ constante.Note_getNameOfTypeNote(note) }} - {{ note.nom }}
+										</span>
 									</small><br/>
 									<small class ="m-2">
-										<span class="text-secondary">Signée par {{ note.signedBy }}, {{ note.titleSignedBy }}</span>
+										<span class="text-secondary">
+											{{ include('segments/icones/invite.html.twig', {size:'10px'}) }}
+											Signée par {{ note.signedBy }}, {{ note.titleSignedBy }}
+										</span>
 									</small>
 								</td>
 								<td>
