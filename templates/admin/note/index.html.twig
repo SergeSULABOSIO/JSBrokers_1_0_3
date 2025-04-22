@@ -47,7 +47,7 @@
 					<tbody class="table-group-divider">
 						{# Boucler les donnees #}
 						{% for note in notes %}
-							<tr id="row_note_{{ note.id }}" class="element-a-encadrer">
+							<tr id="row_note_{{ note.id }}" class="element-a-encadrer parent-a-options">
 								<td>
 									<a class="m-2 fw-bold" href="{{ path('admin.note.edit', {'page':1, 'idNote':note.id, 'idEntreprise': entreprise.id})}}">
 										{{ include('segments/icones/note.html.twig', {size:'18px'}) }}
@@ -81,71 +81,73 @@
 									</small>
 								</td>
 								<td>
-									<div class="d-flex gap-1 d-flex justify-content-end">
-										{# Les actions sur l element de la liste #}
-										<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.note.edit', {'idEntreprise': entreprise.id, 'idNote':note.id, 'page':1 })}}" class="" mthod = 'POST'>
-                							{{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
-											{# Modifier #}
-										</a>
-										<form action="{{ path('admin.note.remove', {'idNote':note.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-											<input type='hidden' name='_method' value='DELETE'>
-											<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                								{{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
-												{# Supprimer #}
-											</button>
-										</form>
-										<div class="dropdown">
-											<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-												{{ include('segments/icones/actions/options.html.twig', {size:'18px'}) }}
-												{# Autres #}
+									<div class="options-du-parent">
+										<div class="d-flex gap-1 d-flex justify-content-end">
+											{# Les actions sur l element de la liste #}
+											<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.note.edit', {'idEntreprise': entreprise.id, 'idNote':note.id, 'page':1 })}}" class="" mthod = 'POST'>
+												{{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+												{# Modifier #}
 											</a>
-											<ul class="dropdown-menu">
-												{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-												{% if panier != null %}
-													{% if panier.idNote != note.id %}
+											<form action="{{ path('admin.note.remove', {'idNote':note.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+												<input type='hidden' name='_method' value='DELETE'>
+												<button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+													{{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+													{# Supprimer #}
+												</button>
+											</form>
+											<div class="dropdown">
+												<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+													{{ include('segments/icones/actions/options.html.twig', {size:'18px'}) }}
+													{# Autres #}
+												</a>
+												<ul class="dropdown-menu">
+													{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+													{% if panier != null %}
+														{% if panier.idNote != note.id %}
+															<li>
+																<a class="dropdown-item" href="{{ path('admin.note.mettredanslepanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+																	{{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
+																	Mettre dans le panier
+																</a>
+															</li>
+														{% else %}
+															<li>
+																<a class="dropdown-item" href="{{ path('admin.note.retirerdupanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+																	{{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
+																	Retirer du panier
+																</a>
+															</li>
+														{% endif %}
+													{% else %}
 														<li>
 															<a class="dropdown-item" href="{{ path('admin.note.mettredanslepanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
 																{{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
-																Mettre dans le panier
-															</a>
-														</li>
-													{% else %}
-														<li>
-															<a class="dropdown-item" href="{{ path('admin.note.retirerdupanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-																{{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
-																Retirer du panier
+																Créer le panier puis insérer cette note
 															</a>
 														</li>
 													{% endif %}
-												{% else %}
 													<li>
-														<a class="dropdown-item" href="{{ path('admin.note.mettredanslepanier', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-															{{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
-															Créer le panier puis insérer cette note
+														{% if constante.Note_getMontant_solde(note) != 0 %}
+															<a class="dropdown-item" href="{{ path('admin.paiement.create', {'idNote': note.id, 'idEntreprise': entreprise.id})}}">
+																{{ include('segments/icones/paiement.html.twig', {size:'18px'}) }}
+																Ajouter un paiement
+															</a>
+														{% endif %}
+													</li>
+													<li>
+														<a class="dropdown-item" href="{{ path('admin.etats.imprimer_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+															{{ include('segments/icones/note.html.twig', {size:'18px'}) }}
+															Ouvrir la note
 														</a>
 													</li>
-												{% endif %}
-												<li>
-													{% if constante.Note_getMontant_solde(note) != 0 %}
-														<a class="dropdown-item" href="{{ path('admin.paiement.create', {'idNote': note.id, 'idEntreprise': entreprise.id})}}">
-															{{ include('segments/icones/paiement.html.twig', {size:'18px'}) }}
-															Ajouter un paiement
+													<li>
+														<a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+															{{ include('segments/icones/bordereau.html.twig', {size:'18px'}) }}
+															Ouvrir le bordereau
 														</a>
-													{% endif %}
-												</li>
-												<li>
-													<a class="dropdown-item" href="{{ path('admin.etats.imprimer_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-														{{ include('segments/icones/note.html.twig', {size:'18px'}) }}
-														Ouvrir la note
-													</a>
-												</li>
-												<li>
-													<a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-														{{ include('segments/icones/bordereau.html.twig', {size:'18px'}) }}
-														Ouvrir le bordereau
-													</a>
-												</li>
-											</ul>
+													</li>
+												</ul>
+											</div>
 										</div>
 									</div>
 								</td>
