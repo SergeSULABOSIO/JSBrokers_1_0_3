@@ -21,202 +21,187 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
-                {% if clients|length == 0 %}
-                    {{ "client_filter_result_empty" | trans }}
-                {% else %}
-                    {{ "client_filter_result_elements" | trans({
-                        ':number': clients|length
-                    })}}
-                {% endif %}
-                <div class="d-flex gap-1">
-                    {{ knp_pagination_render(clients) }}
-                </div>
-            </caption>
-            {% if clients|length != 0 %}
-                <thead class="table-light">
-                    <tr>
-                        {# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "client_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "client_list_actions" | trans }}</div></th>
-                    </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                    {# Boucler les donnees #}
-                    {% for client in clients %}
-                        <tr id="row_client_{{ client.id }}">
-                            <td>
-                                <a class="m-2 fw-bold" href="{{ path('admin.client.edit', {'idClient':client.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ include('segments/icones/client.html.twig', {size:'18px'}) }}
-                                    {{ client.nom }}
-                                </a><br/>
-                                {% if client.rccm != null or client.numimpot != null or client.numimpot != null %}
-                                    <small class="m-2 text-secondary">
-                                        {% if client.rccm != null %}
-                                            RCCM: {{ client.rccm }}
-                                        {% endif %}
-                                        {% if client.numimpot != null %}
-                                            • NIF: {{ client.numimpot }}
-                                        {% endif %}
-                                        {% if client.numimpot != null %}
-                                            • IDNAT: {{ client.idnat }}
-                                        {% endif %}
-                                         • {{ client.email }} • {{ client.telephone }} • {{ client.adresse }}
+	<div>
+		<div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
+                    {% if clients|length == 0 %}
+                        {{ "list_filter_result_empty" | trans }}
+                    {% else %}
+                        {{ "list_filter_result_elements" | trans({
+                            ':number': clients|length
+                        })}}
+                    {% endif %}
+                    <div class="d-flex gap-1">
+                        {{ knp_pagination_render(clients) }}
+                    </div>
+                </caption>
+                {% if clients|length != 0 %}
+                    <thead class="table-light">
+						<tr>
+							<th scope="col">
+								<div class='d-flex justify-content-start text-secondary'>
+									{{ "list_of_object" | trans }}
+								</div>
+							</th>
+							<th scope="col" style="width:100px" >
+								<div class='d-flex justify-content-end'>
+									{# {{ "note_list_actions" | trans }} #}
+								</div>
+							</th>
+						</tr>
+					</thead>
+                    <tbody class="table-group-divider">
+                        {# Boucler les donnees #}
+                        {% for client in clients %}
+                            <tr id="row_client_{{ client.id }}" class="element-a-encadrer parent-a-options">
+                                <td>
+                                    <a class="m-2 fw-bold" href="{{ path('admin.client.edit', {'idClient':client.id, 'idEntreprise': entreprise.id})}}">
+                                        {{ include('segments/icones/client.html.twig', {size:'18px'}) }}
+                                        {{ client.nom }}
+                                    </a><br/>
+                                    {% if client.rccm != null or client.numimpot != null or client.numimpot != null %}
+                                        <small class="m-2 text-secondary">
+                                            {% if client.rccm != null %}
+                                                RCCM: {{ client.rccm }}
+                                            {% endif %}
+                                            {% if client.numimpot != null %}
+                                                • NIF: {{ client.numimpot }}
+                                            {% endif %}
+                                            {% if client.numimpot != null %}
+                                                • IDNAT: {{ client.idnat }}
+                                            {% endif %}
+                                            • {{ client.email }} • {{ client.telephone }} • {{ client.adresse }}
+                                        </small><br/>
+                                    {% endif %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {% if client.groupe != null %}
+                                                {{ include('segments/icones/groupe.html.twig', {size:'18px'}) }}
+                                                {{ client.groupe.nom }}
+                                            {% endif %}
+                                            </span> 
+                                        <span class="text-danger fw-bold">{% if client.exonere == true %} • Exonéré{% endif %}</span> 
                                     </small><br/>
-                                {% endif %}
-                                <small class="m-2">
-                                    <span class="text-secondary">
-                                        {% if client.groupe != null %}
-                                            {{ include('segments/icones/groupe.html.twig', {size:'18px'}) }}
-                                            {{ client.groupe.nom }}
-                                        {% endif %}
+                                    {# Section prime #}
+                                    <small class="m-2">
+                                        <span class="text-secondary fw-bold">
+                                            {{ include('segments/icones/cotation.html.twig', {size:'18px'}) }}
+                                            Prime: {{ constante.Client_getMontant_prime_payable_par_client(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
                                         </span> 
-                                    <span class="text-danger fw-bold">{% if client.exonere == true %} • Exonéré{% endif %}</span> 
-                                </small><br/>
-                                {# Section prime #}
-                                <small class="m-2">
-                                    <span class="text-secondary fw-bold">
-                                        {{ include('segments/icones/cotation.html.twig', {size:'18px'}) }}
-                                        Prime: {{ constante.Client_getMontant_prime_payable_par_client(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                    </span> 
-                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Client_getMontant_prime_payable_par_client_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Client_getMontant_prime_payable_par_client_solde(client) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Client_getMontant_prime_payable_par_client_solde(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {# Section commissions #}
-                                <small class="m-2">
-                                    <span class="text-secondary">
-                                        {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
-                                        Com. pure: {{ constante.Client_getMontant_commission_pure(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                    </span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Client_getMontant_commission_ht(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Client_getMontant_commission_ttc(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Client_getMontant_commission_ttc_collectee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Client_getMontant_commission_ttc_solde(client, -1, false) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Client_getMontant_commission_ttc_solde(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
-                                <small class="m-2">
-                                    <span class="text-secondary">
-                                        {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
-                                        La réserve finale pour {{ entreprise.nom }} est de {{ constante.Client_getReserve(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                    </span> 
-                                </small><br>
-                                {% for taxe in serviceTaxe.taxes %}
-                                     {% if taxe.redevable == 0 %}
-                                        {# Section Taxes : TVA#}
-                                        <small class="m-2">
-                                            <span class="text-secondary">
-                                                {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
-                                                {{ taxe.code }}: {{ constante.Client_getMontant_taxe_payable_par_assureur(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                            </span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Client_getMontant_taxe_payable_par_assureur_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Client_getMontant_taxe_payable_par_assureur_solde(client, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde: {{ constante.Client_getMontant_taxe_payable_par_assureur_solde(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                     {% if taxe.redevable == 1 %}
-                                        {# Section Taxe: ARCA #}
-                                        <small class="m-2">
-                                            <span class="text-secondary">
-                                                {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
-                                                {{ taxe.code }}: {{ constante.Client_getMontant_taxe_payable_par_courtier(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                            </span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Client_getMontant_taxe_payable_par_courtier_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Client_getMontant_taxe_payable_par_courtier_solde(client, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_taxe_payable_par_courtier_solde(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                {% endfor %}
-                                {% for partenaire in constante.Client_getPartenaires(client) %}
-                                    {# Retro-commission #}
-                                    {% if partenaire != null %}
-                                        <small class="m-2">
-                                            <span class="text-secondary">
-                                                {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
-                                                Assiette: {{ constante.Client_getMontant_commission_pure(client, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                            </span> 
-                                            <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier(client, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_payee(client, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, true) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                        </small><br>
-                                        {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
-                                            <small class="m-2">
-                                                {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
-                                                    <span class="text-danger">
-                                                        {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
-                                                         • {{ condition }}
-                                                    </span>
-                                                {% endfor %}
-                                            </small><br>
+                                        <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Client_getMontant_prime_payable_par_client_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Client_getMontant_prime_payable_par_client_solde(client) != 0 %}
+                                            {% set couleur = "text-danger" %}
                                         {% endif %}
-                                    {% endif %}
-                                {% endfor %}
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.client.edit', {'idEntreprise': entreprise.id, 'idClient':client.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    <form action="{{ path('admin.client.remove', {'idClient':client.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                        <input type='hidden' name='_method' value='DELETE'>
-                                        <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                            {# Supprimer #}
-                                        </button>
-                                    </form>
-                                    <div class="dropdown">
-                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "client_item_set_as_display_client" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "client_item_set_as_input_client" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "client_item_set_as_display_and_input_client" | trans }}
-                                                </a>
-                                            </li>
-                                        </ul>
+                                        <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Client_getMontant_prime_payable_par_client_solde(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# Section commissions #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
+                                            Com. pure: {{ constante.Client_getMontant_commission_pure(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary"> • Com. ht: {{ constante.Client_getMontant_commission_ht(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. totale: {{ constante.Client_getMontant_commission_ttc(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. collectée: {{ constante.Client_getMontant_commission_ttc_collectee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Client_getMontant_commission_ttc_solde(client, -1, false) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde: {{ constante.Client_getMontant_commission_ttc_solde(client, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
+                                            La réserve finale pour {{ entreprise.nom }} est de {{ constante.Client_getReserve(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                    </small><br>
+                                    {% for taxe in serviceTaxe.taxes %}
+                                        {% if taxe.redevable == 0 %}
+                                            {# Section Taxes : TVA#}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Client_getMontant_taxe_payable_par_assureur(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Client_getMontant_taxe_payable_par_assureur_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Client_getMontant_taxe_payable_par_assureur_solde(client, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde: {{ constante.Client_getMontant_taxe_payable_par_assureur_solde(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                        {% if taxe.redevable == 1 %}
+                                            {# Section Taxe: ARCA #}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Client_getMontant_taxe_payable_par_courtier(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Client_getMontant_taxe_payable_par_courtier_payee(client)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Client_getMontant_taxe_payable_par_courtier_solde(client, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_taxe_payable_par_courtier_solde(client, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% for partenaire in constante.Client_getPartenaires(client) %}
+                                        {# Retro-commission #}
+                                        {% if partenaire != null %}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
+                                                    Assiette: {{ constante.Client_getMontant_commission_pure(client, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary">Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier(client, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                <span class="text-secondary"> • Rétro-com payée: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_payee(client, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, true) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde dû: {{ constante.Client_getMontant_retrocommissions_payable_par_courtier_solde(client, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            </small><br>
+                                            {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                                <small class="m-2">
+                                                    {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                        <span class="text-danger">
+                                                            {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
+                                                            • {{ condition }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </small><br>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <div class="options-du-parent">
+                                        <div class="d-flex gap-1 d-flex justify-content-end">
+                                            {# Les actions sur l element de la liste #}
+                                            <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.client.edit', {'idEntreprise': entreprise.id, 'idClient':client.id })}}" class="" mthod = 'POST'>
+                                                {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+												{# Modifier #}
+                                            </a>
+                                            <form action="{{ path('admin.client.remove', {'idClient':client.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                                <input type='hidden' name='_method' value='DELETE'>
+                                                <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                    {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+													{# Supprimer #}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            {% endif %}
-        </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+        </div>
     </div>
 {% endblock %}
