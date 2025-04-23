@@ -448,6 +448,8 @@ addressed_to_client: "Towards client"
 addressed_to_insurer: "Towards insurer"
 addressed_to_partner: "Towards partnaire"
 list_of_object: "List of Objects"
+list_filter_result_empty: "No object found."
+list_filter_result_elements: "Result: :number object(s) found."
 
 
 

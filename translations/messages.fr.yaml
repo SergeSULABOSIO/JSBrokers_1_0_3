@@ -448,6 +448,10 @@ addressed_to_client: "Au client"
 addressed_to_insurer: "A l'assureur"
 addressed_to_partner: "Au partenaire"
 list_of_object: "Liste d'Objets"
+list_filter_result_empty: "Aucun objet trouvé."
+list_filter_result_elements: "Résultat: :number objet(s) trouvé(s)."
+
+
 
 
 
