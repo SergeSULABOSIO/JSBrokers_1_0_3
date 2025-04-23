@@ -21,178 +21,167 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
-                {% if groupes|length == 0 %}
-                    {{ "groupe_filter_result_empty" | trans}}
-                {% else %}
-                    {{ "groupe_filter_result_elements" | trans({
-                        ':number': groupes|length
-                    })}}
-                {% endif %}
-                <div class="d-flex gap-1">
-                    {{ knp_pagination_render(groupes) }}
-                </div>
-            </caption>
-            {% if groupes|length != 0 %}
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "groupe_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "groupe_list_actions" | trans }}</div></th>
-                    </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                    {# Boucler les donnees #}
-                    {% for groupe in groupes %}
-                        <tr id="row_groupe_{{ groupe.id }}">
-                            <td>
-                                <a class="m-2 fw-bold" href="{{ path('admin.groupe.edit', {'idGroupe':groupe.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ include('segments/icones/groupe.html.twig', {size:'18px'}) }}                                    
-                                    {{ groupe.nom }} • {{ groupe.clients|length }} client(s)
-                                </a><br/>
-                                <small class="m-2">
-                                    <span class="text-secondary">{{ groupe.description }}</span> 
-                                </small><br/>
-                                {# Section prime #}
-                                <small class="m-2">
-                                    <span class="text-secondary fw-bold">
-                                        {{ include('segments/icones/cotation.html.twig', {size:'18px'}) }}
-                                        Prime: {{ constante.Groupe_getMontant_prime_payable_par_client(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                    </span> 
-                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Groupe_getMontant_prime_payable_par_client_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Groupe_getMontant_prime_payable_par_client_solde(groupe) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Groupe_getMontant_prime_payable_par_client_solde(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {# Section commissions #}
-                                <small class="m-2">
-                                    <span class="text-secondary">
-                                        {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
-                                        Com. pure: {{ constante.Groupe_getMontant_commission_pure(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                    </span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Groupe_getMontant_commission_ht(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Groupe_getMontant_commission_ttc(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Groupe_getMontant_commission_ttc_collectee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Groupe_getMontant_commission_ttc_solde(groupe, -1, false) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Groupe_getMontant_commission_ttc_solde(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
-                                <small class="m-2">
-                                    <span class="text-secondary">
-                                        {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
-                                        La réserve finale pour {{ entreprise.nom }} est de {{ constante.Groupe_getReserve(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                    </span> 
-                                </small><br>
-                                {% for taxe in serviceTaxe.taxes %}
-                                     {% if taxe.redevable == 0 %}
-                                        {# Section Taxes : TVA#}
-                                        <small class="m-2">
-                                            <span class="text-secondary"> 
-                                                {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
-                                                {{ taxe.code }}: {{ constante.Groupe_getMontant_taxe_payable_par_assureur(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                            </span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Groupe_getMontant_taxe_payable_par_assureur_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Groupe_getMontant_taxe_payable_par_assureur_solde(groupe, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde: {{ constante.Groupe_getMontant_taxe_payable_par_assureur_solde(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                     {% if taxe.redevable == 1 %}
-                                        {# Section Taxe: ARCA #}
-                                        <small class="m-2">
-                                            <span class="text-secondary">
-                                                {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
-                                                {{ taxe.code }}: {{ constante.Groupe_getMontant_taxe_payable_par_courtier(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                            </span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Groupe_getMontant_taxe_payable_par_courtier_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Groupe_getMontant_taxe_payable_par_courtier_solde(groupe, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Groupe_getMontant_taxe_payable_par_courtier_solde(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                {% endfor %}
-                                {% for partenaire in constante.Groupe_getPartenaires(groupe) %}
-                                    {# Retro-commission #}
-                                    {% if partenaire != null %}
-                                        <small class="m-2">
-                                            <span class="text-secondary">
-                                                {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
-                                                Assiette: {{ constante.Groupe_getMontant_commission_pure(groupe, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                            </span> 
-                                            <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier(groupe, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_payee(groupe, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire, -1, true) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                        </small><br>
-                                        {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
-                                            <small class="m-2">
-                                                {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
-                                                    <span class="text-danger"> • {{ condition }}</span>
-                                                {% endfor %}
-                                            </small><br>
+	<div>
+		<div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
+                    {% if groupes|length == 0 %}
+                        {{ "list_filter_result_empty" | trans}}
+                    {% else %}
+                        {{ "list_filter_result_elements" | trans({
+                            ':number': groupes|length
+                        })}}
+                    {% endif %}
+                    <div class="d-flex gap-1">
+                        {{ knp_pagination_render(groupes) }}
+                    </div>
+                </caption>
+                {% if groupes|length != 0 %}
+                    <thead class="table-light">
+						<tr>
+							<th scope="col">
+								<div class='d-flex justify-content-start text-secondary'>
+									{{ "list_of_object" | trans }}
+								</div>
+							</th>
+							<th scope="col" style="width:100px" >
+								<div class='d-flex justify-content-end'>
+									{# {{ "note_list_actions" | trans }} #}
+								</div>
+							</th>
+						</tr>
+					</thead>
+                    <tbody class="table-group-divider">
+                        {# Boucler les donnees #}
+                        {% for groupe in groupes %}
+                            <tr id="row_groupe_{{ groupe.id }}" class="element-a-encadrer parent-a-options">
+                                <td>
+                                    <a class="m-2 fw-bold" href="{{ path('admin.groupe.edit', {'idGroupe':groupe.id, 'idEntreprise': entreprise.id})}}">
+                                        {{ include('segments/icones/groupe.html.twig', {size:'18px'}) }}                                    
+                                        {{ groupe.nom }} • {{ groupe.clients|length }} client(s)
+                                    </a><br/>
+                                    <small class="m-2">
+                                        <span class="text-secondary">{{ groupe.description }}</span> 
+                                    </small><br/>
+                                    {# Section prime #}
+                                    <small class="m-2">
+                                        <span class="text-secondary fw-bold">
+                                            {{ include('segments/icones/cotation.html.twig', {size:'18px'}) }}
+                                            Prime: {{ constante.Groupe_getMontant_prime_payable_par_client(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Groupe_getMontant_prime_payable_par_client_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Groupe_getMontant_prime_payable_par_client_solde(groupe) != 0 %}
+                                            {% set couleur = "text-danger" %}
                                         {% endif %}
-                                    {% endif %}
-                                {% endfor %}
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.groupe.edit', {'idEntreprise': entreprise.id, 'idGroupe':groupe.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    <form action="{{ path('admin.groupe.remove', {'idGroupe':groupe.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                        <input type='hidden' name='_method' value='DELETE'>
-                                        <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                            {# Supprimer #}
-                                        </button>
-                                    </form>
-                                    <div class="dropdown">
-                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "groupe_item_set_as_display_groupe" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "groupe_item_set_as_input_groupe" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "groupe_item_set_as_display_and_input_groupe" | trans }}
-                                                </a>
-                                            </li>
-                                        </ul>
+                                        <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Groupe_getMontant_prime_payable_par_client_solde(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# Section commissions #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
+                                            Com. pure: {{ constante.Groupe_getMontant_commission_pure(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary"> • Com. ht: {{ constante.Groupe_getMontant_commission_ht(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. totale: {{ constante.Groupe_getMontant_commission_ttc(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. collectée: {{ constante.Groupe_getMontant_commission_ttc_collectee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Groupe_getMontant_commission_ttc_solde(groupe, -1, false) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde: {{ constante.Groupe_getMontant_commission_ttc_solde(groupe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/revenu.html.twig', {size:'18px'}) }}
+                                            La réserve finale pour {{ entreprise.nom }} est de {{ constante.Groupe_getReserve(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                    </small><br>
+                                    {% for taxe in serviceTaxe.taxes %}
+                                        {% if taxe.redevable == 0 %}
+                                            {# Section Taxes : TVA#}
+                                            <small class="m-2">
+                                                <span class="text-secondary"> 
+                                                    {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Groupe_getMontant_taxe_payable_par_assureur(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Groupe_getMontant_taxe_payable_par_assureur_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Groupe_getMontant_taxe_payable_par_assureur_solde(groupe, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde: {{ constante.Groupe_getMontant_taxe_payable_par_assureur_solde(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                        {% if taxe.redevable == 1 %}
+                                            {# Section Taxe: ARCA #}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Groupe_getMontant_taxe_payable_par_courtier(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Groupe_getMontant_taxe_payable_par_courtier_payee(groupe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Groupe_getMontant_taxe_payable_par_courtier_solde(groupe, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde dû: {{ constante.Groupe_getMontant_taxe_payable_par_courtier_solde(groupe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% for partenaire in constante.Groupe_getPartenaires(groupe) %}
+                                        {# Retro-commission #}
+                                        {% if partenaire != null %}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
+                                                    Assiette: {{ constante.Groupe_getMontant_commission_pure(groupe, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier(groupe, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                <span class="text-secondary"> • Rétro-com payée: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_payee(groupe, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire, -1, true) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde dû: {{ constante.Groupe_getMontant_retrocommissions_payable_par_courtier_solde(groupe, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            </small><br>
+                                            {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                                <small class="m-2">
+                                                    {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                        <span class="text-danger">
+                                                            {{ include('segments/icones/partenaire.html.twig', {size:'18px'}) }}
+                                                            {{ condition }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </small><br>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <div class="options-du-parent">
+                                        <div class="d-flex gap-1 d-flex justify-content-end">
+                                            {# Les actions sur l element de la liste #}
+                                            <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.groupe.edit', {'idEntreprise': entreprise.id, 'idGroupe':groupe.id })}}" class="" mthod = 'POST'>
+                                                {{ include('segments/icones/actions/edit.html.twig', {size:'16px'}) }}
+												{# Modifier #}
+                                            </a>
+                                            <form action="{{ path('admin.groupe.remove', {'idGroupe':groupe.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                                <input type='hidden' name='_method' value='DELETE'>
+                                                <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                    {{ include('segments/icones/actions/delete.html.twig', {size:'16px'}) }}
+													{# Supprimer #}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            {% endif %}
-        </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+        </div>
     </div>
 {% endblock %}
