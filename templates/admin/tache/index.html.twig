@@ -21,133 +21,132 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
-                {% if taches|length == 0 %}
-                    {{ "tache_filter_result_empty" | trans}}
-                {% else %}
-                    {{ "tache_filter_result_elements" | trans({
-                        ':number': taches|length
-                    })}}
-                {% endif %}
-                <div class="d-flex gap-1">
-                    {{ knp_pagination_render(taches) }}
-                </div>
-            </caption>
-            {% if taches|length != 0 %}
-                <thead class="table-light">
-                    <tr>
-                        {# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "tache_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "tache_list_actions" | trans }}</div></th>
-                    </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                    {# Boucler les donnees #}
-                    {% for tache in taches %}
-                        <tr id="row_tache_{{ tache.id }}">
-                            <td>
-                                <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ include('segments/icones/tache.html.twig', {size:'18px'}) }}
-                                    {% if tache.closed == true %}
-                                        <span class="text-success fw-bold">
-                                            {{ include('segments/icones/actions/completed.html.twig', {size:'18px'}) }} 
-                                        </span>
-                                    {% else %}
-                                        {{ include('segments/icones/actions/ongoing.html.twig', {size:'18px'}) }}
-                                    {% endif %}
-                                    "{{ tache.description }}"
-                                </a><br/>
-                                <small class="m-2">
-                                    <span class="text-secondary">{{ include("segments/icones/datetime.html.twig", {size:'18px'}) }}{{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Echéance: {{ tache.toBeEndedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Modifiée le {{ tache.updatedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {% if tache.piste != null %}
+	<div>
+		<div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
+                    {% if taches|length == 0 %}
+                        {{ "list_filter_result_empty" | trans}}
+                    {% else %}
+                        {{ "list_filter_result_elements" | trans({
+                            ':number': taches|length
+                        })}}
+                    {% endif %}
+                    <div class="d-flex gap-1">
+                        {{ knp_pagination_render(taches) }}
+                    </div>
+                </caption>
+                {% if taches|length != 0 %}
+                    <thead class="table-light">
+						<tr>
+							<th scope="col">
+								<div class='d-flex justify-content-start text-secondary'>
+									{{ "list_of_object" | trans }}
+								</div>
+							</th>
+							<th scope="col" style="width:100px" >
+								<div class='d-flex justify-content-end'>
+									{# {{ "note_list_actions" | trans }} #}
+								</div>
+							</th>
+						</tr>
+					</thead>
+                    <tbody class="table-group-divider">
+                        {# Boucler les donnees #}
+                        {% for tache in taches %}
+                            <tr id="row_tache_{{ tache.id }}" class="element-a-encadrer parent-a-options">
+                                <td>
+                                    <a class="m-2 fw-bold" href="{{ path('admin.tache.edit', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}">
+                                        {{ include('segments/icones/tache.html.twig', {size:'18px'}) }}
+                                        {% if tache.closed == true %}
+                                            <span class="text-success fw-bold">
+                                                {{ include('segments/icones/actions/completed.html.twig', {size:'18px'}) }} 
+                                            </span>
+                                        {% else %}
+                                            {{ include('segments/icones/actions/ongoing.html.twig', {size:'18px'}) }}
+                                        {% endif %}
+                                        "{{ tache.description }}"
+                                    </a><br/>
                                     <small class="m-2">
                                         <span class="text-secondary">
-                                            {{ include("segments/icones/piste.html.twig", {size:'18px'}) }}{{ tache.piste }}
+                                            {{ include("segments/icones/datetime.html.twig", {size:'16px'}) }}
+                                            {{ tache.createdAt|format_datetime('short', 'short', locale: utilisateur.locale) }}
                                         </span> 
+                                        <span class="text-secondary"> • Echéance: {{ tache.toBeEndedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • Modifiée le {{ tache.updatedAt|format_datetime('short', 'short', locale: utilisateur.locale) }}</span> 
                                     </small><br/>
-                                {% endif %}
-                                {% if tache.cotation != null %}
+                                    {% if tache.piste != null %}
+                                        <small class="m-2">
+                                            <span class="text-secondary">
+                                                {{ include("segments/icones/piste.html.twig", {size:'16px'}) }}
+                                                {{ tache.piste }}
+                                            </span> 
+                                        </small><br/>
+                                    {% endif %}
+                                    {% if tache.cotation != null %}
+                                        <small class="m-2">
+                                            <span class="text-secondary">
+                                                {{ include("segments/icones/cotation.html.twig", {size:'16px'}) }}
+                                                {{ tache.cotation }}
+                                            </span> 
+                                        </small><br/>
+                                    {% endif %}
+                                    {% if tache.notificationSinistre != null %}
+                                        <small class="m-2">
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/notificationsinistre.html.twig', {size:'16px'}) }}
+                                                {{ tache.notificationSinistre }}
+                                            </span> 
+                                        </small><br/>
+                                    {% endif %}
+                                    {% if tache.offreIndemnisationSinistre != null %}
+                                        <small class="m-2">
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/offreindemnisation.html.twig', {size:'16px'}) }}
+                                                {{ tache.offreIndemnisationSinistre }}
+                                            </span> 
+                                        </small><br/>
+                                    {% endif %}
                                     <small class="m-2">
                                         <span class="text-secondary">
-                                            {{ include("segments/icones/cotation.html.twig", {size:'18px'}) }}{{ tache.cotation }}
+                                            {{ include('segments/icones/invite.html.twig', {size:'10px'}) }}
+                                            Tâche attribuée à {{ tache.executor }}
                                         </span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if tache.feedbacks|length == 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Réponses ({{ tache.feedbacks|length }})</span> 
+                                        {% set couleur = "text-success" %}
+                                        {% if constante.Tache_getExecutionStatus(tache)['remaining days'] < 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{ couleur }}"> • Status d'exécution: {{ constante.Tache_getExecutionStatus(tache)['text'] }}</span> 
                                     </small><br/>
-                                {% endif %}
-                                {% if tache.notificationSinistre != null %}
-                                    <small class="m-2">
-                                        <span class="text-secondary">Déclaration sinistre: {{ tache.notificationSinistre }}</span> 
-                                    </small><br/>
-                                {% endif %}
-                                {% if tache.offreIndemnisationSinistre != null %}
-                                    <small class="m-2">
-                                        <span class="text-secondary">Offre de réglèment sinistre: {{ tache.offreIndemnisationSinistre }}</span> 
-                                    </small><br/>
-                                {% endif %}
-                                <small class="m-2">
-                                    <span class="text-secondary">Tâche attribuée à {{ tache.executor }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if tache.feedbacks|length == 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}}"> • Réponses ({{ tache.feedbacks|length }})</span> 
-                                    {% set couleur = "text-success" %}
-                                    {% if constante.Tache_getExecutionStatus(tache)['remaining days'] < 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{ couleur }}"> • Status d'exécution: {{ constante.Tache_getExecutionStatus(tache)['text'] }}</span> 
-                                </small><br/>
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.tache.edit', {'idEntreprise': entreprise.id, 'idTache':tache.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    <form action="{{ path('admin.tache.remove', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                        <input type='hidden' name='_method' value='DELETE'>
-                                        <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                            {# Supprimer #}
-                                        </button>
-                                    </form>
-                                    <div class="dropdown">
-                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "tache_item_set_as_display_tache" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "tache_item_set_as_input_tache" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "tache_item_set_as_display_and_input_tache" | trans }}
-                                                </a>
-                                            </li>
-                                        </ul>
+                                </td>
+                                <td>
+                                    <div class="options-du-parent">
+                                        <div class="d-flex gap-1 d-flex justify-content-end">
+                                            {# Les actions sur l element de la liste #}
+                                            <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.tache.edit', {'idEntreprise': entreprise.id, 'idTache':tache.id })}}" class="" mthod = 'POST'>
+                                                {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+												{# Modifier #}
+                                            </a>
+                                            <form action="{{ path('admin.tache.remove', {'idTache':tache.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                                <input type='hidden' name='_method' value='DELETE'>
+                                                <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                    {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+													{# Supprimer #}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            {% endif %}
-        </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+        </div>
     </div>
 {% endblock %}
