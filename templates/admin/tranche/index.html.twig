@@ -22,194 +22,228 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
+	<div>
+        <div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
                 {% if tranches|length == 0 %}
-                    {{ "tranche_filter_result_empty" | trans}}
+                    {{ "list_filter_result_empty" | trans}}
                 {% else %}
-                    {{ "tranche_filter_result_elements" | trans ({
+                    {{ "list_filter_result_elements" | trans ({
                         ':number': tranches|length
                     })}}
                 {% endif %}
                 <div class="d-flex gap-1">
                     {{ knp_pagination_render(tranches) }}
                 </div>
-            </caption>
-            {% if tranches|length != 0 %}
-                <thead class="table-light">
-                    <tr>
-                        {# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "tranche_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "tranche_list_actions" | trans }}</div></th>
-                    </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                    {# Boucler les donnees #}
-                    {% for tranche in tranches %}
-                        <tr id="row_tranche_{{ tranche.id }}" class="element-a-encadrer">
-                            <td>
-                                <a class="m-2 fw-bold" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ include('segments/icones/tranche.html.twig', {'size':'19px'}) }}
-                                    {# On fait signe si cette tranche peut entrer dans le panier #}
-                                    {% if panier != null %}
-                                        {% if constante.Tranche_getPanierStatus(tranche, panier) == 0 %}
-                                            <span class="text-success fw-bold">(+{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
-                                        {% endif %}
-                                        {% if constante.Tranche_getPanierStatus(tranche, panier) == 1 %}
-                                            <span class="text-danger fw-bold">(-{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
-                                        {% endif %}
-                                    {% endif %}
-                                    {% if constante.Cotation_isBound(tranche.cotation) %}
-                                        <span class="text-success">
-                                            {{ include('segments/icones/actions/completed.html.twig', {size:'18px'}) }}
-                                        </span>
-                                    {% endif %}
-                                    {{ tranche.nom }}                 
-                                    ({{ tranche.pourcentage * 100 }}% à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
-                                    pour {{ tranche.cotation.piste.client }}
-                                </a><br/>
-                                {# Section prime #}
-                                <small class="m-2">
-                                    <span class="text-secondary fw-bold">Prime: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Tranche_getMontant_prime_payable_par_client_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Tranche_getMontant_prime_payable_par_client_solde(tranche) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Tranche_getMontant_prime_payable_par_client_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {# Section commissions #}
-                                <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Tranche_getMontant_commission_pure(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Tranche_getMontant_commission_ht(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Tranche_getMontant_commission_ttc(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Tranche_getMontant_commission_ttc_collectee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Tranche_getMontant_commission_ttc_solde(tranche, -1, false) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_commission_ttc_solde(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {% for taxe in serviceTaxe.taxes %}
-                                     {% if taxe.redevable == 0 %}
-                                        {# Section Taxes : TVA#}
-                                        <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Tranche_getMontant_taxe_payable_par_assureur(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_payee(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
+                </caption>
+                {% if tranches|length != 0 %}
+                    <thead class="table-light">
+						<tr>
+							<th scope="col">
+								<div class='d-flex justify-content-start text-secondary'>
+									{{ "list_of_object" | trans }}
+								</div>
+							</th>
+							<th scope="col" style="width:100px" >
+								<div class='d-flex justify-content-end'>
+									{# {{ "note_list_actions" | trans }} #}
+								</div>
+							</th>
+						</tr>
+					</thead>
+                    <tbody class="table-group-divider">
+                        {# Boucler les donnees #}
+                        {% for tranche in tranches %}
+                            <tr id="row_tranche_{{ tranche.id }}" class="element-a-encadrer parent-a-options">
+                                <td>
+                                    <a class="m-2 fw-bold" href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}">
+                                        {{ include('segments/icones/tranche.html.twig', {'size':'19px'}) }}
+                                        {# On fait signe si cette tranche peut entrer dans le panier #}
+                                        {% if panier != null %}
+                                            {% if constante.Tranche_getPanierStatus(tranche, panier) == 0 %}
+                                                <span class="text-success fw-bold">(+{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                     {% if taxe.redevable == 1 %}
-                                        {# Section Taxe: ARCA #}
-                                        <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Tranche_getMontant_taxe_payable_par_courtier(tranche, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
+                                            {% if constante.Tranche_getPanierStatus(tranche, panier) == 1 %}
+                                                <span class="text-danger fw-bold">(-{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
                                             {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                {% endfor %}
-                                {% set partenaire = constante.Tranche_getPartenaire(tranche) %}
-                                {% if partenaire %}
-                                    {# Retro-commission #}
+                                        {% endif %}
+                                        {% if constante.Cotation_isBound(tranche.cotation) %}
+                                            <span class="text-success">
+                                                {{ include('segments/icones/actions/completed.html.twig', {size:'18px'}) }}
+                                            </span>
+                                        {% endif %}
+                                        {{ tranche.nom }}                 
+                                        ({{ tranche.pourcentage * 100 }}% à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}})
+                                        pour {{ tranche.cotation.piste.client }}
+                                    </a><br/>
+                                    {# Section prime #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Assiette: {{ constante.Tranche_getMontant_commission_pure(tranche, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier(tranche, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Rétro-com payée: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_payee(tranche, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary fw-bold">
+                                            {{ include('segments/icones/cotation.html.twig', {size:'16px'}) }}
+                                            Prime: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Tranche_getMontant_prime_payable_par_client_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         {% set couleur = "text-secondary" %}
-										{% if constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche, partenaire, -1, true) != 0 %}
-                                    		{% set couleur = "text-danger" %}
-										{% endif %}
-										<span class="{{couleur}}"> • Solde dû: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                        {% if constante.Tranche_hasConditionsSpeciales(tranche) %}
-                                            <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Tranche_getTauxConditionsSpecialePiste(tranche) }}).</span>
+                                        {% if constante.Tranche_getMontant_prime_payable_par_client_solde(tranche) != 0 %}
+                                            {% set couleur = "text-danger" %}
                                         {% endif %}
+                                        <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Tranche_getMontant_prime_payable_par_client_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# Section commissions #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/revenu.html.twig', {size:'16px'}) }}
+                                            Com. pure: {{ constante.Tranche_getMontant_commission_pure(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary"> • Com. ht: {{ constante.Tranche_getMontant_commission_ht(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. totale: {{ constante.Tranche_getMontant_commission_ttc(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. collectée: {{ constante.Tranche_getMontant_commission_ttc_collectee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Tranche_getMontant_commission_ttc_solde(tranche, -1, false) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_commission_ttc_solde(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/revenu.html.twig', {size:'16px'}) }}
+                                            La réserve finale pour {{ entreprise.nom }} est de {{ constante.Tranche_getReserve(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
                                     </small><br>
-                                    {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                    {% for taxe in serviceTaxe.taxes %}
+                                        {% if taxe.redevable == 0 %}
+                                            {# Section Taxes : TVA#}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/taxe.html.twig', {size:'16px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Tranche_getMontant_taxe_payable_par_assureur(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span>
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_payee(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde: {{ constante.Tranche_getMontant_taxe_payable_par_assureur_solde(tranche, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                        {% if taxe.redevable == 1 %}
+                                            {# Section Taxe: ARCA #}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/taxe.html.twig', {size:'16px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Tranche_getMontant_taxe_payable_par_courtier(tranche, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde dû: {{ constante.Tranche_getMontant_taxe_payable_par_courtier_solde(tranche, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set partenaire = constante.Tranche_getPartenaire(tranche) %}
+                                    {% if partenaire %}
+                                        {# Retro-commission #}
                                         <small class="m-2">
-                                            {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
-                                                <span class="text-danger"> • {{ condition }}</span>
-                                            {% endfor %}
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/partenaire.html.twig', {size:'16px'}) }}
+                                                Assiette: {{ constante.Tranche_getMontant_commission_pure(tranche, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                            </span> 
+                                            <span class="text-secondary"> • Rétro-com dûe à {{ partenaire }}: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier(tranche, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_payee(tranche, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            {% set couleur = "text-secondary" %}
+                                            {% if constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche, partenaire, -1, true) != 0 %}
+                                                {% set couleur = "text-danger" %}
+                                            {% endif %}
+                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            {% if constante.Tranche_hasConditionsSpeciales(tranche) %}
+                                                <span class="text-secondary fw-bold"> | Conditions spéciales (taux:{{ constante.Tranche_getTauxConditionsSpecialePiste(tranche) }}).</span>
+                                            {% endif %}
                                         </small><br>
-                                    {% endif %}
-                                {% endif %}
-                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
-                                <small class="m-2">
-                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Tranche_getReserve(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br>
-                                <small class="m-2">
-                                    <span class="text-secondary">
-                                        {{ ux_icon('streamline:store-computer-solid', {height: '18px', width: '18px'}) }}{{ tranche.cotation }} • {{ tranche.cotation.assureur }}
-                                    </span> 
-                                </small>
-                                {% if panier != null %}
-                                    {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length != 0 %}
-                                        {{ constante.Tranche_getPostesFacturablesText(tranche, panier, -1, false)|raw }}
-                                    {% endif %}
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    {# Il est inter #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.tranche.edit', {'idEntreprise': entreprise.id, 'idTranche':tranche.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    {# Pour l'instant, il est interdi de supprimer une tranche ici #}
-                                    {# <form action="{{ path('admin.tranche.remove', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}" method='POST'> #}
-                                        {# <input type='hidden' name='_method' value='DELETE'> #}
-                                        {# <button class='btn btn-outline-danger border-0 btn-sm' type='submit'> #}
-                                            {# {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }} #}
-                                            {# Supprimer #}
-                                        {# </button> #}
-                                    {# </form> #}
-                                    {% if panier != null %}
-                                        {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false) is not empty %}
-                                            <div class="dropdown">
-                                                <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                                    {# Autres #}
-                                                </a>
-                                                <ul class="dropdown-menu">
-                                                    {% if panier != null %}
-                                                        {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
-                                                        {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier, -1, false) %}
-                                                            <li>
-                                                                {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
-                                                                    <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-                                                                        {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
-                                                                        Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
-                                                                    </a>
-                                                                {% else %}
-                                                                    {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
-                                                                        <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idPoste':posteFacturable['idPoste'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-                                                                            {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }}
-                                                                            Insérer <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> dans la note
-                                                                        </a>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            </li>
-                                                        {% endfor %}
-                                                    {% endif %}
-                                                </ul>
-                                            </div>
+                                        {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                            <small class="m-2">
+                                                {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                    <span class="text-danger">
+                                                        {{ include('segments/icones/partenaire.html.twig', {size:'16px'}) }}
+                                                         • {{ condition }}
+                                                    </span>
+                                                {% endfor %}
+                                            </small><br>
                                         {% endif %}
                                     {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            {% endif %}
-        </table>
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/cotation.html.twig', {size:'16px'}) }}
+                                            {{ tranche.cotation }} • {{ tranche.cotation.assureur }}
+                                        </span> 
+                                    </small>
+                                    {% if panier != null %}
+                                        {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length != 0 %}
+                                            {{ include('segments/icones/panier.html.twig', {size:'16px'}) }}
+                                            {{ constante.Tranche_getPostesFacturablesText(tranche, panier, -1, false)|raw }}
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="options-du-parent">
+                                        <div class="d-flex gap-1 d-flex justify-content-end">
+                                            {# Les actions sur l element de la liste #}
+                                            {# Il est inter #}
+                                            <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.tranche.edit', {'idEntreprise': entreprise.id, 'idTranche':tranche.id })}}" class="" mthod = 'POST'>
+                                                {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+												{# Modifier #}
+                                            </a>
+                                            {# Pour l'instant, il est interdi de supprimer une tranche ici #}
+                                            {# <form action="{{ path('admin.tranche.remove', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}" method='POST'> #}
+                                                {# <input type='hidden' name='_method' value='DELETE'> #}
+                                                {# <button class='btn btn-outline-danger border-0 btn-sm' type='submit'> #}
+                                                    {# {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }} #}
+                                                    {# Supprimer #}
+                                                {# </button> #}
+                                            {# </form> #}
+                                            {% if panier != null %}
+                                                {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false) is not empty %}
+                                                    <div class="dropdown">
+                                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            {{ include('segments/icones/actions/options.html.twig', {size:'18px'}) }}
+													        {# Autres #}
+                                                        </a>
+                                                        <ul class="dropdown-menu">
+                                                            {% if panier != null %}
+                                                                {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+                                                                {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier, -1, false) %}
+                                                                    <li>
+                                                                        {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
+                                                                            <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+                                                                                {{ include('segments/icones/panier.html.twig', {size:'16px'}) }}
+                                                                                Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
+                                                                            </a>
+                                                                        {% else %}
+                                                                            {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
+                                                                                <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idPoste':posteFacturable['idPoste'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+                                                                                    {{ include('segments/icones/panier.html.twig', {size:'16px'}) }}
+                                                                                    Insérer <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> dans la note
+                                                                                </a>
+                                                                            {% endif %}
+                                                                        {% endif %}
+                                                                    </li>
+                                                                {% endfor %}
+                                                            {% endif %}
+                                                        </ul>
+                                                    </div>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+        </div>
     </div>
 {% endblock %}
