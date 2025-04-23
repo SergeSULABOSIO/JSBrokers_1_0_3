@@ -179,11 +179,15 @@
                                             {{ include('segments/icones/cotation.html.twig', {size:'16px'}) }}
                                             {{ tranche.cotation }} • {{ tranche.cotation.assureur }}
                                         </span> 
-                                    </small>
+                                    </small><br>
                                     {% if panier != null %}
                                         {% if constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length != 0 %}
-                                            {{ include('segments/icones/panier.html.twig', {size:'16px'}) }}
-                                            {{ constante.Tranche_getPostesFacturablesText(tranche, panier, -1, false)|raw }}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/actions/panier.html.twig', {size:'16px'}) }}
+                                                    {{ constante.Tranche_getPostesFacturablesText(tranche, panier, -1, false)|raw }}
+                                                </span> 
+                                            </small>
                                         {% endif %}
                                     {% endif %}
                                 </td>
@@ -218,13 +222,13 @@
                                                                     <li>
                                                                         {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
                                                                             <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-                                                                                {{ include('segments/icones/panier.html.twig', {size:'16px'}) }}
+                                                                                {{ include('segments/icones/actions/panier.html.twig', {size:'16px'}) }}
                                                                                 Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
                                                                             </a>
                                                                         {% else %}
                                                                             {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
                                                                                 <a class="dropdown-item" href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idPoste':posteFacturable['idPoste'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-                                                                                    {{ include('segments/icones/panier.html.twig', {size:'16px'}) }}
+                                                                                    {{ include('segments/icones/actions/panier.html.twig', {size:'16px'}) }}
                                                                                     Insérer <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> dans la note
                                                                                 </a>
                                                                             {% endif %}

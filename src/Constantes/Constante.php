@@ -2246,11 +2246,11 @@ class Constante
     {
         $tabPosteFacturables = $this->Tranche_getPostesFacturables($tranche, $panier, $addressedTo, $onlySharable);
         // dd($tabPosteFacturables);
-        $str = "<br/><small class='text-secondary m-2'>Postes: ";
+        $str = "Postes: ";
         foreach ($tabPosteFacturables as $posteFacturable) {
-            $str .= '<span class="badge text-bg-secondary m-2">' . $posteFacturable['poste'] . " @ " . number_format($posteFacturable['montantPayable'], 2, ',', ".") . " " . $this->serviceMonnaies->getMonnaieAffichage()->getCode() . '</span>';
+            $str .= $posteFacturable['poste'] . " @ " . number_format($posteFacturable['montantPayable'], 2, ',', ".") . " " . $this->serviceMonnaies->getMonnaieAffichage()->getCode();
         }
-        return $str . '</small>';
+        return $str;
     }
 
     public function Tranche_isAlreadyInADifferentNote(?Tranche $tranche, $posteFacturable)
