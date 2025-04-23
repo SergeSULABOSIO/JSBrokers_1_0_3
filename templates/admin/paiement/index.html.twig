@@ -21,130 +21,120 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
+	<div>
+        <div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
                 {% if paiements|length == 0 %}
-                    {{ "paiement_filter_result_empty" | trans}}
+                    {{ "list_filter_result_empty" | trans}}
                 {% else %}
-                    {{ "paiement_filter_result_elements" | trans({
+                    {{ "list_filter_result_elements" | trans({
                         ':number': paiements|length
                     })}}
                 {% endif %}
                 <div class="d-flex gap-1">
                     {{ knp_pagination_render(paiements) }}
                 </div>
-            </caption>
-            {% if paiements|length != 0 %}
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "paiement_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "paiement_list_actions" | trans }}</div></th>
-                    </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                    {# Boucler les donnees #}
-                    {% for paiement in paiements %}
-                        <tr id="row_paiement_{{ paiement.id }}">
-                            <td>
-                                <a class="m-2 fw-bold" href="{{ path('admin.paiement.edit', {'idPaiement':paiement.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ include('segments/icones/paiement.html.twig', {size:'18px'}) }}
-                                    {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} • Réf.: {{ paiement.reference }}
-                                </a><br/>
-                                <small class ="m-2">
-                                    <span class="text-secondary">
-                                        {{ paiement.description }}
-                                    </span>
-                                </small><br/>
-                                {% if paiement.note != null %}
-                                    <small class ="m-2">
-                                        {% set coleur = 'text-danger' %}
-                                        {% if paiement.note.getType == 0 %}
-                                            {% set coleur = 'text-success' %}
-                                        {% endif %}
-                                        <span class="{{coleur}} fw-bold">
-                                            {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
-                                            {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
-                                            {% if paiement.comptebancaire != null %}
-                                                dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}
-                                            {% endif %}
-                                        </span>
-                                    </small><br/>
-                                {% else %}
-                                    <small class ="m-2">
-                                        {% set coleur = 'text-success' %}
-                                        <span class="{{coleur}} fw-bold">
-                                            {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
-                                            {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
-                                        </span>
-                                    </small><br/>
-                                {% endif %}
-                                <small class ="m-2">
-                                    {% if paiement.note != null %}
-                                        <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% else %}
-                                        <span class="text-secondary fw-bold">Montant dû: {{ paiement.offreIndemnisationSinistre.montantPayable|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        <span class="text-secondary"> • Solde: {{ (paiement.offreIndemnisationSinistre.montantPayable - paiement.montant)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% endif %}
-                                </small><br/>
-                                {% if paiement.note != null %}
+                </caption>
+                {% if paiements|length != 0 %}
+                    <thead class="table-light">
+						<tr>
+							<th scope="col">
+								<div class='d-flex justify-content-start text-secondary'>
+									{{ "list_of_object" | trans }}
+								</div>
+							</th>
+							<th scope="col" style="width:100px" >
+								<div class='d-flex justify-content-end'>
+									{# {{ "note_list_actions" | trans }} #}
+								</div>
+							</th>
+						</tr>
+					</thead>
+                    <tbody class="table-group-divider">
+                        {# Boucler les donnees #}
+                        {% for paiement in paiements %}
+                            <tr id="row_paiement_{{ paiement.id }}" class="element-a-encadrer parent-a-options">
+                                <td>
+                                    <a class="m-2 fw-bold" href="{{ path('admin.paiement.edit', {'idPaiement':paiement.id, 'idEntreprise': entreprise.id})}}">
+                                        {{ include('segments/icones/paiement.html.twig', {size:'18px'}) }}
+                                        {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} • Réf.: {{ paiement.reference }}
+                                    </a><br/>
                                     <small class ="m-2">
                                         <span class="text-secondary">
-                                            {{ include('segments/icones/note.html.twig', {size:'18px'}) }}
-                                            {{ constante.Note_getNameOfTypeNote(paiement.note) }} • {{ paiement.note.nom }} • {{ paiement.note.reference }}
+                                            {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+                                            {{ paiement.description }}
                                         </span>
-                                    </small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.paiement.edit', {'idEntreprise': entreprise.id, 'idPaiement':paiement.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    <form action="{{ path('admin.paiement.remove', {'idPaiement':paiement.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                        <input type='hidden' name='_method' value='DELETE'>
-                                        <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                            {# Supprimer #}
-                                        </button>
-                                    </form>
-                                    <div class="dropdown">
-                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "paiement_item_set_as_display_paiement" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "paiement_item_set_as_input_paiement" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "paiement_item_set_as_display_and_input_paiement" | trans }}
-                                                </a>
-                                            </li>
-                                        </ul>
+                                    </small><br/>
+                                    {% if paiement.note != null %}
+                                        <small class ="m-2">
+                                            {% set coleur = 'text-danger' %}
+                                            {% if paiement.note.getType == 0 %}
+                                                {% set coleur = 'text-success' %}
+                                            {% endif %}
+                                            <span class="{{coleur}} fw-bold">
+                                                {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
+                                                {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                                {% if paiement.comptebancaire != null %}
+                                                    dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}
+                                                {% endif %}
+                                            </span>
+                                        </small><br/>
+                                    {% else %}
+                                        <small class ="m-2">
+                                            {% set coleur = 'text-success' %}
+                                            <span class="{{coleur}} fw-bold">
+                                                {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
+                                                {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+                                            </span>
+                                        </small><br/>
+                                    {% endif %}
+                                    <small class ="m-2">
+                                        {% if paiement.note != null %}
+                                            <span class="text-secondary fw-bold">
+                                                {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+                                                Montant dû: {{ constante.Note_getMontant_payable(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                            </span> 
+                                            <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(paiement.note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% else %}
+                                            <span class="text-secondary fw-bold">Montant dû: {{ paiement.offreIndemnisationSinistre.montantPayable|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Montant payé: {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary"> • Solde: {{ (paiement.offreIndemnisationSinistre.montantPayable - paiement.montant)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% endif %}
+                                    </small><br/>
+                                    {% if paiement.note != null %}
+                                        <small class ="m-2">
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/note.html.twig', {size:'18px'}) }}
+                                                {{ constante.Note_getNameOfTypeNote(paiement.note) }} • {{ paiement.note.nom }} • {{ paiement.note.reference }}
+                                            </span>
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="options-du-parent">
+                                        <div class="d-flex gap-1 d-flex justify-content-end">
+                                            {# Les actions sur l element de la liste #}
+                                            <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.paiement.edit', {'idEntreprise': entreprise.id, 'idPaiement':paiement.id })}}" class="" mthod = 'POST'>
+                                                {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+												{# Modifier #}
+                                            </a>
+                                            <form action="{{ path('admin.paiement.remove', {'idPaiement':paiement.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                                <input type='hidden' name='_method' value='DELETE'>
+                                                <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                    {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
+                                                    {# Supprimer #}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            {% endif %}
-        </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+        </div>
     </div>
 {% endblock %}
