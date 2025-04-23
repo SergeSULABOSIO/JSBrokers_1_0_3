@@ -54,21 +54,30 @@
                     <tbody class="table-group-divider">
                         {# Boucler les donnees #}
                         {% for taxe in taxes %}
-                            <tr id="row_taxe_{{ taxe.id }}">
+                            <tr id="row_taxe_{{ taxe.id }}" class="element-a-encadrer parent-a-options">
                                 <td>
                                     <a class="m-2 fw-bold" href="{{ path('admin.taxe.edit', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}">
                                         {{ include('segments/icones/taxe.html.twig', {size:'18px'}) }}
                                         {{ taxe.code }} • {{ taxe.description }} • {{ constante.Taxe_getNomAutoriteFiscale(taxe) }}
                                     </a><br/>
                                     <small class="m-2">
-                                        <span class="text-secondary">La commission hors taxe est la base du calcul</span> 
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+                                            La commission hors taxe est la base du calcul
+                                        </span> 
                                     </small><br/>
                                     <small class="m-2">
-                                        <span class="text-secondary">Taux - IARD: {{ taxe.tauxIARD * 100 }}% • Taux - VIE: {{ taxe.tauxVIE * 100 }}% • {{ constante.Taxe_getNomRedevable(taxe) }}</span> 
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+                                            Taux - IARD: {{ taxe.tauxIARD * 100 }}% • Taux - VIE: {{ taxe.tauxVIE * 100 }}% • {{ constante.Taxe_getNomRedevable(taxe) }}
+                                        </span> 
                                     </small><br/>
                                     {# Section commissions #}
                                     <small class="m-2">
-                                        <span class="text-secondary">Com. pure: {{ constante.Taxe_getMontant_commission_pure(taxe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary">
+                                            {{ include('segments/icones/revenu.html.twig', {size:'16px'}) }}
+                                            Com. pure: {{ constante.Taxe_getMontant_commission_pure(taxe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
                                         <span class="text-secondary"> • Com. ht: {{ constante.Taxe_getMontant_commission_ht(taxe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • C. totale: {{ constante.Taxe_getMontant_commission_ttc(taxe, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                         <span class="text-secondary"> • C. collectée: {{ constante.Taxe_getMontant_commission_ttc_collectee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
@@ -81,7 +90,10 @@
                                     {% if taxe.redevable == 0 %}
                                         {# Section Taxes : TVA#}
                                         <small class="m-2 fw-bold">
-                                            <span class="text-secondary">Montant {{ taxe.code }} générée: {{ constante.Taxe_getMontant_taxe_payable_par_assureur(taxe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/taxe.html.twig', {size:'16px'}) }}
+                                                Montant {{ taxe.code }} générée: {{ constante.Taxe_getMontant_taxe_payable_par_assureur(taxe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                            </span> 
                                             <span class="text-secondary"> • Montant {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_assureur_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
                                             {% if constante.Taxe_getMontant_taxe_payable_par_assureur_solde(taxe, false) != 0 %}
@@ -93,7 +105,10 @@
                                     {% if taxe.redevable == 1 %}
                                         {# Section Taxe: ARCA #}
                                         <small class="m-2 fw-bold">
-                                            <span class="text-secondary">Montant {{ taxe.code }} générée: {{ constante.Taxe_getMontant_taxe_payable_par_courtier(taxe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            <span class="text-secondary">
+                                                {{ include('segments/icones/taxe.html.twig', {size:'16px'}) }}
+                                                Montant {{ taxe.code }} générée: {{ constante.Taxe_getMontant_taxe_payable_par_courtier(taxe, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                            </span> 
                                             <span class="text-secondary"> • Montant {{ taxe.code }} payée: {{ constante.Taxe_getMontant_taxe_payable_par_courtier_payee(taxe)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
                                             {% set couleur = "text-secondary" %}
                                             {% if constante.Taxe_getMontant_taxe_payable_par_courtier_solde(taxe, false) != 0 %}
@@ -104,44 +119,20 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div class="d-flex gap-1 d-flex justify-content-end">
-                                        {# Les actions sur l element de la liste #}
-                                        <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.taxe.edit', {'idEntreprise': entreprise.id, 'idTaxe':taxe.id })}}" class="" mthod = 'POST'>
-                                            {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                            {# Modifier #}
-                                        </a>
-                                        <form action="{{ path('admin.taxe.remove', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                            <input type='hidden' name='_method' value='DELETE'>
-                                            <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                                {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                                {# Supprimer #}
-                                            </button>
-                                        </form>
-                                        <div class="dropdown">
-                                            <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                                {# Autres #}
+                                    <div class="options-du-parent">
+                                        <div class="d-flex gap-1 d-flex justify-content-end">
+                                            {# Les actions sur l element de la liste #}
+                                            <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.taxe.edit', {'idEntreprise': entreprise.id, 'idTaxe':taxe.id })}}" class="" mthod = 'POST'>
+                                                {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+												{# Modifier #}
                                             </a>
-                                            <ul class="dropdown-menu">
-                                                <li>
-                                                    <a class="dropdown-item" href="#">
-                                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                        {{ "taxe_item_set_as_display_taxe" | trans }}
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#">
-                                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                        {{ "taxe_item_set_as_input_taxe" | trans }}
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#">
-                                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                        {{ "taxe_item_set_as_display_and_input_taxe" | trans }}
-                                                    </a>
-                                                </li>
-                                            </ul>
+                                            <form action="{{ path('admin.taxe.remove', {'idTaxe':taxe.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                                <input type='hidden' name='_method' value='DELETE'>
+                                                <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                    {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+													{# Supprimer #}
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 </td>
