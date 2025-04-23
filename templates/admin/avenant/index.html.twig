@@ -21,13 +21,14 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
+	<div>
+		<div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
                 {% if avenants|length == 0 %}
-                    {{ "avenant_filter_result_empty" | trans }}
+                    {{ "list_filter_result_empty" | trans }}
                 {% else %}
-                    {{ "avenant_filter_result_elements" | trans({
+                    {{ "list_filter_result_elements" | trans({
                         ':number': avenants|length
                     })}}
                 {% endif %}
@@ -38,15 +39,22 @@
             {% if avenants|length != 0 %}
                 <thead class="table-light">
                     <tr>
-                        {# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "avenant_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "avenant_list_actions" | trans }}</div></th>
+                        <th scope="col">
+                            <div class='d-flex justify-content-start text-secondary'>
+                                {{ "list_of_object" | trans }}
+                            </div>
+                        </th>
+                        <th scope="col" style="width:100px" >
+                            <div class='d-flex justify-content-end'>
+                                {# {{ "note_list_actions" | trans }} #}
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="table-group-divider">
                     {# Boucler les donnees #}
                     {% for avenant in avenants %}
-                        <tr id="row_avenant_{{ avenant.id }}">
+                        <tr id="row_avenant_{{ avenant.id }}" class="element-a-encadrer parent-a-options">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.avenant.edit', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}">
                                     {{ include('segments/icones/avenant.html.twig', {size:'18px'}) }}
@@ -74,7 +82,9 @@
                                          {{ avenant.cotation.piste.risque.code }}
                                     </span> 
                                     <span class="text-secondary">
-                                         • par {{ avenant.cotation.piste.invite.nom }}
+                                         • 
+                                        {{ include('segments/icones/invite.html.twig', {size:'10px'}) }}
+                                        {{ avenant.cotation.piste.invite.nom }}
                                     </span> 
                                 </small><br/>
                                 {# Section prime #}
@@ -190,64 +200,66 @@
                                 </small><br>
                             </td>
                             <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.avenant.edit', {'idEntreprise': entreprise.id, 'idAvenant':avenant.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    <form action="{{ path('admin.avenant.remove', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                        <input type='hidden' name='_method' value='DELETE'>
-                                        <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                            {# Supprimer #}
-                                        </button>
-                                    </form>
-                                    <div class="dropdown">
-                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
+                                <div class="options-du-parent">
+                                    <div class="d-flex gap-1 d-flex justify-content-end">
+                                        {# Les actions sur l element de la liste #}
+                                        <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.avenant.edit', {'idEntreprise': entreprise.id, 'idAvenant':avenant.id })}}" class="" mthod = 'POST'>
+                                            {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+											{# Modifier #}
                                         </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <span class="dropdown-header">
-                                                    {# {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }} #}
-                                                    Mouvements
-                                                </span>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 1, 'idEntreprise': entreprise.id}) }}">
-                                                    {{ ux_icon('material-symbols:add-ad-outline-rounded', {height: '18px', width: '18px'}) }}
-                                                    Incorporation
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 2, 'idEntreprise': entreprise.id}) }}">
-                                                    {{ ux_icon('iconoir:truck-length', {height: '18px', width: '18px'}) }}
-                                                    Prorogation
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 3, 'idEntreprise': entreprise.id}) }}">
-                                                    {{ ux_icon('fluent:calendar-cancel-24-regular', {height: '18px', width: '18px'}) }}
-                                                    Annulation
-                                                </a>
-                                            </li>
-                                            {% if avenant.cotation.piste.renewalCondition != 2 %}
+                                        <form action="{{ path('admin.avenant.remove', {'idAvenant':avenant.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                            <input type='hidden' name='_method' value='DELETE'>
+                                            <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+												{# Supprimer #}
+                                            </button>
+                                        </form>
+                                        <div class="dropdown">
+                                            <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                {{ include('segments/icones/actions/options.html.twig', {size:'18px'}) }}
+												{# Autres #}
+                                            </a>
+                                            <ul class="dropdown-menu">
                                                 <li>
-                                                    <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 5, 'idEntreprise': entreprise.id}) }}">
-                                                        {{ ux_icon('carbon:renew', {height: '18px', width: '18px'}) }}
-                                                        Rénouvellement
+                                                    <span class="dropdown-header">
+                                                        {# {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }} #}
+                                                        Mouvements
+                                                    </span>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 1, 'idEntreprise': entreprise.id}) }}">
+                                                        {{ include('segments/icones/actions/incorporation.html.twig', {size:'18px'}) }}
+                                                        Incorporation
                                                     </a>
                                                 </li>
-                                            {% endif %}
-                                            <li>
-                                                <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 4, 'idEntreprise': entreprise.id}) }}">
-                                                    {{ ux_icon('gravity-ui:hand-stop', {height: '18px', width: '18px'}) }}
-                                                    Résiliation
-                                                </a>
-                                            </li>
-                                        </ul>
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 2, 'idEntreprise': entreprise.id}) }}">
+                                                        {{ include('segments/icones/actions/prorogation.html.twig', {size:'18px'}) }}
+                                                        Prorogation
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 3, 'idEntreprise': entreprise.id}) }}">
+                                                        {{ include('segments/icones/actions/annulation.html.twig', {size:'18px'}) }}
+                                                        Annulation
+                                                    </a>
+                                                </li>
+                                                {% if avenant.cotation.piste.renewalCondition != 2 %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 5, 'idEntreprise': entreprise.id}) }}">
+                                                            {{ include('segments/icones/actions/renouvellement.html.twig', {size:'18px'}) }}
+                                                            Rénouvellement
+                                                        </a>
+                                                    </li>
+                                                {% endif %}
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ path('admin.piste.endorse', {'idAvenant':avenant.id, 'mouvement': 4, 'idEntreprise': entreprise.id}) }}">
+                                                        {{ include('segments/icones/actions/resiliation.html.twig', {size:'18px'}) }}
+                                                        Résiliation
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
