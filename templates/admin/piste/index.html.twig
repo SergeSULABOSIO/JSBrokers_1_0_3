@@ -21,168 +21,178 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
-                {% if pistes|length == 0 %}
-                    {{ "piste_filter_result_empty" | trans}}
-                {% else %}
-                    {{ "piste_filter_result_elements" | trans({
-                        ':number': pistes|length
-                    })}}
-                {% endif %}
-                <div class="d-flex gap-1">
-                    {{ knp_pagination_render(pistes) }}
-                </div>
-            </caption>
-            {% if pistes|length != 0 %}
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "piste_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "piste_list_actions" | trans }}</div></th>
-                    </tr>
-                </thead>
-                <tbody class="table-group-divider">
-                    {# Boucler les donnees #}
-                    {% for piste in pistes %}
-                        <tr id="row_piste_{{ piste.id }}">
-                            <td>
-                                <a class="m-2 fw-bold" href="{{ path('admin.piste.edit', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}">
-                                    {{ include("segments/icones/piste.html.twig", {size:'18px'}) }}
-                                    {% if constante.Piste_isBound(piste) %}
-                                        <span class="text-success fw-bold">
-                                            {{ include("segments/icones/actions/completed.html.twig", {size:'18px'}) }}
-                                        </span>
-                                    {% endif %}
-                                    {{ piste.nom }}
-                                </a><br/>
-                                {{ constante.Piste_getTrancheDiagnostic(piste)|raw }}
-                                {# Section prime #}
-                                <small class="m-2">
-                                    <span class="text-secondary fw-bold">Prime: {{ constante.Piste_getMontant_prime_payable_par_client(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Piste_getMontant_prime_payable_par_client_payee(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Piste_getMontant_prime_payable_par_client_solde(piste) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Piste_getMontant_prime_payable_par_client_solde(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {# Section commissions #}
-                                <small class="m-2">
-                                    <span class="text-secondary">Com. pure: {{ constante.Piste_getMontant_commission_pure(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • Com. ht: {{ constante.Piste_getMontant_commission_ht(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. totale: {{ constante.Piste_getMontant_commission_ttc(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    <span class="text-secondary"> • C. collectée: {{ constante.Piste_getMontant_commission_collectee(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                    {% set couleur = "text-secondary" %}
-                                    {% if constante.Piste_getMontant_commission_ttc_solde(piste, -1, false) != 0 %}
-                                        {% set couleur = "text-danger" %}
-                                    {% endif %}
-                                    <span class="{{couleur}}"> • Solde: {{ constante.Piste_getMontant_commission_ttc_solde(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br/>
-                                {% for taxe in serviceTaxe.taxes %}
-                                     {% if taxe.redevable == 0 %}
-                                        {# Section Taxes : TVA#}
-                                        <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Piste_getMontant_taxe_payable_par_assureur(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Piste_getMontant_taxe_payable_par_assureur_payee(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Piste_getMontant_taxe_payable_par_assureur_solde(piste, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde: {{ constante.Piste_getMontant_taxe_payable_par_assureur_solde(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                     {% if taxe.redevable == 1 %}
-                                        {# Section Taxe: ARCA #}
-                                        <small class="m-2">
-                                            <span class="text-secondary">{{ taxe.code }}: {{ constante.Piste_getMontant_taxe_payable_par_courtier(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Piste_getMontant_taxe_payable_par_courtier_payee(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Piste_getMontant_taxe_payable_par_courtier_solde(piste, false) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Piste_getMontant_taxe_payable_par_courtier_solde(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                        </small><br/>
-                                     {% endif %}
-                                {% endfor %}
-                                {% for partenaire in constante.Piste_getPartenaires(piste) %}
-                                    {% if partenaire != null %}
-                                        {# Retro-commission #}
-                                        <small class="m-2">
-                                            {# {{partenaire.nom}} #}
-                                            <span class="text-secondary">Assiette: {{ constante.Piste_getMontant_commission_pure(piste, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier(piste, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            <span class="text-secondary"> • Rétro-com payée: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_payee(piste, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                            {% set couleur = "text-secondary" %}
-                                            {% if constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste, partenaire, -1, true) != 0 %}
-                                                {% set couleur = "text-danger" %}
-                                            {% endif %}
-                                            <span class="{{couleur}}"> • Solde dû: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
-                                        </small><br>
-                                        {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
-                                            <small class="m-2">
-                                                {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
-                                                    <span class="text-danger"> • {{ condition }}</span>
-                                                {% endfor %}
-                                            </small><br>
+	<div>
+		<div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
+                    {% if pistes|length == 0 %}
+                        {{ "list_filter_result_empty" | trans}}
+                    {% else %}
+                        {{ "list_filter_result_elements" | trans({
+                            ':number': pistes|length
+                        })}}
+                    {% endif %}
+                    <div class="d-flex gap-1">
+                        {{ knp_pagination_render(pistes) }}
+                    </div>
+                </caption>
+                {% if pistes|length != 0 %}
+                    <thead class="table-light">
+						<tr>
+							<th scope="col">
+								<div class='d-flex justify-content-start text-secondary'>
+									{{ "list_of_object" | trans }}
+								</div>
+							</th>
+							<th scope="col" style="width:100px" >
+								<div class='d-flex justify-content-end'>
+									{# {{ "note_list_actions" | trans }} #}
+								</div>
+							</th>
+						</tr>
+					</thead>
+                    <tbody class="table-group-divider">
+                        {# Boucler les donnees #}
+                        {% for piste in pistes %}
+                            <tr id="row_piste_{{ piste.id }}" class="element-a-encadrer parent-a-options">
+                                <td>
+                                    <a class="m-2 fw-bold" href="{{ path('admin.piste.edit', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}">
+                                        {{ include("segments/icones/piste.html.twig", {size:'18px'}) }}
+                                        {% if constante.Piste_isBound(piste) %}
+                                            <span class="text-success fw-bold">
+                                                {{ include("segments/icones/actions/completed.html.twig", {size:'18px'}) }}
+                                            </span>
                                         {% endif %}
-                                    {% endif %}
-                                {% endfor %}
-                                {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
-                                <small class="m-2">
-                                    <span class="text-secondary">La réserve finale pour {{ entreprise.nom }} est de {{ constante.Piste_getReserve(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                </small><br>
-                                <small class="m-2">
-                                    <span class="text-secondary">Condition: {{ constante.Piste_getTexteRenewalCondition(piste) }}</span> 
-                                    <span class="text-secondary"> • Type d'avenant: {{ constante.getTypeAvenant(piste.typeAvenant) }}</span> 
-                                </small><br>
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.piste.edit', {'idEntreprise': entreprise.id, 'idPiste':piste.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    <form action="{{ path('admin.piste.remove', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                        <input type='hidden' name='_method' value='DELETE'>
-                                        <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                            {# Supprimer #}
-                                        </button>
-                                    </form>
-                                    <div class="dropdown">
-                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
-                                        </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "piste_item_set_as_display_piste" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "piste_item_set_as_input_piste" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "piste_item_set_as_display_and_input_piste" | trans }}
-                                                </a>
-                                            </li>
-                                        </ul>
+                                        {{ piste.nom }}
+                                    </a><br/>
+                                    {{ constante.Piste_getTrancheDiagnostic(piste)|raw }}
+                                    {# Section prime #}
+                                    <small class="m-2">
+                                        <span class="text-secondary fw-bold">
+                                            {{ include("segments/icones/cotation.html.twig", {size:'16px'}) }}
+                                            Prime: {{ constante.Piste_getMontant_prime_payable_par_client(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary fw-bold"> • Prime payée: {{ constante.Piste_getMontant_prime_payable_par_client_payee(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Piste_getMontant_prime_payable_par_client_solde(piste) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}} fw-bold"> • Solde dû: {{ constante.Piste_getMontant_prime_payable_par_client_solde(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# Section commissions #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include("segments/icones/revenu.html.twig", {size:'16px'}) }}
+                                            Com. pure: {{ constante.Piste_getMontant_commission_pure(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                        <span class="text-secondary"> • Com. ht: {{ constante.Piste_getMontant_commission_ht(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. totale: {{ constante.Piste_getMontant_commission_ttc(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        <span class="text-secondary"> • C. collectée: {{ constante.Piste_getMontant_commission_collectee(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                        {% set couleur = "text-secondary" %}
+                                        {% if constante.Piste_getMontant_commission_ttc_solde(piste, -1, false) != 0 %}
+                                            {% set couleur = "text-danger" %}
+                                        {% endif %}
+                                        <span class="{{couleur}}"> • Solde: {{ constante.Piste_getMontant_commission_ttc_solde(piste, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                    </small><br/>
+                                    {# La reserve du courtier = ce qui revient au courtier après avoir payé tous les partenaires #}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include("segments/icones/revenu.html.twig", {size:'16px'}) }}
+                                            La réserve finale pour {{ entreprise.nom }} est de {{ constante.Piste_getReserve(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                        </span> 
+                                    </small><br>
+                                    {% for taxe in serviceTaxe.taxes %}
+                                        {% if taxe.redevable == 0 %}
+                                            {# Section Taxes : TVA#}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include("segments/icones/taxe.html.twig", {size:'16px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Piste_getMontant_taxe_payable_par_assureur(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Piste_getMontant_taxe_payable_par_assureur_payee(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Piste_getMontant_taxe_payable_par_assureur_solde(piste, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde: {{ constante.Piste_getMontant_taxe_payable_par_assureur_solde(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                        {% if taxe.redevable == 1 %}
+                                            {# Section Taxe: ARCA #}
+                                            <small class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include("segments/icones/taxe.html.twig", {size:'16px'}) }}
+                                                    {{ taxe.code }}: {{ constante.Piste_getMontant_taxe_payable_par_courtier(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • {{ taxe.code }} payée: {{ constante.Piste_getMontant_taxe_payable_par_courtier_payee(piste)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Piste_getMontant_taxe_payable_par_courtier_solde(piste, false) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde dû: {{ constante.Piste_getMontant_taxe_payable_par_courtier_solde(piste, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                            </small><br/>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% for partenaire in constante.Piste_getPartenaires(piste) %}
+                                        {% if partenaire != null %}
+                                            {# Retro-commission #}
+                                            <small class="m-2">
+                                                {# {{partenaire.nom}} #}
+                                                <span class="text-secondary">
+                                                    {{ include("segments/icones/partenaire.html.twig", {size:'16px'}) }}
+                                                    Assiette: {{ constante.Piste_getMontant_commission_pure(piste, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+                                                </span> 
+                                                <span class="text-secondary"> • Rétro-com dûe à {{ partenaire.nom }}: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier(piste, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                <span class="text-secondary"> • Rétro-com payée: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_payee(piste, partenaire)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                                                {% set couleur = "text-secondary" %}
+                                                {% if constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste, partenaire, -1, true) != 0 %}
+                                                    {% set couleur = "text-danger" %}
+                                                {% endif %}
+                                                <span class="{{couleur}}"> • Solde dû: {{ constante.Piste_getMontant_retrocommissions_payable_par_courtier_solde(piste, partenaire, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span>
+                                            </small><br>
+                                            {% if constante.Partenaire_hasConditionsSpeciales(partenaire) %}
+                                                <small class="m-2">
+                                                    {% for condition in constante.Partenaire_getDescriptionsConditionSpecialePartage(partenaire) %}
+                                                        <span class="text-danger">
+                                                            {{ include("segments/icones/partenaire.html.twig", {size:'16px'}) }}
+                                                            {{ condition }}
+                                                        </span>
+                                                    {% endfor %}
+                                                </small><br>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    <small class="m-2">
+                                        <span class="text-secondary">
+                                            {{ include("segments/icones/avenant.html.twig", {size:'16px'}) }}
+                                            Condition: {{ constante.Piste_getTexteRenewalCondition(piste) }}
+                                        </span> 
+                                        <span class="text-secondary"> • Type d'avenant: {{ constante.getTypeAvenant(piste.typeAvenant) }}</span> 
+                                    </small><br>
+                                </td>
+                                <td>
+                                    <div class="options-du-parent">
+                                        <div class="d-flex gap-1 d-flex justify-content-end">
+                                            {# Les actions sur l element de la liste #}
+                                            <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.piste.edit', {'idEntreprise': entreprise.id, 'idPiste':piste.id })}}" class="" mthod = 'POST'>
+                                                {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+												{# Modifier #}
+                                            </a>
+                                            <form action="{{ path('admin.piste.remove', {'idPiste':piste.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                                <input type='hidden' name='_method' value='DELETE'>
+                                                <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                    {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+													{# Supprimer #}
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            {% endif %}
-        </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+        </div>
     </div>
 {% endblock %}
