@@ -61,13 +61,7 @@
                                         {{ paiement.montant|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }} • Réf.: {{ paiement.reference }}
                                     </a><br/>
                                     <small class ="m-2">
-                                        <span class="text-secondary">
-                                            {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
-                                            {{ paiement.description }}
-                                        </span>
-                                    </small><br/>
-                                    {% if paiement.note != null %}
-                                        <small class ="m-2">
+                                        {% if paiement.note != null %}
                                             {% set coleur = 'text-danger' %}
                                             {% if paiement.note.getType == 0 %}
                                                 {% set coleur = 'text-success' %}
@@ -79,16 +73,18 @@
                                                     dans {{ paiement.comptebancaire.intitule }} / {{ paiement.comptebancaire.banque }}
                                                 {% endif %}
                                             </span>
-                                        </small><br/>
-                                    {% else %}
-                                        <small class ="m-2">
+                                        {% else %}
                                             {% set coleur = 'text-success' %}
                                             <span class="{{coleur}} fw-bold">
                                                 {{ include('segments/icones/datetime.html.twig', {size:'18px'}) }}
                                                 {{paiement.paidAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
                                             </span>
-                                        </small><br/>
-                                    {% endif %}
+                                        {% endif %}
+                                        <span class="text-secondary">
+                                                • {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+                                            {{ paiement.description }}
+                                        </span>
+                                    </small><br/>
                                     <small class ="m-2">
                                         {% if paiement.note != null %}
                                             <span class="text-secondary fw-bold">
