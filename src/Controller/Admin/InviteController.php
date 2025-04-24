@@ -43,6 +43,11 @@ class InviteController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        // dd($this->constante->Invite_getInviteByUtilisateur($idEntreprise, $user));
+
         return $this->render('admin/invite/index.html.twig', [
             'pageName' => $this->translator->trans("invite_page_name_list"),
             'utilisateur' => $this->getUser(),

@@ -59,6 +59,7 @@ use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
 use App\Entity\ReportSet\CashflowReportSet;
+use App\Repository\InviteRepository;
 use Doctrine\ORM\Query\Expr\Func;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
@@ -80,6 +81,7 @@ class Constante
         private PartenaireRepository $partenaireRepository,
         private UtilisateurRepository $utilisateurRepository,
         private ServiceMonnaies $serviceMonnaies,
+        private InviteRepository $inviteRepository,
         // private ChargementsLoader $chargementsLoader,
     ) {}
 
@@ -5487,12 +5489,30 @@ class Constante
         return count($users) != 0 ? $users[0] : null;
     }
 
+    public function Invite_getInviteByUtilisateur($idEntreprise, ?Utilisateur $utilisateur): ?Invite
+    {
+        $invites = $this->inviteRepository->findBy([
+            'email' => $utilisateur->getEmail(),
+            'entreprise' => $idEntreprise,
+        ]);
+        return count($invites) != 0 ? $invites[0] : null;
+    }
+
     public function Utilisateur_getUtilisateurByEmail($email): ?Utilisateur
     {
         $users = $this->utilisateurRepository->findBy([
             'email' => $email,
         ]);
         return count($users) != 0 ? $users[0] : null;
+    }
+
+    public function Invite_getInviteByEmail($idEntreprise, string $email): ?Invite
+    {
+        $invites = $this->inviteRepository->findBy([
+            'email' => $email,
+            'entreprise' => $idEntreprise,
+        ]);
+        return count($invites) != 0 ? $invites[0] : null;
     }
 
     public function Tache_getContacts(Tache $tache)
