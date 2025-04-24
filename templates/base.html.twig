@@ -110,11 +110,13 @@
 		{% block contenuPage %}
 			<div class="container">
 				{# Lite de la page #}
-				<h6>
-					<span class="fst-italic text-body-tertiary">
-						{% block titreRubrique %}{% endblock %}
-					</span>
-				</h6>
+				<small>
+					<p>
+						<span class="fst-italic text-body-tertiary">
+							{% block titreRubrique %}{% endblock %}
+						</span>
+					</p>
+				</small>
 				{% block descriptionRubrique %}{% endblock %}
 				{# Corps de la page #}
 				<div class="row d-flex g-2">
