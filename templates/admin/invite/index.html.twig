@@ -105,32 +105,32 @@
 											{% endif %}
 											<div class="dropdown">
 												<a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-													{{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
+													{{ include('segments/icones/actions/options.html.twig', {size:'18px'}) }}
 													{# Autres #}
 												</a>
 												<ul class="dropdown-menu">
 													<li>
 														<a class="dropdown-item" href="#">
-															{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+															{{ include('segments/icones/actions/role.html.twig', {size:'18px'}) }}
 															{{ "invite_liste_titre_actions_set_role" | trans }}
 														</a>
 													</li>
 													<li>
 														<a class="dropdown-item" href="#">
-															{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+															{{ include('segments/icones/actions/invite.html.twig', {size:'18px'}) }}
 															{{ "invite_liste_titre_actions_send_invite_email" | trans }}
 														</a>
 													</li>
 													<li><hr class="dropdown-divider"></li>
 													<li>
 														<a class="dropdown-item" href="#">
-															{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+															{{ include('segments/icones/actions/disable.html.twig', {size:'18px'}) }}
 															{{ "invite_liste_titre_actions_desable_guest" | trans }}
 														</a>
 													</li>
 													<li>
 														<a class="dropdown-item text-muted" href="#">
-															{{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
+															{{ include('segments/icones/utilisateur.html.twig', {size:'18px'}) }}
 															{{ "invite_liste_titre_actions_enable_guest" | trans }}
 														</a>
 													</li>
