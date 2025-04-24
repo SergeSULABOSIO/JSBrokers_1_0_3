@@ -11,9 +11,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: InviteRepository::class)]
 class Invite
 {
-
     public const ACCESS_LECTURE = 0;
     public const ACCESS_ECRITURE = 2;
+    public const ACCESS_MODIFICATION = 3;
+    public const ACCESS_SUPPRESSION = 4;
 
 
     #[ORM\Id]
