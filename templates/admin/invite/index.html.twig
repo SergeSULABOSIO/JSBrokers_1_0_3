@@ -10,11 +10,17 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ utilisateur.nom }}><strong>{{ pageName }}</strong>
+	{{ include('segments/icones/utilisateur.html.twig', {size:'18px'}) }}
+	{{ utilisateur.nom }}>
+	<strong>
+		{{ pageName }}
+	</strong>
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "invite_description_rubrique" | trans }}
+	<p class="text-secondary">
+		{{ "invite_description_rubrique" | trans }}
+	<p>
 {% endblock %}
 
 {% block menuLateraleGauche %}
