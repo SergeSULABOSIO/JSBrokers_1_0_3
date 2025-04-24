@@ -26,6 +26,9 @@ class RolesEnFinance
     #[ORM\Column(type: Types::ARRAY)]
     private array $accessTaxe = [];
 
+    #[ORM\ManyToOne(inversedBy: 'rolesEnFinance')]
+    private ?Invite $invite = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -75,6 +78,18 @@ class RolesEnFinance
     public function setAccessTaxe(array $accessTaxe): static
     {
         $this->accessTaxe = $accessTaxe;
+
+        return $this;
+    }
+
+    public function getInvite(): ?Invite
+    {
+        return $this->invite;
+    }
+
+    public function setInvite(?Invite $invite): static
+    {
+        $this->invite = $invite;
 
         return $this;
     }

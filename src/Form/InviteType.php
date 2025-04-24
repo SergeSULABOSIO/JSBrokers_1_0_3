@@ -4,21 +4,26 @@ namespace App\Form;
 
 use App\Entity\Invite;
 use App\Entity\Entreprise;
+use App\Entity\RolesEnFinance;
+use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class InviteType extends AbstractType
 {
-
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies,
         private Security $security
     ) {}
 
@@ -50,6 +55,25 @@ class InviteType extends AbstractType
                 'expanded' => false,
                 'required' => false,
                 'by_reference' => false,
+            ])
+            ->add('rolesEnFinance', CollectionType::class, [
+                'label' => "Droits d'accès dans le module Finances",
+                'entry_type' => RolesEnFinanceType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    'data-form-collection-entites-view-field-value' => "nom",
+                ],
             ])
 
             // ->add('entreprises', EntrepriseAutocompleteField::class, [

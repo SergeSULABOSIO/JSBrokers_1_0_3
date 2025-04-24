@@ -92,6 +92,12 @@ class Invite
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'invite')]
     private Collection $notes;
 
+    /**
+     * @var Collection<int, RolesEnFinance>
+     */
+    #[ORM\OneToMany(targetEntity: RolesEnFinance::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $rolesEnFinance;
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
@@ -103,6 +109,7 @@ class Invite
         $this->notificationSinistres = new ArrayCollection();
         $this->assistants = new ArrayCollection();
         $this->notes = new ArrayCollection();
+        $this->rolesEnFinance = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -411,6 +418,36 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($note->getInvite() === $this) {
                 $note->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, RolesEnFinance>
+     */
+    public function getRolesEnFinance(): Collection
+    {
+        return $this->rolesEnFinance;
+    }
+
+    public function addRolesEnFinance(RolesEnFinance $rolesEnFinance): static
+    {
+        if (!$this->rolesEnFinance->contains($rolesEnFinance)) {
+            $this->rolesEnFinance->add($rolesEnFinance);
+            $rolesEnFinance->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRolesEnFinance(RolesEnFinance $rolesEnFinance): static
+    {
+        if ($this->rolesEnFinance->removeElement($rolesEnFinance)) {
+            // set the owning side to null (unless already changed)
+            if ($rolesEnFinance->getInvite() === $this) {
+                $rolesEnFinance->setInvite(null);
             }
         }
 
