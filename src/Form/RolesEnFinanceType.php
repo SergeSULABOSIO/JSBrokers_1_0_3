@@ -36,8 +36,8 @@ class RolesEnFinanceType extends AbstractType
                 ],
             ])
             ->add('accessMonnaie', ChoiceType::class, [
-                'label' => "Droit d'accès sur les taxes",
-                'help' => "Ce que peut faire l'invité dans les taxes",
+                'label' => "Droit d'accès sur les monnaies",
+                'help' => "Ce que peut faire l'invité dans les monnaies",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -49,8 +49,8 @@ class RolesEnFinanceType extends AbstractType
                 ],
             ])
             ->add('accessCompteBancaire', ChoiceType::class, [
-                'label' => "Droit d'accès sur les taxes",
-                'help' => "Ce que peut faire l'invité dans les taxes",
+                'label' => "Droit d'accès sur les comptes bancaires",
+                'help' => "Ce que peut faire l'invité dans les comptes bancaires",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,

@@ -138,9 +138,9 @@ class InviteController extends AbstractController
                 ":invite" => $invite->getNom(),
             ]));
             // $this->addFlash("success", $invite->getEmail() . " a été modifié avec succès.");
-            return $this->redirectToRoute("admin.invite.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // return $this->redirectToRoute("admin.invite.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
         }
         return $this->render('admin/invite/edit.html.twig', [
             'pageName' => $this->translator->trans("invite_page_name_update", [
