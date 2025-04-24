@@ -35,7 +35,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Ce qu'il peut faire dans les taxes",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => false,
+                'required' => true,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
