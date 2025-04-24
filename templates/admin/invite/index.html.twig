@@ -19,14 +19,11 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	<span class="text-secondary">
-		{{ "invite_description_rubrique" | trans }}
-	<span>
+	{{ "invite_description_rubrique" | trans }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
 	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
-	{# {% include 'segments/menu_user_dashbord.html.twig' %} #}
 {% endblock %}
 
 {% block body %}
