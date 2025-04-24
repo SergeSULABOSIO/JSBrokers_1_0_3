@@ -21,13 +21,14 @@
 {% endblock %}
 
 {% block body %}
-	<div class="d-flex">
-        <table class="table table-hover table-sm caption-top">
-            <caption>
+	<div>
+		<div class="d-flex shadow-sm sensible bg-white">
+			<table class="table table-hover table-sm caption-top p-3">
+				<caption>
                 {% if classeurs|length == 0 %}
-                    {{ "classeur_filter_result_empty" | trans }}
+                    {{ "list_filter_result_empty" | trans }}
                 {% else %}
-                    {{ "classeur_filter_result_elements" | trans({
+                    {{ "list_filter_result_elements" | trans({
                         ':number': classeurs|length
                     })}}
                 {% endif %}
@@ -38,15 +39,22 @@
             {% if classeurs|length != 0 %}
                 <thead class="table-light">
                     <tr>
-                        {# <th scope="col"><div class='d-flex justify-content-start'>Code</div></th> #}
-                        <th scope="col"><div class='d-flex justify-content-start'>{{ "classeur_list_title" | trans }}</div></th>
-                        <th scope="col" style="width:100px" ><div class='d-flex justify-content-end'>{{ "classeur_list_actions" | trans }}</div></th>
+                        <th scope="col">
+                            <div class='d-flex justify-content-start text-secondary'>
+                                {{ "list_of_object" | trans }}
+                            </div>
+                        </th>
+                        <th scope="col" style="width:100px" >
+                            <div class='d-flex justify-content-end'>
+                                {# {{ "note_list_actions" | trans }} #}
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="table-group-divider">
                     {# Boucler les donnees #}
                     {% for classeur in classeurs %}
-                        <tr id="row_classeur_{{ classeur.id }}">
+                        <tr id="row_classeur_{{ classeur.id }}" class="element-a-encadrer parent-a-options">
                             <td>
                                 <a class="m-2 fw-bold" href="{{ path('admin.classeur.edit', {'idClasseur':classeur.id, 'idEntreprise': entreprise.id})}}">
                                     {{ include('segments/icones/classeur.html.twig', {size:'18px'}) }}
@@ -54,53 +62,30 @@
                                 </a><br/>
                                 <small class="m-2">
                                     <span class="text-secondary">
-                                        {{ include('segments/icones/document.html.twig', {size:'16px'}) }}
-                                        Documents ({{ classeur.documents|length }})
+                                        {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+                                        {{ classeur.description }}
                                     </span>
                                     <span class="text-secondary">
-                                         • {{ classeur.description }}
+                                         • {{ include('segments/icones/document.html.twig', {size:'16px'}) }}
+                                        ({{ classeur.documents|length }})
                                     </span>
                                 </small><br/>
                             </td>
                             <td>
-                                <div class="d-flex gap-1 d-flex justify-content-end">
-                                    {# Les actions sur l element de la liste #}
-                                    <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.classeur.edit', {'idEntreprise': entreprise.id, 'idClasseur':classeur.id })}}" class="" mthod = 'POST'>
-                                        {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                        {# Modifier #}
-                                    </a>
-                                    <form action="{{ path('admin.classeur.remove', {'idClasseur':classeur.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                                        <input type='hidden' name='_method' value='DELETE'>
-                                        <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
-                                            {{ ux_icon('fluent:delete-20-filled', {height: '18px', width: '18px'}) }}
-                                            {# Supprimer #}
-                                        </button>
-                                    </form>
-                                    <div class="dropdown">
-                                        <a class="btn btn-outline-secondary dropdown-toggle border-0 btn-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            {{ ux_icon('gravity-ui:dots-9', {height: '18px', width: '18px'}) }}
-                                            {# Autres #}
+                                <div class="options-du-parent">
+                                    <div class="d-flex gap-1 d-flex justify-content-end">
+                                        {# Les actions sur l element de la liste #}
+                                        <a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.classeur.edit', {'idEntreprise': entreprise.id, 'idClasseur':classeur.id })}}" class="" mthod = 'POST'>
+                                            {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+                                            {# Modifier #}
                                         </a>
-                                        <ul class="dropdown-menu">
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "classeur_item_set_as_display_classeur" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "classeur_item_set_as_input_classeur" | trans }}
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="#">
-                                                    {{ ux_icon('tabler:edit', {height: '18px', width: '18px'}) }}
-                                                    {{ "classeur_item_set_as_display_and_input_classeur" | trans }}
-                                                </a>
-                                            </li>
-                                        </ul>
+                                        <form action="{{ path('admin.classeur.remove', {'idClasseur':classeur.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                                            <input type='hidden' name='_method' value='DELETE'>
+                                            <button class='btn btn-outline-danger border-0 btn-sm' type='submit'>
+                                                {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+                                                {# Supprimer #}
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </td>
