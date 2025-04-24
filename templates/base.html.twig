@@ -117,7 +117,16 @@
 						</span>
 					</p>
 				</small>
-				{% block descriptionRubrique %}{% endblock %}
+				<small>
+					<div class="alert alert-secondary" role="alert">
+						<h6 class="alert-heading fw-bold">
+							{{ include('segments/icones/actions/information.html.twig', {size:'20px'}) }}
+							Tuto rapide!
+						</h6>
+						{% block descriptionRubrique %}{% endblock %}
+					</div>
+				</small>
+
 				{# Corps de la page #}
 				<div class="row d-flex g-2">
 					{# Menu de Gauche #}
