@@ -12,6 +12,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
@@ -27,12 +28,43 @@ class RolesEnFinanceType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom')
-            ->add('accessMonnaie')
-            ->add('accessCompteBancaire')
+            ->add('nom', TextType::class, [
+                'label' => "Nom du rôle",
+                'required' => false,
+                'attr' => [
+                    'placeholder' => "Nom",
+                ],
+            ])
+            ->add('accessMonnaie', ChoiceType::class, [
+                'label' => "Droit d'accès sur les taxes",
+                'help' => "Ce que peut faire l'invité dans les taxes",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessCompteBancaire', ChoiceType::class, [
+                'label' => "Droit d'accès sur les taxes",
+                'help' => "Ce que peut faire l'invité dans les taxes",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
             // ->add('accessTaxe')
             ->add('accessTaxe', ChoiceType::class, [
-                'label' => "Ce qu'il peut faire dans les taxes",
+                'label' => "Droit d'accès sur les taxes",
+                'help' => "Ce que peut faire l'invité dans les taxes",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
