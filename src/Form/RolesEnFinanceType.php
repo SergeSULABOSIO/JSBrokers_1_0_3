@@ -24,14 +24,35 @@ class RolesEnFinanceType extends AbstractType
         private ServiceMonnaies $serviceMonnaies,
         private Security $security
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        // dd($builder);
+        /** @var Invite $parent_object */
+        $parent_object = $options['parent_object'];
+        // dd($invite);
+        $dataNom['data'] = "Droits d'accèss dans le module Finance";
+        $dataMonnaie['data'] = [Invite::ACCESS_LECTURE];
+        $dataCompteBancaire['data'] = [Invite::ACCESS_LECTURE];
+        $dataTaxe['data'] = [Invite::ACCESS_LECTURE];
+
+        if ($parent_object != null) {
+            /** @var RolesEnFinance|[] $tabRolesFin */
+            $tabRolesFin = $parent_object->getRolesEnFinance();
+            if (count($tabRolesFin) != 0) {
+                $dataNom['data'] = $tabRolesFin[0]->getNom();
+                $dataMonnaie['data'] = $tabRolesFin[0]->getAccessMonnaie();
+                $dataCompteBancaire['data'] = $tabRolesFin[0]->getAccessCompteBancaire();
+                $dataTaxe['data'] = $tabRolesFin[0]->getAccessTaxe();
+                dd($dataNom);
+            }
+        }
+
+        // dd($dataNom);
+
         $builder
             ->add('nom', TextType::class, [
-                'data' => "Droits d'accèss dans le module Finance",
                 'label' => "Nom du rôle",
+                'data' => "Droits d'accèss dans le module Finance",
                 'disabled' => true,
                 'required' => false,
                 'attr' => [
@@ -69,6 +90,7 @@ class RolesEnFinanceType extends AbstractType
             // ->add('accessTaxe')
             ->add('accessTaxe', ChoiceType::class, [
                 // 'data' => [Invite::ACCESS_LECTURE],
+                // $dataTaxe,
                 'label' => "Droit d'accès sur les taxes",
                 'help' => "Ce que peut faire l'invité dans les taxes",
                 'multiple' => true,
@@ -89,8 +111,6 @@ class RolesEnFinanceType extends AbstractType
                     'class' => "btn btn-secondary",
                 ],
             ])
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
@@ -98,6 +118,7 @@ class RolesEnFinanceType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => RolesEnFinance::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

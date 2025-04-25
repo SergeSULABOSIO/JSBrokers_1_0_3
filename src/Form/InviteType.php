@@ -29,7 +29,9 @@ class InviteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-
+        /** @var Invite|null $invite */
+        $invite = $options['data'];
+        // dd($invite);
 
         $builder
             ->add('email', EmailType::class, [
@@ -57,6 +59,7 @@ class InviteType extends AbstractType
                 'by_reference' => false,
             ])
             ->add('rolesEnFinance', CollectionType::class, [
+                // 'data' => $invite->getRolesEnFinance(),
                 'label' => "Droits d'accès dans le module Finances",
                 'entry_type' => RolesEnFinanceType::class,
                 'by_reference' => false,
@@ -64,6 +67,7 @@ class InviteType extends AbstractType
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
+                    'parent_object' => $invite,
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
