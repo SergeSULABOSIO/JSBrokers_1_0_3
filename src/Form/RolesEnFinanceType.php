@@ -30,29 +30,28 @@ class RolesEnFinanceType extends AbstractType
         /** @var Invite $parent_object */
         $parent_object = $options['parent_object'];
         // dd($invite);
-        $dataNom['data'] = "Droits d'accèss dans le module Finance";
-        $dataMonnaie['data'] = [Invite::ACCESS_LECTURE];
-        $dataCompteBancaire['data'] = [Invite::ACCESS_LECTURE];
-        $dataTaxe['data'] = [Invite::ACCESS_LECTURE];
+        $dataNom = "Droits d'accèss dans le module Finance";
+        $dataMonnaie = [Invite::ACCESS_LECTURE];
+        $dataCompteBancaire = [Invite::ACCESS_LECTURE];
+        $dataTaxe = [Invite::ACCESS_LECTURE];
+        $prefixeHelp = "Ce que peut faire l'invité";
 
         if ($parent_object != null) {
             /** @var RolesEnFinance|[] $tabRolesFin */
             $tabRolesFin = $parent_object->getRolesEnFinance();
             if (count($tabRolesFin) != 0) {
-                $dataNom['data'] = $tabRolesFin[0]->getNom();
-                $dataMonnaie['data'] = $tabRolesFin[0]->getAccessMonnaie();
-                $dataCompteBancaire['data'] = $tabRolesFin[0]->getAccessCompteBancaire();
-                $dataTaxe['data'] = $tabRolesFin[0]->getAccessTaxe();
-                dd($dataNom);
+                $dataNom = $tabRolesFin[0]->getNom();
+                $dataMonnaie = $tabRolesFin[0]->getAccessMonnaie();
+                $dataCompteBancaire = $tabRolesFin[0]->getAccessCompteBancaire();
+                $dataTaxe = $tabRolesFin[0]->getAccessTaxe();
+                $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
             }
         }
 
-        // dd($dataNom);
-
         $builder
             ->add('nom', TextType::class, [
+                'data' => $dataNom,
                 'label' => "Nom du rôle",
-                'data' => "Droits d'accèss dans le module Finance",
                 'disabled' => true,
                 'required' => false,
                 'attr' => [
@@ -60,9 +59,9 @@ class RolesEnFinanceType extends AbstractType
                 ],
             ])
             ->add('accessMonnaie', ChoiceType::class, [
-                // 'data' => [Invite::ACCESS_LECTURE],
+                'data' => $dataMonnaie,
                 'label' => "Droit d'accès sur les monnaies",
-                'help' => "Ce que peut faire l'invité dans les monnaies",
+                'help' => $prefixeHelp . " dans les monnaies",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -74,9 +73,9 @@ class RolesEnFinanceType extends AbstractType
                 ],
             ])
             ->add('accessCompteBancaire', ChoiceType::class, [
-                // 'data' => [Invite::ACCESS_LECTURE],
+                'data' => $dataCompteBancaire,
                 'label' => "Droit d'accès sur les comptes bancaires",
-                'help' => "Ce que peut faire l'invité dans les comptes bancaires",
+                'help' => $prefixeHelp . " dans les comptes bancaires",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -89,10 +88,9 @@ class RolesEnFinanceType extends AbstractType
             ])
             // ->add('accessTaxe')
             ->add('accessTaxe', ChoiceType::class, [
-                // 'data' => [Invite::ACCESS_LECTURE],
-                // $dataTaxe,
+                'data' => $dataTaxe,
                 'label' => "Droit d'accès sur les taxes",
-                'help' => "Ce que peut faire l'invité dans les taxes",
+                'help' => $prefixeHelp . " dans les taxes",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,

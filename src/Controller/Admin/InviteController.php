@@ -76,7 +76,7 @@ class InviteController extends AbstractController
         $invite->setEntreprise($entreprise);
         $invite->setProprietaire(false);
         //On charge automatiquement les rôles par défaut
-        // $this->chargerRoles($invite);
+        $this->chargerRoles($invite);
 
         $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
@@ -124,6 +124,7 @@ class InviteController extends AbstractController
             //On ne fait ceci que pour tout invité nouveau
             $invite->addRolesEnFinance(
                 (new RolesEnFinance)
+                    ->setNom("Droits d'accèss dans le module Finance")
                     ->setAccessMonnaie([Invite::ACCESS_LECTURE])
                     ->setAccessCompteBancaire([Invite::ACCESS_LECTURE])
                     ->setAccessTaxe([Invite::ACCESS_LECTURE])
