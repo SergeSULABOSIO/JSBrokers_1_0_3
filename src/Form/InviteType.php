@@ -30,7 +30,10 @@ class InviteType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         /** @var Invite|null $invite */
-        $invite = $options['data'];
+        $invite = null;
+        if (isset($options['data'])) {
+            $invite = $options['data'];
+        }
         // dd($invite);
 
         $builder
