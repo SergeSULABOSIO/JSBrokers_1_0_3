@@ -113,6 +113,7 @@
 				<small>
 					<p>
 						<span class="fst-italic text-body-tertiary">
+							{{ include('segments/icones/utilisateur.html.twig', {size:'18px'}) }}
 							{% block titreRubrique %}{% endblock %}
 						</span>
 					</p>
@@ -123,6 +124,7 @@
 							{{ include('segments/icones/actions/information.html.twig', {size:'20px'}) }}
 							Tuto rapide!
 						</h6>
+						<hr>
 						{% block descriptionRubrique %}{% endblock %}
 					</div>
 				</small>

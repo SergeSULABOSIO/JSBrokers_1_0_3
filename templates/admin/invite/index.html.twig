@@ -10,7 +10,6 @@
 {% endblock %}
 
 {%  block titreRubrique %}
-	{{ include('segments/icones/utilisateur.html.twig', {size:'18px'}) }}
 	{{ constante.Invite_getInviteByUtilisateur(entreprise.id, utilisateur) }}>
 	{{ entreprise.nom }}>
 	<strong>
