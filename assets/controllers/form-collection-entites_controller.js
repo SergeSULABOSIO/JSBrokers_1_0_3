@@ -136,7 +136,8 @@ export default class extends Controller {
         const elementPrototype = document.createRange().createContextualFragment(
             this.element.dataset['prototype'].replaceAll('__name__', this.index)
         ).firstElementChild;
-        elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
+        // elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
+        elementPrototype.setAttribute('class', "border rounded bg-white");
         this.addDeleteButton(elementPrototype);
         this.index++;
         e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);

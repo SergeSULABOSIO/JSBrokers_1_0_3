@@ -38,8 +38,8 @@ class InviteType extends AbstractType
 
         $builder
             ->add('email', EmailType::class, [
-                'label' => false,
-                // 'label' => "invite_form_email",
+                // 'label' => false,
+                'label' => "Email",
                 'empty_data' => '',
                 'required' => true,
                 'attr' => [
@@ -47,8 +47,8 @@ class InviteType extends AbstractType
                 ],
             ])
             ->add('nom', TextType::class, [
-                'label' => false,
-                // 'label' => "invite_form_nom",
+                // 'label' => false,
+                'label' => "Nom",
                 'empty_data' => '',
                 'required' => false,
                 'attr' => [
@@ -56,8 +56,8 @@ class InviteType extends AbstractType
                 ],
             ])
             ->add('assistants', InviteAutocompleteField::class, [
-                // 'label' => "invite_form_assistants",
-                'label' => false,
+                'label' => "Assistants",
+                // 'label' => false,
                 'help' => "Liste d'assistants travaillant sous la responsabilité de l'invité actuel.",
                 'multiple' => true,
                 'expanded' => false,
