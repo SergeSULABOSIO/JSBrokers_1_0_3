@@ -32,31 +32,37 @@ class InviteType extends AbstractType
         /** @var Invite|null $invite */
         $invite = $options['data'];
         // dd($invite);
-        
+
         $builder
             ->add('email', EmailType::class, [
-                'label' => "invite_form_email",
+                'label' => false,
+                // 'label' => "invite_form_email",
                 'empty_data' => '',
                 'required' => true,
                 'attr' => [
-                    'placeholder' => "invite_form_email_placeholder",
+                    'placeholder' => "Adresse mail valide de l'invité",
                 ],
             ])
             ->add('nom', TextType::class, [
-                'label' => "invite_form_nom",
+                'label' => false,
+                // 'label' => "invite_form_nom",
                 'empty_data' => '',
                 'required' => false,
                 'attr' => [
-                    'placeholder' => "invite_form_nom_placeholder",
+                    'placeholder' => "Nom complet de l'invité",
                 ],
             ])
             ->add('assistants', InviteAutocompleteField::class, [
-                'label' => "invite_form_assistants",
-                'help' => "invite_form_assistants_help",
+                // 'label' => "invite_form_assistants",
+                'label' => false,
+                'help' => "Liste d'assistants travaillant sous la responsabilité de l'invité actuel.",
                 'multiple' => true,
                 'expanded' => false,
                 'required' => false,
                 'by_reference' => false,
+                'attr' => [
+                    'placeholder' => "Assistants",
+                ],
             ])
             ->add('rolesEnFinance', CollectionType::class, [
                 'label' => "Droits d'accès dans le module Finances",
