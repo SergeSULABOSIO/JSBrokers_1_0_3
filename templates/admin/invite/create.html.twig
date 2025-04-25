@@ -10,13 +10,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-    {# {{ "invite_description_rubrique" | trans }} #}
-	<p>
-		{{ "invite_creation_description_message" | trans({
-			":user": utilisateur.nom, 
-			":company": entreprise.nom, 
-		}) | raw}}
-	</p>
+    {{ "invite_creation_description_message" | trans({
+		":user": utilisateur.nom, 
+		":company": entreprise.nom, 
+	}) | raw}}
 {% endblock %}
 
 {% block menuLateraleGauche %}
