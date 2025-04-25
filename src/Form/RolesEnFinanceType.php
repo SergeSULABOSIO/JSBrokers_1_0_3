@@ -27,6 +27,7 @@ class RolesEnFinanceType extends AbstractType
     
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        // dd($builder);
         $builder
             ->add('nom', TextType::class, [
                 'data' => "Droits d'accèss dans le module Finance",
@@ -38,7 +39,7 @@ class RolesEnFinanceType extends AbstractType
                 ],
             ])
             ->add('accessMonnaie', ChoiceType::class, [
-                'data' => [Invite::ACCESS_LECTURE],
+                // 'data' => [Invite::ACCESS_LECTURE],
                 'label' => "Droit d'accès sur les monnaies",
                 'help' => "Ce que peut faire l'invité dans les monnaies",
                 'multiple' => true,
@@ -52,7 +53,7 @@ class RolesEnFinanceType extends AbstractType
                 ],
             ])
             ->add('accessCompteBancaire', ChoiceType::class, [
-                'data' => [Invite::ACCESS_LECTURE],
+                // 'data' => [Invite::ACCESS_LECTURE],
                 'label' => "Droit d'accès sur les comptes bancaires",
                 'help' => "Ce que peut faire l'invité dans les comptes bancaires",
                 'multiple' => true,
@@ -67,7 +68,7 @@ class RolesEnFinanceType extends AbstractType
             ])
             // ->add('accessTaxe')
             ->add('accessTaxe', ChoiceType::class, [
-                'data' => [Invite::ACCESS_LECTURE],
+                // 'data' => [Invite::ACCESS_LECTURE],
                 'label' => "Droit d'accès sur les taxes",
                 'help' => "Ce que peut faire l'invité dans les taxes",
                 'multiple' => true,

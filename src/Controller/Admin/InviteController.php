@@ -9,6 +9,7 @@ use App\Constantes\Constante;
 use App\Event\InvitationEvent;
 use App\Constantes\MenuActivator;
 use App\Entity\Entreprise;
+use App\Entity\RolesEnFinance;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -74,6 +75,8 @@ class InviteController extends AbstractController
         //Paramètres par défaut
         $invite->setEntreprise($entreprise);
         $invite->setProprietaire(false);
+        //On charge automatiquement les rôles par défaut
+        $this->chargerRoles($invite);
 
         $form = $this->createForm(InviteType::class, $invite);
         $form->handleRequest($request);
@@ -113,6 +116,16 @@ class InviteController extends AbstractController
             'activator' => $this->activator,
             'form' => $form,
         ]);
+    }
+
+    private function chargerRoles(Invite $invite)
+    {
+        $invite->addRolesEnFinance(
+            (new RolesEnFinance)
+                ->setAccessMonnaie([Invite::ACCESS_LECTURE])
+                ->setAccessCompteBancaire([Invite::ACCESS_LECTURE])
+                ->setAccessTaxe([Invite::ACCESS_LECTURE])
+        );
     }
 
 
