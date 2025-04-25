@@ -14,7 +14,7 @@ export default class extends Controller {
     connect() {
         //this.element contient la collection elle-même
         this.index = this.element.childElementCount;
-        console.log("Nombre d'elements = " + this.index);
+        console.log("Nombre d'elements existants = " + this.index);
 
         //Construction de l'élement Bouton pour la supression de l'element de la collection
         const btnAjouter = document.createElement("button");
@@ -23,11 +23,12 @@ export default class extends Controller {
         btnAjouter.innerHTML = this.addLabelValue || "Add";
         btnAjouter.addEventListener('click', this.addElement);
         
-        //On ajoute le bouton SUPPRIMER et EDITER sur chaque element de la collection
+        //Boucle: Pour chaque element de la collection
         this.element.childNodes.forEach(elementDeLaCollection => {
-            elementDeLaCollection.setAttribute('class', "border shadow rounded border-secondary p-3 mb-2 bg-white");
-            // this.addDeleteButton(elementDeLaCollection);
-            this.addViewPanel(elementDeLaCollection);
+            //On lui attribut une bordure stylée
+            elementDeLaCollection.setAttribute('class', "border p-3 shadow-sm rounded mb-2 bg-white");
+            //On lui charge d'autres elements utiles pour manipuler son contenu
+            this.setBarreDeTitre(elementDeLaCollection);
         });
         this.element.append(btnAjouter);
     }
@@ -37,22 +38,22 @@ export default class extends Controller {
      * 
      * @param {HTMLElement} elementDeLaCollection 
      */
-    addViewPanel = (elementDeLaCollection) => {
+    setBarreDeTitre = (elementDeLaCollection) => {
         //Analyses
         var label = "Inconnu";
         var idForm = elementDeLaCollection.firstElementChild.getAttribute("id");
         var idChampDeVisualisation = idForm + "_" + this.viewFieldValue;
         var formulaire = document.getElementById(idForm);
         formulaire.setAttribute("class", "cacherComposant");
-        console.log(" - Bloc cible: id = " + idChampDeVisualisation);
+        // console.log(" - BBBBBBloc cible: id = " + idChampDeVisualisation);
         if(document.getElementById(idChampDeVisualisation) != null){
             // console.log("J'ai trouvé '" + document.getElementById(idChampDeVisualisation).getAttribute("value") + "'.");
             label = document.getElementById(idChampDeVisualisation).getAttribute("value");
         }
 
         //creation du div
-        const divElement = document.createElement("nav");
-        divElement.setAttribute("class", "navbar sensible rounded p-2");
+        const barreDeTitre = document.createElement("nav");
+        barreDeTitre.setAttribute("class", "navbar sensible rounded bg-danger");
         //creation du span
         const spanElement = document.createElement("span");
         spanElement.setAttribute("class", "gras");
@@ -85,14 +86,14 @@ export default class extends Controller {
         });
 
         //Ajout du span dans le div
-        divElement.innerHTML = "";
+        barreDeTitre.innerHTML = "";
         //Ajout des elements de viesualisation au div
-        divElement.append(spanElement);
+        barreDeTitre.append(spanElement);
         const div = document.createElement("div");
         div.append(btnSupprimer);
         div.append(btnEdit);
-        divElement.append(div);
-        elementDeLaCollection.append(divElement);
+        barreDeTitre.append(div);
+        elementDeLaCollection.append(barreDeTitre);
     }
     
 
@@ -136,8 +137,8 @@ export default class extends Controller {
         const elementPrototype = document.createRange().createContextualFragment(
             this.element.dataset['prototype'].replaceAll('__name__', this.index)
         ).firstElementChild;
-        // elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
-        elementPrototype.setAttribute('class', "border rounded bg-white");
+        elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
+        // elementPrototype.setAttribute('class', "border rounded bg-white");
         this.addDeleteButton(elementPrototype);
         this.index++;
         e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);
