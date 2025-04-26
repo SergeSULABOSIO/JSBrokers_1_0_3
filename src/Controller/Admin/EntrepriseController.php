@@ -174,11 +174,12 @@ class EntrepriseController extends AbstractController
         ]);
     }
 
-    #[Route('/geticon/{inaction}/{nom}/{taille}', name: 'geticon', requirements: ['nom' => Requirement::CATCH_ALL, 'taille' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    #[Route('/geticon/{inaction}/{nom}/{taille}', name: 'geticon', requirements: ['inaction' => Requirement::CATCH_ALL, 'nom' => Requirement::CATCH_ALL, 'taille' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function getIcone(bool $inaction, $nom, $taille)
     {
+        // dd($inaction, $nom, $taille);
         $lien = "";
-        if ($inaction == true) {
+        if ($inaction == 1) {
             $lien = "segments/icones/actions/" . $nom . ".html.twig";
         }else{
             $lien = "segments/icones/" . $nom . ".html.twig";

@@ -9,7 +9,9 @@ export default class extends Controller {
         editLabel: String,
         closeLabel: String,
         newElementLabel: String,
-        viewField: String
+        viewField: String,
+        icone: String,
+        dossieraction: String
     }
 
 
@@ -20,7 +22,9 @@ export default class extends Controller {
         this.collection = this.element;
         this.tailleCollection = this.collection.childElementCount;
         // console.log("Nombre d'elements existants = " + this.nbElement);
+
         this.setylerElementsDeLaCollection(this.collection);
+
         this.setBoutonAjouter(this.collection);
     }
 
@@ -43,7 +47,6 @@ export default class extends Controller {
             //on cache le formulaire
             formulaire.setAttribute("class", "cacherComposant");
 
-            
             //On lui charge d'autres elements utiles pour manipuler son contenu
             this.setBarreDeTitre(valeurDisplay, formulaire, elementDeLaCollection);
         });
@@ -62,9 +65,9 @@ export default class extends Controller {
         btnAjouterElementCollection.setAttribute('type', "button");
         btnAjouterElementCollection.innerHTML = this.addLabelValue || "Add";
         //definir l'icone
-        this.setIcone(btnAjouterElementCollection, true, "add", 20);
+        this.setIcone(btnAjouterElementCollection, " " + this.addLabelValue || "Add", 1, "add", 20);
         //definir l'ecouteur de clic
-        btnAjouterElementCollection.addEventListener('click', this.addElement);
+        btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
         //ajoute le bouton en bas de la collection
         objetCollection.append(btnAjouterElementCollection);
     }
@@ -77,20 +80,19 @@ export default class extends Controller {
     /**
      * 
      * @param {HTMLElement} elementDeLaCollection 
-     * @param {boolean} inAction 
+     * @param {int} inAction 
      * @param {string} icone 
+     * @param {string} texteAAjouter 
      * @param {int} taille
      *  
      */
-    setIcone = (elementHtml, inAction, icone, taille) => {
+    setIcone = (elementHtml, texteAAjouter, inAction, icone, taille) => {
         //Chargement de l'icones du bouton
         fetch('/admin/entreprise/geticon/' + inAction + '/' + icone + '/' + taille) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(html => {
-                var donneeHtmlExistant = elementHtml.innerHTML;
-                // console.log(donneeHtmlExistant);
-                elementHtml.innerHTML = html + " " + donneeHtmlExistant;
-                // elementHtml.append(barreDeTitre);
+                elementHtml.innerHTML = html + texteAAjouter;
+                // console.log("Pour icone: " + donneeHtmlExistant);
             })
             .catch(error => {
                 console.error('Erreur lors du chargement du fragment:', error);
@@ -105,49 +107,48 @@ export default class extends Controller {
      * @param {string} valeurDisplay 
      */
     setBarreDeTitre = (valeurDisplay, formulaire, elementDeLaCollection) => {
-        //creation du div
-        const barreDeTitre = document.createElement("nav");
-        barreDeTitre.setAttribute("class", "navbar");
-        //creation du span
-        const spanElement = document.createElement("span");
-        spanElement.setAttribute("class", "fw-bold text-secondary");
-        spanElement.innerHTML = " "+ valeurDisplay;
-        spanElement.innerHTML = " " + this.setIcone(spanElement, false, "invite", 25);
-        //creation du bouton edit
-        const btnEdit = document.createElement("button");
-        btnEdit.setAttribute('class', "btn border-0 btn-outline-secondary");
-        btnEdit.setAttribute('type', "button");
-        btnEdit.innerHTML = this.editLabelValue || "Edit"; //"Edit";
-        btnEdit.addEventListener('click', e => {
-            e.preventDefault();
-            // elementDeLaCollection.remove();
-
-            if (formulaire.hasAttribute("class", "cacherComposant")) {
-                formulaire.removeAttribute("class", "cacherComposant");
-                btnEdit.innerHTML = this.closeLabelValue || "Close"; //"Close";
-            } else {
-                formulaire.setAttribute("class", "cacherComposant");
-                btnEdit.innerHTML = this.editLabelValue || "Edit"; //"Edit";
-            }
-        });
         //creation du bouton supprimer
         const btnSupprimer = document.createElement("button");
         btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
+        btnSupprimer.innerHTML = this.setIcone(btnSupprimer, "", 1, "delete", 18);
         btnSupprimer.setAttribute('type', "button");
         btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
+
+        const barreOutilDisplay = document.createElement("div");
+        barreOutilDisplay.setAttribute('class', "options-du-parent");
+        barreOutilDisplay.append(btnSupprimer);
+        
+        //creation du span
+        const spanDisplayTexte = document.createElement("span");
+        spanDisplayTexte.setAttribute("class", "fw-bold text-secondary p-2");
+        spanDisplayTexte.innerHTML = this.setIcone(spanDisplayTexte, " " + valeurDisplay, this.dossieractionValue || 0, this.iconeValue || "invite", 25);
+        spanDisplayTexte.innerHTML = valeurDisplay;
+
+        //creation du div
+        const barreDeTitre = document.createElement("nav");
+        barreDeTitre.setAttribute("class", "navbar parent-a-options");
+        //Ajout des elements de viesualisation au div
+        barreDeTitre.append(spanDisplayTexte);
+        barreDeTitre.append(barreOutilDisplay);
+
+        
+        barreDeTitre.addEventListener('click', e => {
+            e.preventDefault();
+            // elementDeLaCollection.remove();
+            if (formulaire != null) {
+                if (formulaire.hasAttribute("class", "cacherComposant")) {
+                    formulaire.removeAttribute("class", "cacherComposant");
+                } else {
+                    formulaire.setAttribute("class", "cacherComposant");
+                }
+            }
+        });
+        
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
         });
 
-        //Ajout du span dans le div
-        barreDeTitre.innerHTML = "";
-        //Ajout des elements de viesualisation au div
-        barreDeTitre.append(spanElement);
-        const div = document.createElement("div");
-        div.append(btnSupprimer);
-        div.append(btnEdit);
-        barreDeTitre.append(div);
         elementDeLaCollection.append(barreDeTitre);
     }
 
@@ -186,15 +187,33 @@ export default class extends Controller {
     /**
      * @param {MouseEvent} e
      */
-    addElement = (e) => {
+    creerNewElementCollection = (e) => {
         e.preventDefault();
         // console.log('On vient de cliquer sur le bouton "Ajouter un élement".' + e + ". Son id est = " + this.element.getAttribute("id"));
         const elementPrototype = document.createRange().createContextualFragment(
             this.element.dataset['prototype'].replaceAll('__name__', this.index)
         ).firstElementChild;
-        elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
-        // elementPrototype.setAttribute('class', "border rounded bg-white");
-        this.addDeleteButton(elementPrototype);
+
+        // elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
+        // this.addDeleteButton(elementPrototype);
+        // this.index++;
+        // e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);
+
+
+        //On lui attribut une bordure stylée
+        elementPrototype.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
+        const idFormulaireSaisie = elementPrototype.firstElementChild.getAttribute("id");
+        const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
+        var valeurDisplay = "Inconnu";
+        if (document.getElementById(idChampDeVisualisation) != null) {
+            valeurDisplay = document.getElementById(idChampDeVisualisation).getAttribute("value") + " ";
+        }
+        const formulaire = document.getElementById(idFormulaireSaisie);
+        //on cache le formulaire
+        formulaire.setAttribute("class", "cacherComposant");
+
+        //On lui charge d'autres elements utiles pour manipuler son contenu
+        this.setBarreDeTitre(valeurDisplay, formulaire, elementPrototype);
         this.index++;
         e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);
     }
