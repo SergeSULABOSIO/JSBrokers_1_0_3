@@ -173,4 +173,18 @@ class EntrepriseController extends AbstractController
             'entreprise' => $entreprise,
         ]);
     }
+
+    #[Route('/geticon/{inaction}/{nom}/{taille}', name: 'geticon', requirements: ['nom' => Requirement::CATCH_ALL, 'taille' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function getIcone(bool $inaction, $nom, $taille)
+    {
+        $lien = "";
+        if ($inaction == true) {
+            $lien = "segments/icones/actions/" . $nom . ".html.twig";
+        }else{
+            $lien = "segments/icones/" . $nom . ".html.twig";
+        }
+        return $this->render($lien, [
+            'size' => $taille . 'px',
+        ]);
+    }
 }

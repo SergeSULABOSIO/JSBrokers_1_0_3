@@ -15,20 +15,17 @@ export default class extends Controller {
     connect() {
         this.collection = this.element;
         this.tailleCollection = this.collection.childElementCount;
-        this.btnAjouter = document.createElement("button");
-
-
-
-
         // console.log("Nombre d'elements existants = " + this.nbElement);
 
-        //Construction de l'élement Bouton d'ajout
-        // const btnAjouter = document.createElement("button");
+        this.btnAjouter = document.createElement("button");
         this.btnAjouter.setAttribute('class', "btn btn-outline-secondary");//btn-secondary
         this.btnAjouter.setAttribute('type', "button");
         this.btnAjouter.innerHTML = this.addLabelValue || "Add";
+
+        this.setIcone(this.btnAjouter, true, "add", 20);
+
         this.btnAjouter.addEventListener('click', this.addElement);
-        
+
         //Boucle: Pour chaque element de la collection
         this.element.childNodes.forEach(elementDeLaCollection => {
             //On lui attribut une bordure stylée
@@ -37,6 +34,28 @@ export default class extends Controller {
             this.setBarreDeTitre(elementDeLaCollection);
         });
         this.collection.append(this.btnAjouter);
+    }
+
+
+    /**
+     * 
+     * @param {HTMLElement} elementDeLaCollection 
+     * @param {boolean} inAction 
+     * @param {string} icone 
+     * @param {int} taille
+     *  
+     */
+    setIcone = (elementHtml, inAction, icone, taille) => {
+        //Chargement de l'icones du bouton
+        fetch('/admin/entreprise/geticon/' + inAction + '/' + icone + '/' + taille) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(html => {
+                elementHtml.innerHTML = html + " " + this.btnAjouter.innerHTML;
+                // elementHtml.append(barreDeTitre);
+            })
+            .catch(error => {
+                console.error('Erreur lors du chargement du fragment:', error);
+            });
     }
 
 
@@ -52,7 +71,7 @@ export default class extends Controller {
         var formulaire = document.getElementById(idForm);
         formulaire.setAttribute("class", "cacherComposant");
         // console.log(" - BBBBBBloc cible: id = " + idChampDeVisualisation);
-        if(document.getElementById(idChampDeVisualisation) != null){
+        if (document.getElementById(idChampDeVisualisation) != null) {
             // console.log("J'ai trouvé '" + document.getElementById(idChampDeVisualisation).getAttribute("value") + "'.");
             label = document.getElementById(idChampDeVisualisation).getAttribute("value");
         }
@@ -72,11 +91,11 @@ export default class extends Controller {
         btnEdit.addEventListener('click', e => {
             e.preventDefault();
             // elementDeLaCollection.remove();
-           
-            if(formulaire.hasAttribute("class", "cacherComposant")){
+
+            if (formulaire.hasAttribute("class", "cacherComposant")) {
                 formulaire.removeAttribute("class", "cacherComposant");
                 btnEdit.innerHTML = this.closeLabelValue || "Close"; //"Close";
-            }else{
+            } else {
                 formulaire.setAttribute("class", "cacherComposant");
                 btnEdit.innerHTML = this.editLabelValue || "Edit"; //"Edit";
             }
@@ -101,7 +120,7 @@ export default class extends Controller {
         barreDeTitre.append(div);
         elementDeLaCollection.append(barreDeTitre);
     }
-    
+
 
     /**
      * @param {HTMLElement} elementDeLaCollection 
