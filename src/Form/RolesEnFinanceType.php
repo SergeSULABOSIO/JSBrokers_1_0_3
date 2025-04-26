@@ -36,10 +36,11 @@ class RolesEnFinanceType extends AbstractType
         $dataTaxe = [Invite::ACCESS_LECTURE];
         $prefixeHelp = "Ce que peut faire l'invité";
 
-        if ($parent_object != null) {
+        if ($parent_object != null && $parent_object->getId() != null) {
             /** @var RolesEnFinance|[] $tabRolesFin */
             $tabRolesFin = $parent_object->getRolesEnFinance();
             if (count($tabRolesFin) != 0) {
+                dd($parent_object);
                 $dataNom = $tabRolesFin[0]->getNom();
                 $dataMonnaie = $tabRolesFin[0]->getAccessMonnaie();
                 $dataCompteBancaire = $tabRolesFin[0]->getAccessCompteBancaire();

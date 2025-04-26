@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
 
+    //Les données passées depuis le template HTML à utiliser à travers tout le controlleur
     static values = {
         addLabel: String,
         deleteLabel: String,
@@ -12,16 +13,21 @@ export default class extends Controller {
     }
 
     connect() {
-        //this.element contient la collection elle-même
-        this.index = this.element.childElementCount;
-        console.log("Nombre d'elements existants = " + this.index);
+        this.collection = this.element;
+        this.tailleCollection = this.collection.childElementCount;
+        this.btnAjouter = document.createElement("button");
 
-        //Construction de l'élement Bouton pour la supression de l'element de la collection
-        const btnAjouter = document.createElement("button");
-        btnAjouter.setAttribute('class', "btn btn-outline-secondary");//btn-secondary
-        btnAjouter.setAttribute('type', "button");
-        btnAjouter.innerHTML = this.addLabelValue || "Add";
-        btnAjouter.addEventListener('click', this.addElement);
+
+
+
+        // console.log("Nombre d'elements existants = " + this.nbElement);
+
+        //Construction de l'élement Bouton d'ajout
+        // const btnAjouter = document.createElement("button");
+        this.btnAjouter.setAttribute('class', "btn btn-outline-secondary");//btn-secondary
+        this.btnAjouter.setAttribute('type', "button");
+        this.btnAjouter.innerHTML = this.addLabelValue || "Add";
+        this.btnAjouter.addEventListener('click', this.addElement);
         
         //Boucle: Pour chaque element de la collection
         this.element.childNodes.forEach(elementDeLaCollection => {
@@ -30,7 +36,7 @@ export default class extends Controller {
             //On lui charge d'autres elements utiles pour manipuler son contenu
             this.setBarreDeTitre(elementDeLaCollection);
         });
-        this.element.append(btnAjouter);
+        this.collection.append(this.btnAjouter);
     }
 
 
