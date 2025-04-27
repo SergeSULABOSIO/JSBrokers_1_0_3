@@ -15,16 +15,14 @@ export default class extends Controller {
     }
 
 
-
-
     connect() {
         //DECLARATION DES VARIABLES
+        this.index = 0;
         this.collection = this.element;
         this.tailleCollection = this.collection.childElementCount;
         // console.log("Nombre d'elements existants = " + this.nbElement);
 
         this.setylerElementsDeLaCollection(this.collection);
-
         this.setBoutonAjouter(this.collection);
     }
 
@@ -36,23 +34,30 @@ export default class extends Controller {
     setylerElementsDeLaCollection = (objetCollection) => {
         objetCollection.childNodes.forEach(elementDeLaCollection => {
             //On lui attribut une bordure stylée
-            elementDeLaCollection.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
-            const idFormulaireSaisie = elementDeLaCollection.firstElementChild.getAttribute("id");
-            console.log("Old form: " + idFormulaireSaisie);
-            const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
-            var valeurDisplay = "Inconnu";
-            if (document.getElementById(idChampDeVisualisation) != null) {
-                valeurDisplay = document.getElementById(idChampDeVisualisation).getAttribute("value") + " ";
-            }
-            const formulaire = document.getElementById(idFormulaireSaisie);
-            if (formulaire != null) {
-                //on cache le formulaire
-                formulaire.setAttribute("class", "cacherComposant");
-            }
-
-            //On lui charge d'autres elements utiles pour manipuler son contenu
-            this.setBarreDeTitre(valeurDisplay, formulaire, elementDeLaCollection);
+            this.appliquerStyle(elementDeLaCollection);
         });
+    }
+
+
+    /**
+     * @param {HTMLElement} elementCollection
+     */
+    appliquerStyle(elementCollection) {
+        //On lui attribut une bordure stylée
+        elementCollection.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
+        const idFormulaireSaisie = elementCollection.firstElementChild.getAttribute("id");
+        const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
+        var valeurDisplay = "Inconnu";
+        if (document.getElementById(idChampDeVisualisation) != null) {
+            valeurDisplay = document.getElementById(idChampDeVisualisation).getAttribute("value") + " ";
+        }
+        const formulaire = document.getElementById(idFormulaireSaisie);
+        if (formulaire != null) {
+            //on cache le formulaire
+            formulaire.setAttribute("class", "cacherComposant");
+        }
+        //On lui charge d'autres elements utiles pour manipuler son contenu
+        this.setBarreDeTitre(valeurDisplay, formulaire, elementCollection);
     }
 
 
@@ -134,7 +139,6 @@ export default class extends Controller {
         barreDeTitre.append(spanDisplayTexte);
         barreDeTitre.append(barreOutilDisplay);
 
-
         barreDeTitre.addEventListener('click', e => {
             e.preventDefault();
             // elementDeLaCollection.remove();
@@ -153,6 +157,7 @@ export default class extends Controller {
         });
 
         elementDeLaCollection.append(barreDeTitre);
+        this.index++;
     }
 
 
@@ -192,37 +197,12 @@ export default class extends Controller {
      */
     creerNewElementCollection = (e) => {
         e.preventDefault();
-        // console.log('On vient de cliquer sur le bouton "Ajouter un élement".' + e + ". Son id est = " + this.element.getAttribute("id"));
+
         const elementPrototype = document.createRange().createContextualFragment(
             this.element.dataset['prototype'].replaceAll('__name__', this.index)
         ).firstElementChild;
-
-        // elementPrototype.setAttribute('class', "border rounded border-secondary p-3 mb-2 bg-white");
-        // this.addDeleteButton(elementPrototype);
-        // this.index++;
-        // e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);
-
-
-        //On lui attribut une bordure stylée
-        elementPrototype.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
-        const idFormulaireSaisie = elementPrototype.firstElementChild.getAttribute("id");
-        console.log("New form: " + idFormulaireSaisie);
-        console.log(elementPrototype);
-        const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
-        console.log("Visualisation champ: " + idChampDeVisualisation);
-        var valeurDisplay = "Inconnu";
-        if (document.getElementById(idChampDeVisualisation) != null) {
-            valeurDisplay = document.getElementById(idChampDeVisualisation).getAttribute("value") + " ";
-        }
-        const formulaire = document.getElementById(idFormulaireSaisie);
-        if (formulaire != null) {
-            //on cache le formulaire
-            formulaire.setAttribute("class", "cacherComposant");
-        }
-
-        //On lui charge d'autres elements utiles pour manipuler son contenu
-        this.setBarreDeTitre(valeurDisplay, formulaire, elementPrototype);
-        this.index++;
         e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);
+
+        this.appliquerStyle(elementPrototype);
     }
 }
