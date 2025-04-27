@@ -148,6 +148,8 @@ export default class extends Controller {
         const btnSupprimer = document.createElement("button");
         btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
         btnSupprimer.setAttribute('type', "button");
+        
+        //Chargement de l'icone, choix entre serveur ou image stockée dans la mémoire locale
         var iconeSupprimer = this.getIconeLocale('/admin/entreprise/geticon/1/delete/18');
         if (iconeSupprimer != null) {
             btnSupprimer.innerHTML = iconeSupprimer; //Ok!
@@ -163,6 +165,8 @@ export default class extends Controller {
         //creation du span
         const spanDisplayTexte = document.createElement("span");
         spanDisplayTexte.setAttribute("class", "fw-bold text-primary m-2");
+
+        //Chargement de l'icone, choix entre serveur ou image stockée dans la mémoire locale
         var dossier = "0";
         if (this.dossieractionValue != null) {
             dossier = this.dossieractionValue;
