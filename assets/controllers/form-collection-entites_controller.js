@@ -22,7 +22,7 @@ export default class extends Controller {
         this.tailleCollection = this.collection.childElementCount;
         // console.log("Nombre d'elements existants = " + this.nbElement);
 
-        this.setylerElementsDeLaCollection(this.collection);
+        this.stylerElementsDeLaCollection(this.collection);
         this.setBoutonAjouter(this.collection);
     }
 
@@ -31,7 +31,7 @@ export default class extends Controller {
     /**
      * @param {HTMLElement} objetCollection
      */
-    setylerElementsDeLaCollection = (objetCollection) => {
+    stylerElementsDeLaCollection = (objetCollection) => {
         objetCollection.childNodes.forEach(elementDeLaCollection => {
             //On lui attribut une bordure stylée
             this.appliquerStyle(elementDeLaCollection);
@@ -128,8 +128,8 @@ export default class extends Controller {
 
         //creation du span
         const spanDisplayTexte = document.createElement("span");
-        spanDisplayTexte.setAttribute("class", "fw-bold text-secondary p-2");
-        spanDisplayTexte.innerHTML = this.setIcone(spanDisplayTexte, " " + valeurDisplay, this.dossieractionValue || 0, this.iconeValue || "invite", 25);
+        spanDisplayTexte.setAttribute("class", "fw-bold text-primary p-1");
+        spanDisplayTexte.innerHTML = this.setIcone(spanDisplayTexte, " " + valeurDisplay, this.dossieractionValue || 0, this.iconeValue || "invite", 19);
         spanDisplayTexte.innerHTML = valeurDisplay;
 
         //creation du div
@@ -160,37 +160,6 @@ export default class extends Controller {
         this.index++;
     }
 
-
-    /**
-     * @param {HTMLElement} elementDeLaCollection 
-     */
-    addDeleteButton = (elementDeLaCollection) => {
-        //creation du span
-        const spanElement = document.createElement("span");
-        spanElement.setAttribute("class", "gras");
-        spanElement.innerHTML = this.newElementLabelValue || "Add"; //"New collection element";
-        //creation du div
-        const divElement = document.createElement("nav");
-        divElement.setAttribute("class", "navbar sensible rounded p-2");
-        //creation du bouton supprimer
-        const btnSupprimer = document.createElement("button");
-        btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
-        btnSupprimer.setAttribute('type', "button");
-        btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
-        btnSupprimer.addEventListener('click', e => {
-            e.preventDefault();
-            elementDeLaCollection.remove();
-        });
-        //Ajout du span dans le div
-        divElement.innerHTML = "";
-        //Ajout des elements de viesualisation au div
-        divElement.append(spanElement);
-        const div = document.createElement("div");
-        div.append(btnSupprimer);
-        // div.append(btnEdit);
-        divElement.append(div);
-        elementDeLaCollection.append(divElement);
-    }
 
     /**
      * @param {MouseEvent} e
