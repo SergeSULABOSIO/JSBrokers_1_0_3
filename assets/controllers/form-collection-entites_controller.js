@@ -17,6 +17,7 @@ export default class extends Controller {
 
     connect() {
         //DECLARATION DES VARIABLES
+        this.tabDownloadedIcones = new Map();
         this.index = 0;
         this.collection = this.element;
         this.tailleCollection = this.collection.childElementCount;
@@ -73,7 +74,7 @@ export default class extends Controller {
         btnAjouterElementCollection.setAttribute('type', "button");
         btnAjouterElementCollection.innerHTML = this.addLabelValue || "Add";
         //definir l'icone
-        this.setIcone(btnAjouterElementCollection, " " + this.addLabelValue || "Add", 1, "add", 20);
+        this.downloadIcone(btnAjouterElementCollection, " " + this.addLabelValue || "Add", 1, "add", 20);
         //definir l'ecouteur de clic
         btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
         //ajoute le bouton en bas de la collection
@@ -94,17 +95,45 @@ export default class extends Controller {
      * @param {int} taille
      *  
      */
-    setIcone = (elementHtml, texteAAjouter, inAction, icone, taille) => {
+    downloadIcone = (elementHtml, texteAAjouter, inAction, icone, taille) => {
         //Chargement de l'icones du bouton
-        fetch('/admin/entreprise/geticon/' + inAction + '/' + icone + '/' + taille) // L'URL de votre route Symfony
+        var url = '/admin/entreprise/geticon/' + inAction + '/' + icone + '/' + taille;
+        fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
-            .then(html => {
-                elementHtml.innerHTML = html + texteAAjouter;
-                // console.log("Pour icone: " + donneeHtmlExistant);
+            .then(htmlData => {
+                this.updatTabIcones(url, htmlData);
+                elementHtml.innerHTML = htmlData + texteAAjouter;
             })
             .catch(error => {
                 console.error('Erreur lors du chargement du fragment:', error);
             });
+    }
+
+    /**
+     * 
+     * @param {string} url 
+     * @param {HTMLElement} htmlData 
+     */
+    updatTabIcones(url, htmlData) {
+        if (this.tabDownloadedIcones.has(url) == false) {
+            this.tabDownloadedIcones.set(url, htmlData);
+        }
+        // console.log(this.tabDownloadedIcones);
+    }
+
+    /**
+     * 
+     * @param {string} url 
+     */
+    getIconeLocale(url) {
+        // console.log(url);
+        var icone = null;
+        for (const paire of this.tabDownloadedIcones.entries()) {
+            if (paire[0] == url) {
+                icone = paire[1];
+            }
+        }
+        return icone;
     }
 
 
@@ -118,9 +147,14 @@ export default class extends Controller {
         //creation du bouton supprimer
         const btnSupprimer = document.createElement("button");
         btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
-        btnSupprimer.innerHTML = this.setIcone(btnSupprimer, "", 1, "delete", 18);
         btnSupprimer.setAttribute('type', "button");
-        btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
+        var iconeSupprimer = this.getIconeLocale('/admin/entreprise/geticon/1/delete/18');
+        if (iconeSupprimer != null) {
+            btnSupprimer.innerHTML = iconeSupprimer; //Ok!
+        } else {
+            btnSupprimer.innerHTML = this.downloadIcone(btnSupprimer, "", 1, "delete", 18);
+            btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
+        }
 
         const barreOutilDisplay = document.createElement("div");
         barreOutilDisplay.setAttribute('class', "options-du-parent");
@@ -128,9 +162,22 @@ export default class extends Controller {
 
         //creation du span
         const spanDisplayTexte = document.createElement("span");
-        spanDisplayTexte.setAttribute("class", "fw-bold text-primary p-1");
-        spanDisplayTexte.innerHTML = this.setIcone(spanDisplayTexte, " " + valeurDisplay, this.dossieractionValue || 0, this.iconeValue || "invite", 19);
-        spanDisplayTexte.innerHTML = valeurDisplay;
+        spanDisplayTexte.setAttribute("class", "fw-bold text-primary m-2");
+        var dossier = "0";
+        if (this.dossieractionValue != null) {
+            dossier = this.dossieractionValue;
+        }
+        var nomIcone = "invite";
+        if (this.iconeValue != null) {
+            nomIcone = this.iconeValue;
+        }
+        var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/19");
+        if (iconeDisplay != null) {
+            spanDisplayTexte.innerHTML = iconeDisplay + " " + valeurDisplay; //Ok!
+        } else {
+            spanDisplayTexte.innerHTML = this.downloadIcone(spanDisplayTexte, " " + valeurDisplay, dossier, nomIcone, 19);
+            spanDisplayTexte.innerHTML = valeurDisplay;
+        }
 
         //creation du div
         const barreDeTitre = document.createElement("nav");
