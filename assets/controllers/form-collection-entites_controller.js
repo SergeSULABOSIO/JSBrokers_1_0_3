@@ -49,16 +49,21 @@ export default class extends Controller {
         const idFormulaireSaisie = elementCollection.firstElementChild.getAttribute("id");
         const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
         var valeurDisplay = "Inconnu";
-        if (document.getElementById(idChampDeVisualisation) != null) {
-            valeurDisplay = document.getElementById(idChampDeVisualisation).getAttribute("value") + " ";
+        const champSaisieDisplay = document.getElementById(idChampDeVisualisation);
+        if (champSaisieDisplay != null) {
+            valeurDisplay = champSaisieDisplay.getAttribute("value");
         }
         const formulaire = document.getElementById(idFormulaireSaisie);
+        console.log(formulaire);
+        console.log(valeurDisplay);
+
+
         if (formulaire != null) {
             //on cache le formulaire
             formulaire.setAttribute("class", "cacherComposant");
         }
         //On lui charge d'autres elements utiles pour manipuler son contenu
-        this.setBarreDeTitre(valeurDisplay, formulaire, elementCollection);
+        this.setBarreDeTitre(valeurDisplay, formulaire, elementCollection, champSaisieDisplay);
     }
 
 
@@ -140,15 +145,16 @@ export default class extends Controller {
     /**
      * 
      * @param {HTMLElement} formulaire 
+     * @param {HTMLElement} champDeSaisieDisplay 
      * @param {HTMLElement} elementDeLaCollection 
      * @param {string} valeurDisplay 
      */
-    setBarreDeTitre = (valeurDisplay, formulaire, elementDeLaCollection) => {
+    setBarreDeTitre = (valeurDisplay, formulaire, elementDeLaCollection, champDeSaisieDisplay) => {
         //creation du bouton supprimer
         const btnSupprimer = document.createElement("button");
         btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
         btnSupprimer.setAttribute('type', "button");
-        
+
         //Chargement de l'icone, choix entre serveur ou image stockée dans la mémoire locale
         var iconeSupprimer = this.getIconeLocale('/admin/entreprise/geticon/1/delete/18');
         if (iconeSupprimer != null) {
@@ -164,30 +170,27 @@ export default class extends Controller {
 
         //creation du span
         const spanDisplayTexte = document.createElement("span");
-        spanDisplayTexte.setAttribute("class", "fw-bold text-primary m-2");
+        spanDisplayTexte.setAttribute("class", "fw-bold text-primary");
+        spanDisplayTexte.innerHTML = valeurDisplay;
+
+        const spanDisplayIcon = document.createElement("span");
+        spanDisplayIcon.setAttribute("class", "fw-bold text-primary");
 
         //Chargement de l'icone, choix entre serveur ou image stockée dans la mémoire locale
-        var dossier = "0";
-        if (this.dossieractionValue != null) {
-            dossier = this.dossieractionValue;
-        }
-        var nomIcone = "invite";
-        if (this.iconeValue != null) {
-            nomIcone = this.iconeValue;
-        }
-        var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/19");
-        if (iconeDisplay != null) {
-            spanDisplayTexte.innerHTML = iconeDisplay + " " + valeurDisplay; //Ok!
-        } else {
-            spanDisplayTexte.innerHTML = this.downloadIcone(spanDisplayTexte, " " + valeurDisplay, dossier, nomIcone, 19);
-            spanDisplayTexte.innerHTML = valeurDisplay;
-        }
+        this.setIconSpanDisplay(spanDisplayIcon, "");
 
         //creation du div
         const barreDeTitre = document.createElement("nav");
         barreDeTitre.setAttribute("class", "navbar parent-a-options");
         //Ajout des elements de viesualisation au div
-        barreDeTitre.append(spanDisplayTexte);
+
+
+        const groupDisplay = document.createElement("span");
+        groupDisplay.setAttribute("class", "fw-bold text-primary m-2");
+        groupDisplay.append(spanDisplayIcon);
+        groupDisplay.append(spanDisplayTexte);
+
+        barreDeTitre.append(groupDisplay);
         barreDeTitre.append(barreOutilDisplay);
 
         barreDeTitre.addEventListener('click', e => {
@@ -208,7 +211,40 @@ export default class extends Controller {
         });
 
         elementDeLaCollection.append(barreDeTitre);
+
+        if (champDeSaisieDisplay != null) {
+            champDeSaisieDisplay.addEventListener("keyup", function (event) {
+                if (spanDisplayTexte != null) {
+                    spanDisplayTexte.innerHTML = event.target.value;
+                }
+            })
+        }
+
+
         this.index++;
+    }
+
+    /**
+     * 
+     * @param {HTMLElement} spanDisplayTexte 
+     * @param {string} valeurDisplay 
+     */
+    setIconSpanDisplay(spanDisplayTexte, valeurDisplay){
+        var dossier = "0";
+        if (this.dossieractionValue != null) {
+            dossier = this.dossieractionValue;
+        }
+        var nomIcone = "invite";
+        if (this.iconeValue != null) {
+            nomIcone = this.iconeValue;
+        }
+        var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/19");
+        if (iconeDisplay != null) {
+            spanDisplayTexte.innerHTML = iconeDisplay + " " + valeurDisplay; //Ok!
+        } else {
+            spanDisplayTexte.innerHTML = this.downloadIcone(spanDisplayTexte, " " + valeurDisplay, dossier, nomIcone, 19);
+            spanDisplayTexte.innerHTML = valeurDisplay;
+        }
     }
 
 
