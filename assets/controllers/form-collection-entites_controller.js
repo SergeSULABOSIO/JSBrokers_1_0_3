@@ -56,28 +56,38 @@ export default class extends Controller {
         if (champSaisieDisplay != null) {
             valeurDisplay = champSaisieDisplay.getAttribute("value");
         }
-        console.log(formulaire);
-        // console.log(valeurDisplay);
-        if (formulaire != null) {
-            const champs = formulaire.querySelectorAll('input, select, textarea, button');
-            //parcours des elements du formulaire
-            console.log("(" + this.index + ")***" + idFormulaireSaisie + "***");
-            champs.forEach(champ => {
-                console.log("\t\tId: " + champ.id);
-                console.log("\t\tType: " + champ.tagName.toLowerCase());
-                console.log("\t\tNom: " + champ.name);
-                console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
-                console.log("\t\t*******");
-                // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
-            });
-        }
-
+        
         //on cache le formulaire
         if (formulaire != null) {
             formulaire.setAttribute("class", "cacherComposant");
         }
         //On lui charge d'autres elements utiles pour manipuler son contenu
         this.setBarreDeTitre(valeurDisplay, formulaire, elementCollection, champSaisieDisplay);
+    }
+
+
+    /**
+     * @param {int} idFormulaireSaisie 
+     */
+    parcourirFormulaire = (idFormulaireSaisie) => {
+        if (idFormulaireSaisie != null) {
+            const formulaireEncours = document.getElementById(idFormulaireSaisie);
+            if (formulaireEncours != null) {
+                // console.log(formulaireEncours);
+
+                const champs = formulaireEncours.querySelectorAll('input, select, textarea, button');
+                //parcours des elements du formulaire
+                console.log("(" + this.index + ")***" + idFormulaireSaisie + "***");
+                champs.forEach(champ => {
+                    console.log("\t\tId: " + champ.id);
+                    console.log("\t\tType: " + champ.tagName.toLowerCase());
+                    console.log("\t\tNom: " + champ.name);
+                    console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
+                    console.log("\t\t*******");
+                    // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
+                });
+            }
+        }
     }
 
 
@@ -227,13 +237,15 @@ export default class extends Controller {
         elementDeLaCollection.append(barreDeTitre);
 
         if (champDeSaisieDisplay != null) {
-            champDeSaisieDisplay.addEventListener("keyup", function (event) {
+            champDeSaisieDisplay.addEventListener("change", function (event) {
                 if (spanDisplayTexte != null) {
                     spanDisplayTexte.innerHTML = event.target.value;
                 }
             })
         }
 
+        //On parcours le formulaire
+        this.parcourirFormulaire(formulaire.getAttribute('id'));
 
         this.index++;
     }
