@@ -61,15 +61,13 @@ export default class extends Controller {
         if (formulaire != null) {
             const champs = formulaire.querySelectorAll('input, select, textarea, button');
             //parcours des elements du formulaire
-            var i = 0;
-            console.log("***(" + i + ")********" + idFormulaireSaisie + "********");
+            console.log("(" + this.index + ")***" + idFormulaireSaisie + "***");
             champs.forEach(champ => {
-                console.log("\tID: " + champ.id);
-                console.log("\tType: " + champ.tagName.toLowerCase());
-                console.log("\tNom: " + champ.name);
-                console.log("\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
-                console.log("*******");
-                i++;
+                console.log("\t\tId: " + champ.id);
+                console.log("\t\tType: " + champ.tagName.toLowerCase());
+                console.log("\t\tNom: " + champ.name);
+                console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
+                console.log("\t\t*******");
                 // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
             });
         }
