@@ -73,7 +73,7 @@ export default class extends Controller {
         if (idFormulaireSaisie != null) {
             const formulaireEncours = document.getElementById(idFormulaireSaisie);
             if (formulaireEncours != null) {
-                // console.log(formulaireEncours);
+                console.log(formulaireEncours);
                 const champs = formulaireEncours.querySelectorAll('input, select, textarea, button');
                 //parcours des elements du formulaire
                 champs.forEach(champ => {
@@ -91,12 +91,13 @@ export default class extends Controller {
      */
     enCasDeChangement = (event, champ, formulaire) => {
         console.log("\tFormulaire: " + formulaire.getAttribute("id"));
-        console.log("\t\tChamp " + champ.name + ", valeur = " + event.target.value);
+        console.log("\t\tChamp " + champ.name + ", valeur = " + event.target.value + ", type = " + champ.getAttribute("type"));
 
         // champ.value = event.target.value;
         champ.setAttribute("value", event.target.value);
         //on affiche les champs sur la console
-        // this.afficherChamps(formulaire);
+        this.afficherChamps(formulaire);
+        // console.log(formulaire);
     }
 
     /**
@@ -239,10 +240,26 @@ export default class extends Controller {
         //Ajout des elements de viesualisation au div
 
 
+        //Description
+        const spanDescriptionIcon = document.createElement("span");
+        spanDescriptionIcon.setAttribute("class", "text-secondary");
+        this.setIconSpanDescriptionDisplay(spanDescriptionIcon);
+
+
+        const spanDisplayDescription = document.createElement("span");
+        spanDisplayDescription.setAttribute("class", "text-secondary m-2");
+        spanDisplayDescription.innerHTML = "Brève description d'au moins 3 premiers paramètres de l'élémenet.";
+
+
         const groupDisplay = document.createElement("span");
-        groupDisplay.setAttribute("class", "fw-bold text-primary m-2");
+        groupDisplay.setAttribute("class", "");
         groupDisplay.append(spanDisplayIcon);
         groupDisplay.append(spanDisplayTexte);
+        groupDisplay.append(document.createElement("br"));
+        groupDisplay.append(spanDescriptionIcon);
+        groupDisplay.append(spanDisplayDescription);
+
+        
 
         barreDeTitre.append(groupDisplay);
         barreDeTitre.append(barreOutilDisplay);
@@ -300,6 +317,18 @@ export default class extends Controller {
         } else {
             spanDisplayTexte.innerHTML = this.downloadIcone(spanDisplayTexte, " " + valeurDisplay, dossier, nomIcone, 19);
             spanDisplayTexte.innerHTML = valeurDisplay;
+        }
+    }
+
+    setIconSpanDescriptionDisplay(spanDisplayTexte) {
+        var dossier = "1";
+        var nomIcone = "description";
+        var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/16");
+        if (iconeDisplay != null) {
+            spanDisplayTexte.innerHTML = iconeDisplay; //Ok!
+        } else {
+            spanDisplayTexte.innerHTML = this.downloadIcone(spanDisplayTexte, "", dossier, nomIcone, 16);
+            spanDisplayTexte.innerHTML = "...";
         }
     }
 
