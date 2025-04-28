@@ -9,7 +9,6 @@ export default class extends Controller {
         editLabel: String,
         closeLabel: String,
         newElementLabel: String,
-        viewField: String,
         icone: String,
         dossieraction: String
     }
@@ -47,29 +46,21 @@ export default class extends Controller {
         //On lui attribut une bordure stylée
         elementCollection.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
         //Formulaire de saisie
-        const idFormulaireSaisie = elementCollection.firstElementChild.getAttribute("id");
-        const formulaire = document.getElementById(idFormulaireSaisie);
-        //Champ Text, considéré comme principal display
-        const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
-        var valeurDisplay = "Inconnu";
-        const champSaisieDisplay = document.getElementById(idChampDeVisualisation);
-        if (champSaisieDisplay != null) {
-            valeurDisplay = champSaisieDisplay.getAttribute("value");
-        }
-
-        //on cache le formulaire
+        const formulaire = document.getElementById(elementCollection.firstElementChild.getAttribute("id"));
         if (formulaire != null) {
+            //on cache le formulaire
             formulaire.setAttribute("class", "cacherComposant");
         }
-        //On lui charge d'autres elements utiles pour manipuler son contenu
-        this.setBarreDeTitre(valeurDisplay, formulaire, elementCollection, champSaisieDisplay);
+        //On construit la barre de titre qui transport les textes display principal et secondaire
+        this.setBarreDeTitre(formulaire, elementCollection);
     }
 
 
     /**
      * @param {int} idFormulaireSaisie 
+     * @param {HTMLElement} champDisplayPrincipal 
      */
-    parcourirFormulaire = (idFormulaireSaisie) => {
+    ecouterFormulaire = (idFormulaireSaisie, champDisplayPrincipal) => {
         if (idFormulaireSaisie != null) {
             const formulaireEncours = document.getElementById(idFormulaireSaisie);
             if (formulaireEncours != null) {
@@ -78,7 +69,7 @@ export default class extends Controller {
                 //parcours des elements du formulaire
                 champs.forEach(champ => {
                     //ecouter tout changement de valeur
-                    champ.addEventListener("change", (event) => this.enCasDeChangement(event, champ, formulaireEncours));
+                    champ.addEventListener("change", (event) => this.enCasDeChangement(event, champ, formulaireEncours, champDisplayPrincipal));
                 });
             }
         }
@@ -88,36 +79,89 @@ export default class extends Controller {
      * @param {Event} event 
      * @param {HTMLElement} champ 
      * @param {HTMLFormElement} formulaire 
+     * @param {HTMLElement} champDisplayPrincipal 
+     * 
      */
-    enCasDeChangement = (event, champ, formulaire) => {
-        console.log("\tFormulaire: " + formulaire.getAttribute("id"));
-        console.log("\t\tChamp " + champ.name + ", valeur = " + event.target.value + ", type = " + champ.getAttribute("type"));
+    enCasDeChangement = (event, champ, formulaire, champDisplayPrincipal) => {
+        event.preventDefault();
 
-        // champ.value = event.target.value;
-        champ.setAttribute("value", event.target.value);
-        //on affiche les champs sur la console
-        this.afficherChamps(formulaire);
+        // console.log("\tFormulaire: " + formulaire.getAttribute("id"));
+        // console.log("\t\tChamp " + champ.name + ", valeur = " + event.target.value + ", type = " + champ.getAttribute("type"));
+
+        switch (champ.getAttribute("type")) {
+            case "text":
+                champ.setAttribute("value", event.target.value);
+                break;
+            case "checkbox":
+                champ.setAttribute("checked", event.target.checked);
+                break;
+            default:
+                break;
+        }
+        console.log("Target: ", event.target);
+
+        //on actualise l'affichage sur le display
+        this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal);
         // console.log(formulaire);
     }
 
     /**
      * 
      * @param {HTMLFormElement} formulaire 
+     * @param {HTMLElement} champDisplayPrincipal 
+     * 
      */
-    afficherChamps = (formulaire) => {
+    actualiserDonneesDisplay = (formulaire, champDisplayPrincipal) => {
         if (formulaire != null) {
             const champs = formulaire.querySelectorAll('input, select, textarea, button');
-            console.log("********");
-            console.log("********");
-            console.log("*****" + formulaire.getAttribute('id') + "****");
+            // console.log("********");
+            // console.log("*****" + formulaire.getAttribute('id') + "****");
+            // champs.forEach(champ => {
+            //     console.log("\t\tId: " + champ.id);
+            //     console.log("\t\tType: " + champ.tagName.toLowerCase());
+            //     console.log("\t\tNom: " + champ.name);
+            //     console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
+            //     // console.log("\t\t*******");
+            //     // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
+            // });
+
+
+
+            //le premier champs de type Text à affecter au display principal
+            var texteDisplayPrincipal = "";
+            var idChampDisplayPrincipal = null;
             champs.forEach(champ => {
-                console.log("\t\tId: " + champ.id);
-                console.log("\t\tType: " + champ.tagName.toLowerCase());
-                console.log("\t\tNom: " + champ.name);
-                console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
-                // console.log("\t\t*******");
-                // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
-            });
+                if (champ.getAttribute('type') == "text") {
+                    idChampDisplayPrincipal = champ.getAttribute("id");
+                    texteDisplayPrincipal = champ.getAttribute("value");
+                }
+            })
+            champDisplayPrincipal.innerHTML = texteDisplayPrincipal;
+
+            //on cherche ensuite le reste pour affecter au display secondaire
+            var texteDisplaySecondaire = "";
+            var nbChampsSecondaire = 0;
+            champs.forEach(champ => {
+                if (champ.getAttribute('id') != idChampDisplayPrincipal) {
+                    switch (champ.getAttribute("type")) {
+                        case "text":
+                            texteDisplaySecondaire += champ.getAttribute("id") + ": " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + " | ";
+                            break;
+                        case "checkbox":
+                            texteDisplaySecondaire += champ.getAttribute("id") + ": Name = " + champ.getAttribute("name") + ", " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + "("+ champ.getAttribute("checked") +") |\n ";
+                            break;
+
+                        default:
+                            break;
+                    }
+                    nbChampsSecondaire++;
+                }
+            })
+
+            console.log("");
+            console.log("\tFormulaire: " + formulaire.getAttribute("id"));
+            console.log("\tTexte principal: " + texteDisplayPrincipal);
+            console.log("\tTexte secondaire (" + nbChampsSecondaire + "): \n" + texteDisplaySecondaire);
         }
     }
 
@@ -200,11 +244,9 @@ export default class extends Controller {
     /**
      * 
      * @param {HTMLElement} formulaire 
-     * @param {HTMLElement} champDeSaisieDisplay 
      * @param {HTMLElement} elementDeLaCollection 
-     * @param {string} valeurDisplay 
      */
-    setBarreDeTitre = (valeurDisplay, formulaire, elementDeLaCollection, champDeSaisieDisplay) => {
+    setBarreDeTitre = (formulaire, elementDeLaCollection) => {
         //creation du bouton supprimer
         const btnSupprimer = document.createElement("button");
         btnSupprimer.setAttribute('class', "btn border-0 btn-outline-danger");
@@ -226,7 +268,7 @@ export default class extends Controller {
         //creation du span
         const spanDisplayTexte = document.createElement("span");
         spanDisplayTexte.setAttribute("class", "fw-bold text-primary");
-        spanDisplayTexte.innerHTML = valeurDisplay;
+        spanDisplayTexte.innerHTML = "...";
 
         const spanDisplayIcon = document.createElement("span");
         spanDisplayIcon.setAttribute("class", "fw-bold text-primary");
@@ -239,17 +281,14 @@ export default class extends Controller {
         barreDeTitre.setAttribute("class", "navbar parent-a-options");
         //Ajout des elements de viesualisation au div
 
-
         //Description
         const spanDescriptionIcon = document.createElement("span");
         spanDescriptionIcon.setAttribute("class", "text-secondary");
         this.setIconSpanDescriptionDisplay(spanDescriptionIcon);
 
-
-        const spanDisplayDescription = document.createElement("span");
-        spanDisplayDescription.setAttribute("class", "text-secondary m-2");
-        spanDisplayDescription.innerHTML = "Brève description d'au moins 3 premiers paramètres de l'élémenet.";
-
+        const spanDisplaySecondaire = document.createElement("span");
+        spanDisplaySecondaire.setAttribute("class", "text-secondary m-2");
+        spanDisplaySecondaire.innerHTML = "Brève description d'au moins 3 premiers paramètres de l'élémenet.";
 
         const groupDisplay = document.createElement("span");
         groupDisplay.setAttribute("class", "");
@@ -257,13 +296,11 @@ export default class extends Controller {
         groupDisplay.append(spanDisplayTexte);
         groupDisplay.append(document.createElement("br"));
         groupDisplay.append(spanDescriptionIcon);
-        groupDisplay.append(spanDisplayDescription);
-
-        
+        groupDisplay.append(spanDisplaySecondaire);
 
         barreDeTitre.append(groupDisplay);
         barreDeTitre.append(barreOutilDisplay);
-
+        //on ecoute les clicks sur la barre de titre
         barreDeTitre.addEventListener('click', e => {
             e.preventDefault();
             // elementDeLaCollection.remove();
@@ -275,25 +312,16 @@ export default class extends Controller {
                 }
             }
         });
-
+        //on ecoute le bouton supprimer
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
         });
 
         elementDeLaCollection.append(barreDeTitre);
-
-        if (champDeSaisieDisplay != null) {
-            champDeSaisieDisplay.addEventListener("change", function (event) {
-                if (spanDisplayTexte != null) {
-                    spanDisplayTexte.innerHTML = event.target.value;
-                }
-            })
-        }
-
-        //On parcours le formulaire
-        this.parcourirFormulaire(formulaire.getAttribute('id'));
-
+        //On active les ecouteurs sur tous les champs du formulaire
+        this.ecouterFormulaire(formulaire.getAttribute('id'), spanDisplayTexte);
+        this.actualiserDonneesDisplay(formulaire, spanDisplayTexte);
         this.index++;
     }
 

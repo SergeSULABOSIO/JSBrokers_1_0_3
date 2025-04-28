@@ -84,7 +84,7 @@ class InviteType extends AbstractType
                     'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
                     'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
                     'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
+                    // 'data-form-collection-entites-view-field-value' => "nom",
                     'data-form-collection-entites-icone-value' => "role",
                     'data-form-collection-entites-dossieraction-value' => "1",  //1 si oui 0 si non
                 ],
