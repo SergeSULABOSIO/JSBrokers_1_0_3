@@ -46,21 +46,21 @@ export default class extends Controller {
     appliquerStyle(elementCollection) {
         //On lui attribut une bordure stylée
         elementCollection.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
+
         const idFormulaireSaisie = elementCollection.firstElementChild.getAttribute("id");
+        const formulaire = document.getElementById(idFormulaireSaisie);
+
         const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
         var valeurDisplay = "Inconnu";
         const champSaisieDisplay = document.getElementById(idChampDeVisualisation);
         if (champSaisieDisplay != null) {
             valeurDisplay = champSaisieDisplay.getAttribute("value");
         }
-        const formulaire = document.getElementById(idFormulaireSaisie);
-        
         console.log(formulaire);
         console.log(valeurDisplay);
 
-
+        //on cache le formulaire
         if (formulaire != null) {
-            //on cache le formulaire
             formulaire.setAttribute("class", "cacherComposant");
         }
         //On lui charge d'autres elements utiles pour manipuler son contenu
