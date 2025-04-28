@@ -46,10 +46,10 @@ export default class extends Controller {
     appliquerStyle(elementCollection) {
         //On lui attribut une bordure stylée
         elementCollection.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
-
+        //Formulaire de saisie
         const idFormulaireSaisie = elementCollection.firstElementChild.getAttribute("id");
         const formulaire = document.getElementById(idFormulaireSaisie);
-
+        //Champ Text, considéré comme principal display
         const idChampDeVisualisation = idFormulaireSaisie + "_" + this.viewFieldValue;
         var valeurDisplay = "Inconnu";
         const champSaisieDisplay = document.getElementById(idChampDeVisualisation);
@@ -57,7 +57,22 @@ export default class extends Controller {
             valeurDisplay = champSaisieDisplay.getAttribute("value");
         }
         console.log(formulaire);
-        console.log(valeurDisplay);
+        // console.log(valeurDisplay);
+        if (formulaire != null) {
+            const champs = formulaire.querySelectorAll('input, select, textarea, button');
+            //parcours des elements du formulaire
+            var i = 0;
+            console.log("***(" + i + ")********" + idFormulaireSaisie + "********");
+            champs.forEach(champ => {
+                console.log("\tID: " + champ.id);
+                console.log("\tType: " + champ.tagName.toLowerCase());
+                console.log("\tNom: " + champ.name);
+                console.log("\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
+                console.log("*******");
+                i++;
+                // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
+            });
+        }
 
         //on cache le formulaire
         if (formulaire != null) {
@@ -230,7 +245,7 @@ export default class extends Controller {
      * @param {HTMLElement} spanDisplayTexte 
      * @param {string} valeurDisplay 
      */
-    setIconSpanDisplay(spanDisplayTexte, valeurDisplay){
+    setIconSpanDisplay(spanDisplayTexte, valeurDisplay) {
         var dossier = "0";
         if (this.dossieractionValue != null) {
             dossier = this.dossieractionValue;
