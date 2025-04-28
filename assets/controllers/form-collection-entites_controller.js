@@ -54,6 +54,7 @@ export default class extends Controller {
             valeurDisplay = champSaisieDisplay.getAttribute("value");
         }
         const formulaire = document.getElementById(idFormulaireSaisie);
+        
         console.log(formulaire);
         console.log(valeurDisplay);
 
