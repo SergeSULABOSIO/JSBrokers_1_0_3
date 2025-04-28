@@ -56,7 +56,7 @@ export default class extends Controller {
         if (champSaisieDisplay != null) {
             valeurDisplay = champSaisieDisplay.getAttribute("value");
         }
-        
+
         //on cache le formulaire
         if (formulaire != null) {
             formulaire.setAttribute("class", "cacherComposant");
@@ -74,19 +74,49 @@ export default class extends Controller {
             const formulaireEncours = document.getElementById(idFormulaireSaisie);
             if (formulaireEncours != null) {
                 // console.log(formulaireEncours);
-
                 const champs = formulaireEncours.querySelectorAll('input, select, textarea, button');
                 //parcours des elements du formulaire
-                console.log("(" + this.index + ")***" + idFormulaireSaisie + "***");
                 champs.forEach(champ => {
-                    console.log("\t\tId: " + champ.id);
-                    console.log("\t\tType: " + champ.tagName.toLowerCase());
-                    console.log("\t\tNom: " + champ.name);
-                    console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
-                    console.log("\t\t*******");
-                    // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
+                    //ecouter tout changement de valeur
+                    champ.addEventListener("change", (event) => this.enCasDeChangement(event, champ, formulaireEncours));
                 });
             }
+        }
+    }
+
+    /**
+     * @param {Event} event 
+     * @param {HTMLElement} champ 
+     * @param {HTMLFormElement} formulaire 
+     */
+    enCasDeChangement = (event, champ, formulaire) => {
+        console.log("\tFormulaire: " + formulaire.getAttribute("id"));
+        console.log("\t\tChamp " + champ.name + ", valeur = " + event.target.value);
+
+        // champ.value = event.target.value;
+        champ.setAttribute("value", event.target.value);
+        //on affiche les champs sur la console
+        // this.afficherChamps(formulaire);
+    }
+
+    /**
+     * 
+     * @param {HTMLFormElement} formulaire 
+     */
+    afficherChamps = (formulaire) => {
+        if (formulaire != null) {
+            const champs = formulaire.querySelectorAll('input, select, textarea, button');
+            console.log("********");
+            console.log("********");
+            console.log("*****" + formulaire.getAttribute('id') + "****");
+            champs.forEach(champ => {
+                console.log("\t\tId: " + champ.id);
+                console.log("\t\tType: " + champ.tagName.toLowerCase());
+                console.log("\t\tNom: " + champ.name);
+                console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
+                // console.log("\t\t*******");
+                // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
+            });
         }
     }
 
