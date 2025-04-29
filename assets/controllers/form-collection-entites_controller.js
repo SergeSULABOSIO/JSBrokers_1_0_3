@@ -292,8 +292,8 @@ export default class extends Controller {
         spanDisplayIcon.setAttribute("class", "fw-bold text-primary");
 
         //Chargement de l'icone, choix entre serveur ou image stockée dans la mémoire locale
-        this.setIconSpanDisplay(spanDisplayIcon, "");
-
+        this.setIconObjet(spanDisplayIcon, "");
+        
         //creation du div
         const barreDeTitre = document.createElement("nav");
         barreDeTitre.setAttribute("class", "navbar parent-a-options");
@@ -302,7 +302,7 @@ export default class extends Controller {
         //Description
         const spanDescriptionIcon = document.createElement("span");
         spanDescriptionIcon.setAttribute("class", "text-secondary");
-        this.setIconSpanDescriptionDisplay(spanDescriptionIcon);
+        this.setIconDescription(spanDescriptionIcon);
 
         const spanDisplaySecondaire = document.createElement("span");
         spanDisplaySecondaire.setAttribute("class", "text-secondary m-2");
@@ -344,33 +344,37 @@ export default class extends Controller {
     }
 
     /**
-     * 
-     * @param {HTMLElement} spanDisplayTexte 
+     * @param {HTMLElement} htmlElement 
      * @param {string} valeurDisplay 
      */
-    setIconSpanDisplay(spanDisplayTexte, valeurDisplay) {
+    setIconObjet(htmlElement, texteAccompagnement) {
         var dossier = this.donneesInitiales.dossieractions || "0";
         var nomIcone = this.donneesInitiales.icone || "invite";
         var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/19");
         if (iconeDisplay != null) {
-            spanDisplayTexte.innerHTML = iconeDisplay + " " + valeurDisplay; //Ok!
+            htmlElement.innerHTML = iconeDisplay + " " + texteAccompagnement; //Ok!
         } else {
-            spanDisplayTexte.innerHTML = this.downloadIcone(spanDisplayTexte, " " + valeurDisplay, dossier, nomIcone, 19);
-            spanDisplayTexte.innerHTML = valeurDisplay;
+            htmlElement.innerHTML = this.downloadIcone(htmlElement, " " + texteAccompagnement, dossier, nomIcone, 19);
+            htmlElement.innerHTML = texteAccompagnement;
         }
     }
 
-    setIconSpanDescriptionDisplay(spanDisplayTexte) {
+    /**
+     * @param {HTMLElement} htmlElement
+     */
+    setIconDescription(htmlElement) {
         var dossier = "1";
         var nomIcone = "description";
         var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/16");
         if (iconeDisplay != null) {
-            spanDisplayTexte.innerHTML = iconeDisplay; //Ok!
+            htmlElement.innerHTML = iconeDisplay; //Ok!
         } else {
-            spanDisplayTexte.innerHTML = this.downloadIcone(spanDisplayTexte, "", dossier, nomIcone, 16);
-            spanDisplayTexte.innerHTML = "...";
+            htmlElement.innerHTML = this.downloadIcone(htmlElement, "", dossier, nomIcone, 16);
+            htmlElement.innerHTML = "...";
         }
     }
+
+    
 
 
     /**
