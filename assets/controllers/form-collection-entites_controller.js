@@ -102,7 +102,7 @@ export default class extends Controller {
      * @param {htmlElement} formulaire 
      */
     setIconBoutonEnregistrer = (formulaire) => {
-        console.log("\tMise de l'icone sur le bouton Enregister");
+        // console.log("\tMise de l'icone sur le bouton Enregister");
         if (formulaire != null) {
             const champs = formulaire.querySelectorAll('input, select, textarea, button');
             champs.forEach(champ => {
