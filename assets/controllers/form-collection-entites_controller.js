@@ -11,7 +11,7 @@ export default class extends Controller {
     connect() {
         this.donneesInitiales = JSON.parse(this.dataValue);
         console.log(this.donneesInitiales);
-        
+
         //DECLARATION DES VARIABLES
         this.tabDownloadedIcones = new Map();
         this.index = 0;
@@ -149,6 +149,13 @@ export default class extends Controller {
                     }
                 })
             }
+            //On supprime le champ dont la valeur est null ou vide (pour le cas de champs dont la valeur est un tableau)
+            for (const [nomDuChamp, valeurDuChamp] of mapChamps){
+                if (valeurDuChamp == null || valeurDuChamp.length == 0 || valeurDuChamp == "") {
+                    console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
+                }
+            }
+
             //Chargement des données sur le display
             let isPremier = true;
             let maxLengthSecondaire = 4;
@@ -163,7 +170,12 @@ export default class extends Controller {
                     isPremier = false;
                 } else {
                     if (maxLengthSecondaire != 0) {
-                        champDisplaySecondaire.innerHTML += nomDuChamp + "(" + valeurDuChamp + ") * ";
+                        if (valeurDuChamp == null || valeurDuChamp.length == 0 || valeurDuChamp == "") {
+                            console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
+                            champDisplaySecondaire.innerHTML += "";
+                        }else{
+                            champDisplaySecondaire.innerHTML += " • " + nomDuChamp + "[" + valeurDuChamp + "]";
+                        }
                         maxLengthSecondaire--;
                     }
                 }
