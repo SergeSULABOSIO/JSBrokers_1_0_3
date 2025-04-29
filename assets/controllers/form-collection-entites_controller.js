@@ -48,6 +48,9 @@ export default class extends Controller {
             //on cache le formulaire
             formulaire.setAttribute("class", "cacherComposant");
         }
+        //On met l'icone sur le bouton Enregistrer
+        this.setIconBoutonEnregistrer(formulaire);
+
         //On construit la barre de titre qui transport les textes display principal et secondaire
         this.setBarreDeTitre(formulaire, elementCollection);
     }
@@ -79,7 +82,6 @@ export default class extends Controller {
      * @param {HTMLFormElement} formulaire 
      * @param {HTMLElement} champDisplayPrincipal 
      * @param {HTMLElement} champDisplaySecondaire
-     * 
      */
     enCasDeChangement = (event, champ, formulaire, champDisplayPrincipal, champDisplaySecondaire) => {
         event.preventDefault();
@@ -95,12 +97,33 @@ export default class extends Controller {
         this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal, champDisplaySecondaire);
     }
 
+
     /**
-     * 
+     * @param {htmlElement} formulaire 
+     */
+    setIconBoutonEnregistrer = (formulaire) => {
+        console.log("\tMise de l'icone sur le bouton Enregister");
+        if (formulaire != null) {
+            const champs = formulaire.querySelectorAll('input, select, textarea, button');
+            champs.forEach(champ => {
+                if (champ.getAttribute("type") == "submit") {
+                    // console.log("Bonton ** ", champ);
+                    var iconeSave = this.getIconeLocale('/admin/entreprise/geticon/1/save/15');
+                    if (iconeSave != null) {
+                        champ.innerHTML = iconeSave + " " + champ.innerHTML; //Ok!
+                    } else {
+                        champ.innerHTML = this.downloadIcone(champ, " " + champ.innerHTML, 1, "save", 15);
+                    }
+                }
+            });
+        }
+    }
+
+
+    /**
      * @param {HTMLFormElement} formulaire 
      * @param {HTMLElement} champDisplayPrincipal 
      * @param {HTMLElement} champDisplaySecondaire 
-     * 
      */
     actualiserDonneesDisplay = (formulaire, champDisplayPrincipal, champDisplaySecondaire) => {
         if (formulaire != null) {
@@ -150,7 +173,7 @@ export default class extends Controller {
                 })
             }
             //On supprime le champ dont la valeur est null ou vide (pour le cas de champs dont la valeur est un tableau)
-            for (const [nomDuChamp, valeurDuChamp] of mapChamps){
+            for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
                 if (valeurDuChamp == null || valeurDuChamp.length == 0 || valeurDuChamp == "") {
                     console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
                 }
@@ -163,7 +186,7 @@ export default class extends Controller {
                 if (isPremier) {
                     if (valeurDuChamp != "") {
                         champDisplayPrincipal.innerHTML = valeurDuChamp;
-                    }else{
+                    } else {
                         champDisplayPrincipal.innerHTML = "Element n°" + this.index;
                     }
                     champDisplaySecondaire.innerHTML = "";
@@ -173,7 +196,7 @@ export default class extends Controller {
                         if (valeurDuChamp == null || valeurDuChamp.length == 0 || valeurDuChamp == "") {
                             console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
                             champDisplaySecondaire.innerHTML += "";
-                        }else{
+                        } else {
                             champDisplaySecondaire.innerHTML += " • " + nomDuChamp + "[" + valeurDuChamp + "]";
                         }
                         maxLengthSecondaire--;
@@ -293,7 +316,7 @@ export default class extends Controller {
 
         //Chargement de l'icone, choix entre serveur ou image stockée dans la mémoire locale
         this.setIconObjet(spanDisplayIcon, "");
-        
+
         //creation du div
         const barreDeTitre = document.createElement("nav");
         barreDeTitre.setAttribute("class", "navbar parent-a-options");
@@ -374,7 +397,7 @@ export default class extends Controller {
         }
     }
 
-    
+
 
 
     /**
