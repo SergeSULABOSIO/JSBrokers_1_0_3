@@ -109,24 +109,12 @@ export default class extends Controller {
      * 
      * @param {HTMLFormElement} formulaire 
      * @param {HTMLElement} champDisplayPrincipal 
+     * @param {HTMLElement} champDisplaySecondaire 
      * 
      */
-    actualiserDonneesDisplay = (formulaire, champDisplayPrincipal) => {
+    actualiserDonneesDisplay = (formulaire, champDisplayPrincipal, champDisplaySecondaire) => {
         if (formulaire != null) {
             const champs = formulaire.querySelectorAll('input, select, textarea, button');
-            // console.log("********");
-            // console.log("*****" + formulaire.getAttribute('id') + "****");
-            // champs.forEach(champ => {
-            //     console.log("\t\tId: " + champ.id);
-            //     console.log("\t\tType: " + champ.tagName.toLowerCase());
-            //     console.log("\t\tNom: " + champ.name);
-            //     console.log("\t\tValeur: " + document.getElementById(champ.id).getAttribute("value"));
-            //     // console.log("\t\t*******");
-            //     // Vous pouvez accéder à d'autres propriétés comme champ.value, champ.type, etc.
-            // });
-
-
-
             //le premier champs de type Text à affecter au display principal
             var texteDisplayPrincipal = "";
             var idChampDisplayPrincipal = null;
@@ -157,11 +145,11 @@ export default class extends Controller {
                     nbChampsSecondaire++;
                 }
             })
-
-            console.log("");
-            console.log("\tFormulaire: " + formulaire.getAttribute("id"));
-            console.log("\tTexte principal: " + texteDisplayPrincipal);
-            console.log("\tTexte secondaire (" + nbChampsSecondaire + "): \n" + texteDisplaySecondaire);
+            champDisplaySecondaire.innerHTML = texteDisplaySecondaire;
+            // console.log("");
+            // console.log("\tFormulaire: " + formulaire.getAttribute("id"));
+            // console.log("\tTexte principal: " + texteDisplayPrincipal);
+            // console.log("\tTexte secondaire (" + nbChampsSecondaire + "): \n" + texteDisplaySecondaire);
         }
     }
 
