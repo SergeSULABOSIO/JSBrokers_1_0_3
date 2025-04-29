@@ -87,24 +87,15 @@ export default class extends Controller {
     enCasDeChangement = (event, champ, formulaire, champDisplayPrincipal, champDisplaySecondaire) => {
         event.preventDefault();
 
-        // console.log("\tFormulaire: " + formulaire.getAttribute("id"));
-        // console.log("\t\tChamp " + champ.name + ", valeur = " + event.target.value + ", type = " + champ.getAttribute("type"));
-
-        switch (champ.getAttribute("type")) {
-            case "text":
-                champ.setAttribute("value", event.target.value);
-                break;
-            case "checkbox":
-                champ.setAttribute("checked", event.target.checked);
-                break;
-            default:
-                break;
+        if (champ.getAttribute("type") == "text") {
+            champ.setAttribute("value", event.target.value);
+        }
+        if (champ.getAttribute("type") == "checkbox") {
+            champ.setAttribute("checked", event.target.checked);
         }
         console.log("Target: ", event.target);
-
         //on actualise l'affichage sur le display
         this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal, champDisplaySecondaire);
-        // console.log(formulaire);
     }
 
     /**
@@ -118,45 +109,52 @@ export default class extends Controller {
         if (formulaire != null) {
             const champs = formulaire.querySelectorAll('input, select, textarea, button');
 
-            //On doit d'abord identifier les deux premiers champs du formuaire.
+            //Identification des noms des champs.
             var mapChamps = new Map();
             champs.forEach(champ => {
-                var name = champ.getAttribute("name");
-                var value = champ.getAttribute("value");
                 var id = champ.getAttribute("id");
-                var checked = champ.getAttribute("checked");
-
                 var tabData = id.split("_");
-
                 var nomChamp = "";
                 if (tabData.length != 0) {
-                    switch (champ.getAttribute("type")) {
-                        case "text":
-                            nomChamp = tabData[tabData.length - 1];
-                            if (mapChamps.get(nomChamp) == null) {
-                                mapChamps.set(nomChamp, new Map());
-                            }
-                            break;
-
-                        case "checkbox":
-                            nomChamp = tabData[tabData.length - 2];
-                            if (mapChamps.get(nomChamp) == null) {
-                                mapChamps.set(nomChamp, new Map());
-                            }
-                            break;
-
-                        default:    
-                            //On ne fait rien par défaut
-                            break;
+                    if (champ.getAttribute("type") == "text") {
+                        nomChamp = tabData[tabData.length - 1];
+                        if (mapChamps.get(nomChamp) == null) {
+                            mapChamps.set(nomChamp, []);
+                        }
+                    }
+                    if (champ.getAttribute("type") == "checkbox") {
+                        nomChamp = tabData[tabData.length - 2];
+                        if (mapChamps.get(nomChamp) == null) {
+                            mapChamps.set(nomChamp, []);
+                        }
                     }
                 }
-                // console.log(champ);
-                // console.log(id, name, value, checked, champ);
-                // tabChamps.set(name, champ.getAttribute("value"))
             })
 
-            for (const [clé, valeur] of mapChamps) {
-                console.log(`\tClé : ${clé}, Valeur : ${valeur}`);
+            //Récupération des valeurs des champs
+            for (const [nomDuChamp, tabvaleurDuChamp] of mapChamps) {
+                champs.forEach(champ => {
+                    // var name = champ.getAttribute("name");
+                    var value = champ.getAttribute("value");
+                    var id = champ.getAttribute("id");
+                    var checked = champ.getAttribute("checked");
+
+                    if (id.indexOf("_" + nomDuChamp) != -1) {
+                        if (champ.getAttribute("type") == "text") {
+                            tabvaleurDuChamp.push(value);
+                        }
+                        if (champ.getAttribute("type") == "checkbox") {
+                            if (checked == "checked" || checked == "true") {
+                                // console.log("J'AI TROUVE LE CHAMP " + nomDuChamp + "!" + id + "!" + value + "|" + checked);
+                                tabvaleurDuChamp.push(value);
+                            }
+                        }
+                    }
+                })
+            }
+
+            for (const [nomDuChamp, tabvaleurDuChamp] of mapChamps) {
+                console.log("\tChamp: " + nomDuChamp + ", valeur: " + tabvaleurDuChamp);
             }
 
 
