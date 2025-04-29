@@ -11,7 +11,7 @@ export default class extends Controller {
     connect() {
         this.donneesInitiales = JSON.parse(this.dataValue);
         console.log(this.donneesInitiales);
-
+        
         //DECLARATION DES VARIABLES
         this.tabDownloadedIcones = new Map();
         this.index = 0;
