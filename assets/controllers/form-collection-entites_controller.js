@@ -4,17 +4,14 @@ export default class extends Controller {
 
     //Les données passées depuis le template HTML à utiliser à travers tout le controlleur
     static values = {
-        addLabel: String,
-        deleteLabel: String,
-        editLabel: String,
-        closeLabel: String,
-        newElementLabel: String,
-        icone: String,
-        dossieraction: String
+        data: String
     }
 
 
     connect() {
+        this.donneesInitiales = JSON.parse(this.dataValue);
+        console.log(this.donneesInitiales);
+
         //DECLARATION DES VARIABLES
         this.tabDownloadedIcones = new Map();
         this.index = 0;
@@ -157,19 +154,20 @@ export default class extends Controller {
             let maxLengthSecondaire = 4;
             for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
                 if (isPremier) {
-                    champDisplayPrincipal.innerHTML = valeurDuChamp;
+                    if (valeurDuChamp != "") {
+                        champDisplayPrincipal.innerHTML = valeurDuChamp;
+                    }else{
+                        champDisplayPrincipal.innerHTML = "Element n°" + this.index;
+                    }
                     champDisplaySecondaire.innerHTML = "";
                     isPremier = false;
-                }else{
+                } else {
                     if (maxLengthSecondaire != 0) {
                         champDisplaySecondaire.innerHTML += nomDuChamp + "(" + valeurDuChamp + ") * ";
                         maxLengthSecondaire--;
                     }
                 }
             }
-            // for (const [nomDuChamp, tabvaleurDuChamp] of mapChamps) {
-            //     console.log("\tChamp: " + nomDuChamp + ", valeur: " + tabvaleurDuChamp);
-            // }
         }
     }
 
@@ -184,9 +182,9 @@ export default class extends Controller {
         const btnAjouterElementCollection = document.createElement("button");
         btnAjouterElementCollection.setAttribute('class', "btn btn-outline-secondary");
         btnAjouterElementCollection.setAttribute('type', "button");
-        btnAjouterElementCollection.innerHTML = this.addLabelValue || "Add";
+        btnAjouterElementCollection.innerHTML = this.donneesInitiales.addLabel || "Add";
         //definir l'icone
-        this.downloadIcone(btnAjouterElementCollection, " " + this.addLabelValue || "Add", 1, "add", 20);
+        this.downloadIcone(btnAjouterElementCollection, " " + this.donneesInitiales.addLabel || "Add", 1, "add", 20);
         //definir l'ecouteur de clic
         btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
         //ajoute le bouton en bas de la collection
@@ -266,7 +264,7 @@ export default class extends Controller {
             btnSupprimer.innerHTML = iconeSupprimer; //Ok!
         } else {
             btnSupprimer.innerHTML = this.downloadIcone(btnSupprimer, "", 1, "delete", 18);
-            btnSupprimer.innerHTML = this.deleteLabelValue || "Delete";
+            btnSupprimer.innerHTML = this.donneesInitiales.deleteLabel || "Delete";
         }
 
         const barreOutilDisplay = document.createElement("div");
@@ -339,14 +337,8 @@ export default class extends Controller {
      * @param {string} valeurDisplay 
      */
     setIconSpanDisplay(spanDisplayTexte, valeurDisplay) {
-        var dossier = "0";
-        if (this.dossieractionValue != null) {
-            dossier = this.dossieractionValue;
-        }
-        var nomIcone = "invite";
-        if (this.iconeValue != null) {
-            nomIcone = this.iconeValue;
-        }
+        var dossier = this.donneesInitiales.dossieractions || "0";
+        var nomIcone = this.donneesInitiales.icone || "invite";
         var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/19");
         if (iconeDisplay != null) {
             spanDisplayTexte.innerHTML = iconeDisplay + " " + valeurDisplay; //Ok!

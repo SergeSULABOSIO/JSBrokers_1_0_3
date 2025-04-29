@@ -79,14 +79,23 @@ class InviteType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
+                    // 'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
+                    // 'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
+                    // 'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
+                    // 'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
+                    // 'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
                     // 'data-form-collection-entites-view-field-value' => "nom",
-                    'data-form-collection-entites-icone-value' => "role",
-                    'data-form-collection-entites-dossieraction-value' => "1",  //1 si oui 0 si non
+                    // 'data-form-collection-entites-icone-value' => "role",
+                    // 'data-form-collection-entites-dossieraction-value' => "1",  //1 si oui 0 si non
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        // 'editLabel' => $this->translatorInterface->trans("commom_edit"),
+                        // 'closeLabel' => $this->translatorInterface->trans("commom_close"),
+                        // 'newElementLabel' => $this->translatorInterface->trans("commom_new_element"),
+                        'icone' => "role",
+                        'dossieractions' => 1, //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                    ]),
                 ],
             ])
 
