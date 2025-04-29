@@ -152,61 +152,24 @@ export default class extends Controller {
                     }
                 })
             }
-
-            for (const [nomDuChamp, tabvaleurDuChamp] of mapChamps) {
-                console.log("\tChamp: " + nomDuChamp + ", valeur: " + tabvaleurDuChamp);
+            //Chargement des données sur le display
+            let isPremier = true;
+            let maxLengthSecondaire = 4;
+            for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
+                if (isPremier) {
+                    champDisplayPrincipal.innerHTML = valeurDuChamp;
+                    champDisplaySecondaire.innerHTML = "";
+                    isPremier = false;
+                }else{
+                    if (maxLengthSecondaire != 0) {
+                        champDisplaySecondaire.innerHTML += nomDuChamp + "(" + valeurDuChamp + ") * ";
+                        maxLengthSecondaire--;
+                    }
+                }
             }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            // //le premier champs de type Text à affecter au display principal
-            // var texteDisplayPrincipal = "";
-            // var idChampDisplayPrincipal = null;
-            // champs.forEach(champ => {
-            //     if (champ.getAttribute('type') == "text") {
-            //         idChampDisplayPrincipal = champ.getAttribute("id");
-            //         texteDisplayPrincipal = champ.getAttribute("value");
-            //     }
-            // })
-            // champDisplayPrincipal.innerHTML = texteDisplayPrincipal;
-
-            // //on cherche ensuite le reste pour affecter au display secondaire
-            // var texteDisplaySecondaire = "";
-            // var nbChampsSecondaire = 0;
-            // champs.forEach(champ => {
-            //     if (champ.getAttribute('id') != idChampDisplayPrincipal) {
-            //         switch (champ.getAttribute("type")) {
-            //             case "text":
-            //                 texteDisplaySecondaire += champ.getAttribute("id") + ": " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + " | ";
-            //                 break;
-            //             case "checkbox":
-            //                 texteDisplaySecondaire += champ.getAttribute("id") + ": Name = " + champ.getAttribute("name") + ", " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + "("+ champ.getAttribute("checked") +") |\n ";
-            //                 break;
-
-            //             default:
-            //                 break;
-            //         }
-            //         nbChampsSecondaire++;
-            //     }
-            // })
-            // champDisplaySecondaire.innerHTML = "Texte secondaire ici ..." + texteDisplayPrincipal;
+            // for (const [nomDuChamp, tabvaleurDuChamp] of mapChamps) {
+            //     console.log("\tChamp: " + nomDuChamp + ", valeur: " + tabvaleurDuChamp);
+            // }
         }
     }
 
