@@ -59,8 +59,9 @@ export default class extends Controller {
     /**
      * @param {int} idFormulaireSaisie 
      * @param {HTMLElement} champDisplayPrincipal 
+     * @param {HTMLElement} champDisplaySecondaire 
      */
-    ecouterFormulaire = (idFormulaireSaisie, champDisplayPrincipal) => {
+    ecouterFormulaire = (idFormulaireSaisie, champDisplayPrincipal, champDisplaySecondaire) => {
         if (idFormulaireSaisie != null) {
             const formulaireEncours = document.getElementById(idFormulaireSaisie);
             if (formulaireEncours != null) {
@@ -69,7 +70,7 @@ export default class extends Controller {
                 //parcours des elements du formulaire
                 champs.forEach(champ => {
                     //ecouter tout changement de valeur
-                    champ.addEventListener("change", (event) => this.enCasDeChangement(event, champ, formulaireEncours, champDisplayPrincipal));
+                    champ.addEventListener("change", (event) => this.enCasDeChangement(event, champ, formulaireEncours, champDisplayPrincipal, champDisplaySecondaire));
                 });
             }
         }
@@ -80,9 +81,10 @@ export default class extends Controller {
      * @param {HTMLElement} champ 
      * @param {HTMLFormElement} formulaire 
      * @param {HTMLElement} champDisplayPrincipal 
+     * @param {HTMLElement} champDisplaySecondaire
      * 
      */
-    enCasDeChangement = (event, champ, formulaire, champDisplayPrincipal) => {
+    enCasDeChangement = (event, champ, formulaire, champDisplayPrincipal, champDisplaySecondaire) => {
         event.preventDefault();
 
         // console.log("\tFormulaire: " + formulaire.getAttribute("id"));
@@ -101,7 +103,7 @@ export default class extends Controller {
         console.log("Target: ", event.target);
 
         //on actualise l'affichage sur le display
-        this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal);
+        this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal, champDisplaySecondaire);
         // console.log(formulaire);
     }
 
@@ -115,41 +117,98 @@ export default class extends Controller {
     actualiserDonneesDisplay = (formulaire, champDisplayPrincipal, champDisplaySecondaire) => {
         if (formulaire != null) {
             const champs = formulaire.querySelectorAll('input, select, textarea, button');
-            //le premier champs de type Text à affecter au display principal
-            var texteDisplayPrincipal = "";
-            var idChampDisplayPrincipal = null;
-            champs.forEach(champ => {
-                if (champ.getAttribute('type') == "text") {
-                    idChampDisplayPrincipal = champ.getAttribute("id");
-                    texteDisplayPrincipal = champ.getAttribute("value");
-                }
-            })
-            champDisplayPrincipal.innerHTML = texteDisplayPrincipal;
 
-            //on cherche ensuite le reste pour affecter au display secondaire
-            var texteDisplaySecondaire = "";
-            var nbChampsSecondaire = 0;
+            //On doit d'abord identifier les deux premiers champs du formuaire.
+            var mapChamps = new Map();
             champs.forEach(champ => {
-                if (champ.getAttribute('id') != idChampDisplayPrincipal) {
+                var name = champ.getAttribute("name");
+                var value = champ.getAttribute("value");
+                var id = champ.getAttribute("id");
+                var checked = champ.getAttribute("checked");
+
+                var tabData = id.split("_");
+
+                var nomChamp = "";
+                if (tabData.length != 0) {
                     switch (champ.getAttribute("type")) {
                         case "text":
-                            texteDisplaySecondaire += champ.getAttribute("id") + ": " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + " | ";
-                            break;
-                        case "checkbox":
-                            texteDisplaySecondaire += champ.getAttribute("id") + ": Name = " + champ.getAttribute("name") + ", " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + "("+ champ.getAttribute("checked") +") |\n ";
+                            nomChamp = tabData[tabData.length - 1];
+                            if (mapChamps.get(nomChamp) == null) {
+                                mapChamps.set(nomChamp, new Map());
+                            }
                             break;
 
-                        default:
+                        case "checkbox":
+                            nomChamp = tabData[tabData.length - 2];
+                            if (mapChamps.get(nomChamp) == null) {
+                                mapChamps.set(nomChamp, new Map());
+                            }
+                            break;
+
+                        default:    
+                            //On ne fait rien par défaut
                             break;
                     }
-                    nbChampsSecondaire++;
                 }
+                // console.log(champ);
+                // console.log(id, name, value, checked, champ);
+                // tabChamps.set(name, champ.getAttribute("value"))
             })
-            champDisplaySecondaire.innerHTML = texteDisplaySecondaire;
-            // console.log("");
-            // console.log("\tFormulaire: " + formulaire.getAttribute("id"));
-            // console.log("\tTexte principal: " + texteDisplayPrincipal);
-            // console.log("\tTexte secondaire (" + nbChampsSecondaire + "): \n" + texteDisplaySecondaire);
+
+            for (const [clé, valeur] of mapChamps) {
+                console.log(`\tClé : ${clé}, Valeur : ${valeur}`);
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            // //le premier champs de type Text à affecter au display principal
+            // var texteDisplayPrincipal = "";
+            // var idChampDisplayPrincipal = null;
+            // champs.forEach(champ => {
+            //     if (champ.getAttribute('type') == "text") {
+            //         idChampDisplayPrincipal = champ.getAttribute("id");
+            //         texteDisplayPrincipal = champ.getAttribute("value");
+            //     }
+            // })
+            // champDisplayPrincipal.innerHTML = texteDisplayPrincipal;
+
+            // //on cherche ensuite le reste pour affecter au display secondaire
+            // var texteDisplaySecondaire = "";
+            // var nbChampsSecondaire = 0;
+            // champs.forEach(champ => {
+            //     if (champ.getAttribute('id') != idChampDisplayPrincipal) {
+            //         switch (champ.getAttribute("type")) {
+            //             case "text":
+            //                 texteDisplaySecondaire += champ.getAttribute("id") + ": " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + " | ";
+            //                 break;
+            //             case "checkbox":
+            //                 texteDisplaySecondaire += champ.getAttribute("id") + ": Name = " + champ.getAttribute("name") + ", " + champ.getAttribute("type") + "=" + champ.getAttribute("value") + "("+ champ.getAttribute("checked") +") |\n ";
+            //                 break;
+
+            //             default:
+            //                 break;
+            //         }
+            //         nbChampsSecondaire++;
+            //     }
+            // })
+            // champDisplaySecondaire.innerHTML = "Texte secondaire ici ..." + texteDisplayPrincipal;
         }
     }
 
@@ -308,8 +367,8 @@ export default class extends Controller {
 
         elementDeLaCollection.append(barreDeTitre);
         //On active les ecouteurs sur tous les champs du formulaire
-        this.ecouterFormulaire(formulaire.getAttribute('id'), spanDisplayTexte);
-        this.actualiserDonneesDisplay(formulaire, spanDisplayTexte);
+        this.ecouterFormulaire(formulaire.getAttribute('id'), spanDisplayTexte, spanDisplaySecondaire);
+        this.actualiserDonneesDisplay(formulaire, spanDisplayTexte, spanDisplaySecondaire);
         this.index++;
     }
 
