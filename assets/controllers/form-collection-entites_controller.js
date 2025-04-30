@@ -20,7 +20,10 @@ export default class extends Controller {
         // console.log("Nombre d'elements existants = " + this.nbElement);
 
         this.stylerElementsDeLaCollection(this.collection);
-        this.setBoutonAjouter(this.collection);
+        if (this.donneesInitiales.tailleMax != -1) {
+            this.setBoutonAjouter(this.collection);
+        }
+        this.setBlocAlert(this.collection);
     }
 
 
@@ -41,7 +44,7 @@ export default class extends Controller {
      */
     appliquerStyle(elementCollection) {
         //On lui attribut une bordure stylée
-        elementCollection.setAttribute('class', "shadow-sm rounded mb-2 sensible bg-white");
+        elementCollection.setAttribute('class', "shadow-sm rounded mb-2 sensible");
         //Formulaire de saisie
         const formulaire = document.getElementById(elementCollection.firstElementChild.getAttribute("id"));
         if (formulaire != null) {
@@ -224,6 +227,23 @@ export default class extends Controller {
         btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
         //ajoute le bouton en bas de la collection
         objetCollection.append(btnAjouterElementCollection);
+    }
+
+
+    setBlocAlert = (objetCollection) => {
+        var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection.";
+        if (this.donneesInitiales.tailleMax == this.index) {
+            
+        }
+        console.log("Taille Max: " + this.donneesInitiales.tailleMax, "Index: " + this.index);
+        var blocAlert = document.createElement("small");
+        var spanAlert = document.createElement("span");
+        spanAlert.setAttribute('class', "text-danger m-2 fw-italic");
+        this.downloadIcone(spanAlert, " " + messageAlert, 1, "alert", 15);
+        spanAlert.innerHTML = messageAlert;
+        
+        blocAlert.append(spanAlert);
+        objetCollection.append(blocAlert);
     }
 
 

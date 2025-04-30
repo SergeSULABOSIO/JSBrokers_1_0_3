@@ -20,7 +20,7 @@ a:active {
 }
 
 .sensible:hover {
-  background-color: lightgray;
+  background-color: #ECECEC;
   border: 4px solid darkgray;  /* Bordure grise claire par défaut */
 }
 
