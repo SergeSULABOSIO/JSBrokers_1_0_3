@@ -84,7 +84,7 @@ class InviteType extends AbstractType
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "role",
                         'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,  //Nombre maximal d'éléments que cette collection est sensé permettre de créer,
+                        'tailleMax' => 3,  //Nombre maximal d'éléments que cette collection est sensé permettre de créer,
                         //Indiquez tailleMax => -1 si on peut ajouter les éléments à l'infini.
                     ]),
                 ],

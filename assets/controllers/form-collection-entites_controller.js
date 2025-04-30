@@ -6,13 +6,16 @@ export default class extends Controller {
     static values = {
         data: String
     }
-
-
+    
+    
     connect() {
         this.donneesInitiales = JSON.parse(this.dataValue);
         console.log(this.donneesInitiales);
-
+        
         //DECLARATION DES VARIABLES
+        this.blocAlert = document.createElement("small");
+        this.spanAlert = document.createElement("span");
+        this.btnAjouterElementCollection = document.createElement("button");
         this.tabDownloadedIcones = new Map();
         this.index = 0;
         this.collection = this.element;
@@ -20,7 +23,8 @@ export default class extends Controller {
         // console.log("Nombre d'elements existants = " + this.nbElement);
 
         this.stylerElementsDeLaCollection(this.collection);
-        if (this.donneesInitiales.tailleMax != -1) {
+
+        if (this.canAddElementDansCollection()) {
             this.setBoutonAjouter(this.collection);
         }
         this.setBlocAlert(this.collection);
@@ -216,38 +220,63 @@ export default class extends Controller {
      * @param {HTMLElement} objetCollection
     */
     setBoutonAjouter = (objetCollection) => {
-        //creation du bouton
-        const btnAjouterElementCollection = document.createElement("button");
-        btnAjouterElementCollection.setAttribute('class', "btn btn-outline-secondary");
-        btnAjouterElementCollection.setAttribute('type', "button");
-        btnAjouterElementCollection.innerHTML = this.donneesInitiales.addLabel || "Add";
-        //definir l'icone
-        this.downloadIcone(btnAjouterElementCollection, " " + this.donneesInitiales.addLabel || "Add", 1, "add", 20);
-        //definir l'ecouteur de clic
-        btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
-        //ajoute le bouton en bas de la collection
-        objetCollection.append(btnAjouterElementCollection);
-    }
-
-
-    setBlocAlert = (objetCollection) => {
-        var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection.";
-        if (this.donneesInitiales.tailleMax == this.index) {
-            messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite défini (" + this.donneesInitiales.tailleMax + ") est atteinte.";
+        if (this.canAddElementDansCollection()) {
+            this.btnAjouterElementCollection.setAttribute('class', "btn btn-outline-secondary");
+            this.btnAjouterElementCollection.setAttribute('type', "button");
+            this.btnAjouterElementCollection.innerHTML = this.donneesInitiales.addLabel || "Add";
+            //definir l'icone
+            this.downloadIcone(this.btnAjouterElementCollection, " " + this.donneesInitiales.addLabel || "Add", 1, "add", 20);
+            //definir l'ecouteur de clic
+            this.btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
+            //ajoute le bouton en bas de la collection
+            objetCollection.append(this.btnAjouterElementCollection);
         }
-        console.log("Taille Max: " + this.donneesInitiales.tailleMax, "Index: " + this.index);
-        var blocAlert = document.createElement("small");
-        var spanAlert = document.createElement("span");
-        spanAlert.setAttribute('class', "text-danger m-2 fw-italic");
-        this.downloadIcone(spanAlert, " " + messageAlert, 1, "alert", 15);
-        spanAlert.innerHTML = messageAlert;
-        
-        blocAlert.append(spanAlert);
-        objetCollection.append(blocAlert);
+
     }
 
 
 
+    /**
+     * 
+     * @returns boolean
+     */
+    canAddElementDansCollection = () => {
+        return this.donneesInitiales.tailleMax > this.index;
+    }
+
+
+    /**
+     * @param {htmlElement} objetCollection 
+     */
+    setBlocAlert = (objetCollection) => {
+        // console.log("Taille Max: " + this.donneesInitiales.tailleMax, "Index: " + this.index);
+        this.blocAlert.setAttribute('class', "text-secondary fw-italic");
+        var spanIconeAlert = document.createElement("span");
+        spanIconeAlert.setAttribute('class', "m-2 fw-bold");
+
+        // var spanAlert = document.createElement("span");
+        this.downloadIcone(spanIconeAlert, "", 1, "alert", 15);
+        this.spanAlert.innerHTML = "...";
+        
+        this.blocAlert.append(spanIconeAlert);
+        this.blocAlert.append(this.spanAlert);
+        objetCollection.append(this.blocAlert);
+
+        this.afficherAlert();
+    }
+
+
+
+    afficherAlert() {
+        var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection.";
+        if (this.canAddElementDansCollection() == false) {
+            this.blocAlert.setAttribute('class', "text-danger");
+            messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite maximale définie à " + this.donneesInitiales.tailleMax + " élément(s) est atteinte.";
+        }else{
+            this.blocAlert.setAttribute('class', "text-secondary");
+        }
+        this.spanAlert.innerHTML = messageAlert + " [" + this.index + "/" + this.donneesInitiales.tailleMax + "].";
+    }
 
 
 
@@ -339,7 +368,7 @@ export default class extends Controller {
 
         //creation du div
         const barreDeTitre = document.createElement("nav");
-        barreDeTitre.setAttribute("class", "navbar parent-a-options");
+        barreDeTitre.setAttribute("class", "navbar parent-a-options rounded p-2 bg-white");
         //Ajout des elements de viesualisation au div
 
         //Description
@@ -377,6 +406,8 @@ export default class extends Controller {
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
+            
+            this.afficherAlert();
         });
 
         elementDeLaCollection.append(barreDeTitre);
@@ -432,5 +463,11 @@ export default class extends Controller {
         e.currentTarget.insertAdjacentElement("beforebegin", elementPrototype);
 
         this.appliquerStyle(elementPrototype);
+
+        if (this.canAddElementDansCollection() == false) {
+            this.btnAjouterElementCollection.setAttribute("class", "cacherComposant");
+        }
+        
+        this.afficherAlert();
     }
 }
