@@ -145,7 +145,9 @@ class InviteController extends AbstractController
         /** @var Invite $invite */
         $invite = $this->inviteRepository->find($idInvite);
 
-        $form = $this->createForm(InviteType::class, $invite);
+        $form = $this->createForm(InviteType::class, $invite, [
+            'parent_object' => $invite,
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
