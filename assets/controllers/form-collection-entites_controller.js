@@ -11,6 +11,7 @@ export default class extends Controller {
     connect() {
         this.donneesInitiales = JSON.parse(this.dataValue);
         // console.log(this.donneesInitiales);
+        console.log(this.donneesInitiales.parent_object);
 
         //DECLARATION DES VARIABLES
         this.blocAlert = document.createElement("small");
