@@ -6,12 +6,12 @@ export default class extends Controller {
     static values = {
         data: String
     }
-    
-    
+
+
     connect() {
         this.donneesInitiales = JSON.parse(this.dataValue);
         // console.log(this.donneesInitiales);
-        
+
         //DECLARATION DES VARIABLES
         this.blocAlert = document.createElement("small");
         this.spanAlert = document.createElement("span");
@@ -24,9 +24,7 @@ export default class extends Controller {
 
         this.stylerElementsDeLaCollection(this.collection);
 
-        if (this.canAddElementDansCollection()) {
-            this.setBoutonAjouter(this.collection);
-        }
+        this.setBoutonAjouter(this.collection);
         this.setBlocAlert(this.collection);
     }
 
@@ -214,17 +212,15 @@ export default class extends Controller {
      * @param {HTMLElement} objetCollection
     */
     setBoutonAjouter = (objetCollection) => {
-        if (this.canAddElementDansCollection()) {
-            this.btnAjouterElementCollection.setAttribute('class', "btn btn-outline-secondary");
-            this.btnAjouterElementCollection.setAttribute('type', "button");
-            this.btnAjouterElementCollection.innerHTML = this.donneesInitiales.addLabel || "Add";
-            //definir l'icone
-            this.downloadIcone(this.btnAjouterElementCollection, " " + this.donneesInitiales.addLabel || "Add", 1, "add", 20);
-            //definir l'ecouteur de clic
-            this.btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
-            //ajoute le bouton en bas de la collection
-            objetCollection.append(this.btnAjouterElementCollection);
-        }
+        this.btnAjouterElementCollection.setAttribute('class', "btn btn-outline-secondary");
+        this.btnAjouterElementCollection.setAttribute('type', "button");
+        this.btnAjouterElementCollection.innerHTML = this.donneesInitiales.addLabel || "Add";
+        //definir l'icone
+        this.downloadIcone(this.btnAjouterElementCollection, " " + this.donneesInitiales.addLabel || "Add", 1, "add", 20);
+        //definir l'ecouteur de clic
+        this.btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
+        //ajoute le bouton en bas de la collection
+        objetCollection.append(this.btnAjouterElementCollection);
     }
 
 
@@ -237,7 +233,7 @@ export default class extends Controller {
         var reponse = true;
         if (this.index == 0) {
             reponse = true;
-        }else{
+        } else {
             reponse = this.donneesInitiales.tailleMax > this.index;//1 0
         }
         console.log(this.index, reponse);
@@ -257,7 +253,7 @@ export default class extends Controller {
         // var spanAlert = document.createElement("span");
         this.downloadIcone(spanIconeAlert, "", 1, "alert", 15);
         this.spanAlert.innerHTML = "...";
-        
+
         this.blocAlert.append(spanIconeAlert);
         this.blocAlert.append(this.spanAlert);
         objetCollection.append(this.blocAlert);
@@ -273,10 +269,10 @@ export default class extends Controller {
             this.blocAlert.setAttribute('class', "text-danger");
             messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite maximale définie à " + this.donneesInitiales.tailleMax + " élément(s) est atteinte.";
             this.btnAjouterElementCollection.style.display = 'none';
-        }else{
+        } else {
             this.blocAlert.setAttribute('class', "text-secondary");
             this.btnAjouterElementCollection.style.display = 'inline';
-            // console.log("On doit reafficher le bouton Ajout");
+            // console.log("On doit reafficher le bouton Ajout", this.btnAjouterElementCollection);
         }
         this.spanAlert.innerHTML = messageAlert + " [" + this.index + "/" + this.donneesInitiales.tailleMax + "].";
     }
@@ -409,8 +405,8 @@ export default class extends Controller {
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
-            this.index--;
             // console.log("SUPPRESSION DE L'ELEMENT");
+            this.index--;
             this.afficherAlertEtGererBoutonAjoutElement();
         });
 
