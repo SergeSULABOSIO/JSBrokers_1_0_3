@@ -97,7 +97,7 @@ export default class extends Controller {
         if (champ.getAttribute("type") == "checkbox") {
             champ.setAttribute("checked", event.target.checked);
         }
-        console.log("Target: ", event.target);
+        // console.log("Target: ", event.target);
         //on actualise l'affichage sur le display
         this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal, champDisplaySecondaire);
     }
