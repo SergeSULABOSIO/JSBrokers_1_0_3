@@ -236,7 +236,7 @@ export default class extends Controller {
         } else {
             reponse = this.donneesInitiales.tailleMax > this.index;//1 0
         }
-        console.log(this.index, reponse);
+        // console.log(this.index, reponse);
         return reponse;
     }
 
