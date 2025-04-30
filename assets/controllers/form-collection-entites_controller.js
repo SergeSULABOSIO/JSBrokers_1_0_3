@@ -10,7 +10,7 @@ export default class extends Controller {
     
     connect() {
         this.donneesInitiales = JSON.parse(this.dataValue);
-        console.log(this.donneesInitiales);
+        // console.log(this.donneesInitiales);
         
         //DECLARATION DES VARIABLES
         this.blocAlert = document.createElement("small");
@@ -72,7 +72,7 @@ export default class extends Controller {
         if (idFormulaireSaisie != null) {
             const formulaireEncours = document.getElementById(idFormulaireSaisie);
             if (formulaireEncours != null) {
-                console.log(formulaireEncours);
+                // console.log(formulaireEncours);
                 const champs = formulaireEncours.querySelectorAll('input, select, textarea, button');
                 //parcours des elements du formulaire
                 champs.forEach(champ => {
@@ -179,12 +179,6 @@ export default class extends Controller {
                     }
                 })
             }
-            //On supprime le champ dont la valeur est null ou vide (pour le cas de champs dont la valeur est un tableau)
-            for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
-                if (valeurDuChamp == null || valeurDuChamp.length == 0 || valeurDuChamp == "") {
-                    console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
-                }
-            }
 
             //Chargement des données sur le display
             let isPremier = true;
@@ -201,7 +195,7 @@ export default class extends Controller {
                 } else {
                     if (maxLengthSecondaire != 0) {
                         if (valeurDuChamp == null || valeurDuChamp.length == 0 || valeurDuChamp == "") {
-                            console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
+                            // console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
                             champDisplaySecondaire.innerHTML += "";
                         } else {
                             champDisplaySecondaire.innerHTML += " • " + nomDuChamp + "[" + valeurDuChamp + "]";
