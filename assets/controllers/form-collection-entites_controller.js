@@ -262,20 +262,20 @@ export default class extends Controller {
         this.blocAlert.append(this.spanAlert);
         objetCollection.append(this.blocAlert);
 
-        this.afficherAlert();
+        this.afficherAlertEtGererBoutonAjoutElement();
     }
 
 
-    
-    afficherAlert() {
+
+    afficherAlertEtGererBoutonAjoutElement() {
         var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection.";
         if (this.canAddElementDansCollection() == false) {
             this.blocAlert.setAttribute('class', "text-danger");
             messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite maximale définie à " + this.donneesInitiales.tailleMax + " élément(s) est atteinte.";
-            this.btnAjouterElementCollection.setAttribute("class", "cacherComposant");
+            this.btnAjouterElementCollection.style.display = 'none';
         }else{
-            this.btnAjouterElementCollection.removeAttribute("class", "cacherComposant");
             this.blocAlert.setAttribute('class', "text-secondary");
+            this.btnAjouterElementCollection.style.display = '';
         }
         this.spanAlert.innerHTML = messageAlert + " [" + this.index + "/" + this.donneesInitiales.tailleMax + "].";
     }
@@ -408,8 +408,9 @@ export default class extends Controller {
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
-
-            this.afficherAlert();
+            // console.log("SUPPRESSION DE L'ELEMENT");
+            this.index--;
+            this.afficherAlertEtGererBoutonAjoutElement();
         });
 
         elementDeLaCollection.append(barreDeTitre);
@@ -466,6 +467,6 @@ export default class extends Controller {
 
         this.appliquerStyle(elementPrototype);
 
-        this.afficherAlert();
+        this.afficherAlertEtGererBoutonAjoutElement();
     }
 }

@@ -47,6 +47,10 @@ input[type=text], input[type=password], input[type=number], input[type=email], i
   display: none;
 }
 
+.afficherComposant {
+  display: block;
+}
+
 .gras {
   font-weight: bold;
 }
