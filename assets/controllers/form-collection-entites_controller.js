@@ -233,7 +233,7 @@ export default class extends Controller {
     setBlocAlert = (objetCollection) => {
         var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection.";
         if (this.donneesInitiales.tailleMax == this.index) {
-            
+            messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite défini (" + this.donneesInitiales.tailleMax + ") est atteinte.";
         }
         console.log("Taille Max: " + this.donneesInitiales.tailleMax, "Index: " + this.index);
         var blocAlert = document.createElement("small");
