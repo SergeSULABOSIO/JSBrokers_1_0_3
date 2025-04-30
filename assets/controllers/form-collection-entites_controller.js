@@ -266,13 +266,15 @@ export default class extends Controller {
     }
 
 
-
+    
     afficherAlert() {
         var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection.";
         if (this.canAddElementDansCollection() == false) {
             this.blocAlert.setAttribute('class', "text-danger");
             messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite maximale définie à " + this.donneesInitiales.tailleMax + " élément(s) est atteinte.";
+            this.btnAjouterElementCollection.setAttribute("class", "cacherComposant");
         }else{
+            this.btnAjouterElementCollection.removeAttribute("class", "cacherComposant");
             this.blocAlert.setAttribute('class', "text-secondary");
         }
         this.spanAlert.innerHTML = messageAlert + " [" + this.index + "/" + this.donneesInitiales.tailleMax + "].";
@@ -406,7 +408,7 @@ export default class extends Controller {
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
-            
+
             this.afficherAlert();
         });
 
@@ -464,10 +466,6 @@ export default class extends Controller {
 
         this.appliquerStyle(elementPrototype);
 
-        if (this.canAddElementDansCollection() == false) {
-            this.btnAjouterElementCollection.setAttribute("class", "cacherComposant");
-        }
-        
         this.afficherAlert();
     }
 }
