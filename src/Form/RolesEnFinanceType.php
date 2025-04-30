@@ -53,7 +53,7 @@ class RolesEnFinanceType extends AbstractType
             ->add('nom', TextType::class, [
                 'data' => $dataNom,
                 'label' => "Nom du rôle",
-                // 'disabled' => true,
+                'disabled' => true,
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Nom",
