@@ -225,7 +225,6 @@ export default class extends Controller {
             //ajoute le bouton en bas de la collection
             objetCollection.append(this.btnAjouterElementCollection);
         }
-
     }
 
 
@@ -235,7 +234,14 @@ export default class extends Controller {
      * @returns boolean
      */
     canAddElementDansCollection = () => {
-        return this.donneesInitiales.tailleMax > this.index;
+        var reponse = true;
+        if (this.index == 0) {
+            reponse = true;
+        }else{
+            reponse = this.donneesInitiales.tailleMax > this.index;//1 0
+        }
+        console.log(this.index, reponse);
+        return reponse;
     }
 
 
@@ -269,7 +275,8 @@ export default class extends Controller {
             this.btnAjouterElementCollection.style.display = 'none';
         }else{
             this.blocAlert.setAttribute('class', "text-secondary");
-            this.btnAjouterElementCollection.style.display = '';
+            this.btnAjouterElementCollection.style.display = 'inline';
+            // console.log("On doit reafficher le bouton Ajout");
         }
         this.spanAlert.innerHTML = messageAlert + " [" + this.index + "/" + this.donneesInitiales.tailleMax + "].";
     }
@@ -402,8 +409,8 @@ export default class extends Controller {
         btnSupprimer.addEventListener('click', e => {
             e.preventDefault();
             elementDeLaCollection.remove();
-            // console.log("SUPPRESSION DE L'ELEMENT");
             this.index--;
+            // console.log("SUPPRESSION DE L'ELEMENT");
             this.afficherAlertEtGererBoutonAjoutElement();
         });
 
