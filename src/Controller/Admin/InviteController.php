@@ -159,24 +159,17 @@ class InviteController extends AbstractController
             //     'idEntreprise' => $idEntreprise,
             // ]);
         }
-
-
-        try {
-            return $this->render('admin/invite/edit.html.twig', [
-                'pageName' => $this->translator->trans("invite_page_name_update", [
-                    ":invite" => $invite->getNom(),
-                ]),
-                // 'pageName' => $this->translator->trans("invite_page_name_edit"),
-                'utilisateur' => $user,
-                'invite' => $invite,
-                'entreprise' => $entreprise,
-                'activator' => $this->activator,
-                'form' => $form,
-            ]);
-        } catch (\Throwable $th) {
-            //throw $th;
-            dd($th);
-        }
+        return $this->render('admin/invite/edit.html.twig', [
+            'pageName' => $this->translator->trans("invite_page_name_update", [
+                ":invite" => $invite->getNom(),
+            ]),
+            // 'pageName' => $this->translator->trans("invite_page_name_edit"),
+            'utilisateur' => $user,
+            'invite' => $invite,
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
+            'form' => $form,
+        ]);
     }
 
 
