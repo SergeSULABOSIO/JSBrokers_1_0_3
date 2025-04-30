@@ -34,6 +34,13 @@ class RolesEnFinanceType extends AbstractType
         $dataMonnaie = [Invite::ACCESS_LECTURE];
         $dataCompteBancaire = [Invite::ACCESS_LECTURE];
         $dataTaxe = [Invite::ACCESS_LECTURE];
+        $dataTypeRevenu = [Invite::ACCESS_LECTURE];
+        $dataTranche = [Invite::ACCESS_LECTURE];
+        $dataTypeChargement = [Invite::ACCESS_LECTURE];
+        $dataNote = [Invite::ACCESS_LECTURE];
+        $dataPaiement = [Invite::ACCESS_LECTURE];
+        $dataBordereau = [Invite::ACCESS_LECTURE];
+        $dataRevenu = [Invite::ACCESS_LECTURE];
         $prefixeHelp = "Ce que peut faire l'invité";
 
         if ($parent_object != null && $parent_object->getId() != null) {
@@ -45,6 +52,13 @@ class RolesEnFinanceType extends AbstractType
                 $dataMonnaie = $tabRolesFin[0]->getAccessMonnaie();
                 $dataCompteBancaire = $tabRolesFin[0]->getAccessCompteBancaire();
                 $dataTaxe = $tabRolesFin[0]->getAccessTaxe();
+                $dataTypeRevenu = $tabRolesFin[0]->getAccessTypeRevenu();
+                $dataTranche = $tabRolesFin[0]->getAccessTranche();
+                $dataTypeChargement = $tabRolesFin[0]->getAccessTypeChargement();
+                $dataNote = $tabRolesFin[0]->getAccessNote();
+                $dataPaiement = $tabRolesFin[0]->getAccessPaiement();
+                $dataBordereau = $tabRolesFin[0]->getAccessBordereau();
+                $dataRevenu = $tabRolesFin[0]->getAccessRevenu();
                 $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
             }
         }
@@ -102,6 +116,105 @@ class RolesEnFinanceType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
+            ->add('accessTypeRevenu', ChoiceType::class, [
+                'data' => $dataTypeRevenu,
+                'label' => "Droit d'accès sur les types de revenu",
+                'help' => $prefixeHelp . " dans les types de revenu",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessRevenu', ChoiceType::class, [
+                'data' => $dataRevenu,
+                'label' => "Droit d'accès sur les revenus",
+                'help' => $prefixeHelp . " dans les revenus",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessTranche', ChoiceType::class, [
+                'data' => $dataTranche,
+                'label' => "Droit d'accès sur les tranches",
+                'help' => $prefixeHelp . " dans les tranches",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessTypeChargement', ChoiceType::class, [
+                'data' => $dataTypeChargement,
+                'label' => "Droit d'accès sur les types de chargement",
+                'help' => $prefixeHelp . " dans les types de chargement",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessNote', ChoiceType::class, [
+                'data' => $dataNote,
+                'label' => "Droit d'accès sur les notes",
+                'help' => $prefixeHelp . " dans les notes",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessPaiement', ChoiceType::class, [
+                'data' => $dataPaiement,
+                'label' => "Droit d'accès sur les paiements",
+                'help' => $prefixeHelp . " dans les paiements",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            ->add('accessBordereau', ChoiceType::class, [
+                'data' => $dataBordereau,
+                'label' => "Droit d'accès sur les bordereaux",
+                'help' => $prefixeHelp . " dans les bordereaux",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => true,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
+            
 
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [

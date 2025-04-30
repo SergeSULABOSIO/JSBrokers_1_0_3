@@ -6,7 +6,6 @@
 
 {%  block titreRubrique %}
 	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
-	{# {{ utilisateur.nom }}>{{ "invite_page_name_list" | trans }}><strong>{{ pageName }}</strong> #}
 {% endblock %}
 
 {% block descriptionRubrique %}
@@ -23,34 +22,34 @@
 {% block body %}
 	{# {{ form(form) }} #}
 	{{ form_start(form) }}
-		<div class="d-flex shadow-sm card bg-body sensible bg-white">
-			<div class="card-body">
-				<div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.nom) }}
-						</div>
-						<div class="col">
-							{{ form_row(form.email) }}
-						</div>
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.nom) }}
 					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.assistants) }}
-						</div>
+					<div class="col">
+						{{ form_row(form.email) }}
 					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.rolesEnFinance) }}
-						</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.assistants) }}
 					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_widget(form.enregistrer) }}
-						</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.rolesEnFinance) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
 					</div>
 				</div>
 			</div>
 		</div>
+	</div>
 	{{ form_end(form) }}
 {% endblock %}
