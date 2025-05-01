@@ -85,7 +85,6 @@ class InviteType extends AbstractType
                         'icone' => "role",
                         'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
                         'tailleMax' => 1,
-                        'parent_object' => $invite,
                     ]),
                 ],
             ])
