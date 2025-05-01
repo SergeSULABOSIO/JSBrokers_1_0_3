@@ -269,9 +269,12 @@ export default class extends Controller {
             this.blocAlert.setAttribute('class', "text-danger");
             messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite maximale définie à " + this.donneesInitiales.tailleMax + " élément(s) est atteinte.";
             this.btnAjouterElementCollection.style.display = 'none';
+            this.blocAlert.style.display = 'none';
         } else {
             this.blocAlert.setAttribute('class', "text-secondary");
             this.btnAjouterElementCollection.style.display = 'inline';
+            this.blocAlert.style.display = 'inline';
+
             // console.log("On doit reafficher le bouton Ajout", this.btnAjouterElementCollection);
         }
         this.spanAlert.innerHTML = messageAlert;

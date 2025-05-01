@@ -166,6 +166,7 @@ class InviteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // dd($invite);
             $this->manager->persist($invite); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
             $this->addFlash("success", $this->translator->trans("invite_edition_ok", [

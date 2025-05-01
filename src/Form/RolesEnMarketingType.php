@@ -43,7 +43,7 @@ class RolesEnMarketingType extends AbstractType
                 // dd($parent_object);
                 if (count($tabRolesMark) != 0) {
                     // dd($parent_object);
-                    $dataNom = $tabRolesMark[0]->getNom();
+                    // $dataNom = $tabRolesMark[0]->getNom();
                     $dataPiste = $tabRolesMark[0]->getAccessPiste();
                     $dataTache = $tabRolesMark[0]->getAccessTache();
                     $dataFeedback = $tabRolesMark[0]->getAccessFeedback();
@@ -56,7 +56,7 @@ class RolesEnMarketingType extends AbstractType
             ->add('nom', TextType::class, [
                 'data' => $dataNom,
                 'label' => "Nom du rôle",
-                'disabled' => true,
+                // 'disabled' => true,
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Nom",

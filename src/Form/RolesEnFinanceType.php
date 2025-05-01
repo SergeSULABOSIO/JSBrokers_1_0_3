@@ -48,7 +48,7 @@ class RolesEnFinanceType extends AbstractType
             $tabRolesFin = $parent_object->getRolesEnFinance();
             if (count($tabRolesFin) != 0) {
                 // dd($parent_object);
-                $dataNom = $tabRolesFin[0]->getNom();
+                // $dataNom = $tabRolesFin[0]->getNom();
                 $dataMonnaie = $tabRolesFin[0]->getAccessMonnaie();
                 $dataCompteBancaire = $tabRolesFin[0]->getAccessCompteBancaire();
                 $dataTaxe = $tabRolesFin[0]->getAccessTaxe();
@@ -67,7 +67,7 @@ class RolesEnFinanceType extends AbstractType
             ->add('nom', TextType::class, [
                 'data' => $dataNom,
                 'label' => "Nom du rôle",
-                'disabled' => true,
+                // 'disabled' => true,
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Nom",
