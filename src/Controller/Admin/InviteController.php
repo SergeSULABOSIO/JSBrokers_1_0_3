@@ -10,6 +10,7 @@ use App\Event\InvitationEvent;
 use App\Constantes\MenuActivator;
 use App\Entity\Entreprise;
 use App\Entity\RolesEnFinance;
+use App\Entity\RolesEnMarketing;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -128,6 +129,20 @@ class InviteController extends AbstractController
                     ->setAccessMonnaie([Invite::ACCESS_LECTURE])
                     ->setAccessCompteBancaire([Invite::ACCESS_LECTURE])
                     ->setAccessTaxe([Invite::ACCESS_LECTURE])
+                    ->setAccessTypeRevenu([Invite::ACCESS_LECTURE])
+                    ->setAccessTranche([Invite::ACCESS_LECTURE])
+                    ->setAccessTypeChargement([Invite::ACCESS_LECTURE])
+                    ->setAccessNote([Invite::ACCESS_LECTURE])
+                    ->setAccessPaiement([Invite::ACCESS_LECTURE])
+                    ->setAccessBordereau([Invite::ACCESS_LECTURE])
+                    ->setAccessRevenu([Invite::ACCESS_LECTURE])
+            );
+            $invite->addRolesEnMarketing(
+                (new RolesEnMarketing)
+                    ->setNom("Droits d'accèss dans le module Marketing")
+                    ->setAccessPiste([Invite::ACCESS_LECTURE])
+                    ->setAccessTache([Invite::ACCESS_LECTURE])
+                    ->setAccessFeedback([Invite::ACCESS_LECTURE])
             );
         }
     }

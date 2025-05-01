@@ -264,7 +264,7 @@ export default class extends Controller {
 
 
     afficherAlertEtGererBoutonAjoutElement() {
-        var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection.";
+        var messageAlert = "Vous ne pouvez enregistrer " + (this.donneesInitiales.tailleMax == 1 ? " qu'un seul élément" : "que " + this.donneesInitiales.tailleMax + " éléments") + " dans cette collection [" + this.index + "/" + this.donneesInitiales.tailleMax + "].";
         if (this.canAddElementDansCollection() == false) {
             this.blocAlert.setAttribute('class', "text-danger");
             messageAlert = "Vous ne pouvez plus ajouter d'éléments car la limite maximale définie à " + this.donneesInitiales.tailleMax + " élément(s) est atteinte.";
@@ -274,7 +274,7 @@ export default class extends Controller {
             this.btnAjouterElementCollection.style.display = 'inline';
             // console.log("On doit reafficher le bouton Ajout", this.btnAjouterElementCollection);
         }
-        this.spanAlert.innerHTML = messageAlert + " [" + this.index + "/" + this.donneesInitiales.tailleMax + "].";
+        this.spanAlert.innerHTML = messageAlert;
     }
 
 
