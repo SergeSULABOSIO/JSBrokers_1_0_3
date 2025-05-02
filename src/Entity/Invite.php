@@ -116,6 +116,12 @@ class Invite
     #[ORM\OneToMany(targetEntity: RolesEnSinistre::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $rolesEnSinistre;
 
+    /**
+     * @var Collection<int, RolesEnAdministration>
+     */
+    #[ORM\OneToMany(targetEntity: RolesEnAdministration::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $rolesEnAdministration;
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
@@ -131,6 +137,7 @@ class Invite
         $this->rolesEnMarketing = new ArrayCollection();
         $this->rolesEnProduction = new ArrayCollection();
         $this->rolesEnSinistre = new ArrayCollection();
+        $this->rolesEnAdministration = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -559,6 +566,36 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($rolesEnSinistre->getInvite() === $this) {
                 $rolesEnSinistre->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, RolesEnAdministration>
+     */
+    public function getRolesEnAdministration(): Collection
+    {
+        return $this->rolesEnAdministration;
+    }
+
+    public function addRolesEnAdministration(RolesEnAdministration $rolesEnAdministration): static
+    {
+        if (!$this->rolesEnAdministration->contains($rolesEnAdministration)) {
+            $this->rolesEnAdministration->add($rolesEnAdministration);
+            $rolesEnAdministration->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRolesEnAdministration(RolesEnAdministration $rolesEnAdministration): static
+    {
+        if ($this->rolesEnAdministration->removeElement($rolesEnAdministration)) {
+            // set the owning side to null (unless already changed)
+            if ($rolesEnAdministration->getInvite() === $this) {
+                $rolesEnAdministration->setInvite(null);
             }
         }
 
