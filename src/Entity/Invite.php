@@ -110,6 +110,12 @@ class Invite
     #[ORM\OneToMany(targetEntity: RolesEnProduction::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $rolesEnProduction;
 
+    /**
+     * @var Collection<int, RolesEnSinistre>
+     */
+    #[ORM\OneToMany(targetEntity: RolesEnSinistre::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $rolesEnSinistre;
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
@@ -124,6 +130,7 @@ class Invite
         $this->rolesEnFinance = new ArrayCollection();
         $this->rolesEnMarketing = new ArrayCollection();
         $this->rolesEnProduction = new ArrayCollection();
+        $this->rolesEnSinistre = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -522,6 +529,36 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($rolesEnProduction->getInvite() === $this) {
                 $rolesEnProduction->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, RolesEnSinistre>
+     */
+    public function getRolesEnSinistre(): Collection
+    {
+        return $this->rolesEnSinistre;
+    }
+
+    public function addRolesEnSinistre(RolesEnSinistre $rolesEnSinistre): static
+    {
+        if (!$this->rolesEnSinistre->contains($rolesEnSinistre)) {
+            $this->rolesEnSinistre->add($rolesEnSinistre);
+            $rolesEnSinistre->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRolesEnSinistre(RolesEnSinistre $rolesEnSinistre): static
+    {
+        if ($this->rolesEnSinistre->removeElement($rolesEnSinistre)) {
+            // set the owning side to null (unless already changed)
+            if ($rolesEnSinistre->getInvite() === $this) {
+                $rolesEnSinistre->setInvite(null);
             }
         }
 

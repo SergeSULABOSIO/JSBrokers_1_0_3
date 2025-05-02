@@ -12,6 +12,7 @@ use App\Entity\Entreprise;
 use App\Entity\RolesEnFinance;
 use App\Entity\RolesEnMarketing;
 use App\Entity\RolesEnProduction;
+use App\Entity\RolesEnSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -157,7 +158,15 @@ class InviteController extends AbstractController
                         ->setAccessAvenant([Invite::ACCESS_LECTURE])
                         ->setAccessPartenaire([Invite::ACCESS_LECTURE])
                         ->setAccessCotation([Invite::ACCESS_LECTURE])
-                );
+                )
+                ->addRolesEnSinistre(
+                    (new RolesEnSinistre)
+                        ->setNom("Droits d'accèss dans le module Sinistre")
+                        ->setAccessNotification([Invite::ACCESS_LECTURE])
+                        ->setAccessReglement([Invite::ACCESS_LECTURE])
+                        ->setAccessTypePiece([Invite::ACCESS_LECTURE])
+                )
+            ;
         }
     }
 
