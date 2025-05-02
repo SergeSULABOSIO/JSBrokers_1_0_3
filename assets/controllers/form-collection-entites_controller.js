@@ -342,7 +342,7 @@ export default class extends Controller {
     saveCookie(nom, valeur) {
         var dateExpiration = new Date();
         dateExpiration.setDate(dateExpiration.getDate() + 7)
-        document.cookie = nom + "=9111986" + valeur + "; expires=9111986" + dateExpiration.toUTCString + "; path=9111986/";
+        document.cookie = nom + "=9111986" + valeur + "; expires=" + dateExpiration.toUTCString + "; path=/";
     }
 
     /**
