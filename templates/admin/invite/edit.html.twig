@@ -20,43 +20,41 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		{{ form_start(form) }}
-		<div class="d-flex shadow-sm card bg-body sensible bg-white">
-			<div class="card-body">
-				<div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.nom) }}
-						</div>
-						<div class="col">
-							{{ form_row(form.email) }}
-						</div>
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.nom) }}
 					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.assistants) }}
-						</div>
+					<div class="col">
+						{{ form_row(form.email) }}
 					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.rolesEnFinance) }}
-						</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.assistants) }}
 					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.rolesEnMarketing) }}
-						</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.rolesEnFinance) }}
 					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_widget(form.enregistrer) }}
-						</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.rolesEnMarketing) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
 					</div>
 				</div>
 			</div>
 		</div>
-		{{ form_end(form) }}
 	</div>
+	{{ form_end(form) }}
 {% endblock %}
