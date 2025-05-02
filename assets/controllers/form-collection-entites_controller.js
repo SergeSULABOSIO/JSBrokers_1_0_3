@@ -225,6 +225,11 @@ export default class extends Controller {
     }
 
 
+    /**
+     * @param {string} url 
+     * @param {htmlElement} elementHtml 
+     * @param {string} texteAccompagnement 
+     */
     defineIcone(url, elementHtml, texteAccompagnement) {
         // var url = '/admin/entreprise/geticon/1/add/20';
         var iconeData = this.getIconeLocale(url);
