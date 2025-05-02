@@ -9,6 +9,7 @@ use App\Constantes\Constante;
 use App\Event\InvitationEvent;
 use App\Constantes\MenuActivator;
 use App\Entity\Entreprise;
+use App\Entity\RolesEnAdministration;
 use App\Entity\RolesEnFinance;
 use App\Entity\RolesEnMarketing;
 use App\Entity\RolesEnProduction;
@@ -165,6 +166,13 @@ class InviteController extends AbstractController
                         ->setAccessNotification([Invite::ACCESS_LECTURE])
                         ->setAccessReglement([Invite::ACCESS_LECTURE])
                         ->setAccessTypePiece([Invite::ACCESS_LECTURE])
+                )
+                ->addRolesEnAdministration(
+                    (new RolesEnAdministration)
+                        ->setNom("Droits d'accèss dans le module Administration")
+                        ->setAccessDocument([Invite::ACCESS_LECTURE])
+                        ->setAccessClasseur([Invite::ACCESS_LECTURE])
+                        ->setAccessInvite([Invite::ACCESS_LECTURE])
                 )
             ;
         }

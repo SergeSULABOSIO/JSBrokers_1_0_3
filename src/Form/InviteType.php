@@ -151,6 +151,27 @@ class InviteType extends AbstractType
                     ]),
                 ],
             ])
+            ->add('rolesEnAdministration', CollectionType::class, [
+                'label' => "Droits d'accès dans le module Administration",
+                'entry_type' => RolesEnAdministrationType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                    'parent_object' => $invite,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "role",
+                        'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'tailleMax' => 1,
+                    ]),
+                ],
+            ])
 
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
