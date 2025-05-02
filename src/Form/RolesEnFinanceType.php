@@ -30,7 +30,7 @@ class RolesEnFinanceType extends AbstractType
         /** @var Invite $parent_object */
         $parent_object = $options['parent_object'];
         // dd($invite);
-        $dataNom = "Droits d'accèss dans le module Finance";
+        $dataNom = "Droits d'accès dans le module Finance";
         $dataMonnaie = [Invite::ACCESS_LECTURE];
         $dataCompteBancaire = [Invite::ACCESS_LECTURE];
         $dataTaxe = [Invite::ACCESS_LECTURE];

@@ -30,7 +30,7 @@ class RolesEnProductionType extends AbstractType
         /** @var Invite $parent_object */
         $parent_object = $options['parent_object'];
         // dd($invite);
-        $dataNom = "Droits d'accèss dans le module Production";
+        $dataNom = "Droits d'accès dans le module Production";
         $dataGroupe = [Invite::ACCESS_LECTURE];
         $dataClient = [Invite::ACCESS_LECTURE];
         $dataAssureur = [Invite::ACCESS_LECTURE];

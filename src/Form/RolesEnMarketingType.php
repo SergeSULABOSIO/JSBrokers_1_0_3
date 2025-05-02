@@ -29,7 +29,7 @@ class RolesEnMarketingType extends AbstractType
         /** @var Invite $parent_object */
         $parent_object = $options['parent_object'];
         // dd($invite);
-        $dataNom = "Droits d'accèss dans le module Marketing";
+        $dataNom = "Droits d'accès dans le module Marketing";
         $dataPiste = [Invite::ACCESS_LECTURE];
         $dataTache = [Invite::ACCESS_LECTURE];
         $dataFeedback = [Invite::ACCESS_LECTURE];

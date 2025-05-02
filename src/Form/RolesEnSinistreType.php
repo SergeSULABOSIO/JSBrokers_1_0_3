@@ -30,7 +30,7 @@ class RolesEnSinistreType extends AbstractType
         /** @var Invite $parent_object */
         $parent_object = $options['parent_object'];
         // dd($invite);
-        $dataNom = "Droits d'accèss dans le module Sinistre";
+        $dataNom = "Droits d'accès dans le module Sinistre";
         $dataTypePiece = [Invite::ACCESS_LECTURE];
         $dataNotification = [Invite::ACCESS_LECTURE];
         $dataReglement = [Invite::ACCESS_LECTURE];

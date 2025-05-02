@@ -30,7 +30,7 @@ class RolesEnAdministrationType extends AbstractType
         /** @var Invite $parent_object */
         $parent_object = $options['parent_object'];
         // dd($invite);
-        $dataNom = "Droits d'accèss dans le module Administration";
+        $dataNom = "Droits d'accès dans le module Administration";
         $dataDocument = [Invite::ACCESS_LECTURE];
         $dataClasseur = [Invite::ACCESS_LECTURE];
         $dataInvite = [Invite::ACCESS_LECTURE];
@@ -122,6 +122,7 @@ class RolesEnAdministrationType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => RolesEnAdministration::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

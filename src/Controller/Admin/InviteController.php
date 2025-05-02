@@ -129,7 +129,7 @@ class InviteController extends AbstractController
             $invite
                 ->addRolesEnFinance(
                     (new RolesEnFinance)
-                        ->setNom("Droits d'accèss dans le module Finance")
+                        ->setNom("Droits d'accès dans le module Finance")
                         ->setAccessMonnaie([Invite::ACCESS_LECTURE])
                         ->setAccessCompteBancaire([Invite::ACCESS_LECTURE])
                         ->setAccessTaxe([Invite::ACCESS_LECTURE])
@@ -143,14 +143,14 @@ class InviteController extends AbstractController
                 )
                 ->addRolesEnMarketing(
                     (new RolesEnMarketing)
-                        ->setNom("Droits d'accèss dans le module Marketing")
+                        ->setNom("Droits d'accès dans le module Marketing")
                         ->setAccessPiste([Invite::ACCESS_LECTURE])
                         ->setAccessTache([Invite::ACCESS_LECTURE])
                         ->setAccessFeedback([Invite::ACCESS_LECTURE])
                 )
                 ->addRolesEnProduction(
                     (new RolesEnProduction)
-                        ->setNom("Droits d'accèss dans le module Production")
+                        ->setNom("Droits d'accès dans le module Production")
                         ->setAccessGroupe([Invite::ACCESS_LECTURE])
                         ->setAccessClient([Invite::ACCESS_LECTURE])
                         ->setAccessAssureur([Invite::ACCESS_LECTURE])
@@ -162,14 +162,14 @@ class InviteController extends AbstractController
                 )
                 ->addRolesEnSinistre(
                     (new RolesEnSinistre)
-                        ->setNom("Droits d'accèss dans le module Sinistre")
+                        ->setNom("Droits d'accès dans le module Sinistre")
                         ->setAccessNotification([Invite::ACCESS_LECTURE])
                         ->setAccessReglement([Invite::ACCESS_LECTURE])
                         ->setAccessTypePiece([Invite::ACCESS_LECTURE])
                 )
                 ->addRolesEnAdministration(
                     (new RolesEnAdministration)
-                        ->setNom("Droits d'accèss dans le module Administration")
+                        ->setNom("Droits d'accès dans le module Administration")
                         ->setAccessDocument([Invite::ACCESS_LECTURE])
                         ->setAccessClasseur([Invite::ACCESS_LECTURE])
                         ->setAccessInvite([Invite::ACCESS_LECTURE])
