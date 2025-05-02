@@ -212,15 +212,27 @@ export default class extends Controller {
      * @param {HTMLElement} objetCollection
     */
     setBoutonAjouter = (objetCollection) => {
+        var textBtn = this.donneesInitiales.addLabel || "Add";
         this.btnAjouterElementCollection.setAttribute('class', "btn btn-outline-secondary");
         this.btnAjouterElementCollection.setAttribute('type', "button");
-        this.btnAjouterElementCollection.innerHTML = this.donneesInitiales.addLabel || "Add";
+        this.btnAjouterElementCollection.innerHTML = textBtn;
         //definir l'icone
-        this.downloadIcone(this.btnAjouterElementCollection, " " + this.donneesInitiales.addLabel || "Add", 1, "add", 20);
+        this.defineIcone('/admin/entreprise/geticon/1/add/20', this.btnAjouterElementCollection, textBtn);
         //definir l'ecouteur de clic
         this.btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
         //ajoute le bouton en bas de la collection
         objetCollection.append(this.btnAjouterElementCollection);
+    }
+
+
+    defineIcone(url, elementHtml, texteAccompagnement) {
+        // var url = '/admin/entreprise/geticon/1/add/20';
+        var iconeData = this.getIconeLocale(url);
+        if (iconeData != null) {
+            this.setIcone(iconeData, elementHtml, texteAccompagnement);
+        } else {
+            this.downloadIcone(elementHtml, " " + texteAccompagnement, url.split('/')[4], url.split('/')[5], url.split('/')[6]);
+        }
     }
 
 
@@ -455,6 +467,15 @@ export default class extends Controller {
             htmlElement.innerHTML = this.downloadIcone(htmlElement, " " + texteAccompagnement, dossier, nomIcone, 19);
             htmlElement.innerHTML = texteAccompagnement;
         }
+    }
+
+    /**
+     * @param {HTMLElement} htmlElement 
+     * @param {string} valeurDisplay 
+     * @param {string} icone 
+     */
+    setIcone(icone, htmlElement, texteAccompagnement) {
+        htmlElement.innerHTML = icone + " " + texteAccompagnement;
     }
 
     /**
