@@ -10,8 +10,9 @@ export default class extends Controller {
 
     connect() {
         this.donneesInitiales = JSON.parse(this.dataValue);
-        console.log(this.donneesInitiales);
-        
+        // console.log(this.donneesInitiales);
+        // console.log("COOKIE:", document.cookie);
+
         //DECLARATION DES VARIABLES
         this.blocAlert = document.createElement("small");
         this.spanAlert = document.createElement("span");
@@ -311,10 +312,42 @@ export default class extends Controller {
      * @param {HTMLElement} htmlData 
      */
     updatTabIcones(url, htmlData) {
-        if (this.tabDownloadedIcones.has(url) == false) {
-            this.tabDownloadedIcones.set(url, htmlData);
+        // if (this.tabDownloadedIcones.has(url) == false) {
+        //     this.tabDownloadedIcones.set(url, htmlData);
+        // }
+        if (this.getCookies(url) == null) {
+            this.saveCookie(url, htmlData);
         }
-        // console.log(this.tabDownloadedIcones);
+        // console.log(document.cookie);
+    }
+
+    /**
+     * 
+     * @param {string} nom 
+    */
+    getCookies(nom) {
+        const nomEQ = nom + "=9111986";
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') {
+                c = c.substring(1, c.length);
+            }
+            if (c.indexOf(nomEQ) === 0) {
+                return c.substring(nomEQ.length, c.length);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param {string} nom 
+     * @param {string} valeur 
+     */
+    saveCookie(nom, valeur) {
+        var dateExpiration = new Date();
+        dateExpiration.setDate(dateExpiration.getDate() + 7)
+        document.cookie = nom + "=9111986" + valeur + "; expires=9111986" + dateExpiration.toUTCString + "; path=9111986/";
     }
 
     /**
@@ -323,13 +356,14 @@ export default class extends Controller {
      */
     getIconeLocale(url) {
         // console.log(url);
-        var icone = null;
-        for (const paire of this.tabDownloadedIcones.entries()) {
-            if (paire[0] == url) {
-                icone = paire[1];
-            }
-        }
-        return icone;
+        // var icone = null;
+        // for (const paire of this.tabDownloadedIcones.entries()) {
+        //     if (paire[0] == url) {
+        //         icone = paire[1];
+        //     }
+        // }
+
+        return this.getCookies(url);
     }
 
 
