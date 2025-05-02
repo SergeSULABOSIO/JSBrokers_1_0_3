@@ -17,7 +17,6 @@ export default class extends Controller {
         this.blocAlert = document.createElement("small");
         this.spanAlert = document.createElement("span");
         this.btnAjouterElementCollection = document.createElement("button");
-        this.tabDownloadedIcones = new Map();
         this.index = 0;
         this.collection = this.element;
         this.tailleCollection = this.collection.childElementCount;
@@ -312,13 +311,9 @@ export default class extends Controller {
      * @param {HTMLElement} htmlData 
      */
     updatTabIcones(url, htmlData) {
-        // if (this.tabDownloadedIcones.has(url) == false) {
-        //     this.tabDownloadedIcones.set(url, htmlData);
-        // }
         if (this.getCookies(url) == null) {
             this.saveCookie(url, htmlData);
         }
-        // console.log(document.cookie);
     }
 
     /**
@@ -355,14 +350,6 @@ export default class extends Controller {
      * @param {string} url 
      */
     getIconeLocale(url) {
-        // console.log(url);
-        // var icone = null;
-        // for (const paire of this.tabDownloadedIcones.entries()) {
-        //     if (paire[0] == url) {
-        //         icone = paire[1];
-        //     }
-        // }
-
         return this.getCookies(url);
     }
 
