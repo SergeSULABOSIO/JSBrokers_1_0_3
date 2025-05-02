@@ -11,6 +11,7 @@ use App\Constantes\MenuActivator;
 use App\Entity\Entreprise;
 use App\Entity\RolesEnFinance;
 use App\Entity\RolesEnMarketing;
+use App\Entity\RolesEnProduction;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -123,27 +124,40 @@ class InviteController extends AbstractController
     {
         if ($invite->getId() == null) {
             //On ne fait ceci que pour tout invité nouveau
-            $invite->addRolesEnFinance(
-                (new RolesEnFinance)
-                    ->setNom("Droits d'accèss dans le module Finance")
-                    ->setAccessMonnaie([Invite::ACCESS_LECTURE])
-                    ->setAccessCompteBancaire([Invite::ACCESS_LECTURE])
-                    ->setAccessTaxe([Invite::ACCESS_LECTURE])
-                    ->setAccessTypeRevenu([Invite::ACCESS_LECTURE])
-                    ->setAccessTranche([Invite::ACCESS_LECTURE])
-                    ->setAccessTypeChargement([Invite::ACCESS_LECTURE])
-                    ->setAccessNote([Invite::ACCESS_LECTURE])
-                    ->setAccessPaiement([Invite::ACCESS_LECTURE])
-                    ->setAccessBordereau([Invite::ACCESS_LECTURE])
-                    ->setAccessRevenu([Invite::ACCESS_LECTURE])
-            );
-            $invite->addRolesEnMarketing(
-                (new RolesEnMarketing)
-                    ->setNom("Droits d'accèss dans le module Marketing")
-                    ->setAccessPiste([Invite::ACCESS_LECTURE])
-                    ->setAccessTache([Invite::ACCESS_LECTURE])
-                    ->setAccessFeedback([Invite::ACCESS_LECTURE])
-            );
+            $invite
+                ->addRolesEnFinance(
+                    (new RolesEnFinance)
+                        ->setNom("Droits d'accèss dans le module Finance")
+                        ->setAccessMonnaie([Invite::ACCESS_LECTURE])
+                        ->setAccessCompteBancaire([Invite::ACCESS_LECTURE])
+                        ->setAccessTaxe([Invite::ACCESS_LECTURE])
+                        ->setAccessTypeRevenu([Invite::ACCESS_LECTURE])
+                        ->setAccessTranche([Invite::ACCESS_LECTURE])
+                        ->setAccessTypeChargement([Invite::ACCESS_LECTURE])
+                        ->setAccessNote([Invite::ACCESS_LECTURE])
+                        ->setAccessPaiement([Invite::ACCESS_LECTURE])
+                        ->setAccessBordereau([Invite::ACCESS_LECTURE])
+                        ->setAccessRevenu([Invite::ACCESS_LECTURE])
+                )
+                ->addRolesEnMarketing(
+                    (new RolesEnMarketing)
+                        ->setNom("Droits d'accèss dans le module Marketing")
+                        ->setAccessPiste([Invite::ACCESS_LECTURE])
+                        ->setAccessTache([Invite::ACCESS_LECTURE])
+                        ->setAccessFeedback([Invite::ACCESS_LECTURE])
+                )
+                ->addRolesEnProduction(
+                    (new RolesEnProduction)
+                        ->setNom("Droits d'accèss dans le module Production")
+                        ->setAccessGroupe([Invite::ACCESS_LECTURE])
+                        ->setAccessClient([Invite::ACCESS_LECTURE])
+                        ->setAccessAssureur([Invite::ACCESS_LECTURE])
+                        ->setAccessContact([Invite::ACCESS_LECTURE])
+                        ->setAccessRisque([Invite::ACCESS_LECTURE])
+                        ->setAccessAvenant([Invite::ACCESS_LECTURE])
+                        ->setAccessPartenaire([Invite::ACCESS_LECTURE])
+                        ->setAccessCotation([Invite::ACCESS_LECTURE])
+                );
         }
     }
 

@@ -104,6 +104,12 @@ class Invite
     #[ORM\OneToMany(targetEntity: RolesEnMarketing::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $rolesEnMarketing;
 
+    /**
+     * @var Collection<int, RolesEnProduction>
+     */
+    #[ORM\OneToMany(targetEntity: RolesEnProduction::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $rolesEnProduction;
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
@@ -117,6 +123,7 @@ class Invite
         $this->notes = new ArrayCollection();
         $this->rolesEnFinance = new ArrayCollection();
         $this->rolesEnMarketing = new ArrayCollection();
+        $this->rolesEnProduction = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -485,6 +492,36 @@ class Invite
             // set the owning side to null (unless already changed)
             if ($rolesEnMarketing->getInvite() === $this) {
                 $rolesEnMarketing->setInvite(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, RolesEnProduction>
+     */
+    public function getRolesEnProduction(): Collection
+    {
+        return $this->rolesEnProduction;
+    }
+
+    public function addRolesEnProduction(RolesEnProduction $rolesEnProduction): static
+    {
+        if (!$this->rolesEnProduction->contains($rolesEnProduction)) {
+            $this->rolesEnProduction->add($rolesEnProduction);
+            $rolesEnProduction->setInvite($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRolesEnProduction(RolesEnProduction $rolesEnProduction): static
+    {
+        if ($this->rolesEnProduction->removeElement($rolesEnProduction)) {
+            // set the owning side to null (unless already changed)
+            if ($rolesEnProduction->getInvite() === $this) {
+                $rolesEnProduction->setInvite(null);
             }
         }
 
