@@ -47,8 +47,8 @@ class RolesEnMarketingType extends AbstractType
                     $dataPiste = $tabRolesMark[0]->getAccessPiste();
                     $dataTache = $tabRolesMark[0]->getAccessTache();
                     $dataFeedback = $tabRolesMark[0]->getAccessFeedback();
-                    $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
                 }
+                $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
             }
         }
 

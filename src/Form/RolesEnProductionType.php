@@ -40,14 +40,15 @@ class RolesEnProductionType extends AbstractType
         $dataPartenaire = [Invite::ACCESS_LECTURE];
         $dataCotation = [Invite::ACCESS_LECTURE];
         $prefixeHelp = "Ce que peut faire l'invité";
+        // dd($parent_object);
 
         if ($parent_object != null) {
             if ($parent_object->getId() != null) {
-                /** @var RolesEnMarketing|[] $tabRolesProd */
+                /** @var RolesEnProduction|[] $tabRolesProd */
                 $tabRolesProd = $parent_object->getRolesEnProduction();
                 // dd($parent_object);
                 if (count($tabRolesProd) != 0) {
-                    // dd($parent_object);
+                    dd($parent_object);
                     $dataNom = $tabRolesProd[0]->getNom();
                     $dataGroupe = $tabRolesProd[0]->getAccessGroupe();
                     $dataClient = $tabRolesProd[0]->getAccessClient();
@@ -56,8 +57,8 @@ class RolesEnProductionType extends AbstractType
                     $dataRisque = $tabRolesProd[0]->getAccessRisque();
                     $dataPartenaire = $tabRolesProd[0]->getAccessPartenaire();
                     $dataCotation = $tabRolesProd[0]->getAccessCotation();
-                    $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
                 }
+                $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
             }
         }
 

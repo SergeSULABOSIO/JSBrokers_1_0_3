@@ -59,8 +59,8 @@ class RolesEnFinanceType extends AbstractType
                 $dataPaiement = $tabRolesFin[0]->getAccessPaiement();
                 $dataBordereau = $tabRolesFin[0]->getAccessBordereau();
                 $dataRevenu = $tabRolesFin[0]->getAccessRevenu();
-                $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
             }
+            $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
         }
 
         $builder

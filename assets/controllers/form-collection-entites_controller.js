@@ -217,11 +217,22 @@ export default class extends Controller {
         this.btnAjouterElementCollection.setAttribute('type', "button");
         this.btnAjouterElementCollection.innerHTML = textBtn;
         //definir l'icone
-        this.defineIcone('/admin/entreprise/geticon/1/add/20', this.btnAjouterElementCollection, textBtn);
+        this.defineIcone(this.getIconeUrl(1, "add", 20), this.btnAjouterElementCollection, textBtn);
         //definir l'ecouteur de clic
         this.btnAjouterElementCollection.addEventListener('click', this.creerNewElementCollection);
         //ajoute le bouton en bas de la collection
         objetCollection.append(this.btnAjouterElementCollection);
+    }
+
+    /**
+     * 
+     * @param {int} dossier 
+     * @param {string} image 
+     * @param {int} taille 
+     * @returns {string}
+     */
+    getIconeUrl(dossier, image, taille) {
+        return '/admin/entreprise/geticon/' + dossier + '/' + image + '/' + taille;
     }
 
 
@@ -231,12 +242,12 @@ export default class extends Controller {
      * @param {string} texteAccompagnement 
      */
     defineIcone(url, elementHtml, texteAccompagnement) {
-        // var url = '/admin/entreprise/geticon/1/add/20';
         var iconeData = this.getIconeLocale(url);
         if (iconeData != null) {
             this.setIcone(iconeData, elementHtml, texteAccompagnement);
         } else {
-            this.downloadIcone(elementHtml, " " + texteAccompagnement, url.split('/')[4], url.split('/')[5], url.split('/')[6]);
+            var data = url.split('/'); // var url = '/admin/entreprise/geticon/1/add/20';
+            this.downloadIcone(elementHtml, " " + texteAccompagnement, data[4], data[5], data[6]);
         }
     }
 
@@ -266,10 +277,9 @@ export default class extends Controller {
         this.blocAlert.setAttribute('class', "text-secondary fw-italic");
         var spanIconeAlert = document.createElement("span");
         spanIconeAlert.setAttribute('class', "m-2 fw-bold");
-
-        // var spanAlert = document.createElement("span");
-        this.downloadIcone(spanIconeAlert, "", 1, "alert", 15);
+        //definir l'icone
         this.spanAlert.innerHTML = "...";
+        this.defineIcone(this.getIconeUrl(1, "alert", 15), spanIconeAlert, "");
 
         this.blocAlert.append(spanIconeAlert);
         this.blocAlert.append(this.spanAlert);
