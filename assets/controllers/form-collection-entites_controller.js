@@ -113,7 +113,7 @@ export default class extends Controller {
             champs.forEach(champ => {
                 if (champ.getAttribute("type") == "submit") {
                     // console.log("Bonton ** ", champ);
-                    var iconeSave = this.getIconeLocale('/admin/entreprise/geticon/1/save/15');
+                    var iconeSave = this.getIconeLocale(this.getIconeUrl(1, "save", 15)); //'/admin/entreprise/geticon/1/save/15'
                     if (iconeSave != null) {
                         champ.innerHTML = iconeSave + " " + champ.innerHTML; //Ok!
                     } else {
@@ -320,7 +320,7 @@ export default class extends Controller {
      */
     downloadIcone = (elementHtml, texteAAjouter, inAction, icone, taille) => {
         //Chargement de l'icones du bouton
-        var url = '/admin/entreprise/geticon/' + inAction + '/' + icone + '/' + taille;
+        var url = this.getIconeUrl(inAction, icone, taille); //'/admin/entreprise/geticon/' + inAction + '/' + icone + '/' + taille;
         fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(htmlData => {
@@ -393,7 +393,7 @@ export default class extends Controller {
         btnSupprimer.setAttribute('type', "button");
 
         //Chargement de l'icone, choix entre serveur ou image stockée dans la mémoire locale
-        var iconeSupprimer = this.getIconeLocale('/admin/entreprise/geticon/1/delete/18');
+        var iconeSupprimer = this.getIconeLocale(this.getIconeUrl(1, "delete", 18)); //'/admin/entreprise/geticon/1/delete/18'+ 
         if (iconeSupprimer != null) {
             btnSupprimer.innerHTML = iconeSupprimer; //Ok!
         } else {
@@ -475,7 +475,7 @@ export default class extends Controller {
     setIconObjet(htmlElement, texteAccompagnement) {
         var dossier = this.donneesInitiales.dossieractions || "0";
         var nomIcone = this.donneesInitiales.icone || "invite";
-        var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/19");
+        var iconeDisplay = this.getIconeLocale(this.getIconeUrl(dossier, nomIcone, 19)); //"/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/19"
         if (iconeDisplay != null) {
             htmlElement.innerHTML = iconeDisplay + " " + texteAccompagnement; //Ok!
         } else {
@@ -499,7 +499,7 @@ export default class extends Controller {
     setIconDescription(htmlElement) {
         var dossier = "1";
         var nomIcone = "description";
-        var iconeDisplay = this.getIconeLocale("/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/16");
+        var iconeDisplay = this.getIconeLocale(this.getIconeUrl(dossier, nomIcone, 16)); //"/admin/entreprise/geticon/" + dossier + "/" + nomIcone + "/16"
         if (iconeDisplay != null) {
             htmlElement.innerHTML = iconeDisplay; //Ok!
         } else {

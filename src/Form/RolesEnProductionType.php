@@ -48,7 +48,7 @@ class RolesEnProductionType extends AbstractType
                 $tabRolesProd = $parent_object->getRolesEnProduction();
                 // dd($parent_object);
                 if (count($tabRolesProd) != 0) {
-                    dd($parent_object);
+                    // dd($parent_object);
                     $dataNom = $tabRolesProd[0]->getNom();
                     $dataGroupe = $tabRolesProd[0]->getAccessGroupe();
                     $dataClient = $tabRolesProd[0]->getAccessClient();
