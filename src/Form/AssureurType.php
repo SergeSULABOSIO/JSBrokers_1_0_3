@@ -74,6 +74,7 @@ class AssureurType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Assureur::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }
