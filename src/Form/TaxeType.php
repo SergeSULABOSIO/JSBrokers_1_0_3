@@ -86,8 +86,8 @@ class TaxeType extends AbstractType
                     'data-form-collection-entites-data-value' => json_encode([
                         'addLabel' => $this->translatorInterface->trans("commom_add"),
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "role",
-                        'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'icone' => "taxe",
+                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
                         'tailleMax' => 1,
                     ]),
                 ],
