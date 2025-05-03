@@ -42,14 +42,8 @@ class BordereauType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
-            // ->add('createdAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', null, [
-            //     'widget' => 'single_text',
-            // ])
             ->add('receivedAt', DateTimeType::class, [
-                'label' => "Date de reception",
+                'label' => "Date de réception",
                 'widget' => 'single_text',
             ])
             ->add('montantTTC', MoneyType::class, [
@@ -65,14 +59,6 @@ class BordereauType extends AbstractType
                 'class' => Assureur::class,
                 'choice_label' => 'nom',
             ])
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('factureCommission', EntityType::class, [
-            //     'class' => FactureCommission::class,
-            //     'choice_label' => 'id',
-            // ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
                 'entry_type' => DocumentType::class,
@@ -84,12 +70,13 @@ class BordereauType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "document",
+                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'tailleMax' => 1,
+                    ]),
                 ],
             ])
             //Le bouton d'enregistrement / soumission
@@ -108,6 +95,7 @@ class BordereauType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Bordereau::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "bordereau_description" | trans }}
+	{{ "bordereau_form_description" | trans({
+		":user": utilisateur.nom, 
+		":bordereau": bordereau.nom, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,24 +20,42 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "bordereau_form_description" | trans({
-						":user": utilisateur.nom, 
-						":bordereau": bordereau.nom, 
-					}) | raw }}
-				</p>
-				<div class = "m-2">
-					{{ form(form, {action: path('admin.bordereau.edit', {
-						idEntreprise:entreprise.id,
-						idBordereau:bordereau.id
-						})}) 
-					}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.nom) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.type) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.montantTTC) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.receivedAt) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.assureur) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.documents) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}
