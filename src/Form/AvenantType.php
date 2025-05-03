@@ -14,6 +14,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class AvenantType extends AbstractType
 {
@@ -39,25 +40,13 @@ class AvenantType extends AbstractType
                     'placeholder' => "Numéro",
                 ],
             ])
-            ->add('description', TextType::class, [
+            ->add('description', TextareaType::class, [
                 'required' => false,
                 'label' => "Description",
                 'attr' => [
                     'placeholder' => "Description",
                 ],
             ])
-            // ->add('type', ChoiceType::class, [
-            //     'label' => "Type d'Avenant",
-            //     'expanded' => true,
-            //     'choices'  => [
-            //         "SOUSCRIPTION"      => Avenant::AVENANT_SOUSCRIPTION,
-            //         "INCORPORATION"     => Avenant::AVENANT_INCORPORATION,
-            //         "PROROGATION"       => Avenant::AVENANT_PROROGATION,
-            //         "ANNULATION"        => Avenant::AVENANT_ANNULATION,
-            //         "RENOUVELLEMENT"    => Avenant::AVENANT_RENOUVELLEMENT,
-            //         "RESILIATION"       => Avenant::AVENANT_RESILIATION,
-            //     ],
-            // ])
             ->add('startingAt', DateTimeType::class, [
                 'label' => "Date début",
                 'widget' => 'single_text',
@@ -77,29 +66,15 @@ class AvenantType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "document",
+                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'tailleMax' => 10,
+                    ]),
                 ],
             ])
-            // ->add('createdAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('cotation', EntityType::class, [
-            //     'class' => Cotation::class,
-            //     'choice_label' => 'id',
-            // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
@@ -117,6 +92,7 @@ class AvenantType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Avenant::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

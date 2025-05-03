@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "avenant_description" | trans }}
+	{{ "avenant_form_description" | trans({
+		":user": utilisateur.nom, 
+		":avenant": avenant.referencePolice, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,24 +20,44 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "avenant_form_description" | trans({
-						":user": utilisateur.nom, 
-						":avenant": avenant.referencePolice, 
-					}) | raw }}
-				</p>
-				<div class = "m-2">
-					{{ form(form, {action: path('admin.avenant.edit', {
-						idEntreprise:entreprise.id,
-						idAvenant:avenant.id
-						})}) 
-					}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.referencePolice) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.numero) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.description) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.startingAt) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.endingAt) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.documents) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}
