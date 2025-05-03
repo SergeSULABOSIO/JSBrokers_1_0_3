@@ -14,6 +14,7 @@ use App\Repository\TaxeRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\TacheRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -69,13 +70,10 @@ class TacheController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
         /** @var Tache */
         $tache = new Tache();
         //Paramètres par défaut
-        // $tache->setEntreprise($entreprise);
+        $tache->setToBeEndedAt(new DateTimeImmutable("+7 days"));
         $tache->setClosed(false);
         // $tache->setInvite($invite);
 

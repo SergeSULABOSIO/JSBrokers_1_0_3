@@ -18,6 +18,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class TacheType extends AbstractType
@@ -32,7 +33,7 @@ class TacheType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('description', TextType::class, [
+            ->add('description', TextareaType::class, [
                 'label' => "Description",
                 'attr' => [
                     'placeholder' => "Description",
@@ -42,14 +43,6 @@ class TacheType extends AbstractType
                 'label' => "Echéance",
                 'widget' => 'single_text',
             ])
-            // ->add('createdAt', DateTimeType::class, [
-            //     'label' => "Description",
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', DateTimeType::class, [
-            //     'label' => "Description",
-            //     'widget' => 'single_text',
-            // ])
             ->add('closed', ChoiceType::class, [
                 'label' => "La tâche est-elle accomplie?",
                 'expanded' => true,
@@ -58,27 +51,12 @@ class TacheType extends AbstractType
                     "Pas encore." => false,
                 ],
             ])
-            // ->add('invite', EntityType::class, [
-            //     'label' => "Invité",
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
             ->add('executor', EntityType::class, [
                 'label' => "Executeur",
                 'required' => false,
                 'class' => Invite::class,
                 'choice_label' => 'nom',
             ])
-            // ->add('piste', EntityType::class, [
-            //     'label' => "Piste",
-            //     'class' => Piste::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('cotation', EntityType::class, [
-            //     'label' => "Cotation",
-            //     'class' => Cotation::class,
-            //     'choice_label' => 'id',
-            // ])
             ->add('feedbacks', CollectionType::class, [
                 'label' => "tache_form_label_feedbacks",
                 'entry_type' => FeedbackType::class,
@@ -90,12 +68,13 @@ class TacheType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"),
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "description",
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "feedback",
+                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'tailleMax' => 20,
+                    ]),
                 ],
             ])
             //Le bouton d'enregistrement / soumission
@@ -114,6 +93,7 @@ class TacheType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Tache::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

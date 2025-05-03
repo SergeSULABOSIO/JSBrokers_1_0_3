@@ -7,6 +7,7 @@ use App\Entity\Cotation;
 use App\Entity\TypeRevenu;
 use App\Entity\RevenuPourCourtier;
 use App\Services\FormListenerFactory;
+use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -22,7 +23,8 @@ class RevenuPourCourtierType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -50,7 +52,7 @@ class RevenuPourCourtierType extends AbstractType
             ->add('montantFlatExceptionel', MoneyType::class, [
                 'label' => "Montant fixe (exceptionnel)",
                 'required' => false,
-                'currency' => "USD",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant fixe",

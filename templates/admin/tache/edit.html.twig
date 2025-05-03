@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "tache_description" | trans }}
+	{{ "tache_form_description" | trans({
+		":user": utilisateur.nom, 
+		":tache": tache.description, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,26 +20,39 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "tache_form_description" | trans({
-						":user": utilisateur.nom, 
-						":tache": tache.description, 
-					}) | raw }}
-				</p>
-				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
-					<div class = "m-2">
-						{{ form(form, {action: path('admin.tache.edit', {
-							idEntreprise:entreprise.id,
-							idTache:tache.id
-							})}) 
-						}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.description) }}
 					</div>
-				{# </turbo-frame> #}
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.executor) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.toBeEndedAt) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.closed) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.feedbacks) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}

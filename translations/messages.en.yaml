@@ -450,6 +450,7 @@ addressed_to_partner: "Towards partnaire"
 list_of_object: "List of Objects"
 list_filter_result_empty: "No object found."
 list_filter_result_elements: "Result: :number object(s) found."
+tache_form_label_feedbacks: "Feedbacks"
 
 
 

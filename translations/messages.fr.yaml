@@ -450,6 +450,7 @@ addressed_to_partner: "Au partenaire"
 list_of_object: "Liste d'Objets"
 list_filter_result_empty: "Aucun objet trouvé."
 list_filter_result_elements: "Résultat: :number objet(s) trouvé(s)."
+tache_form_label_feedbacks: "Compte-rendus"
 
 
 
