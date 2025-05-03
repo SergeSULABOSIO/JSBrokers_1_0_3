@@ -52,7 +52,7 @@ class BordereauType extends AbstractType
                 'currency' => "USD",
                 'grouping' => true,
                 'attr' => [
-                    'placeholder' => "Montant fixe",
+                    'placeholder' => "Montant",
                 ],
             ])
             ->add('assureur', EntityType::class, [
