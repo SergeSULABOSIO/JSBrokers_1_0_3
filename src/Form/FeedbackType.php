@@ -16,6 +16,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class FeedbackType extends AbstractType
 {
@@ -28,9 +29,15 @@ class FeedbackType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('description', TextareaType::class, [
+                'label' => "Description",
+                'attr' => [
+                    'placeholder' => "Description",
+                ],
+            ])
             ->add('type', ChoiceType::class, [
-                'label' => "feedback_form_type",
-                'expanded' => true,
+                'label' => "Moyen de contact",
+                'expanded' => false,
                 'choices'  => [
                     "Rencontre physique" => Feedback::TYPE_PHYSICAL_MEETING,
                     "Appel" => Feedback::TYPE_CALL,
@@ -39,13 +46,7 @@ class FeedbackType extends AbstractType
                     "Non défini" => Feedback::TYPE_UNDEFINED,
                 ],
             ])
-            ->add('description', TextType::class, [
-                'label' => "Description",
-                'attr' => [
-                    'placeholder' => "Description",
-                ],
-            ])
-            ->add('nextAction', TextType::class, [
+            ->add('nextAction', TextareaType::class, [
                 'required' => false,
                 'label' => "Prochaine Action",
                 'attr' => [
@@ -53,25 +54,10 @@ class FeedbackType extends AbstractType
                 ],
             ])
             ->add('nextActionAt', DateTimeType::class, [
+                'label' => "Date",
                 'required' => false,
                 'widget' => 'single_text',
             ])
-            // ->add('createdAt', DateTimeType::class, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', DateTimeType::class, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('invite', EntityType::class, [
-            //     'label' => "Invité",
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('tache', EntityType::class, [
-            //     'label' => "Tâche",
-            //     'class' => Tache::class,
-            //     'choice_label' => 'id',
-            // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
@@ -88,6 +74,7 @@ class FeedbackType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Feedback::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

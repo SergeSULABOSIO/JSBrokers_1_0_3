@@ -101,12 +101,12 @@
           {{ "entreprise_bouton_new_notificationsinistre" | trans }}
         </a>
     {% endif %}
-    {% if app.current_route starts with 'admin.feedback' %}
+    {# {% if app.current_route starts with 'admin.feedback' %}
         <a href="{{ path('admin.feedback.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_feedback" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {% if app.current_route starts with 'admin.groupe' %}
         <a href="{{ path('admin.groupe.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
