@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "risque_description" | trans }}
+	{{ "risque_creation_description_message" | trans({
+		":user": utilisateur.nom, 
+		":company": entreprise.nom, 
+	}) | raw}}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,20 +20,42 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "risque_creation_description_message" | trans({
-						":user": utilisateur.nom, 
-						":company": entreprise.nom, 
-					}) | raw}}
-					<hr>
-				</p>
-				{{ form(form) }}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col-8">
+						{{ form_row(form.nomComplet) }}
+					</div>
+					<div class="col-4">
+						{{ form_row(form.code) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.description) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.pourcentageCommissionSpecifiqueHT) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.branche) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.imposable) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
 				</div>
 			</div>
-		</div>	
+		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}

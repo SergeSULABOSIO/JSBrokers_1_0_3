@@ -79,6 +79,7 @@ class RisqueType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Risque::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

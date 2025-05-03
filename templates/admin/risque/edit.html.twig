@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "risque_description" | trans }}
+	{{ "risque_form_description" | trans({
+		":user": utilisateur.nom, 
+		":risque": risque.nomComplet, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,26 +20,42 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "risque_form_description" | trans({
-						":user": utilisateur.nom, 
-						":risque": risque.nomComplet, 
-					}) | raw }}
-				</p>
-				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
-					<div class = "m-2">
-						{{ form(form, {action: path('admin.risque.edit', {
-							idEntreprise:entreprise.id,
-							idRisque:risque.id
-							})}) 
-						}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col-8">
+						{{ form_row(form.nomComplet) }}
 					</div>
-				{# </turbo-frame> #}
+					<div class="col-4">
+						{{ form_row(form.code) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.description) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.pourcentageCommissionSpecifiqueHT) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.branche) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.imposable) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}
