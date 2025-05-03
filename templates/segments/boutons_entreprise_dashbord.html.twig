@@ -125,18 +125,18 @@
           {{ "entreprise_bouton_new_cotation" | trans }}
         </a>
     {% endif %}
-    {% if app.current_route starts with 'admin.revenucourtier' %}
+    {# {% if app.current_route starts with 'admin.revenucourtier' %}
         <a href="{{ path('admin.revenucourtier.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_revenucourtier" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.avenant' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.avenant' %}
         <a href="{{ path('admin.avenant.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_avenant" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {# {% if app.current_route starts with 'admin.tranche' %}
         <a href="{{ path('admin.tranche.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}

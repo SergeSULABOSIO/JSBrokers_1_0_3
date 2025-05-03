@@ -56,17 +56,6 @@ class RevenuPourCourtierType extends AbstractType
                     'placeholder' => "Montant fixe",
                 ],
             ])
-            // ->add('createdAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-
-            // ->add('cotation', EntityType::class, [
-            //     'class' => Cotation::class,
-            //     'choice_label' => 'id',
-            // ])
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
                 'attr' => [
@@ -83,6 +72,7 @@ class RevenuPourCourtierType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => RevenuPourCourtier::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }
