@@ -203,7 +203,7 @@ export default class extends Controller {
 
             //Chargement des données sur le display
             let isPremier = true;
-            let maxLengthSecondaire = 4;
+            let maxLengthSecondaire = 3;
             for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
                 if (isPremier) {
                     if (valeurDuChamp != "") {
