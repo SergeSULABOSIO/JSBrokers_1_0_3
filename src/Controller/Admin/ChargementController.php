@@ -69,9 +69,6 @@ class ChargementController extends AbstractController
         $chargement = new Chargement();
         //Paramètres par défaut
         $chargement->setNom("CHGM" . (rand(0, 100)));
-        $chargement->setTauxSurPrimeNette(0.1);
-        $chargement->setMontantflat(0);
-        $chargement->setImposable(true);
         $chargement->setEntreprise($entreprise);
 
         $form = $this->createForm(ChargementType::class, $chargement);

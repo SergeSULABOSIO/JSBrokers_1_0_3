@@ -47,25 +47,6 @@ class ChargementPourPrimeType extends AbstractType
                     'placeholder' => "Montant",
                 ],
             ])
-            // ->add('tauxExceptionel', PercentType::class, [
-            //     'label' => "Taux exceptionnel",
-            //     'required' => false,
-            //     'scale' => 3,
-            //     'attr' => [
-            //         'placeholder' => "Taux",
-            //     ],
-            // ])
-            // ->add('createdAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-
-            // ->add('cotation', EntityType::class, [
-            //     'class' => Cotation::class,
-            //     'choice_label' => 'id',
-            // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
@@ -83,6 +64,7 @@ class ChargementPourPrimeType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => ChargementPourPrime::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

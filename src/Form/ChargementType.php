@@ -81,6 +81,7 @@ class ChargementType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Chargement::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

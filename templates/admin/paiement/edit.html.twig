@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "paiement_description" | trans }}
+	{{ "paiement_form_description" | trans({
+		":user": utilisateur.nom, 
+		":paiement": paiement.description, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,24 +20,62 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 55rem;">
-			<div class="card-body">
-				<p>
-					{{ "paiement_form_description" | trans({
-						":user": utilisateur.nom, 
-						":paiement": paiement.description, 
-					}) | raw }}
-				</p>
-				<div class = "m-2">
-					{{ form(form, {action: path('admin.paiement.edit', {
-						idEntreprise:entreprise.id,
-						idPaiement:paiement.id
-						})}) 
-					}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				{% if paiement.note != null %}
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.referenceNote) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.montantPayable) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.montantPaye) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.montantSolde) }}
+						</div>
+					</div>
+				{% endif %}
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.reference) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.montant) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.paidAt) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.description) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.CompteBancaire) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.preuves) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}
