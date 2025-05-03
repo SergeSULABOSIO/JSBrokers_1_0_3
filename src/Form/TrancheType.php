@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Tranche;
 use App\Services\FormListenerFactory;
+use DateTimeImmutable;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -21,12 +22,9 @@ class TrancheType extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        // if ($options['tranche'] != null) {
-        //     dd($options['tranche']);
-        // }
         $builder
             ->add('nom', TextType::class, [
                 'label' => "Nom",
@@ -52,31 +50,15 @@ class TrancheType extends AbstractType
                 ],
             ])
             ->add('payableAt', DateTimeType::class, [
+                // 'data' => $defautDateA,
                 'label' => "Date d'effet",
                 'widget' => 'single_text',
-            ])//
+            ]) //
             ->add('echeanceAt', DateTimeType::class, [
+                // 'data' => $defautDateB,
                 'label' => "Echéance",
                 'widget' => 'single_text',
             ])
-            // ->add('createdAt', DateTimeImmutable::class, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('cotation', EntityType::class, [
-            //     'class' => Cotation::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('factureCommission', EntityType::class, [
-            //     'class' => FactureCommission::class,
-            //     'choice_label' => 'id',
-            // ])
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
                 'attr' => [
@@ -85,7 +67,7 @@ class TrancheType extends AbstractType
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
-        
+
         ;
     }
 
@@ -94,6 +76,7 @@ class TrancheType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Tranche::class,
             'tranche' => null,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

@@ -27,6 +27,7 @@ use App\Repository\EntrepriseRepository;
 use App\Repository\NoteRepository;
 use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -232,6 +233,12 @@ class TrancheController extends AbstractController
 
         /** @var Tranche $tranche */
         $tranche = new Tranche();
+        $tranche
+            ->setNom("Tranche n°" . random_int(1986, 2070))
+            ->setPourcentage(1)
+            ->setPayableAt(new DateTimeImmutable("now"))
+            ->setEcheanceAt(new DateTimeImmutable("+364 days"))
+        ;
         //Paramètres par défaut
 
         $form = $this->createForm(TrancheType::class, $tranche);

@@ -137,12 +137,12 @@
           {{ "entreprise_bouton_new_avenant" | trans }}
         </a>
     {% endif %}
-    {% if app.current_route starts with 'admin.tranche' %}
+    {# {% if app.current_route starts with 'admin.tranche' %}
         <a href="{{ path('admin.tranche.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_tranche" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {% if app.current_route starts with 'admin.note' %}
         <a href="{{ path('admin.note.create', {'idNote':-1, 'page':1, 'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
