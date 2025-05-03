@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "comptebancaire_description" | trans }}
+	{{ "comptebancaire_creation_description_message" | trans({
+		":user": utilisateur.nom, 
+		":company": entreprise.nom, 
+	}) | raw}}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,20 +20,44 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "comptebancaire_creation_description_message" | trans({
-						":user": utilisateur.nom, 
-						":company": entreprise.nom, 
-					}) | raw}}
-					<hr>
-				</p>
-				{{ form(form) }}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.nom) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.intitule) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.codeSwift) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.banque) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.numero) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.documents) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
 				</div>
 			</div>
-		</div>	
+		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}

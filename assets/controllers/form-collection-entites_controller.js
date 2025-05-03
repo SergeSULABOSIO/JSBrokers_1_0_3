@@ -141,38 +141,61 @@ export default class extends Controller {
                 var tabData = id.split("_");
                 var nomChamp = "";
                 if (tabData.length != 0) {
-                    if (champ.getAttribute("type") == "text") {
+                    // console.log("\t" + champ.tagName.toLocaleLowerCase());
+                    if (champ.tagName.toLocaleLowerCase() == "input") {
+                        if (champ.getAttribute("type") == "text") {
+                            nomChamp = tabData[tabData.length - 1];
+                            if (mapChamps.get(nomChamp) == null) {
+                                mapChamps.set(nomChamp, []);
+                            }
+                        }
+                        if (champ.getAttribute("type") == "checkbox") {
+                            nomChamp = tabData[tabData.length - 2];
+                            if (mapChamps.get(nomChamp) == null) {
+                                mapChamps.set(nomChamp, []);
+                            }
+                        }
+                    }
+                    if (champ.tagName.toLocaleLowerCase() == "select") {
                         nomChamp = tabData[tabData.length - 1];
                         if (mapChamps.get(nomChamp) == null) {
                             mapChamps.set(nomChamp, []);
                         }
                     }
-                    if (champ.getAttribute("type") == "checkbox") {
-                        nomChamp = tabData[tabData.length - 2];
-                        if (mapChamps.get(nomChamp) == null) {
-                            mapChamps.set(nomChamp, []);
-                        }
-                    }
+
                 }
             })
 
             //Récupération des valeurs des champs
             for (const [nomDuChamp, tabvaleurDuChamp] of mapChamps) {
                 champs.forEach(champ => {
-                    // var name = champ.getAttribute("name");
-                    var value = champ.getAttribute("value");
                     var id = champ.getAttribute("id");
-                    var checked = champ.getAttribute("checked");
-
                     if (id.indexOf("_" + nomDuChamp) != -1) {
-                        if (champ.getAttribute("type") == "text") {
-                            tabvaleurDuChamp.push(value);
-                        }
-                        if (champ.getAttribute("type") == "checkbox") {
-                            if (checked == "checked" || checked == "true") {
-                                // console.log("J'AI TROUVE LE CHAMP " + nomDuChamp + "!" + id + "!" + value + "|" + checked);
+                        if (champ.tagName.toLocaleLowerCase() == "input") {
+                            var value = champ.getAttribute("value");
+                            if (champ.getAttribute("type") == "text") {
                                 tabvaleurDuChamp.push(value);
                             }
+                            if (champ.getAttribute("type") == "checkbox") {
+                                var checked = champ.getAttribute("checked");
+                                if (checked == "checked" || checked == "true") {
+                                    tabvaleurDuChamp.push(value);
+                                }
+                            }
+                        }
+                        if (champ.tagName.toLocaleLowerCase() == "select") {
+                            var selectedOptions = champ.selectedOptions;
+                            var optionsText = "";
+                            var i = 1;
+                            for (const selectedOption of selectedOptions){
+                                var sepa = ", ";
+                                if (i==1 && selectedOptions.length == 1) {
+                                    sepa = "";
+                                }
+                                optionsText += selectedOption.textContent + sepa;
+                                i++;
+                            }
+                            tabvaleurDuChamp.push(optionsText);
                         }
                     }
                 })
