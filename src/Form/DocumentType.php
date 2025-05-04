@@ -39,79 +39,17 @@ class DocumentType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                'label' => "document_form_label_nom",
+                'label' => "nom",
                 'attr' => [
-                    'placeholder' => "document_form_label_nom_placeholder",
+                    'placeholder' => "nom",
                 ],
             ])
             ->add('classeur', EntityType::class, [
+                'label' => "Classeur",
                 'class' => Classeur::class,
                 'required' => false,
                 'choice_label' => 'nom',
             ])
-            // ->add('createdAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('updatedAt', null, [
-            //     'widget' => 'single_text',
-            // ])
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
-
-            // ->add('pieceSinistre', EntityType::class, [
-            //     'class' => PieceSinistre::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('offreIndemnisationSinistre', EntityType::class, [
-            //     'class' => OffreIndemnisationSinistre::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('paiement', EntityType::class, [
-            //     'class' => Paiement::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('cotation', EntityType::class, [
-            //     'class' => Cotation::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('avenant', EntityType::class, [
-            //     'class' => Avenant::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('tache', EntityType::class, [
-            //     'class' => Tache::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('feedback', EntityType::class, [
-            //     'class' => Feedback::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('client', EntityType::class, [
-            //     'class' => Client::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('bordereau', EntityType::class, [
-            //     'class' => Bordereau::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('compteBancaire', EntityType::class, [
-            //     'class' => CompteBancaire::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('entreprise', EntityType::class, [
-            //     'class' => Entreprise::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('piste', EntityType::class, [
-            //     'class' => Piste::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('partenaire', EntityType::class, [
-            //     'class' => Partenaire::class,
-            //     'choice_label' => 'id',
-            // ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
@@ -128,6 +66,7 @@ class DocumentType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Document::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

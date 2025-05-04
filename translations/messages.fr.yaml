@@ -459,6 +459,8 @@ model_piece_sinistre_form_label_name_obligatoire: "Est-elle obligatoire?"
 oui: "Oui"
 non: "Non"
 enregistrer: "Enregistrer"
+nom: "Nom"
+classeur: "Classeur"
 
 
 

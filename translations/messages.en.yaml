@@ -459,6 +459,8 @@ model_piece_sinistre_form_label_name_obligatoire: "Is this document mendatory?"
 oui: "Yes"
 non: "No"
 enregistrer: "Save"
+nom: "Nom"
+classeur: "Folder"
 
 
 
