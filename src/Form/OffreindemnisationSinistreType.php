@@ -5,6 +5,7 @@ namespace App\Form;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -17,6 +18,7 @@ class OffreIndemnisationSinistreType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private ServiceMonnaies $serviceMonnaies,
         private TranslatorInterface $translatorInterface
     ) {}
     
@@ -40,7 +42,7 @@ class OffreIndemnisationSinistreType extends AbstractType
             ])
             ->add('franchiseAppliquee', MoneyType::class, [
                 'label' => "Franchise appliquée",
-                'currency' => "USD",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Franchise",
@@ -49,7 +51,7 @@ class OffreIndemnisationSinistreType extends AbstractType
             ->add('montantPayable', MoneyType::class, [
                 'label' => "Montant payable / Compensation",
                 'help' => "Solde payable après application de la franchise au coût / valeure totale de reparation.",
-                'currency' => "USD",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant payable",
@@ -138,6 +140,7 @@ class OffreIndemnisationSinistreType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => OffreIndemnisationSinistre::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }
