@@ -87,6 +87,7 @@ class NotificationSinistreController extends AbstractController
         $notificationsinistre = new NotificationSinistre();
         //Paramètres par défaut
         $notificationsinistre->setOccuredAt(new DateTimeImmutable("now"));
+        $notificationsinistre->setNotifiedAt(new DateTimeImmutable("now"));
         $notificationsinistre->setInvite($invite);
 
         $form = $this->createForm(NotificationSinistreType::class, $notificationsinistre);
