@@ -92,12 +92,13 @@ class PartenaireType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "partenaire",
+                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'tailleMax' => 1,
+                    ]),
                 ],
             ])
             ->add('documents', CollectionType::class, [
@@ -112,12 +113,13 @@ class PartenaireType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "document",
+                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'tailleMax' => 5,
+                    ]),
                 ],
             ])
             //Le bouton d'enregistrement / soumission
@@ -134,6 +136,7 @@ class PartenaireType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Partenaire::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

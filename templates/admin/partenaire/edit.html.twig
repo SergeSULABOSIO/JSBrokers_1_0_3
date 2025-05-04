@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "partenaire_description" | trans }}
+	{{ "partenaire_form_description" | trans({
+		":user": utilisateur.nom, 
+		":partenaire": partenaire.nom, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,26 +20,58 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "partenaire_form_description" | trans({
-						":user": utilisateur.nom, 
-						":partenaire": partenaire.nom, 
-					}) | raw }}
-				</p>
-				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
-					<div class = "m-2">
-						{{ form(form, {action: path('admin.partenaire.edit', {
-							idEntreprise:entreprise.id,
-							idPartenaire:partenaire.id
-							})}) 
-						}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col-8">
+						{{ form_row(form.nom) }}
 					</div>
-				{# </turbo-frame> #}
+					<div class="col-4">
+						{{ form_row(form.adressePhysique) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.telephone) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.email) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.numimpot) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.idnat) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.rccm) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.part) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.conditionPartages) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.documents) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}
