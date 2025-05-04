@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "piste_description" | trans }}
+	{{ "piste_creation_description_message" | trans({
+		":user": utilisateur.nom, 
+		":company": entreprise.nom, 
+	}) | raw}}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,20 +20,5 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card m-2 shadow-sm bg-body" style="width: 55rem;">
-			<div class="card-body">
-				<p>
-					{{ "piste_creation_description_message" | trans({
-						":user": utilisateur.nom, 
-						":company": entreprise.nom, 
-					}) | raw}}
-					<hr>
-				</p>
-				{{ form(form) }}
-				</div>
-			</div>
-		</div>	
-	</div>
+	
 {% endblock %}

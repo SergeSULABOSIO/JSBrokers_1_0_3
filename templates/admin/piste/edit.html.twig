@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "piste_description" | trans }}
+	{{ "piste_form_description" | trans({
+		":user": utilisateur.nom, 
+		":piste": piste.nom, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,26 +20,5 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 55rem;">
-			<div class="card-body">
-				<p>
-					{{ "piste_form_description" | trans({
-						":user": utilisateur.nom, 
-						":piste": piste.nom, 
-					}) | raw }}
-				</p>
-				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
-					<div class = "m-2">
-						{{ form(form, {action: path('admin.piste.edit', {
-							idEntreprise:entreprise.id,
-							idPiste:piste.id
-							})}) 
-						}}
-					</div>
-				{# </turbo-frame> #}
-			</div>
-		</div>
-	</div>
+	
 {% endblock %}
