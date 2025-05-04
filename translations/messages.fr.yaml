@@ -453,6 +453,12 @@ list_filter_result_elements: "Résultat: :number objet(s) trouvé(s)."
 tache_form_label_feedbacks: "Compte-rendus"
 entreprise_form_label_documents: "Documents"
 entreprise_form_label_contacts: "Personnes ressources"
+model_piece_sinistre_form_label_name: "Type de pièce"
+model_piece_sinistre_form_label_name_placeholder: "Type de pièce ici"
+model_piece_sinistre_form_label_name_obligatoire: "Est-elle obligatoire?"
+oui: "Oui"
+non: "Non"
+enregistrer: "Enregistrer"
 
 
 

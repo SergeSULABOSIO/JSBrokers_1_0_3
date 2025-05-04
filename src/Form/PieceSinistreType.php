@@ -45,14 +45,6 @@ class PieceSinistreType extends AbstractType
                 'class' => ModelePieceSinistre::class,
                 'choice_label' => 'nom',
             ])
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
-            // ->add('notificationSinistre', EntityType::class, [
-            //     'class' => NotificationSinistre::class,
-            //     'choice_label' => 'id',
-            // ])
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",
                 'attr' => [
@@ -66,6 +58,7 @@ class PieceSinistreType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => PieceSinistre::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }

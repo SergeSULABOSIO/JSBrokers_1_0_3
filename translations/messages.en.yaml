@@ -453,7 +453,12 @@ list_filter_result_elements: "Result: :number object(s) found."
 tache_form_label_feedbacks: "Feedbacks"
 entreprise_form_label_documents: "Documents"
 entreprise_form_label_contacts: "Key people"
-
+model_piece_sinistre_form_label_name: "Type of document"
+model_piece_sinistre_form_label_name_placeholder: "Type of document here"
+model_piece_sinistre_form_label_name_obligatoire: "Is this document mendatory?"
+oui: "Yes"
+non: "No"
+enregistrer: "Save"
 
 
 

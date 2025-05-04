@@ -25,13 +25,13 @@ class ModelePieceSinistreType extends AbstractType
                 ],
             ])
             ->add('description', TextareaType::class, [
-                'label' => "model_piece_sinistre_form_label_description",
+                'label' => "Description",
                 'attr' => [
-                    'placeholder' => "model_piece_sinistre_form_label_description_placeholder",
+                    'placeholder' => "Description",
                 ],
             ])
             ->add('obligatoire', ChoiceType::class, [
-                'label' => "Est-elle une pièce obligatoire?",
+                'label' => "model_piece_sinistre_form_label_name_obligatoire",
                 'expanded' => true,
                 'required' => true,
                 'choices'  => [
@@ -40,7 +40,7 @@ class ModelePieceSinistreType extends AbstractType
                 ],
             ])
             ->add('enregistrer', SubmitType::class, [
-                'label' => "model_piece_sinistre_form_save",
+                'label' => "enregistrer",
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],
