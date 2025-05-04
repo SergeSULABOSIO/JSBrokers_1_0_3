@@ -171,6 +171,7 @@ export default class extends Controller {
                 champs.forEach(champ => {
                     var id = champ.getAttribute("id");
                     if (id.indexOf("_" + nomDuChamp) != -1) {
+                        // console.log(champ);
                         if (champ.tagName.toLocaleLowerCase() == "input") {
                             var value = champ.getAttribute("value");
                             if (champ.getAttribute("type") == "text") {

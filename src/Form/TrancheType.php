@@ -32,23 +32,6 @@ class TrancheType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
-            ->add('montantFlat', MoneyType::class, [
-                'label' => "Montant fixe",
-                'required' => false,
-                'currency' => "USD",
-                'grouping' => true,
-                'attr' => [
-                    'placeholder' => "Montant fixe",
-                ],
-            ])
-            ->add('pourcentage', PercentType::class, [
-                'label' => "Pourcentage",
-                'required' => false,
-                'scale' => 3,
-                'attr' => [
-                    'placeholder' => "Portion",
-                ],
-            ])
             ->add('payableAt', DateTimeType::class, [
                 // 'data' => $defautDateA,
                 'label' => "Date d'effet",
@@ -58,6 +41,23 @@ class TrancheType extends AbstractType
                 // 'data' => $defautDateB,
                 'label' => "Echéance",
                 'widget' => 'single_text',
+            ])
+            ->add('pourcentage', PercentType::class, [
+                'label' => "Pourcentage",
+                'required' => false,
+                'scale' => 3,
+                'attr' => [
+                    'placeholder' => "Portion",
+                ],
+            ])
+            ->add('montantFlat', MoneyType::class, [
+                'label' => "Montant fixe",
+                'required' => false,
+                'currency' => "USD",
+                'grouping' => true,
+                'attr' => [
+                    'placeholder' => "Montant fixe",
+                ],
             ])
             ->add('enregistrer', SubmitType::class, [
                 'label' => "Enregistrer",

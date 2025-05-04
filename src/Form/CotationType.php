@@ -101,7 +101,7 @@ class CotationType extends AbstractType
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "revenu",
                         'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
+                        'tailleMax' => 10,
                     ]),
                 ],
             ]);
@@ -162,7 +162,7 @@ class CotationType extends AbstractType
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "tranche",
                         'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
+                        'tailleMax' => 12,
                     ]),
                 ],
             ])
@@ -182,7 +182,7 @@ class CotationType extends AbstractType
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "document",
                         'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
+                        'tailleMax' => 10,
                     ]),
                 ],
             ])
@@ -203,7 +203,7 @@ class CotationType extends AbstractType
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "tache",
                         'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
+                        'tailleMax' => 100,
                     ]),
                 ],
             ])

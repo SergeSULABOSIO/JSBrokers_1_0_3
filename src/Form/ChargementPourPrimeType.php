@@ -27,11 +27,6 @@ class ChargementPourPrimeType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('type', EntityType::class, [
-                'label' => "Type de chargement",
-                'class' => Chargement::class,
-                'choice_label' => 'nom',
-            ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
                 'attr' => [
@@ -46,6 +41,11 @@ class ChargementPourPrimeType extends AbstractType
                 'attr' => [
                     'placeholder' => "Montant",
                 ],
+            ])
+            ->add('type', EntityType::class, [
+                'label' => "Type de chargement",
+                'class' => Chargement::class,
+                'choice_label' => 'nom',
             ])
             //Le bouton d'enregistrement / soumission
             ->add('enregistrer', SubmitType::class, [

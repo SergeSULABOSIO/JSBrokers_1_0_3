@@ -24,6 +24,12 @@ class ChargementType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
+            ->add('description', TextareaType::class, [
+                'label' => "Description",
+                'attr' => [
+                    'placeholder' => "Description",
+                ],
+            ])
             ->add('fonction', ChoiceType::class, [
                 'label' => "Quelle est la fonction de ce type de chargement?",
                 'expanded' => true,
@@ -35,12 +41,7 @@ class ChargementType extends AbstractType
                     "C'est une taxe" => Chargement::FONCTION_TAXE,
                 ],
             ])
-            ->add('description', TextareaType::class, [
-                'label' => "Description",
-                'attr' => [
-                    'placeholder' => "Description",
-                ],
-            ])
+            
             // ->add('montantflat', MoneyType::class, [
             //     'label' => "Montant Flat",
             //     'currency' => "USD",
