@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "cotation_description" | trans }}
+	{{ "risque_form_description" | trans({
+		":user": utilisateur.nom, 
+		":cotation": cotation.nom, 
+	}) | raw }}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,26 +20,79 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "risque_form_description" | trans({
-						":user": utilisateur.nom, 
-						":cotation": cotation.nom, 
-					}) | raw }}
-				</p>
-				{# <turbo-frame id="monnaie_{{ monnaie.id }}"> #}
-					<div class = "m-2">
-						{{ form(form, {action: path('admin.cotation.edit', {
-							idEntreprise:entreprise.id,
-							idCotation:cotation.id
-							})}) 
-						}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col-6">
+						{{ form_row(form.nom) }}
 					</div>
-				{# </turbo-frame> #}
+					<div class="col-2">
+						{{ form_row(form.duree) }}
+					</div>
+					<div class="col-4">
+						{{ form_row(form.assureur) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.chargements) }}
+					</div>
+				</div>
+				<div class="row">
+					{% if cotation != null %}
+						<div class="col">
+							{{ form_row(form.prime) }}
+						</div>
+					{% endif %}
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.revenus) }}
+					</div>
+				</div>
+				{% if cotation != null %}
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.commissionNette) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.commissionNetteTva) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.commissionTTC) }}
+						</div>
+					</div>
+				{% endif %}
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.tranches) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.documents) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.taches) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.avenants) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_widget(form.enregistrer) }}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}

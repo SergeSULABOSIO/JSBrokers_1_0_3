@@ -128,7 +128,7 @@ class CotationController extends AbstractController
         if ($cotation) {
             $form->get('prime')->setData($this->constante->Cotation_getMontant_prime_payable_par_client($cotation));
 
-            $comNette = $this->constante->Cotation_getMontant_commission_payable_par_assureur($cotation) + $this->constante->Cotation_getMontant_commission_payable_par_client($cotation);
+            $comNette = $this->constante->Cotation_getMontant_commission_ht($cotation, -1, false);
             $tvaCom = 0;
 
             if ($cotation->getPiste()) {
