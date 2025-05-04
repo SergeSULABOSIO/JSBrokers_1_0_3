@@ -41,6 +41,7 @@ class ClasseurType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Classeur::class,
+            'parent_object' => null, // l'objet parent
         ]);
     }
 }
