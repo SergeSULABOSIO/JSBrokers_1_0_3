@@ -47,7 +47,7 @@ class CotationType extends AbstractType
                 'choice_label' => 'nom',
             ])
             ->add('chargements', CollectionType::class, [
-                'label' => "Chargements",
+                'label' => "Composition de la prime d'assurance",
                 'entry_type' => ChargementPourPrimeType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -62,7 +62,7 @@ class CotationType extends AbstractType
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "cotation",
                         'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
+                        'tailleMax' => 10,
                     ]),
                 ],
             ]);
