@@ -55,10 +55,10 @@ class PisteType extends AbstractType
                     "RESILIATION"       => Piste::AVENANT_RESILIATION,
                 ],
             ])
-
             ->add('renewalCondition', ChoiceType::class, [
-                'label' => "Type d'assurance selon la condition de renouvellement",
-                'expanded' => false,
+                'label' => "Type d'assurance.",
+                'help' => "Type d'assurance selon les conditions de renouvellement.",
+                'expanded' => true,
                 'required' => true,
                 'choices'  => [
                     "ASSURANCE A TERME RENOUVELLABLE"           => Piste::RENEWAL_CONDITION_RENEWABLE,

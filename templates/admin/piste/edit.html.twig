@@ -20,5 +20,50 @@
 {% endblock %}
 
 {% block body %}
-	
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.nom) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-4">
+						{{ form_row(form.client) }}
+					</div>
+					<div class="col-3">
+						{{ form_row(form.typeAvenant) }}
+					</div>
+					<div class="col-5">
+						{{ form_row(form.renewalCondition) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-4">
+						{{ form_row(form.exercice) }}
+					</div>
+					<div class="col-4">
+						{{ form_row(form.primePotentielle) }}
+					</div>
+					<div class="col-4">
+						{{ form_row(form.commissionPotentielle) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.descriptionDuRisque) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.enregistrer) }}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{{ form_end(form) }}
 {% endblock %}
