@@ -98,7 +98,7 @@ export default class extends Controller {
             champ.setAttribute("checked", event.target.checked);
         }
         if (champ.getAttribute("type") == "radio") {
-            console.log("Target: ", event.target, event.target.value, event.target.textContent);
+            // console.log("Target: ", event.target, event.target.value, event.target.nextElementSibling.innerText);
             champ.setAttribute("checked", event.target.checked);
         }
         if (champ.getAttribute("type") == "datetime-local") {
@@ -238,12 +238,8 @@ export default class extends Controller {
                                     tabvaleurDuChamp.push((new Date(value)).toLocaleDateString());
                                 }
                                 if (champ.getAttribute("type") == "radio") {
-                                    var checked = champ.getAttribute("checked");
-                                    // console.log(champ, champ.checked);
                                     if (champ.checked == true) {
-                                        tabvaleurDuChamp.push("Oui");
-                                    }else{
-                                        tabvaleurDuChamp.push("Non");
+                                        tabvaleurDuChamp.push(champ.nextElementSibling.innerText);
                                     }
                                 }
                             }
