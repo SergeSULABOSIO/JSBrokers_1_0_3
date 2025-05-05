@@ -69,7 +69,7 @@ class PisteType extends AbstractType
             ])
 
             ->add('exercice', NumberType::class, [
-                'label' => "Exercice comptable (année)",
+                'label' => "Exercice",
                 'grouping' => false,
                 'attr' => [
                     'placeholder' => "Année",
