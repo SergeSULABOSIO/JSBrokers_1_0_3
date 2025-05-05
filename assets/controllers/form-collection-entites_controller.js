@@ -102,6 +102,22 @@ export default class extends Controller {
         this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal, champDisplaySecondaire);
     }
 
+    /**
+     * @param {htmlElement} element 
+     * @returns boolean
+     */
+    contientDejaImmage = (element) => {
+        var containsSVG = false;
+        for (const enfant of element.children) {
+            console.log("\t", enfant, enfant.tagName);
+            if (enfant.tagName === "svg") {
+                containsSVG = true;
+                break;
+            }
+        }
+        return containsSVG;
+    }
+
 
     /**
      * @param {htmlElement} formulaire 
@@ -112,12 +128,13 @@ export default class extends Controller {
             const champs = formulaire.querySelectorAll('input, select, textarea, button');
             champs.forEach(champ => {
                 if (champ.getAttribute("type") == "submit") {
-                    // console.log("Bonton ** ", champ);
-                    var iconeSave = this.getIconeLocale(this.getIconeUrl(1, "save", 15)); //'/admin/entreprise/geticon/1/save/15'
-                    if (iconeSave != null) {
-                        champ.innerHTML = iconeSave + " " + champ.innerHTML; //Ok!
-                    } else {
-                        champ.innerHTML = this.downloadIcone(champ, " " + champ.innerHTML, 1, "save", 15);
+                    if (this.contientDejaImmage(champ) == false) {
+                        var iconeSave = this.getIconeLocale(this.getIconeUrl(1, "save", 15)); //'/admin/entreprise/geticon/1/save/15'
+                        if (iconeSave != null) {
+                            champ.innerHTML = iconeSave + " " + champ.innerHTML; //Ok!
+                        } else {
+                            champ.innerHTML = this.downloadIcone(champ, " " + champ.innerHTML, 1, "save", 15);
+                        }
                     }
                 }
             });
@@ -198,9 +215,9 @@ export default class extends Controller {
                             var selectedOptions = champ.selectedOptions;
                             var optionsText = "";
                             var i = 1;
-                            for (const selectedOption of selectedOptions){
+                            for (const selectedOption of selectedOptions) {
                                 var sepa = ", ";
-                                if (i==1 && selectedOptions.length == 1) {
+                                if (i == 1 && selectedOptions.length == 1) {
                                     sepa = "";
                                 }
                                 optionsText += selectedOption.textContent + sepa;
@@ -233,7 +250,7 @@ export default class extends Controller {
                             var txtVal = "" + valeurDuChamp;
                             var maxLegnth = 15;
                             if (txtVal.length > maxLegnth) {
-                                txtVal = txtVal.substring(0, maxLegnth-1) + "...";
+                                txtVal = txtVal.substring(0, maxLegnth - 1) + "...";
                             }
                             // console.log("LE CHAMP DECONDAIRE: ", txtVal, txtVal.length);
                             champDisplaySecondaire.innerHTML += " • " + nomDuChamp + "[" + txtVal + "]";
