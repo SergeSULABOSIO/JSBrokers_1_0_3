@@ -273,7 +273,7 @@ export default class extends Controller {
             let isPremier = true;
             let maxLengthSecondaire = 3;
 
-            console.log("\t", mapChamps);
+            // console.log("\t", mapChamps);
 
             for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
                 if (isPremier) {
