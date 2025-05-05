@@ -109,7 +109,7 @@ export default class extends Controller {
     contientDejaImmage = (element) => {
         var containsSVG = false;
         for (const enfant of element.children) {
-            console.log("\t", enfant, enfant.tagName);
+            // console.log("\t", enfant, enfant.tagName);
             if (enfant.tagName === "svg") {
                 containsSVG = true;
                 break;
