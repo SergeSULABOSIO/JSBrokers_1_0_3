@@ -97,7 +97,7 @@ export default class extends Controller {
         if (champ.getAttribute("type") == "checkbox") {
             champ.setAttribute("checked", event.target.checked);
         }
-        // console.log("Target: ", event.target);
+        console.log("Target: ", event.target);
         //on actualise l'affichage sur le display
         this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal, champDisplaySecondaire);
     }
@@ -154,12 +154,13 @@ export default class extends Controller {
             //Identification des noms des champs.
             var mapChamps = new Map();
             champs.forEach(champ => {
+                // console.log(champ);
                 var id = champ.getAttribute("id");
                 var tabData = id.split("_");
                 var nomChamp = "";
                 if (tabData.length != 0) {
+                    // console.log("CHAMP:", champ);
                     if (champ.tagName.toLocaleLowerCase() == "input") {
-                        // console.log("CHAMP:", champ);
                         if (champ.getAttribute("type") == "text") {
                             nomChamp = tabData[tabData.length - 1];
                             if (mapChamps.get(nomChamp) == null) {
@@ -174,6 +175,12 @@ export default class extends Controller {
                         }
                         if (champ.getAttribute("type") == "datetime-local") {
                             nomChamp = tabData[tabData.length - 1];
+                            if (mapChamps.get(nomChamp) == null) {
+                                mapChamps.set(nomChamp, []);
+                            }
+                        }
+                        if (champ.getAttribute("type") == "radio") {
+                            nomChamp = tabData[tabData.length - 2];
                             // console.log("CHAMP:", champ, nomChamp);
                             if (mapChamps.get(nomChamp) == null) {
                                 mapChamps.set(nomChamp, []);
@@ -186,7 +193,12 @@ export default class extends Controller {
                             mapChamps.set(nomChamp, []);
                         }
                     }
-
+                    if (champ.tagName.toLocaleLowerCase() == "textarea") {
+                        nomChamp = tabData[tabData.length - 1];
+                        if (mapChamps.get(nomChamp) == null) {
+                            mapChamps.set(nomChamp, []);
+                        }
+                    }
                 }
             })
 
@@ -210,6 +222,13 @@ export default class extends Controller {
                             if (champ.getAttribute("type") == "datetime-local") {
                                 tabvaleurDuChamp.push((new Date(value)).toLocaleDateString());
                             }
+                            if (champ.getAttribute("type") == "radio") {
+                                var checked = champ.getAttribute("checked");
+                                // console.log(champ, champ.checked);
+                                if (champ.checked == true) {
+                                    tabvaleurDuChamp.push("Oui");
+                                }
+                            }
                         }
                         if (champ.tagName.toLocaleLowerCase() == "select") {
                             var selectedOptions = champ.selectedOptions;
@@ -224,6 +243,9 @@ export default class extends Controller {
                                 i++;
                             }
                             tabvaleurDuChamp.push(optionsText);
+                        }
+                        if (champ.tagName.toLocaleLowerCase() == "textarea") {
+                            tabvaleurDuChamp.push(champ.innerText);
                         }
                     }
                 })
