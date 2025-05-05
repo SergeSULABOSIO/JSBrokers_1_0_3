@@ -20,6 +20,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class PisteType extends AbstractType
 {
@@ -45,7 +46,7 @@ class PisteType extends AbstractType
             ])
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",
-                'expanded' => false,
+                'expanded' => true,
                 'choices'  => [
                     "SOUSCRIPTION"      => Piste::AVENANT_SOUSCRIPTION,
                     "INCORPORATION"     => Piste::AVENANT_INCORPORATION,
@@ -61,9 +62,9 @@ class PisteType extends AbstractType
                 'expanded' => true,
                 'required' => true,
                 'choices'  => [
-                    "ASSURANCE A TERME RENOUVELLABLE"           => Piste::RENEWAL_CONDITION_RENEWABLE,
-                    "ASSURANCE AVEC AJUSTEMENT"                 => Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY,
-                    "ASSURANCE TEMPORAIRE NON RENOUVELLABLE"    => Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE,
+                    "A TERME RENOUVELLABLE"           => Piste::RENEWAL_CONDITION_RENEWABLE,
+                    "AVEC AJUSTEMENT"                 => Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY,
+                    "TEMPORAIRE NON RENOUVELLABLE"    => Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE,
                 ],
             ])
 
@@ -90,7 +91,7 @@ class PisteType extends AbstractType
                     'placeholder' => "Commission potentielle",
                 ],
             ])
-            ->add('descriptionDuRisque', TextType::class, [
+            ->add('descriptionDuRisque', TextareaType::class, [
                 'label' => "Description du risque",
                 'attr' => [
                     'placeholder' => "Description du risque",
