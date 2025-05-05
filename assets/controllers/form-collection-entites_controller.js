@@ -141,8 +141,8 @@ export default class extends Controller {
                 var tabData = id.split("_");
                 var nomChamp = "";
                 if (tabData.length != 0) {
-                    // console.log("\t" + champ.tagName.toLocaleLowerCase());
                     if (champ.tagName.toLocaleLowerCase() == "input") {
+                        // console.log("CHAMP:", champ);
                         if (champ.getAttribute("type") == "text") {
                             nomChamp = tabData[tabData.length - 1];
                             if (mapChamps.get(nomChamp) == null) {
@@ -151,6 +151,13 @@ export default class extends Controller {
                         }
                         if (champ.getAttribute("type") == "checkbox") {
                             nomChamp = tabData[tabData.length - 2];
+                            if (mapChamps.get(nomChamp) == null) {
+                                mapChamps.set(nomChamp, []);
+                            }
+                        }
+                        if (champ.getAttribute("type") == "datetime-local") {
+                            nomChamp = tabData[tabData.length - 1];
+                            // console.log("CHAMP:", champ, nomChamp);
                             if (mapChamps.get(nomChamp) == null) {
                                 mapChamps.set(nomChamp, []);
                             }
@@ -182,6 +189,9 @@ export default class extends Controller {
                                 if (checked == "checked" || checked == "true") {
                                     tabvaleurDuChamp.push(value);
                                 }
+                            }
+                            if (champ.getAttribute("type") == "datetime-local") {
+                                tabvaleurDuChamp.push((new Date(value)).toLocaleDateString());
                             }
                         }
                         if (champ.tagName.toLocaleLowerCase() == "select") {
