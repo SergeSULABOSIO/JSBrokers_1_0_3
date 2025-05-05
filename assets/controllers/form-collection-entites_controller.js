@@ -98,7 +98,7 @@ export default class extends Controller {
             champ.setAttribute("checked", event.target.checked);
         }
         if (champ.getAttribute("type") == "radio") {
-            console.log("Target: ", event.target, event.target.value);
+            console.log("Target: ", event.target, event.target.checked);
             champ.setAttribute("checked", event.target.checked);
         }
         if (champ.getAttribute("type") == "datetime-local") {
