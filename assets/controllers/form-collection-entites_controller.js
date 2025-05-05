@@ -97,7 +97,19 @@ export default class extends Controller {
         if (champ.getAttribute("type") == "checkbox") {
             champ.setAttribute("checked", event.target.checked);
         }
-        console.log("Target: ", event.target);
+        if (champ.getAttribute("type") == "radio") {
+            console.log("Target: ", event.target, event.target.value);
+            champ.setAttribute("checked", event.target.checked);
+        }
+        if (champ.getAttribute("type") == "datetime-local") {
+            champ.setAttribute("value", event.target.value);
+        }//
+        if (champ.tagName.toLowerCase() == "select") {
+            champ.setAttribute("selectedOptions", event.target.selectedOptions);
+        }
+        if (champ.tagName.toLowerCase() == "textarea") {
+            champ.setAttribute("value", event.target.value);
+        }
         //on actualise l'affichage sur le display
         this.actualiserDonneesDisplay(formulaire, champDisplayPrincipal, champDisplaySecondaire);
     }
@@ -156,47 +168,49 @@ export default class extends Controller {
             champs.forEach(champ => {
                 // console.log(champ);
                 var id = champ.getAttribute("id");
-                var tabData = id.split("_");
-                var nomChamp = "";
-                if (tabData.length != 0) {
-                    // console.log("CHAMP:", champ);
-                    if (champ.tagName.toLocaleLowerCase() == "input") {
-                        if (champ.getAttribute("type") == "text") {
+                if (id != null) {
+                    var tabData = id.split("_");
+                    var nomChamp = "";
+                    if (tabData.length != 0) {
+                        // console.log("CHAMP:", champ);
+                        if (champ.tagName.toLocaleLowerCase() == "input") {
+                            if (champ.getAttribute("type") == "text") {
+                                nomChamp = tabData[tabData.length - 1];
+                                if (mapChamps.get(nomChamp) == null) {
+                                    mapChamps.set(nomChamp, []);
+                                }
+                            }
+                            if (champ.getAttribute("type") == "checkbox") {
+                                nomChamp = tabData[tabData.length - 2];
+                                if (mapChamps.get(nomChamp) == null) {
+                                    mapChamps.set(nomChamp, []);
+                                }
+                            }
+                            if (champ.getAttribute("type") == "datetime-local") {
+                                nomChamp = tabData[tabData.length - 1];
+                                if (mapChamps.get(nomChamp) == null) {
+                                    mapChamps.set(nomChamp, []);
+                                }
+                            }
+                            if (champ.getAttribute("type") == "radio") {
+                                nomChamp = tabData[tabData.length - 2];
+                                // console.log("CHAMP:", champ, nomChamp);
+                                if (mapChamps.get(nomChamp) == null) {
+                                    mapChamps.set(nomChamp, []);
+                                }
+                            }
+                        }
+                        if (champ.tagName.toLocaleLowerCase() == "select") {
                             nomChamp = tabData[tabData.length - 1];
                             if (mapChamps.get(nomChamp) == null) {
                                 mapChamps.set(nomChamp, []);
                             }
                         }
-                        if (champ.getAttribute("type") == "checkbox") {
-                            nomChamp = tabData[tabData.length - 2];
-                            if (mapChamps.get(nomChamp) == null) {
-                                mapChamps.set(nomChamp, []);
-                            }
-                        }
-                        if (champ.getAttribute("type") == "datetime-local") {
+                        if (champ.tagName.toLocaleLowerCase() == "textarea") {
                             nomChamp = tabData[tabData.length - 1];
                             if (mapChamps.get(nomChamp) == null) {
                                 mapChamps.set(nomChamp, []);
                             }
-                        }
-                        if (champ.getAttribute("type") == "radio") {
-                            nomChamp = tabData[tabData.length - 2];
-                            // console.log("CHAMP:", champ, nomChamp);
-                            if (mapChamps.get(nomChamp) == null) {
-                                mapChamps.set(nomChamp, []);
-                            }
-                        }
-                    }
-                    if (champ.tagName.toLocaleLowerCase() == "select") {
-                        nomChamp = tabData[tabData.length - 1];
-                        if (mapChamps.get(nomChamp) == null) {
-                            mapChamps.set(nomChamp, []);
-                        }
-                    }
-                    if (champ.tagName.toLocaleLowerCase() == "textarea") {
-                        nomChamp = tabData[tabData.length - 1];
-                        if (mapChamps.get(nomChamp) == null) {
-                            mapChamps.set(nomChamp, []);
                         }
                     }
                 }
@@ -206,46 +220,50 @@ export default class extends Controller {
             for (const [nomDuChamp, tabvaleurDuChamp] of mapChamps) {
                 champs.forEach(champ => {
                     var id = champ.getAttribute("id");
-                    if (id.indexOf("_" + nomDuChamp) != -1) {
-                        // console.log(champ);
-                        if (champ.tagName.toLocaleLowerCase() == "input") {
-                            var value = champ.getAttribute("value");
-                            if (champ.getAttribute("type") == "text") {
-                                tabvaleurDuChamp.push(value);
-                            }
-                            if (champ.getAttribute("type") == "checkbox") {
-                                var checked = champ.getAttribute("checked");
-                                if (checked == "checked" || checked == "true") {
+                    if (id != null) {
+                        if (id.indexOf("_" + nomDuChamp) != -1) {
+                            // console.log(champ);
+                            if (champ.tagName.toLocaleLowerCase() == "input") {
+                                var value = champ.getAttribute("value");
+                                if (champ.getAttribute("type") == "text") {
                                     tabvaleurDuChamp.push(value);
                                 }
-                            }
-                            if (champ.getAttribute("type") == "datetime-local") {
-                                tabvaleurDuChamp.push((new Date(value)).toLocaleDateString());
-                            }
-                            if (champ.getAttribute("type") == "radio") {
-                                var checked = champ.getAttribute("checked");
-                                // console.log(champ, champ.checked);
-                                if (champ.checked == true) {
-                                    tabvaleurDuChamp.push("Oui");
+                                if (champ.getAttribute("type") == "checkbox") {
+                                    var checked = champ.getAttribute("checked");
+                                    if (checked == "checked" || checked == "true") {
+                                        tabvaleurDuChamp.push(value);
+                                    }
+                                }
+                                if (champ.getAttribute("type") == "datetime-local") {
+                                    tabvaleurDuChamp.push((new Date(value)).toLocaleDateString());
+                                }
+                                if (champ.getAttribute("type") == "radio") {
+                                    var checked = champ.getAttribute("checked");
+                                    // console.log(champ, champ.checked);
+                                    if (champ.checked == true) {
+                                        tabvaleurDuChamp.push("Oui");
+                                    }else{
+                                        tabvaleurDuChamp.push("Non");
+                                    }
                                 }
                             }
-                        }
-                        if (champ.tagName.toLocaleLowerCase() == "select") {
-                            var selectedOptions = champ.selectedOptions;
-                            var optionsText = "";
-                            var i = 1;
-                            for (const selectedOption of selectedOptions) {
-                                var sepa = ", ";
-                                if (i == 1 && selectedOptions.length == 1) {
-                                    sepa = "";
+                            if (champ.tagName.toLocaleLowerCase() == "select") {
+                                var selectedOptions = champ.selectedOptions;
+                                var optionsText = "";
+                                var i = 1;
+                                for (const selectedOption of selectedOptions) {
+                                    var sepa = ", ";
+                                    if (i == 1 && selectedOptions.length == 1) {
+                                        sepa = "";
+                                    }
+                                    optionsText += selectedOption.textContent + sepa;
+                                    i++;
                                 }
-                                optionsText += selectedOption.textContent + sepa;
-                                i++;
+                                tabvaleurDuChamp.push(optionsText);
                             }
-                            tabvaleurDuChamp.push(optionsText);
-                        }
-                        if (champ.tagName.toLocaleLowerCase() == "textarea") {
-                            tabvaleurDuChamp.push(champ.innerText);
+                            if (champ.tagName.toLocaleLowerCase() == "textarea") {
+                                tabvaleurDuChamp.push(champ.value);
+                            }
                         }
                     }
                 })
@@ -254,12 +272,24 @@ export default class extends Controller {
             //Chargement des données sur le display
             let isPremier = true;
             let maxLengthSecondaire = 3;
+
+            console.log("\t", mapChamps);
+
             for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
                 if (isPremier) {
-                    if (valeurDuChamp != "") {
-                        champDisplayPrincipal.innerHTML = valeurDuChamp[0];
+                    if (Array.isArray(valeurDuChamp) == true) {
+                        // console.log("C'EST UN TABLEAU", valeurDuChamp);
+                        if (valeurDuChamp.length != 0) {
+                            champDisplayPrincipal.innerHTML = valeurDuChamp[0];
+                        } else {
+                            champDisplayPrincipal.innerHTML = "Element n°" + this.index;
+                        }
                     } else {
-                        champDisplayPrincipal.innerHTML = "Element n°" + this.index;
+                        if (valeurDuChamp != "") {
+                            champDisplayPrincipal.innerHTML = valeurDuChamp;
+                        } else {
+                            champDisplayPrincipal.innerHTML = "Element n°" + this.index;
+                        }
                     }
                     champDisplaySecondaire.innerHTML = "";
                     // console.log("PREMIER CHAMP:", nomDuChamp, valeurDuChamp[0]);
