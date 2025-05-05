@@ -208,19 +208,25 @@ export default class extends Controller {
             for (const [nomDuChamp, valeurDuChamp] of mapChamps) {
                 if (isPremier) {
                     if (valeurDuChamp != "") {
-                        champDisplayPrincipal.innerHTML = valeurDuChamp;
+                        champDisplayPrincipal.innerHTML = valeurDuChamp[0];
                     } else {
                         champDisplayPrincipal.innerHTML = "Element n°" + this.index;
                     }
                     champDisplaySecondaire.innerHTML = "";
+                    // console.log("PREMIER CHAMP:", nomDuChamp, valeurDuChamp[0]);
                     isPremier = false;
                 } else {
                     if (maxLengthSecondaire != 0) {
                         if (valeurDuChamp == null || valeurDuChamp.length == 0 || valeurDuChamp == "") {
-                            // console.log("LE CHAMP " + nomDuChamp + " EST VIDE!!!!!");
                             champDisplaySecondaire.innerHTML += "";
                         } else {
-                            champDisplaySecondaire.innerHTML += " • " + nomDuChamp + "[" + valeurDuChamp + "]";
+                            var txtVal = "" + valeurDuChamp;
+                            var maxLegnth = 15;
+                            if (txtVal.length > maxLegnth) {
+                                txtVal = txtVal.substring(0, maxLegnth-1) + "...";
+                            }
+                            // console.log("LE CHAMP DECONDAIRE: ", txtVal, txtVal.length);
+                            champDisplaySecondaire.innerHTML += " • " + nomDuChamp + "[" + txtVal + "]";
                         }
                         maxLengthSecondaire--;
                     }
