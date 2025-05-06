@@ -212,7 +212,7 @@ class NoteType extends AbstractType
                 $builder
                     ->add('paiements', CollectionType::class, [
                         'label' => "Paiements",
-                        'help' => "Les paiements relatives à cette notes.",
+                        'help' => "Les paiements relatives à cette note.",
                         'entry_type' => PaiementType::class,
                         'by_reference' => false,
                         'allow_add' => false,
