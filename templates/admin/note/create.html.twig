@@ -22,7 +22,7 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {'attr': {'data-controller': 'note-formulaire'}}) }}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
@@ -98,9 +98,9 @@
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.precedent) }}
-						{{ form_row(form.suivant) }}
-						{{ form_row(form.delete) }}
+						{{ form_widget(form.precedent, {'attr': {'data-action': 'note-formulaire#precedent'}}) }}
+						{{ form_widget(form.suivant) }}
+						{{ form_widget(form.delete) }}
 					</div>
 				</div>
 			</div>
