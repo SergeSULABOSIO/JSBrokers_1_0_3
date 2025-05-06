@@ -43,94 +43,60 @@ class NoteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        if ($options["page"] != -1) {
-            if ($options["type"] != -1 && $options["addressedTo"] != -1) {
-                $this->labelbtSubmit = match (true) {
-                    $options['page'] == $options['pageMax'] => "TERMINER PUIS ALLER TRIER LES TRANCHES",
-                    default => "PAGE SUIVANTE",
-                };
-            }
-        }
-
-        if ($options['page'] == 1) {
-            //PAGE 1
-            $this->buildPageA($builder, $options);
-        }
-
-        if ($options['page'] == 2) {
-            // dd($options['page']);
-            //PAGE 2
-            $this->buildPageB($builder, $options);
-        }
-
-        if ($options['note'] != null) {
-            if ($options['note']->getId() != null) {
-                $builder
-                    //champ non mappé
-                    ->add('montantDue', MoneyType::class, [
-                        'label' => "Montant dû",
-                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        'grouping' => true,
-                        'mapped' => false,
-                        'disabled' => true,
-                        'attr' => [
-                            'placeholder' => "Montant dû",
-                        ],
-                    ])
-                    //champ non mappé
-                    ->add('montantPaye', MoneyType::class, [
-                        'label' => "Montant payé",
-                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        'grouping' => true,
-                        'mapped' => false,
-                        'disabled' => true,
-                        'attr' => [
-                            'placeholder' => "Montant payé",
-                        ],
-                    ])
-                    //champ non mappé
-                    ->add('montantSolde', MoneyType::class, [
-                        'label' => "Solde restant dû",
-                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        'grouping' => true,
-                        'mapped' => false,
-                        'disabled' => true,
-                        'attr' => [
-                            'placeholder' => "Solde restant dû",
-                        ],
-                    ]);
-            }
-        }
-
-        //BAS DE PAGE
-        if ($options['page'] > 1) {
-            $builder
-                //Le bouton précédent
-                ->add('precedent', SubmitType::class, [
-                    'label' => $this->labelbtBack,
-                    'attr' => [
-                        'class' => "btn btn-secondary",
-                    ],
-                ]);
-        }
         $builder
-            //Le bouton suivant
+            //champ non mappé
+            ->add('montantDue', MoneyType::class, [
+                'label' => "Montant dû",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Montant dû",
+                ],
+            ])
+            //champ non mappé
+            ->add('montantPaye', MoneyType::class, [
+                'label' => "Montant payé",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Montant payé",
+                ],
+            ])
+            //champ non mappé
+            ->add('montantSolde', MoneyType::class, [
+                'label' => "Solde restant dû",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Solde restant dû",
+                ],
+            ])
+            //Le bouton précédent
+            ->add('precedent', SubmitType::class, [
+                'label' => $this->labelbtBack,
+                'attr' => [
+                    'class' => "btn btn-secondary",
+                ],
+            ])
             ->add('suivant', SubmitType::class, [
                 'label' => $this->labelbtSubmit,
                 'attr' => [
                     'class' => "btn btn-secondary",
                 ],
-            ]);
-        if ($options['idNote'] != -1) {
-            $builder
-                //Le bouton suppression
-                ->add('delete', SubmitType::class, [
-                    'label' => $this->labelbtDelete,
-                    'attr' => [
-                        'class' => "btn btn-danger",
-                    ],
-                ]);
-        }
+            ])
+            ->add('delete', SubmitType::class, [
+                'label' => $this->labelbtDelete,
+                'attr' => [
+                    'class' => "btn btn-danger",
+                ],
+            ])
+        ;
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -253,11 +219,11 @@ class NoteType extends AbstractType
                     'required' => false,
                     'choice_label' => 'nom',
                 ])
-                ->add('sentAt', DateTimeType::class, [
-                    'label' => "Date de soumission",
-                    'widget' => 'single_text',
-                ]);
-                
+                    ->add('sentAt', DateTimeType::class, [
+                        'label' => "Date de soumission",
+                        'widget' => 'single_text',
+                    ]);
+
                 break;
 
             case Note::TO_CLIENT:
@@ -274,10 +240,10 @@ class NoteType extends AbstractType
                     'required' => false,
                     'choice_label' => 'nom',
                 ])
-                ->add('sentAt', DateTimeType::class, [
-                    'label' => "Date de soumission",
-                    'widget' => 'single_text',
-                ]);
+                    ->add('sentAt', DateTimeType::class, [
+                        'label' => "Date de soumission",
+                        'widget' => 'single_text',
+                    ]);
                 break;
 
             case Note::TO_PARTENAIRE:
@@ -294,10 +260,10 @@ class NoteType extends AbstractType
                     'required' => false,
                     'choice_label' => 'nom',
                 ])
-                ->add('sentAt', DateTimeType::class, [
-                    'label' => "Date de soumission",
-                    'widget' => 'single_text',
-                ]);
+                    ->add('sentAt', DateTimeType::class, [
+                        'label' => "Date de soumission",
+                        'widget' => 'single_text',
+                    ]);
                 break;
 
             case Note::TO_AUTORITE_FISCALE:
@@ -314,10 +280,10 @@ class NoteType extends AbstractType
                     'required' => false,
                     'choice_label' => 'nom',
                 ])
-                ->add('sentAt', DateTimeType::class, [
-                    'label' => "Date de soumission",
-                    'widget' => 'single_text',
-                ]);
+                    ->add('sentAt', DateTimeType::class, [
+                        'label' => "Date de soumission",
+                        'widget' => 'single_text',
+                    ]);
                 break;
 
             default:
