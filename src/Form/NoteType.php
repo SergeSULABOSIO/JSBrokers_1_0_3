@@ -188,15 +188,15 @@ class NoteType extends AbstractType
                 ]
             ])
             ->add('addressedTo', ChoiceType::class, [
-                'label' => "A destination",
+                'label' => "Destination de la note",
                 'required' => true,
                 'expanded' => true,
                 'choices'  => [
                     // "Null" => Note::TO_NULL,
-                    "Du client" => Note::TO_CLIENT,
-                    "De l'assureur" => Note::TO_ASSUREUR,
-                    "De l'intermédiaire" => Note::TO_PARTENAIRE,
-                    "De l'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
+                    "Le client" => Note::TO_CLIENT,
+                    "L'assureur" => Note::TO_ASSUREUR,
+                    "L'intermédiaire" => Note::TO_PARTENAIRE,
+                    "L'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
                 ]
             ])
             ->add('signedBy', TextType::class, [
