@@ -9,6 +9,8 @@ export default class extends Controller {
         event.preventDefault(); // Empêche la soumission classique du formulaire
 
         console.log('Le bouton Précédent a été cliqué !');
+        
+        
         // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         fetch(this.element.action, {
