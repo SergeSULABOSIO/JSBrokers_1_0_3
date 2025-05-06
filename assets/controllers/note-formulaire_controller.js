@@ -17,7 +17,7 @@ export default class extends Controller {
             method: this.element.method,
             body: formData,
         })
-        .then(response => response.text())
+        .then(response => response.text()) //.json()
         .then(data => {
             console.log('Réponse du serveur :', data);
             // Traitez la réponse ici
