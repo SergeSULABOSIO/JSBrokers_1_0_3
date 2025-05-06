@@ -3,22 +3,15 @@
 namespace App\Form;
 
 use App\Entity\Note;
-use App\Entity\Taxe;
 use App\Entity\Client;
-use App\Entity\Invite;
 use App\Entity\Assureur;
 use App\Entity\Partenaire;
 use App\Entity\CompteBancaire;
 use App\Entity\AutoriteFiscale;
 use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
-use Symfony\Component\Form\Event\PreSetDataEvent;
-use Symfony\Component\Form\Event\PostSetDataEvent;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -229,12 +222,13 @@ class NoteType extends AbstractType
                         ],
                         'attr' => [
                             'data-controller' => 'form-collection-entites',
-                            'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                            'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                            'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                            'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                            'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                            'data-form-collection-entites-view-field-value' => "description",
+                            'data-form-collection-entites-data-value' => json_encode([
+                                'addLabel' => $this->translatorInterface->trans("commom_add"),
+                                'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                                'icone' => "paiement",
+                                'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                                'tailleMax' => 1,
+                            ]),
                         ],
                     ]);
             }
@@ -357,12 +351,13 @@ class NoteType extends AbstractType
                 ],
                 'attr' => [
                     'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "tranche",
+                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+                        'tailleMax' => 50,
+                    ]),
                 ],
             ]);
     }

@@ -364,11 +364,16 @@ export default class extends Controller {
      */
     canAddElementDansCollection = () => {
         var reponse = true;
-        if (this.index == 0) {
-            reponse = true;
+        if (this.donneesInitiales.tailleMax == 0) {
+            reponse = false;
         } else {
-            reponse = this.donneesInitiales.tailleMax > this.index;//1 0
+            if (this.index == 0) {
+                reponse = true;
+            } else {
+                reponse = this.donneesInitiales.tailleMax > this.index;//1 0
+            }
         }
+
         // console.log(this.index, reponse);
         return reponse;
     }
