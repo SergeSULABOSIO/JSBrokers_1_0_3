@@ -9,7 +9,10 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "note_description" | trans }}
+	{{ "note_creation_description_message" | trans({
+		":user": utilisateur.nom, 
+		":company": entreprise.nom, 
+	}) | raw}}
 	{% include 'segments/panier_pour_note.html.twig' %}
 {% endblock %}
 
@@ -18,31 +21,29 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "note_creation_description_message" | trans({
-						":user": utilisateur.nom, 
-						":company": entreprise.nom, 
-					}) | raw}}
-					<hr>
-				</p>
-				{% if page == pageMax %}
-					Vous êtes sur la dernière page du formulaire, il ne vous reste plus qu'à terminer l'édition.
-				{% else %}
-					Vous êtes sur la page {{ page }} sur {{ pageMax }}.
-				{% endif %}
-				{# {{ form(form) }} #}
-				{{ form(form, {action: path('admin.note.create', {
-						idEntreprise:entreprise.id,
-						idNote:idNote,
-						page:page,
-						})}) 
-					}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.nom) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.reference) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.description) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.type) }}
+					</div>
 				</div>
 			</div>
-		</div>	
+		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}

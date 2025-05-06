@@ -9,7 +9,11 @@
 {% endblock %}
 
 {% block descriptionRubrique %}
-	{{ "note_description" | trans }}
+	{{ "note_form_description" | trans({
+		":user": utilisateur.nom, 
+		":note": note.nom, 
+	}) | raw }}
+	{% include 'segments/panier_pour_note.html.twig' %}
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -17,25 +21,23 @@
 {% endblock %}
 
 {% block body %}
-	<div class="container">
-		{# {{ form(form) }} #}
-		<div class="card shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-					{{ "note_form_description" | trans({
-						":user": utilisateur.nom, 
-						":note": note.nom, 
-					}) | raw }}
-				</p>
-				<div class = "m-2">
-					{{ form(form, {action: path('admin.note.edit', {
-						idEntreprise:entreprise.id,
-						idNote:note.id,
-						page:page,
-						})}) 
-					}}
+	{# {{ form(form) }} #}
+	{{ form_start(form) }}
+	<div class="d-flex shadow-sm card bg-body sensible bg-white">
+		<div class="card-body">
+			<div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.nom) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.enregistrer) }}
+					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	{{ form_end(form) }}
 {% endblock %}

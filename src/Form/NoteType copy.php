@@ -27,7 +27,6 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 // use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
@@ -157,12 +156,6 @@ class NoteType extends AbstractType
     private function buildPageA(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('nom', TextType::class, [
-                'label' => "Nom",
-                'attr' => [
-                    'placeholder' => "Nom",
-                ],
-            ])
             ->add('reference', TextType::class, [
                 'required' => false,
                 'disabled' => true,
@@ -171,7 +164,13 @@ class NoteType extends AbstractType
                     'placeholder' => "Référence",
                 ],
             ])
-            ->add('description', TextareaType::class, [
+            ->add('nom', TextType::class, [
+                'label' => "Nom",
+                'attr' => [
+                    'placeholder' => "Nom",
+                ],
+            ])
+            ->add('description', TextType::class, [
                 'label' => "Description",
                 'attr' => [
                     'placeholder' => "Description",
