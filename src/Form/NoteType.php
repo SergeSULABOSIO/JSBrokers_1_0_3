@@ -159,10 +159,6 @@ class NoteType extends AbstractType
                 'required' => false,
                 'choice_label' => 'nom',
             ])
-            ->add('sentAt', DateTimeType::class, [
-                'label' => "Date de soumission",
-                'widget' => 'single_text',
-            ])
             ->add('client', ClientAutocompleteField::class, [
                 'label' => "Client",
                 'help' => $this->helpClient,
@@ -170,12 +166,8 @@ class NoteType extends AbstractType
                 'required' => false,
                 'choice_label' => 'nom',
             ])
-            ->add('sentAt', DateTimeType::class, [
-                'label' => "Date de soumission",
-                'widget' => 'single_text',
-            ])
             ->add('partenaire', PartenaireAutocompleteField::class, [
-                'label' => "Intermédiaire ou partenaire",
+                'label' => "Intermédiaire",
                 'help' => $this->helppartenaire,
                 'class' => Partenaire::class,
                 'required' => false,
@@ -191,10 +183,6 @@ class NoteType extends AbstractType
                 'class' => AutoriteFiscale::class,
                 'required' => false,
                 'choice_label' => 'nom',
-            ])
-            ->add('sentAt', DateTimeType::class, [
-                'label' => "Date de soumission",
-                'widget' => 'single_text',
             ])
             ->add('comptes', CompteBancaireAutocompleteField::class, [
                 'label' => "Comptes bancaires",

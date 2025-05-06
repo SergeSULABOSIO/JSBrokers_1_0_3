@@ -52,6 +52,9 @@
 					<div class="col">
 						{{ form_row(form.titleSignedBy) }}
 					</div>
+					<div class="col">
+						{{ form_row(form.sentAt) }}
+					</div>
 				</div>
 				<div class="row">
 					<div class="col">
@@ -71,12 +74,32 @@
 				</div>
 				<div class="row">
 					<div class="col">
+						{{ form_row(form.assureur) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.client) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.partenaire) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.autoritefiscale) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.comptes) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.articles) }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col">
 						{{ form_row(form.precedent) }}
-					</div>
-					<div class="col">
 						{{ form_row(form.suivant) }}
-					</div>
-					<div class="col">
 						{{ form_row(form.delete) }}
 					</div>
 				</div>
