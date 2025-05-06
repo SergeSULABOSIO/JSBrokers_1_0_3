@@ -10,15 +10,15 @@ export default class extends Controller {
 
         console.log('Le bouton Précédent a été cliqué !');
         // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
-        // const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
-        // fetch(this.element.action, {
-        //     method: this.element.method,
-        //     body: formData,
-        // })
-        // .then(response => response.json())
-        // .then(data => {
-        //     console.log('Réponse du serveur :', data);
-        //     // Traitez la réponse ici
-        // });
+        const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
+        fetch(this.element.action, {
+            method: this.element.method,
+            body: formData,
+        })
+        .then(response => response.text())
+        .then(data => {
+            console.log('Réponse du serveur :', data);
+            // Traitez la réponse ici
+        });
     }
 }
