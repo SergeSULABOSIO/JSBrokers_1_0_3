@@ -227,7 +227,7 @@ class NoteType extends AbstractType
                                 'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                                 'icone' => "paiement",
                                 'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                                'tailleMax' => 1,
+                                'tailleMax' => 0,
                             ]),
                         ],
                     ]);
