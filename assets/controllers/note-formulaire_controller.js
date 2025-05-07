@@ -9,7 +9,11 @@ export default class extends Controller {
         event.preventDefault(); // Empêche la soumission classique du formulaire
 
         console.log('Le bouton Précédent a été cliqué !');
+        console.log(event.target);
         
+        event.target.disabled = true;
+        var OldLabel = event.target.innerText;
+        event.target.innerText = "PATIENTEZ SVP...";
         
         // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
@@ -19,7 +23,15 @@ export default class extends Controller {
         })
         .then(response => response.text()) //.json()
         .then(data => {
+            event.target.disabled = false;
+            event.target.innerText = OldLabel;
             console.log('Réponse du serveur :', data);
+            // Traitez la réponse ici
+        })
+        .catch(errorMessage => {
+            event.target.disabled = false;
+            event.target.innerText = OldLabel;
+            console.error("Réponse d'erreur du serveur :", errorMessage);
             // Traitez la réponse ici
         });
     }
