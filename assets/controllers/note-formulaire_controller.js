@@ -14,8 +14,6 @@ export default class extends Controller {
         console.log(event.target);
 
         event.target.disabled = true;
-        // var OldLabel = event.target.innerText;
-        // event.target.innerText = "PATIENTEZ SVP...";
 
         this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
         this.displayTarget.style.display = 'block';
@@ -29,7 +27,7 @@ export default class extends Controller {
             .then(response => response.text()) //.json()
             .then(data => {
                 event.target.disabled = false;
-                
+
                 this.displayTarget.textContent = "Infos.";
                 this.displayTarget.style.display = 'none';
 
@@ -38,7 +36,6 @@ export default class extends Controller {
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
-                // event.target.innerText = OldLabel;
 
                 this.displayTarget.textContent = "Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.";
                 this.displayTarget.style.display = 'none';
