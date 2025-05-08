@@ -92,7 +92,7 @@
 									<div class="options-du-parent">
 										<div class="d-flex gap-1 d-flex justify-content-end">
 											{# Les actions sur l element de la liste #}
-											<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.note.edit', {'idEntreprise': entreprise.id, 'idNote':note.id, 'page':1 })}}" class="" mthod = 'POST'>
+											<a class= "btn btn-outline-primary btn-sm border-0" href="{{ path('admin.note.edit', {'idEntreprise': entreprise.id, 'idNote':note.id})}}" class="" mthod = 'POST'>
 												{{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
 												{# Modifier #}
 											</a>

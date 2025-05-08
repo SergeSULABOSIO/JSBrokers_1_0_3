@@ -163,10 +163,9 @@ class NoteController extends AbstractController
         return $this->redirect($currentURL);
     }
 
-    #[Route('/create/{idEntreprise}/{idNote}/{page}', name: 'create', requirements: [
+    #[Route('/create/{idEntreprise}/{idNote}', name: 'create', requirements: [
         'idEntreprise' => Requirement::DIGITS,
         'idNote' => Requirement::CATCH_ALL,
-        // 'page' => Requirement::DIGITS,
     ])]
     public function create(int $idEntreprise, int $idNote, Request $request)
     {
@@ -309,10 +308,9 @@ class NoteController extends AbstractController
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idNote}/{page}', name: 'edit', methods: ['GET', 'POST'], requirements: [
+    #[Route('/edit/{idEntreprise}/{idNote}', name: 'edit', methods: ['GET', 'POST'], requirements: [
         'idEntreprise' => Requirement::DIGITS,
         'idNote' => Requirement::CATCH_ALL,
-        // 'page' => Requirement::DIGITS,
     ])]
     public function edit(int $idEntreprise, int $idNote, Request $request)
     {
