@@ -20,6 +20,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\RadioType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 // use Symfony\Component\Form\Extension\Core\Type\CollectionType;
@@ -64,7 +65,7 @@ class NoteType extends AbstractType
             ->add('type', ChoiceType::class, [
                 'label' => "Type",
                 'required' => true,
-                'expanded' => true,
+                'expanded' => false,
                 'choices'  => [
                     // "Null" => Note::TYPE_NULL,
                     "Note de débit" => Note::TYPE_NOTE_DE_DEBIT,
@@ -74,7 +75,7 @@ class NoteType extends AbstractType
             ->add('addressedTo', ChoiceType::class, [
                 'label' => "Destination de la note",
                 'required' => true,
-                'expanded' => true,
+                'expanded' => false,
                 'choices'  => [
                     // "Null" => Note::TO_NULL,
                     "Le client" => Note::TO_CLIENT,

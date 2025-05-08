@@ -11,6 +11,20 @@ export default class extends Controller {
         this.element.addEventListener("click", event => this.enregistrer(event));
     }
 
+    changerType = (event) => {
+        // event.preventDefault(); // Empêche la soumission classique du formulaire
+
+        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target);
+
+    }
+
+    changerAddressedTo = (event) => {
+        // event.preventDefault(); // Empêche la soumission classique du formulaire
+
+        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target);
+
+    }
+
     enregistrer = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
 

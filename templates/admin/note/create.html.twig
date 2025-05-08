@@ -35,14 +35,16 @@
 					</div>
 				</div>
 				<div class="row">
-					<div class="col-6">
+					<div class="col">
 						{{ form_row(form.description) }}
 					</div>
-					<div class="col-3">
-						{{ form_row(form.type) }}
+				</div>
+				<div class="row">
+					<div class="col">
+						{{ form_row(form.type, {'attr': {'data-action': 'note-formulaire#changerType'}}) }}
 					</div>
-					<div class="col-3">
-						{{ form_row(form.addressedTo) }}
+					<div class="col">
+						{{ form_row(form.addressedTo, {'attr': {'data-action': 'note-formulaire#changerAddressedTo'}}) }}
 					</div>
 				</div>
 				<div class="row">
