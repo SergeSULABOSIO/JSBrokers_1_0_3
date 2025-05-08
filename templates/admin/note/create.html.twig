@@ -22,7 +22,14 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form, {'attr': {'data-controller': 'note-formulaire'}}) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'note-formulaire', 
+			'data-note-formulaire-idnote-value': note.id,
+			'data-note-formulaire-identreprise-value': entreprise.id
+			}
+		}) 
+	}}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
@@ -82,11 +89,13 @@
 						{{ form_row(form.paiements) }}
 					</div>
 				</div>
-				{# <div class="row">
-					<div class="col">
-						{{ form_row(form.articles) }}
+				{% if note.id != null %}
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.articles) }}
+						</div>
 					</div>
-				</div> #}
+				{% endif %}
 				<div class="row">
 					<div class="col">
 						{{ form_row(form.signedBy) }}
@@ -102,11 +111,19 @@
 					<div class="col">
 						{# {{ form_widget(form.enregistrer, {'attr': {'data-action': 'note-formulaire#precedent'}}) }} #}
 						{{ form_widget(form.enregistrer) }}
-						{# {{ form_widget(form.annuler) }} #}
+						{{ form_widget(form.ajouterarticles, {
+							'attr': {
+								'data-action': 'note-formulaire#ajouterarticles', 
+								'data-note-formulaire-target': 'btArticles'
+								}
+							})
+						}}
 					</div>
 				</div>
 			</div>
-			<span class="text-secondary" data-note-formulaire-target="display" style="display:none;">Message d'infos ici</span>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-note-formulaire-target="display" style="display:none;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}

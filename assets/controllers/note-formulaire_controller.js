@@ -8,12 +8,25 @@ export default class extends Controller {
         'block_client',
         'block_partenaire',
         'block_autorite',
-        'display'
+        'display',
+        'btArticles'
     ];
 
+    static values = {
+        idnote: String,
+        identreprise: String
+    };
+
     connect() {
-        console.log('Le contrôleur note-formulaire est connecté !');
-        console.log("Formulaire:", this.element);
+        this.isSaved = false;
+        console.log("ID NOTE: " + this.idnoteValue);
+        if (this.idnoteValue == null) {
+            this.btArticlesTarget.style.display = 'none';
+        } else {
+            this.btArticlesTarget.style.display = 'inline';
+        }
+        // console.log('Le contrôleur note-formulaire est connecté !');
+        // console.log("Formulaire:", this.element);
 
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.enregistrer(event));
@@ -68,11 +81,16 @@ export default class extends Controller {
         // console.log("ECOUTEUR: Je viens d'écouter une action...", event.target, selectedCotent, selectedValue);
     }
 
-    enregistrer = (event) => {
+    ajouterarticles = () => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
+        window.location.href = "/admin/tranche/index/" + this.identrepriseValue;
+    }
+
+    enregistrer = (event) => {
 
         if (event.target.innerText.toLowerCase() == "enregistrer") {
-            console.log("ECOUTEUR: le bouton " + event.target.innerText + " vient d'être clické !");
+            event.preventDefault(); // Empêche la soumission classique du formulaire
+            // console.log("ECOUTEUR: le bouton " + event.target.innerText + " vient d'être clické !");
 
             event.target.disabled = true;
 
@@ -88,12 +106,17 @@ export default class extends Controller {
                 .then(response => response.text()) //.json()
                 .then(data => {
                     event.target.disabled = false;
-
-                    this.displayTarget.textContent = "Infos.";
-                    this.displayTarget.style.display = 'none';
+                    this.isSaved = true;
+                    // this.displayTarget.textContent = "Infos.";
+                    this.displayTarget.style.display = 'block';
 
                     // console.log('Réponse du serveur :', data);
                     // Traitez la réponse ici
+                    if (this.isSaved == true) {
+                        this.btArticlesTarget.style.display = 'inline';
+                        this.displayTarget.textContent = "Cliquez sur le bouton 'AJOUTER LES ARTICLES [...]' afin d'aller ajouter les articles dans la note.";
+                    }
+
                 })
                 .catch(errorMessage => {
                     event.target.disabled = false;
