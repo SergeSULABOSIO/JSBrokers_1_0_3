@@ -27,9 +27,6 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 class NoteType extends AbstractType
 {
     private string $helpArticle = "";
-    private string $labelbtSubmit = "PAGE SUIVANTE";
-    private string $labelbtDelete = "SUPPRIMER";
-    private string $labelbtBack = "PAGE PRECEDENTE";
     private string $helpAssureur = "";
     private string $helpClient = "";
     private string $helppartenaire = "";
@@ -216,26 +213,20 @@ class NoteType extends AbstractType
                     ]),
                 ],
             ])
-            //Le bouton précédent
-            ->add('precedent', SubmitType::class, [
-                'label' => $this->labelbtBack,
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
-            ->add('suivant', SubmitType::class, [
-                'label' => $this->labelbtSubmit,
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
-            ->add('delete', SubmitType::class, [
-                'label' => $this->labelbtDelete,
+            ->add('annuler', SubmitType::class, [
+                'label' => "ANNUMER",
                 'attr' => [
                     'class' => "btn btn-danger",
                 ],
             ])
-        ;
+
+            //Le bouton enregistrer
+            ->add('enregistrer', SubmitType::class, [
+                'label' => "ENREGISTRER",
+                'attr' => [
+                    'class' => "btn btn-secondary",
+                ],
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
