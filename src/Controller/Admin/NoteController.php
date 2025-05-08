@@ -4,23 +4,17 @@ namespace App\Controller\Admin;
 
 use App\Entity\Note;
 use App\Entity\Invite;
-use App\Entity\Risque;
-use App\Form\RisqueType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Constantes\PanierNotes;
-use App\DTO\NotePageADTO;
-use App\Form\NotePageAType;
 use App\Form\NoteType;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
-use App\Repository\RisqueRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\ServiceDates;
 use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -30,14 +24,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Form;
-use Symfony\Component\Form\SubmitButton;
-use Symfony\Component\Form\Test\FormInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpFoundation\Session\Session;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\Messenger\Transport\Serialization\Serializer;
-use Symfony\Component\Serializer\Serializer as SerializerSerializer;
-use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/note", name: 'admin.note.')]
 #[IsGranted('ROLE_USER')]
