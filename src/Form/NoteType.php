@@ -68,12 +68,12 @@ class NoteType extends AbstractType
                 'expanded' => false,
                 'choices'  => [
                     // "Null" => Note::TYPE_NULL,
-                    "Note de débit" => Note::TYPE_NOTE_DE_DEBIT,
-                    "Note de crédit" => Note::TYPE_NOTE_DE_CREDIT,
+                    "Débit" => Note::TYPE_NOTE_DE_DEBIT,
+                    "Crédit" => Note::TYPE_NOTE_DE_CREDIT,
                 ]
             ])
             ->add('addressedTo', ChoiceType::class, [
-                'label' => "Destination de la note",
+                'label' => "Destination",
                 'required' => true,
                 'expanded' => false,
                 'choices'  => [
@@ -95,46 +95,58 @@ class NoteType extends AbstractType
                 'attr' => [
                     'placeholder' => "Titre du signataire",
                 ],
-            ])
-            //champ non mappé
-            ->add('montantDue', MoneyType::class, [
-                'label' => "Montant dû",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Montant dû",
-                ],
-            ])
-            //champ non mappé
-            ->add('montantPaye', MoneyType::class, [
-                'label' => "Montant payé",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Montant payé",
-                ],
-            ])
-            //champ non mappé
-            ->add('montantSolde', MoneyType::class, [
-                'label' => "Solde restant dû",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Solde restant dû",
-                ],
-            ])
+            ]);
+
+        /**
+         * @var Note $note
+         */
+        $note = $options['note'];
+        if ($note != null) {
+            if ($note->getId() != null) {
+                $builder
+                    //champ non mappé
+                    ->add('montantDue', MoneyType::class, [
+                        'label' => "Montant dû",
+                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        'grouping' => true,
+                        'mapped' => false,
+                        'disabled' => true,
+                        'attr' => [
+                            'placeholder' => "Montant dû",
+                        ],
+                    ])
+                    //champ non mappé
+                    ->add('montantPaye', MoneyType::class, [
+                        'label' => "Montant payé",
+                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        'grouping' => true,
+                        'mapped' => false,
+                        'disabled' => true,
+                        'attr' => [
+                            'placeholder' => "Montant payé",
+                        ],
+                    ])
+                    //champ non mappé
+                    ->add('montantSolde', MoneyType::class, [
+                        'label' => "Solde restant dû",
+                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        'grouping' => true,
+                        'mapped' => false,
+                        'disabled' => true,
+                        'attr' => [
+                            'placeholder' => "Solde restant dû",
+                        ],
+                    ]);
+            }
+        }
+
+        $builder
             ->add('paiements', CollectionType::class, [
                 'label' => "Paiements",
                 'help' => "Les paiements relatives à cette note.",
                 'entry_type' => PaiementType::class,
                 'by_reference' => false,
-                'allow_add' => false,
+                'allow_add' => true,
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
@@ -146,7 +158,7 @@ class NoteType extends AbstractType
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "paiement",
                         'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 0,
+                        'tailleMax' => 12,
                     ]),
                 ],
             ])
@@ -214,12 +226,12 @@ class NoteType extends AbstractType
                     ]),
                 ],
             ])
-            ->add('annuler', SubmitType::class, [
-                'label' => "ANNUMER",
-                'attr' => [
-                    'class' => "btn btn-danger",
-                ],
-            ])
+            // ->add('annuler', SubmitType::class, [
+            //     'label' => "ANNUMER",
+            //     'attr' => [
+            //         'class' => "btn btn-danger",
+            //     ],
+            // ])
 
             //Le bouton enregistrer
             ->add('enregistrer', SubmitType::class, [

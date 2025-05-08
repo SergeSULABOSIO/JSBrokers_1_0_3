@@ -1,7 +1,15 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['nom', 'display'];
+    static targets = [
+        'nom',
+        'block_comptes',
+        'block_assureur',
+        'block_client',
+        'block_partenaire',
+        'block_autorite',
+        'display'
+    ];
 
     connect() {
         console.log('Le contrôleur note-formulaire est connecté !');
@@ -13,11 +21,12 @@ export default class extends Controller {
 
     changerType = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
-        
-        var selectedCotent = event.target.selectedOptions[0].textContent;
         var selectedValue = event.target.selectedOptions[0].value;
-
-        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target, selectedCotent, selectedValue);
+        if (selectedValue == 1) {
+            this.block_comptesTarget.style.display = 'none';
+        } else {
+            this.block_comptesTarget.style.display = 'block';
+        }
     }
 
     changerAddressedTo = (event) => {
@@ -26,7 +35,37 @@ export default class extends Controller {
         var selectedCotent = event.target.selectedOptions[0].textContent;
         var selectedValue = event.target.selectedOptions[0].value;
 
-        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target, selectedCotent, selectedValue);
+        switch (selectedValue) {
+            case '0'://Client
+                this.block_clientTarget.style.display = 'block';
+                this.block_assureurTarget.style.display = 'none';
+                this.block_partenaireTarget.style.display = 'none';
+                this.block_autoriteTarget.style.display = 'none';
+                break;
+            case '1'://Assureur
+                this.block_clientTarget.style.display = 'none';
+                this.block_assureurTarget.style.display = 'block';
+                this.block_partenaireTarget.style.display = 'none';
+                this.block_autoriteTarget.style.display = 'none';
+                break;
+            case '2'://Partenaire
+                this.block_clientTarget.style.display = 'none';
+                this.block_assureurTarget.style.display = 'none';
+                this.block_partenaireTarget.style.display = 'block';
+                this.block_autoriteTarget.style.display = 'none';
+                break;
+            case '3'://Autorite
+                this.block_clientTarget.style.display = 'none';
+                this.block_assureurTarget.style.display = 'none';
+                this.block_partenaireTarget.style.display = 'none';
+                this.block_autoriteTarget.style.display = 'block';
+                break;
+
+            default:
+                break;
+        }
+
+        // console.log("ECOUTEUR: Je viens d'écouter une action...", event.target, selectedCotent, selectedValue);
     }
 
     enregistrer = (event) => {
