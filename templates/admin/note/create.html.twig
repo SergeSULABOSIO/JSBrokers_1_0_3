@@ -98,7 +98,8 @@
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_widget(form.precedent, {'attr': {'data-action': 'note-formulaire#precedent'}}) }}
+						{# {{ form_widget(form.precedent, {'attr': {'data-action': 'note-formulaire#precedent'}}) }} #}
+						{{ form_widget(form.precedent) }}
 						{{ form_widget(form.suivant) }}
 						{{ form_widget(form.delete) }}
 					</div>
