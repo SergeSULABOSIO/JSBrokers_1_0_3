@@ -12,17 +12,21 @@ export default class extends Controller {
     }
 
     changerType = (event) => {
-        // event.preventDefault(); // Empêche la soumission classique du formulaire
+        event.preventDefault(); // Empêche la soumission classique du formulaire
+        
+        var selectedCotent = event.target.selectedOptions[0].textContent;
+        var selectedValue = event.target.selectedOptions[0].value;
 
-        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target);
-
+        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target, selectedCotent, selectedValue);
     }
 
     changerAddressedTo = (event) => {
-        // event.preventDefault(); // Empêche la soumission classique du formulaire
+        event.preventDefault(); // Empêche la soumission classique du formulaire
 
-        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target);
+        var selectedCotent = event.target.selectedOptions[0].textContent;
+        var selectedValue = event.target.selectedOptions[0].value;
 
+        console.log("ECOUTEUR: Je viens d'écouter une action...", event.target, selectedCotent, selectedValue);
     }
 
     enregistrer = (event) => {
