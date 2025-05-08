@@ -224,15 +224,6 @@ class NoteType extends AbstractType
                 'multiple' => true,
                 'choice_label' => 'nom',
             ])
-
-            // ->add('annuler', SubmitType::class, [
-            //     'label' => "ANNUMER",
-            //     'attr' => [
-            //         'class' => "btn btn-danger",
-            //     ],
-            // ])
-
-
             //Le bouton enregistrer
             ->add('enregistrer', SubmitType::class, [
                 'label' => "ENREGISTRER",

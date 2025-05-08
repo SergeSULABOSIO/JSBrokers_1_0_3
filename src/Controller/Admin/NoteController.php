@@ -226,13 +226,13 @@ class NoteController extends AbstractController
             $page = $this->movePage($page, $form);
             if ($page > $this->pageMax) {
                 $this->validateBeforeSaving = true;
-                $this->saveNote($note, $request, $serializer);
+                $this->saveNote($note, $request);
                 $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
                 return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
                     'idEntreprise' => $idEntreprise,
                 ]);
             } else {
-                $this->saveNote($note, $request, $serializer);
+                $this->saveNote($note, $request);
                 /** @var Form $form */
                 $form = $this->buildForm($note, $page);
             }
