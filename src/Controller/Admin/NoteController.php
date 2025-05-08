@@ -179,9 +179,9 @@ class NoteController extends AbstractController
     #[Route('/create/{idEntreprise}/{idNote}/{page}', name: 'create', requirements: [
         'idEntreprise' => Requirement::DIGITS,
         'idNote' => Requirement::CATCH_ALL,
-        'page' => Requirement::DIGITS,
+        // 'page' => Requirement::DIGITS,
     ])]
-    public function create(int $idEntreprise, int $idNote, int $page, Request $request, SerializerInterface $serializer)
+    public function create(int $idEntreprise, int $idNote, Request $request)
     {
         //S'il s'agit de la création d'une nouvelle note, il faut vider d'abord le panier
         if ($idNote == -1) {
@@ -204,7 +204,7 @@ class NoteController extends AbstractController
         $note = $this->loadNote($idNote, $invite, $request);
 
         /** @var Form $form */
-        $form = $this->buildForm($note, $page);
+        $form = $this->buildForm($note);
 
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
@@ -215,27 +215,11 @@ class NoteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            
-            //On rentre sur la page Index si le client a supprimé la note
-            if ($this->deleteNoteIfNeeded($form, $note, $idEntreprise) == true) {
-                return $this->redirectToRoute("admin.note.index", [
-                    'idEntreprise' => $idEntreprise,
-                ]);
-            }
-            //Si non, on continue l'édition de la note
-            $page = $this->movePage($page, $form);
-            if ($page > $this->pageMax) {
-                $this->validateBeforeSaving = true;
-                $this->saveNote($note, $request);
-                $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
-                return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
-                    'idEntreprise' => $idEntreprise,
-                ]);
-            } else {
-                $this->saveNote($note, $request);
-                /** @var Form $form */
-                $form = $this->buildForm($note, $page);
-            }
+            $this->saveNote($note, $request);
+            $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
+            return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
+                'idEntreprise' => $idEntreprise,
+            ]);
         }
         return $this->render('admin/note/create.html.twig', [
             'pageName' => $this->pageName,
@@ -244,9 +228,7 @@ class NoteController extends AbstractController
             'activator' => $this->activator,
             'note' => $note,
             'form' => $form,
-            "page" => $page,
             "idNote" => $note->getId() == null ? -1 : $note->getId(),
-            "pageMax" => $this->pageMax,
             "panier" => $panier,
             "constante" => $this->constante,
             "serviceMonnaie" => $this->serviceMonnaies,
@@ -261,15 +243,11 @@ class NoteController extends AbstractController
         }
     }
 
-    private function buildForm(?Note $note, $page): Form
+    private function buildForm(?Note $note): Form
     {
         // dd("Note: ", $note);
         $form = $this->createForm(NoteType::class, $note, [
             "idNote" => $note->getId() == null ? -1 : $note->getId(),
-            "page" => $page,
-            "pageMax" => $this->pageMax,
-            "type" => $note->getType(),
-            "addressedTo" => $note->getAddressedTo(),
             "note" => $note,
         ]);
         if ($note != null) {
@@ -343,62 +321,15 @@ class NoteController extends AbstractController
         return $note;
     }
 
-    private function deleteNoteIfNeeded(Form $form, ?Note $note, $idEntreprise): bool
-    {
-        /** @var SubmitButton $btDelete */
-        $btDelete = $form->has("delete") != null ? $form->get("delete") : null;
-        if ($btDelete != null) {
-            if ($btDelete->isClicked() == true) {
-                // dd("Je dois supprimer ", $note);
-                // $this->remove($idEntreprise, $note->getId(), new Request());
-                // $message = $this->translator->trans("note_deletion_ok", [
-                //     ":note" => $note->getNom(),
-                // ]);;
-
-                $this->manager->remove($note);
-                $this->manager->flush();
-
-                // dd("Deleted!");
-                // $this->addFlash("success", $message);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private function movePage(int $page, Form $form): int
-    {
-        /** @var SubmitButton $btSuivant */
-        $btSuivant = $form->has("suivant") != null ? $form->get("suivant") : null;
-
-        /** @var SubmitButton $btPrecedent */
-        $btPrecedent = $form->has("precedent") != null ? $form->get("precedent") : null;
-
-        // dd($form->get("suivant"));
-
-        if ($btSuivant != null) {
-            if ($btSuivant->isClicked() == true) { // && $page < $this->pageMax
-                $page++;
-            }
-        }
-        if ($btPrecedent != null) {
-            if ($btPrecedent->isClicked() == true) { // && $page > 1
-                $page--;
-            }
-        }
-        // dd($page);
-        return $page;
-    }
-
 
     #[Route('/edit/{idEntreprise}/{idNote}/{page}', name: 'edit', methods: ['GET', 'POST'], requirements: [
         'idEntreprise' => Requirement::DIGITS,
         'idNote' => Requirement::CATCH_ALL,
-        'page' => Requirement::DIGITS,
+        // 'page' => Requirement::DIGITS,
     ])]
-    public function edit(int $idEntreprise, int $idNote, int $page, Request $request, SerializerInterface $serializer)
+    public function edit(int $idEntreprise, int $idNote, Request $request)
     {
-        return $this->create($idEntreprise, $idNote, $page, $request, $serializer);
+        return $this->create($idEntreprise, $idNote, $request);
     }
 
 

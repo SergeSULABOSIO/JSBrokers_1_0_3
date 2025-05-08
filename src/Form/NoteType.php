@@ -244,11 +244,7 @@ class NoteType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Note::class,
-            "page" => -1,
             "idNote" => -1,
-            "pageMax" => -100,
-            "type" => -1,
-            "addressedTo" => -1,
             "note" => null,
             'parent_object' => null, // l'objet parent
         ]);
