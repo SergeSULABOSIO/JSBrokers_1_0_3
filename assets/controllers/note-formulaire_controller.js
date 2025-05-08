@@ -27,7 +27,7 @@ export default class extends Controller {
             .then(response => response.text()) //.json()
             .then(data => {
                 event.target.disabled = false;
-                
+
                 this.displayTarget.textContent = "Infos.";
                 this.displayTarget.style.display = 'none';
 
