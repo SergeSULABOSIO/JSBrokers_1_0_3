@@ -202,27 +202,27 @@ class NoteType extends AbstractType
                 'multiple' => true,
                 'choice_label' => 'nom',
             ])
-            ->add('articles', CollectionType::class, [
-                'label' => "Articles",
-                'help' => $this->helpArticle,
-                'entry_type' => ArticleType::class,
-                'by_reference' => false,
-                'allow_add' => false,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "tranche",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 50,
-                    ]),
-                ],
-            ])
+            // ->add('articles', CollectionType::class, [
+            //     'label' => "Articles",
+            //     'help' => $this->helpArticle,
+            //     'entry_type' => ArticleType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => false,
+            //     'allow_delete' => true,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            //     'attr' => [
+            //         'data-controller' => 'form-collection-entites',
+            //         'data-form-collection-entites-data-value' => json_encode([
+            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
+            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+            //             'icone' => "tranche",
+            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+            //             'tailleMax' => 50,
+            //         ]),
+            //     ],
+            // ])
             // ->add('annuler', SubmitType::class, [
             //     'label' => "ANNUMER",
             //     'attr' => [

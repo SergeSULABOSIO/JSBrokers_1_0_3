@@ -82,11 +82,11 @@
 						{{ form_row(form.paiements) }}
 					</div>
 				</div>
-				<div class="row">
+				{# <div class="row">
 					<div class="col">
 						{{ form_row(form.articles) }}
 					</div>
-				</div>
+				</div> #}
 				<div class="row">
 					<div class="col">
 						{{ form_row(form.signedBy) }}
@@ -99,8 +99,7 @@
 					</div>
 				</div>
 				<div class="row">
-					<div
-						class="col">
+					<div class="col">
 						{# {{ form_widget(form.enregistrer, {'attr': {'data-action': 'note-formulaire#precedent'}}) }} #}
 						{{ form_widget(form.enregistrer) }}
 						{# {{ form_widget(form.annuler) }} #}
