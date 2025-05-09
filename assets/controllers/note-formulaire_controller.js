@@ -9,7 +9,8 @@ export default class extends Controller {
         'block_partenaire',
         'block_autorite',
         'display',
-        'btArticles'
+        'btArticles',
+        'btEnregistrer',
     ];
 
     static values = {
@@ -28,7 +29,8 @@ export default class extends Controller {
         // console.log('Le contrôleur note-formulaire est connecté !');
         // console.log("Formulaire:", this.element);
 
-        this.defineIcone(this.getIconeUrl(0, "tranche", 19), this.btArticlesTarget, "AJOUTER LES ARTICLES...");
+        this.defineIcone(this.getIconeUrl(0, "tranche", 19), this.btArticlesTarget, "AJOUTER LES ARTICLES");
+        this.defineIcone(this.getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.enregistrer(event));
 
@@ -187,7 +189,7 @@ export default class extends Controller {
         }
     }
 
-    
+
     /**
      * 
      * @param {string} nom 
@@ -224,5 +226,15 @@ export default class extends Controller {
      */
     getIconeLocale(url) {
         return this.getCookies(url);
+    }
+
+    /**
+     * @param {string} nom 
+     * @param {string} valeur 
+     */
+    saveCookie(nom, valeur) {
+        var dateExpiration = new Date();
+        dateExpiration.setDate(dateExpiration.getDate() + 7)
+        document.cookie = nom + "=9111986" + valeur + "; expires=" + dateExpiration.toUTCString + "; path=/";
     }
 }
