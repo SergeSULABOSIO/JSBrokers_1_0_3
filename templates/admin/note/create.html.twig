@@ -13,9 +13,7 @@
 		":user": utilisateur.nom, 
 		":company": entreprise.nom, 
 	}) | raw}}
-	<div id='conteneurpanier'>
-		{% include 'segments/panier_pour_note.html.twig' %}
-	</div>
+	{% include 'segments/panier_pour_note.html.twig' %}
 {% endblock %}
 
 {% block menuLateraleGauche %}

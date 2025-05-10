@@ -1,32 +1,34 @@
-{% if panier != null and note != null %}
-  <div data-controller = "panier" data-panier-identreprise-value = "{{entreprise.id}}">
-    <div class="row">
-      <div class="col sensible m-2 shadow-sm" data-panier-target = "corps">
-        {% if panier.idNote != null %}
-            {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
-            <a class="m-2" href="{{ path('admin.note.edit', {'idNote':panier.idnote, 'idEntreprise': entreprise.id})}}">
-              {{ include('segments/icones/note.html.twig', {size:'18px'}) }}
-              {{ constante.Note_getNameOfTypeNote(note) }} • 
-              {{ include('segments/icones/actions/description.html.twig', {size:'18px'}) }}
-              {{ panier.nomNote }} • 
-              {{ panier.reference }} • 
-              {{ include('segments/icones/tranche.html.twig', {size:'18px'}) }}
-              {{ panier.nbTranche }} tranche(s) • 
-              {{ constante.Note_getNameOfAddressedTo(note) }}
-              </br>
-            </a>
-            <small class ="m-2">
-              <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-              <span class="text-secondary"> • Montant payé: {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-              <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-            </small></br>
-            <a class="m-2 btn btn-danger border-0 btn-sm" data-action="panier#detruirepanier">
-              {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+<div id='conteneurpanier'>
+  {% if panier != null and note != null %}
+    <div data-controller = "panier" data-panier-identreprise-value = "{{entreprise.id}}">
+      <div class="row">
+        <div class="col sensible m-2 shadow-sm" data-panier-target = "corps">
+          {% if panier.idNote != null %}
               {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
-              Vider puis détruire le panier
-            </a>
-        {% endif %}
+              <a class="m-2" href="{{ path('admin.note.edit', {'idNote':panier.idnote, 'idEntreprise': entreprise.id})}}">
+                {{ include('segments/icones/note.html.twig', {size:'18px'}) }}
+                {{ constante.Note_getNameOfTypeNote(note) }} • 
+                {{ include('segments/icones/actions/description.html.twig', {size:'18px'}) }}
+                {{ panier.nomNote }} • 
+                {{ panier.reference }} • 
+                {{ include('segments/icones/tranche.html.twig', {size:'18px'}) }}
+                {{ panier.nbTranche }} tranche(s) • 
+                {{ constante.Note_getNameOfAddressedTo(note) }}
+                </br>
+              </a>
+              <small class ="m-2">
+                <span class="text-secondary fw-bold">Montant dû: {{ constante.Note_getMontant_payable(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                <span class="text-secondary"> • Montant payé: {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+                <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+              </small></br>
+              <a class="m-2 btn btn-danger border-0 btn-sm" data-action="panier#detruirepanier">
+                {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+                {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
+                Vider puis détruire le panier
+              </a>
+          {% endif %}
+        </div>
       </div>
     </div>
-  </div>
-{% endif %}
+  {% endif %}
+</div>
