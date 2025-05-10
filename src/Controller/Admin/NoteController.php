@@ -16,6 +16,7 @@ use App\Services\ServiceDates;
 use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Util\Json;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -24,7 +25,9 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Form;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/note", name: 'admin.note.')]
 #[IsGranted('ROLE_USER')]
@@ -79,6 +82,32 @@ class NoteController extends AbstractController
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
+            "panier" => $panier,
+            "note" => $note,
+        ]);
+    }
+
+
+
+    #[Route('/getpanier/{idEntreprise}', name: 'getpanier', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function getPanier($idEntreprise, Request $request)
+    {
+        /** @var Panier $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+
+        /** @var Note $note */
+        $note = null;
+        if ($panier != null) {
+            if ($panier->getIdNote() != null) {
+                $note = $this->noteRepository->find($panier->getIdNote());
+            }
+        }
+
+        return $this->render('/segments/panier_pour_note.html.twig', [
+            'utilisateur' => $this->getUser(),
+            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
             "panier" => $panier,
             "note" => $note,
         ]);
@@ -173,7 +202,6 @@ class NoteController extends AbstractController
         if ($idNote == -1) {
             $this->detruirePanier($request);
         }
-        // dd("Edition...", $idNote);
 
         $this->openSession($request);
 
@@ -195,17 +223,22 @@ class NoteController extends AbstractController
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
 
-
-        // dd($note);
-
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->saveNote($note, $request);
-            $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
-            return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
-                'idEntreprise' => $idEntreprise,
-            ]);
+
+            $mntDue = $this->constante->Note_getMontant_payable($note);
+            $mntPaye = $this->constante->Note_getMontant_paye($note);
+            $mntSolde = $this->constante->Note_getMontant_solde($note);
+
+            // return new JsonResponse($note);
+            return new Response($mntDue . "___" . $mntPaye . "___" . $mntSolde, Response::HTTP_OK);
+
+            // $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
+            // return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
         }
         return $this->render('admin/note/create.html.twig', [
             'pageName' => $this->pageName,

@@ -85,65 +85,91 @@ export default class extends Controller {
         }
     }
 
-    ajouterarticles = () => {
+    /**
+     * 
+     * @param {MouseEvent} event 
+     */
+    ajouterarticles = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         window.location.href = "/admin/tranche/index/" + this.identrepriseValue;
     }
 
+    /**
+     * 
+     * @param {MouseEvent} event 
+     */
     ecouterClick = (event) => {
+        event.preventDefault(); // Empêche la soumission classique du formulaire
         if (event.target.innerText) {
             //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
             if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
-                event.preventDefault(); // Empêche la soumission classique du formulaire
-
-                event.target.disabled = true;
-
-                this.isSaved = true;
-                this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
-                this.displayTarget.style.display = 'block';
-
-                // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
-                const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
-                fetch(this.element.action, {
-                    method: this.element.method,
-                    body: formData,
-                })
-                    .then(response => response.text()) //.json()
-                    .then(data => {
-                        event.target.disabled = false;
-                        this.displayTarget.style.display = 'block';
-
-                        // console.log('Réponse du serveur :', data);
-                        // Traitez la réponse ici
-                        if (this.isSaved == true) {
-                            this.btArticlesTarget.style.display = 'inline';
-                            this.displayTarget.textContent = "Cliquez sur le bouton 'AJOUTER LES ARTICLES [...]' afin d'aller ajouter les articles dans la note.";
-
-
-
-
-                            //actualisation des autres composant du formyulaire ainsi que du panier
-                            this.montantdueTarget.value = 1000;
-                            this.montantpayeTarget.value = 500;
-                            this.montantsoldeTarget.value = this.montantdueTarget.value - this.montantpayeTarget.value;
-
-                            if (this.conteneurpanierValue != null) {
-                                var conteneurPanier = document.getElementById(this.conteneurpanierValue);
-                                conteneurPanier.innerHTML = "SULA BOSIO Serge!";
-                            }
-                        }
-
-                    })
-                    .catch(errorMessage => {
-                        event.target.disabled = false;
-
-                        this.displayTarget.textContent = "Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.";
-                        this.displayTarget.style.display = 'none';
-
-                        console.error("Réponse d'erreur du serveur :", errorMessage);
-                    });
+                this.enregistrerNote(event);
             }
         }
+    }
+
+
+    /**
+     * 
+     * @param {MouseEvent} event 
+     */
+    enregistrerNote = (event) => {
+        event.target.disabled = true;
+        this.isSaved = true;
+        this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
+        this.displayTarget.style.display = 'block';
+
+        // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
+        const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
+        fetch(this.element.action, {
+            method: this.element.method,
+            body: formData,
+        })
+            .then(response => response.text()) //.json()
+            .then(data => {
+                console.log(data);
+                event.target.disabled = false;
+                this.displayTarget.style.display = 'block';
+
+                // Traitez la réponse ici
+                if (this.isSaved == true) {
+                    this.btArticlesTarget.style.display = 'inline';
+                    this.displayTarget.textContent = "Cliquez sur le bouton 'AJOUTER LES ARTICLES [...]' afin d'aller ajouter les articles dans la note.";
+
+                    //actualisation des autres composant du formulaire ainsi que du panier
+                    this.montantdueTarget.value = data.split("___")[0] * 1;
+                    this.montantpayeTarget.value = data.split("___")[1];
+                    this.montantsoldeTarget.value = data.split("___")[2];
+
+                    //On actualise le panier
+                    if (this.conteneurpanierValue != null) {
+                        this.actualiserPanier();
+                    }
+                }
+
+            })
+            .catch(errorMessage => {
+                event.target.disabled = false;
+                this.displayTarget.textContent = "Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.";
+                this.displayTarget.style.display = 'none';
+                console.error("Réponse d'erreur du serveur :", errorMessage);
+            });
+    }
+
+
+    actualiserPanier = () => {
+        var conteneurPanier = document.getElementById(this.conteneurpanierValue);
+        conteneurPanier.firstElementChild.firstElementChild.firstElementChild.innerHTML = "Actualisation du panier...";
+
+        fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(htmlData => {
+                conteneurPanier.innerHTML = htmlData;
+            })
+            .catch(error => {
+                conteneurPanier.innerHTML = "Désolé, une erreur s'est produite! Merci d'actualiser la page ou vérifier votre connexion Internet";
+                console.error('Erreur lors du chargement du fragment:', conteneurPanier, error);
+            });
     }
 
 
