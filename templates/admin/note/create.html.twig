@@ -13,7 +13,9 @@
 		":user": utilisateur.nom, 
 		":company": entreprise.nom, 
 	}) | raw}}
-	{% include 'segments/panier_pour_note.html.twig' %}
+	<div id='conteneurpanier'>
+		{% include 'segments/panier_pour_note.html.twig' %}
+	</div>
 {% endblock %}
 
 {% block menuLateraleGauche %}
@@ -26,7 +28,8 @@
 		'attr': {
 			'data-controller': 'note-formulaire', 
 			'data-note-formulaire-idnote-value': note.id,
-			'data-note-formulaire-identreprise-value': entreprise.id
+			'data-note-formulaire-identreprise-value': entreprise.id,
+			'data-note-formulaire-conteneurpanier-value': 'conteneurpanier',
 			}
 		}) 
 	}}
@@ -74,13 +77,25 @@
 				{% if note.id != null %}
 					<div class="row">
 						<div class="col">
-							{{ form_row(form.montantDue) }}
+							{{ form_row(form.montantDue, {
+								'aatr' : {
+									'data-note-formulaire-target': 'montantdue'
+								}
+							}) }}
 						</div>
 						<div class="col">
-							{{ form_row(form.montantPaye) }}
+							{{ form_row(form.montantPaye, {
+								'aatr' : {
+									'data-note-formulaire-target': 'montantpaye'
+								}
+							}) }}
 						</div>
 						<div class="col">
-							{{ form_row(form.montantSolde) }}
+							{{ form_row(form.montantSolde, {
+								'aatr' : {
+									'data-note-formulaire-target': 'montantsolde'
+								}
+							}) }}
 						</div>
 					</div>
 				{% endif %}

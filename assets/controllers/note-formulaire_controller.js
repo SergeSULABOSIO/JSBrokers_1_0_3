@@ -11,11 +11,15 @@ export default class extends Controller {
         'display',
         'btArticles',
         'btEnregistrer',
+        'montantdue',
+        'montantpaye',
+        'montantsolde',
     ];
 
     static values = {
         idnote: String,
-        identreprise: String
+        identreprise: String,
+        conteneurpanier: String
     };
 
     connect() {
@@ -26,14 +30,12 @@ export default class extends Controller {
         } else {
             this.btArticlesTarget.style.display = 'inline';
         }
-        // console.log('Le contrôleur note-formulaire est connecté !');
-        // console.log("Formulaire:", this.element);
 
         this.defineIcone(this.getIconeUrl(0, "tranche", 19), this.btArticlesTarget, "AJOUTER LES ARTICLES");
         this.defineIcone(this.getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
-        //On écoute les boutons de soumission du formulaire
-        this.element.addEventListener("click", event => this.enregistrer(event));
 
+        //On écoute les boutons de soumission du formulaire
+        this.element.addEventListener("click", event => this.ecouterClick(event));
     }
 
     changerType = (event) => {
@@ -88,13 +90,15 @@ export default class extends Controller {
         window.location.href = "/admin/tranche/index/" + this.identrepriseValue;
     }
 
-    enregistrer = (event) => {
+    ecouterClick = (event) => {
         if (event.target.innerText) {
+            //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
             if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
                 event.preventDefault(); // Empêche la soumission classique du formulaire
 
                 event.target.disabled = true;
 
+                this.isSaved = true;
                 this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
                 this.displayTarget.style.display = 'block';
 
@@ -107,7 +111,6 @@ export default class extends Controller {
                     .then(response => response.text()) //.json()
                     .then(data => {
                         event.target.disabled = false;
-                        this.isSaved = true;
                         this.displayTarget.style.display = 'block';
 
                         // console.log('Réponse du serveur :', data);
@@ -115,6 +118,19 @@ export default class extends Controller {
                         if (this.isSaved == true) {
                             this.btArticlesTarget.style.display = 'inline';
                             this.displayTarget.textContent = "Cliquez sur le bouton 'AJOUTER LES ARTICLES [...]' afin d'aller ajouter les articles dans la note.";
+
+
+
+
+                            //actualisation des autres composant du formyulaire ainsi que du panier
+                            this.montantdueTarget.value = 1000;
+                            this.montantpayeTarget.value = 500;
+                            this.montantsoldeTarget.value = this.montantdueTarget.value - this.montantpayeTarget.value;
+
+                            if (this.conteneurpanierValue != null) {
+                                var conteneurPanier = document.getElementById(this.conteneurpanierValue);
+                                conteneurPanier.innerHTML = "SULA BOSIO Serge!";
+                            }
                         }
 
                     })
