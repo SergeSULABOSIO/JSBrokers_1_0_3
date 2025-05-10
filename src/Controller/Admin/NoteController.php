@@ -122,7 +122,8 @@ class NoteController extends AbstractController
     {
         $this->detruirePanier($request);
         // dd("Ici", $currentURL);
-        return $this->redirect($currentURL);
+        // return $this->redirect($currentURL);
+        return new Response("ok");
     }
 
     private function detruirePanier(Request $request)

@@ -1,7 +1,7 @@
 {% if panier != null and note != null %}
-  <div data-controller = "panier" data-panier-identreprise-value = entreprise.id>
+  <div data-controller = "panier" data-panier-identreprise-value = "{{entreprise.id}}">
     <div class="row">
-      <div class="col sensible m-2 shadow-sm">
+      <div class="col sensible m-2 shadow-sm" data-panier-target = "corps">
         {% if panier.idNote != null %}
             {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
             <a class="m-2" href="{{ path('admin.note.edit', {'idNote':panier.idnote, 'idEntreprise': entreprise.id})}}">
@@ -20,9 +20,7 @@
               <span class="text-secondary"> • Montant payé: {{ constante.Note_getMontant_paye(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
               <span class="text-secondary"> • Solde: {{ constante.Note_getMontant_solde(note)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
             </small></br>
-            {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
             <a class="m-2 btn btn-danger border-0 btn-sm" data-action="panier#detruirepanier">
-              {# href="{{ path('admin.note.viderpanier', {'idEntreprise': entreprise.id, 'currentURL': currentURL})}}" #}
               {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
               {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
               Vider puis détruire le panier

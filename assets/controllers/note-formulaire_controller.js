@@ -159,6 +159,7 @@ export default class extends Controller {
 
     actualiserPanier = () => {
         var conteneurPanier = document.getElementById(this.conteneurpanierValue);
+        conteneurPanier.style.display = "block";
         conteneurPanier.firstElementChild.firstElementChild.firstElementChild.innerHTML = "Actualisation du panier...";
 
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
