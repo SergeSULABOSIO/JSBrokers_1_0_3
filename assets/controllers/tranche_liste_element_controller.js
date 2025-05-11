@@ -62,17 +62,16 @@ export default class extends Controller {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         console.log("METTRE DANS LA NOTE QUI SE TROUVE DANS LE PANIER");
         const parametresCibles = event.currentTarget.dataset; //L'element 
-        console.log(parametresCibles.poste);
-        
-        const poste = elementCible.poste;
-        const montantpayable = elementCible.montantpayable;
-        const idposte = elementCible.idposte;
-        const idnote = elementCible.idnote;
-        const idtranche = elementCible.idtranche;
-        const identreprise = elementCible.identreprise;
+        // console.log(parametresCibles.poste);
+        const poste = parametresCibles.poste;
+        const montantpayable = parametresCibles.montantpayable;
+        const idposte = parametresCibles.idposte;
+        const idnote = parametresCibles.idnote;
+        const idtranche = parametresCibles.idtranche;
+        const identreprise = parametresCibles.identreprise;
         // var url = "/admin/tranche/mettredanslanote/" + this.posteValue + "/" + this.montantpayableValue + "/" + this.idnoteValue + "/" + this.idposteValue + "/" + this.idtrancheValue + "/" + this.identrepriseValue;
         var url = "/admin/tranche/mettredanslanote/" + poste + "/" + montantpayable + "/" + idposte + "/" + idnote + "/" + idtranche + "/" + identreprise;
-        // console.log(url);
+        console.log(url);
         // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
         // fetch(url) // L'URL de votre route Symfony
         //     .then(response => response.text())
