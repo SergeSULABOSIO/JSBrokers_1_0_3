@@ -92,12 +92,13 @@ class TrancheController extends AbstractController
     }
 
 
-    #[Route('/retirerdelanote/{idTranche}/{idEntreprise}/{currentURL}', name: 'retirerdelanote', requirements: [
+    // #[Route('/retirerdelanote/{idTranche}/{idEntreprise}/{currentURL}', name: 'retirerdelanote', requirements: [
+    #[Route('/retirerdelanote/{idTranche}/{idEntreprise}', name: 'retirerdelanote', requirements: [
         'idTranche' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
-        'currentURL' => '.+'
+        // 'currentURL' => '.+'
     ])]
-    public function retirerdelanote($currentURL, int $idTranche, $idEntreprise, Request $request)
+    public function retirerdelanote(int $idTranche, $idEntreprise, Request $request)
     {
         $reponseServeur = "";
         /** @var PanierNotes $panier */
@@ -111,9 +112,11 @@ class TrancheController extends AbstractController
             $articleToDelete = null;
 
             foreach ($note->getArticles() as $article) {
-                if ($panier->isInvoiced($article->getTranche()->getId(), $article->getMontant(), $article->getNom())) {
-                    $articleToDelete = $article;
-                    break;
+                if ($idTranche == $article->getTranche()->getId() && $idEntreprise == $note->getInvite()->getEntreprise()->getId()) {
+                    if ($panier->isInvoiced($idTranche, $article->getMontant(), $article->getNom())) {
+                        $articleToDelete = $article;
+                        break;
+                    }
                 }
             }
             if ($articleToDelete) {

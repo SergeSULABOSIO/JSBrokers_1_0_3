@@ -5,6 +5,7 @@ export default class extends Controller {
         'texteprincipal',
         'textesecondaire',
         'details',
+        'optionspanier',
     ];
 
     static values = {
@@ -73,6 +74,8 @@ export default class extends Controller {
         fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(reponseServeur => {
+                // console.log("Options panier:", this.optionspanierTarget);
+                this.optionspanierTarget.innerHTML = "{{ include('admin/tranche/segments/optionspanier.html.twig') }}";
                 console.log(reponseServeur);
 
                 //On actualise le panier
@@ -105,6 +108,8 @@ export default class extends Controller {
         fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(reponseServeur => {
+                // console.log("Options panier:", this.optionspanierTarget);
+                this.optionspanierTarget.innerHTML = "{{ include('admin/tranche/segments/optionspanier.html.twig') }}";
                 console.log(reponseServeur);
 
                 //On actualise le panier

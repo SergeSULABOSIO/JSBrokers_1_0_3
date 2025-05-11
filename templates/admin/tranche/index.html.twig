@@ -237,36 +237,10 @@
                                                             {% if panier != null %}
                                                                 {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
                                                                 {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier, -1, false) %}
-                                                                    <li>
-                                                                        {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
-                                                                            <a 
-                                                                                class="dropdown-item" 
-                                                                                data-idtranche="{{tranche.id}}" 
-                                                                                data-identreprise="{{entreprise.id}}" 
-                                                                                data-action="tranche-liste-element#retirerdelanote"  
-                                                                                {# href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}" #}
-                                                                            >
-                                                                                {{ include('segments/icones/actions/panier.html.twig', {size:'16px'}) }}
-                                                                                Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
-                                                                            </a>
-                                                                        {% else %}
-                                                                            {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
-                                                                                <a 
-                                                                                    class="dropdown-item" 
-                                                                                    data-poste="{{posteFacturable['poste']}}" 
-                                                                                    data-montantpayable="{{posteFacturable['montantPayable']}}" 
-                                                                                    data-idposte="{{posteFacturable['idPoste']}}" 
-                                                                                    data-idnote="{{posteFacturable['idNote']}}" 
-                                                                                    data-idtranche="{{tranche.id}}" 
-                                                                                    data-identreprise="{{entreprise.id}}" 
-                                                                                    data-action="tranche-liste-element#mettredanslanote"  
-                                                                                    {# href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idPoste':posteFacturable['idPoste'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}" #}
-                                                                                >
-                                                                                    {{ include('segments/icones/actions/panier.html.twig', {size:'16px'}) }}
-                                                                                    Insérer <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> dans la note
-                                                                                </a>
-                                                                            {% endif %}
-                                                                        {% endif %}
+                                                                    <li
+                                                                        data-tranche-liste-element-target="optionspanier" 
+                                                                    >
+                                                                        {{ include("admin/tranche/segments/optionspanier.html.twig") }}
                                                                     </li>
                                                                 {% endfor %}
                                                             {% endif %}
