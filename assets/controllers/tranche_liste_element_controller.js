@@ -13,6 +13,7 @@ export default class extends Controller {
         identreprise: String,
         conteneurpanier: String,
         corpspanier: String,
+        // postefacturable: String,
     };
 
     connect() {
@@ -58,7 +59,7 @@ export default class extends Controller {
      */
     mettredanslanote = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
-        
+
         const parametresCibles = event.currentTarget.dataset; //L'element 
         const poste = parametresCibles.poste;
         const montantpayable = parametresCibles.montantpayable;
@@ -66,7 +67,7 @@ export default class extends Controller {
         const idnote = parametresCibles.idnote;
         const idtranche = parametresCibles.idtranche;
         const identreprise = parametresCibles.identreprise;
-        
+
         var url = "/admin/tranche/mettredanslanote/" + poste + "/" + montantpayable + "/" + idnote + "/" + idposte + "/" + idtranche + "/" + identreprise;
         console.log(url);
 
@@ -75,8 +76,8 @@ export default class extends Controller {
             .then(response => response.text())
             .then(reponseServeur => {
                 // console.log("Options panier:", this.optionspanierTarget);
-                this.optionspanierTarget.innerHTML = "{{ include('admin/tranche/segments/optionspanier.html.twig') }}";
                 console.log(reponseServeur);
+                this.getOptionsPanier(idtranche);
 
                 //On actualise le panier
                 if (this.conteneurpanierValue != null) {
@@ -96,26 +97,41 @@ export default class extends Controller {
      */
     retirerdelanote = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
-        
+
         const parametresCibles = event.currentTarget.dataset; //L'element 
         const idtranche = parametresCibles.idtranche;
         const identreprise = parametresCibles.identreprise;
-        
+
         var url = "/admin/tranche/retirerdelanote/" + idtranche + "/" + identreprise;
         console.log(url);
-        
-        // #[Route('/retirerdelanote/{idTranche}/{idEntreprise}/{currentURL}', name: 'retirerdelanote', requirements: [
+
         fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(reponseServeur => {
-                // console.log("Options panier:", this.optionspanierTarget);
-                this.optionspanierTarget.innerHTML = "{{ include('admin/tranche/segments/optionspanier.html.twig') }}";
-                console.log(reponseServeur);
-
+                // console.log(reponseServeur);
+                this.getOptionsPanier(idtranche);
+                
                 //On actualise le panier
                 if (this.conteneurpanierValue != null) {
                     this.actualiserPanier();
                 }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
+    }
+
+    /**
+     * 
+     * @param {string} idTranche 
+     */
+    getOptionsPanier = (idTranche) => {
+        const url = "/admin/tranche/getoptionspanier/" + idTranche + "/" + this.identrepriseValue;
+        fetch(url) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(reponseServeur => {
+                this.optionspanierTarget.innerHTML = reponseServeur;
+                // console.log(reponseServeur);
             })
             .catch(error => {
                 console.error('Erreur:', error);
@@ -133,7 +149,7 @@ export default class extends Controller {
         var corpsPanier = document.getElementById(this.corpspanierValue);
         // console.log(corpsPanier);
         conteneurPanier.style.display = "block";
-        corpsPanier.innerHTML = "Actualisation du panier...";
+        // corpsPanier.innerHTML = "Actualisation du panier...";
 
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
             .then(response => response.text())

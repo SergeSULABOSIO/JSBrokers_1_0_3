@@ -175,7 +175,7 @@ export default class extends Controller {
         var corpsPanier = document.getElementById(this.corpspanierValue);
         // console.log(corpsPanier);
         conteneurPanier.style.display = "block";
-        corpsPanier.innerHTML = "Actualisation du panier...";
+        // corpsPanier.innerHTML = "Actualisation du panier...";
 
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
             .then(response => response.text())
