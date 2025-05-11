@@ -10,8 +10,8 @@ export default class extends Controller {
     };
 
     connect() {
-        console.log("Controleur du panier connecté!", "Entreprise = " + this.identrepriseValue);
-        console.log(this.element);
+        // console.log("Controleur du panier connecté!", "Entreprise = " + this.identrepriseValue);
+        // console.log(this.element);
     }
 
     /**

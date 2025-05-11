@@ -141,14 +141,15 @@ class TrancheController extends AbstractController
     }
 
 
-    #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+    // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+    #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}', name: 'mettredanslanote', requirements: [
         'poste' => Requirement::CATCH_ALL,
         'montantPayable' => Requirement::CATCH_ALL,
         // 'idNote' => Requirement::DIGITS,
         'idPoste' => Requirement::DIGITS,
         'idTranche' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
-        'currentURL' => Requirement::CATCH_ALL
+        // 'currentURL' => Requirement::CATCH_ALL
     ])]
     public function mettredanslanote($currentURL, string $poste, int $idPoste, float $montantPayable, int $idNote, int $idTranche, $idEntreprise, Request $request)
     {

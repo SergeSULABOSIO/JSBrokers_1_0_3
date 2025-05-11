@@ -1,6 +1,6 @@
 <div id='conteneurpanier'>
   {% if panier != null and note != null %}
-    <div data-controller = "panier" data-panier-identreprise-value = "{{entreprise.id}}">
+    <div data-controller="panier" data-panier-identreprise-value="{{entreprise.id}}">
       <div class="row">
         <div class="col sensible m-2 shadow-sm" data-panier-target = "corps">
           {% if panier.idNote != null %}
