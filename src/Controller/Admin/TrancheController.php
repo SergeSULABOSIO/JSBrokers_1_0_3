@@ -152,6 +152,7 @@ class TrancheController extends AbstractController
         $reponseServeur = "";
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
+        // dd("idNote:", $idNote, $panier->getIdNote());
         if ($panier && $panier->getIdNote() == $idNote) {
             /** @var Note $note */
             $note = $this->noteRepository->find($idNote);

@@ -11,10 +11,7 @@ export default class extends Controller {
         idtranche: String,
         identreprise: String,
         conteneurpanier: String,
-        // poste: String,
-        // montantpayable: String,
-        // idposte: String,
-        // idnote: String,
+        corpspanier: String,
     };
 
     connect() {
@@ -69,10 +66,10 @@ export default class extends Controller {
         const idtranche = parametresCibles.idtranche;
         const identreprise = parametresCibles.identreprise;
         
-        var url = "/admin/tranche/mettredanslanote/" + poste + "/" + montantpayable + "/" + idposte + "/" + idnote + "/" + idtranche + "/" + identreprise;
+        var url = "/admin/tranche/mettredanslanote/" + poste + "/" + montantpayable + "/" + idnote + "/" + idposte + "/" + idtranche + "/" + identreprise;
         console.log(url);
 
-        // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+        // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}', name: 'mettredanslanote', requirements: [
         fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(reponseServeur => {
