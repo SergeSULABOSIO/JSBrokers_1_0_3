@@ -19,7 +19,8 @@ export default class extends Controller {
     static values = {
         idnote: String,
         identreprise: String,
-        conteneurpanier: String
+        conteneurpanier: String,
+        corpspanier: String,
     };
 
     connect() {
@@ -103,7 +104,7 @@ export default class extends Controller {
         
         if (event.target.type != undefined) {
             if (event.target.type == "datetime-local") {
-                
+                //On laisse le comportement par défaut
             }else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
@@ -168,8 +169,10 @@ export default class extends Controller {
 
     actualiserPanier = () => {
         var conteneurPanier = document.getElementById(this.conteneurpanierValue);
+        var corpsPanier = document.getElementById(this.corpspanierValue);
+        console.log(corpsPanier);
         conteneurPanier.style.display = "block";
-        conteneurPanier.firstElementChild.firstElementChild.firstElementChild.firstElementChild.innerHTML = "Actualisation du panier...";
+        corpsPanier.innerHTML = "Actualisation du panier...";
 
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
             .then(response => response.text())

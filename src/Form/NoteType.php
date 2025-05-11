@@ -92,7 +92,42 @@ class NoteType extends AbstractType
                 'attr' => [
                     'placeholder' => "Titre du signataire",
                 ],
-            ]);
+            ])
+            //champ non mappé
+            ->add('montantDue', MoneyType::class, [
+                'label' => "Montant dû",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Montant dû",
+                ],
+            ])
+            //champ non mappé
+            ->add('montantPaye', MoneyType::class, [
+                'label' => "Montant payé",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Montant payé",
+                ],
+            ])
+            //champ non mappé
+            ->add('montantSolde', MoneyType::class, [
+                'label' => "Solde restant dû",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'mapped' => false,
+                'disabled' => true,
+                'attr' => [
+                    'placeholder' => "Solde restant dû",
+                ],
+            ])
+
+        ;
 
         /**
          * @var Note $note
@@ -101,39 +136,6 @@ class NoteType extends AbstractType
         if ($note != null) {
             if ($note->getId() != null) {
                 $builder
-                    //champ non mappé
-                    ->add('montantDue', MoneyType::class, [
-                        'label' => "Montant dû",
-                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        'grouping' => true,
-                        'mapped' => false,
-                        'disabled' => true,
-                        'attr' => [
-                            'placeholder' => "Montant dû",
-                        ],
-                    ])
-                    //champ non mappé
-                    ->add('montantPaye', MoneyType::class, [
-                        'label' => "Montant payé",
-                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        'grouping' => true,
-                        'mapped' => false,
-                        'disabled' => true,
-                        'attr' => [
-                            'placeholder' => "Montant payé",
-                        ],
-                    ])
-                    //champ non mappé
-                    ->add('montantSolde', MoneyType::class, [
-                        'label' => "Solde restant dû",
-                        'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        'grouping' => true,
-                        'mapped' => false,
-                        'disabled' => true,
-                        'attr' => [
-                            'placeholder' => "Solde restant dû",
-                        ],
-                    ])
                     ->add('articles', CollectionType::class, [
                         'label' => "Articles",
                         'help' => $this->helpArticle,
@@ -154,8 +156,7 @@ class NoteType extends AbstractType
                                 'tailleMax' => 0,
                             ]),
                         ],
-                    ])
-                ;
+                    ]);
             }
         }
 

@@ -1,9 +1,16 @@
 <div id='conteneurpanier'>
   {% if panier != null and note != null %}
     {% if panier.idNote != null %}
-      <div data-controller="panier" data-panier-identreprise-value="{{entreprise.id}}">
+      <div 
+        data-controller="panier" 
+        data-panier-identreprise-value="{{entreprise.id}}"
+      >
         <div class="row">
-          <div class="col sensible m-2 shadow-sm" data-panier-target = "corps">
+          <div 
+            id='corpspanier'
+            class="col sensible m-2 shadow-sm" 
+            data-panier-target = "corps"
+          >
             {{ include('segments/icones/actions/panier.html.twig', {size:'18px'}) }}
             <a class="m-2" href="{{ path('admin.note.edit', {'idNote':panier.idnote, 'idEntreprise': entreprise.id})}}">
               {{ include('segments/icones/note.html.twig', {size:'18px'}) }}

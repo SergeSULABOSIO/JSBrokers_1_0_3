@@ -128,8 +128,10 @@ export default class extends Controller {
      */
     actualiserPanier = () => {
         var conteneurPanier = document.getElementById(this.conteneurpanierValue);
+        var corpsPanier = document.getElementById(this.corpspanierValue);
+        console.log(corpsPanier);
         conteneurPanier.style.display = "block";
-        conteneurPanier.firstElementChild.firstElementChild.firstElementChild.firstElementChild.innerHTML = "Actualisation du panier...";
+        corpsPanier.innerHTML = "Actualisation du panier...";
 
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
             .then(response => response.text())
@@ -138,7 +140,7 @@ export default class extends Controller {
             })
             .catch(error => {
                 conteneurPanier.innerHTML = "Désolé, une erreur s'est produite! Merci d'actualiser la page ou vérifier votre connexion Internet";
-                console.error('Erreur:', conteneurPanier, error);
+                console.error('Erreur lors du chargement du fragment:', conteneurPanier, error);
             });
     }
 
