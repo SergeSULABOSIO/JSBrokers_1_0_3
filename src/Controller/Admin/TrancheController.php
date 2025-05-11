@@ -99,6 +99,7 @@ class TrancheController extends AbstractController
     ])]
     public function retirerdelanote($currentURL, int $idTranche, $idEntreprise, Request $request)
     {
+        $reponseServeur = "";
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
 
@@ -112,16 +113,8 @@ class TrancheController extends AbstractController
             foreach ($note->getArticles() as $article) {
                 if ($panier->isInvoiced($article->getTranche()->getId(), $article->getMontant(), $article->getNom())) {
                     $articleToDelete = $article;
-                    // dd("Article à supprimer:", $article);
                     break;
                 }
-                // if ($article) {
-                //     if ($article->getTranche()->getId() == $idTranche) {
-                //         $articleToDelete = $article;
-                //         // dd("Article à supprimer:", $article);
-                //         break;
-                //     }
-                // }
             }
             if ($articleToDelete) {
                 $note->removeArticle($articleToDelete);
@@ -132,12 +125,15 @@ class TrancheController extends AbstractController
 
                 //On actualise le panier
                 $panier->setNote($note);
-                $this->addFlash("success", "La tranche a été retirée du panier.");
+                $reponseServeur = "La tranche a été retirée du panier.";
+                // $this->addFlash("success", $reponseServeur);
             }
         } else {
-            $this->addFlash("danger", "Cher utilisateur, la note est introuvable dans le panier.");
+            $reponseServeur = "Cher utilisateur, la note est introuvable dans le panier.";
+            $this->addFlash("danger", $reponseServeur);
         }
-        return $this->redirect($currentURL);
+        // return $this->redirect($currentURL);
+        return new Response($reponseServeur);
     }
 
 

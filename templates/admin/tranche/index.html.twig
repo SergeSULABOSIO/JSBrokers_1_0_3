@@ -237,7 +237,13 @@
                                                                 {% for posteFacturable in constante.Tranche_getPostesFacturables(tranche, panier, -1, false) %}
                                                                     <li>
                                                                         {% if panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) %}
-                                                                            <a class="dropdown-item" href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+                                                                            <a 
+                                                                                class="dropdown-item" 
+                                                                                data-idtranche="{{tranche.id}}" 
+                                                                                data-identreprise="{{entreprise.id}}" 
+                                                                                data-action="tranche-liste-element#retirerdelanote"  
+                                                                                {# href="{{ path('admin.tranche.retirerdelanote', {'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}" #}
+                                                                            >
                                                                                 {{ include('segments/icones/actions/panier.html.twig', {size:'16px'}) }}
                                                                                 Retier <span class=''>{{ posteFacturable['poste'] }} ({{ posteFacturable['pourcentage'] * 100 }}% soit {{ posteFacturable['montantPayable']|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }})</span> de la note
                                                                             </a>
@@ -245,7 +251,6 @@
                                                                             {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
                                                                                 <a 
                                                                                     class="dropdown-item" 
-                                                                                    data-controller="tranche-liste-element" 
                                                                                     data-poste="{{posteFacturable['poste']}}" 
                                                                                     data-montantpayable="{{posteFacturable['montantPayable']}}" 
                                                                                     data-idposte="{{posteFacturable['idPoste']}}" 

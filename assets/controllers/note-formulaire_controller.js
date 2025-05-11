@@ -99,20 +99,29 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     ecouterClick = (event) => {
-        //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
-        if (event.target.innerText) {
-            if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
-                this.enregistrerNote(event);
+        console.log(event.target);
+        
+        if (event.target.type != undefined) {
+            if (event.target.type == "datetime-local") {
+                
+            }else if (event.target.type == "submit") {
+                //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
+                if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
+                    console.log("On a cliqué sur un bouton Enregistré.");
+                    this.enregistrerNote(event);
+                }
+            }else{
+                event.preventDefault(); // Empêche la soumission classique du formulaire
             }
         }
     }
-    
-    
+
+
     /**
      * 
      * @param {MouseEvent} event 
     */
-   enregistrerNote = (event) => {
+    enregistrerNote = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.target.disabled = true;
         this.isSaved = true;
@@ -137,7 +146,7 @@ export default class extends Controller {
                     this.displayTarget.textContent = "Cliquez sur le bouton 'AJOUTER LES ARTICLES [...]' afin d'aller ajouter les articles dans la note.";
 
                     //actualisation des autres composant du formulaire ainsi que du panier
-                    this.montantdueTarget.value = data.split("___")[0] * 1;
+                    this.montantdueTarget.value = data.split("___")[0];
                     this.montantpayeTarget.value = data.split("___")[1];
                     this.montantsoldeTarget.value = data.split("___")[2];
 

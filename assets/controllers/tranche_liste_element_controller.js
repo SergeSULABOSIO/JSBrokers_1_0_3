@@ -11,10 +11,10 @@ export default class extends Controller {
         idtranche: String,
         identreprise: String,
         conteneurpanier: String,
-        poste: String,
-        montantpayable: String,
-        idposte: String,
-        idnote: String,
+        // poste: String,
+        // montantpayable: String,
+        // idposte: String,
+        // idnote: String,
     };
 
     connect() {
@@ -60,33 +60,67 @@ export default class extends Controller {
      */
     mettredanslanote = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
-        console.log("METTRE DANS LA NOTE QUI SE TROUVE DANS LE PANIER");
+        
         const parametresCibles = event.currentTarget.dataset; //L'element 
-        // console.log(parametresCibles.poste);
         const poste = parametresCibles.poste;
         const montantpayable = parametresCibles.montantpayable;
         const idposte = parametresCibles.idposte;
         const idnote = parametresCibles.idnote;
         const idtranche = parametresCibles.idtranche;
         const identreprise = parametresCibles.identreprise;
-        // var url = "/admin/tranche/mettredanslanote/" + this.posteValue + "/" + this.montantpayableValue + "/" + this.idnoteValue + "/" + this.idposteValue + "/" + this.idtrancheValue + "/" + this.identrepriseValue;
+        
         var url = "/admin/tranche/mettredanslanote/" + poste + "/" + montantpayable + "/" + idposte + "/" + idnote + "/" + idtranche + "/" + identreprise;
         console.log(url);
-        // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
-        // fetch(url) // L'URL de votre route Symfony
-        //     .then(response => response.text())
-        //     .then(reponseServeur => {
-        //         console.log(reponseServeur);
 
-        //         //On actualise le panier
-        //         if (this.conteneurpanierValue != null) {
-        //             this.actualiserPanier();
-        //         }
-        //     })
-        //     .catch(error => {
-        //         console.error('Erreur:', error);
-        //     });
+        // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+        fetch(url) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(reponseServeur => {
+                console.log(reponseServeur);
+
+                //On actualise le panier
+                if (this.conteneurpanierValue != null) {
+                    this.actualiserPanier();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
     }
+
+
+
+    /**
+     * 
+     * @param {MouseEvent} event 
+     */
+    retirerdelanote = (event) => {
+        event.preventDefault(); // Empêche la soumission classique du formulaire
+        
+        const parametresCibles = event.currentTarget.dataset; //L'element 
+        const idtranche = parametresCibles.idtranche;
+        const identreprise = parametresCibles.identreprise;
+        
+        var url = "/admin/tranche/retirerdelanote/" + idtranche + "/" + identreprise;
+        console.log(url);
+        
+        // #[Route('/retirerdelanote/{idTranche}/{idEntreprise}/{currentURL}', name: 'retirerdelanote', requirements: [
+        fetch(url) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(reponseServeur => {
+                console.log(reponseServeur);
+
+                //On actualise le panier
+                if (this.conteneurpanierValue != null) {
+                    this.actualiserPanier();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
+    }
+
+
 
 
     /**
