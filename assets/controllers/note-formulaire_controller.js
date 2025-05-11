@@ -167,10 +167,13 @@ export default class extends Controller {
     }
 
 
+     /**
+     * 
+     */
     actualiserPanier = () => {
         var conteneurPanier = document.getElementById(this.conteneurpanierValue);
         var corpsPanier = document.getElementById(this.corpspanierValue);
-        console.log(corpsPanier);
+        // console.log(corpsPanier);
         conteneurPanier.style.display = "block";
         corpsPanier.innerHTML = "Actualisation du panier...";
 
