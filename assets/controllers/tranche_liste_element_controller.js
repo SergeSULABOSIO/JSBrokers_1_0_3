@@ -14,7 +14,7 @@ export default class extends Controller {
         poste: String,
         montantpayable: String,
         idposte: String,
-        // idnote: String,
+        idnote: String,
     };
 
     connect() {
@@ -33,7 +33,7 @@ export default class extends Controller {
         if (this.detailsVisible == true) {
             this.detailsTarget.style.display = "none";
             this.detailsVisible = false;
-        }else{
+        } else {
             this.detailsTarget.style.display = "block";
             this.detailsVisible = true;
         }
@@ -61,12 +61,43 @@ export default class extends Controller {
     mettredanslanote = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         console.log("METTRE DANS LA NOTE QUI SE TROUVE DANS LE PANIER");
-        var url = "/admin/tranche/mettredanslanote/" + this.posteValue + "/" + this.montantpayableValue + "/" + this.idposteValue + "/" + this.idtranche + "/" + this.identrepriseValue;
+        var url = "/admin/tranche/mettredanslanote/" + this.posteValue + "/" + this.montantpayableValue + "/" + this.idnoteValue + "/" + this.idposteValue + "/" + this.idtrancheValue + "/" + this.identrepriseValue;
         console.log(url);
         // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
+        fetch(url) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(reponseServeur => {
+                console.log(reponseServeur);
 
+                //On actualise le panier
+                if (this.conteneurpanierValue != null) {
+                    // this.actualiserPanier();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
     }
 
+
+    /**
+     * 
+     */
+    actualiserPanier = () => {
+        var conteneurPanier = document.getElementById(this.conteneurpanierValue);
+        conteneurPanier.style.display = "block";
+        conteneurPanier.firstElementChild.firstElementChild.firstElementChild.firstElementChild.innerHTML = "Actualisation du panier...";
+
+        fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(htmlData => {
+                conteneurPanier.innerHTML = htmlData;
+            })
+            .catch(error => {
+                conteneurPanier.innerHTML = "Désolé, une erreur s'est produite! Merci d'actualiser la page ou vérifier votre connexion Internet";
+                console.error('Erreur:', conteneurPanier, error);
+            });
+    }
 
 
     /**

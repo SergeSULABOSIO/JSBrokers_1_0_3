@@ -36,7 +36,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\BrowserKit\Response;
 
 #[Route("/admin/tranche", name: 'admin.tranche.')]
 #[IsGranted('ROLE_USER')]
@@ -145,14 +145,15 @@ class TrancheController extends AbstractController
     #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}', name: 'mettredanslanote', requirements: [
         'poste' => Requirement::CATCH_ALL,
         'montantPayable' => Requirement::CATCH_ALL,
-        // 'idNote' => Requirement::DIGITS,
+        'idNote' => Requirement::DIGITS,
         'idPoste' => Requirement::DIGITS,
         'idTranche' => Requirement::DIGITS,
         'idEntreprise' => Requirement::DIGITS,
         // 'currentURL' => Requirement::CATCH_ALL
     ])]
-    public function mettredanslanote($currentURL, string $poste, int $idPoste, float $montantPayable, int $idNote, int $idTranche, $idEntreprise, Request $request)
+    public function mettredanslanote(string $poste, int $idPoste, float $montantPayable, int $idNote, int $idTranche, Request $request)
     {
+        $reponseServeur = "";
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
         if ($panier && $panier->getIdNote() == $idNote) {
@@ -179,47 +180,26 @@ class TrancheController extends AbstractController
                         //On actualise le panier
                         $panier->setNote($note);
                         // dd("Je suis ici !", $article);
-                        $this->addFlash("success", $article->getNom() . " vient d'être insérée dans la note.");
+                        $reponseServeur = "ok_1986_" . $article->getNom() . " vient d'être insérée dans la note.";
+                        $this->addFlash("success", $reponseServeur);
                     } else {
-                        $this->addFlash("danger", "Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.");
+                        $reponseServeur = "erreur_1986_Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.";
+                        $this->addFlash("danger", $reponseServeur);
                     }
                 } else {
-                    $this->addFlash("danger", "Cette tranche est introuvable dans la base de données.");
+                    $reponseServeur = "erreur_1986_Cette tranche est introuvable dans la base de données.";
+                    $this->addFlash("danger", $reponseServeur);
                 }
             } else {
-                $this->addFlash("danger", "La note n'existe pas. Impossible d'ajouter quoi que ce soit.");
+                $reponseServeur = "erreur_1986_La note n'existe pas. Impossible d'ajouter quoi que ce soit.";
+                $this->addFlash("danger", $reponseServeur);
             }
         } else {
-            $this->addFlash("danger", "Désolé, vous ne pouvez pas l'insérer dans ce panier car il contient une autre note.");
+            $reponseServeur = "erreur_1986_Désolé, vous ne pouvez pas l'insérer dans ce panier car il contient une autre note.";
+            $this->addFlash("danger", $reponseServeur);
         }
-        return $this->redirect($currentURL);
-    }
-
-    private function getNomArticle(?Tranche $tranche): string
-    {
-        $nomArticle = "";
-        if ($tranche->getCotation()) {
-            /** @var Cotation */
-            $cotation = $tranche->getCotation();
-            $nomArticle = $cotation->getNom();
-            if ($cotation->getPiste()) {
-                /** @var Piste */
-                $piste = $cotation->getPiste();
-                if ($piste->getRisque()) {
-                    $nomArticle = $piste->getRisque()->getCode() . " / " . $nomArticle;
-                }
-                if ($piste->getClient()) {
-                    $nomArticle = $piste->getClient()->getNom() . " / " . $nomArticle;
-                }
-            }
-            $echeance = "";
-            if ($tranche->getEcheanceAt()) {
-                $echeance = " (début: " . $tranche->getPayableAt()->format('d-m-Y') . ")";
-            }
-            $nomArticle = $tranche->getNom() . $echeance . " / " . $nomArticle;
-        }
-        // dd($nomArticle);
-        return $nomArticle;
+        // return $this->redirect($currentURL);
+        return new Response($reponseServeur);
     }
 
 

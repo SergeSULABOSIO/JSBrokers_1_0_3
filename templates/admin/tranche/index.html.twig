@@ -245,10 +245,11 @@
                                                                             {% if constante.Tranche_isAlreadyInADifferentNote(tranche, posteFacturable) == false or panier.isInvoiced(tranche.id, posteFacturable['montantPayable'], posteFacturable['poste']) == false %}
                                                                                 <a 
                                                                                     class="dropdown-item" 
+                                                                                    data-controller="tranche-liste-element" 
                                                                                     data-tranche-liste-element-poste-value="{{posteFacturable['poste']}}" 
                                                                                     data-tranche-liste-element-montantpayable-value="{{posteFacturable['montantPayable']}}" 
                                                                                     data-tranche-liste-element-idposte-value="{{posteFacturable['idPoste']}}" 
-                                                                                    {# data-tranche-liste-element-idnote-value="{{posteFacturable['idNote']}}"  #}
+                                                                                    data-tranche-liste-element-idnote-value="{{posteFacturable['idNote']}}" 
                                                                                     data-tranche-liste-element-idtranche-value="{{tranche.id}}" 
                                                                                     data-tranche-liste-element-identreprise-value="{{entreprise.id}}" 
                                                                                     data-action="tranche-liste-element#mettredanslanote"  
