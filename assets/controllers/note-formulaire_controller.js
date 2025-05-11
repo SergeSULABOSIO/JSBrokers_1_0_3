@@ -99,21 +99,21 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     ecouterClick = (event) => {
-        event.preventDefault(); // Empêche la soumission classique du formulaire
+        //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
         if (event.target.innerText) {
-            //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
             if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
                 this.enregistrerNote(event);
             }
         }
     }
-
-
+    
+    
     /**
      * 
      * @param {MouseEvent} event 
-     */
-    enregistrerNote = (event) => {
+    */
+   enregistrerNote = (event) => {
+        event.preventDefault(); // Empêche la soumission classique du formulaire
         event.target.disabled = true;
         this.isSaved = true;
         this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
@@ -160,7 +160,7 @@ export default class extends Controller {
     actualiserPanier = () => {
         var conteneurPanier = document.getElementById(this.conteneurpanierValue);
         conteneurPanier.style.display = "block";
-        conteneurPanier.firstElementChild.firstElementChild.firstElementChild.innerHTML = "Actualisation du panier...";
+        conteneurPanier.firstElementChild.firstElementChild.firstElementChild.firstElementChild.innerHTML = "Actualisation du panier...";
 
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
             .then(response => response.text())
