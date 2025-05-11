@@ -36,7 +36,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\BrowserKit\Response;
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/tranche", name: 'admin.tranche.')]
 #[IsGranted('ROLE_USER')]
@@ -142,7 +142,7 @@ class TrancheController extends AbstractController
 
 
     // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
-    #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}', name: 'mettredanslanote', requirements: [
+    #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}', name: 'mettredanslanote', requirements: [
         'poste' => Requirement::CATCH_ALL,
         'montantPayable' => Requirement::CATCH_ALL,
         'idNote' => Requirement::DIGITS,
@@ -181,22 +181,22 @@ class TrancheController extends AbstractController
                         $panier->setNote($note);
                         // dd("Je suis ici !", $article);
                         $reponseServeur = "ok_1986_" . $article->getNom() . " vient d'être insérée dans la note.";
-                        $this->addFlash("success", $reponseServeur);
+                        // $this->addFlash("success", $reponseServeur);
                     } else {
                         $reponseServeur = "erreur_1986_Cette tranche existe déjà dans cette note. Impossible de l'ajouter car le doublon n'est pas autorisé.";
-                        $this->addFlash("danger", $reponseServeur);
+                        // $this->addFlash("danger", $reponseServeur);
                     }
                 } else {
                     $reponseServeur = "erreur_1986_Cette tranche est introuvable dans la base de données.";
-                    $this->addFlash("danger", $reponseServeur);
+                    // $this->addFlash("danger", $reponseServeur);
                 }
             } else {
                 $reponseServeur = "erreur_1986_La note n'existe pas. Impossible d'ajouter quoi que ce soit.";
-                $this->addFlash("danger", $reponseServeur);
+                // $this->addFlash("danger", $reponseServeur);
             }
         } else {
             $reponseServeur = "erreur_1986_Désolé, vous ne pouvez pas l'insérer dans ce panier car il contient une autre note.";
-            $this->addFlash("danger", $reponseServeur);
+            // $this->addFlash("danger", $reponseServeur);
         }
         // return $this->redirect($currentURL);
         return new Response($reponseServeur);

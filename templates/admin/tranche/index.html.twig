@@ -246,12 +246,12 @@
                                                                                 <a 
                                                                                     class="dropdown-item" 
                                                                                     data-controller="tranche-liste-element" 
-                                                                                    data-tranche-liste-element-poste-value="{{posteFacturable['poste']}}" 
-                                                                                    data-tranche-liste-element-montantpayable-value="{{posteFacturable['montantPayable']}}" 
-                                                                                    data-tranche-liste-element-idposte-value="{{posteFacturable['idPoste']}}" 
-                                                                                    data-tranche-liste-element-idnote-value="{{posteFacturable['idNote']}}" 
-                                                                                    data-tranche-liste-element-idtranche-value="{{tranche.id}}" 
-                                                                                    data-tranche-liste-element-identreprise-value="{{entreprise.id}}" 
+                                                                                    data-poste="{{posteFacturable['poste']}}" 
+                                                                                    data-montantpayable="{{posteFacturable['montantPayable']}}" 
+                                                                                    data-idposte="{{posteFacturable['idPoste']}}" 
+                                                                                    data-idnote="{{posteFacturable['idNote']}}" 
+                                                                                    data-idtranche="{{tranche.id}}" 
+                                                                                    data-identreprise="{{entreprise.id}}" 
                                                                                     data-action="tranche-liste-element#mettredanslanote"  
                                                                                     {# href="{{ path('admin.tranche.mettredanslanote', {'poste':posteFacturable['poste'], 'montantPayable':posteFacturable['montantPayable'], 'idPoste':posteFacturable['idPoste'], 'idNote':posteFacturable['idNote'], 'idTranche':tranche.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}" #}
                                                                                 >

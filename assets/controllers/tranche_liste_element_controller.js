@@ -61,22 +61,32 @@ export default class extends Controller {
     mettredanslanote = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         console.log("METTRE DANS LA NOTE QUI SE TROUVE DANS LE PANIER");
-        var url = "/admin/tranche/mettredanslanote/" + this.posteValue + "/" + this.montantpayableValue + "/" + this.idnoteValue + "/" + this.idposteValue + "/" + this.idtrancheValue + "/" + this.identrepriseValue;
-        console.log(url);
+        const parametresCibles = event.currentTarget.dataset; //L'element 
+        console.log(parametresCibles.poste);
+        
+        const poste = elementCible.poste;
+        const montantpayable = elementCible.montantpayable;
+        const idposte = elementCible.idposte;
+        const idnote = elementCible.idnote;
+        const idtranche = elementCible.idtranche;
+        const identreprise = elementCible.identreprise;
+        // var url = "/admin/tranche/mettredanslanote/" + this.posteValue + "/" + this.montantpayableValue + "/" + this.idnoteValue + "/" + this.idposteValue + "/" + this.idtrancheValue + "/" + this.identrepriseValue;
+        var url = "/admin/tranche/mettredanslanote/" + poste + "/" + montantpayable + "/" + idposte + "/" + idnote + "/" + idtranche + "/" + identreprise;
+        // console.log(url);
         // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
-        fetch(url) // L'URL de votre route Symfony
-            .then(response => response.text())
-            .then(reponseServeur => {
-                console.log(reponseServeur);
+        // fetch(url) // L'URL de votre route Symfony
+        //     .then(response => response.text())
+        //     .then(reponseServeur => {
+        //         console.log(reponseServeur);
 
-                //On actualise le panier
-                if (this.conteneurpanierValue != null) {
-                    // this.actualiserPanier();
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-            });
+        //         //On actualise le panier
+        //         if (this.conteneurpanierValue != null) {
+        //             this.actualiserPanier();
+        //         }
+        //     })
+        //     .catch(error => {
+        //         console.error('Erreur:', error);
+        //     });
     }
 
 
