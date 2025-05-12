@@ -26,16 +26,19 @@
         <div class="d-flex shadow-sm sensible bg-white">
 			<table class="table table-hover table-sm caption-top p-3">
 				<caption>
-                {% if tranches|length == 0 %}
-                    {{ "list_filter_result_empty" | trans}}
-                {% else %}
-                    {{ "list_filter_result_elements" | trans ({
-                        ':number': tranches|length
-                    })}}
-                {% endif %}
-                <div class="d-flex gap-1">
-                    {{ knp_pagination_render(tranches) }}
-                </div>
+                    {% if tranches|length == 0 %}
+                        {{ "list_filter_result_empty" | trans}}
+                    {% else %}
+                        {{ "list_filter_result_elements" | trans ({
+                            ':number': tranches|length
+                        })}}
+                    {% endif %}
+                    <span id="infosstatus" class="">
+                        | Autres informations...
+                    </span>
+                    <div class="d-flex gap-1">
+                        {{ knp_pagination_render(tranches) }}
+                    </div>
                 </caption>
                 {% if tranches|length != 0 %}
                     <thead class="table-light">
