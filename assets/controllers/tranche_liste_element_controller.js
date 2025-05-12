@@ -6,6 +6,7 @@ export default class extends Controller {
         'textesecondaire',
         'details',
         'optionspanier',
+        'statuspanier',
     ];
 
     static values = {
@@ -13,7 +14,6 @@ export default class extends Controller {
         identreprise: String,
         conteneurpanier: String,
         corpspanier: String,
-        // postefacturable: String,
     };
 
     connect() {
@@ -132,6 +132,7 @@ export default class extends Controller {
             .then(reponseServeur => {
                 this.optionspanierTarget.innerHTML = reponseServeur;
                 // console.log(reponseServeur);
+                this.getStatusPanier(idTranche);
             })
             .catch(error => {
                 console.error('Erreur:', error);
@@ -139,6 +140,23 @@ export default class extends Controller {
     }
 
 
+
+    /**
+     * 
+     * @param {string} idTranche 
+     */
+    getStatusPanier = (idTranche) => {
+        const url = "/admin/tranche/getstatuspanier/" + idTranche + "/" + this.identrepriseValue;
+        fetch(url) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(reponseServeur => {
+                this.statuspanierTarget.innerHTML = reponseServeur;
+                // console.log(reponseServeur);
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
+    }
 
 
     /**

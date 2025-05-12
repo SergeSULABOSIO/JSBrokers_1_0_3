@@ -165,6 +165,30 @@ class TrancheController extends AbstractController
     }
 
 
+
+    #[Route('/getstatuspanier/{idTranche}/{idEntreprise}', name: 'getstatuspanier', requirements: [
+        'idTranche' => Requirement::DIGITS,
+        'idEntreprise' => Requirement::DIGITS,
+    ])]
+    public function getstatuspanier(int $idTranche, int $idEntreprise, Request $request)
+    {
+        /** @var Tranche $tranche */
+        $tranche = $this->trancheRepository->find($idTranche);
+
+        /** @var PanierNotes $panier */
+        $panier = $request->getSession()->get(PanierNotes::NOM);
+
+        return $this->render('admin/tranche/segments/optionspanier.html.twig', [
+            // 'utilisateur' => $this->getUser(),
+            // 'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            // 'serviceMonnaie' => $this->serviceMonnaies,
+            'constante' => $this->constante,
+            "panier" => $panier,
+            "tranche" => $tranche,
+        ]);
+    }
+
+
     // #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}/{currentURL}', name: 'mettredanslanote', requirements: [
     #[Route('/mettredanslanote/{poste}/{montantPayable}/{idNote}/{idPoste}/{idTranche}/{idEntreprise}', name: 'mettredanslanote', requirements: [
         'poste' => Requirement::CATCH_ALL,

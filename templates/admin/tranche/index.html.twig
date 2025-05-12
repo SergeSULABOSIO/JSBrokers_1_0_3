@@ -74,20 +74,10 @@
                                         {# href="{{ path('admin.tranche.edit', {'idTranche':tranche.id, 'idEntreprise': entreprise.id})}}" #}
                                     >
                                         {{ include('segments/icones/tranche.html.twig', {'size':'19px'}) }}
-                                        {# On fait signe si cette tranche peut entrer dans le panier #}
-                                        {% if panier != null %}
-
-                                        
-                                            {% if constante.Tranche_getPanierStatus(tranche, panier) == 0 %}
-                                                <span class="text-success fw-bold">(+{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
-                                            {% endif %}
-                                            {% if constante.Tranche_getPanierStatus(tranche, panier) == 1 %}
-                                                <span class="text-danger fw-bold">(-{{ constante.Tranche_getPostesFacturables(tranche, panier, -1, false)|length }} {{ ux_icon('pepicons-print:cart', {height: '18px', width: '18px'}) }})</span>
-                                            {% endif %}
-
-
-
-                                        {% endif %}
+                                        {# Info pour indiquer si cette tranche est dans le panier ou pas #}
+                                        <span data-tranche-liste-element-target="statuspanier">
+                                            {{ include("admin/tranche/segments/statuspanier.html.twig") }}
+                                        </span>
                                         {% if constante.Cotation_isBound(tranche.cotation) %}
                                             <span class="text-success">
                                                 {{ include('segments/icones/actions/completed.html.twig', {size:'18px'}) }}
