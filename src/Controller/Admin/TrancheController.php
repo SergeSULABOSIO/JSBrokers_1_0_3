@@ -178,10 +178,10 @@ class TrancheController extends AbstractController
         /** @var PanierNotes $panier */
         $panier = $request->getSession()->get(PanierNotes::NOM);
 
-        return $this->render('admin/tranche/segments/optionspanier.html.twig', [
-            // 'utilisateur' => $this->getUser(),
-            // 'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            // 'serviceMonnaie' => $this->serviceMonnaies,
+        return $this->render('admin/tranche/segments/statuspanier.html.twig', [
+            'utilisateur' => $this->getUser(),
+            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'serviceMonnaie' => $this->serviceMonnaies,
             'constante' => $this->constante,
             "panier" => $panier,
             "tranche" => $tranche,
