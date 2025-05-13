@@ -18,7 +18,7 @@ export default class extends Controller {
 
     connect() {
         this.detailsVisible = false;
-        this.afficherInfosStatus(" | Prêt.");
+        this.afficherInfosStatus("Prêt.");
         // console.log("Texte principal: ", this.textesecondaireTarget);
     }
 
@@ -78,7 +78,7 @@ export default class extends Controller {
             .then(response => response.text())
             .then(reponseServeur => {
                 // console.log("Options panier:", this.optionspanierTarget);
-                this.afficherInfosStatus(" | Prêt.");
+                this.afficherInfosStatus("Prêt.");
                 // console.log(reponseServeur);
                 this.getOptionsPanier(idtranche);
 
@@ -137,7 +137,7 @@ export default class extends Controller {
             .then(reponseServeur => {
                 this.optionspanierTarget.innerHTML = reponseServeur;
                 // console.log(reponseServeur);
-                this.afficherInfosStatus(" | Prêt.");
+                this.afficherInfosStatus("Prêt.");
                 this.getStatusPanier(idTranche);
             })
             .catch(error => {
@@ -157,7 +157,7 @@ export default class extends Controller {
         fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(reponseServeur => {
-                this.afficherInfosStatus(" | Prêt.");
+                this.afficherInfosStatus("Prêt.");
                 this.statuspanierTarget.innerHTML = reponseServeur;
 
                 // console.log(reponseServeur);
@@ -170,7 +170,7 @@ export default class extends Controller {
 
     afficherInfosStatus = (texte) => {
         var conteneurInfosStatus = document.getElementById("infosstatus");
-        conteneurInfosStatus.innerHTML = texte;
+        conteneurInfosStatus.innerHTML = " | " + texte;
     }
 
 
@@ -187,7 +187,7 @@ export default class extends Controller {
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(htmlData => {
-                this.afficherInfosStatus(" | Prêt.");
+                this.afficherInfosStatus("Prêt.");
                 conteneurPanier.innerHTML = htmlData;
             })
             .catch(error => {
