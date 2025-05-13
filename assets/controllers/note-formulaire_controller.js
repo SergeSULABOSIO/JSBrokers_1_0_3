@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+// import { defineIcone, getIconeUrl } from '../app';
 
 export default class extends Controller {
     static targets = [
@@ -215,7 +216,7 @@ export default class extends Controller {
 
     /**
      * 
-     * @param {HTMLElement} elementDeLaCollection 
+     * @param {HTMLElement} elementHtml 
      * @param {int} inAction 
      * @param {string} icone 
      * @param {string} texteAAjouter 

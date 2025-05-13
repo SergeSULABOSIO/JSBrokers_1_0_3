@@ -23,3 +23,95 @@ export function defineIcone(url, elementHtml, texteAccompagnement) {
         this.downloadIcone(elementHtml, " " + texteAccompagnement, data[4], data[5], data[6]);
     }
 }
+
+/**
+ * @param {HTMLElement} htmlElement 
+ * @param {string} valeurDisplay 
+ * @param {string} icone 
+ */
+export function setIcone(icone, htmlElement, texteAccompagnement) {
+    htmlElement.innerHTML = icone + " " + texteAccompagnement;
+}
+
+/**
+ * 
+ * @param {HTMLElement} elementHtml 
+ * @param {int} inAction 
+ * @param {string} icone 
+ * @param {string} texteAAjouter 
+ * @param {int} taille
+ *  
+ */
+export function downloadIcone (elementHtml, texteAAjouter, inAction, icone, taille) {
+    //Chargement de l'icones du bouton
+    var url = this.getIconeUrl(inAction, icone, taille); //'/admin/entreprise/geticon/' + inAction + '/' + icone + '/' + taille;
+    fetch(url) // L'URL de votre route Symfony
+        .then(response => response.text())
+        .then(htmlData => {
+            this.updatTabIcones(url, htmlData);
+            elementHtml.innerHTML = htmlData + texteAAjouter;
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement du fragment:', error);
+        });
+}
+
+/**
+ * 
+ * @param {string} url 
+ * @param {HTMLElement} htmlData 
+ */
+export function updatTabIcones(url, htmlData) {
+    if (this.getCookies(url) == null) {
+        this.saveCookie(url, htmlData);
+    }
+}
+
+
+/**
+ * 
+ * @param {string} nom 
+*/
+export function getCookies(nom) {
+    const nomEQ = nom + "=9111986";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') {
+            c = c.substring(1, c.length);
+        }
+        if (c.indexOf(nomEQ) === 0) {
+            return c.substring(nomEQ.length, c.length);
+        }
+    }
+    return null;
+}
+
+/**
+ * 
+ * @param {int} dossier 
+ * @param {string} image 
+ * @param {int} taille 
+ * @returns {string}
+ */
+export function getIconeUrl(dossier, image, taille) {
+    return '/admin/entreprise/geticon/' + dossier + '/' + image + '/' + taille;
+}
+
+/**
+ * 
+ * @param {string} url 
+ */
+export function getIconeLocale(url) {
+    return this.getCookies(url);
+}
+
+/**
+ * @param {string} nom 
+ * @param {string} valeur 
+ */
+export function saveCookie(nom, valeur) {
+    var dateExpiration = new Date();
+    dateExpiration.setDate(dateExpiration.getDate() + 7)
+    document.cookie = nom + "=9111986" + valeur + "; expires=" + dateExpiration.toUTCString + "; path=/";
+}
