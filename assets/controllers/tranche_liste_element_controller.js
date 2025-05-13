@@ -18,7 +18,7 @@ export default class extends Controller {
 
     connect() {
         this.detailsVisible = false;
-        this.afficherInfosStatus("| Prêt.");
+        this.afficherInfosStatus(" | Prêt.");
         // console.log("Texte principal: ", this.textesecondaireTarget);
     }
 
