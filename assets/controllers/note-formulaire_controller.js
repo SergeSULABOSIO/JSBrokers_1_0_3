@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { defineIcone, getIconeUrl } from './base_controller.js';
+import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 
 export default class extends Controller {
     static targets = [
