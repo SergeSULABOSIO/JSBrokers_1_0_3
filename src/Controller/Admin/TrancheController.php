@@ -3,24 +3,13 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Note;
-use App\Entity\Taxe;
-use App\Entity\Tache;
-use App\Entity\Invite;
-use App\Form\TaxeType;
 use App\Entity\Tranche;
-use App\Form\TacheType;
 use App\Form\TrancheType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Constantes\PanierNotes;
 use App\Entity\Article;
-use App\Entity\Client;
-use App\Entity\Cotation;
-use App\Entity\Piste;
-use App\Entity\Risque;
-use App\Repository\TaxeRepository;
-use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
 use App\Repository\TrancheRepository;
 use App\Repository\EntrepriseRepository;
