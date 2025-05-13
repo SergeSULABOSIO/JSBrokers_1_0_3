@@ -48,7 +48,7 @@ export default class extends Controller {
     modifier = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         console.log("MODIFIER");
-        this.afficherInfosStatus("Modification...Chargement du formulaire d'édition");
+        // this.afficherInfosStatus("Modification...Chargement du formulaire d'édition");
         var url = "/admin/tranche/edit/" + this.identrepriseValue + "/" + this.idtrancheValue;
         window.location.href = url;
     }
@@ -78,7 +78,8 @@ export default class extends Controller {
             .then(response => response.text())
             .then(reponseServeur => {
                 // console.log("Options panier:", this.optionspanierTarget);
-                console.log(reponseServeur);
+                this.afficherInfosStatus(" | Prêt.");
+                // console.log(reponseServeur);
                 this.getOptionsPanier(idtranche);
 
                 //On actualise le panier
@@ -136,7 +137,7 @@ export default class extends Controller {
             .then(reponseServeur => {
                 this.optionspanierTarget.innerHTML = reponseServeur;
                 // console.log(reponseServeur);
-                this.afficherInfosStatus("Données chargées.");
+                this.afficherInfosStatus(" | Prêt.");
                 this.getStatusPanier(idTranche);
             })
             .catch(error => {
@@ -156,8 +157,8 @@ export default class extends Controller {
         fetch(url) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(reponseServeur => {
+                this.afficherInfosStatus(" | Prêt.");
                 this.statuspanierTarget.innerHTML = reponseServeur;
-                this.afficherInfosStatus("");
 
                 // console.log(reponseServeur);
             })
@@ -186,8 +187,8 @@ export default class extends Controller {
         fetch('/admin/note/getpanier/' + this.identrepriseValue) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(htmlData => {
+                this.afficherInfosStatus(" | Prêt.");
                 conteneurPanier.innerHTML = htmlData;
-                this.afficherInfosStatus("Panier actualisé.");
             })
             .catch(error => {
                 conteneurPanier.innerHTML = "Désolé, une erreur s'est produite! Merci d'actualiser la page ou vérifier votre connexion Internet";
