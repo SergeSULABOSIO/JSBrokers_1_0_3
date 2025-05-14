@@ -64,16 +64,6 @@ class TypeRevenuType extends AbstractType
                     "Non, pas du tout." => false,
                 ],
             ])
-            // ->add('formule', ChoiceType::class, [
-            //     'label' => "Quelle est la formule applicable?",
-            //     'expanded' => true,
-            //     'required' => false,
-            //     'choices'  => [
-            //         "Un pourcentage du Fronting" => TypeRevenu::FORMULE_POURCENTAGE_FRONTING,
-            //         "Un pourcentage de la prime nette" => TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE,
-            //         "Un pourcentage de la prime totale" => TypeRevenu::FORMULE_POURCENTAGE_PRIME_TOTALE,
-            //     ],
-            // ])
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
                 'required' => false,
