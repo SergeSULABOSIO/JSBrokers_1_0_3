@@ -15,6 +15,7 @@ use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -88,12 +89,9 @@ class TaxeController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($taxe);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("taxe_creation_ok", [
-                ":tax" => $taxe->getCode(),
-            ]));
-            return $this->redirectToRoute("admin.taxe.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
+
         }
         return $this->render('admin/taxe/create.html.twig', [
             'pageName' => $this->translator->trans("taxe_page_name_new"),
@@ -123,12 +121,9 @@ class TaxeController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($taxe); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("taxe_edition_ok", [
-                ":tax" => $taxe->getCode(),
-            ]));
-            return $this->redirectToRoute("admin.taxe.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
+
         }
         return $this->render('admin/taxe/edit.html.twig', [
             'pageName' => $this->translator->trans("taxe_page_name_update", [

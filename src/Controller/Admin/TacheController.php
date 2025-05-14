@@ -3,21 +3,22 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Taxe;
+use App\Entity\Tache;
+use App\Entity\Invite;
+use App\Form\TaxeType;
+use DateTimeImmutable;
+use App\Form\TacheType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
-use App\Entity\Invite;
-use App\Entity\Tache;
-use App\Form\TacheType;
-use App\Form\TaxeType;
 use App\Repository\TaxeRepository;
+use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\TacheRepository;
-use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -83,12 +84,8 @@ class TacheController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($tache);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("tache_creation_ok", [
-                ":tache" => $tache->getDescription(),
-            ]));
-            return $this->redirectToRoute("admin.tache.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            return new Response("Ok");
+
         }
         return $this->render('admin/tache/create.html.twig', [
             'pageName' => $this->translator->trans("tache_page_name_new"),
@@ -118,12 +115,9 @@ class TacheController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($tache); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("tache_edition_ok", [
-                ":tache" => $tache->getDescription(),
-            ]));
-            return $this->redirectToRoute("admin.tache.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
+
         }
         return $this->render('admin/tache/edit.html.twig', [
             'pageName' => $this->translator->trans("tache_page_name_update", [
