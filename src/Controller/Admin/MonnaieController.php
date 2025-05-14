@@ -91,6 +91,7 @@ class MonnaieController extends AbstractController
             'pageName' => $this->translator->trans("currency_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'monnaie' => $monnaie,
             'activator' => $this->activator,
             'form' => $form,
         ]);

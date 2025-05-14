@@ -46,12 +46,12 @@ class MonnaieType extends AbstractType
             ])
             ->add('fonction', ChoiceType::class, [
                 'label' => "currency_form_fonction",
-                'expanded' => true,
+                'expanded' => false,
                 'choices'  => $this->constante->getTabFonctionsMonnaies(),
             ])
             ->add('locale', ChoiceType::class, [
                 'label' => "currency_form_local",
-                'expanded' => true,
+                'expanded' => false,
                 'choices'  => $this->constante->getTabIsMonnaieLocale(),
             ])
             //Le bouton d'enregistrement / soumission
