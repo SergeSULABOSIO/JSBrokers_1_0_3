@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/chargement", name: 'admin.chargement.')]
 #[IsGranted('ROLE_USER')]
@@ -77,12 +77,13 @@ class ChargementController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($chargement);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("chargement_creation_ok", [
-                ":chargement" => $chargement->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.chargement.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("chargement_creation_ok", [
+            //     ":chargement" => $chargement->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.chargement.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/chargement/create.html.twig', [
             'pageName' => $this->translator->trans("chargement_page_name_new"),
@@ -112,12 +113,14 @@ class ChargementController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($chargement); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("chargement_edition_ok", [
-                ":chargement" => $chargement->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.chargement.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("chargement_edition_ok", [
+            //     ":chargement" => $chargement->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.chargement.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
+
         }
         return $this->render('admin/chargement/edit.html.twig', [
             'pageName' => $this->translator->trans("chargement_page_name_update", [
