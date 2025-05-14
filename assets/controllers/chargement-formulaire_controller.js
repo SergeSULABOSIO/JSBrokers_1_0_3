@@ -24,12 +24,6 @@ export default class extends Controller {
         this.displayTarget.textContent = "Prêt.";
     }
 
-    // changerModeCalcul = (event) => {
-    //     event.preventDefault(); // Empêche la soumission classique du formulaire
-    //     var selectedValue = event.target.selectedOptions[0].value;
-    //     this.appliquerModeCalcul(selectedValue);
-    // }
-
 
     /**
      * 
