@@ -116,12 +116,6 @@ class MonnaieController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($monnaie); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("currency_edition_ok", [
-            //     ":currency" => $monnaie->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.monnaie.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
             return new Response("Ok");
         }
         return $this->render('admin/monnaie/edit.html.twig', [
