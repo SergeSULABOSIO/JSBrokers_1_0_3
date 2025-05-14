@@ -21,29 +21,43 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'chargement-formulaire', 
+			'data-chargement-formulaire-idchargement-value': chargement.id,
+			'data-chargement-formulaire-identreprise-value': entreprise.id,
+			}
+		}) }}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.nom) }}
+						{{ form_row(form.nom, {'attr': {'data-chargement-formulaire-target': 'nom'}}) }}
 					</div>
-				</div>
-				<div class="row">
 					<div class="col">
 						{{ form_row(form.fonction) }}
 					</div>
+				</div>
+				<div class="row">
 					<div class="col">
 						{{ form_row(form.description) }}
 					</div>
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_widget(form.enregistrer) }}
+						{{ form_row(form.enregistrer, {
+							'attr': {
+								'data-chargement-formulaire-target': 'btEnregistrer'
+								}
+							}) 
+						}}
 					</div>
 				</div>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-chargement-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}

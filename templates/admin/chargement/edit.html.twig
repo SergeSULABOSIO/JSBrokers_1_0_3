@@ -32,14 +32,14 @@
 		<div class="card-body">
 			<div>
 				<div class="row">
-					<div class="col">
+					<div class="col-8">
 						{{ form_row(form.nom, {'attr': {'data-chargement-formulaire-target': 'nom'}}) }}
+					</div>
+					<div class="col-4">
+						{{ form_row(form.fonction) }}
 					</div>
 				</div>
 				<div class="row">
-					<div class="col">
-						{{ form_row(form.fonction) }}
-					</div>
 					<div class="col">
 						{{ form_row(form.description) }}
 					</div>

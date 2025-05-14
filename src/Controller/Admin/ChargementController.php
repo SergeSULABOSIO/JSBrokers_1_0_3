@@ -89,6 +89,7 @@ class ChargementController extends AbstractController
             'pageName' => $this->translator->trans("chargement_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'chargement' => $chargement,
             'activator' => $this->activator,
             'form' => $form,
         ]);
