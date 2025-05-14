@@ -266,12 +266,16 @@ class TrancheController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($tranche);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("tranche_creation_ok", [
-                ":tranche" => $tranche->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.tranche.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("tranche_creation_ok", [
+            //     ":tranche" => $tranche->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.tranche.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+
+            return new Response("Ok", Response::HTTP_OK);
+            // return $this->json($tranche);
+
         }
         return $this->render('admin/tranche/create.html.twig', [
             'pageName' => $this->translator->trans("tranche_page_name_new"),
@@ -303,12 +307,8 @@ class TrancheController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($tranche); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("tranche_edition_ok", [
-                ":tranche" => $tranche->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.tranche.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
         }
         return $this->render('admin/tranche/edit.html.twig', [
             'pageName' => $this->translator->trans("tranche_page_name_update", [
