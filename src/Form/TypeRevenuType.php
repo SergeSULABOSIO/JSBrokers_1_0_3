@@ -49,7 +49,7 @@ class TypeRevenuType extends AbstractType
             ])
             ->add('typeChargement', EntityType::class, [
                 'label' => "Chargement cible",
-                'required' => false,
+                'required' => true,
                 'class' => Chargement::class,
                 'choice_label' => 'nom',
                 'help' => 'Le composant de la prime (ou chargement) sur base duquel ce revenu sera calculé automatiquement.',

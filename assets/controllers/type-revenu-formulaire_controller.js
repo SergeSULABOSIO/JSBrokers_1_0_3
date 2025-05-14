@@ -89,6 +89,7 @@ export default class extends Controller {
         this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
         this.displayTarget.style.display = 'block';
 
+        
         // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         fetch(this.element.action, {

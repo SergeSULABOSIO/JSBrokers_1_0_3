@@ -38,17 +38,21 @@
 						{{ form_row(form.modeCalcul, {'attr': {'data-type-revenu-formulaire-target': 'modecalcul'}}) }}
 					</div>
 				</div>
-				<div class="row" data-type-revenu-formulaire-target='block_pourcentage'>
-					<div class="col">
-						{{ form_row(form.pourcentage) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.typeChargement) }}
+				<div data-type-revenu-formulaire-target='block_pourcentage'>
+					<div class="row">  
+						<div class="col">
+							{{ form_row(form.pourcentage) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.typeChargement) }}
+						</div>
 					</div>
 				</div>
-				<div class="row" data-type-revenu-formulaire-target='block_flat'>
-					<div class="col">
-						{{ form_row(form.montantflat) }}
+				<div data-type-revenu-formulaire-target='block_flat'>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.montantflat) }}
+						</div>
 					</div>
 				</div>
 				<div class="row">

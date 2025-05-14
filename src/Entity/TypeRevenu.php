@@ -65,11 +65,11 @@ class TypeRevenu
     #[ORM\ManyToOne(inversedBy: 'typeRevenu')]
     private ?Article $article = null;
 
-    /**
-     * @var Collection<int, Article>
-     */
-    #[ORM\ManyToMany(targetEntity: Article::class, mappedBy: 'revenus')]
-    private Collection $articles;
+    // /**
+    //  * @var Collection<int, Article>
+    //  */
+    // #[ORM\ManyToMany(targetEntity: Article::class, mappedBy: 'revenus')]
+    // private Collection $articles;
 
     #[ORM\Column(nullable: true)]
     private ?int $modeCalcul = null;
@@ -77,7 +77,7 @@ class TypeRevenu
     public function __construct()
     {
         $this->revenuPourCourtiers = new ArrayCollection();
-        $this->articles = new ArrayCollection();
+        // $this->articles = new ArrayCollection();
     }
 
 
@@ -265,13 +265,13 @@ class TypeRevenu
         return $this;
     }
 
-    /**
-     * @return Collection<int, Article>
-     */
-    public function getArticles(): Collection
-    {
-        return $this->articles;
-    }
+    // /**
+    //  * @return Collection<int, Article>
+    //  */
+    // public function getArticles(): Collection
+    // {
+    //     return $this->articles;
+    // }
 
     // public function addArticle(Article $article): static
     // {
