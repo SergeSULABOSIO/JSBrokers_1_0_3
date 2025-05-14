@@ -30,7 +30,7 @@ class PaiementType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        if ($options['note'] != null) {
+        // if ($options['note'] != null) {
             $builder
                 ->add('referenceNote', TextType::class, [
                     'label' => "Référence de la note",
@@ -77,7 +77,7 @@ class PaiementType extends AbstractType
                         'readonly' => true,
                     ],
                 ]);
-        }
+        // }
 
 
         $builder
