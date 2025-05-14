@@ -30,29 +30,27 @@
 		}) }}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
-			<div>
-				<div class="row">
-					<div class="col-8">
-						{{ form_row(form.nom, {'attr': {'data-chargement-formulaire-target': 'nom'}}) }}
-					</div>
-					<div class="col-4">
-						{{ form_row(form.fonction) }}
-					</div>
+			<div class="row">
+				<div class="col-8">
+					{{ form_row(form.nom, {'attr': {'data-chargement-formulaire-target': 'nom'}}) }}
 				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.description) }}
-					</div>
+				<div class="col-4">
+					{{ form_row(form.fonction) }}
 				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.enregistrer, {
-							'attr': {
-								'data-chargement-formulaire-target': 'btEnregistrer'
-								}
-							}) 
-						}}
-					</div>
+			</div>
+			<div class="row">
+				<div class="col">
+					{{ form_row(form.description) }}
+				</div>
+			</div>
+			<div class="row">
+				<div class="col">
+					{{ form_row(form.enregistrer, {
+						'attr': {
+							'data-chargement-formulaire-target': 'btEnregistrer'
+							}
+						}) 
+					}}
 				</div>
 			</div>
 			<small>
