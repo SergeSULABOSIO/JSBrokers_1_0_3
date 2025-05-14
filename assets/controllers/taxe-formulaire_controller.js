@@ -3,7 +3,7 @@ import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l
 
 export default class extends Controller {
     static targets = [
-        'nom',
+        'code',
         'display',
         'btEnregistrer',
     ];
@@ -58,7 +58,7 @@ export default class extends Controller {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.target.disabled = true;
         this.isSaved = true;
-        this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
+        this.displayTarget.textContent = "Enregistrement de " + this.codeTarget.value + " en cours...";
         this.displayTarget.style.display = 'block';
 
         // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
