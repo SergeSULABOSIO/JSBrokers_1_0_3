@@ -77,12 +77,6 @@ class ChargementController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($chargement);
             $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("chargement_creation_ok", [
-            //     ":chargement" => $chargement->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.chargement.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
             return new Response("Ok");
         }
         return $this->render('admin/chargement/create.html.twig', [
@@ -114,12 +108,6 @@ class ChargementController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($chargement); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("chargement_edition_ok", [
-            //     ":chargement" => $chargement->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.chargement.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
             return new Response("Ok");
 
         }
