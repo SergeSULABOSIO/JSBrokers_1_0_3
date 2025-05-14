@@ -2,11 +2,11 @@
 
 namespace App\Controller\Admin;
 
-use App\Constantes\Constante;
 use App\Entity\Monnaie;
 use App\Form\MonnaieType;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Repository\InviteRepository;
 use App\Repository\MonnaieRepository;
@@ -14,6 +14,7 @@ use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -78,12 +79,13 @@ class MonnaieController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($monnaie);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("currency_creation_ok", [
-                ":currency" => $monnaie->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.monnaie.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("currency_creation_ok", [
+            //     ":currency" => $monnaie->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.monnaie.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/monnaie/create.html.twig', [
             'pageName' => $this->translator->trans("currency_page_name_new"),
@@ -113,12 +115,13 @@ class MonnaieController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($monnaie); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("currency_edition_ok", [
-                ":currency" => $monnaie->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.monnaie.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("currency_edition_ok", [
+            //     ":currency" => $monnaie->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.monnaie.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/monnaie/edit.html.twig', [
             'pageName' => $this->translator->trans("currency_page_name_update", [
