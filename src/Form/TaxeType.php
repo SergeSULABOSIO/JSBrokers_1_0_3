@@ -63,7 +63,7 @@ class TaxeType extends AbstractType
             ])
             ->add('redevable', ChoiceType::class, [
                 'label' => "Qui sont-ils redevables à cette taxe?",
-                'expanded' => true,
+                'expanded' => false,
                 'required' => false,
                 'choices'  => [
                     "L'assureur" => Taxe::REDEVABLE_ASSUREUR,
