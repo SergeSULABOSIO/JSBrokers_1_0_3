@@ -20,31 +20,42 @@
 {% endblock %}
 
 {% block body %}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'type-revenu-formulaire', 
+			'data-type-revenu-formulaire-idtyperevenu-value': typerevenu.id,
+			'data-type-revenu-formulaire-identreprise-value': entreprise.id,
+			}
+		}) }}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.nom) }}
+						{{ form_row(form.nom, {'attr': {'data-type-revenu-formulaire-target': 'nom'}}) }}
+					</div>
+					<div class="col">
+						{{ form_row(form.modeCalcul, {'attr': {'data-type-revenu-formulaire-target': 'modecalcul'}}) }}
+					</div>
+				</div>
+				<div class="row" data-type-revenu-formulaire-target='block_pourcentage'>
+					<div class="col">
+						{{ form_row(form.pourcentage) }}
 					</div>
 					<div class="col">
 						{{ form_row(form.typeChargement) }}
 					</div>
 				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.pourcentage) }}
-					</div>
+				<div class="row" data-type-revenu-formulaire-target='block_flat'>
 					<div class="col">
 						{{ form_row(form.montantflat) }}
 					</div>
 				</div>
 				<div class="row">
-					<div class="col">
+					<div class="col-8">
 						{{ form_row(form.appliquerPourcentageDuRisque) }}
 					</div>
-					<div class="col">
+					<div class="col-4">
 						{{ form_row(form.shared) }}
 					</div>
 				</div>
@@ -58,10 +69,17 @@
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_widget(form.enregistrer) }}
+						{{ form_widget(form.enregistrer, {
+							'attr': {
+								'data-type-revenu-formulaire-target': 'btEnregistrer'
+								}
+							}) }}
 					</div>
 				</div>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-type-revenu-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}

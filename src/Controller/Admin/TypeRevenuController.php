@@ -21,6 +21,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\CompteBancaireRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -97,15 +98,18 @@ class TypeRevenuController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($typerevenu);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("typerevenu_creation_ok", [
-                ":typerevenu" => $typerevenu->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.typerevenu.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("typerevenu_creation_ok", [
+            //     ":typerevenu" => $typerevenu->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.typerevenu.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
+
         }
         return $this->render('admin/typerevenu/create.html.twig', [
             'pageName' => $this->translator->trans("typerevenu_page_name_new"),
+            'typerevenu' => $typerevenu,
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
@@ -132,12 +136,8 @@ class TypeRevenuController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($typerevenu); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("typerevenu_edition_ok", [
-                ":typerevenu" => $typerevenu->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.typerevenu.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            return new Response("Ok");
+
         }
         return $this->render('admin/typerevenu/edit.html.twig', [
             'pageName' => $this->translator->trans("typerevenu_page_name_update", [

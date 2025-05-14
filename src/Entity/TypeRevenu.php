@@ -21,9 +21,8 @@ class TypeRevenu
     // #[ORM\Column(nullable: true)]
     // private ?int $formule = null;
 
-    // public const FORMULE_POURCENTAGE_PRIME_NETTE = 0;
-    // public const FORMULE_POURCENTAGE_FRONTING = 1;
-    // public const FORMULE_POURCENTAGE_PRIME_TOTALE = 2;
+    public const MODE_CALCUL_POURCENTAGE_CHARGEMENT = 0;
+    public const MODE_CALCUL_MONTANT_FLAT = 1;
 
     #[ORM\Column(nullable: true)]
     private ?float $montantflat = null;
@@ -71,6 +70,9 @@ class TypeRevenu
      */
     #[ORM\ManyToMany(targetEntity: Article::class, mappedBy: 'revenus')]
     private Collection $articles;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $modeCalcul = null;
 
     public function __construct()
     {
@@ -289,4 +291,16 @@ class TypeRevenu
 
     //     return $this;
     // }
+
+    public function getModeCalcul(): ?int
+    {
+        return $this->modeCalcul;
+    }
+
+    public function setModeCalcul(?int $modeCalcul): static
+    {
+        $this->modeCalcul = $modeCalcul;
+
+        return $this;
+    }
 }

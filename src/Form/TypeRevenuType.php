@@ -2,14 +2,18 @@
 
 namespace App\Form;
 
-use App\Entity\Chargement;
 use App\Entity\Revenu;
+use App\Entity\Chargement;
 use App\Entity\TypeRevenu;
+use App\Services\ServiceMonnaies;
+use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
@@ -17,6 +21,12 @@ use Symfony\Component\Form\Extension\Core\Type\PercentType;
 
 class TypeRevenuType extends AbstractType
 {
+    public function __construct(
+        private FormListenerFactory $ecouteurFormulaire,
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies
+    ) {}
+    
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -25,6 +35,16 @@ class TypeRevenuType extends AbstractType
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Nom ici",
+                ],
+            ])
+            ->add('modeCalcul', ChoiceType::class, [
+                'label' => "Mode de calcul",
+                'help' => "Comment calcule-t-on ce revenu?",
+                'expanded' => false,
+                'required' => true,
+                'choices'  => [
+                    "Pourcentage d'un chargement" => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT,
+                    "Un montant fixe à préciser" => TypeRevenu::MODE_CALCUL_MONTANT_FLAT,
                 ],
             ])
             ->add('typeChargement', EntityType::class, [
@@ -38,9 +58,9 @@ class TypeRevenuType extends AbstractType
                 'help' => "Si vous cochez 'OUI', càd qu'en cas de déifférence, c'est le pourcentage commission spécifique au risque qui sera appliqué.",
                 'required' => false,
                 'label' => "Privilégier le taux de commission configuré pour le risque concerné?",
-                'expanded' => true,
+                'expanded' => false,
                 'choices'  => [
-                    "Oui, si celui-ci existe et qu'il est différent du pourcentage de ce revenu." => true,
+                    "Oui, s'il existe et qu'il est différent du pourcentage de ce revenu." => true,
                     "Non, pas du tout." => false,
                 ],
             ])
@@ -63,9 +83,11 @@ class TypeRevenuType extends AbstractType
                     'placeholder' => "Pourcentage",
                 ],
             ])
-            ->add('montantflat', NumberType::class, [
+            ->add('montantflat', MoneyType::class, [
                 'label' => "Montant fixe",
                 'help' => "On considère un montant fixe",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Montant fixe",
@@ -74,7 +96,7 @@ class TypeRevenuType extends AbstractType
             ->add('shared', ChoiceType::class, [
                 'help' => "Le montant partageable (càd l'assiette) équivaut au montant après déduction de toutes les taxes.",
                 'label' => "Est-il partageable avec un partenaire?",
-                'expanded' => true,
+                'expanded' => false,
                 'required' => false,
                 'choices'  => [
                     "Oui, si celui-ci existe." => true,
@@ -83,7 +105,7 @@ class TypeRevenuType extends AbstractType
             ])
             ->add('multipayments', ChoiceType::class, [
                 'label' => "Son paiement peut-il être échélonné?",
-                'expanded' => true,
+                'expanded' => false,
                 'required' => false,
                 'choices'  => [
                     "Oui, il peut être payé en plusieurs tranches." => true,
@@ -92,7 +114,7 @@ class TypeRevenuType extends AbstractType
             ])
             ->add('redevable', ChoiceType::class, [
                 'label' => "Qui est débiteur?",
-                'expanded' => true,
+                'expanded' => false,
                 'required' => false,
                 'choices'  => [
                     "L'assureur" => TypeRevenu::REDEVABLE_ASSUREUR,

@@ -66,7 +66,7 @@
                                             {{ constante.Revenu_getNomRedevable(typerevenu) }}
                                         </span> 
                                         {% if typerevenu.pourcentage != 0 %}
-                                            <span class="text-secondary"> • {{typerevenu.pourcentage * 100}}% de {{ typerevenu.typeChargement.nom }}</span> 
+                                            <span class="text-secondary"> • {{typerevenu.pourcentage * 100}}%{% if typerevenu.typeChargement != null %} de {{ typerevenu.typeChargement.nom }}{% endif %}</span> 
                                         {% endif %}
                                         {% if typerevenu.montantflat != 0 %}
                                             <span class="text-secondary"> • Montant fixe: {{typerevenu.montantflat |format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
