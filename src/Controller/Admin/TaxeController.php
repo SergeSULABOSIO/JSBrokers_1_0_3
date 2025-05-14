@@ -97,6 +97,7 @@ class TaxeController extends AbstractController
             'pageName' => $this->translator->trans("taxe_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'taxe' => $taxe,
             'activator' => $this->activator,
             'form' => $form,
         ]);
