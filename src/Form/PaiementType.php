@@ -19,6 +19,7 @@ use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class PaiementType extends AbstractType
 {
@@ -31,57 +32,57 @@ class PaiementType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         // if ($options['note'] != null) {
-            $builder
-                ->add('referenceNote', TextType::class, [
-                    'label' => "Référence de la note",
-                    // 'disabled' => true,
-                    'mapped' => false,
-                    'attr' => [
-                        'readonly' => true,
-                        'placeholder' => "Référence",
-                    ],
-                ])
-                ->add('montantPayable', MoneyType::class, [
-                    'label' => "Montant payable",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'required' => false,
-                    // 'disabled' => true,
-                    'mapped' => false,
-                    'grouping' => true,
-                    'attr' => [
-                        'readonly' => true,
-                        'placeholder' => "Montant",
-                    ],
-                ])
-                ->add('montantPaye', MoneyType::class, [
-                    'label' => "Montant payé",
-                    // 'disabled' => true,
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'required' => false,
-                    'mapped' => false,
-                    'grouping' => true,
-                    'attr' => [
-                        'readonly' => true,
-                        'placeholder' => "Montant",
-                    ],
-                ])
-                ->add('montantSolde', MoneyType::class, [
-                    'label' => "Solde restant dû",
-                    // 'disabled' => true,
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'required' => false,
-                    'mapped' => false,
-                    'grouping' => true,
-                    'attr' => [
-                        'placeholder' => "Montant",
-                        'readonly' => true,
-                    ],
-                ]);
+        $builder
+            ->add('referenceNote', TextType::class, [
+                'label' => "Référence de la note",
+                // 'disabled' => true,
+                'mapped' => false,
+                'attr' => [
+                    'readonly' => true,
+                    'placeholder' => "Référence",
+                ],
+            ])
+            ->add('montantPayable', MoneyType::class, [
+                'label' => "Montant payable",
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'required' => false,
+                // 'disabled' => true,
+                'mapped' => false,
+                'grouping' => true,
+                'attr' => [
+                    'readonly' => true,
+                    'placeholder' => "Montant",
+                ],
+            ])
+            ->add('montantPaye', MoneyType::class, [
+                'label' => "Montant payé",
+                // 'disabled' => true,
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'required' => false,
+                'mapped' => false,
+                'grouping' => true,
+                'attr' => [
+                    'readonly' => true,
+                    'placeholder' => "Montant",
+                ],
+            ])
+            ->add('montantSolde', MoneyType::class, [
+                'label' => "Solde restant dû",
+                // 'disabled' => true,
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'required' => false,
+                'mapped' => false,
+                'grouping' => true,
+                'attr' => [
+                    'placeholder' => "Montant",
+                    'readonly' => true,
+                ],
+            ]);
         // }
 
 
         $builder
-            ->add('description', TextType::class, [
+            ->add('description', TextareaType::class, [
                 'label' => "Description",
                 'attr' => [
                     'placeholder' => "Description",

@@ -28,7 +28,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\BrowserKit\Response;
 
 #[Route("/admin/paiement", name: 'admin.paiement.')]
 #[IsGranted('ROLE_USER')]
@@ -136,17 +136,14 @@ class PaiementController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($paiement);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("paiement_creation_ok", [
-                ":paiement" => $paiement->getDescription(),
-            ]));
-            return $this->redirectToRoute("admin.note.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            return new Response("Ok");
+
         }
         return $this->render('admin/paiement/create.html.twig', [
             'pageName' => $this->translator->trans("paiement_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'paiement' => $paiement,
             'activator' => $this->activator,
             'form' => $form,
         ]);
@@ -167,16 +164,13 @@ class PaiementController extends AbstractController
 
         $form = $this->createForm(PaiementType::class, $paiement);
         $form->handleRequest($request);
+        // dd($paiement);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($paiement); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("paiement_edition_ok", [
-                ":paiement" => $paiement->getDescription(),
-            ]));
-            return $this->redirectToRoute("admin.paiement.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
         }
         return $this->render('admin/paiement/edit.html.twig', [
             'pageName' => $this->translator->trans("paiement_page_name_update", [
