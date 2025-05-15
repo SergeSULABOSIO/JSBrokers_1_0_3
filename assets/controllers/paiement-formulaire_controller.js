@@ -10,6 +10,8 @@ export default class extends Controller {
         'montantsolde',
         'display',
         'btEnregistrer',
+        'btvoirnotepdf',
+        'btvoirbordereaupdf',
     ];
 
     static values = {
@@ -23,6 +25,8 @@ export default class extends Controller {
 
         //Définition de l'icone sur le bouton Enregistrer.
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
+        defineIcone(getIconeUrl(0, "note", 19), this.btvoirnotepdfTarget, "Ouvrir la note");
+        defineIcone(getIconeUrl(0, "bordereau", 19), this.btvoirbordereaupdfTarget, "Ouvrir le bordereau");
 
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));
@@ -102,5 +106,29 @@ export default class extends Controller {
                 this.displayTarget.style.display = 'none';
                 console.error("Réponse d'erreur du serveur :", errorMessage);
             });
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    voirnotepdf(event){
+        event.preventDefault(); // Empêche la soumission classique du formulaire
+        console.log("OUVERTURE DE LA NOTE EN PDF");
+        // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    voirbordereaupdf(event){
+        event.preventDefault(); // Empêche la soumission classique du formulaire
+        console.log("OUVERTURE DU BORDEREAU EN PDF");
+        // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
+
     }
 }
