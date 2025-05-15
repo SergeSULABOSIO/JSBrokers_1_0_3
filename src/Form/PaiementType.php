@@ -2,6 +2,7 @@
 
 namespace App\Form;
 
+use App\Constantes\Constante;
 use App\Entity\CompteBancaire;
 use App\Entity\Paiement;
 use App\Entity\FactureCommission;
@@ -27,15 +28,31 @@ class PaiementType extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface,
         private ServiceMonnaies $serviceMonnaies,
+        private Constante $constante,
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        // if ($options['note'] != null) {
+        /** @var Paiement $objetPaiement */
+        $objetPaiement = $options['data'];
+        $refNote = "";
+        $montPayable = 0;
+        $montPaye = 0;
+        $montSolde = 0;
+        if ($objetPaiement != null) {
+            $note = $objetPaiement->getNote();
+            if ($note != null) {
+                $refNote = $note->getReference();
+                $montPayable = $this->constante->Note_getMontant_payable($note);
+                $montPaye = $this->constante->Note_getMontant_paye($note);
+                $montSolde = $this->constante->Note_getMontant_solde($note);
+            }
+        }
+        // dd($objetPaiement);
         $builder
             ->add('referenceNote', TextType::class, [
-                'label' => "Référence de la note",
-                // 'disabled' => true,
+                'label' => "Note ou Facture",
+                'data' => $refNote,
                 'mapped' => false,
                 'attr' => [
                     'readonly' => true,
@@ -45,8 +62,8 @@ class PaiementType extends AbstractType
             ->add('montantPayable', MoneyType::class, [
                 'label' => "Montant payable",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'data' => $montPayable,
                 'required' => false,
-                // 'disabled' => true,
                 'mapped' => false,
                 'grouping' => true,
                 'attr' => [
@@ -56,8 +73,8 @@ class PaiementType extends AbstractType
             ])
             ->add('montantPaye', MoneyType::class, [
                 'label' => "Montant payé",
-                // 'disabled' => true,
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'data' => $montPaye,
                 'required' => false,
                 'mapped' => false,
                 'grouping' => true,
@@ -68,9 +85,9 @@ class PaiementType extends AbstractType
             ])
             ->add('montantSolde', MoneyType::class, [
                 'label' => "Solde restant dû",
-                // 'disabled' => true,
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'required' => false,
+                'data' => $montSolde,
                 'mapped' => false,
                 'grouping' => true,
                 'attr' => [
@@ -78,7 +95,6 @@ class PaiementType extends AbstractType
                     'readonly' => true,
                 ],
             ]);
-        // }
 
 
         $builder

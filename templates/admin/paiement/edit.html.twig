@@ -21,58 +21,78 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'paiement-formulaire', 
+			'data-paiement-formulaire-idpaiement-value': paiement.id,
+			'data-paiement-formulaire-identreprise-value': entreprise.id,
+			}
+		}) }}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
-				{# Champs dont les valeurs seront calculé depuis le serveur #}
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.referenceNote) }}
+				<p class="">
+					{# Champs dont les valeurs seront calculé depuis le serveur #}
+					<span class="fw-bold">Informations relatives à la note en cours de paiement:</span>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.referenceNote, {'attr': {'data-paiement-formulaire-target': 'referencenote'}}) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.montantPayable, {'attr': {'data-paiement-formulaire-target': 'montantpayable'}}) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.montantPaye, {'attr': {'data-paiement-formulaire-target': 'montantpaye'}}) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.montantSolde, {'attr': {'data-paiement-formulaire-target': 'montantsolde'}}) }}
+						</div>
 					</div>
-					<div class="col">
-						{{ form_row(form.montantPayable) }}
+					{# fin #}
+				</p>
+				<p class="">
+					<span class="fw-bold">Paiement en cours:</span>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.reference, {'attr': {'data-paiement-formulaire-target': 'reference'}}) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.montant) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.paidAt) }}
+						</div>
 					</div>
-					<div class="col">
-						{{ form_row(form.montantPaye) }}
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.description) }}
+						</div>
 					</div>
-					<div class="col">
-						{{ form_row(form.montantSolde) }}
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.CompteBancaire) }}
+						</div>
 					</div>
-				</div>
-				{# fin #}
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.reference) }}
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.preuves) }}
+						</div>
 					</div>
-					<div class="col">
-						{{ form_row(form.montant) }}
+					<div class="row">
+						<div class="col">
+							{{ form_widget(form.enregistrer, {
+								'attr': {
+									'data-paiement-formulaire-target': 'btEnregistrer'
+									}
+								}) 
+							}}
+						</div>
 					</div>
-					<div class="col">
-						{{ form_row(form.paidAt) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.description) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.CompteBancaire) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.preuves) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_widget(form.enregistrer) }}
-					</div>
-				</div>
+				</p>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-paiement-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}
