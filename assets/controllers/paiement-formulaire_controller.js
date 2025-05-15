@@ -120,7 +120,7 @@ export default class extends Controller {
         // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
         this.displayTarget.textContent = "Ouverture de la note en cours...";
         this.displayTarget.style.display = 'block';
-        fetch('/admin/etats/imprimerNote/' + this.idnoteValue + "/" + this.identrepriseValue + "/" + window.location.href) // L'URL de votre route Symfony
+        fetch('/admin/etats/imprimerNote/' + this.identrepriseValue + "/" + this.idnoteValue + "/" + window.location.href) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(htmlData => {
                 console.log(htmlData);
@@ -143,7 +143,7 @@ export default class extends Controller {
         // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
         this.displayTarget.textContent = "Ouverture du bordereau en cours...";
         this.displayTarget.style.display = 'block';
-        fetch('/admin/etats/imprimerBordereauNote/' + this.idnoteValue + "/" + this.identrepriseValue + "/" + window.location.href) // L'URL de votre route Symfony
+        fetch('/admin/etats/imprimerBordereauNote/' + this.identrepriseValue + "/" + this.idnoteValue + "/" + window.location.href) // L'URL de votre route Symfony
             .then(response => response.text())
             .then(htmlData => {
                 console.log(htmlData);
