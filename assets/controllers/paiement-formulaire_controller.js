@@ -16,6 +16,7 @@ export default class extends Controller {
 
     static values = {
         idpaiement: Number,
+        idnote: Number,
         identreprise: Number,
     };
 
@@ -113,11 +114,22 @@ export default class extends Controller {
      * 
      * @param {Event} event 
      */
-    voirnotepdf(event){
+    voirnotepdf(event) {
         event.preventDefault(); // Empêche la soumission classique du formulaire
-        console.log("OUVERTURE DE LA NOTE EN PDF");
+        console.log("OUVERTURE DE LA NOTE EN PDF. ID NOTE: " + this.idnoteValue);
         // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-
+        this.displayTarget.textContent = "Ouverture de la note en cours...";
+        this.displayTarget.style.display = 'block';
+        fetch('/admin/etats/imprimerNote/' + this.idnoteValue + "/" + this.identrepriseValue + "/" + window.location.href) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(htmlData => {
+                console.log(htmlData);
+                this.displayTarget.textContent = "Prêt.";
+            })
+            .catch(error => {
+                this.displayTarget.textContent = "Erreur!";
+                console.error('Erreur lors du chargement du fragment:', conteneurPanier, error);
+            });
     }
 
 
@@ -125,10 +137,21 @@ export default class extends Controller {
      * 
      * @param {Event} event 
      */
-    voirbordereaupdf(event){
+    voirbordereaupdf(event) {
         event.preventDefault(); // Empêche la soumission classique du formulaire
-        console.log("OUVERTURE DU BORDEREAU EN PDF");
+        console.log("OUVERTURE DU BORDEREAU EN PDF. ID NOTE: " + this.idnoteValue);
         // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
-
+        this.displayTarget.textContent = "Ouverture du bordereau en cours...";
+        this.displayTarget.style.display = 'block';
+        fetch('/admin/etats/imprimerBordereauNote/' + this.idnoteValue + "/" + this.identrepriseValue + "/" + window.location.href) // L'URL de votre route Symfony
+            .then(response => response.text())
+            .then(htmlData => {
+                console.log(htmlData);
+                this.displayTarget.textContent = "Prêt.";
+            })
+            .catch(error => {
+                this.displayTarget.textContent = "Erreur!";
+                console.error('Erreur lors du chargement du fragment:', conteneurPanier, error);
+            });
     }
 }
