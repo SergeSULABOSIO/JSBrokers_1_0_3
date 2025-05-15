@@ -120,16 +120,10 @@ export default class extends Controller {
         // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
         this.displayTarget.textContent = "Ouverture de la note en cours...";
         this.displayTarget.style.display = 'block';
-        fetch('/admin/etats/imprimerNote/' + this.identrepriseValue + "/" + this.idnoteValue + "/" + window.location.href) // L'URL de votre route Symfony
-            .then(response => response.text())
-            .then(htmlData => {
-                console.log(htmlData);
-                this.displayTarget.textContent = "Prêt.";
-            })
-            .catch(error => {
-                this.displayTarget.textContent = "Erreur!";
-                console.error('Erreur lors du chargement du fragment:', conteneurPanier, error);
-            });
+        const url = '/admin/etats/imprimerNote/' + this.identrepriseValue + "/" + this.idnoteValue + "/" + window.location.href;
+        //On ouvre un autre onglet pour afficher le contenu du PDF
+        window.open(url, '_blank');
+        this.displayTarget.textContent = "Prêt.";
     }
 
 
@@ -143,15 +137,9 @@ export default class extends Controller {
         // <a class="dropdown-item" href="{{ path('admin.etats.imprimer_bordereau_note', {'idNote': note.id, 'idEntreprise': entreprise.id, 'currentURL': currentURL})}}">
         this.displayTarget.textContent = "Ouverture du bordereau en cours...";
         this.displayTarget.style.display = 'block';
-        fetch('/admin/etats/imprimerBordereauNote/' + this.identrepriseValue + "/" + this.idnoteValue + "/" + window.location.href) // L'URL de votre route Symfony
-            .then(response => response.text())
-            .then(htmlData => {
-                console.log(htmlData);
-                this.displayTarget.textContent = "Prêt.";
-            })
-            .catch(error => {
-                this.displayTarget.textContent = "Erreur!";
-                console.error('Erreur lors du chargement du fragment:', conteneurPanier, error);
-            });
+        const url = '/admin/etats/imprimerBordereauNote/' + this.identrepriseValue + "/" + this.idnoteValue + "/" + window.location.href;
+        //On ouvre un autre onglet pour afficher le contenu du PDF
+        window.open(url, '_blank');
+        this.displayTarget.textContent = "Prêt.";
     }
 }
