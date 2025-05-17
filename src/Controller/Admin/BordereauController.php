@@ -28,7 +28,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/bordereau", name: 'admin.bordereau.')]
 #[IsGranted('ROLE_USER')]
@@ -93,12 +93,13 @@ class BordereauController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($bordereau);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("bordereau_creation_ok", [
-                ":bordereau" => $bordereau->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.bordereau.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("bordereau_creation_ok", [
+            //     ":bordereau" => $bordereau->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.bordereau.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/bordereau/create.html.twig', [
             'pageName' => $this->translator->trans("bordereau_page_name_new"),
@@ -128,14 +129,7 @@ class BordereauController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($bordereau); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("bordereau_edition_ok", [
-                ":bordereau" => $bordereau->getNom(),
-            ]));
-
-            //On doit rester sur la page d'édition
-            // return $this->redirectToRoute("admin.piste.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/bordereau/edit.html.twig', [
             'pageName' => $this->translator->trans("bordereau_page_name_update", [

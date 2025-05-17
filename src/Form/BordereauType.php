@@ -31,7 +31,8 @@ class BordereauType extends AbstractType
         $builder
             ->add('type', ChoiceType::class, [
                 'label' => "Type",
-                'expanded' => true,
+                'required' => true,
+                'expanded' => false,
                 'choices'  => [
                     "Bordereau de production" => Bordereau::TYPE_BOREDERAU_PRODUCTION,
                 ],
