@@ -28,6 +28,14 @@ class FeedbackType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+
+        $hasNextAction = false;
+        if ($options["data"] != null) {
+            /** @var Feedback $feedback */
+            $feedback = $options["data"];
+            $hasNextAction = $feedback->hasNextAction();
+        }
+
         $builder
             ->add('description', TextareaType::class, [
                 'label' => "Description",
@@ -46,6 +54,17 @@ class FeedbackType extends AbstractType
                     "Non défini" => Feedback::TYPE_UNDEFINED,
                 ],
             ])
+            ->add('hasNextAction', ChoiceType::class, [
+                'label' => "Y a-t-il une prochaine action?",
+                'help' => "Action consécutive au compte-rendu courant et qui devra être exécutée par la suite.",
+                'expanded' => false,
+                'data' => $hasNextAction,
+                'required' => true,
+                'choices'  => [
+                    "Non" => false,
+                    "Oui" => true,
+                ],
+            ])
             ->add('nextAction', TextareaType::class, [
                 'required' => false,
                 'label' => "Prochaine Action",
@@ -54,7 +73,8 @@ class FeedbackType extends AbstractType
                 ],
             ])
             ->add('nextActionAt', DateTimeType::class, [
-                'label' => "Date",
+                'label' => "Date de la prochaine action",
+                'help' => "Date en laquelle la prochaine action devra être exécutée.",
                 'required' => false,
                 'widget' => 'single_text',
             ])

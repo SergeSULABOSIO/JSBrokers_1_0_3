@@ -26,7 +26,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/feedback", name: 'admin.feedback.')]
 #[IsGranted('ROLE_USER')]
@@ -86,12 +86,7 @@ class FeedbackController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($feedback);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("feedback_creation_ok", [
-                ":feedback" => $feedback->getDescription(),
-            ]));
-            return $this->redirectToRoute("admin.feedback.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            return new Response("Ok");
         }
         return $this->render('admin/feedback/create.html.twig', [
             'pageName' => $this->translator->trans("feedback_page_name_new"),
@@ -121,14 +116,7 @@ class FeedbackController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($feedback); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("feedback_edition_ok", [
-                ":feedback" => $feedback->getDescription(),
-            ]));
-
-            //On doit rester sur la page d'édition
-            // return $this->redirectToRoute("admin.piste.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/feedback/edit.html.twig', [
             'pageName' => $this->translator->trans("feedback_page_name_update", [

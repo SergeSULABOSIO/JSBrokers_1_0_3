@@ -50,6 +50,9 @@ class Feedback
     #[ORM\ManyToOne(inversedBy: 'feedback')]
     private ?Invite $invite = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $hasNextAction = null;
+
 
     public function __construct()
     {
@@ -183,6 +186,18 @@ class Feedback
     public function setType(int $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function hasNextAction(): ?bool
+    {
+        return $this->hasNextAction;
+    }
+
+    public function setHasNextAction(?bool $hasNextAction): static
+    {
+        $this->hasNextAction = $hasNextAction;
 
         return $this;
     }
