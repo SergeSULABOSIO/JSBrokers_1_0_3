@@ -28,7 +28,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/revenucourtier", name: 'admin.revenucourtier.')]
 #[IsGranted('ROLE_USER')]
@@ -92,12 +92,13 @@ class RevenuCourtierController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($revenucourtier);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("revenucourtier_creation_ok", [
-                ":revenucourtier" => $revenucourtier->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.revenucourtier.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("revenucourtier_creation_ok", [
+            //     ":revenucourtier" => $revenucourtier->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.revenucourtier.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/revenucourtier/create.html.twig', [
             'pageName' => $this->translator->trans("revenucourtier_page_name_new"),
@@ -127,14 +128,15 @@ class RevenuCourtierController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($revenucourtier); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("revenucourtier_edition_ok", [
-                ":revenucourtier" => $revenucourtier->getNom(),
-            ]));
+            // $this->addFlash("success", $this->translator->trans("revenucourtier_edition_ok", [
+            //     ":revenucourtier" => $revenucourtier->getNom(),
+            // ]));
 
             //On doit rester sur la page d'édition
             // return $this->redirectToRoute("admin.piste.index", [
             //     'idEntreprise' => $idEntreprise,
             // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/revenucourtier/edit.html.twig', [
             'pageName' => $this->translator->trans("revenucourtier_page_name_update", [
