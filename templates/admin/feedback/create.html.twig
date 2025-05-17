@@ -36,18 +36,35 @@
 					<div class="col">
 						{{ form_row(form.description, {'attr': {'data-feedback-formulaire-target': 'description'}}) }}
 					</div>
-					<div class="col">
-						{{ form_row(form.nextAction) }}
-					</div>
 				</div>
 				<div class="row">
 					<div class="col">
 						{{ form_row(form.type) }}
 					</div>
 					<div class="col">
-						{{ form_row(form.nextActionAt) }}
+						{{ form_row(form.hasNextAction, {
+							'attr': {
+								'data-action': 'feedback-formulaire#setActionComplementaire', 
+								'data-feedback-formulaire-target': 'hasnextaction',
+								}
+							}) 
+						}}
 					</div>
 				</div>
+				{# Pour la prochiane action #}
+				<div data-feedback-formulaire-target = "nextaction">
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.nextAction) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.nextActionAt) }}
+						</div>
+					</div>
+				</div>
+				{# Fin prochaine action #}
 				<div class="row">
 					<div class="col">
 						{{ form_widget(form.enregistrer, {
