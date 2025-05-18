@@ -118,7 +118,7 @@ class PisteType extends AbstractType
                 ],
             ])
             ->add('conditionsPartageExceptionnelles', CollectionType::class, [
-                'label' => "Conditions spéciales de partage",
+                'label' => "Liste des conditions spéciales de partage",
                 'entry_type' => ConditionPartageType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -139,7 +139,7 @@ class PisteType extends AbstractType
                 ],
             ])
             ->add('taches', CollectionType::class, [
-                'label' => "Tâches",
+                'label' => "Liste des tâches",
                 'entry_type' => TacheType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -159,7 +159,7 @@ class PisteType extends AbstractType
                 ],
             ])
             ->add('cotations', CollectionType::class, [
-                'label' => "Cotations",
+                'label' => "Liste des cotations",
                 'entry_type' => CotationType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -179,7 +179,7 @@ class PisteType extends AbstractType
                 ],
             ])
             ->add('documents', CollectionType::class, [
-                'label' => "Documents",
+                'label' => "Liste des documents",
                 'entry_type' => DocumentType::class,
                 'by_reference' => false,
                 'allow_add' => true,
