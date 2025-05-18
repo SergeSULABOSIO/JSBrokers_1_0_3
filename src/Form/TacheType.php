@@ -45,7 +45,8 @@ class TacheType extends AbstractType
             ])
             ->add('closed', ChoiceType::class, [
                 'label' => "La tâche est-elle accomplie?",
-                'expanded' => true,
+                'expanded' => false,
+                'required' => true,
                 'choices'  => [
                     "Oui" => true,
                     "Pas encore." => false,

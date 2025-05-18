@@ -28,12 +28,13 @@ class FeedbackType extends AbstractType
     {
 
         $hasNextAction = false;
-        if ($options["data"] != null) {
-            /** @var Feedback $feedback */
-            $feedback = $options["data"];
-            $hasNextAction = $feedback->hasNextAction();
+        if (isset($options["data"])) {
+            if ($options["data"] != null) {
+                /** @var Feedback $feedback */
+                $feedback = $options["data"];
+                $hasNextAction = $feedback->hasNextAction();
+            }
         }
-
         $builder
             ->add('description', TextareaType::class, [
                 'label' => "Description",
