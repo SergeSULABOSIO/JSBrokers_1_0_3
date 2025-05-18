@@ -6,36 +6,37 @@ use App\Entity\Piste;
 use App\Entity\Tache;
 use App\Entity\Invite;
 use DateTimeImmutable;
+use Twig\Node\SetNode;
 use App\Entity\Avenant;
+use App\Entity\Tranche;
 use App\Form\PisteType;
 use App\Form\TacheType;
+use App\Entity\Cotation;
+use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
+use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Constantes\MenuActivator;
-use App\Entity\Chargement;
-use App\Entity\ChargementPourPrime;
-use App\Entity\Cotation;
-use App\Entity\RevenuPourCourtier;
-use App\Entity\Tranche;
 use App\Services\ServiceMonnaies;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\ChargementPourPrime;
 use App\Repository\PisteRepository;
 use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
 use App\Repository\AvenantRepository;
-use App\Repository\EntrepriseRepository;
-use App\Services\ServiceDates;
-use Doctrine\ORM\EntityManagerInterface;
 use Proxies\__CG__\App\Entity\Revenu;
+use App\Repository\EntrepriseRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Twig\Node\SetNode;
 
 #[Route("/admin/piste", name: 'admin.piste.')]
 #[IsGranted('ROLE_USER')]
@@ -102,9 +103,9 @@ class PisteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->save($piste, $this->translator->trans("piste_creation_ok", [
-                ":piste" => $piste->getNom(),
-            ]));
+            $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->flush();
+            return new Response("Ok");
         }
         return $this->render('admin/piste/create.html.twig', [
             'pageName' => $this->translator->trans("piste_page_name_new"),
@@ -132,9 +133,9 @@ class PisteController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->save($piste, $this->translator->trans("piste_edition_ok", [
-                ":piste" => $piste->getNom(),
-            ]));
+            $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->flush();
+            return new Response("Ok");
         }
         return $this->render('admin/piste/edit.html.twig', [
             'pageName' => $this->translator->trans("piste_page_name_update", [
@@ -185,10 +186,9 @@ class PisteController extends AbstractController
             $form->handleRequest($request);
 
             if ($form->isSubmitted() && $form->isValid()) {
-                // dd("je suis !", $newPiste);
-                $this->save($newPiste, $this->translator->trans("piste_creation_ok", [
-                    ":piste" => $newPiste->getNom(),
-                ]));
+                $this->manager->persist($newPiste); //On peut ignorer cette instruction car la fonction flush suffit.
+                $this->manager->flush();
+                return new Response("Ok");
             }
             return $this->render('admin/piste/create.html.twig', [
                 'pageName' => $this->translator->trans("piste_page_name_new"),
@@ -202,18 +202,6 @@ class PisteController extends AbstractController
                 'idEntreprise' => $idEntreprise,
             ]);
         }
-    }
-
-    private function save(?Piste $piste, $message)
-    {
-        $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
-        $this->manager->flush();
-        $this->addFlash("success", $message);
-
-        //On doit rester sur la page d'édition
-        // return $this->redirectToRoute("admin.piste.index", [
-        //     'idEntreprise' => $idEntreprise,
-        // ]);
     }
 
     private function buildNewPisteFromAvenant(Utilisateur $user, Avenant $avenantDeBase, $mouvement): Piste

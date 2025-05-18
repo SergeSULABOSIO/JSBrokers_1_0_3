@@ -128,14 +128,6 @@ class RevenuCourtierController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($revenucourtier); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("revenucourtier_edition_ok", [
-            //     ":revenucourtier" => $revenucourtier->getNom(),
-            // ]));
-
-            //On doit rester sur la page d'édition
-            // return $this->redirectToRoute("admin.piste.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
             return new Response("Ok");
         }
         return $this->render('admin/revenucourtier/edit.html.twig', [
