@@ -32,6 +32,73 @@
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
+
+
+
+
+
+
+
+
+
+				{# pour les onglets #}
+				<div class="col-md sensible shadow-sm ">
+					<div class="card">
+						<div class="card-header text-center">
+							Titre de la carte
+						</div>
+						<div class="card-body">
+							{# Texte introductif #}
+							Texte introductif de la page à onglets
+							{# Tableau d'onglets #}
+							{# Barre de navigation #}
+							<nav>
+								<div class="nav nav-tabs" id="nav-tab" role="tablist">
+									{{ include('admin/dashbord/segments/sections/graphs/onglet.html.twig') }}
+									{{ include('admin/dashbord/segments/sections/assureur/onglet.html.twig') }}
+									{{ include('admin/dashbord/segments/sections/partenaire/onglet.html.twig') }}
+									{{ include('admin/dashbord/segments/sections/client/onglet.html.twig') }}
+									{{ include('admin/dashbord/segments/sections/tache/onglet.html.twig') }}
+									{{ include('admin/dashbord/segments/sections/renewal/onglet.html.twig') }}
+									{{ include('admin/dashbord/segments/sections/sinistre/onglet.html.twig') }}
+									{{ include('admin/dashbord/segments/sections/cashflow/onglet.html.twig') }}
+								</div>
+							</nav>
+							{# Contenu de chaque Onglet #}
+							<div class="tab-content" id="nav-tabContent">
+								{{ include('admin/dashbord/segments/sections/assureur/corps.html.twig') }}
+								{{ include('admin/dashbord/segments/sections/partenaire/corps.html.twig') }}
+								{{ include('admin/dashbord/segments/sections/graphs/corps.html.twig') }}
+								{{ include('admin/dashbord/segments/sections/client/corps.html.twig') }}
+								{{ include('admin/dashbord/segments/sections/tache/corps.html.twig') }}
+								{{ include('admin/dashbord/segments/sections/renewal/corps.html.twig') }}
+								{{ include('admin/dashbord/segments/sections/sinistre/corps.html.twig') }}
+								{{ include('admin/dashbord/segments/sections/cashflow/corps.html.twig') }}
+							</div>
+						</div>
+						<div class="card-footer text-muted text-center">
+							Merci.
+						</div>
+					</div>
+				</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 				<div class="row">
 					<div class="col">
 						{{ form_row(form.nom, {'attr': {'data-piste-formulaire-target': 'nom'}}) }}
