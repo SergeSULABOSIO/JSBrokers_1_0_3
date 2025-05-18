@@ -112,6 +112,7 @@ class PisteController extends AbstractController
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
+            'piste' => $piste,
             'form' => $form,
         ]);
     }
