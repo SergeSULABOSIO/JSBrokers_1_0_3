@@ -21,13 +21,20 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'piste-formulaire', 
+			'data-piste-formulaire-idpiste-value': piste.id,
+			'data-piste-formulaire-identreprise-value': entreprise.id,
+			}
+		}) 
+	}}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.nom) }}
+						{{ form_row(form.nom, {'attr': {'data-piste-formulaire-target': 'nom'}}) }}
 					</div>
 				</div>
 				<div class="row">
@@ -87,10 +94,18 @@
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.enregistrer) }}
+						{{ form_widget(form.enregistrer, {
+							'attr': {
+								'data-piste-formulaire-target': 'btEnregistrer'
+								}
+							})
+						}}
 					</div>
 				</div>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-piste-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}

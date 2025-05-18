@@ -46,7 +46,8 @@ class PisteType extends AbstractType
             ])
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",
-                'expanded' => true,
+                'expanded' => false,
+                'required' => true,
                 'choices'  => [
                     "SOUSCRIPTION"      => Piste::AVENANT_SOUSCRIPTION,
                     "INCORPORATION"     => Piste::AVENANT_INCORPORATION,
@@ -59,7 +60,7 @@ class PisteType extends AbstractType
             ->add('renewalCondition', ChoiceType::class, [
                 'label' => "Type d'assurance.",
                 'help' => "Type d'assurance selon les conditions de renouvellement.",
-                'expanded' => true,
+                'expanded' => false,
                 'required' => true,
                 'choices'  => [
                     "A TERME RENOUVELLABLE"           => Piste::RENEWAL_CONDITION_RENEWABLE,
