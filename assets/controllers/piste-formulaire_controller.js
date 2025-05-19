@@ -5,17 +5,25 @@ export default class extends Controller {
     static targets = [
         'nom',
         'display',
+        'displaycotation',
+        'displaytache',
+        'displaydocument',
+        'displayconditionspartage',
         'btEnregistrer',
     ];
 
     static values = {
         idpiste: Number,
         identreprise: Number,
+        nbcotations: Number,
+        nbtaches: Number,
+        nbdocuments: Number,
+        nbconditionspartage: Number,
     };
 
     connect() {
         this.isSaved = false;
-        console.log("ID PISTE: " + this.idpisteValue);
+        console.log("ID PISTE: " + this.idpisteValue, this.nbcotationsValue);
 
         //Définition de l'icone sur le bouton Enregistrer.
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
@@ -23,6 +31,46 @@ export default class extends Controller {
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));
         this.displayTarget.textContent = "Prêt.";
+
+        //On initialise les badges des onglets
+        this.initBadges(
+            this.nbcotationsValue,
+            this.nbtachesValue,
+            this.nbdocumentsValue,
+            this.nbconditionspartageValue
+        );
+    }
+
+    initBadges(nbCotations, nbTaches, nbDocuments, nbConditions) {
+        this.displaycotationTarget.innerHTML = "";
+        this.displaytacheTarget.innerHTML = "";
+        this.displaydocumentTarget.innerHTML = "";
+        this.displayconditionspartageTarget.innerHTML = "";
+
+        //Cotations
+        if (nbCotations != 0) {
+            this.displaycotationTarget.append(this.generateSpanElement(nbCotations));
+        }
+        // Taches
+        if (nbTaches != 0) {
+            this.displaytacheTarget.append(this.generateSpanElement(nbTaches));
+        }
+        // Documents
+        if (nbDocuments != 0) {
+            this.displaydocumentTarget.append(this.generateSpanElement(nbDocuments));
+        }
+        // Conditions de partage avec partenaire
+        if (nbConditions != 0) {
+            this.displayconditionspartageTarget.append(this.generateSpanElement(nbConditions));
+        }
+    }
+
+
+    generateSpanElement = (texte) => {
+        var span = document.createElement("span");
+        span.setAttribute('class', "badge bg-secondary m-2 fw-bold");
+        span.innerText = texte;
+        return span;
     }
 
 
@@ -33,17 +81,17 @@ export default class extends Controller {
      */
     ecouterClick = (event) => {
         console.log(event.target);
-        
+
         if (event.target.type != undefined) {
             if (event.target.type == "datetime-local") {
                 //On laisse le comportement par défaut
-            }else if (event.target.type == "submit") {
+            } else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
                     console.log("On a cliqué sur un bouton Enregistré.");
                     this.enregistrer(event);
                 }
-            }else{
+            } else {
                 event.preventDefault(); // Empêche la soumission classique du formulaire
             }
         }
@@ -78,6 +126,9 @@ export default class extends Controller {
                     this.displayTarget.textContent = "Prêt.";
                 }
 
+                //Actualisation des badges des onglets
+                const tabData = data.split("__1986__");
+                this.initBadges(tabData[0], tabData[1], tabData[2], tabData[3]);
             })
             .catch(errorMessage => {
                 event.target.disabled = false;

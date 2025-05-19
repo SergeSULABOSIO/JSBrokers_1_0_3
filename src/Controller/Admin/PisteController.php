@@ -105,7 +105,13 @@ class PisteController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            return new Response("Ok");
+
+            return new Response(
+                count($piste->getCotations()) . "__1986__" . 
+                count($piste->getTaches()) . "__1986__" . 
+                count($piste->getDocuments()) . "__1986__" . 
+                count($piste->getConditionsPartageExceptionnelles())
+            );
         }
         return $this->render('admin/piste/create.html.twig', [
             'pageName' => $this->translator->trans("piste_page_name_new"),
@@ -136,7 +142,13 @@ class PisteController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            return new Response("Ok");
+            // return new Response("Ok");
+            return new Response(
+                count($piste->getCotations()) . "__1986__" . 
+                count($piste->getTaches()) . "__1986__" . 
+                count($piste->getDocuments()) . "__1986__" . 
+                count($piste->getConditionsPartageExceptionnelles())
+            );
         }
         return $this->render('admin/piste/edit.html.twig', [
             'pageName' => $this->translator->trans("piste_page_name_update", [

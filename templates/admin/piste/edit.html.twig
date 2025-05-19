@@ -26,6 +26,10 @@
 			'data-controller': 'piste-formulaire', 
 			'data-piste-formulaire-idpiste-value': piste.id,
 			'data-piste-formulaire-identreprise-value': entreprise.id,
+			'data-piste-formulaire-nbcotations-value': piste.cotations|length,
+			'data-piste-formulaire-nbtaches-value': piste.taches|length,
+			'data-piste-formulaire-nbdocuments-value': piste.documents|length,
+			'data-piste-formulaire-nbconditionspartage-value': piste.conditionsPartageExceptionnelles|length,
 			}
 		}) 
 	}}
@@ -80,22 +84,38 @@
 								{# Onglet cotattion - tittre #}
 								<button class="nav-link active" id="nav-cotation-tab" data-bs-toggle="tab" data-bs-target="#nav-cotation" type="button" role="tab" aria-controls="nav-cotation" aria-selected="true">
 									{{ include('segments/icones/cotation.html.twig', {size:'20px'}) }}
-									Cotations
+									Cotations 
+									<span 
+										data-piste-formulaire-target = "displaycotation"
+									>
+									<span>
 								</button>
 								{# Onglet tache - tittre #}
 								<button class="nav-link" id="nav-tache-tab" data-bs-toggle="tab" data-bs-target="#nav-tache" type="button" role="tab" aria-controls="nav-tache" aria-selected="false">
 									{{ include('segments/icones/tache.html.twig', {size:'20px'}) }}
-									Tâches
+									Tâches 
+									<span 
+										data-piste-formulaire-target = "displaytache"
+									>
+									<span>
 								</button>
 								{# Onglet document - tittre #}
 								<button class="nav-link" id="nav-document-tab" data-bs-toggle="tab" data-bs-target="#nav-document" type="button" role="tab" aria-controls="nav-document" aria-selected="false">
 									{{ include('segments/icones/document.html.twig', {size:'20px'}) }}
-									Documents
+									Documents 
+									<span 
+										data-piste-formulaire-target = "displaydocument"
+									>
+									<span>
 								</button>
 								{# Onglet conditions de partage - tittre #}
 								<button class="nav-link" id="nav-condition-partage-tab" data-bs-toggle="tab" data-bs-target="#nav-condition-partage" type="button" role="tab" aria-controls="nav-condition-partage" aria-selected="false">
 									{{ include('segments/icones/partenaire.html.twig', {size:'20px'}) }}
-									Conditions de partage
+									Conditions de partage 
+									<span 
+										data-piste-formulaire-target = "displayconditionspartage"
+									>
+									<span>
 								</button>
 							</div>
 						</nav>
