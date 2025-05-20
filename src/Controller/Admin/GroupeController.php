@@ -100,13 +100,6 @@ class GroupeController extends AbstractController
             $this->manager->persist($groupe);
             $this->manager->flush();
 
-            // $this->addFlash("success", $this->translator->trans("groupe_creation_ok", [
-            //     ":groupe" => $groupe->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.groupe.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
-
             return new Response(
                 "Ok" . "__1986__" .
                 count($groupe->getClients())
@@ -117,6 +110,7 @@ class GroupeController extends AbstractController
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
+            'groupe' => $groupe,
             'form' => $form,
         ]);
     }

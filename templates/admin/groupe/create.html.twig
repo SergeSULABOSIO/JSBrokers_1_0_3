@@ -21,13 +21,21 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'groupe-formulaire', 
+			'data-groupe-formulaire-idgroupe-value': groupe.id,
+			'data-groupe-formulaire-identreprise-value': entreprise.id,
+			'data-groupe-formulaire-nbclients-value': groupe.clients|length,
+			}
+		}) 
+	}}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.nom) }}
+						{{ form_row(form.nom, {'attr': {'data-groupe-formulaire-target': 'nom'}}) }}
 					</div>
 				</div>
 				<div class="row">
@@ -37,15 +45,42 @@
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.clients) }}
+						{# Les onglets #}
+						<nav>
+							<div class="nav nav-tabs" id="nav-tab" role="tablist">
+								{# Onglet client - tittre #}
+								<button class="nav-link fw-bold text-secondary active" id="nav-client-tab" data-bs-toggle="tab" data-bs-target="#nav-client" type="button" role="tab" aria-controls="nav-client" aria-selected="true">
+									{{ include('segments/icones/client.html.twig', {size:'20px'}) }}
+									CLIENTS 
+									<span 
+										data-groupe-formulaire-target = "displayclient"
+									>
+									<span>
+								</button>
+							</div>
+						</nav>
+						{# Contenu de chaque Onglet #}
+						<div class="tab-content" id="nav-tabContent">
+							{# Onglet clients - corps #}
+							<div class="tab-pane fade table-responsive m-2 show active" id="nav-client" role="tabpanel" aria-labelledby="nav-client-tab" tabindex="0">
+								{{ form_row(form.clients) }}
+							</div>
+						</div>
 					</div>
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_widget(form.enregistrer) }}
+						{{ form_widget(form.enregistrer, {
+							'attr': {
+								'data-groupe-formulaire-target': 'btEnregistrer'
+								}
+							}) }}
 					</div>
 				</div>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-groupe-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}
