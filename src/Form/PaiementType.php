@@ -98,10 +98,6 @@ class PaiementType extends AbstractType
             }
         }
 
-        // dd($objetPaiement);
-
-
-
         $builder
             ->add('description', TextareaType::class, [
                 'label' => "Description",
