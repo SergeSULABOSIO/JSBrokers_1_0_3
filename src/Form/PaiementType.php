@@ -47,57 +47,59 @@ class PaiementType extends AbstractType
                     $montPayable = $this->constante->Note_getMontant_payable($note);
                     $montPaye = $this->constante->Note_getMontant_paye($note);
                     $montSolde = $this->constante->Note_getMontant_solde($note);
+
+                    $builder
+                        ->add('referenceNote', TextType::class, [
+                            'label' => "Note ou Facture",
+                            'data' => $refNote,
+                            'mapped' => false,
+                            'attr' => [
+                                'readonly' => true,
+                                'placeholder' => "Référence",
+                            ],
+                        ])
+                        ->add('montantPayable', MoneyType::class, [
+                            'label' => "Montant payable",
+                            'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            'data' => $montPayable,
+                            'required' => false,
+                            'mapped' => false,
+                            'grouping' => true,
+                            'attr' => [
+                                'readonly' => true,
+                                'placeholder' => "Montant",
+                            ],
+                        ])
+                        ->add('montantPaye', MoneyType::class, [
+                            'label' => "Montant payé",
+                            'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            'data' => $montPaye,
+                            'required' => false,
+                            'mapped' => false,
+                            'grouping' => true,
+                            'attr' => [
+                                'readonly' => true,
+                                'placeholder' => "Montant",
+                            ],
+                        ])
+                        ->add('montantSolde', MoneyType::class, [
+                            'label' => "Solde restant dû",
+                            'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            'required' => false,
+                            'data' => $montSolde,
+                            'mapped' => false,
+                            'grouping' => true,
+                            'attr' => [
+                                'placeholder' => "Montant",
+                                'readonly' => true,
+                            ],
+                        ]);
                 }
             }
         }
 
         // dd($objetPaiement);
-        $builder
-            ->add('referenceNote', TextType::class, [
-                'label' => "Note ou Facture",
-                'data' => $refNote,
-                'mapped' => false,
-                'attr' => [
-                    'readonly' => true,
-                    'placeholder' => "Référence",
-                ],
-            ])
-            ->add('montantPayable', MoneyType::class, [
-                'label' => "Montant payable",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'data' => $montPayable,
-                'required' => false,
-                'mapped' => false,
-                'grouping' => true,
-                'attr' => [
-                    'readonly' => true,
-                    'placeholder' => "Montant",
-                ],
-            ])
-            ->add('montantPaye', MoneyType::class, [
-                'label' => "Montant payé",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'data' => $montPaye,
-                'required' => false,
-                'mapped' => false,
-                'grouping' => true,
-                'attr' => [
-                    'readonly' => true,
-                    'placeholder' => "Montant",
-                ],
-            ])
-            ->add('montantSolde', MoneyType::class, [
-                'label' => "Solde restant dû",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'required' => false,
-                'data' => $montSolde,
-                'mapped' => false,
-                'grouping' => true,
-                'attr' => [
-                    'placeholder' => "Montant",
-                    'readonly' => true,
-                ],
-            ]);
+
 
 
         $builder

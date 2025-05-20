@@ -66,6 +66,11 @@ export default class extends Controller {
     }
 
 
+    /**
+     * 
+     * @param {string} texte 
+     * @returns
+     */
     generateSpanElement = (texte) => {
         var span = document.createElement("span");
         span.setAttribute('class', "badge rounded-pill text-bg-warning m-2 fw-bold");

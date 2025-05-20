@@ -15,6 +15,9 @@ export default class extends Controller {
         'montantdue',
         'montantpaye',
         'montantsolde',
+        'displayarticle',
+        'displaypaiement',
+
     ];
 
     static values = {
@@ -22,6 +25,8 @@ export default class extends Controller {
         identreprise: String,
         conteneurpanier: String,
         corpspanier: String,
+        nbarticles: Number,
+        nbpaiements: Number,
     };
 
     connect() {
@@ -38,7 +43,49 @@ export default class extends Controller {
 
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));
+        
+        //On initialise les badges des onglets
+        this.initBadges(
+            this.nbarticlesValue,
+            this.nbpaiementsValue,
+        );
     }
+
+
+
+    /**
+     * 
+     * @param {Number} nbArticles 
+     * @param {Number} nbPaiements 
+     */
+    initBadges(nbArticles, nbPaiements) {
+        this.displayarticleTarget.innerHTML = "";
+        this.displaypaiementTarget.innerHTML = "";
+
+        // Articles
+        if (nbArticles != 0) {
+            this.displayarticleTarget.append(this.generateSpanElement(nbArticles));
+        }
+        // Paiements
+        if (nbPaiements != 0) {
+            this.displaypaiementTarget.append(this.generateSpanElement(nbPaiements));
+        }
+    }
+
+
+    /**
+     * 
+     * @param {string} texte 
+     * @returns {HTMLSpanElement}
+     */
+    generateSpanElement = (texte) => {
+        var span = document.createElement("span");
+        span.setAttribute('class', "badge rounded-pill text-bg-warning m-2 fw-bold");
+        span.innerText = texte;
+        return span;
+    }
+
+
 
     changerType = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
@@ -148,9 +195,13 @@ export default class extends Controller {
                     this.displayTarget.textContent = "Cliquez sur le bouton 'AJOUTER LES ARTICLES [...]' afin d'aller ajouter les articles dans la note.";
 
                     //actualisation des autres composant du formulaire ainsi que du panier
-                    this.montantdueTarget.value = data.split("___")[0];
-                    this.montantpayeTarget.value = data.split("___")[1];
-                    this.montantsoldeTarget.value = data.split("___")[2];
+                    const tabData = data.split("__1986__");
+                    
+                    this.montantdueTarget.value = tabData[0];
+                    this.montantpayeTarget.value = tabData[1];
+                    this.montantsoldeTarget.value = tabData[2];
+
+                    this.initBadges(tabData[3], tabData[4]);
 
                     //On actualise le panier
                     if (this.conteneurpanierValue != null) {

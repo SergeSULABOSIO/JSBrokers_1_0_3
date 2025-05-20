@@ -234,12 +234,13 @@ class NoteController extends AbstractController
             $mntSolde = $this->constante->Note_getMontant_solde($note);
 
             // return new JsonResponse($note);
-            return new Response($mntDue . "___" . $mntPaye . "___" . $mntSolde, Response::HTTP_OK);
-
-            // $this->addFlash("success", "Cher utilisateur, veuillez séléctionner les tranches à ajouter dans la note.");
-            // return $this->redirectToRoute("admin.tranche.index", [ //admin.note.index
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            return new Response(
+                $mntDue . "__1986__" .
+                $mntPaye . "__1986__" .
+                $mntSolde . "__1986__" .
+                count($note->getArticles()) . "__1986__" .
+                count($note->getPaiements())
+            );
         }
         return $this->render('admin/note/create.html.twig', [
             'pageName' => $this->pageName,

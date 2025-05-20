@@ -27,6 +27,8 @@
 			'data-controller': 'note-formulaire', 
 			'data-note-formulaire-idnote-value': note.id,
 			'data-note-formulaire-identreprise-value': entreprise.id,
+			'data-note-formulaire-nbarticles-value': note.articles|length,
+			'data-note-formulaire-nbpaiements-value': note.paiements|length,
 			'data-note-formulaire-conteneurpanier-value': 'conteneurpanier',
 			'data-note-formulaire-corpspanier-value': 'corpspanier',
 			}
@@ -80,7 +82,8 @@
 							'attr' : {
 								'data-note-formulaire-target': 'montantdue'
 							}
-						}) }}
+						}) 
+					}}
 					</div>
 					<div class="col">
 						{{ form_row(form.montantPaye, {
@@ -97,19 +100,6 @@
 						}) }}
 					</div>
 				</div>
-				{# {% endif %} #}
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.paiements) }}
-					</div>
-				</div>
-				{% if note.id != null %}
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.articles) }}
-						</div>
-					</div>
-				{% endif %}
 				<div class="row">
 					<div class="col">
 						{{ form_row(form.signedBy) }}
@@ -119,6 +109,44 @@
 					</div>
 					<div class="col">
 						{{ form_row(form.sentAt) }}
+					</div>
+				</div>
+				<div class="row mt-3 mb-3">
+					<div class="col">
+						{# Les onglets #}
+						<nav>
+							<div class="nav nav-tabs" id="nav-tab" role="tablist">
+								{# Onglet Articles - tittre #}
+								<button class="nav-link fw-bold text-secondary active" id="nav-article-tab" data-bs-toggle="tab" data-bs-target="#nav-article" type="button" role="tab" aria-controls="nav-article" aria-selected="true">
+									{{ include('segments/icones/tranche.html.twig', {size:'20px'}) }}
+									ARTICLES 
+									<span 
+										data-note-formulaire-target = "displayarticle"
+									>
+									<span>
+								</button>
+								{# Onglet Paiements - tittre #}
+								<button class="nav-link fw-bold text-secondary" id="nav-paiement-tab" data-bs-toggle="tab" data-bs-target="#nav-paiement" type="button" role="tab" aria-controls="nav-paiement" aria-selected="false">
+									{{ include('segments/icones/paiement.html.twig', {size:'20px'}) }}
+									PAIEMENTS 
+									<span 
+										data-note-formulaire-target = "displaypaiement"
+									>
+									<span>
+								</button>
+							</div>
+						</nav>
+						{# Contenu de chaque Onglet #}
+						<div class="tab-content" id="nav-tabContent">
+							{# Onglet Article - corps #}
+							<div class="tab-pane fade table-responsive m-2 show active" id="nav-article" role="tabpanel" aria-labelledby="nav-article-tab" tabindex="0">
+								{{ form_row(form.articles) }}
+							</div>
+							{# Onglet Paiement - corps #}
+							<div class="tab-pane fade table-responsive m-2" id="nav-paiement" role="tabpanel" aria-labelledby="nav-paiement-tab" tabindex="1">
+								{{ form_row(form.paiements) }}
+							</div>
+						</div>
 					</div>
 				</div>
 				<div class="row">
