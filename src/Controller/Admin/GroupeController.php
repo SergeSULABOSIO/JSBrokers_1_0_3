@@ -23,6 +23,7 @@ use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -96,15 +97,20 @@ class GroupeController extends AbstractController
                 $client->setGroupe($groupe);
                 $client->setEntreprise($entreprise);
             }
-
             $this->manager->persist($groupe);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("groupe_creation_ok", [
-                ":groupe" => $groupe->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.groupe.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+
+            // $this->addFlash("success", $this->translator->trans("groupe_creation_ok", [
+            //     ":groupe" => $groupe->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.groupe.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+
+            return new Response(
+                "Ok" . "__1986__" .
+                count($groupe->getClients())
+            );
         }
         return $this->render('admin/groupe/create.html.twig', [
             'pageName' => $this->translator->trans("groupe_page_name_new"),
@@ -139,14 +145,11 @@ class GroupeController extends AbstractController
             }
             $this->manager->persist($groupe);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("groupe_edition_ok", [
-                ":groupe" => $groupe->getNom(),
-            ]));
-
-            //On doit rester sur la page d'édition
-            // return $this->redirectToRoute("admin.piste.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            
+            return new Response(
+                "Ok" . "__1986__" .
+                count($groupe->getClients())
+            );
         }
         return $this->render('admin/groupe/edit.html.twig', [
             'pageName' => $this->translator->trans("groupe_page_name_update", [
