@@ -33,21 +33,24 @@ class PaiementType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        /** @var Paiement $objetPaiement */
-        $objetPaiement = $options['data'];
         $refNote = "";
         $montPayable = 0;
         $montPaye = 0;
         $montSolde = 0;
-        if ($objetPaiement != null) {
-            $note = $objetPaiement->getNote();
-            if ($note != null) {
-                $refNote = $note->getReference();
-                $montPayable = $this->constante->Note_getMontant_payable($note);
-                $montPaye = $this->constante->Note_getMontant_paye($note);
-                $montSolde = $this->constante->Note_getMontant_solde($note);
+        if (isset($options['data'])) {
+            /** @var Paiement $objetPaiement */
+            $objetPaiement = $options['data'];
+            if ($objetPaiement != null) {
+                $note = $objetPaiement->getNote();
+                if ($note != null) {
+                    $refNote = $note->getReference();
+                    $montPayable = $this->constante->Note_getMontant_payable($note);
+                    $montPaye = $this->constante->Note_getMontant_paye($note);
+                    $montSolde = $this->constante->Note_getMontant_solde($note);
+                }
             }
         }
+
         // dd($objetPaiement);
         $builder
             ->add('referenceNote', TextType::class, [
