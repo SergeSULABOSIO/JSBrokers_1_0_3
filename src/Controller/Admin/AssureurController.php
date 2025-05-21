@@ -20,7 +20,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/assureur", name: 'admin.assureur.')]
 #[IsGranted('ROLE_USER')]
@@ -82,12 +82,8 @@ class AssureurController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($assureur);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("assureur_creation_ok", [
-                ":assureur" => $assureur->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.assureur.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
         }
         return $this->render('admin/assureur/create.html.twig', [
             'pageName' => $this->translator->trans("assureur_page_name_new"),
@@ -117,12 +113,8 @@ class AssureurController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($assureur); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("assureur_edition_ok", [
-                ":assureur" => $assureur->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.assureur.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
         }
         return $this->render('admin/assureur/edit.html.twig', [
             'pageName' => $this->translator->trans("assureur_page_name_update", [
