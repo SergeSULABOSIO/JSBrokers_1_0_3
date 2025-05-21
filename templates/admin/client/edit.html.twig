@@ -21,64 +21,133 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'client-formulaire', 
+			'data-client-formulaire-idclient-value': client.id,
+			'data-client-formulaire-identreprise-value': entreprise.id,
+			'data-client-formulaire-nbcontacts-value': client.contacts|length,
+			'data-client-formulaire-nbdocuments-value': client.documents|length,
+			}
+		}) 
+	}}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.nom) }}
+				{# Les onglets #}
+				<nav>
+					<div class="nav nav-tabs" id="nav-tab" role="tablist">
+						{# Onglet client - tittre #}
+						<button class="nav-link fw-bold text-secondary active" id="nav-client-tab" data-bs-toggle="tab" data-bs-target="#nav-client" type="button" role="tab" aria-controls="nav-client" aria-selected="true">
+							<small>
+								{{ include('segments/icones/client.html.twig', {size:'20px'}) }}
+								PRINCIPAL
+								<span 
+									data-client-formulaire-target = "displayclient"
+								>
+								<span>
+							</small>
+						</button>
+						{# Onglet client - tittre #}
+						<button class="nav-link fw-bold text-secondary" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact" type="button" role="tab" aria-controls="nav-contact" aria-selected="false">
+							<small>
+								{{ include('segments/icones/contact.html.twig', {size:'20px'}) }}
+								CONTACTS
+								<span 
+									data-client-formulaire-target = "displaycontact"
+								>
+								<span>
+							</small>
+						</button>
+						{# Onglet document - tittre #}
+						<button class="nav-link fw-bold text-secondary" id="nav-document-tab" data-bs-toggle="tab" data-bs-target="#nav-document" type="button" role="tab" aria-controls="nav-document" aria-selected="false">
+							<small>
+								{{ include('segments/icones/document.html.twig', {size:'20px'}) }}
+								DOCUMENT
+								<span 
+									data-client-formulaire-target = "displaydocument"
+								>
+								<span>
+							</small>
+						</button>
+					</div>
+				</nav>
+				{# Contenu de chaque Onglet #}
+				<div class="tab-content" id="nav-tabContent">
+					{# Onglet Client - corps #}
+					<div class="tab-pane fade show active" id="nav-client" role="tabpanel" aria-labelledby="nav-client-tab" tabindex="0">
+						<div class="row">
+							<div class="col">
+								{{ form_row(form.nom, {'attr': {'data-client-formulaire-target': 'nom'}}) }}
+							</div>
+						</div>
+						<div class="row">
+							<div class="col">
+								{{ form_row(form.groupe) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.adresse) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.telephone) }}
+							</div>
+						</div>
+						<div class="row">
+							<div class="col">
+								{{ form_row(form.email) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.exonere) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.numimpot) }}
+							</div>
+						</div>
+						<div class="row">
+							<div class="col">
+								{{ form_row(form.rccm) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.idnat) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.partenaires) }}
+							</div>
+						</div>
+					</div>
+
+					{# Onglet Contact - corps #}
+					<div class="tab-pane fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab" tabindex="1">
+						<div class="row">
+							<div class="col">
+								{{ form_row(form.contacts) }}
+							</div>
+						</div>
+					</div>
+
+					{# Onglet Document - corps #}
+					<div class="tab-pane fade" id="nav-document" role="tabpanel" aria-labelledby="nav-document-tab" tabindex="2">
+						<div class="row">
+							<div class="col">
+								{{ form_row(form.documents) }}
+							</div>
+						</div>
 					</div>
 				</div>
+				
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.groupe) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.adresse) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.telephone) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.email) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.exonere) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.numimpot) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.rccm) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.idnat) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.partenaires) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.contacts) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.documents) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_widget(form.enregistrer) }}
+						{{ form_widget(form.enregistrer, {
+							'attr': {
+								'data-client-formulaire-target': 'btEnregistrer'
+								}
+							}) }}
 					</div>
 				</div>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-client-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}
