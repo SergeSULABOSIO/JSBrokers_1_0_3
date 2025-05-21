@@ -50,12 +50,14 @@
 							<div class="nav nav-tabs" id="nav-tab" role="tablist">
 								{# Onglet client - tittre #}
 								<button class="nav-link fw-bold text-secondary active" id="nav-client-tab" data-bs-toggle="tab" data-bs-target="#nav-client" type="button" role="tab" aria-controls="nav-client" aria-selected="true">
-									{{ include('segments/icones/client.html.twig', {size:'20px'}) }}
-									CLIENTS 
-									<span 
-										data-groupe-formulaire-target = "displayclient"
-									>
-									<span>
+									<small>
+										{{ include('segments/icones/client.html.twig', {size:'20px'}) }}
+										CLIENTS 
+										<span 
+											data-groupe-formulaire-target = "displayclient"
+										>
+										<span>
+									</small>
 								</button>
 							</div>
 						</nav>
