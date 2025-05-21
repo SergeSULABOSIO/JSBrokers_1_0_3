@@ -37,8 +37,7 @@
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
-				
-				<div class="row mt-3 mb-3">
+				<div class="row">
 					<div class="col">
 						{# Les onglets #}
 						<nav>
@@ -52,21 +51,25 @@
 								</button>
 								{# Onglet Articles - tittre #}
 								<button class="nav-link fw-bold text-secondary" id="nav-article-tab" data-bs-toggle="tab" data-bs-target="#nav-article" type="button" role="tab" aria-controls="nav-article" aria-selected="false">
-									{{ include('segments/icones/tranche.html.twig', {size:'20px'}) }}
-									ARTICLES 
-									<span 
-										data-note-formulaire-target = "displayarticle"
-									>
-									<span>
+									<small>
+										{{ include('segments/icones/tranche.html.twig', {size:'20px'}) }}
+										ARTICLES 
+										<span 
+											data-note-formulaire-target = "displayarticle"
+										>
+										<span>
+									</small>
 								</button>
 								{# Onglet Paiements - tittre #}
 								<button class="nav-link fw-bold text-secondary" id="nav-paiement-tab" data-bs-toggle="tab" data-bs-target="#nav-paiement" type="button" role="tab" aria-controls="nav-paiement" aria-selected="false">
-									{{ include('segments/icones/paiement.html.twig', {size:'20px'}) }}
-									PAIEMENTS 
-									<span 
-										data-note-formulaire-target = "displaypaiement"
-									>
-									<span>
+									<small>
+										{{ include('segments/icones/paiement.html.twig', {size:'20px'}) }}
+										PAIEMENTS 
+										<span 
+											data-note-formulaire-target = "displaypaiement"
+										>
+										<span>
+									</small>
 								</button>
 							</div>
 						</nav>
@@ -180,7 +183,7 @@
 				</div>
 			</div>
 			<small>
-				<span class="text-secondary m-2 fw-bold" data-note-formulaire-target="display" style="display:none;">Message d'infos ici</span>
+				<span class="text-secondary m-2 fw-bold" data-note-formulaire-target="display" style="display:block;">Message d'infos ici</span>
 			</small>
 		</div>
 	</div>
