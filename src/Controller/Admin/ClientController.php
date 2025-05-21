@@ -23,7 +23,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/client", name: 'admin.client.')]
 #[IsGranted('ROLE_USER')]
@@ -86,18 +86,25 @@ class ClientController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($client);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("client_creation_ok", [
-                ":client" => $client->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.client.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("client_creation_ok", [
+            //     ":client" => $client->getNom(),
+            // ]));
+            // return $this->redirectToRoute("admin.client.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+
+            return new Response(
+                "Ok__1986__" . 
+                count($client->getContacts()) . "__1986__" . 
+                count($client->getDocuments())
+            );
         }
         return $this->render('admin/client/create.html.twig', [
             'pageName' => $this->translator->trans("client_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
+            'client' => $client,
             'form' => $form,
         ]);
     }
@@ -121,12 +128,12 @@ class ClientController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($client); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("client_edition_ok", [
-                ":client" => $client->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.client.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+
+            return new Response(
+                "Ok__1986__" . 
+                count($client->getContacts()) . "__1986__" . 
+                count($client->getDocuments())
+            );
         }
         return $this->render('admin/client/edit.html.twig', [
             'pageName' => $this->translator->trans("client_page_name_update", [
