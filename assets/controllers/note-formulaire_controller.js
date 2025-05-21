@@ -193,7 +193,7 @@ export default class extends Controller {
                 if (this.isSaved == true) {
                     this.btArticlesTarget.style.display = 'inline';
                     this.displayTarget.textContent = "Cliquez sur le bouton 'AJOUTER LES ARTICLES' si vous voulez ajouter les articles dans cette note.";
-
+                    
                     //actualisation des autres composant du formulaire ainsi que du panier
                     const tabData = data.split("__1986__");
                     

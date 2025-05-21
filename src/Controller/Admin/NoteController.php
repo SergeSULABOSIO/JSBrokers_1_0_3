@@ -235,9 +235,9 @@ class NoteController extends AbstractController
 
             // return new JsonResponse($note);
             return new Response(
-                $mntDue . "__1986__" .
-                $mntPaye . "__1986__" .
-                $mntSolde . "__1986__" .
+                number_format($mntDue, 2, ",", " ") . "__1986__" .
+                number_format($mntPaye, 2, ",", " ") . "__1986__" .
+                number_format($mntSolde, 2, ",", " ") . "__1986__" .
                 count($note->getArticles()) . "__1986__" .
                 count($note->getPaiements())
             );
