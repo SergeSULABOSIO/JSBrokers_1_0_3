@@ -38,6 +38,10 @@ export default class extends Controller {
     }
 
 
+    /**
+     * 
+     * @param {Event} event 
+     */
     changerCivilite = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         var selectedValue = event.target.selectedOptions[0].value;
