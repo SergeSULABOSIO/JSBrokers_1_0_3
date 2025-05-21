@@ -72,7 +72,7 @@
 				{# Contenu de chaque Onglet #}
 				<div class="tab-content" id="nav-tabContent">
 					{# Onglet Client - corps #}
-					<div class="tab-pane fade show active" id="nav-client" role="tabpanel" aria-labelledby="nav-client-tab" tabindex="0">
+					<div class="tab-pane fade m-2 show active" id="nav-client" role="tabpanel" aria-labelledby="nav-client-tab" tabindex="0">
 						<div class="row">
 							<div class="col-2">
 								{{ form_row(form.civilite, {'attr': {'data-action': 'client-formulaire#changerCivilite'}}) }}
@@ -125,7 +125,7 @@
 					</div>
 
 					{# Onglet Contact - corps #}
-					<div class="tab-pane fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab" tabindex="1">
+					<div class="tab-pane m-2 fade" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab" tabindex="1">
 						<div class="row">
 							<div class="col">
 								{{ form_row(form.contacts) }}
@@ -134,7 +134,7 @@
 					</div>
 
 					{# Onglet Document - corps #}
-					<div class="tab-pane fade" id="nav-document" role="tabpanel" aria-labelledby="nav-document-tab" tabindex="2">
+					<div class="tab-pane m-2 fade" id="nav-document" role="tabpanel" aria-labelledby="nav-document-tab" tabindex="2">
 						<div class="row">
 							<div class="col">
 								{{ form_row(form.documents) }}
