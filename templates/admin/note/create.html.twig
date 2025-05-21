@@ -37,87 +37,21 @@
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.nom, {'attr': {'data-note-formulaire-target': 'nom'}}) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.reference) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.description) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col-2">
-						{{ form_row(form.type, {'attr': {'data-action': 'note-formulaire#changerType'}}) }}
-					</div>
-					<div class="col-3">
-						{{ form_row(form.addressedTo, {'attr': {'data-action': 'note-formulaire#changerAddressedTo'}}) }}
-					</div>
-					<div class="col" data-note-formulaire-target='block_assureur'>
-						{{ form_row(form.assureur) }}
-					</div>
-					<div class="col" data-note-formulaire-target='block_client' style='display:none'>
-						{{ form_row(form.client) }}
-					</div>
-					<div class="col" data-note-formulaire-target='block_partenaire' style='display:none'>
-						{{ form_row(form.partenaire) }}
-					</div>
-					<div class="col" data-note-formulaire-target='block_autorite' style='display:none'>
-						{{ form_row(form.autoritefiscale) }}
-					</div>
-				</div>
-				<div class="row" data-note-formulaire-target='block_comptes'>
-					<div class="col">
-						{{ form_row(form.comptes, {'attr': {'data-note-formulaire-target': 'comptes'}}) }}
-					</div>
-				</div>
-				{# {% if note.id != null %} #}
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.montantDue, {
-							'attr' : {
-								'data-note-formulaire-target': 'montantdue'
-							}
-						}) 
-					}}
-					</div>
-					<div class="col">
-						{{ form_row(form.montantPaye, {
-							'attr' : {
-								'data-note-formulaire-target': 'montantpaye'
-							}
-						}) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.montantSolde, {
-							'attr' : {
-								'data-note-formulaire-target': 'montantsolde'
-							}
-						}) }}
-					</div>
-				</div>
-				<div class="row">
-					<div class="col">
-						{{ form_row(form.signedBy) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.titleSignedBy) }}
-					</div>
-					<div class="col">
-						{{ form_row(form.sentAt) }}
-					</div>
-				</div>
+				
 				<div class="row mt-3 mb-3">
 					<div class="col">
 						{# Les onglets #}
 						<nav>
 							<div class="nav nav-tabs" id="nav-tab" role="tablist">
+								{# Onglet client - tittre #}
+								<button class="nav-link fw-bold text-secondary active" id="nav-note-tab" data-bs-toggle="tab" data-bs-target="#nav-note" type="button" role="tab" aria-controls="nav-note" aria-selected="true">
+									<small>
+										{{ include('segments/icones/note.html.twig', {size:'20px'}) }}
+										PRINCIPAL
+									</small>
+								</button>
 								{# Onglet Articles - tittre #}
-								<button class="nav-link fw-bold text-secondary active" id="nav-article-tab" data-bs-toggle="tab" data-bs-target="#nav-article" type="button" role="tab" aria-controls="nav-article" aria-selected="true">
+								<button class="nav-link fw-bold text-secondary" id="nav-article-tab" data-bs-toggle="tab" data-bs-target="#nav-article" type="button" role="tab" aria-controls="nav-article" aria-selected="false">
 									{{ include('segments/icones/tranche.html.twig', {size:'20px'}) }}
 									ARTICLES 
 									<span 
@@ -138,12 +72,89 @@
 						</nav>
 						{# Contenu de chaque Onglet #}
 						<div class="tab-content" id="nav-tabContent">
+							{# Onglet Principal - corps #}
+							<div class="tab-pane fade m-2 show active" id="nav-note" role="tabpanel" aria-labelledby="nav-note-tab" tabindex="0">
+								<div class="row">
+									<div class="col">
+										{{ form_row(form.nom, {'attr': {'data-note-formulaire-target': 'nom'}}) }}
+									</div>
+									<div class="col">
+										{{ form_row(form.reference) }}
+									</div>
+								</div>
+								<div class="row">
+									<div class="col">
+										{{ form_row(form.description) }}
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-2">
+										{{ form_row(form.type, {'attr': {'data-action': 'note-formulaire#changerType'}}) }}
+									</div>
+									<div class="col-3">
+										{{ form_row(form.addressedTo, {'attr': {'data-action': 'note-formulaire#changerAddressedTo'}}) }}
+									</div>
+									<div class="col" data-note-formulaire-target='block_assureur'>
+										{{ form_row(form.assureur) }}
+									</div>
+									<div class="col" data-note-formulaire-target='block_client' style='display:none'>
+										{{ form_row(form.client) }}
+									</div>
+									<div class="col" data-note-formulaire-target='block_partenaire' style='display:none'>
+										{{ form_row(form.partenaire) }}
+									</div>
+									<div class="col" data-note-formulaire-target='block_autorite' style='display:none'>
+										{{ form_row(form.autoritefiscale) }}
+									</div>
+								</div>
+								<div class="row" data-note-formulaire-target='block_comptes'>
+									<div class="col">
+										{{ form_row(form.comptes, {'attr': {'data-note-formulaire-target': 'comptes'}}) }}
+									</div>
+								</div>
+								{# {% if note.id != null %} #}
+								<div class="row">
+									<div class="col">
+										{{ form_row(form.montantDue, {
+											'attr' : {
+												'data-note-formulaire-target': 'montantdue'
+											}
+										}) 
+									}}
+									</div>
+									<div class="col">
+										{{ form_row(form.montantPaye, {
+											'attr' : {
+												'data-note-formulaire-target': 'montantpaye'
+											}
+										}) }}
+									</div>
+									<div class="col">
+										{{ form_row(form.montantSolde, {
+											'attr' : {
+												'data-note-formulaire-target': 'montantsolde'
+											}
+										}) }}
+									</div>
+								</div>
+								<div class="row">
+									<div class="col">
+										{{ form_row(form.signedBy) }}
+									</div>
+									<div class="col">
+										{{ form_row(form.titleSignedBy) }}
+									</div>
+									<div class="col">
+										{{ form_row(form.sentAt) }}
+									</div>
+								</div>
+							</div>
 							{# Onglet Article - corps #}
-							<div class="tab-pane fade table-responsive m-2 show active" id="nav-article" role="tabpanel" aria-labelledby="nav-article-tab" tabindex="0">
+							<div class="tab-pane fade m-2 show active" id="nav-article" role="tabpanel" aria-labelledby="nav-article-tab" tabindex="1">
 								{{ form_row(form.articles) }}
 							</div>
 							{# Onglet Paiement - corps #}
-							<div class="tab-pane fade table-responsive m-2" id="nav-paiement" role="tabpanel" aria-labelledby="nav-paiement-tab" tabindex="1">
+							<div class="tab-pane fade m-2" id="nav-paiement" role="tabpanel" aria-labelledby="nav-paiement-tab" tabindex="2">
 								{{ form_row(form.paiements) }}
 							</div>
 						</div>
