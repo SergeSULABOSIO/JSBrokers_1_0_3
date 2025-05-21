@@ -84,6 +84,14 @@ class Client
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $idnat = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $civilite = null;
+    //Les civilités possible
+    public const CIVILITE_Mr = 0;
+    public const CIVILITE_Mme = 1;
+    public const CIVILITE_ENTREPRISE = 2;
+    public const CIVILITE_ASBL = 3;
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
@@ -394,6 +402,18 @@ class Client
     public function setIdnat(?string $idnat): static
     {
         $this->idnat = $idnat;
+
+        return $this;
+    }
+
+    public function getCivilite(): ?int
+    {
+        return $this->civilite;
+    }
+
+    public function setCivilite(?int $civilite): static
+    {
+        $this->civilite = $civilite;
 
         return $this;
     }

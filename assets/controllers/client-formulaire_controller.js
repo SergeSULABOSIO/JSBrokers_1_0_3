@@ -31,6 +31,7 @@ export default class extends Controller {
             this.nbcontactsValue,
             this.nbdocumentsValue,
         );
+        this.displayTarget.textContent = "Prêt.";
     }
 
 

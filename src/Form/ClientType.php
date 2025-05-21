@@ -25,10 +25,21 @@ class ClientType extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('civilite', ChoiceType::class, [
+                'label' => "Status",
+                'required' => true,
+                'expanded' => false,
+                'choices'  => [
+                    "Mr." => Client::CIVILITE_Mr,
+                    "Mme." => Client::CIVILITE_Mme,
+                    "Sté." => Client::CIVILITE_ENTREPRISE,
+                    "Asbl." => Client::CIVILITE_ASBL,
+                ],
+            ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
                 'attr' => [
@@ -36,8 +47,8 @@ class ClientType extends AbstractType
                 ],
             ])
             ->add('groupe', EntityType::class, [
-                'help' => "Le groupe ou la famille ou encore conglomérat auquel apprtient cette entité.",
-                'label' => "Groupe",
+                // 'help' => "Le groupe ou la famille ou encore conglomérat auquel apprtient cette entité.",
+                'label' => "Groupe / Catégorie",
                 'autocomplete' => true,
                 'class' => Groupe::class,
                 'required' => false,
