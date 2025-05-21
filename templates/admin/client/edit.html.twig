@@ -28,6 +28,7 @@
 			'data-client-formulaire-identreprise-value': entreprise.id,
 			'data-client-formulaire-nbcontacts-value': client.contacts|length,
 			'data-client-formulaire-nbdocuments-value': client.documents|length,
+			'data-client-formulaire-civilite-value': client.civilite,
 			}
 		}) 
 	}}
@@ -74,7 +75,7 @@
 					<div class="tab-pane fade show active" id="nav-client" role="tabpanel" aria-labelledby="nav-client-tab" tabindex="0">
 						<div class="row">
 							<div class="col-2">
-								{{ form_row(form.civilite) }}
+								{{ form_row(form.civilite, {'attr': {'data-action': 'client-formulaire#changerCivilite'}}) }}
 							</div>
 							<div class="col-6">
 								{{ form_row(form.nom, {'attr': {'data-client-formulaire-target': 'nom'}}) }}
@@ -101,22 +102,25 @@
 								{{ form_row(form.email) }}
 							</div>
 						</div>
-						<div class="row">
-							<div class="col">
-								{{ form_row(form.exonere) }}
+						{# Pour les entreprises uniquement #}
+						<div data-client-formulaire-target='block_entreprise' style='display:none'>
+							<div class="row">
+								<div class="col">
+									{{ form_row(form.exonere) }}
+								</div>
+								<div class="col">
+									{{ form_row(form.numimpot) }}
+								</div>
 							</div>
-							<div class="col">
-								{{ form_row(form.numimpot) }}
+							<div class="row">
+								<div class="col">
+									{{ form_row(form.rccm) }}
+								</div>
+								<div class="col">
+									{{ form_row(form.idnat) }}
+								</div>
+								
 							</div>
-						</div>
-						<div class="row">
-							<div class="col">
-								{{ form_row(form.rccm) }}
-							</div>
-							<div class="col">
-								{{ form_row(form.idnat) }}
-							</div>
-							
 						</div>
 					</div>
 

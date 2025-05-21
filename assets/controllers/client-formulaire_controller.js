@@ -8,6 +8,7 @@ export default class extends Controller {
         'displaycontact',
         'displaydocument',
         'btEnregistrer',
+        'block_entreprise',
     ];
 
     static values = {
@@ -15,6 +16,7 @@ export default class extends Controller {
         identreprise: Number,
         nbcontacts: Number,
         nbdocuments: Number,
+        civilite: Number,
     };
 
     connect() {
@@ -25,13 +27,34 @@ export default class extends Controller {
 
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));
-        
+        //On définit la civilité du client
+        this.setCivilite(this.civiliteValue);
         //On initialise les badges des onglets
         this.initBadges(
             this.nbcontactsValue,
             this.nbdocumentsValue,
         );
         this.displayTarget.textContent = "Prêt.";
+    }
+
+
+    changerCivilite = (event) => {
+        event.preventDefault(); // Empêche la soumission classique du formulaire
+        var selectedValue = event.target.selectedOptions[0].value;
+        console.log("J'ECOUTE:", selectedValue);
+        this.setCivilite(selectedValue);
+    }
+
+    /**
+     * 
+     * @param {Number} code 
+     */
+    setCivilite(code){
+        if (code != 2) {
+            this.block_entrepriseTarget.style.display = 'none';
+        } else {
+            this.block_entrepriseTarget.style.display = 'block';
+        }
     }
 
 
