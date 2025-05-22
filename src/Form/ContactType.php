@@ -37,9 +37,9 @@ class ContactType extends AbstractType
                 ],
             ])
             ->add('type', ChoiceType::class, [
-                'label' => "Type",
+                'label' => "Domaine d'activité",
                 'help' => "Dans quelle catégorie voudriez-vous classer ce contact?",
-                'expanded' => true,
+                'expanded' => false,
                 'choices'  => [
                     "Dans l'administration" => Contact::TYPE_CONTACT_ADMINISTRATION,
                     "Dans la production" => Contact::TYPE_CONTACT_PRODUCTION,

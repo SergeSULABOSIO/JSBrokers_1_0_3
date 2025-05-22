@@ -21,7 +21,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/contact", name: 'admin.contact.')]
 #[IsGranted('ROLE_USER')]
@@ -79,17 +79,14 @@ class ContactController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($contact);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("contact_creation_ok", [
-                ":contact" => $contact->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.contact.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
         }
         return $this->render('admin/contact/create.html.twig', [
             'pageName' => $this->translator->trans("contact_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'contact' => $contact,
             'activator' => $this->activator,
             'form' => $form,
         ]);
@@ -114,12 +111,8 @@ class ContactController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($contact); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("contact_edition_ok", [
-                ":contact" => $contact->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.contact.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok");
         }
         return $this->render('admin/contact/edit.html.twig', [
             'pageName' => $this->translator->trans("contact_page_name_update", [
