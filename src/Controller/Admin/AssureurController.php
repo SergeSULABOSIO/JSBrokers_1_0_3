@@ -88,6 +88,7 @@ class AssureurController extends AbstractController
         return $this->render('admin/assureur/create.html.twig', [
             'pageName' => $this->translator->trans("assureur_page_name_new"),
             'utilisateur' => $user,
+            'assureur' => $assureur,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
