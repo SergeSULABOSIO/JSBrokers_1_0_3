@@ -23,7 +23,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/avenant", name: 'admin.avenant.')]
 #[IsGranted('ROLE_USER')]
@@ -84,17 +84,15 @@ class AvenantController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($avenant);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("avenant_creation_ok", [
-                ":avenant" => $avenant->getReferencePolice(),
-            ]));
-            return $this->redirectToRoute("admin.avenant.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok__1986__" . count($avenant->getDocuments()));
+
         }
         return $this->render('admin/avenant/create.html.twig', [
             'pageName' => $this->translator->trans("avenant_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'avenant' => $avenant,
             'activator' => $this->activator,
             'form' => $form,
         ]);
@@ -119,12 +117,8 @@ class AvenantController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($avenant); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("avenant_edition_ok", [
-                ":avenant" => $avenant->getReferencePolice(),
-            ]));
-            return $this->redirectToRoute("admin.avenant.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return new Response("Ok__1986__" . count($avenant->getDocuments()));
         }
         return $this->render('admin/avenant/edit.html.twig', [
             'pageName' => $this->translator->trans("avenant_page_name_update", [
