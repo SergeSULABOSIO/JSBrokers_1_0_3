@@ -23,7 +23,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/risque", name: 'admin.risque.')]
 #[IsGranted('ROLE_USER')]
@@ -91,17 +91,19 @@ class RisqueController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($risque);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("risque_creation_ok", [
-                ":risque" => $risque->getNomComplet(),
-            ]));
-            return $this->redirectToRoute("admin.risque.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("risque_creation_ok", [
+            //     ":risque" => $risque->getNomComplet(),
+            // ]));
+            // return $this->redirectToRoute("admin.risque.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/risque/create.html.twig', [
             'pageName' => $this->translator->trans("risque_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'risque' => $risque,
             'activator' => $this->activator,
             'form' => $form,
         ]);
@@ -126,12 +128,13 @@ class RisqueController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($risque); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("risque_edition_ok", [
-                ":risque" => $risque->getNomComplet(),
-            ]));
-            return $this->redirectToRoute("admin.risque.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            // $this->addFlash("success", $this->translator->trans("risque_edition_ok", [
+            //     ":risque" => $risque->getNomComplet(),
+            // ]));
+            // return $this->redirectToRoute("admin.risque.index", [
+            //     'idEntreprise' => $idEntreprise,
+            // ]);
+            return new Response("Ok");
         }
         return $this->render('admin/risque/edit.html.twig', [
             'pageName' => $this->translator->trans("risque_page_name_update", [
