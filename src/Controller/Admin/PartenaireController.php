@@ -23,7 +23,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/partenaire", name: 'admin.partenaire.')]
 #[IsGranted('ROLE_USER')]
@@ -87,18 +87,17 @@ class PartenaireController extends AbstractController
             $this->manager->persist($partenaire);
             $this->manager->flush();
 
-            $this->addFlash("success", $this->translator->trans("partenaire_creation_ok", [
-                ":partenaire" => $partenaire->getNom(),
-            ]));
-
-            // return $this->redirectToRoute("admin.partenaire.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            return new Response(
+                "Ok__1986__" .
+                count($partenaire->getConditionPartages()) . "__1986__" . 
+                count($partenaire->getDocuments())
+            );
         }
         return $this->render('admin/partenaire/create.html.twig', [
             'pageName' => $this->translator->trans("partenaire_page_name_new"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
+            'partenaire' => $partenaire,
             'activator' => $this->activator,
             'form' => $form,
         ]);
@@ -123,12 +122,12 @@ class PartenaireController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($partenaire); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("partenaire_edition_ok", [
-                ":partenaire" => $partenaire->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.partenaire.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+             return new Response(
+                "Ok__1986__" .
+                count($partenaire->getConditionPartages()) . "__1986__" . 
+                count($partenaire->getDocuments())
+            );
         }
         return $this->render('admin/partenaire/edit.html.twig', [
             'pageName' => $this->translator->trans("partenaire_page_name_update", [
