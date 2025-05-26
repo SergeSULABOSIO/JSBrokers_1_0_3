@@ -21,13 +21,27 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'cotation-formulaire', 
+			'data-cotation-formulaire-idcotation-value': cotation.id,
+			'data-cotation-formulaire-identreprise-value': entreprise.id,
+
+			'data-cotation-formulaire-nbchargements-value': cotation.chargements|length,
+			'data-cotation-formulaire-nbrevenus-value': partenaire.revenus|length,
+			'data-cotation-formulaire-nbavenants-value': partenaire.avenants|length,
+			'data-cotation-formulaire-nbtranches-value': partenaire.tranches|length,
+			'data-cotation-formulaire-nbtaches-value': partenaire.taches|length,
+			'data-cotation-formulaire-nbdocuments-value': partenaire.documents|length,
+			}
+		}) 
+	}}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
 				<div class="row">
 					<div class="col-6">
-						{{ form_row(form.nom) }}
+						{{ form_row(form.nom, {'attr': {'data-cotation-formulaire-target': 'nom'}}) }}
 					</div>
 					<div class="col-2">
 						{{ form_row(form.duree) }}
@@ -88,10 +102,18 @@
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_widget(form.enregistrer) }}
+						{{ form_widget(form.enregistrer, {
+							'attr': {
+								'data-cotation-formulaire-target': 'btEnregistrer'
+								}
+							}) 
+						}}
 					</div>
 				</div>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-cotation-formulaire-target="display" style="display:block;">Prêt</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}
