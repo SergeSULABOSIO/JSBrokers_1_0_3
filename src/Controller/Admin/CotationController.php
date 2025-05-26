@@ -29,7 +29,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/cotation", name: 'admin.cotation.')]
 #[IsGranted('ROLE_USER')]
@@ -93,12 +93,16 @@ class CotationController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($cotation);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("cotation_creation_ok", [
-                ":cotation" => $cotation->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.cotation.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+
+            return new Response(
+                "Ok__1986__" . 
+                count($cotation->getChargements()) . "__1986__" . 
+                count($cotation->getRevenus()) . "__1986__" . 
+                count($cotation->getAvenants()) . "__1986__" . 
+                count($cotation->getTranches()) . "__1986__" . 
+                count($cotation->getTaches()) . "__1986__" . 
+                count($cotation->getDocuments())
+            );
         }
         return $this->render('admin/cotation/create.html.twig', [
             'pageName' => $this->translator->trans("cotation_page_name_new"),
@@ -144,26 +148,6 @@ class CotationController extends AbstractController
                 }
             }
 
-            // foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAss) {
-            //     /** @var Taxe $taxeAssureur */
-            //     $taxeAssureur = $taxeAss;
-            //     // dd($taxeAssureur, $cotation);
-            //     if ($cotation->getPiste()) {
-            //         /** @var Piste $piste */
-            //         $piste = $cotation->getPiste();
-            //         if ($piste->getRisque()) {
-            //             /** @var Risque $risque */
-            //             $risque = $piste->getRisque();
-            //             if ($risque->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE) {
-            //                 $tvaCom += $comNette * $taxeAssureur->getTauxIARD();
-            //             }else{
-            //                 $tvaCom += $comNette * $taxeAssureur->getTauxVIE();
-            //             }
-            //             // dd($comNette, $risque, $tvaCom);
-            //         }
-            //     }
-            // }
-
             $form->get('commissionNette')->setData($comNette);
             $form->get('commissionNetteTva')->setData($tvaCom);
             $form->get('commissionTTC')->setData($comNette + $tvaCom);
@@ -175,12 +159,16 @@ class CotationController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($cotation); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("cotation_edition_ok", [
-                ":cotation" => $cotation->getNom(),
-            ]));
-            // return $this->redirectToRoute("admin.cotation.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            
+            return new Response(
+                "Ok__1986__" . 
+                count($cotation->getChargements()) . "__1986__" . 
+                count($cotation->getRevenus()) . "__1986__" . 
+                count($cotation->getAvenants()) . "__1986__" . 
+                count($cotation->getTranches()) . "__1986__" . 
+                count($cotation->getTaches()) . "__1986__" . 
+                count($cotation->getDocuments())
+            );
         }
         return $this->render('admin/cotation/edit.html.twig', [
             'pageName' => $this->translator->trans("cotation_page_name_update", [
