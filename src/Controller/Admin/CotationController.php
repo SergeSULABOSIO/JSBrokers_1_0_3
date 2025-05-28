@@ -22,6 +22,7 @@ use App\Repository\EntrepriseRepository;
 use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Util\Json;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -96,13 +97,13 @@ class CotationController extends AbstractController
             $this->manager->flush();
 
             return new Response(
-                "Ok__1986__" . 
-                count($cotation->getChargements()) . "__1986__" . 
-                count($cotation->getRevenus()) . "__1986__" . 
-                count($cotation->getAvenants()) . "__1986__" . 
-                count($cotation->getTranches()) . "__1986__" . 
-                count($cotation->getTaches()) . "__1986__" . 
-                count($cotation->getDocuments())
+                "Ok__1986__" .
+                    count($cotation->getChargements()) . "__1986__" .
+                    count($cotation->getRevenus()) . "__1986__" .
+                    count($cotation->getAvenants()) . "__1986__" .
+                    count($cotation->getTranches()) . "__1986__" .
+                    count($cotation->getTaches()) . "__1986__" .
+                    count($cotation->getDocuments())
             );
         }
         return $this->render('admin/cotation/create.html.twig', [
@@ -160,36 +161,9 @@ class CotationController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($cotation); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            
 
-            $tabDataCotation = [
-                "reponse" => "Ok",
-                "nbChargements" => count($cotation->getChargements()),
-                "nbRevenus" => count($cotation->getRevenus()),
-                "nbAvenants" => count($cotation->getAvenants()),
-                "nbTranches" => count($cotation->getTranches()),
-                "nbDocuments" => count($cotation->getDocuments()),
-                "primeTTC" => $this->constante->Cotation_getMontant_prime_payable_par_client($cotation),
-                "commissionHT" => $this->constante->Cotation_getMontant_commission_ht($cotation, -1, false),
-                "commissionTaxe" => $this->constante->Cotation_getMontant_taxe_payable_par_assureur($cotation, -1, false),
-                "commissionTTC" => $this->constante->Cotation_getMontant_commission_ttc($cotation, -1, false),
-            ];
-
-            $jsonDataCotation = json_encode($tabDataCotation);
-            
-            // return new Response(
-            //     "Ok__1986__" . 
-            //     count($cotation->getChargements()) . "__1986__" . 
-            //     count($cotation->getRevenus()) . "__1986__" . 
-            //     count($cotation->getAvenants()) . "__1986__" . 
-            //     count($cotation->getTranches()) . "__1986__" . 
-            //     count($cotation->getTaches()) . "__1986__" . 
-            //     count($cotation->getDocuments())
-            // );
-
-            // return new JsonResponse($jsonDataCotation);
-            
-            return $this->json($jsonDataCotation);
+            //Le serveur renvoie un objet JSON
+            return $this->getJsonData($cotation);
         }
         return $this->render('admin/cotation/edit.html.twig', [
             'pageName' => $this->translator->trans("cotation_page_name_update", [
@@ -201,6 +175,23 @@ class CotationController extends AbstractController
             'activator' => $this->activator,
             'form' => $form,
         ]);
+    }
+
+    private function getJsonData(?Cotation $cotation)
+    {
+        return $this->json(json_encode([
+            "reponse" => "Ok",
+            "nbChargements" => count($cotation->getChargements()),
+            "nbRevenus" => count($cotation->getRevenus()),
+            "nbAvenants" => count($cotation->getAvenants()),
+            "nbTranches" => count($cotation->getTranches()),
+            "nbTaches" => count($cotation->getTaches()),
+            "nbDocuments" => count($cotation->getDocuments()),
+            "primeTTC" => "" . number_format($this->constante->Cotation_getMontant_prime_payable_par_client($cotation), 2, ",", " "),
+            "commissionHT" => "" . number_format($this->constante->Cotation_getMontant_commission_ht($cotation, -1, false), 2, ",", " "),
+            "commissionTaxe" => "" . number_format($this->constante->Cotation_getMontant_taxe_payable_par_assureur($cotation, -1, false), 2, ",", " "),
+            "commissionTTC" => "" . number_format($this->constante->Cotation_getMontant_commission_ttc($cotation, -1, false), 2, ",", " "),
+        ]));
     }
 
     #[Route('/remove/{idEntreprise}/{idCotation}', name: 'remove', requirements: ['idCotation' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]

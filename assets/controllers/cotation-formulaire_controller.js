@@ -34,7 +34,7 @@ export default class extends Controller {
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));
         this.displayTarget.textContent = "Prêt.";
-        
+
         //On initialise les badges des onglets
         this.initBadges(
             this.nbchargementsValue,
@@ -98,7 +98,7 @@ export default class extends Controller {
      */
     generateSpanElement = (texte) => {
         var span = document.createElement("span");
-        span.setAttribute('class', "badge rounded-pill text-bg-warning m-2 fw-bold");
+        span.setAttribute('class', "badge rounded-pill text-bg-warning fw-bold");
         span.innerText = texte;
         return span;
     }
@@ -110,19 +110,19 @@ export default class extends Controller {
      */
     ecouterClick = (event) => {
         console.log(event.target);
-        
+
         if (event.target.type != undefined) {
             if (event.target.type == "radio") {
                 //On laisse le comportement par défaut
-            }else if (event.target.type == "datetime-local") {
+            } else if (event.target.type == "datetime-local") {
                 //On laisse le comportement par défaut
-            }else if (event.target.type == "submit") {
+            } else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
                     console.log("On a cliqué sur un bouton Enregistré.");
                     this.enregistrerCotation(event);
                 }
-            }else{
+            } else {
                 event.preventDefault(); // Empêche la soumission classique du formulaire
             }
         }
@@ -146,12 +146,14 @@ export default class extends Controller {
             method: this.element.method,
             body: formData,
         })
-            .then(response => response.text()) //.json()
+            .then(response => response.json()) //.json()
             .then(data => {
-                console.log(data);
+                const userObject = JSON.parse(data);
+                console.log(userObject);
+
                 event.target.disabled = false;
                 this.displayTarget.style.display = 'block';
-                
+
                 // Traitez la réponse ici
                 if (this.isSaved == true) {
                     this.displayTarget.textContent = "Prêt.";
@@ -160,14 +162,13 @@ export default class extends Controller {
                 //actualisation des autres composant du formulaire ainsi que du panier
                 const tabData = data.split("__1986__");
                 this.initBadges(
-                    tabData[1], 
-                    tabData[2],
-                    tabData[3],
-                    tabData[4],
-                    tabData[5],
-                    tabData[6],
+                    userObject.nbChargements, 
+                    userObject.nbRevenus,
+                    userObject.nbAvenants,
+                    userObject.nbTranches,
+                    userObject.nbTaches,
+                    userObject.nbDocuments,
                 );
-
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
