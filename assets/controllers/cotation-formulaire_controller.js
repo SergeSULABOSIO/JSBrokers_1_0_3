@@ -153,14 +153,9 @@ export default class extends Controller {
 
                 event.target.disabled = false;
                 this.displayTarget.style.display = 'block';
+                this.displayTarget.textContent = "Prêt.";
 
                 // Traitez la réponse ici
-                if (this.isSaved == true) {
-                    this.displayTarget.textContent = "Prêt.";
-                }
-
-                //actualisation des autres composant du formulaire ainsi que du panier
-                const tabData = data.split("__1986__");
                 this.initBadges(
                     userObject.nbChargements, 
                     userObject.nbRevenus,
