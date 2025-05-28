@@ -153,13 +153,13 @@
 						{% if cotation != null %}
 							<div class="row">
 								<div class="col">
-									{{ form_row(form.commissionNette) }}
+									{{ form_row(form.commissionNette, {'attr': {'data-cotation-formulaire-target': 'commissionNette'}}) }}
 								</div>
 								<div class="col">
-									{{ form_row(form.commissionNetteTva) }}
+									{{ form_row(form.commissionNetteTva, {'attr': {'data-cotation-formulaire-target': 'commissionNetteTva'}}) }}
 								</div>
 								<div class="col">
-									{{ form_row(form.commissionTTC) }}
+									{{ form_row(form.commissionTTC, {'attr': {'data-cotation-formulaire-target': 'commissionTTC'}}) }}
 								</div>
 							</div>
 						{% endif %}

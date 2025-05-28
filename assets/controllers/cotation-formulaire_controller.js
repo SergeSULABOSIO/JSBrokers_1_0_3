@@ -5,6 +5,9 @@ export default class extends Controller {
     static targets = [
         'nom',
         'prime',
+        'commissionNette',
+        'commissionNetteTva',
+        'commissionTTC',
         'display',
         'displayprime',
         'displaycommission',
@@ -165,8 +168,11 @@ export default class extends Controller {
                     userObject.nbTaches,
                     userObject.nbDocuments,
                 );
-                
+
                 this.primeTarget.value = userObject.primeTTC;
+                this.commissionNetteTarget.value = userObject.commissionHT;
+                this.commissionNetteTvaTarget.value = userObject.commissionTaxe;
+                this.commissionTTCTarget.value = userObject.commissionTTC;
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
