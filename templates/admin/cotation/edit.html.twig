@@ -137,11 +137,9 @@
 					{# Onglet Chargement pour prime - corps #}
 					<div class="tab-pane fade m-2" id="nav-chargement" role="tabpanel" aria-labelledby="nav-chargement-tab" tabindex="1">
 						<div class="row">
-							{% if cotation != null %}
-								<div class="col">
-									{{ form_row(form.prime) }}
-								</div>
-							{% endif %}
+							<div class="col">
+								{{ form_row(form.prime, {'attr': {'data-cotation-formulaire-target': 'prime'}}) }}
+							</div>
 						</div>
 						<div class="row">
 							<div class="col">

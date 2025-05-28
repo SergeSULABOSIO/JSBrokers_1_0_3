@@ -4,6 +4,7 @@ import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l
 export default class extends Controller {
     static targets = [
         'nom',
+        'prime',
         'display',
         'displayprime',
         'displaycommission',
@@ -164,6 +165,8 @@ export default class extends Controller {
                     userObject.nbTaches,
                     userObject.nbDocuments,
                 );
+                
+                this.primeTarget.value = userObject.primeTTC;
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
