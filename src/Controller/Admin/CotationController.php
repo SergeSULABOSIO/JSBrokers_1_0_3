@@ -29,6 +29,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/cotation", name: 'admin.cotation.')]
@@ -160,15 +161,35 @@ class CotationController extends AbstractController
             $this->manager->persist($cotation); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
             
-            return new Response(
-                "Ok__1986__" . 
-                count($cotation->getChargements()) . "__1986__" . 
-                count($cotation->getRevenus()) . "__1986__" . 
-                count($cotation->getAvenants()) . "__1986__" . 
-                count($cotation->getTranches()) . "__1986__" . 
-                count($cotation->getTaches()) . "__1986__" . 
-                count($cotation->getDocuments())
-            );
+
+            $tabDataCotation = [
+                "reponse" => "Ok",
+                "nbChargements" => count($cotation->getChargements()),
+                "nbRevenus" => count($cotation->getRevenus()),
+                "nbAvenants" => count($cotation->getAvenants()),
+                "nbTranches" => count($cotation->getTranches()),
+                "nbDocuments" => count($cotation->getDocuments()),
+                "primeTTC" => $this->constante->Cotation_getMontant_prime_payable_par_client($cotation),
+                "commissionHT" => $this->constante->Cotation_getMontant_commission_ht($cotation, -1, false),
+                "commissionTaxe" => $this->constante->Cotation_getMontant_taxe_payable_par_assureur($cotation, -1, false),
+                "commissionTTC" => $this->constante->Cotation_getMontant_commission_ttc($cotation, -1, false),
+            ];
+
+            $jsonDataCotation = json_encode($tabDataCotation);
+            
+            // return new Response(
+            //     "Ok__1986__" . 
+            //     count($cotation->getChargements()) . "__1986__" . 
+            //     count($cotation->getRevenus()) . "__1986__" . 
+            //     count($cotation->getAvenants()) . "__1986__" . 
+            //     count($cotation->getTranches()) . "__1986__" . 
+            //     count($cotation->getTaches()) . "__1986__" . 
+            //     count($cotation->getDocuments())
+            // );
+
+            // return new JsonResponse($jsonDataCotation);
+            
+            return $this->json($jsonDataCotation);
         }
         return $this->render('admin/cotation/edit.html.twig', [
             'pageName' => $this->translator->trans("cotation_page_name_update", [

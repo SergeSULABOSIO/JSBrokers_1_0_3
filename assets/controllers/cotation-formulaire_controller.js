@@ -151,7 +151,7 @@ export default class extends Controller {
                 console.log(data);
                 event.target.disabled = false;
                 this.displayTarget.style.display = 'block';
-
+                
                 // Traitez la réponse ici
                 if (this.isSaved == true) {
                     this.displayTarget.textContent = "Prêt.";
