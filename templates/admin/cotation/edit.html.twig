@@ -150,19 +150,22 @@
 
 					{# Onglet Revenu - corps #}
 					<div class="tab-pane fade m-2" id="nav-revenu" role="tabpanel" aria-labelledby="nav-revenu-tab" tabindex="2">
-						{% if cotation != null %}
-							<div class="row">
-								<div class="col">
-									{{ form_row(form.commissionNette, {'attr': {'data-cotation-formulaire-target': 'commissionNette'}}) }}
-								</div>
-								<div class="col">
-									{{ form_row(form.commissionNetteTva, {'attr': {'data-cotation-formulaire-target': 'commissionNetteTva'}}) }}
-								</div>
-								<div class="col">
-									{{ form_row(form.commissionTTC, {'attr': {'data-cotation-formulaire-target': 'commissionTTC'}}) }}
-								</div>
+						<div class="row">
+							<div class="col-8">
+								{% include 'admin/cotation/view/revenucourtier.html.twig' %}
 							</div>
-						{% endif %}
+						</div>
+						<div class="row">
+							<div class="col">
+								{{ form_row(form.commissionNette, {'attr': {'data-cotation-formulaire-target': 'commissionNette'}}) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.commissionNetteTva, {'attr': {'data-cotation-formulaire-target': 'commissionNetteTva'}}) }}
+							</div>
+							<div class="col">
+								{{ form_row(form.commissionTTC, {'attr': {'data-cotation-formulaire-target': 'commissionTTC'}}) }}
+							</div>
+						</div>
 						<div class="row">
 							<div class="col">
 								{{ form_row(form.revenus) }}
