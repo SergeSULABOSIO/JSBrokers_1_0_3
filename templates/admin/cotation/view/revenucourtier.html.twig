@@ -5,42 +5,67 @@
 				<div class="fw-bold fw-italic text-dark">Assiette partageable</div>
 				<span class="fw-italic">Part de la commision partageable avec l'intermédiaire</span>
 			</div>
-			<span class="fw-bold">14 000 USD</span>
+			<span class="fw-bold">
+				{{ constante.Cotation_getMontant_commission_pure(cotation, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale)}}
+			</span>
 		</li>
 		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
 			<div class="ms-2 text-secondary">
 				<div class="fw-bold fw-italic text-dark">Commission Pure</div>
 				<span class="fw-italic">Commission hors toutes les taxes</span>
 			</div>
-			<span class="fw-bold">14 000 USD</span>
+			<span class="fw-bold">
+				{{ constante.Cotation_getMontant_commission_pure(cotation, -1, true)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale)}}
+			</span>
 		</li>
-		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
-			<div class="ms-2 text-secondary">
-				<div class="fw-bold fw-italic text-dark">Frais Arca</div>
-				<span class="fw-italic">Taxe dûe à l'Autorité de régulation, payable par le courtier</span>
-			</div>
-			<span class="fw-bold">14 000 USD</span>
-		</li>
+		{% for taxe in serviceTaxe.taxes %}
+			{% if taxe.redevable == 1 %}
+				<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+					<div class="ms-2 text-secondary">
+						<div class="fw-bold fw-italic text-dark">
+							{{ taxe.code }}
+						</div>
+						<span class="fw-italic">Taxe dûe à {{ taxe.autoriteFiscales[0].nom }}, payable par le courtier</span>
+					</div>
+					<span class="fw-bold">
+						{{ constante.Cotation_getMontant_taxe_payable_par_courtier(cotation, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+					</span>
+				</li>
+			{% endif %}
+		{% endfor %}
 		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
 			<div class="ms-2 text-secondary">
 				<div class="fw-bold fw-italic text-dark">Commission Hors Taxe</div>
 				<span class="fw-italic">Commision hors taxe, mais cele-ci contient la taxe payable par le courtier.</span>
 			</div>
-			<span class="fw-bold">14 000 USD</span>
+			<span class="fw-bold">
+				{{ constante.Cotation_getMontant_commission_ht(cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+			</span>
 		</li>
-		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
-			<div class="ms-2 text-secondary">
-				<div class="fw-bold fw-italic text-dark">TVA (16%)</div>
-				<span class="fw-italic">Taxe payable par le courtier mais collectée au près de l'assureur.</span>
-			</div>
-			<span class="fw-bold">14 000 USD</span>
-		</li>
+		{% for taxe in serviceTaxe.taxes %}
+			{% if taxe.redevable == 0 %}
+				<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+					<div class="ms-2 text-secondary">
+						<div class="fw-bold fw-italic text-dark">
+							{{ taxe.code }}
+						</div>
+						<span class="fw-italic">Taxe due à {{ taxe.autoriteFiscales[0].nom }}, payable par le courtier mais collectée au près de l'assureur.</span>
+					</div>
+					<span class="fw-bold">
+						{{ constante.Cotation_getMontant_taxe_payable_par_assureur(cotation, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+					</span>
+				</li>
+			{% endif %}
+		{% endfor %}
+		
 		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
 			<div class="ms-2 text-secondary">
 				<div class="fw-bold fw-italic text-dark">Commission TTC</div>
 				<span class="fw-italic">Commission incluant toutes les taxes au profit du courtier.</span>
 			</div>
-			<span class="fw-bold">14 000 USD</span>
+			<span class="fw-bold">
+				{{ constante.Cotation_getMontant_commission_ttc(cotation, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+			</span>
 		</li>
 	</ul>
 </small>

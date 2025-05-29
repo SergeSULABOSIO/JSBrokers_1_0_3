@@ -172,6 +172,9 @@ class CotationController extends AbstractController
             'utilisateur' => $user,
             'cotation' => $cotation,
             'entreprise' => $entreprise,
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
             'activator' => $this->activator,
             'form' => $form,
         ]);
