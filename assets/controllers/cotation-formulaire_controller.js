@@ -15,6 +15,7 @@ export default class extends Controller {
         'displayavenant',
         'displaydocument',
         'displaytache',
+        'displayrevenu',
         'btEnregistrer',
     ];
 
@@ -132,6 +133,24 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * 
+     * @param {Number} idcotation 
+     */
+    updateDisplayRevenu(idcotation) {
+        this.displayTarget.textContent = "Actualisation du displayRevenu...";
+        fetch("/admin/cotation/viewRevenu/" + idcotation)
+            .then(response => response.text()) //.json()
+            .then(data => {
+                // console.log(data);
+                this.displayTarget.textContent = "Prêt.";
+                this.displayrevenuTarget.innerHTML = data;
+            })
+            .catch(errorMessage => {
+                console.error("Réponse d'erreur du serveur :", errorMessage);
+            });
+    }
+
 
     /**
      * 
@@ -161,7 +180,7 @@ export default class extends Controller {
 
                 // Traitez la réponse ici
                 this.initBadges(
-                    userObject.nbChargements, 
+                    userObject.nbChargements,
                     userObject.nbRevenus,
                     userObject.nbAvenants,
                     userObject.nbTranches,
@@ -173,6 +192,7 @@ export default class extends Controller {
                 this.commissionNetteTarget.value = userObject.commissionHT;
                 this.commissionNetteTvaTarget.value = userObject.commissionTaxe;
                 this.commissionTTCTarget.value = userObject.commissionTTC;
+                this.updateDisplayRevenu(userObject.idcotation);
             })
             .catch(errorMessage => {
                 event.target.disabled = false;

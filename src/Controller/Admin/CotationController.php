@@ -180,11 +180,32 @@ class CotationController extends AbstractController
         ]);
     }
 
+
+    #[Route('/viewRevenu/{idCotation}', name: 'viewRevenu', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function viewRevenu($idCotation)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Cotation $cotation */
+        $cotation = $this->cotationRepository->find($idCotation);
+
+        return $this->render('admin/cotation/view/revenucourtier.html.twig', [
+            'utilisateur' => $user,
+            'cotation' => $cotation,
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
+            'activator' => $this->activator,
+        ]);
+    }
+
     private function getJsonData(?Cotation $cotation)
     {
         return $this->json(json_encode([
             "reponse" => "Ok",
             "nbChargements" => count($cotation->getChargements()),
+            "idcotation" => $cotation->getId(),
             "nbRevenus" => count($cotation->getRevenus()),
             "nbAvenants" => count($cotation->getAvenants()),
             "nbTranches" => count($cotation->getTranches()),
