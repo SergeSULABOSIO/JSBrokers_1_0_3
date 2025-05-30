@@ -122,6 +122,11 @@
 					{# Onglet Principale - corps #}
 					<div class="tab-pane fade m-2 show active" id="nav-cotation" role="tabpanel" aria-labelledby="nav-cotation-tab" tabindex="0">
 						<div class="row">
+							<div class="col" data-cotation-formulaire-target = "viewpiste">
+								{% include 'admin/piste/view/infos.html.twig' %}
+							</div>
+						</div>
+						<div class="row">
 							<div class="col-6">
 								{{ form_row(form.nom, {'attr': {'data-cotation-formulaire-target': 'nom'}}) }}
 							</div>
@@ -137,8 +142,8 @@
 					{# Onglet Chargement pour prime - corps #}
 					<div class="tab-pane fade m-2" id="nav-chargement" role="tabpanel" aria-labelledby="nav-chargement-tab" tabindex="1">
 						<div class="row">
-							<div class="col">
-								{{ form_row(form.prime, {'attr': {'data-cotation-formulaire-target': 'prime'}}) }}
+							<div class="col" data-cotation-formulaire-target = "viewprime">
+								{% include 'admin/cotation/view/prime.html.twig' %}
 							</div>
 						</div>
 						<div class="row">
@@ -151,7 +156,7 @@
 					{# Onglet Revenu - corps #}
 					<div class="tab-pane fade m-2" id="nav-revenu" role="tabpanel" aria-labelledby="nav-revenu-tab" tabindex="2">
 						<div class="row">
-							<div class="col" data-cotation-formulaire-target = "displayrevenu">
+							<div class="col" data-cotation-formulaire-target = "viewrevenu">
 								{% include 'admin/cotation/view/revenucourtier.html.twig' %}
 							</div>
 						</div>

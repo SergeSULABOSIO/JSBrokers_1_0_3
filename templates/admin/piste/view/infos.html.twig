@@ -1,0 +1,68 @@
+<div class="fw-bold text-secondary mb-2">
+	{{ include('segments/icones/actions/information.html.twig', {size:'17px'}) }}
+	Aperçu de la piste
+</div>
+<small>
+	<ul class="list-group list-group-flush">
+		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+			<div class="ms-2 text-secondary">
+				<div class="fw-bold fw-italic text-dark">
+					Intitulé
+				</div>
+			</div>
+			<span class="fw-bold">
+				{{ piste.nom }}
+			</span>
+		</li>
+		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+			<div class="ms-2 text-secondary">
+				<div class="fw-bold fw-italic text-dark">
+					Description
+				</div>
+			</div>
+			<span class="fw-bold">
+				{{ piste.descriptionDuRisque }}
+			</span>
+		</li>
+		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+			<div class="ms-2 text-secondary">
+				<div class="fw-bold fw-italic text-dark">
+					Risque
+				</div>
+			</div>
+			<span class="fw-bold">
+				{{ piste.risque.nomComplet }}
+			</span>
+		</li>
+		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+			<div class="ms-2 text-secondary">
+				<div class="fw-bold fw-italic text-dark">
+					Client
+				</div>
+			</div>
+			<span class="fw-bold">
+				{{ piste.client.nom }}
+			</span>
+		</li>
+		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+			<div class="ms-2 text-secondary">
+				<div class="fw-bold fw-italic text-dark">
+					Prime potentielle
+				</div>
+			</div>
+			<span class="fw-bold">
+				{{ piste.primePotentielle|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+			</span>
+		</li>
+		<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+			<div class="ms-2 text-secondary">
+				<div class="fw-bold fw-italic text-dark">
+					Revenu potentiel
+				</div>
+			</div>
+			<span class="fw-bold">
+				{{ piste.commissionPotentielle|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+			</span>
+		</li>
+	</ul>
+</small>

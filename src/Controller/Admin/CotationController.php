@@ -131,31 +131,7 @@ class CotationController extends AbstractController
         $form = $this->createForm(CotationType::class, $cotation, [
             "cotation" => $cotation
         ]);
-        if ($cotation) {
-            $form->get('prime')->setData($this->constante->Cotation_getMontant_prime_payable_par_client($cotation));
-
-            $comNette = $this->constante->Cotation_getMontant_commission_ht($cotation, -1, false);
-            $tvaCom = 0;
-
-            if ($cotation->getPiste()) {
-                /** @var Piste $piste */
-                $piste = $cotation->getPiste();
-                if ($piste->getRisque()) {
-                    /** @var Risque $risque */
-                    $tvaCom = $this->serviceTaxes->getMontantTaxe(
-                        $comNette,
-                        $piste->getRisque()->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE,
-                        true
-                    );
-                }
-            }
-
-            // $form->get('commissionNette')->setData($comNette);
-            // $form->get('commissionNetteTva')->setData($tvaCom);
-            // $form->get('commissionTTC')->setData($comNette + $tvaCom);
-
-            // dd($this->serviceTaxes->getTaxesPayableParCourtier());
-        }
+        
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -171,6 +147,7 @@ class CotationController extends AbstractController
             ]),
             'utilisateur' => $user,
             'cotation' => $cotation,
+            'piste' => $cotation->getPiste(),
             'entreprise' => $entreprise,
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
@@ -191,6 +168,25 @@ class CotationController extends AbstractController
         $cotation = $this->cotationRepository->find($idCotation);
 
         return $this->render('admin/cotation/view/revenucourtier.html.twig', [
+            'utilisateur' => $user,
+            'cotation' => $cotation,
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
+            'activator' => $this->activator,
+        ]);
+    }
+
+    #[Route('/viewPrime/{idCotation}', name: 'viewPrime', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function viewPrime($idCotation)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        
+        /** @var Cotation $cotation */
+        $cotation = $this->cotationRepository->find($idCotation);
+
+        return $this->render('admin/cotation/view/prime.html.twig', [
             'utilisateur' => $user,
             'cotation' => $cotation,
             'constante' => $this->constante,

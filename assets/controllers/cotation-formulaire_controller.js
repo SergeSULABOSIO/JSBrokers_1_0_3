@@ -4,7 +4,7 @@ import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l
 export default class extends Controller {
     static targets = [
         'nom',
-        'prime',
+        // 'prime',
         // 'commissionNette',
         // 'commissionNetteTva',
         // 'commissionTTC',
@@ -15,7 +15,8 @@ export default class extends Controller {
         'displayavenant',
         'displaydocument',
         'displaytache',
-        'displayrevenu',
+        'viewrevenu',
+        'viewprime',
         'btEnregistrer',
     ];
 
@@ -137,14 +138,33 @@ export default class extends Controller {
      * 
      * @param {Number} idcotation 
      */
-    updateDisplayRevenu(idcotation) {
+    updateViewRevenu(idcotation) {
         this.displayTarget.textContent = "Actualisation du displayRevenu...";
         fetch("/admin/cotation/viewRevenu/" + idcotation)
             .then(response => response.text()) //.json()
             .then(data => {
                 // console.log(data);
                 this.displayTarget.textContent = "Prêt.";
-                this.displayrevenuTarget.innerHTML = data;
+                this.viewrevenuTarget.innerHTML = data;
+            })
+            .catch(errorMessage => {
+                console.error("Réponse d'erreur du serveur :", errorMessage);
+            });
+    }
+
+
+    /**
+     * 
+     * @param {Number} idcotation 
+     */
+    updateViewPrime(idcotation) {
+        this.displayTarget.textContent = "Actualisation du viewPrime...";
+        fetch("/admin/cotation/viewPrime/" + idcotation)
+            .then(response => response.text()) //.json()
+            .then(data => {
+                // console.log(data);
+                this.displayTarget.textContent = "Prêt.";
+                this.viewprimeTarget.innerHTML = data;
             })
             .catch(errorMessage => {
                 console.error("Réponse d'erreur du serveur :", errorMessage);
@@ -188,11 +208,12 @@ export default class extends Controller {
                     userObject.nbDocuments,
                 );
 
-                this.primeTarget.value = userObject.primeTTC;
+                // this.primeTarget.value = userObject.primeTTC;
                 // this.commissionNetteTarget.value = userObject.commissionHT;
                 // this.commissionNetteTvaTarget.value = userObject.commissionTaxe;
                 // this.commissionTTCTarget.value = userObject.commissionTTC;
-                this.updateDisplayRevenu(userObject.idcotation);
+                this.updateViewPrime(userObject.idcotation);
+                this.updateViewRevenu(userObject.idcotation);
             })
             .catch(errorMessage => {
                 event.target.disabled = false;

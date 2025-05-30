@@ -67,21 +67,21 @@ class CotationType extends AbstractType
                 ],
             ]);
 
-        if ($options['cotation'] != null) {
-            $builder
-                //champ non mappé
-                ->add('prime', MoneyType::class, [
-                    'label' => "Prime TTC",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'grouping' => true,
-                    'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
-                    'mapped' => false,
-                    'disabled' => true,
-                    'attr' => [
-                        'placeholder' => "Prime totale",
-                    ],
-                ]);
-        }
+        // if ($options['cotation'] != null) {
+            // $builder
+            //     //champ non mappé
+            //     ->add('prime', MoneyType::class, [
+            //         'label' => "Prime TTC",
+            //         'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+            //         'grouping' => true,
+            //         'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
+            //         'mapped' => false,
+            //         'disabled' => true,
+            //         'attr' => [
+            //             'placeholder' => "Prime totale",
+            //         ],
+            //     ]);
+        // }
 
 
         $builder
