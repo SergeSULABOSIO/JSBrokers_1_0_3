@@ -5,9 +5,9 @@ export default class extends Controller {
     static targets = [
         'nom',
         'prime',
-        'commissionNette',
-        'commissionNetteTva',
-        'commissionTTC',
+        // 'commissionNette',
+        // 'commissionNetteTva',
+        // 'commissionTTC',
         'display',
         'displayprime',
         'displaycommission',
@@ -189,9 +189,9 @@ export default class extends Controller {
                 );
 
                 this.primeTarget.value = userObject.primeTTC;
-                this.commissionNetteTarget.value = userObject.commissionHT;
-                this.commissionNetteTvaTarget.value = userObject.commissionTaxe;
-                this.commissionTTCTarget.value = userObject.commissionTTC;
+                // this.commissionNetteTarget.value = userObject.commissionHT;
+                // this.commissionNetteTvaTarget.value = userObject.commissionTaxe;
+                // this.commissionTTCTarget.value = userObject.commissionTTC;
                 this.updateDisplayRevenu(userObject.idcotation);
             })
             .catch(errorMessage => {

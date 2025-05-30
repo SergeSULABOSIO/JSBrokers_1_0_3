@@ -2646,11 +2646,13 @@ class Constante
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     /** @var RevenuPourCourtier $revenu */
                     $revenu = $this->revenuPourCourtierRepository->find($article->getIdPoste());
-                    if ($revenu->getTypeRevenu()) {
-                        if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR || $revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
-                            //Quelle proportion de la note a-t-elle été payée (100%?)
-                            $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
-                            $montant += $proportionPaiement * $article->getMontant();
+                    if ($revenu != null) {
+                        if ($revenu->getTypeRevenu()) {
+                            if ($revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_ASSUREUR || $revenu->getTypeRevenu()->getRedevable() == TypeRevenu::REDEVABLE_CLIENT) {
+                                //Quelle proportion de la note a-t-elle été payée (100%?)
+                                $proportionPaiement = $this->Note_getMontant_paye($note) / $this->Note_getMontant_payable($note);
+                                $montant += $proportionPaiement * $article->getMontant();
+                            }
                         }
                     }
                 }

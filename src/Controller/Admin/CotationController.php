@@ -150,9 +150,9 @@ class CotationController extends AbstractController
                 }
             }
 
-            $form->get('commissionNette')->setData($comNette);
-            $form->get('commissionNetteTva')->setData($tvaCom);
-            $form->get('commissionTTC')->setData($comNette + $tvaCom);
+            // $form->get('commissionNette')->setData($comNette);
+            // $form->get('commissionNetteTva')->setData($tvaCom);
+            // $form->get('commissionTTC')->setData($comNette + $tvaCom);
 
             // dd($this->serviceTaxes->getTaxesPayableParCourtier());
         }

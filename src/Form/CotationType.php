@@ -106,43 +106,43 @@ class CotationType extends AbstractType
                 ],
             ]);
 
-        if ($options['cotation'] != null) {
-            $builder
-                //champ non mappé
-                ->add('commissionNette', MoneyType::class, [
-                    'label' => "Commission totale ht",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'grouping' => true,
-                    'help' => "La somme des revenus ci-haut.",
-                    'mapped' => false,
-                    'disabled' => true,
-                    'attr' => [
-                        'placeholder' => "Commission totale ht",
-                    ],
-                ])
-                //champ non mappé
-                ->add('commissionNetteTva', MoneyType::class, [
-                    'label' => "Taxes",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'grouping' => true,
-                    'mapped' => false,
-                    'disabled' => true,
-                    'attr' => [
-                        'placeholder' => "Taxes",
-                    ],
-                ])
-                //champ non mappé
-                ->add('commissionTTC', MoneyType::class, [
-                    'label' => "Commission TTC",
-                    'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    'grouping' => true,
-                    'mapped' => false,
-                    'disabled' => true,
-                    'attr' => [
-                        'placeholder' => "Commission TTC",
-                    ],
-                ]);
-        }
+        // if ($options['cotation'] != null) {
+        //     $builder
+        //         //champ non mappé
+        //         ->add('commissionNette', MoneyType::class, [
+        //             'label' => "Commission totale ht",
+        //             'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+        //             'grouping' => true,
+        //             'help' => "La somme des revenus ci-haut.",
+        //             'mapped' => false,
+        //             'disabled' => true,
+        //             'attr' => [
+        //                 'placeholder' => "Commission totale ht",
+        //             ],
+        //         ])
+        //         //champ non mappé
+        //         ->add('commissionNetteTva', MoneyType::class, [
+        //             'label' => "Taxes",
+        //             'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+        //             'grouping' => true,
+        //             'mapped' => false,
+        //             'disabled' => true,
+        //             'attr' => [
+        //                 'placeholder' => "Taxes",
+        //             ],
+        //         ])
+        //         //champ non mappé
+        //         ->add('commissionTTC', MoneyType::class, [
+        //             'label' => "Commission TTC",
+        //             'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+        //             'grouping' => true,
+        //             'mapped' => false,
+        //             'disabled' => true,
+        //             'attr' => [
+        //                 'placeholder' => "Commission TTC",
+        //             ],
+        //         ]);
+        // }
 
 
         $builder
