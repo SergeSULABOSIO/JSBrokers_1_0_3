@@ -21,7 +21,18 @@
 
 {% block body %}
 	{# {{ form(form) }} #}
-	{{ form_start(form) }}
+	{{ form_start(form, {
+		'attr': {
+			'data-controller': 'notificationsinistre-formulaire', 
+			'data-notificationsinistre-formulaire-idpiste-value': notificationsinistre.id,
+			'data-notificationsinistre-formulaire-identreprise-value': entreprise.id,
+			'data-notificationsinistre-formulaire-nboffres-value': notificationsinistre.offreIndemnisationSinistres|length,
+			'data-notificationsinistre-formulaire-nbcontacts-value': notificationsinistre.contacts|length,
+			'data-notificationsinistre-formulaire-nbtaches-value': notificationsinistre.taches|length,
+			'data-notificationsinistre-formulaire-nbdocuments-value': notificationsinistre.pieces|length,
+			}
+		}) 
+	}}
 	<div class="d-flex shadow-sm card bg-body sensible bg-white">
 		<div class="card-body">
 			<div>
@@ -90,7 +101,7 @@
 								{{ form_row(form.referencePolice) }}
 							</div>
 							<div class="col">
-								{{ form_row(form.referenceSinistre) }}
+								{{ form_row(form.referenceSinistre, {'attr': {'data-notificationsinistre-formulaire-target': 'reference'}}) }}
 							</div>
 						</div>
 						<div class="row">
@@ -169,10 +180,18 @@
 				</div>
 				<div class="row">
 					<div class="col">
-						{{ form_row(form.enregistrer) }}
+						{{ form_row(form.enregistrer, {
+							'attr': {
+								'data-notificationsinistre-formulaire-target': 'btEnregistrer'
+								}
+							}) 
+						}}
 					</div>
 				</div>
 			</div>
+			<small>
+				<span class="text-secondary m-2 fw-bold" data-notificationsinistre-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+			</small>
 		</div>
 	</div>
 	{{ form_end(form) }}
