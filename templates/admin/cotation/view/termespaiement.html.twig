@@ -9,7 +9,7 @@
 				<div class="ms-2 text-secondary">
 					<div class="fw-bold fw-italic text-dark">
 						{{ include('segments/icones/tranche.html.twig', {size:'16px'}) }}
-						{{ tranche.nom }}, due à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+						{{ tranche.nom }}, dûe à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
 					</div>
 					<span class="fw-italic">
 						Prime dûe: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
