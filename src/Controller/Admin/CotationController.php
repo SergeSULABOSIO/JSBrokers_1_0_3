@@ -158,6 +158,26 @@ class CotationController extends AbstractController
     }
 
 
+    #[Route('/viewtermespaiement/{idCotation}', name: 'viewtermespaiement', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function viewtermespaiement($idCotation)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Cotation $cotation */
+        $cotation = $this->cotationRepository->find($idCotation);
+
+        return $this->render('admin/cotation/view/termespaiement.html.twig', [
+            'utilisateur' => $user,
+            'cotation' => $cotation,
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
+            'activator' => $this->activator,
+        ]);
+    }
+
+
     #[Route('/viewRevenu/{idCotation}', name: 'viewRevenu', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function viewRevenu($idCotation)
     {

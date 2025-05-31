@@ -17,6 +17,7 @@ export default class extends Controller {
         'displaytache',
         'viewrevenu',
         'viewprime',
+        'viewtermespaiement',
         'btEnregistrer',
     ];
 
@@ -157,6 +158,25 @@ export default class extends Controller {
      * 
      * @param {Number} idcotation 
      */
+    updateViewTermesPaiement(idcotation) {
+        this.displayTarget.textContent = "Actualisation des termes de paiement...";
+        fetch("/admin/cotation/viewtermespaiement/" + idcotation)
+            .then(response => response.text()) //.json()
+            .then(data => {
+                // console.log(data);
+                this.displayTarget.textContent = "Prêt.";
+                this.viewtermespaiementTarget.innerHTML = data;
+            })
+            .catch(errorMessage => {
+                console.error("Réponse d'erreur du serveur :", errorMessage);
+            });
+    }
+
+
+    /**
+     * 
+     * @param {Number} idcotation 
+     */
     updateViewPrime(idcotation) {
         this.displayTarget.textContent = "Actualisation du viewPrime...";
         fetch("/admin/cotation/viewPrime/" + idcotation)
@@ -214,6 +234,7 @@ export default class extends Controller {
                 // this.commissionTTCTarget.value = userObject.commissionTTC;
                 this.updateViewPrime(userObject.idcotation);
                 this.updateViewRevenu(userObject.idcotation);
+                this.updateViewTermesPaiement(userObject.idcotation);
             })
             .catch(errorMessage => {
                 event.target.disabled = false;

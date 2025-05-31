@@ -1,0 +1,37 @@
+<div class="fw-bold text-secondary mb-2">
+	{{ include('segments/icones/actions/information.html.twig', {size:'17px'}) }}
+	Aperçu des termes de paiement
+</div>
+<small>
+	<ul class="list-group list-group-flush">
+		{% for tranche in cotation.tranches %}
+			<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+				<div class="ms-2 text-secondary">
+					<div class="fw-bold fw-italic text-dark">
+						{{ include('segments/icones/tranche.html.twig', {size:'16px'}) }}
+						{{ tranche.nom }}, due à partir du {{tranche.payableAt|format_datetime('short', 'none', locale: utilisateur.locale)}}
+					</div>
+					<span class="fw-italic">
+						Prime dûe: {{ constante.Tranche_getMontant_prime_payable_par_client(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+						 • Payée: {{ constante.Tranche_getMontant_prime_payable_par_client_payee(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+						 • Solde: {{ constante.Tranche_getMontant_prime_payable_par_client_solde(tranche)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}<br/>
+						Commission dûe: {{ constante.Tranche_getMontant_commission_ttc(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+						 • Collectée: {{ constante.Tranche_getMontant_commission_ttc_collectee(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+						 • Solde: {{ constante.Tranche_getMontant_commission_ttc_solde(tranche, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}<br/>
+						{% set partenaire = constante.Cotation_getPartenaire(cotation) %}
+						Rétro-Com. dûe à {{partenaire.nom}}: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier(tranche, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+						 • Payée: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_payee(tranche, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+						 • Solde: {{ constante.Tranche_getMontant_retrocommissions_payable_par_courtier_solde(tranche, partenaire, -1, false)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}<br/>
+					</span>
+				</div>
+				<span class="fw-bold">
+					{% if tranche.pourcentage != 0 %}
+						{{(tranche.pourcentage * 100)|number_format(2, ',', ' ') }} %
+					{% else %}
+						{{tranche.montantFlat|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}%
+					{% endif %}
+				</span>
+			</li>
+		{% endfor %}
+	</ul>
+</small>
