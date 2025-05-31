@@ -40,56 +40,56 @@
 				<nav>
 					<div class="nav nav-tabs" id="nav-tab" role="tablist">
 						{# Onglet Principal - tittre #}
-						<button class="nav-link fw-bold text-secondary active" id="nav-index-tab" data-bs-toggle="tab" data-bs-target="#nav-index" type="button" role="tab" aria-controls="nav-index" aria-selected="true">
-							<small>
+						<small>
+							<button class="nav-link fw-bold text-secondary active" id="nav-index-tab" data-bs-toggle="tab" data-bs-target="#nav-index" type="button" role="tab" aria-controls="nav-index" aria-selected="true">
 								{{ include('segments/icones/piste.html.twig', {size:'18px'}) }}
 								INDEX
-							</small>
-						</button>
+							</button>
+						</small>
 						{# Onglet cotattion - tittre #}
-						<button class="nav-link fw-bold text-secondary" id="nav-cotation-tab" data-bs-toggle="tab" data-bs-target="#nav-cotation" type="button" role="tab" aria-controls="nav-cotation" aria-selected="false">
-							<small>
+						<small>
+							<button class="nav-link fw-bold text-secondary" id="nav-cotation-tab" data-bs-toggle="tab" data-bs-target="#nav-cotation" type="button" role="tab" aria-controls="nav-cotation" aria-selected="false">
 								{{ include('segments/icones/cotation.html.twig', {size:'18px'}) }}
 								COTATIONS 
 								<span 
 									data-piste-formulaire-target = "displaycotation"
 								>
 								<span>
-							</small>
-						</button>
+							</button>
+						</small>
 						{# Onglet tache - tittre #}
-						<button class="nav-link fw-bold text-secondary" id="nav-tache-tab" data-bs-toggle="tab" data-bs-target="#nav-tache" type="button" role="tab" aria-controls="nav-tache" aria-selected="false">
-							<small>
+						<small>
+							<button class="nav-link fw-bold text-secondary" id="nav-tache-tab" data-bs-toggle="tab" data-bs-target="#nav-tache" type="button" role="tab" aria-controls="nav-tache" aria-selected="false">
 								{{ include('segments/icones/tache.html.twig', {size:'18px'}) }}
 								TACHES 
 								<span 
 									data-piste-formulaire-target = "displaytache"
 								>
 								<span>
-							</small>
-						</button>
+							</button>
+						</small>
 						{# Onglet document - tittre #}
-						<button class="nav-link fw-bold text-secondary" id="nav-document-tab" data-bs-toggle="tab" data-bs-target="#nav-document" type="button" role="tab" aria-controls="nav-document" aria-selected="false">
-							<small>
+						<small>
+							<button class="nav-link fw-bold text-secondary" id="nav-document-tab" data-bs-toggle="tab" data-bs-target="#nav-document" type="button" role="tab" aria-controls="nav-document" aria-selected="false">
 								{{ include('segments/icones/document.html.twig', {size:'18px'}) }}
 								DOCUMENTS 
 								<span 
 									data-piste-formulaire-target = "displaydocument"
 								>
 								<span>
-							</small>
-						</button>
+							</button>
+						</small>
 						{# Onglet conditions de partage - tittre #}
-						<button class="nav-link fw-bold text-secondary" id="nav-condition-partage-tab" data-bs-toggle="tab" data-bs-target="#nav-condition-partage" type="button" role="tab" aria-controls="nav-condition-partage" aria-selected="false">
-							<small>
+						<small>
+							<button class="nav-link fw-bold text-secondary" id="nav-condition-partage-tab" data-bs-toggle="tab" data-bs-target="#nav-condition-partage" type="button" role="tab" aria-controls="nav-condition-partage" aria-selected="false">
 								{{ include('segments/icones/partenaire.html.twig', {size:'20px'}) }}
 								CONDITIONS DE PART. 
 								<span 
 									data-piste-formulaire-target = "displayconditionspartage"
 								>
 								<span>
-							</small>
-						</button>
+							</button>
+						</small>
 					</div>
 				</nav>
 				{# Contenu de chaque Onglet #}
@@ -138,19 +138,19 @@
 						</div>
 					</div>
 					{# Onglet cotation - corps #}
-					<div class="tab-pane fade table-responsive m-2" id="nav-cotation" role="tabpanel" aria-labelledby="nav-cotation-tab" tabindex="1">
+					<div class="tab-pane fade m-2" id="nav-cotation" role="tabpanel" aria-labelledby="nav-cotation-tab" tabindex="1">
 						{{ form_row(form.cotations) }}
 					</div>
 					{# Onglet taches - corps #}
-					<div class="tab-pane fade table-responsive m-2" id="nav-tache" role="tabpanel" aria-labelledby="nav-tache-tab" tabindex="2">
+					<div class="tab-pane fade m-2" id="nav-tache" role="tabpanel" aria-labelledby="nav-tache-tab" tabindex="2">
 						{{ form_row(form.taches) }}
 					</div>
 					{# Onglet document - corps #}
-					<div class="tab-pane fade table-responsive m-2" id="nav-document" role="tabpanel" aria-labelledby="nav-document-tab" tabindex="3">
+					<div class="tab-pane fade m-2" id="nav-document" role="tabpanel" aria-labelledby="nav-document-tab" tabindex="3">
 						{{ form_row(form.documents) }}
 					</div>
 					{# Onglet Conditions de partage - corps #}
-					<div class="tab-pane fade table-responsive m-2" id="nav-condition-partage" role="tabpanel" aria-labelledby="nav-condition-partage-tab" tabindex="4">
+					<div class="tab-pane fade m-2" id="nav-condition-partage" role="tabpanel" aria-labelledby="nav-condition-partage-tab" tabindex="4">
 						{{ form_row(form.conditionsPartageExceptionnelles) }}
 					</div>
 				</div>
