@@ -177,6 +177,26 @@ class CotationController extends AbstractController
         ]);
     }
 
+    #[Route('/viewAvenant/{idCotation}', name: 'viewAvenant', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function viewAvenant($idCotation)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Cotation $cotation */
+        $cotation = $this->cotationRepository->find($idCotation);
+
+        return $this->render('admin/avenant/view/simpleinfos.html.twig', [
+            'utilisateur' => $user,
+            'cotation' => $cotation,
+            'piste' => $cotation->getPiste(),
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
+            'activator' => $this->activator,
+        ]);
+    }
+
 
     #[Route('/viewRevenu/{idCotation}', name: 'viewRevenu', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function viewRevenu($idCotation)
