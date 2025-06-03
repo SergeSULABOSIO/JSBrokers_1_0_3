@@ -4,6 +4,7 @@ import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l
 export default class extends Controller {
     static targets = [
         'reference',
+        'referencepolice',
         'display',
         'displayoffre',
         'displaycontact',
@@ -38,6 +39,7 @@ export default class extends Controller {
             this.nbtachesValue,
             this.nbdocumentsValue,
         );
+        this.updateViewAvenants(this.referencepoliceTarget.value);
     }
 
 
@@ -118,7 +120,7 @@ export default class extends Controller {
     updateViewAvenants(referencePolice) {
         this.viewavenantsTarget.textContent = "Actualisation des avenants...";
         this.displayTarget.textContent = "Actualisation des termes de paiement...";
-        fetch("/admin/avenant/viewavenants/" + referencePolice)
+        fetch("/admin/avenant/viewAvenantsByReferencePolice/" + referencePolice)
             .then(response => response.text()) //.json()
             .then(data => {
                 // console.log(data);
@@ -165,7 +167,7 @@ export default class extends Controller {
                 );
                 // this.updateViewPrime(userObject.idcotation);
                 // this.updateViewRevenu(userObject.idcotation);
-                // this.updateViewTermesPaiement(userObject.idcotation);
+                this.updateViewAvenants(userObject.idNotificationSinistre);
             })
             .catch(errorMessage => {
                 event.target.disabled = false;

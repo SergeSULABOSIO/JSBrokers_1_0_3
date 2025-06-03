@@ -1,22 +1,30 @@
 {% if cotation is defined %}
+	{% set tabAvenants = cotation.avenants %}
+{% else %}
+	{% if avenants is defined %}
+		{% set tabAvenants = avenants %}
+	{% endif %}
+{% endif %}
+
+{% if tabAvenants is defined %}
 	<div class="fw-bold text-secondary mb-2">
 		{{ include('segments/icones/actions/information.html.twig', {size:'17px'}) }}
 		Aperçu des termes
 	</div>
 	<small>
 		<ul class="list-group list-group-flush">
-			{% for avenant in cotation.avenants %}
+			{% for avenant in tabAvenants %}
 				<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
 					<div class="ms-2 text-secondary">
 						<div class="fw-bold fw-italic text-dark">
 							{{ include('segments/icones/avenant.html.twig', {size:'16px'}) }}
-							{{ constante.getTypeAvenant(piste.getTypeAvenant()) }} n°{{ avenant.numero }}.
+							{{ constante.getTypeAvenant(avenant.cotation.piste.getTypeAvenant()) }} n°{{ avenant.numero }}.
 						</div>
 						<span class="fw-italic">
 							Réf. police: {{ avenant.referencePolice }}<br/>
 							Descrp.: {{ avenant.description }}<br/>
-							Risque: {{ piste.risque.nomComplet }}
-							Client: {{ piste.client.nom }}
+							Risque: {{ avenant.cotation.piste.risque.nomComplet }}
+							Client: {{ avenant.cotation.piste.client.nom }}
 						</span>
 					</div>
 					<span class="fw-bold">

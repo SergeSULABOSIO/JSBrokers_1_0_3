@@ -5918,9 +5918,12 @@ class Constante
                     }
                     return ($dateA > $dateB) ? -1 : 1;
                 });
+                
                 //On récupère les dates
-                $tabDetails['effectDate'] = $effectDates[0];
-                $tabDetails['expiryDate'] = $expiryDates[0];
+                if (count($effectDates) != 0) {
+                    $tabDetails['effectDate'] = $effectDates[0];
+                    $tabDetails['expiryDate'] = $expiryDates[0];
+                }
             }
             // dd($effectDates, $expiryDates);
         }

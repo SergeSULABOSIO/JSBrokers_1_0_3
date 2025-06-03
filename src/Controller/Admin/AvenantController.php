@@ -150,4 +150,25 @@ class AvenantController extends AbstractController
             'idEntreprise' => $idEntreprise,
         ]);
     }
+
+
+    #[Route('/viewAvenantsByReferencePolice/{referencepolice}', name: 'viewAvenantsByReferencePolice', methods: ['GET', 'POST'])]
+    public function viewAvenant($referencepolice)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Avenant[] $avenants */
+        $avenants = $this->constante->Entreprise_getAvenantsByReference($referencepolice);
+        // dd($avenants);
+
+        return $this->render('admin/avenant/view/simpleinfos.html.twig', [
+            'utilisateur' => $user,
+            'avenants' => $avenants,
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'serviceTaxe' => $this->serviceTaxes,
+            'activator' => $this->activator,
+        ]);
+    }
 }

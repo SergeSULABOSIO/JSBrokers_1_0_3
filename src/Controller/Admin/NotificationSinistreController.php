@@ -150,6 +150,7 @@ class NotificationSinistreController extends AbstractController
         return $this->json(json_encode([
             "reponse" => "Ok",
             "idNotificationSinistre" => $notification->getId(),
+            "referencePolice" => $notification->getReferencePolice(),
             "nbOffres" => count($notification->getOffreIndemnisationSinistres()),
             "nbContacts" => count($notification->getContacts()),
             "nbTaches" => count($notification->getTaches()),
