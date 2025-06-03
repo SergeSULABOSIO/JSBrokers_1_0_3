@@ -24,7 +24,7 @@
 	{{ form_start(form, {
 		'attr': {
 			'data-controller': 'notificationsinistre-formulaire', 
-			'data-notificationsinistre-formulaire-idpiste-value': notificationsinistre.id,
+			'data-notificationsinistre-formulaire-idnotificationsinistre-value': notificationsinistre.id,
 			'data-notificationsinistre-formulaire-identreprise-value': entreprise.id,
 			'data-notificationsinistre-formulaire-nboffres-value': notificationsinistre.offreIndemnisationSinistres|length,
 			'data-notificationsinistre-formulaire-nbcontacts-value': notificationsinistre.contacts|length,
@@ -52,7 +52,7 @@
 								{{ include('segments/icones/offreindemnisation.html.twig', {size:'18px'}) }}
 								OFFRES 
 								<span 
-									data-piste-formulaire-target = "displayoffre"
+									data-notificationsinistre-formulaire-target = "displayoffre"
 								>
 								<span>
 							</button>
@@ -63,7 +63,7 @@
 								{{ include('segments/icones/contact.html.twig', {size:'18px'}) }}
 								CONTACTS 
 								<span 
-									data-piste-formulaire-target = "displaycontact"
+									data-notificationsinistre-formulaire-target = "displaycontact"
 								>
 								<span>
 							</button>
@@ -74,7 +74,7 @@
 								{{ include('segments/icones/tache.html.twig', {size:'18px'}) }}
 								TACHES 
 								<span 
-									data-piste-formulaire-target = "displaytache"
+									data-notificationsinistre-formulaire-target = "displaytache"
 								>
 								<span>
 							</button>
@@ -85,7 +85,7 @@
 								{{ include('segments/icones/document.html.twig', {size:'18px'}) }}
 								DOC. 
 								<span 
-									data-piste-formulaire-target = "displaydoc"
+									data-notificationsinistre-formulaire-target = "displaydoc"
 								>
 								<span>
 							</button>

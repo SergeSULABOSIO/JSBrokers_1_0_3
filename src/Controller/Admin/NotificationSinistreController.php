@@ -96,16 +96,13 @@ class NotificationSinistreController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($notificationsinistre);
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("notificationsinistre_creation_ok", [
-                ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),
-            ]));
-            return $this->redirectToRoute("admin.notificationsinistre.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+            
+            return $this->getJsonData($notificationsinistre);
         }
         return $this->render('admin/notificationsinistre/create.html.twig', [
             'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
             'utilisateur' => $user,
+            'notificationsinistre' => $notificationsinistre,
             'entreprise' => $entreprise,
             'activator' => $this->activator,
             'form' => $form,
@@ -131,13 +128,9 @@ class NotificationSinistreController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("notificationsinistre_edition_ok", [
-                ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),
-            ]));
-            // //On par sur la page index
-            // return $this->redirectToRoute("admin.notificationsinistre.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
+            
+            //Le serveur renvoie un objet JSON
+            return $this->getJsonData($notificationsinistre);
         }
         //On se dirie vers la page le formulaire d'édition
         return $this->render('admin/notificationsinistre/edit.html.twig', [
@@ -150,6 +143,18 @@ class NotificationSinistreController extends AbstractController
             'activator' => $this->activator,
             'form' => $form,
         ]);
+    }
+
+    private function getJsonData(?NotificationSinistre $notification)
+    {
+        return $this->json(json_encode([
+            "reponse" => "Ok",
+            "idNotificationSinistre" => $notification->getId(),
+            "nbOffres" => count($notification->getOffreIndemnisationSinistres()),
+            "nbContacts" => count($notification->getContacts()),
+            "nbTaches" => count($notification->getTaches()),
+            "nbDocuments" => count($notification->getPieces()),
+        ]));
     }
 
     #[Route('/remove/{idEntreprise}/{idNotificationsinistre}', name: 'remove', requirements: ['idNotificationsinistre' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]

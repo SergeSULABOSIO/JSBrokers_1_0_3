@@ -3,32 +3,26 @@ import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l
 
 export default class extends Controller {
     static targets = [
-        'nom',
+        'reference',
         'display',
         'displayoffre',
         'displaycontact',
         'displaytache',
         'displaydoc',
-        // 'viewrevenu',
-        // 'viewprime',
-        'viewtermespaiement',
         'btEnregistrer',
     ];
 
     static values = {
-        idcotation: Number,
+        idnotificationsinistre: Number,
         identreprise: Number,
-        nbchargements: Number,
-        nbrevenus: Number,
-        nbavenants: Number,
-        nbtranches: Number,
+        nboffres: Number,
+        nbcontacts: Number,
         nbtaches: Number,
         nbdocuments: Number,
     };
 
     connect() {
-        this.isSaved = false;
-        console.log("ID COTATION: " + this.idcotationValue);
+        console.log("ID NOTIFICATION SINISTRE: " + this.idnotificationsinistreValue);
 
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
 
@@ -38,10 +32,8 @@ export default class extends Controller {
 
         //On initialise les badges des onglets
         this.initBadges(
-            this.nbchargementsValue,
-            this.nbrevenusValue,
-            this.nbavenantsValue,
-            this.nbtranchesValue,
+            this.nboffresValue,
+            this.nbcontactsValue,
             this.nbtachesValue,
             this.nbdocumentsValue,
         );
@@ -50,47 +42,35 @@ export default class extends Controller {
 
 
     /**
-     * 
-     * @param {Number} nbchargements 
-     * @param {Number} nbrevenus 
-     * @param {Number} nbavenants 
-     * @param {Number} nbtranches 
-     * @param {Number} nbtaches 
-     * @param {Number} nbdocuments 
+     * @param {Number} nboffresValue 
+     * @param {Number} nbcontactsValue 
+     * @param {Number} nbtachesValue 
+     * @param {Number} nbdocumentsValue 
      */
-    initBadges(nbchargements, nbrevenus, nbavenants, nbtranches, nbtaches, nbdocuments) {
-        this.displayprimeTarget.innerHTML = "";
-        this.displaycommissionTarget.innerHTML = "";
-        this.displaytrancheTarget.innerHTML = "";
-        this.displayavenantTarget.innerHTML = "";
-        this.displaydocumentTarget.innerHTML = "";
+    initBadges(nboffresValue, nbcontactsValue, nbtachesValue, nbdocumentsValue) {
+        this.displayoffreTarget.innerHTML = "";
+        this.displaycontactTarget.innerHTML = "";
         this.displaytacheTarget.innerHTML = "";
+        this.displaydocTarget.innerHTML = "";
 
-        // Chargement
-        if (nbchargements != 0) {
-            this.displayprimeTarget.append(this.generateSpanElement(nbchargements));
+        // Offres d'indemnisation
+        if (nboffresValue != 0) {
+            this.displayoffreTarget.append(this.generateSpanElement(nboffresValue));
         }
-        // Commission
-        if (nbrevenus != 0) {
-            this.displaycommissionTarget.append(this.generateSpanElement(nbrevenus));
+        // Contacts
+        if (nbcontactsValue != 0) {
+            this.displaycontactTarget.append(this.generateSpanElement(nbcontactsValue));
         }
-        // Tranche
-        if (nbtranches != 0) {
-            this.displaytrancheTarget.append(this.generateSpanElement(nbtranches));
+        // Taches
+        if (nbtachesValue != 0) {
+            this.displaytacheTarget.append(this.generateSpanElement(nbtachesValue));
         }
-        // Avenant
-        if (nbavenants != 0) {
-            this.displayavenantTarget.append(this.generateSpanElement(nbavenants));
-        }
-        // Document
-        if (nbdocuments != 0) {
-            this.displaydocumentTarget.append(this.generateSpanElement(nbdocuments));
-        }
-        // Tache
-        if (nbtaches != 0) {
-            this.displaytacheTarget.append(this.generateSpanElement(nbtaches));
+        // Doc
+        if (nbdocumentsValue != 0) {
+            this.displaydocTarget.append(this.generateSpanElement(nbdocumentsValue));
         }
     }
+
 
     /**
      * 
@@ -121,30 +101,12 @@ export default class extends Controller {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
                     console.log("On a cliqué sur un bouton Enregistré.");
-                    this.enregistrerCotation(event);
+                    this.enregistrerNotificationSinistre(event);
                 }
             } else {
                 event.preventDefault(); // Empêche la soumission classique du formulaire
             }
         }
-    }
-
-    /**
-     * 
-     * @param {Number} idcotation 
-     */
-    updateViewRevenu(idcotation) {
-        this.displayTarget.textContent = "Actualisation du displayRevenu...";
-        fetch("/admin/cotation/viewRevenu/" + idcotation)
-            .then(response => response.text()) //.json()
-            .then(data => {
-                // console.log(data);
-                this.displayTarget.textContent = "Prêt.";
-                this.viewrevenuTarget.innerHTML = data;
-            })
-            .catch(errorMessage => {
-                console.error("Réponse d'erreur du serveur :", errorMessage);
-            });
     }
 
 
@@ -169,32 +131,12 @@ export default class extends Controller {
 
     /**
      * 
-     * @param {Number} idcotation 
-     */
-    updateViewPrime(idcotation) {
-        this.displayTarget.textContent = "Actualisation du viewPrime...";
-        fetch("/admin/cotation/viewPrime/" + idcotation)
-            .then(response => response.text()) //.json()
-            .then(data => {
-                // console.log(data);
-                this.displayTarget.textContent = "Prêt.";
-                this.viewprimeTarget.innerHTML = data;
-            })
-            .catch(errorMessage => {
-                console.error("Réponse d'erreur du serveur :", errorMessage);
-            });
-    }
-
-
-    /**
-     * 
      * @param {MouseEvent} event 
     */
-    enregistrerCotation = (event) => {
+    enregistrerNotificationSinistre = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.target.disabled = true;
-        this.isSaved = true;
-        this.displayTarget.textContent = "Enregistrement de " + this.nomTarget.value + " en cours...";
+        this.displayTarget.textContent = "Enregistrement de " + this.referenceTarget.value + " en cours...";
         this.displayTarget.style.display = 'block';
 
         // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
@@ -214,21 +156,15 @@ export default class extends Controller {
 
                 // Traitez la réponse ici
                 this.initBadges(
-                    userObject.nbChargements,
-                    userObject.nbRevenus,
-                    userObject.nbAvenants,
-                    userObject.nbTranches,
+                    userObject.nbOffres,
+                    userObject.nbContacts,
                     userObject.nbTaches,
                     userObject.nbDocuments,
                 );
 
-                // this.primeTarget.value = userObject.primeTTC;
-                // this.commissionNetteTarget.value = userObject.commissionHT;
-                // this.commissionNetteTvaTarget.value = userObject.commissionTaxe;
-                // this.commissionTTCTarget.value = userObject.commissionTTC;
-                this.updateViewPrime(userObject.idcotation);
-                this.updateViewRevenu(userObject.idcotation);
-                this.updateViewTermesPaiement(userObject.idcotation);
+                // this.updateViewPrime(userObject.idcotation);
+                // this.updateViewRevenu(userObject.idcotation);
+                // this.updateViewTermesPaiement(userObject.idcotation);
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
