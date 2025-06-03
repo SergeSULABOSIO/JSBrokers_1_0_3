@@ -161,7 +161,6 @@ export default class extends Controller {
                     userObject.nbTaches,
                     userObject.nbDocuments,
                 );
-
                 // this.updateViewPrime(userObject.idcotation);
                 // this.updateViewRevenu(userObject.idcotation);
                 // this.updateViewTermesPaiement(userObject.idcotation);
