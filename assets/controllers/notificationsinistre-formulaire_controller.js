@@ -10,6 +10,7 @@ export default class extends Controller {
         'displaytache',
         'displaydoc',
         'btEnregistrer',
+        'viewavenants',
     ];
 
     static values = {
@@ -112,16 +113,17 @@ export default class extends Controller {
 
     /**
      * 
-     * @param {Number} idcotation 
+     * @param {Number} referencePolice 
      */
-    updateViewTermesPaiement(idcotation) {
+    updateViewAvenants(referencePolice) {
+        this.viewavenantsTarget.textContent = "Actualisation des avenants...";
         this.displayTarget.textContent = "Actualisation des termes de paiement...";
-        fetch("/admin/cotation/viewtermespaiement/" + idcotation)
+        fetch("/admin/avenant/viewavenants/" + referencePolice)
             .then(response => response.text()) //.json()
             .then(data => {
                 // console.log(data);
                 this.displayTarget.textContent = "Prêt.";
-                this.viewtermespaiementTarget.innerHTML = data;
+                this.viewavenantsTarget.innerHTML = data;
             })
             .catch(errorMessage => {
                 console.error("Réponse d'erreur du serveur :", errorMessage);

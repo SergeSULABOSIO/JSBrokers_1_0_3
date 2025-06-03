@@ -121,7 +121,7 @@ class NotificationSinistreController extends AbstractController
 
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
-
+        
         $form = $this->createForm(NotificationSinistreType::class, $notificationsinistre);
         $form->handleRequest($request);
 
