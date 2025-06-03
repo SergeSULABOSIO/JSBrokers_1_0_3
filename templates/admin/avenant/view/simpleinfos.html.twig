@@ -12,7 +12,7 @@
 				{{ include('segments/icones/actions/information.html.twig', {size:'17px'}) }}
 				Aperçu des termes
 			</div>
-			<small class="mb-3">
+			<small>
 				<ul class="list-group list-group-flush">
 					{% for avenant in tabAvenants %}
 						<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
@@ -40,6 +40,16 @@
 					{% endfor %}
 				</ul>
 			</small>
+		</div>
+	{% else %}
+		<div class="border border-light m-2 rounded">
+			<div class="text-danger">
+				{{ include('segments/icones/actions/information.html.twig', {size:'17px'}) }}
+				Aucune police.
+				<span class="fw-italic">
+					La référence fournie n'est pas valide.
+				</span>
+			</div>
 		</div>
 	{% endif %}
 {% endif %}

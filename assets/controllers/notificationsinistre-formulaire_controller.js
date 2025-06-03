@@ -40,7 +40,6 @@ export default class extends Controller {
             this.nbdocumentsValue,
         );
         this.updateViewAvenants(this.referencepoliceTarget.value);
-    
         this.referencepoliceTarget.addEventListener("change", (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
     }
 
