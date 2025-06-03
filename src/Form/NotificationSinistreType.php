@@ -2,26 +2,27 @@
 
 namespace App\Form;
 
-use App\Entity\Assureur;
 use App\Entity\Client;
 use App\Entity\Invite;
 use App\Entity\Risque;
+use App\Entity\Assureur;
 use App\Entity\NotificationSinistre;
 use App\Services\FormListenerFactory;
+use Doctrine\DBAL\Types\DateTimeType;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Doctrine\DBAL\Types\DateTimeImmutableType;
-use Doctrine\DBAL\Types\DateTimeType;
+use Eckinox\TinymceBundle\Form\Type\TinymceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
-use Symfony\Component\Form\Extension\Core\Type\DateType;
 
 class NotificationSinistreType extends AbstractType
 {
@@ -29,7 +30,7 @@ class NotificationSinistreType extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -60,13 +61,22 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Réf. Sinistre",
                 ],
             ])
-            ->add('descriptionDeFait', TextareaType::class, [
-                'label' => "Description des faits",
-                'required' => true,
-                'attr' => [
-                    'placeholder' => "Description",
-                ],
-            ])
+            // ->add('descriptionDeFait', TextareaType::class, [
+            //     'label' => "Description des faits",
+            //     'required' => true,
+            //     'attr' => [
+            //         'placeholder' => "Description",
+            //     ],
+            // ])
+            // ->add('descriptionDeFait', TinymceType::class, [
+            //     'label' => "Description des faits",
+            //     'required' => true,
+            //     "attr" => [
+            //         'placeholder' => "Description",
+            //         "toolbar" => "bold italic underline | bullist numlist",
+            //     ],
+            // ])
+
             ->add('descriptionVictimes', TextareaType::class, [
                 'label' => "Description ou détails sur les victimes",
                 'required' => true,
