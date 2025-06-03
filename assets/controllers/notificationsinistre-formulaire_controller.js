@@ -40,6 +40,8 @@ export default class extends Controller {
             this.nbdocumentsValue,
         );
         this.updateViewAvenants(this.referencepoliceTarget.value);
+    
+        this.referencepoliceTarget.addEventListener("change", (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
     }
 
 
@@ -165,9 +167,7 @@ export default class extends Controller {
                     userObject.nbTaches,
                     userObject.nbDocuments,
                 );
-                // this.updateViewPrime(userObject.idcotation);
-                // this.updateViewRevenu(userObject.idcotation);
-                this.updateViewAvenants(userObject.idNotificationSinistre);
+                this.updateViewAvenants(userObject.referencePolice);
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
