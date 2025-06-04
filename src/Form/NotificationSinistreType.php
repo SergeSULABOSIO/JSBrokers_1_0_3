@@ -61,13 +61,13 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Réf. Sinistre",
                 ],
             ])
-            // ->add('descriptionDeFait', TextareaType::class, [
-            //     'label' => "Description des faits",
-            //     'required' => true,
-            //     'attr' => [
-            //         'placeholder' => "Description",
-            //     ],
-            // ])
+            ->add('descriptionDeFait', TextareaType::class, [
+                'label' => "Description des faits",
+                'required' => true,
+                'attr' => [
+                    'placeholder' => "Description",
+                ],
+            ])
             // ->add('descriptionDeFait', TinymceType::class, [
             //     'label' => "Description des faits",
             //     'required' => true,

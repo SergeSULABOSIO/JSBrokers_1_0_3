@@ -35,4 +35,7 @@ return [
     'chart.js' => [
         'version' => '3.9.1',
     ],
+    'tinymce' => [
+        'version' => '7.9.1',
+    ],
 ];
