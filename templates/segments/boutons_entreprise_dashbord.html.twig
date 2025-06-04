@@ -98,7 +98,7 @@
     {% if app.current_route starts with 'admin.notificationsinistre' %}
         <div data-controller="dialogue">
           <button data-action="dialogue#open" class="btn btn-secondary">Ouvrir la boîte de dialogue</button>
-          <div class="modal fade" data-dialogue-target="boite">
+          <div class="modal fade" data-dialogue-target="boite" id="maModal" tabindex="-1" aria-labelledby="maModalLabel" aria-hidden="true">
             <button data-action="dialogue#close">Fermer</button>
           </div>
         </div>
