@@ -38,11 +38,9 @@ a:active {
   background-color: #e0f9ee;
 }
 
-input[type=text], input[type=password], input[type=number], input[type=email], input[type=file] {
-  border: none;
-  border-bottom: 2px solid gray;
-  font-weight: bold;
-}
+
+
+
 
 .cacherComposant {
   display: none;
@@ -72,4 +70,26 @@ input[type=text], input[type=password], input[type=number], input[type=email], i
 .parent-a-options:hover .options-du-parent {
   display: block; /* Affiche le sous-élément au survol du parent (comme un élément de bloc) */
   /* Ou display: inline-block; ou display: inline; selon vos besoins */
+}
+
+.form-select, input[type=date], input[type=text], input[type=password], input[type=number], input[type=email], input[type=file] {
+  border: none;
+  /* border: 0.5px solid #ccc; */
+  border-bottom: 2px solid gray;
+  font-weight: bold;
+}
+
+.editeur-riche {
+  /* width: 100px; */
+  height: 150px;
+  padding: 10px;
+  /* border: 0.5px solid #ccc; */
+  border: none;
+  border-bottom: 2px solid gray;
+  border-radius: 10px;
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1.5;
+  resize: vertical; /* Permet de redimensionner verticalement */
 }

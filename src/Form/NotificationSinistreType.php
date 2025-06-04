@@ -65,22 +65,16 @@ class NotificationSinistreType extends AbstractType
                 'label' => "Description des faits",
                 'required' => true,
                 'attr' => [
+                    'class' => 'editeur-riche',
                     'placeholder' => "Description",
                 ],
             ])
-            // ->add('descriptionDeFait', TinymceType::class, [
-            //     'label' => "Description des faits",
-            //     'required' => true,
-            //     "attr" => [
-            //         'placeholder' => "Description",
-            //         "toolbar" => "bold italic underline | bullist numlist",
-            //     ],
-            // ])
 
             ->add('descriptionVictimes', TextareaType::class, [
                 'label' => "Description ou détails sur les victimes",
                 'required' => true,
                 'attr' => [
+                    'class' => 'editeur-riche',
                     'placeholder' => "Victimes",
                 ],
             ])

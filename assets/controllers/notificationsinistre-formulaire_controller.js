@@ -101,6 +101,8 @@ export default class extends Controller {
                 //On laisse le comportement par défaut
             } else if (event.target.type == "datetime-local") {
                 //On laisse le comportement par défaut
+            } else if (event.target.type == "date") {
+                //On laisse le comportement par défaut
             } else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {

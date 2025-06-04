@@ -3,7 +3,3 @@ framework:
         # The paths to make available to the asset mapper.
         paths:
             - assets/
-            # ...
-            - '%kernel.project_dir%/assets'
-            # ou spécifiquement si tu veux isoler les vendors
-            # - '%kernel.project_dir%/assets/vendor'
