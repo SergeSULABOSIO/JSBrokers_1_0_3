@@ -29,6 +29,13 @@ export default class extends Controller {
         //         this.close(event); // Appeler votre méthode close de Stimulus
         //     }
         // });
+
+        // Écouter l'événement 'hidden.bs.modal' qui est déclenché quand la modal est complètement fermée
+        // this.boiteTarget.addEventListener('hidden.bs.modal', () => {
+        //     console.log("La modal a été fermée par Bootstrap (y compris via le backdrop).");
+        //     // Ici, vous pouvez ajouter n'importe quel nettoyage ou logique post-fermeture
+        //     // Évitez d'appeler this.modal.hide() à nouveau ici, car Bootstrap vient de le faire.
+        // });
     }
 
     /**
