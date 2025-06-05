@@ -1,0 +1,180 @@
+{# {{ form(form) }} #}
+{{ form_start(form, {
+	'attr': {
+		'data-controller': 'notificationsinistre-formulaire', 
+		'data-notificationsinistre-formulaire-idnotificationsinistre-value': notificationsinistre.id,
+		'data-notificationsinistre-formulaire-identreprise-value': entreprise.id,
+		'data-notificationsinistre-formulaire-nboffres-value': notificationsinistre.offreIndemnisationSinistres|length,
+		'data-notificationsinistre-formulaire-nbcontacts-value': notificationsinistre.contacts|length,
+		'data-notificationsinistre-formulaire-nbtaches-value': notificationsinistre.taches|length,
+		'data-notificationsinistre-formulaire-nbdocuments-value': notificationsinistre.pieces|length,
+		}
+	}) 
+}}
+<div class="d-flex shadow-sm card bg-body sensible bg-white">
+	<div class="card-body">
+		<div>
+			{# Les onglets #}
+			<nav>
+				<div class="nav nav-tabs" id="nav-tab" role="tablist">
+					<small>
+						{# Onglet Principal - tittre #}
+						<button class="nav-link fw-bold text-secondary active" id="nav-index-tab" data-bs-toggle="tab" data-bs-target="#nav-index" type="button" role="tab" aria-controls="nav-index" aria-selected="true">
+							{{ include('segments/icones/notificationsinistre.html.twig', {size:'18px'}) }}
+							INDEX
+						</button>
+					</small>
+					<small>
+						{# Onglet offre - tittre #}
+						<button class="nav-link fw-bold text-secondary" id="nav-offre-tab" data-bs-toggle="tab" data-bs-target="#nav-offre" type="button" role="tab" aria-controls="nav-offre" aria-selected="false">
+							{{ include('segments/icones/offreindemnisation.html.twig', {size:'18px'}) }}
+							OFFRES 
+							<span 
+								data-notificationsinistre-formulaire-target = "displayoffre"
+							>
+							<span>
+						</button>
+					</small>
+					<small>
+						{# Onglet contact - tittre #}
+						<button class="nav-link fw-bold text-secondary" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact" type="button" role="tab" aria-controls="nav-contact" aria-selected="false">
+							{{ include('segments/icones/contact.html.twig', {size:'18px'}) }}
+							CONTACTS 
+							<span 
+								data-notificationsinistre-formulaire-target = "displaycontact"
+							>
+							<span>
+						</button>
+					</small>
+					<small>
+						{# Onglet Tâche - tittre #}
+						<button class="nav-link fw-bold text-secondary" id="nav-tache-tab" data-bs-toggle="tab" data-bs-target="#nav-tache" type="button" role="tab" aria-controls="nav-tache" aria-selected="false">
+							{{ include('segments/icones/tache.html.twig', {size:'18px'}) }}
+							TACHES 
+							<span 
+								data-notificationsinistre-formulaire-target = "displaytache"
+							>
+							<span>
+						</button>
+					</small>
+					<small>
+						{# Onglet Doc - tittre #}
+						<button class="nav-link fw-bold text-secondary" id="nav-doc-tab" data-bs-toggle="tab" data-bs-target="#nav-doc" type="button" role="tab" aria-controls="nav-doc" aria-selected="false">
+							{{ include('segments/icones/document.html.twig', {size:'18px'}) }}
+							DOC. 
+							<span 
+								data-notificationsinistre-formulaire-target = "displaydoc"
+							>
+							<span>
+						</button>
+					</small>
+				</div>
+			</nav>
+			{# Contenu de chaque Onglet #}
+			<div class="tab-content" id="nav-tabContent">
+				{# Onglet Index - corps #}
+				<div class="tab-pane fade m-2 show active" id="nav-index" role="tabpanel" aria-labelledby="nav-index-tab" tabindex="0">
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.referencePolice, {'attr': {'data-notificationsinistre-formulaire-target': 'referencepolice'}}) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.referenceSinistre, {'attr': {'data-notificationsinistre-formulaire-target': 'reference'}}) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col" data-notificationsinistre-formulaire-target = "viewavenants">
+							{% include 'admin/avenant/view/simpleinfos.html.twig' %}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.assureur) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.notifiedAt) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.occuredAt) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.descriptionDeFait) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.descriptionVictimes) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.lieu) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.dommage) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.evaluationChiffree) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.assure) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.risque) }}
+						</div>
+					</div>
+				</div>
+				{# Onglet Offres - corps #}
+				<div class="tab-pane fade m-2" id="nav-offre" role="tabpanel" aria-labelledby="nav-offre-tab" tabindex="1">
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.offreIndemnisationSinistres) }}
+						</div>
+					</div>
+				</div>
+				{# Onglet contact - corps #}
+				<div class="tab-pane fade m-2" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab" tabindex="2">
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.contacts) }}
+						</div>
+					</div>
+				</div>
+				{# Onglet tache - corps #}
+				<div class="tab-pane fade m-2" id="nav-tache" role="tabpanel" aria-labelledby="nav-tache-tab" tabindex="3">
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.taches) }}
+						</div>
+					</div>
+				</div>
+				{# Onglet doc - corps #}
+				<div class="tab-pane fade m-2" id="nav-doc" role="tabpanel" aria-labelledby="nav-doc-tab" tabindex="4">
+					<div class="row">
+						<div class="col">
+							{{ form_row(form.pieces) }}
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col">
+					{{ form_row(form.enregistrer, {
+						'attr': {
+							'data-notificationsinistre-formulaire-target': 'btEnregistrer'
+							}
+						}) 
+					}}
+				</div>
+			</div>
+		</div>
+		<small>
+			<span class="text-secondary m-2 fw-bold" data-notificationsinistre-formulaire-target="display" style="display:block;">Message d'infos ici</span>
+		</small>
+	</div>
+</div>
+{{ form_end(form) }}

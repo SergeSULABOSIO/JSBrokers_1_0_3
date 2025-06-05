@@ -152,7 +152,7 @@ class AvenantController extends AbstractController
     }
 
 
-    #[Route('/viewAvenantsByReferencePolice/{referencepolice}', name: 'viewAvenantsByReferencePolice', methods: ['GET', 'POST'])]
+    #[Route('/viewAvenantsByReferencePolice/{referencepolice}', name: 'viewAvenantsByReferencePolice', defaults:['referencepolice'=>'Nulle'])]
     public function viewAvenant($referencepolice)
     {
         /** @var Utilisateur $user */

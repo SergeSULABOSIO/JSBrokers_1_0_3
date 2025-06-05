@@ -1,0 +1,22 @@
+<div class="modal fade" data-dialogue-target="boite" id="maModal" tabindex="-1" aria-labelledby="maModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">{# modal-dialog #}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="maModalLabel">{{titre}}</h5>
+          {# Le bouton de fermeture n'a plus data-bs-dismiss #}
+          <button type="button" class="btn-close" data-action="dialogue#close" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+            {# Contenu de la boîte de dialogue. Action: {{action}} / Objet: {{objet}} #}
+            {# <form data-dialogue-target="form" data-action="submit->dialogue#submit"></form> #}
+            <div data-dialogue-target="form"></div>
+            <div data-dialogue-target="message"></div>
+        </div>
+        <div class="modal-footer">
+            {# Le bouton de fermeture du footer n'a plus data-bs-dismiss #}
+            <button type="button" class="btn btn-secondary" data-action="dialogue#close">Fermer</button>
+            <button type="button" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+  </div>
+</div>

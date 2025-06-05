@@ -6,7 +6,13 @@ import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si v
 
 
 export default class extends Controller {
-    static targets = ['boite'];
+    static targets = ['boite', 'form', 'message'];
+    static values = {
+        idnotificationsinistre: Number,
+        identreprise: Number,
+        action: Number,
+        objet: Number,
+    };
 
     connect() {
         console.log("Connecté au contrôleur dialogue.");
@@ -45,12 +51,22 @@ export default class extends Controller {
     open(event) {
         // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
-        console.log("Méthode open appelée.");
-        if (this.boite) {
-            this.boite.show();
-        } else {
-            console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
-        }
+        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.idnotificationsinistreValue;
+        console.log("Méthode open appelée.", this.identrepriseValue, this.idnotificationsinistreValue, url);
+
+        this.formTarget.innerHTML = "Veuillez patienter svp...";
+        this.boite.show();
+
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.text())
+            .then(html => {
+                if (this.boite) {
+                    this.formTarget.innerHTML = html;
+                    // this.boite.show();
+                } else {
+                    console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
+                }
+            });
     }
 
     /**
