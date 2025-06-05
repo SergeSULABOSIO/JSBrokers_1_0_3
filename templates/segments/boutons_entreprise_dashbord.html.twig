@@ -99,12 +99,16 @@
         <div data-controller="dialogue">
           <button data-action="dialogue#open" class="btn btn-secondary">
             {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
-            Ouvrir la boîte de dialogue
+            {{ "entreprise_bouton_new_notificationsinistre" | trans }}
           </button>
           <div class="modal fade" data-dialogue-target="boite" id="maModal" tabindex="-1" aria-labelledby="maModalLabel" aria-hidden="true">
             <div class="modal-dialog">
-                <button data-action="dialogue#close">Fermer</button>
-                <div class="modal-content">Contenu de la boîte ici.</div>
+                <div class="modal-content">
+                  <div>
+                    <button data-action="dialogue#close">Fermer</button><br/>
+                    Contenu de la boîte ici.
+                  </div>
+                </div>
             </div>
           </div>
         </div>
