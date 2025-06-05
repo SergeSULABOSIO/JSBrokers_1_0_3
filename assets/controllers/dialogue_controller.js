@@ -15,10 +15,20 @@ export default class extends Controller {
             console.error("Modal target is not a DOM element:", this.boiteTarget);
             return;
         }
-
         // Si this.modalTarget est bien un élément DOM, créez l'instance
-        this.boite = new Modal(this.boiteTarget);
+        // Initialiser la modal en désactivant le backdrop click
+        this.boite = new Modal(this.boiteTarget, {
+            backdrop: 'static', // ou true si vous voulez un backdrop sans fermeture au clic
+            keyboard: true // Désactive la fermeture par la touche Échap si vous le souhaitez
+        });
         console.log("Modal instance created:", this.boite);
+
+        // Optionnel: Ajouter un écouteur d'événement pour le clic sur le backdrop si vous voulez le gérer manuellement
+        this.boiteTarget.addEventListener('click', (event) => {
+            if (event.target === this.boiteTarget) { // S'assurer que le clic est sur le backdrop lui-même
+                this.close(event); // Appeler votre méthode close de Stimulus
+            }
+        });
     }
 
     /**
