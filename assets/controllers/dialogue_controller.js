@@ -51,7 +51,9 @@ export default class extends Controller {
      * @param {Event} event 
      */
     close(event) {
-        event.preventDefault();
+        if (event) {
+            event.preventDefault();
+        }
         console.log("Méthode close appelée.");
         if (this.boite) {
             this.boite.hide();
