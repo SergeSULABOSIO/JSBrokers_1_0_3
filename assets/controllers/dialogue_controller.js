@@ -24,11 +24,11 @@ export default class extends Controller {
         console.log("Modal instance created:", this.boite);
 
         // Optionnel: Ajouter un écouteur d'événement pour le clic sur le backdrop si vous voulez le gérer manuellement
-        this.boiteTarget.addEventListener('click', (event) => {
-            if (event.target === this.boiteTarget) { // S'assurer que le clic est sur le backdrop lui-même
-                this.close(event); // Appeler votre méthode close de Stimulus
-            }
-        });
+        // this.boiteTarget.addEventListener('click', (event) => {
+        //     if (event.target === this.boiteTarget) { // S'assurer que le clic est sur le backdrop lui-même
+        //         this.close(event); // Appeler votre méthode close de Stimulus
+        //     }
+        // });
     }
 
     /**
