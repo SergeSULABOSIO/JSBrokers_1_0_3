@@ -1,6 +1,7 @@
 // assets/controllers/dialogue_controller.js
 import { Controller } from '@hotwired/stimulus';
 // Assurez-vous que Bootstrap est bien importé ici
+// import * as bootstrap from '../bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 import * as bootstrap from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 
