@@ -19,7 +19,7 @@ export default class extends Controller {
         // Initialiser la modal en désactivant le backdrop click
         this.boite = new Modal(this.boiteTarget, {
             backdrop: 'static', // ou true si vous voulez un backdrop sans fermeture au clic
-            keyboard: true // Désactive la fermeture par la touche Échap si vous le souhaitez
+            keyboard: false // Désactive la fermeture par la touche Échap si vous le souhaitez
         });
         console.log("Modal instance created:", this.boite);
 
