@@ -12,6 +12,7 @@ export default class extends Controller {
         // Vérifiez que this.boiteTarget existe bien et est un élément DOM
         if (this.boiteTarget) {
             this.boite = new bootstrap.Modal(this.boiteTarget);
+            console.log("Modal target: ", this.boite);
         } else {
             console.error("Modal target not found!");
         }
