@@ -97,5 +97,27 @@ export default class extends Controller {
         }
     }
 
+    // Méthode pour obtenir l'instance du contrôleur enfant
+    getChildController() {
+        // Vérifie que l'élément 'form' est bien défini comme target
+        if (this.hasFormTarget) {
+            // 'child' est l'identifiant de votre contrôleur enfant (data-controller="child")
+            return this.application.getControllerForElementAndIdentifier(this.hasFormTarget, 'form');
+        }
+        return null;
+    }
 
+    /**
+     * @param {Event} event 
+    */
+    triggerChildAction(event) {
+        const childController = this.getChildController();
+        if (childController) {
+            // Appeler une méthode du contrôleur enfant
+            childController.triggerFromParent(event);
+            console.log("Fonction enfant déclenchée.");
+        } else {
+            console.error("Contrôleur enfant non trouvé.");
+        }
+    }
 }

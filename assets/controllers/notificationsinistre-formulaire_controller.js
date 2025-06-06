@@ -213,4 +213,12 @@ export default class extends Controller {
             }
         }
     }
+
+
+    /**
+     * @param {Event} event 
+    */
+    triggerFromParen(event) {
+        this.enregistrerNotificationSinistre(event);
+    }
 }
