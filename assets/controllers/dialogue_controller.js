@@ -13,12 +13,13 @@ export default class extends Controller {
     ];
     static values = {
         idnotificationsinistre: Number,
+        nomcontroler: String,
         identreprise: Number,
         action: Number,
         objet: Number,
     };
 
-    
+
     connect() {
         console.log("Connecté au contrôleur dialogue.");
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
@@ -91,10 +92,11 @@ export default class extends Controller {
 
     // Méthode pour obtenir l'instance du contrôleur enfant
     getChildController() {
+        console.log(this.hasFormTarget, this.formTarget, this.nomcontrolerValue);
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
             // 'child' est l'identifiant de votre contrôleur enfant (data-controller="child")
-            return this.application.getControllerForElementAndIdentifier(this.hasFormTarget, 'form');
+            return this.application.getControllerForElementAndIdentifier(this.formTarget, this.nomcontrolerValue);
         }
         return null;
     }
