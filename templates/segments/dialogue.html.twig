@@ -12,12 +12,12 @@
           {# Contenu de la boîte de dialogue. Action: {{action}} / Objet: {{objet}} #}
           {# <form data-dialogue-target="form" data-action="submit->dialogue#submit"></form> #}
           <div data-dialogue-target="form"></div>
-          <div data-dialogue-target="message"></div>
       </div>
       <div class="modal-footer">
-          {# Le bouton de fermeture du footer n'a plus data-bs-dismiss #}
-          <button type="button" data-dialogue-target="btFermer" class="btn btn-danger" data-action="dialogue#close">Fermer</button>
-          {# <button type="button" class="btn btn-primary">Enregistrer</button> #}
+        <span class="text-secondary fw-italic" data-dialogue-target="message">Message</span>
+        {# Le bouton de fermeture du footer n'a plus data-bs-dismiss #}
+        <button type="button" data-dialogue-target="btFermer" class="btn btn-danger" data-action="dialogue#close">Fermer</button>
+        {# <button type="button" class="btn btn-primary">Enregistrer</button> #}
       </div>
     </div>
   </div>
