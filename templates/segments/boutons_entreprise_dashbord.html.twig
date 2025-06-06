@@ -96,7 +96,7 @@
         </a>
     {% endif %}
     {% if app.current_route starts with 'admin.notificationsinistre' %}
-        <a 
+        <span 
           data-controller="dialogue"
           data-dialogue-identreprise-value={{entreprise.id}} 
           data-dialogue-idnotificationsinistre-value=-1 
@@ -108,7 +108,7 @@
             {{ "entreprise_bouton_new_notificationsinistre" | trans }}
           </button>
           {{ include('segments/dialogue.html.twig', {titre:"entreprise_bouton_new_notificationsinistre" | trans}) }}
-        </a>
+        </span>
         {# Ancien code: il s'agissait d'un simple lien
         <a href="{{ path('admin.notificationsinistre.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}

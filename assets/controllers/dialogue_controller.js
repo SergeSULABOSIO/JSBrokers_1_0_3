@@ -1,12 +1,13 @@
 // assets/controllers/dialogue_controller.js
 import { Controller } from '@hotwired/stimulus';
+import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 // Assurez-vous que Bootstrap est bien importé ici
-// import * as bootstrap from '.bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
+// import * as bootstrap from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 
 export default class extends Controller {
-    static targets = ['boite', 'form', 'message'];
+    static targets = ['boite', 'form', 'message', 'btFermer'];
     static values = {
         idnotificationsinistre: Number,
         identreprise: Number,
@@ -16,6 +17,7 @@ export default class extends Controller {
 
     connect() {
         console.log("Connecté au contrôleur dialogue.");
+        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
         // Initialiser la modal uniquement si elle n'est pas déjà une instance
         if (!(this.boiteTarget instanceof Element)) { // Check if it's a DOM element, not already a Bootstrap instance
             console.error("Modal target is not a DOM element:", this.boiteTarget);
