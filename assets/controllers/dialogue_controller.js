@@ -8,6 +8,7 @@ export default class extends Controller {
         'boite',
         'form',
         'message',
+        'btSubmit',
         'btFermer'
     ];
     static values = {
@@ -20,6 +21,7 @@ export default class extends Controller {
     connect() {
         console.log("Connecté au contrôleur dialogue.");
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
+        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
 
         // Initialiser la modal uniquement si elle n'est pas déjà une instance
         if (!(this.boiteTarget instanceof Element)) { // Check if it's a DOM element, not already a Bootstrap instance
@@ -68,6 +70,18 @@ export default class extends Controller {
                 }
             });
     }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    submit(event) {
+        // Empêcher le comportement par défaut si le bouton est un submit ou un lien
+        event.preventDefault();
+        console.log("Click sur le bouton Submit.");
+    }
+
 
     /**
      * 
