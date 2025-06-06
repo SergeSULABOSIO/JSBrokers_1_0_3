@@ -177,4 +177,6 @@ export default class extends Controller {
                 console.error("Réponse d'erreur du serveur :", errorMessage);
             });
     }
+
+    
 }
