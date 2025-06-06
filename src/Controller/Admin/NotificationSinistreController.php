@@ -155,28 +155,33 @@ class NotificationSinistreController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        //Paramètres par défaut
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = new NotificationSinistre();
-        $notificationsinistre->setCreatedAt(new DateTimeImmutable("now"));
-        $notificationsinistre->setUpdatedAt(new DateTimeImmutable("now"));
-        $notificationsinistre->setNotifiedAt(new DateTimeImmutable("now"));
-        $notificationsinistre->setOccuredAt(new DateTimeImmutable("now"));
-
         if ($idNotificationsinistre != -1) {
             $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
+        } else {
+            $notificationsinistre->setCreatedAt(new DateTimeImmutable("now"));
+            $notificationsinistre->setUpdatedAt(new DateTimeImmutable("now"));
+            $notificationsinistre->setNotifiedAt(new DateTimeImmutable("now"));
+            $notificationsinistre->setOccuredAt(new DateTimeImmutable("now"));
+            $notificationsinistre->setInvite($invite);
         }
-
         // dd($notificationsinistre, $idEntreprise, $idNotificationsinistre);
 
         $form = $this->createForm(NotificationSinistreType::class, $notificationsinistre);
         $form->handleRequest($request);
 
-        // if ($form->isSubmitted() && $form->isValid()) {
-        //     $this->manager->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
-        //     $this->manager->flush();
-        //     //Le serveur renvoie un objet JSON
-        //     return $this->getJsonData($notificationsinistre);
-        // }
+        if ($form->isSubmitted() && $form->isValid()) {
+            // dd("Ici");
+            $this->manager->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->manager->flush();
+            //Le serveur renvoie un objet JSON
+            return $this->getJsonData($notificationsinistre);
+        }
         //On se dirie vers la page le formulaire d'édition
         return $this->render('admin/notificationsinistre/form.html.twig', [
             'utilisateur' => $user,

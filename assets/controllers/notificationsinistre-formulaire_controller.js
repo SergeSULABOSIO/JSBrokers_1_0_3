@@ -30,7 +30,10 @@ export default class extends Controller {
 
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));
-        this.displayTarget.textContent = "Prêt.";
+
+        // this.displayTarget.textContent = "Prêt.";
+        this.updateMessage("Prêt.");
+
 
         //On initialise les badges des onglets
         this.initBadges(
@@ -122,12 +125,15 @@ export default class extends Controller {
      */
     updateViewAvenants(referencePolice) {
         this.viewavenantsTarget.textContent = "Actualisation des avenants...";
-        this.displayTarget.textContent = "Actualisation des termes de paiement...";
+        // this.displayTarget.textContent = "Actualisation des termes de paiement...";
+        this.updateMessage("Actualisation des termes de paiement...");
+
         fetch("/admin/avenant/viewAvenantsByReferencePolice/" + referencePolice)
             .then(response => response.text()) //.json()
             .then(data => {
                 // console.log(data);
-                this.displayTarget.textContent = "Prêt.";
+                // this.displayTarget.textContent = "Prêt.";
+                this.updateMessage("Prêt.");
                 this.viewavenantsTarget.innerHTML = data;
             })
             .catch(errorMessage => {
@@ -143,23 +149,29 @@ export default class extends Controller {
     enregistrerNotificationSinistre = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.target.disabled = true;
-        this.displayTarget.textContent = "Enregistrement de " + this.referenceTarget.value + " en cours...";
+        // this.displayTarget.textContent = "Enregistrement de " + this.referenceTarget.value + " en cours...";
+        this.updateMessage("Enregistrement de " + this.referenceTarget.value + " en cours...");
+
         this.displayTarget.style.display = 'block';
 
         // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
-        fetch(this.element.action, {
+        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/-1';// + this.idnotificationsinistreValue;
+        console.log(formData, this.element, url);
+        fetch(url, {
             method: this.element.method,
             body: formData,
         })
             .then(response => response.json()) //.json()
             .then(data => {
+                console.log("Text Reponse:", data);
                 const userObject = JSON.parse(data);
-                console.log(userObject);
+                console.log("Json Reponse:", userObject);
 
                 event.target.disabled = false;
                 this.displayTarget.style.display = 'block';
                 this.displayTarget.textContent = "Prêt.";
+                this.updateMessage("Prêt.");
 
                 // Traitez la réponse ici
                 this.initBadges(
@@ -172,11 +184,33 @@ export default class extends Controller {
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
-                this.displayTarget.textContent = "Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.";
+                // this.displayTarget.textContent = "Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.";
+                this.updateMessage("Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.");
                 this.displayTarget.style.display = 'none';
                 console.error("Réponse d'erreur du serveur :", errorMessage);
             });
     }
 
-    
+    /**
+     * 
+     * @param {string} newMessage 
+     */
+    updateMessage(newMessage) {
+        this.displayTarget.innerHTML = newMessage;
+
+        // Accéder à l'élément parent du contrôleur
+        const parentElement = this.element.closest('[data-controller="dialogue"]');
+        if (parentElement) {
+            // Obtenir l'instance du contrôleur parent
+            const dialogueController = this.application.getControllerForElementAndIdentifier(parentElement, 'dialogue');
+
+            if (dialogueController && dialogueController.hasMessageTarget) {
+                // Accéder au target 'message' du parent (ou plus précisement de la boîte de dialogue)
+                // console.log("Accès au target 'message' du parent :", dialogueController.messageTarget.textContent);
+
+                // Appeler une méthode du parent, par exemple
+                dialogueController.updateMessage(newMessage);
+            }
+        }
+    }
 }
