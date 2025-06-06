@@ -154,9 +154,8 @@ export default class extends Controller {
 
         this.displayTarget.style.display = 'block';
 
-        // Ici, vous pouvez ajouter votre logique AJAX, de validation, etc.
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
-        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/-1';// + this.idnotificationsinistreValue;
+        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + (this.idnotificationsinistreValue == 0 ? '-1' : this.idnotificationsinistreValue);
         console.log(formData, this.element, url);
         fetch(url, {
             method: this.element.method,
@@ -174,6 +173,7 @@ export default class extends Controller {
                 this.updateMessage("Prêt.");
 
                 // Traitez la réponse ici
+                this.idnotificationsinistreValue = userObject.idNotificationSinistre;
                 this.initBadges(
                     userObject.nbOffres,
                     userObject.nbContacts,
