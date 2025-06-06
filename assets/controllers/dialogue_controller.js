@@ -18,6 +18,7 @@ export default class extends Controller {
         objet: Number,
     };
 
+    
     connect() {
         console.log("Connecté au contrôleur dialogue.");
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
@@ -45,6 +46,7 @@ export default class extends Controller {
     updateMessage(newMessage) {
         this.messageTarget.innerHTML = newMessage + " | ";
     }
+
 
     /**
      * 
@@ -76,17 +78,6 @@ export default class extends Controller {
      * 
      * @param {Event} event 
      */
-    submit(event) {
-        // Empêcher le comportement par défaut si le bouton est un submit ou un lien
-        event.preventDefault();
-        console.log("Click sur le bouton Submit.");
-    }
-
-
-    /**
-     * 
-     * @param {Event} event 
-     */
     close(event) {
         if (event) {
             event.preventDefault();
@@ -96,6 +87,7 @@ export default class extends Controller {
             this.boite.hide();
         }
     }
+
 
     // Méthode pour obtenir l'instance du contrôleur enfant
     getChildController() {
@@ -107,10 +99,12 @@ export default class extends Controller {
         return null;
     }
 
+
     /**
      * @param {Event} event 
     */
-    triggerChildAction(event) {
+    submit(event) {
+        console.log("Click sur le bouton Submit.");
         const childController = this.getChildController();
         if (childController) {
             // Appeler une méthode du contrôleur enfant
