@@ -5,7 +5,6 @@ export default class extends Controller {
     static targets = [
         'reference',
         'referencepolice',
-        'display',
         'displayoffre',
         'displaycontact',
         'displaytache',
@@ -25,15 +24,10 @@ export default class extends Controller {
 
     connect() {
         console.log("ID NOTIFICATION SINISTRE: " + this.idnotificationsinistreValue);
-
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
-
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));
-
-        // this.displayTarget.textContent = "Prêt.";
         this.updateMessage("Prêt.");
-
 
         //On initialise les badges des onglets
         this.initBadges(
@@ -44,6 +38,8 @@ export default class extends Controller {
         );
         this.updateViewAvenants(this.referencepoliceTarget.value);
         this.referencepoliceTarget.addEventListener("change", (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
+        
+        this.btEnregistrerTarget.style.display = "none";
     }
 
 
@@ -125,14 +121,12 @@ export default class extends Controller {
      */
     updateViewAvenants(referencePolice) {
         this.viewavenantsTarget.textContent = "Actualisation des avenants...";
-        // this.displayTarget.textContent = "Actualisation des termes de paiement...";
         this.updateMessage("Actualisation des termes de paiement...");
 
         fetch("/admin/avenant/viewAvenantsByReferencePolice/" + referencePolice)
             .then(response => response.text()) //.json()
             .then(data => {
                 // console.log(data);
-                // this.displayTarget.textContent = "Prêt.";
                 this.updateMessage("Prêt.");
                 this.viewavenantsTarget.innerHTML = data;
             })
@@ -149,10 +143,7 @@ export default class extends Controller {
     enregistrerNotificationSinistre = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.target.disabled = true;
-        // this.displayTarget.textContent = "Enregistrement de " + this.referenceTarget.value + " en cours...";
         this.updateMessage("Enregistrement de " + this.referenceTarget.value + " en cours...");
-
-        this.displayTarget.style.display = 'block';
 
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + (this.idnotificationsinistreValue == 0 ? '-1' : this.idnotificationsinistreValue);
@@ -168,8 +159,6 @@ export default class extends Controller {
                 console.log("Json Reponse:", userObject);
 
                 event.target.disabled = false;
-                this.displayTarget.style.display = 'block';
-                this.displayTarget.textContent = "Prêt.";
                 this.updateMessage("Prêt.");
 
                 // Traitez la réponse ici
@@ -184,9 +173,7 @@ export default class extends Controller {
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
-                // this.displayTarget.textContent = "Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.";
                 this.updateMessage("Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.");
-                this.displayTarget.style.display = 'none';
                 console.error("Réponse d'erreur du serveur :", errorMessage);
             });
     }
@@ -196,8 +183,6 @@ export default class extends Controller {
      * @param {string} newMessage 
      */
     updateMessage(newMessage) {
-        this.displayTarget.innerHTML = newMessage;
-
         // Accéder à l'élément parent du contrôleur
         const parentElement = this.element.closest('[data-controller="dialogue"]');
         if (parentElement) {

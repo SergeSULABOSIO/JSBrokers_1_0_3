@@ -37,8 +37,6 @@ export default class extends Controller {
         });
         console.log("Modal instance created:", this.boite);
         this.updateMessage("Prêt");
-
-        window.addEventListener("contenuFilsIsLoaded", this.cacherDisplayEtBtEnregistrerDuControllerFils.bind(this));
     }
 
 
@@ -72,33 +70,7 @@ export default class extends Controller {
             .then(response => response.text())
             .then(html => {
                 this.formTarget.innerHTML = html;
-                const contenuFilsIsLoadedEvent = new CustomEvent("contenuFilsIsLoaded", {
-                    detail: {
-                        fils: this.formTarget
-                    }
-                });
-                window.dispatchEvent(contenuFilsIsLoadedEvent);
             });
-    }
-
-
-    /**
-     * 
-     * @param {Event} event 
-     */
-    cacherDisplayEtBtEnregistrerDuControllerFils(event) {
-        const childController = this.getChildController();
-        console.log("Event - Evenement: ", event);
-        console.log("Event - Target du Controlleur Fils:", childController, this.formTarget);
-        console.log("Controleur Fils:", childController, this.formTarget);
-        if (childController) {
-            // console.log("J'ai trouvé le controleur Fils dont on va cacher le display et ne bouton Enregistrer.", childController);
-            // Appeler une méthode du contrôleur enfant
-            childController.displayTarget.style.display = "none";
-            childController.btEnregistrerTarget.style.display = "none";
-        } else {
-            console.error("Impossible de trouver le controleur Fils!");
-        }
     }
 
 
@@ -112,8 +84,7 @@ export default class extends Controller {
         }
         console.log("Méthode close appelée.");
         if (this.boite) {
-            // this.boite.hide();
-            this.cacherDisplayEtBtEnregistrerDuControllerFils(event);
+            this.boite.hide();
         }
     }
 
