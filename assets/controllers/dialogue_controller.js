@@ -37,6 +37,8 @@ export default class extends Controller {
         });
         console.log("Modal instance created:", this.boite);
         this.updateMessage("Prêt");
+
+        window.addEventListener("contenuFilsIsLoaded", this.cacherDisplayEtBtEnregistrerDuControllerFils.bind(this));
     }
 
 
@@ -60,18 +62,43 @@ export default class extends Controller {
         console.log("Méthode open appelée.", this.identrepriseValue, this.idnotificationsinistreValue, url);
 
         this.formTarget.innerHTML = "Veuillez patienter svp...";
-        this.boite.show();
+        if (this.boite) {
+            this.boite.show();
+        } else {
+            console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
+        }
 
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())
             .then(html => {
-                if (this.boite) {
-                    this.formTarget.innerHTML = html;
-                    // this.boite.show();
-                } else {
-                    console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
-                }
+                this.formTarget.innerHTML = html;
+                const contenuFilsIsLoadedEvent = new CustomEvent("contenuFilsIsLoaded", {
+                    detail: {
+                        fils: this.formTarget
+                    }
+                });
+                window.dispatchEvent(contenuFilsIsLoadedEvent);
             });
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    cacherDisplayEtBtEnregistrerDuControllerFils(event) {
+        const childController = this.getChildController();
+        console.log("Event - Evenement: ", event);
+        console.log("Event - Target du Controlleur Fils:", childController, this.formTarget);
+        console.log("Controleur Fils:", childController, this.formTarget);
+        if (childController) {
+            // console.log("J'ai trouvé le controleur Fils dont on va cacher le display et ne bouton Enregistrer.", childController);
+            // Appeler une méthode du contrôleur enfant
+            childController.displayTarget.style.display = "none";
+            childController.btEnregistrerTarget.style.display = "none";
+        } else {
+            console.error("Impossible de trouver le controleur Fils!");
+        }
     }
 
 
@@ -85,18 +112,17 @@ export default class extends Controller {
         }
         console.log("Méthode close appelée.");
         if (this.boite) {
-            this.boite.hide();
+            // this.boite.hide();
+            this.cacherDisplayEtBtEnregistrerDuControllerFils(event);
         }
     }
 
 
     // Méthode pour obtenir l'instance du contrôleur enfant
     getChildController() {
-        console.log(this.hasFormTarget, this.formTarget, this.nomcontrolerValue);
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
-            // 'child' est l'identifiant de votre contrôleur enfant (data-controller="child")
-            return this.application.getControllerForElementAndIdentifier(this.formTarget, this.nomcontrolerValue);
+            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.nomcontrolerValue);
         }
         return null;
     }
@@ -108,6 +134,7 @@ export default class extends Controller {
     submit(event) {
         console.log("Click sur le bouton Submit.");
         const childController = this.getChildController();
+        console.log("Controleur Fils:", childController);
         if (childController) {
             // Appeler une méthode du contrôleur enfant
             childController.triggerFromParent(event);

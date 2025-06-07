@@ -11,7 +11,7 @@
 		}
 	}) 
 }}
-<div class="d-flex shadow-sm card bg-body sensible bg-white">
+<div class="d-flex shadow-sm card bg-body bg-white">
 	<div class="card-body">
 		<div>
 			{# Les onglets #}
@@ -100,6 +100,14 @@
 					</div>
 					<div class="row">
 						<div class="col">
+							{{ form_row(form.assure) }}
+						</div>
+						<div class="col">
+							{{ form_row(form.risque) }}
+						</div>
+					</div>
+					<div class="row">
+						<div class="col">
 							{{ form_row(form.descriptionDeFait) }}
 						</div>
 					</div>
@@ -117,14 +125,6 @@
 						</div>
 						<div class="col">
 							{{ form_row(form.evaluationChiffree) }}
-						</div>
-					</div>
-					<div class="row">
-						<div class="col">
-							{{ form_row(form.assure) }}
-						</div>
-						<div class="col">
-							{{ form_row(form.risque) }}
 						</div>
 					</div>
 				</div>

@@ -203,11 +203,7 @@ export default class extends Controller {
         if (parentElement) {
             // Obtenir l'instance du contrôleur parent
             const dialogueController = this.application.getControllerForElementAndIdentifier(parentElement, 'dialogue');
-
             if (dialogueController && dialogueController.hasMessageTarget) {
-                // Accéder au target 'message' du parent (ou plus précisement de la boîte de dialogue)
-                // console.log("Accès au target 'message' du parent :", dialogueController.messageTarget.textContent);
-
                 // Appeler une méthode du parent, par exemple
                 dialogueController.updateMessage(newMessage);
             }
@@ -218,7 +214,7 @@ export default class extends Controller {
     /**
      * @param {Event} event 
     */
-    triggerFromParen(event) {
+    triggerFromParent(event) {
         this.enregistrerNotificationSinistre(event);
     }
 }
