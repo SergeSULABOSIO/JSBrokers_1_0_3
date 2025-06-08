@@ -4,6 +4,9 @@ import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l
 import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 export default class extends Controller {
+    /**
+     * Action [0=New, 1=Edit, 3=Delete]
+     */
     static targets = [
         'titre',
         'boite',
@@ -61,13 +64,22 @@ export default class extends Controller {
         } else {
             console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
         }
-        
-        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
-        fetch(url) // Remplacez par l'URL de votre formulaire
-            .then(response => response.text())
-            .then(html => {
-                this.formTarget.innerHTML = html;
-            });
+
+        if (this.actionValue == 0 || this.actionValue == 1) {
+            defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+            defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
+            const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
+            fetch(url) // Remplacez par l'URL de votre formulaire
+                .then(response => response.text())
+                .then(html => {
+                    this.formTarget.innerHTML = html;
+                });
+        }
+        if (this.actionValue == 3) {
+            defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
+            defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
+            this.formTarget.innerHTML = "Etes-vous sûre de vouloir supprimer cet enregistrement?";
+        }
     }
 
 
@@ -100,12 +112,16 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        const childController = this.getChildController();
-        if (childController) {
-            // Appeler une méthode du contrôleur enfant
-            childController.triggerFromParent(event);
+        if (this.actionValue == 3) {
+            console.log("On lance la suppression...");
         } else {
-            console.error("Contrôleur enfant non trouvé.");
+            const childController = this.getChildController();
+            if (childController) {
+                // Appeler une méthode du contrôleur enfant
+                childController.triggerFromParent(event);
+            } else {
+                console.error("Contrôleur enfant non trouvé.");
+            }
         }
     }
 }
