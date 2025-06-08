@@ -111,13 +111,10 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        // console.log("Click sur le bouton Submit.");
         const childController = this.getChildController();
-        // console.log("Controleur Fils:", childController);
         if (childController) {
             // Appeler une méthode du contrôleur enfant
             childController.triggerFromParent(event);
-            // console.log("Fonction enfant déclenchée.");
         } else {
             console.error("Contrôleur enfant non trouvé.");
         }
