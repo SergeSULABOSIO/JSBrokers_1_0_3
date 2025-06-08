@@ -66,14 +66,14 @@ export default class extends Controller {
             this.titreTarget.innerHTML = cible.dataset.itemTitre;
         }
 
-        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
         this.formTarget.innerHTML = "Veuillez patienter svp...";
         if (this.boite) {
             this.boite.show();
         } else {
             console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
         }
-
+        
+        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())
             .then(html => {
@@ -100,7 +100,6 @@ export default class extends Controller {
     // Méthode pour obtenir l'instance du contrôleur enfant
     getChildController() {
         // Vérifie que l'élément 'form' est bien défini comme target
-        // console.log("Form Target", this.formTarget);
         if (this.hasFormTarget) {
             return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.nomcontrolerValue);
         }
