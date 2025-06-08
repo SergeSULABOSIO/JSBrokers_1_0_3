@@ -13,7 +13,6 @@ export default class extends Controller {
         'btFermer'
     ];
     static values = {
-        idnotificationsinistre: Number,
         nomcontroler: String,
         identreprise: Number,
         action: Number,
@@ -27,10 +26,10 @@ export default class extends Controller {
         defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
 
         // Initialiser la modal uniquement si elle n'est pas déjà une instance
-        if (!(this.boiteTarget instanceof Element)) { // Check if it's a DOM element, not already a Bootstrap instance
-            console.error("Modal target is not a DOM element:", this.boiteTarget);
-            return;
-        }
+        // if (!(this.boiteTarget instanceof Element)) { // Check if it's a DOM element, not already a Bootstrap instance
+        //     console.error("Modal target is not a DOM element:", this.boiteTarget);
+        //     return;
+        // }
         // Initialiser la modal en désactivant le backdrop click
         this.boite = new Modal(this.boiteTarget, {
             backdrop: 'static', // ou true si vous voulez un backdrop sans fermeture au clic
@@ -58,18 +57,16 @@ export default class extends Controller {
         // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
         const cible = event.currentTarget;
-        this.idnotificationsinistreValue = cible.dataset.itemIdnotificationsinistre;
+        this.actionValue = cible.dataset.itemAction;
+        this.objetValue = cible.dataset.itemObjet;
         this.nomcontrolerValue = cible.dataset.itemNomcontroler;
-        if(this.idnotificationsinistreValue != -1){
+        if(this.objetValue != -1){
             this.titreTarget.innerHTML = "Edition de " + cible.dataset.itemTitre;
         }else{
             this.titreTarget.innerHTML = cible.dataset.itemTitre;
         }
-        this.actionValue = cible.dataset.itemAction;
-        this.objetValue = cible.dataset.itemObjet;
-        // console.log("Open - dialogue - dataset: ", cible.dataset);
 
-        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.idnotificationsinistreValue;
+        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
         this.formTarget.innerHTML = "Veuillez patienter svp...";
         if (this.boite) {
             this.boite.show();
