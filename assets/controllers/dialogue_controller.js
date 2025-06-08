@@ -53,11 +53,7 @@ export default class extends Controller {
         this.actionValue = cible.dataset.itemAction;
         this.objetValue = cible.dataset.itemObjet;
         this.nomcontrolerValue = cible.dataset.itemNomcontroler;
-        if(this.objetValue != -1){
-            this.titreTarget.innerHTML = "Edition de " + cible.dataset.itemTitre;
-        }else{
-            this.titreTarget.innerHTML = cible.dataset.itemTitre;
-        }
+        this.titreTarget.innerHTML = cible.dataset.itemTitre;
 
         this.formTarget.innerHTML = "Veuillez patienter svp...";
         if (this.boite) {

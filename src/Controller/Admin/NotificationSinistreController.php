@@ -10,6 +10,7 @@ use App\Form\AssureurType;
 use App\Form\PartenaireType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Entity\Avenant;
 use App\Entity\NotificationSinistre;
 use App\Entity\Utilisateur;
 use App\Form\NotificationSinistreType;
@@ -177,6 +178,18 @@ class NotificationSinistreController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             // dd("Ici");
+
+            $avenants = $this->constante->Entreprise_getAvenantsByReference($notificationsinistre->getReferencePolice());
+            if (count($avenants) != 0) {
+                /** @var Avenant $ave */
+                $ave = $avenants[0];
+                if ($ave->getCotation() != null) {
+                    $notificationsinistre->setAssureur($ave->getCotation()->getAssureur());
+                    $notificationsinistre->setAssure($ave->getCotation()->getPiste()->getClient());
+                    $notificationsinistre->setRisque($ave->getCotation()->getPiste()->getRisque());
+                }
+            }
+
             $this->manager->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
             //Le serveur renvoie un objet JSON
