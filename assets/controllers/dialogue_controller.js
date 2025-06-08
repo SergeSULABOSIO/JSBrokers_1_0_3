@@ -24,18 +24,11 @@ export default class extends Controller {
         console.log("Connecté au contrôleur dialogue.");
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
         defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
-
-        // Initialiser la modal uniquement si elle n'est pas déjà une instance
-        // if (!(this.boiteTarget instanceof Element)) { // Check if it's a DOM element, not already a Bootstrap instance
-        //     console.error("Modal target is not a DOM element:", this.boiteTarget);
-        //     return;
-        // }
         // Initialiser la modal en désactivant le backdrop click
         this.boite = new Modal(this.boiteTarget, {
             backdrop: 'static', // ou true si vous voulez un backdrop sans fermeture au clic
             keyboard: false // Désactive la fermeture par la touche Échap si vous le souhaitez
         });
-        // console.log("Modal instance created:", this.boite);
         this.updateMessage("Prêt");
     }
 
