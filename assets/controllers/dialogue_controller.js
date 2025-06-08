@@ -5,6 +5,7 @@ import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si v
 
 export default class extends Controller {
     static targets = [
+        'titre',
         'boite',
         'form',
         'message',
@@ -35,7 +36,7 @@ export default class extends Controller {
             backdrop: 'static', // ou true si vous voulez un backdrop sans fermeture au clic
             keyboard: false // Désactive la fermeture par la touche Échap si vous le souhaitez
         });
-        console.log("Modal instance created:", this.boite);
+        // console.log("Modal instance created:", this.boite);
         this.updateMessage("Prêt");
     }
 
@@ -56,9 +57,19 @@ export default class extends Controller {
     open(event) {
         // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
-        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.idnotificationsinistreValue;
-        console.log("Méthode open appelée.", this.identrepriseValue, this.idnotificationsinistreValue, url);
+        const cible = event.currentTarget;
+        this.idnotificationsinistreValue = cible.dataset.itemIdnotificationsinistre;
+        this.nomcontrolerValue = cible.dataset.itemNomcontroler;
+        if(this.idnotificationsinistreValue != -1){
+            this.titreTarget.innerHTML = "Edition de " + cible.dataset.itemTitre;
+        }else{
+            this.titreTarget.innerHTML = cible.dataset.itemTitre;
+        }
+        this.actionValue = cible.dataset.itemAction;
+        this.objetValue = cible.dataset.itemObjet;
+        // console.log("Open - dialogue - dataset: ", cible.dataset);
 
+        const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.idnotificationsinistreValue;
         this.formTarget.innerHTML = "Veuillez patienter svp...";
         if (this.boite) {
             this.boite.show();
@@ -82,7 +93,7 @@ export default class extends Controller {
         if (event) {
             event.preventDefault();
         }
-        console.log("Méthode close appelée.");
+        // console.log("Méthode close appelée.");
         if (this.boite) {
             this.boite.hide();
         }
@@ -92,6 +103,7 @@ export default class extends Controller {
     // Méthode pour obtenir l'instance du contrôleur enfant
     getChildController() {
         // Vérifie que l'élément 'form' est bien défini comme target
+        // console.log("Form Target", this.formTarget);
         if (this.hasFormTarget) {
             return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.nomcontrolerValue);
         }
@@ -103,13 +115,13 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        console.log("Click sur le bouton Submit.");
+        // console.log("Click sur le bouton Submit.");
         const childController = this.getChildController();
-        console.log("Controleur Fils:", childController);
+        // console.log("Controleur Fils:", childController);
         if (childController) {
             // Appeler une méthode du contrôleur enfant
             childController.triggerFromParent(event);
-            console.log("Fonction enfant déclenchée.");
+            // console.log("Fonction enfant déclenchée.");
         } else {
             console.error("Contrôleur enfant non trouvé.");
         }
