@@ -68,7 +68,7 @@ export default class extends Controller {
         if (this.actionValue == 0 || this.actionValue == 1) {
             if (this.actionValue == 0) {
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
-            }else{
+            } else {
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
             }
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
@@ -97,6 +97,11 @@ export default class extends Controller {
     close(event) {
         if (event) {
             event.preventDefault();
+        }
+        //On ferme après Actualisation
+        if (this.actionValue == 1) {
+            const listeControler = this.getListeController();
+            listeControler.actualiserElement(this.objetValue);
         }
         //Annulation de la suppression
         if (this.actionValue == 2) {
@@ -134,19 +139,9 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        //Action: Suppression
-        if (this.actionValue == 2) {
-            const listeControler = this.getListeController();
-            console.log("On lance la suppression...");
-            listeControler.supprimerElement(this.objetValue);
-            if (this.boite) {
-                this.boite.hide();
-            }
-        } else if (this.actionValue == 1) {
-            //Action: Modification
-            const listeControler = this.getListeController();
-            listeControler.actualiserElement(this.objetValue);
-        } else {
+        console.log("Dialogue - Action: " + this.actionValue);
+        //Action: Ajout ou Modification
+        if (this.actionValue == 0 || this.actionValue == 1) {
             const childController = this.getChildController();
             if (childController) {
                 // Appeler une méthode du contrôleur enfant
@@ -155,5 +150,29 @@ export default class extends Controller {
                 console.error("Contrôleur enfant non trouvé.");
             }
         }
+        //Action: Suppression
+        if (this.actionValue == 2) {
+            const listeControler = this.getListeController();
+            console.log("On lance la suppression...");
+            listeControler.supprimerElement(this.objetValue);
+            if (this.boite) {
+                this.boite.hide();
+            }
+        }
+
+
+        // else if (this.actionValue == 1) {
+        //     //Action: Modification
+        //     const listeControler = this.getListeController();
+        //     listeControler.actualiserElement(this.objetValue);
+        // } else {
+        //     const childController = this.getChildController();
+        //     if (childController) {
+        //         // Appeler une méthode du contrôleur enfant
+        //         childController.triggerFromParent(event);
+        //     } else {
+        //         console.error("Contrôleur enfant non trouvé.");
+        //     }
+        // }
     }
 }

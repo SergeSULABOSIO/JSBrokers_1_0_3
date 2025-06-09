@@ -60,8 +60,8 @@ export default class extends Controller {
      * @param {number} idObjet 
      */
     actualiserElement(idObjet) {
-        this.updateMessage("Actualisation de l'élement " + idObjet + " en cours... Patientez svp.");
-        const url = '/admin/' + this.controleurphpValue + '/getlistelementdetails/' + idObjet;
+        this.updateMessage("Actualisation de l'élement " + idObjet + " en cours...");
+        const url = '/admin/' + this.controleurphpValue + '/getlistelementdetails/' + this.identrepriseValue + "/" + idObjet;
         console.log(url);
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())

@@ -232,9 +232,12 @@ class NotificationSinistreController extends AbstractController
         ]));
     }
 
-    #[Route('/getlistelementdetails/{idNotificationsinistre}', name: 'getlistelementdetails', requirements: ['idNotificationsinistre' => Requirement::DIGITS])]
-    public function getlistelementdetails($idNotificationsinistre, Request $request)
+    #[Route('/getlistelementdetails/{idEntreprise}/{idNotificationsinistre}', name: 'getlistelementdetails')]
+    public function getlistelementdetails($idEntreprise, $idNotificationsinistre, Request $request)
     {
+        /** @var Entreprise $entreprise */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
@@ -244,12 +247,10 @@ class NotificationSinistreController extends AbstractController
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
 
-        $this->manager->remove($notificationsinistre);
-        $this->manager->flush();
-
         //On se dirie vers la page le formulaire d'édition
         return $this->render('admin/notificationsinistre/elementview.html.twig', [
             'notificationsinistre' => $notificationsinistre,
+            'entreprise' => $entreprise,
             'utilisateur' => $user,
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
