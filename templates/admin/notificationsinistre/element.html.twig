@@ -1,6 +1,14 @@
-<tr id="row_notificationsinistre_{{ notificationsinistre.id }}" class="element-a-encadrer parent-a-options">
+<tr 
+    id="row_notificationsinistre_{{ notificationsinistre.id }}" 
+    class="element-a-encadrer parent-a-options" 
+>
     <td>
-        <a class="m-2 fw-bold" href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}">
+        <a 
+            class="m-2 fw-bold" 
+            data-action = "liste-principale#selectionner" 
+            data-item-objet={{notificationsinistre.id}}
+        >
+            {# href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" #}
             {{ include('segments/icones/notificationsinistre.html.twig', {size:'19px'}) }}
             "{{ notificationsinistre.descriptionDeFait|slice(0, 85) }} [...]"
         </a><br/>

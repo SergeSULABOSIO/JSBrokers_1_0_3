@@ -21,17 +21,26 @@
 {% endblock %}
 
 {% block body %}
-    <div data-controller="dialogue" data-dialogue-identreprise-value={{entreprise.id}}>
+    <div 
+        data-controller="dialogue liste-principale" 
+        data-dialogue-identreprise-value={{entreprise.id}} 
+        data-liste-principale-identreprise-value={{entreprise.id}} 
+        data-liste-principale-idutilisateur-value={{utilisateur.id}} 
+        data-liste-principale-nbelements-value={{notificationsinistres|length}} 
+        data-liste-principale-rubrique-value="Notificaton Sinistre" 
+    >
         <div class="d-flex shadow-sm sensible bg-white">
             <table class="table table-hover table-sm caption-top p-3">
                 <caption>
-                    {% if notificationsinistres|length == 0 %}
-                        {{ "list_filter_result_empty" | trans}}
-                    {% else %}
-                        {{ "list_filter_result_elements" | trans({
-                            ':number': notificationsinistres|length
-                        })}}
-                    {% endif %}
+                    <span data-liste-principale-target = "display">
+                        {% if notificationsinistres|length == 0 %}
+                            {{ "list_filter_result_empty" | trans}}
+                        {% else %}
+                            {{ "list_filter_result_elements" | trans({
+                                ':number': notificationsinistres|length
+                            })}}
+                        {% endif %}
+                    </span>
                     <div class="d-flex gap-1">
                         {{ knp_pagination_render(notificationsinistres) }}
                     </div>
@@ -51,7 +60,7 @@
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="table-group-divider">
+                    <tbody class="table-group-divider" data-liste-principale-target = "donnees">
                         {# Boucler les donnees #}
                         {% for notificationsinistre in notificationsinistres %}
                             {{ include('admin/notificationsinistre/element.html.twig') }}
