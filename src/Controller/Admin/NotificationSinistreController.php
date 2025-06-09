@@ -218,22 +218,25 @@ class NotificationSinistreController extends AbstractController
         ]));
     }
 
-    #[Route('/remove/{idEntreprise}/{idNotificationsinistre}', name: 'remove', requirements: ['idNotificationsinistre' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    #[Route('/remove/{idEntreprise}/{idNotificationsinistre}', name: 'remove', requirements: ['idNotificationsinistre' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS])]
     public function remove($idEntreprise, $idNotificationsinistre, Request $request)
     {
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
 
-        $message = $this->translator->trans("notificationsinistre_deletion_ok", [
-            ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),
-        ]);
-
+        // $message = $this->translator->trans("notificationsinistre_deletion_ok", [
+        //     ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),
+        // ]);
         $this->manager->remove($notificationsinistre);
         $this->manager->flush();
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.notificationsinistre.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // $this->addFlash("success", $message);
+
+        // return $this->redirectToRoute("admin.notificationsinistre.index", [
+        //     'idEntreprise' => $idEntreprise,
+        // ]);
+        return $this->json(json_encode([
+            "reponse" => "Ok",
+        ]));
     }
 }

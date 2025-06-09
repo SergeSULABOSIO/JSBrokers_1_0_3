@@ -6,6 +6,7 @@ export default class extends Controller {
         'donnees',     //Liste conténant des élements
     ];
     static values = {
+        controleurphp: String,
         objet: Number,
         identreprise: Number,
         idutilisateur: Number,
@@ -33,7 +34,25 @@ export default class extends Controller {
      * @param {number} idObjet 
     */
     supprimer(idObjet) {
-        this.updateMessage("Liste Principale - Suppression de " + idObjet);
+        this.objetValue = idObjet;
+        this.updateMessage("Suppression de " + idObjet + " en cours... Patientez svp.");
+        const url = '/admin/' + this.controleurphpValue + '/remove/' + this.identrepriseValue + '/' + this.objetValue;
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.json())
+            .then(data => {
+                const serverJsonObject = JSON.parse(data);
+                // this.formTarget.innerHTML = html;
+                if (serverJsonObject.reponse == "Ok") {
+                    this.nbelementsValue--;
+                    const elementDeleted = document.getElementById("liste_row_" + this.objetValue);
+                    const parentElementDeleted = elementDeleted.parentElement;
+                    parentElementDeleted.removeChild(elementDeleted);
+                    // console.log("Element HTML à Supprimer: ", elementDeleted);
+                    this.updateMessage("Suppression réussie.");
+                }else{
+                    this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
+                }
+            });
     }
 
 
