@@ -16,7 +16,7 @@ export default class extends Controller {
 
     connect() {
         console.log("Liste " + this.rubriqueValue);
-        this.updateMessage("Prêt: " + this.nbelementsValue + " élement(s).");
+        this.updateMessage("");
     }
 
     /**
@@ -25,8 +25,15 @@ export default class extends Controller {
     selectionner(event) {
         const cible = event.currentTarget;
         this.objetValue = cible.dataset.itemObjet;
-        this.updateMessage("Prêt: " + this.nbelementsValue + " élement(s) " + "| Séléction [id.=" + this.objetValue + "]");
+        this.updateMessage("Séléction [id.=" + this.objetValue + "]");
         console.log("Liste : Element selectionné: ", event.currentTarget, this.objetValue);
+    }
+
+    /**
+     * @param {number} idObjet 
+    */
+    supprimer(idObjet) {
+        this.updateMessage("Liste Principale - Suppression de " + idObjet);
     }
 
 
@@ -35,6 +42,6 @@ export default class extends Controller {
      * @param {string} newMessage 
      */
     updateMessage(newMessage) {
-        this.displayTarget.innerHTML = newMessage;
+        this.displayTarget.innerHTML = "Résultat: " + this.nbelementsValue + " élement(s) | " + newMessage;
     }
 }

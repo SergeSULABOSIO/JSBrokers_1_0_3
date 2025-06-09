@@ -76,6 +76,8 @@ export default class extends Controller {
                 });
         }
         if (this.actionValue == 3) {
+            const listeControler = this.getListeController();
+            listeControler.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
             defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
             this.formTarget.innerHTML = "Etes-vous sûre de vouloir supprimer cet enregistrement?";
@@ -90,6 +92,10 @@ export default class extends Controller {
     close(event) {
         if (event) {
             event.preventDefault();
+        }
+        if (this.actionValue == 3) {
+            const listeControler = this.getListeController();
+            listeControler.updateMessage("Suppression annulée.");
         }
         // console.log("Méthode close appelée.");
         if (this.boite) {
@@ -108,12 +114,27 @@ export default class extends Controller {
     }
 
 
+    getListeController() {
+        const liste = document.getElementById("liste");
+        // Vérifie que l'élément 'form' est bien défini comme target
+        if (liste) {
+            return this.application.getControllerForElementAndIdentifier(liste, "liste-principale");
+        }
+        return null;
+    }
+
+
     /**
      * @param {Event} event 
     */
     submit(event) {
         if (this.actionValue == 3) {
+            const listeControler = this.getListeController();
+            listeControler.supprimer(this.objetValue);
             console.log("On lance la suppression...");
+            if (this.boite) {
+                this.boite.hide();
+            }
         } else {
             const childController = this.getChildController();
             if (childController) {
