@@ -224,19 +224,35 @@ class NotificationSinistreController extends AbstractController
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
 
-        // $message = $this->translator->trans("notificationsinistre_deletion_ok", [
-        //     ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),
-        // ]);
         $this->manager->remove($notificationsinistre);
         $this->manager->flush();
 
-        // $this->addFlash("success", $message);
-
-        // return $this->redirectToRoute("admin.notificationsinistre.index", [
-        //     'idEntreprise' => $idEntreprise,
-        // ]);
         return $this->json(json_encode([
             "reponse" => "Ok",
         ]));
+    }
+
+    #[Route('/getlistelementdetails/{idNotificationsinistre}', name: 'getlistelementdetails', requirements: ['idNotificationsinistre' => Requirement::DIGITS])]
+    public function getlistelementdetails($idNotificationsinistre, Request $request)
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var NotificationSinistre $notificationsinistre */
+        $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
+
+        $this->manager->remove($notificationsinistre);
+        $this->manager->flush();
+
+        //On se dirie vers la page le formulaire d'édition
+        return $this->render('admin/notificationsinistre/elementview.html.twig', [
+            'notificationsinistre' => $notificationsinistre,
+            'utilisateur' => $user,
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+        ]);
     }
 }

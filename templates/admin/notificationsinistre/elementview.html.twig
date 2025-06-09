@@ -1,0 +1,160 @@
+<td>
+    <a 
+        class="m-2 fw-bold" 
+        data-action = "liste-principale#selectionner" 
+        data-item-objet={{notificationsinistre.id}}
+    >
+        {# href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" #}
+        {{ include('segments/icones/notificationsinistre.html.twig', {size:'19px'}) }}
+        "{{ notificationsinistre.descriptionDeFait|slice(0, 85) }} [...]"
+    </a><br/>
+    <small class="m-2">
+        {% if notificationsinistre.occuredAt != null %}
+            <span class="text-secondary">
+                {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                Le {{ notificationsinistre.occuredAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+            </span>
+        {% endif %}
+        {% if notificationsinistre.lieu != null %}
+            <span class="text-secondary">
+                à {{ notificationsinistre.lieu }}
+            </span>
+        {% endif %}
+        {% if notificationsinistre.notifiedAt != null %}
+            <span class="text-secondary">
+                • {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
+                Notifié le {{ notificationsinistre.notifiedAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
+            </span>
+        {% endif %}
+        {% if notificationsinistre.referenceSinistre != null %}
+            <span class="text-secondary">
+                • {{ include('segments/icones/notificationsinistre.html.twig', {size:'16px'}) }}
+                Réf.: {{ notificationsinistre.referenceSinistre }}
+            </span>
+        {% endif %}
+    </small><br/>
+    <small class="m-2">
+        {% if notificationsinistre.assure != null %}
+            <span class="text-secondary">
+                {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                {{ notificationsinistre.assure.nom }}
+            </span>
+        {% endif %}
+        {% if notificationsinistre.referencePolice != null %}
+            <span class="text-secondary">
+                • {{ include('segments/icones/avenant.html.twig', {size:'16px'}) }}
+                Police: {{ notificationsinistre.referencePolice }}
+            </span>
+        {% endif %}
+        {% if notificationsinistre.assureur != null %}
+            <span class="text-secondary">
+                • 
+                {{ include('segments/icones/assureur.html.twig', {size:'16px'}) }}
+                {{ notificationsinistre.assureur.nom }}
+            </span>
+        {% endif %}
+        {% if notificationsinistre.risque != null %}
+            <span class="text-secondary">
+                • 
+                {{ include('segments/icones/risque.html.twig', {size:'16px'}) }}
+                {{ notificationsinistre.risque.code }}
+            </span>
+        {% endif %}
+    </small><br/>
+    <small class="m-2">
+        <span class="text-secondary">
+            {{ include('segments/icones/offreindemnisation.html.twig', {size:'16px'}) }}
+            Dommage: {{ notificationsinistre.dommage|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+        </span> 
+        <span class="text-secondary"> • Evaluation de l'expert: {{ notificationsinistre.evaluationChiffree|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+        <span class="text-secondary"> • Franchise: {{ constante.Notification_Sinistre_getFranchise(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
+    </small><br/>
+    <small class="m-2 fw-bold">
+        <span class="text-secondary">
+            {{ include('segments/icones/offreindemnisation.html.twig', {size:'16px'}) }}
+            Compensation: {{ constante.Notification_Sinistre_getCompensation(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+        </span> 
+        <span class="text-secondary">
+            • versée: {{ constante.Notification_Sinistre_getCompensationVersee(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+        </span> 
+        {% set couleur = "text-secondary" %}
+        {% if constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre) != 0 %}
+            {% set couleur = "text-danger" %}
+        {% endif %}
+        <span class="{{couleur}}">
+            • Solde: {{ constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
+        </span> 
+    </small><br/>
+    {% set statusDoc = constante.Notification_Sinistre_getStatusDocumentsAttendus(notificationsinistre) %}
+    <small class="m-2">
+        <span class="text-secondary">
+            {{ include('segments/icones/modelepiecesinistre.html.twig', {size:'16px'}) }}
+            Attendu ({{ statusDoc['Docs_attendus']|length }})
+        </span> 
+        <span class="text-secondary">
+            • Fournis ({{ statusDoc['Docs_fournis']|length }})
+        </span> 
+        <span class="text-danger">
+            • Manquants ({{ statusDoc['Docs_manquants']|length }})
+        </span> 
+    </small><br/>
+    {% if statusDoc['Docs_manquants']|length != 0 %}
+        <small class="m-2 fw-bold">
+            <span class="text-danger">Les documents suivants sont manquants:</span>
+        </small><br/>
+        {% set index = 1 %}
+        {% for manquant in statusDoc['Docs_manquants'] %}
+            <small class="m-2">
+                <span class="text-danger"> {{ index}}) {{ manquant.nom }}
+                {% if manquant.obligatoire == true %}
+                    <span class="fw-bold">(obligatoire)</span>
+                {% endif %}
+                : {{ manquant.description }}</span><br/>
+            </small>
+        {% set index = index + 1 %}
+        {% endfor %}
+    {% endif %}
+    {% if constante.Notification_Sinistre_getDureeReglement(notificationsinistre)|length > 0 %}
+        <small class="m-2">
+            <span class="text-secondary">
+                {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
+                Sinistre indemnisé en {{ constante.Notification_Sinistre_getDureeReglement(notificationsinistre) }} jours
+            </span> 
+            <span class="text-secondary"> • entre le {{ notificationsinistre.notifiedAt|format_datetime('short', 'none', locale: utilisateur.locale) }} et le {{ constante.Notification_Sinistre_getDateDernierRgelement(notificationsinistre)|format_datetime('short', 'none', locale: utilisateur.locale) }}, jour du dernier reglèment.</span> 
+        </small><br/>
+    {% endif %}
+</td>
+<td>
+    <div class="d-flex gap-1 d-flex justify-content-end">
+        {# Les actions sur l element de la liste #}
+        <div class="options-du-parent">
+            <button 
+                data-item-nomcontroler="notificationsinistre-formulaire" 
+                data-item-action=1 
+                data-item-objet={{notificationsinistre.id}} 
+                data-item-titre="Edition de la notification" 
+                data-action="dialogue#open" 
+                class="btn btn-outline-primary btn-sm border-0" 
+            >
+                {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
+            </button>
+        </div>
+        <div class="options-du-parent">
+            <form action="{{ path('admin.notificationsinistre.remove', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" method='POST'>
+                <input type='hidden' name='_method' value='DELETE'>
+                <button 
+                    data-item-nomcontroler="" 
+                    data-item-action=2 
+                    data-item-objet={{notificationsinistre.id}} 
+                    data-item-titre="Suppression de la notification" 
+                    data-action="dialogue#open" 
+                    class='btn btn-outline-danger border-0 btn-sm' 
+                    type='submit'
+                >
+                    {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+                    {# Supprimer #}
+                </button>
+            </form>
+        </div>
+    </div>
+</td>

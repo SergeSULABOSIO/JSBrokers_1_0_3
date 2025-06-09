@@ -33,7 +33,7 @@ export default class extends Controller {
     /**
      * @param {number} idObjet 
     */
-    supprimer(idObjet) {
+    supprimerElement(idObjet) {
         this.objetValue = idObjet;
         this.updateMessage("Suppression de " + idObjet + " en cours... Patientez svp.");
         const url = '/admin/' + this.controleurphpValue + '/remove/' + this.identrepriseValue + '/' + this.objetValue;
@@ -49,9 +49,30 @@ export default class extends Controller {
                     parentElementDeleted.removeChild(elementDeleted);
                     // console.log("Element HTML à Supprimer: ", elementDeleted);
                     this.updateMessage("Suppression réussie.");
-                }else{
+                } else {
                     this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
                 }
+            });
+    }
+
+    /**
+     * 
+     * @param {number} idObjet 
+     */
+    actualiserElement(idObjet) {
+        this.updateMessage("Actualisation de l'élement " + idObjet + " en cours... Patientez svp.");
+        const url = '/admin/' + this.controleurphpValue + '/getlistelementdetails/' + idObjet;
+        console.log(url);
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.text())
+            .then(data => {
+                const elementUpdated = document.getElementById("liste_row_" + idObjet);
+                elementUpdated.innerHTML = data;
+                this.updateMessage("La mise a jour réussie.");
+            })
+            .catch(errorMessage => {
+                this.updateMessage("La mise a jour échouée. Prière de bien vérifier votre connexion Internet.");
+                console.error(errorMessage);
             });
     }
 

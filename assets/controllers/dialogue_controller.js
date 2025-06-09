@@ -5,7 +5,7 @@ import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si v
 
 export default class extends Controller {
     /**
-     * Action [0=New, 1=Edit, 3=Delete]
+     * Action [0=New, 1=Edit, 2=Delete]
      */
     static targets = [
         'titre',
@@ -66,7 +66,11 @@ export default class extends Controller {
         }
         //Opération Ajout ou Modification
         if (this.actionValue == 0 || this.actionValue == 1) {
-            defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+            if (this.actionValue == 0) {
+                defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+            }else{
+                defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
+            }
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
             const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
             fetch(url) // Remplacez par l'URL de votre formulaire
@@ -76,7 +80,7 @@ export default class extends Controller {
                 });
         }
         //Opération Suppression
-        if (this.actionValue == 3) {
+        if (this.actionValue == 2) {
             const listeControler = this.getListeController();
             listeControler.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
             defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
@@ -95,7 +99,7 @@ export default class extends Controller {
             event.preventDefault();
         }
         //Annulation de la suppression
-        if (this.actionValue == 3) {
+        if (this.actionValue == 2) {
             const listeControler = this.getListeController();
             listeControler.updateMessage("Suppression annulée.");
         }
@@ -130,13 +134,18 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        if (this.actionValue == 3) {
+        //Action: Suppression
+        if (this.actionValue == 2) {
             const listeControler = this.getListeController();
-            listeControler.supprimer(this.objetValue);
             console.log("On lance la suppression...");
+            listeControler.supprimerElement(this.objetValue);
             if (this.boite) {
                 this.boite.hide();
             }
+        } else if (this.actionValue == 1) {
+            //Action: Modification
+            const listeControler = this.getListeController();
+            listeControler.actualiserElement(this.objetValue);
         } else {
             const childController = this.getChildController();
             if (childController) {
