@@ -25,6 +25,7 @@ export default class extends Controller {
     selectionner(event) {
         const cible = event.currentTarget;
         this.objetValue = cible.dataset.itemObjet;
+        this.updateMessage("Prêt: " + this.nbelementsValue + " élement(s) " + "| Séléction [id.=" + this.objetValue + "]");
         console.log("Liste : Element selectionné: ", event.currentTarget, this.objetValue);
     }
 
