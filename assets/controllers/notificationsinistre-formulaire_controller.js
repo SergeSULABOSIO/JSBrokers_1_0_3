@@ -184,10 +184,13 @@ export default class extends Controller {
      */
     updateMessage(newMessage) {
         // Accéder à l'élément parent du contrôleur
-        const parentElement = this.element.closest('[data-controller="dialogue"]');
-        if (parentElement) {
+        // const parentElement = this.element.closest('[data-controller="dialogue liste-principale"]');
+        const elementListe = document.getElementById("liste");
+        console.log("Element HTML où le controleur de la boîte de dialogue est attaché: ", elementListe);
+        if (elementListe) {
             // Obtenir l'instance du contrôleur parent
-            const dialogueController = this.application.getControllerForElementAndIdentifier(parentElement, 'dialogue');
+            const dialogueController = this.application.getControllerForElementAndIdentifier(elementListe, 'dialogue');
+            console.log("Controlleur de la boîte de dialogue: ", dialogueController);
             if (dialogueController && dialogueController.hasMessageTarget) {
                 // Appeler une méthode du parent, par exemple
                 dialogueController.updateMessage(newMessage);

@@ -64,11 +64,14 @@ export default class extends Controller {
         } else {
             console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
         }
-        //Opération Ajout ou Modification
+        //Ouverture de la boîte:
+        // * Opération Ajout ou Modification
         if (this.actionValue == 0 || this.actionValue == 1) {
             if (this.actionValue == 0) {
+                this.updateMessage("Opération: Ajout d'un élément.");
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
             } else {
+                this.updateMessage("Opération: Edition de l'élément " + this.objetValue + ".");
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
             }
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
@@ -79,7 +82,8 @@ export default class extends Controller {
                     this.formTarget.innerHTML = html;
                 });
         }
-        //Opération Suppression
+        //Ouverture de la boîte:
+        // * Opération Suppression
         if (this.actionValue == 2) {
             const listeControler = this.getListeController();
             listeControler.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
