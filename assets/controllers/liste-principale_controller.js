@@ -3,7 +3,7 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = [
         'display',  //Champ d'affichage d'informations
-        'donnees',     //Liste conténant des élements
+        'donnees',  //Liste conténant des élements
     ];
     static values = {
         controleurphp: String,
@@ -27,7 +27,7 @@ export default class extends Controller {
         const cible = event.currentTarget;
         this.objetValue = cible.dataset.itemObjet;
         this.updateMessage("Séléction [id.=" + this.objetValue + "]");
-        console.log("Liste : Element selectionné: ", event.currentTarget, this.objetValue);
+        // console.log("Liste : Element selectionné: ", event.currentTarget, this.objetValue);
     }
 
     /**

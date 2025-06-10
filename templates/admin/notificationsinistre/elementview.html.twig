@@ -9,7 +9,7 @@
     >
         {# href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" #}
         {{ include('segments/icones/notificationsinistre.html.twig', {size:'19px'}) }}
-        "{{ notificationsinistre.descriptionDeFait|slice(0, 85) }} [...]"
+        "{{ notificationsinistre.descriptionDeFait|slice(0, 75) }} [...]"
     </a><br/>
     {# texte secondaire #}
     <small 
