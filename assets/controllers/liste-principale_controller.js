@@ -17,7 +17,7 @@ export default class extends Controller {
 
     connect() {
         console.log("Liste " + this.rubriqueValue);
-        this.updateMessage("");
+        this.updateMessage("Prêt.");
     }
 
     /**

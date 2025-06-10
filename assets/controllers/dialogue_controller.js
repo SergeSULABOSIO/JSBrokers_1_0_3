@@ -142,37 +142,26 @@ export default class extends Controller {
         console.log("Dialogue - Action: " + this.actionValue);
         //Action: Ajout ou Modification
         if (this.actionValue == 0 || this.actionValue == 1) {
+            // this.updateMessage('Enregistrement en cours...');
             const childController = this.getChildController();
             if (childController) {
                 // Appeler une méthode du contrôleur enfant
                 childController.triggerFromParent(event);
+                // this.updateMessage('Prêt.');
             } else {
                 console.error("Contrôleur enfant non trouvé.");
             }
         }
         //Action: Suppression
         if (this.actionValue == 2) {
+            // this.updateMessage('Suppression en cours...');
             const listeControler = this.getListeController();
             console.log("On lance la suppression...");
             listeControler.supprimerElement(this.objetValue);
+            // this.updateMessage('Prêt.');
             if (this.boite) {
                 this.boite.hide();
             }
         }
-
-
-        // else if (this.actionValue == 1) {
-        //     //Action: Modification
-        //     const listeControler = this.getListeController();
-        //     listeControler.actualiserElement(this.objetValue);
-        // } else {
-        //     const childController = this.getChildController();
-        //     if (childController) {
-        //         // Appeler une méthode du contrôleur enfant
-        //         childController.triggerFromParent(event);
-        //     } else {
-        //         console.error("Contrôleur enfant non trouvé.");
-        //     }
-        // }
     }
 }
