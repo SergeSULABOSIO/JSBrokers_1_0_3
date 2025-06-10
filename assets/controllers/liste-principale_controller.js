@@ -17,6 +17,7 @@ export default class extends Controller {
 
 
     connect() {
+        this.tabSelectedCheckBox = [];
         console.log("Liste " + this.rubriqueValue);
         this.updateMessage("Prêt.");
 
@@ -97,9 +98,17 @@ export default class extends Controller {
     cocherTousElements(event) {
         const cases = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         // console.log(event);
+        this.tabSelectedCheckBox = [];
+        console.log("Coché?:" + this.btToutCocherTarget.checked);
         cases.forEach(caseACocher => {
-            caseACocher.checked = event.currentTarget.checked;
+            caseACocher.checked = this.btToutCocherTarget.checked;
+            // this.tabSelectedCheckBox.push(caseACocher.getAttribute("id"));
         });
+        if (this.tabSelectedCheckBox.length != 0) {
+            this.updateMessage(this.tabSelectedCheckBox.length + " éléments cochés.");
+        } else {
+            this.updateMessage("");
+        }
     }
 
     /**
@@ -107,6 +116,19 @@ export default class extends Controller {
      * @param {Event} event 
      */
     cocherElement(event) {
-        console.log("checkBox", event.currentTarget);
+        // console.log("checkBox", event.currentTarget);
+        const idCheckBoxCible = event.currentTarget.getAttribute("id");
+        const indexASupp = this.tabSelectedCheckBox.indexOf(idCheckBoxCible);
+        if (indexASupp == -1) {
+            this.tabSelectedCheckBox.push(idCheckBoxCible);
+        } else {
+            this.tabSelectedCheckBox.splice(indexASupp, 1);
+        }
+        console.log(this.tabSelectedCheckBox);
+        if (this.tabSelectedCheckBox.length != 0) {
+            this.updateMessage(this.tabSelectedCheckBox.length + " éléments cochés.");
+        } else {
+            this.updateMessage("");
+        }
     }
 }
