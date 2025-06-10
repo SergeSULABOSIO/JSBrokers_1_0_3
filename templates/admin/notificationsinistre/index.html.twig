@@ -51,7 +51,18 @@
                     <thead class="table-light">
                         <tr>
                             <th scope="col">
-                                <div class='d-flex justify-content-start text-secondary'>
+                                <div class="form-check m-1">
+                                    <input 
+                                        id="checkToutCocher" 
+                                        data-liste-principale-target="btToutCocher" 
+                                        class="form-check-input" 
+                                        type="checkbox" 
+                                        value="" 
+                                    >
+                                </div>
+                            </th>
+                            <th scope="col">
+                                <div class='d-flex justify-content-start text-secondary m-1'>
                                     {{ "list_of_object" | trans }}
                                 </div>
                             </th>

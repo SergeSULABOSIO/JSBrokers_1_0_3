@@ -4,6 +4,7 @@ export default class extends Controller {
     static targets = [
         'display',  //Champ d'affichage d'informations
         'donnees',  //Liste conténant des élements
+        'btToutCocher',
     ];
     static values = {
         controleurphp: String,
@@ -18,12 +19,15 @@ export default class extends Controller {
     connect() {
         console.log("Liste " + this.rubriqueValue);
         this.updateMessage("Prêt.");
+
+        //On défini les écouteurs ici
+        this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
     }
 
     /**
      * @param {Event} event 
     */
-    selectionner(event) {
+    selectionnerElement(event) {
         const cible = event.currentTarget;
         this.objetValue = cible.dataset.itemObjet;
         this.updateMessage("Séléction [id.=" + this.objetValue + "]");
@@ -83,5 +87,26 @@ export default class extends Controller {
      */
     updateMessage(newMessage) {
         this.displayTarget.innerHTML = "Résultat: " + this.nbelementsValue + " élement(s) | " + newMessage;
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    cocherTousElements(event) {
+        const cases = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
+        // console.log(event);
+        cases.forEach(caseACocher => {
+            caseACocher.checked = event.currentTarget.checked;
+        });
+    }
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    cocherElement(event) {
+        console.log("checkBox", event.currentTarget);
     }
 }

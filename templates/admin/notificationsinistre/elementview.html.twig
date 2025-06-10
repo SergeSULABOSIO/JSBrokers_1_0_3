@@ -1,10 +1,22 @@
 <td class="p-2">
+    {# La checkbox de séléction #}
+    <div class="form-check">
+        <input 
+            class="form-check-input" 
+            type="checkbox" 
+            value="" 
+            id="check_{{notificationsinistre.id}}" 
+            data-action="liste-principale#cocherElement" 
+        >
+    </div>
+</td>
+<td class="p-2">
     {# Texte principal #}
     <a 
         class="m-2 fw-bold" 
         style="text-decoration:none;" 
         data-liste-element-target="texteprincipal" 
-        data-action = "liste-principale#selectionner liste-element#afficherdetails" 
+        data-action = "liste-principale#selectionnerElement liste-element#afficherdetails" 
         data-item-objet={{notificationsinistre.id}}
     >
         {# href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" #}
