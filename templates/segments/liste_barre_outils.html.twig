@@ -3,7 +3,7 @@
   role="toolbar" 
   aria-label="Toolbar with button groups"
 >
-  <div class="btn-group me-2" role="group" aria-label="Second group">
+  <div class="btn-group me-2 border-end" role="group" aria-label="Second group">
     <button 
       data-liste-principale-target="outilbtexit" 
       type="button" 
@@ -23,15 +23,16 @@
       {{ include('segments/icones/actions/settings.html.twig', {size:'18px'}) }}
     </button>
   </div>
-  <div class="btn-group me-2" role="group" aria-label="First group">
+  <div class="btn-group me-2 border-end" role="group" aria-label="First group">
     <button 
       data-liste-principale-target="outilbtadd" 
       type="button" 
-      class="btn btn-outline-secondary btn-sm border-0" 
+      class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
       style="display:none" 
       data-bs-toggle="tooltip" data-bs-title="Ajouter"
     >
       {{ include('segments/icones/actions/add.html.twig', {size:'18px'}) }}
+      Nouveau
     </button>
     <button 
       data-liste-principale-target="outilbtedit" 
