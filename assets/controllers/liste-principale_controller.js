@@ -41,7 +41,7 @@ export default class extends Controller {
         this.outilbtexitTarget.style.display = "block";
         this.outilbtsettingsTarget.style.display = "block";
         this.outilbtaddTarget.style.display = "block";
-        
+
         if (this.tabSelectedCheckBoxs.length != 0) {
             this.outilbtdeleteTarget.style.display = "block";
             if (this.tabSelectedCheckBoxs.length >= 2) {
@@ -53,6 +53,7 @@ export default class extends Controller {
             this.outilbteditTarget.style.display = "none";
             this.outilbtdeleteTarget.style.display = "none";
         }
+        console.log("Données à utiliser - Barre d'outils:", this.tabSelectedCheckBoxs);
     }
 
     /**
