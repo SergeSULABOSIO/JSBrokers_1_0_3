@@ -5,6 +5,12 @@ export default class extends Controller {
         'display',  //Champ d'affichage d'informations
         'donnees',  //Liste conténant des élements
         'btToutCocher',
+        // Les boutons de la barre d'outils
+        'outilbtexit',
+        'outilbtsettings',
+        'outilbtadd',
+        'outilbtedit',
+        'outilbtdelete',
     ];
     static values = {
         controleurphp: String,
@@ -23,6 +29,30 @@ export default class extends Controller {
 
         //On défini les écouteurs ici
         this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
+        this.initialiserBarreDoutils();
+
+        //On initialise le tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+    }
+
+
+    initialiserBarreDoutils() {
+        this.outilbtexitTarget.style.display = "block";
+        this.outilbtsettingsTarget.style.display = "block";
+        this.outilbtaddTarget.style.display = "block";
+
+        if (this.tabSelectedCheckBoxs.length != 0) {
+            this.outilbtdeleteTarget.style.display = "block";
+            if (this.tabSelectedCheckBoxs.length >= 2) {
+                this.outilbteditTarget.style.display = "none";
+            }else{
+                this.outilbteditTarget.style.display = "block";
+            }
+        } else {
+            this.outilbteditTarget.style.display = "none";
+            this.outilbtdeleteTarget.style.display = "none";
+        }
     }
 
     /**
@@ -141,5 +171,6 @@ export default class extends Controller {
         } else {
             this.updateMessage("");
         }
+        this.initialiserBarreDoutils();
     }
 }

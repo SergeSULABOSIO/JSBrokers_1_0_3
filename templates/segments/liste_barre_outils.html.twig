@@ -4,21 +4,51 @@
   aria-label="Toolbar with button groups"
 >
   <div class="btn-group me-2" role="group" aria-label="Second group">
-    <button type="button" class="btn btn-outline-danger btn-sm border-0">
+    <button 
+      data-liste-principale-target="outilbtexit" 
+      type="button" 
+      class="btn btn-outline-danger btn-sm border-0" 
+      style="display:block" 
+      data-bs-toggle="tooltip" data-bs-title="Quitter cet espace de travail"
+    >
       {{ include('segments/icones/actions/exit.html.twig', {size:'18px'}) }}
     </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm border-0">
+    <button 
+      data-liste-principale-target="outilbtsettings" 
+      type="button" 
+      class="btn btn-outline-secondary btn-sm border-0" 
+      style="display:block" 
+      data-bs-toggle="tooltip" data-bs-title="Paramètres"
+    >
       {{ include('segments/icones/actions/settings.html.twig', {size:'18px'}) }}
     </button>
   </div>
   <div class="btn-group me-2" role="group" aria-label="First group">
-    <button type="button" class="btn btn-outline-secondary btn-sm border-0">
+    <button 
+      data-liste-principale-target="outilbtadd" 
+      type="button" 
+      class="btn btn-outline-secondary btn-sm border-0" 
+      style="display:none" 
+      data-bs-toggle="tooltip" data-bs-title="Ajouter"
+    >
       {{ include('segments/icones/actions/add.html.twig', {size:'18px'}) }}
     </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm border-0">
+    <button 
+      data-liste-principale-target="outilbtedit" 
+      type="button" 
+      class="btn btn-outline-secondary btn-sm border-0" 
+      style="display:none" 
+      data-bs-toggle="tooltip" data-bs-title="Modifier"
+    >
       {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
     </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm border-0">
+    <button 
+      data-liste-principale-target="outilbtdelete" 
+      type="button" 
+      class="btn btn-outline-secondary btn-sm border-0" 
+      style="display:none" 
+      data-bs-toggle="tooltip" data-bs-title="Supprimer"
+    >
       {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
     </button>
   </div>
