@@ -17,7 +17,7 @@ export default class extends Controller {
 
 
     connect() {
-        this.tabSelectedCheckBox = [];
+        this.tabSelectedCheckBoxs = [];
         console.log("Liste " + this.rubriqueValue);
         this.updateMessage("Prêt.");
 
@@ -96,20 +96,23 @@ export default class extends Controller {
      * @param {Event} event 
      */
     cocherTousElements(event) {
-        const cases = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
+        const isChecked = this.btToutCocherTarget.checked;
+        console.log("Coché?:" + isChecked);
+        const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         // console.log(event);
-        this.tabSelectedCheckBox = [];
-        console.log("Coché?:" + this.btToutCocherTarget.checked);
-        cases.forEach(caseACocher => {
-            caseACocher.checked = this.btToutCocherTarget.checked;
-            // this.tabSelectedCheckBox.push(caseACocher.getAttribute("id"));
+        this.tabSelectedCheckBoxs = [];
+        checkBoxes.forEach(currentCheckBox => {
+            currentCheckBox.checked = isChecked;
+            if (isChecked == true) {
+                this.tabSelectedCheckBoxs.push(currentCheckBox.getAttribute("id"));
+            } else {
+                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(currentCheckBox.getAttribute("id")), 1);
+            }
         });
-        if (this.tabSelectedCheckBox.length != 0) {
-            this.updateMessage(this.tabSelectedCheckBox.length + " éléments cochés.");
-        } else {
-            this.updateMessage("");
-        }
+        this.updateMessageSelectedCheckBoxes();
     }
+
+
 
     /**
      * 
@@ -117,16 +120,21 @@ export default class extends Controller {
      */
     cocherElement(event) {
         // console.log("checkBox", event.currentTarget);
-        const idCheckBoxCible = event.currentTarget.getAttribute("id");
-        const indexASupp = this.tabSelectedCheckBox.indexOf(idCheckBoxCible);
-        if (indexASupp == -1) {
-            this.tabSelectedCheckBox.push(idCheckBoxCible);
+        const idSelectedCheckBox = event.currentTarget.getAttribute("id");
+        const indexOfSelectedCheckBox = this.tabSelectedCheckBoxs.indexOf(idSelectedCheckBox);
+        if (indexOfSelectedCheckBox == -1) {
+            this.tabSelectedCheckBoxs.push(idSelectedCheckBox);
         } else {
-            this.tabSelectedCheckBox.splice(indexASupp, 1);
+            this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
         }
-        console.log(this.tabSelectedCheckBox);
-        if (this.tabSelectedCheckBox.length != 0) {
-            this.updateMessage(this.tabSelectedCheckBox.length + " éléments cochés.");
+        // console.log(this.tabSelectedCheckBox);
+        this.updateMessageSelectedCheckBoxes();
+    }
+
+
+    updateMessageSelectedCheckBoxes() {
+        if (this.tabSelectedCheckBoxs.length != 0) {
+            this.updateMessage(this.tabSelectedCheckBoxs.length + " éléments cochés.");
         } else {
             this.updateMessage("");
         }
