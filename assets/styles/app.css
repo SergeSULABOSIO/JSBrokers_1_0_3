@@ -89,3 +89,7 @@ a:active {
   line-height: 1.5;
   resize: vertical; /* Permet de redimensionner verticalement */
 }
+
+.shadow-bottom {
+  box-shadow: 0 8px 6px -6px rgba(0, 0, 0, 0.1); /* Exemple d'ombre en bas */
+}

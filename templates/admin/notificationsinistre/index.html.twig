@@ -31,7 +31,10 @@
         data-liste-principale-rubrique-value="Notificaton Sinistre" 
         data-liste-principale-controleurphp-value="notificationsinistre" 
     >
-        <div class="d-flex shadow-sm sensible bg-white">
+        <div class="shadow-sm sensible bg-white">
+            {# Barre d'outils #}
+            {{ include("segments/liste_barre_outils.html.twig") }}
+            {# Tableau #}
             <table class="table table-hover table-sm caption-top p-3">
                 <caption>
                     <span data-liste-principale-target = "display">
