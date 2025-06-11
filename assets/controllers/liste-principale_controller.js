@@ -41,7 +41,7 @@ export default class extends Controller {
         this.outilbtexitTarget.style.display = "block";
         this.outilbtsettingsTarget.style.display = "block";
         this.outilbtaddTarget.style.display = "block";
-
+        
         if (this.tabSelectedCheckBoxs.length != 0) {
             this.outilbtdeleteTarget.style.display = "block";
             if (this.tabSelectedCheckBoxs.length >= 2) {
