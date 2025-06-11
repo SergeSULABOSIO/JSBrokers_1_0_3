@@ -52,6 +52,7 @@ export default class extends Controller {
     open(event) {
         // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
+        console.log(event.currentTarget);
         const cible = event.currentTarget;
         this.actionValue = cible.dataset.itemAction;
         this.objetValue = cible.dataset.itemObjet;

@@ -46,7 +46,7 @@ export default class extends Controller {
             this.outilbtdeleteTarget.style.display = "block";
             if (this.tabSelectedCheckBoxs.length >= 2) {
                 this.outilbteditTarget.style.display = "none";
-            }else{
+            } else {
                 this.outilbteditTarget.style.display = "block";
             }
         } else {
@@ -173,5 +173,78 @@ export default class extends Controller {
             this.updateMessage("");
         }
         this.initialiserBarreDoutils();
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    outils_quitter(event) {
+        console.log("Action Barre d'outils:", event.currentTarget);
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    outils_parametrer(event) {
+        console.log("Action Barre d'outils:", event.currentTarget);
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    outils_ajouter(event) {
+        const dialogue_controler = this.getDialogueController();
+        event.currentTarget.dataset.itemAction = 0;
+        event.currentTarget.dataset.itemObjet = -1;
+        event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue;
+        event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Nouveau";
+        dialogue_controler.open(event);
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    outils_modifier(event) {
+        if (this.tabSelectedCheckBoxs.length == 1) {
+            const objetSelected = (this.tabSelectedCheckBoxs[0].split("_"))[1];
+            if (objetSelected != -1) {
+                console.log("Selected ID", objetSelected);
+                const dialogue_controler = this.getDialogueController();
+                event.currentTarget.dataset.itemAction = 0;
+                event.currentTarget.dataset.itemObjet = objetSelected;
+                event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue;
+                event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Edition";
+                dialogue_controler.open(event);
+            }
+        } else {
+            this.updateMessage("Impossible d'effectuer cette opération.");
+        }
+    }
+
+
+    /**
+    * 
+    * @param {Event} event 
+    */
+    outils_supprimer(event) {
+        console.log("Action Barre d'outils:", event.currentTarget);
+    }
+
+
+    getDialogueController() {
+        const liste = document.getElementById("liste");
+        // Vérifie que l'élément 'form' est bien défini comme target
+        if (liste) {
+            return this.application.getControllerForElementAndIdentifier(liste, "dialogue");
+        }
+        return null;
     }
 }
