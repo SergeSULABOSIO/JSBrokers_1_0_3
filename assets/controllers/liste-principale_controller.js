@@ -206,7 +206,7 @@ export default class extends Controller {
         event.currentTarget.dataset.itemNomcontrolerphp = this.controleurphpValue;
         event.currentTarget.dataset.itemNomcontrolerstimulus = this.controleurphpValue + "-formulaire";
         event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Nouveau";
-        console.log("DataSet pour ajout:", event.currentTarget.dataset);
+        // console.log("DataSet pour ajout:", event.currentTarget.dataset);
         dialogue_controler.open(event);
     }
 

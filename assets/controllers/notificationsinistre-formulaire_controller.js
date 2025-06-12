@@ -93,7 +93,7 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     ecouterClick = (event) => {
-        console.log(event.target);
+        // console.log(event.target);
 
         if (event.target.type != undefined) {
             if (event.target.type == "radio") {
@@ -105,7 +105,7 @@ export default class extends Controller {
             } else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
-                    console.log("On a cliqué sur un bouton Enregistré.");
+                    // console.log("On a cliqué sur un bouton Enregistré.");
                     this.enregistrerNotificationSinistre(event);
                 }
             } else {
@@ -147,16 +147,16 @@ export default class extends Controller {
 
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + (this.idnotificationsinistreValue == 0 ? '-1' : this.idnotificationsinistreValue);
-        console.log("ICI", formData, this.element, url);
+        // console.log("ICI", formData, this.element, url);
         fetch(url, {
             method: this.element.method,
             body: formData,
         })
             .then(response => response.json()) //.json()
             .then(data => {
-                console.log("Text Reponse:", data);
+                // console.log("Text Reponse:", data);
                 const userObject = JSON.parse(data);
-                console.log("Json Reponse:", userObject, data);
+                // console.log("Json Reponse:", userObject, data);
 
                 event.target.disabled = false;
                 this.updateMessage("Prêt.");
@@ -186,11 +186,11 @@ export default class extends Controller {
         // Accéder à l'élément parent du contrôleur
         // const parentElement = this.element.closest('[data-controller="dialogue liste-principale"]');
         const elementListe = document.getElementById("liste");
-        console.log("Element HTML où le controleur de la boîte de dialogue est attaché: ", elementListe);
+        // console.log("Element HTML où le controleur de la boîte de dialogue est attaché: ", elementListe);
         if (elementListe) {
             // Obtenir l'instance du contrôleur parent
             const dialogueController = this.application.getControllerForElementAndIdentifier(elementListe, 'dialogue');
-            console.log("Controlleur de la boîte de dialogue: ", dialogueController);
+            // console.log("Controlleur de la boîte de dialogue: ", dialogueController);
             if (dialogueController && dialogueController.hasMessageTarget) {
                 // Appeler une méthode du parent, par exemple
                 dialogueController.updateMessage(newMessage);

@@ -105,7 +105,7 @@ export default class extends Controller {
         if (event) {
             event.preventDefault();
         }
-        console.log("On ferme après action: " + this.actionValue);
+        // console.log("On ferme après action: " + this.actionValue);
         //On ferme après Actualisation
         if (this.actionValue == 1) {
             const listeControler = this.getListeController();
@@ -148,7 +148,7 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        console.log("Dialogue - Action: " + this.actionValue);
+        // console.log("Dialogue - Action: " + this.actionValue);
         //Action: Ajout ou Modification
         if (this.actionValue == 0 || this.actionValue == 1) {
             // this.updateMessage('Enregistrement en cours...');
@@ -165,7 +165,7 @@ export default class extends Controller {
         if (this.actionValue == 2) {
             // this.updateMessage('Suppression en cours...');
             const listeControler = this.getListeController();
-            console.log("On lance la suppression...");
+            // console.log("On lance la suppression...");
             listeControler.supprimerElement(this.objetValue);
             // this.updateMessage('Prêt.');
             if (this.boite) {
