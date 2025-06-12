@@ -103,6 +103,7 @@ export default class extends Controller {
         if (event) {
             event.preventDefault();
         }
+        console.log("On ferme après action: " + this.actionValue);
         //On ferme après Actualisation
         if (this.actionValue == 1) {
             const listeControler = this.getListeController();
@@ -124,6 +125,7 @@ export default class extends Controller {
     getChildController() {
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
+            // console.log(this.formTarget.firstElementChild, this.nomcontrolerValue);
             return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.nomcontrolerValue);
         }
         return null;

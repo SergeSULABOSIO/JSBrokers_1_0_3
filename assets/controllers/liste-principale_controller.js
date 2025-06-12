@@ -53,7 +53,6 @@ export default class extends Controller {
             this.outilbteditTarget.style.display = "none";
             this.outilbtdeleteTarget.style.display = "none";
         }
-        console.log("Données à utiliser - Barre d'outils:", this.tabSelectedCheckBoxs);
     }
 
     /**
@@ -83,7 +82,6 @@ export default class extends Controller {
                     const elementDeleted = document.getElementById("liste_row_" + this.objetValue);
                     const parentElementDeleted = elementDeleted.parentElement;
                     parentElementDeleted.removeChild(elementDeleted);
-                    // console.log("Element HTML à Supprimer: ", elementDeleted);
                     this.updateMessage("Suppression réussie.");
                 } else {
                     this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
@@ -98,13 +96,16 @@ export default class extends Controller {
     actualiserElement(idObjet) {
         this.updateMessage("Actualisation de l'élement " + idObjet + " en cours...");
         const url = '/admin/' + this.controleurphpValue + '/getlistelementdetails/' + this.identrepriseValue + "/" + idObjet;
-        console.log(url);
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())
             .then(data => {
                 const elementUpdated = document.getElementById("liste_row_" + idObjet);
                 elementUpdated.innerHTML = data;
                 this.updateMessage("La mise a jour réussie.");
+
+                //On doit rétirer cet objet de la liste des séléction car il viendra du serveur avec une checkbox décochée.
+                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(idObjet), 1);
+                this.updateMessageSelectedCheckBoxes();
             })
             .catch(errorMessage => {
                 this.updateMessage("La mise a jour échouée. Prière de bien vérifier votre connexion Internet.");
@@ -128,7 +129,7 @@ export default class extends Controller {
      */
     cocherTousElements(event) {
         const isChecked = this.btToutCocherTarget.checked;
-        console.log("Coché?:" + isChecked);
+        // console.log("Coché?:" + isChecked);
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         // console.log(event);
         this.tabSelectedCheckBoxs = [];
@@ -216,11 +217,12 @@ export default class extends Controller {
         if (this.tabSelectedCheckBoxs.length == 1) {
             const objetSelected = (this.tabSelectedCheckBoxs[0].split("_"))[1];
             if (objetSelected != -1) {
-                console.log("Selected ID", objetSelected);
                 const dialogue_controler = this.getDialogueController();
-                event.currentTarget.dataset.itemAction = 0;
+                event.currentTarget.dataset.itemAction = 1;
                 event.currentTarget.dataset.itemObjet = objetSelected;
-                event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue;
+                if (this.controleurphpValue == "notificationsinistre") {
+                    event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue + "-formulaire";
+                }
                 event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Edition";
                 dialogue_controler.open(event);
             }
