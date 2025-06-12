@@ -147,7 +147,7 @@ export default class extends Controller {
 
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + (this.idnotificationsinistreValue == 0 ? '-1' : this.idnotificationsinistreValue);
-        console.log(formData, this.element, url);
+        console.log("ICI", formData, this.element, url);
         fetch(url, {
             method: this.element.method,
             body: formData,
@@ -156,7 +156,7 @@ export default class extends Controller {
             .then(data => {
                 console.log("Text Reponse:", data);
                 const userObject = JSON.parse(data);
-                console.log("Json Reponse:", userObject);
+                console.log("Json Reponse:", userObject, data);
 
                 event.target.disabled = false;
                 this.updateMessage("Prêt.");

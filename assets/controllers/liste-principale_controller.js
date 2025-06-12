@@ -203,7 +203,9 @@ export default class extends Controller {
         const dialogue_controler = this.getDialogueController();
         event.currentTarget.dataset.itemAction = 0;
         event.currentTarget.dataset.itemObjet = -1;
-        event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue;
+        if (this.controleurphpValue == "notificationsinistre") {
+            event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue + "-formulaire";
+        }
         event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Nouveau";
         dialogue_controler.open(event);
     }
