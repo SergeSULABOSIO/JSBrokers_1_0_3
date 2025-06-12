@@ -16,7 +16,8 @@ export default class extends Controller {
         'btFermer'
     ];
     static values = {
-        nomcontroler: String,
+        nomcontrolerphp: String,
+        nomcontrolerstimulus: String,
         identreprise: Number,
         action: Number,
         objet: Number,
@@ -52,11 +53,12 @@ export default class extends Controller {
     open(event) {
         // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
-        console.log(event.currentTarget);
+        // console.log(event.currentTarget);
         const cible = event.currentTarget;
         this.actionValue = cible.dataset.itemAction;
         this.objetValue = cible.dataset.itemObjet;
-        this.nomcontrolerValue = cible.dataset.itemNomcontroler;
+        this.nomcontrolerstimulusValue = cible.dataset.itemNomcontrolerstimulus;
+        this.nomcontrolerphpValue = cible.dataset.itemNomcontrolerphp;
         this.titreTarget.innerHTML = cible.dataset.itemTitre;
 
         this.formTarget.innerHTML = "Veuillez patienter svp...";
@@ -76,7 +78,7 @@ export default class extends Controller {
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
             }
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
-            const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
+            const url = '/admin/'+ this.nomcontrolerphpValue +'/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
             fetch(url) // Remplacez par l'URL de votre formulaire
                 .then(response => response.text())
                 .then(html => {
@@ -126,7 +128,7 @@ export default class extends Controller {
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
             // console.log(this.formTarget.firstElementChild, this.nomcontrolerValue);
-            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.nomcontrolerValue);
+            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.nomcontrolerstimulusValue);
         }
         return null;
     }

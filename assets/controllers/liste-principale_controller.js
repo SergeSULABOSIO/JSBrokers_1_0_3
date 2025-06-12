@@ -203,10 +203,10 @@ export default class extends Controller {
         const dialogue_controler = this.getDialogueController();
         event.currentTarget.dataset.itemAction = 0;
         event.currentTarget.dataset.itemObjet = -1;
-        if (this.controleurphpValue == "notificationsinistre") {
-            event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue + "-formulaire";
-        }
+        event.currentTarget.dataset.itemNomcontrolerphp = this.controleurphpValue;
+        event.currentTarget.dataset.itemNomcontrolerstimulus = this.controleurphpValue + "-formulaire";
         event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Nouveau";
+        console.log("DataSet pour ajout:", event.currentTarget.dataset);
         dialogue_controler.open(event);
     }
 
@@ -222,9 +222,8 @@ export default class extends Controller {
                 const dialogue_controler = this.getDialogueController();
                 event.currentTarget.dataset.itemAction = 1;
                 event.currentTarget.dataset.itemObjet = objetSelected;
-                if (this.controleurphpValue == "notificationsinistre") {
-                    event.currentTarget.dataset.itemNomcontroler = this.controleurphpValue + "-formulaire";
-                }
+                event.currentTarget.dataset.itemNomcontrolerstimulus = this.controleurphpValue + "-formulaire";
+                event.currentTarget.dataset.itemNomcontrolerphp = this.controleurphpValue;
                 event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Edition";
                 dialogue_controler.open(event);
             }

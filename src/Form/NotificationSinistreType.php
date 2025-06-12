@@ -90,7 +90,6 @@ class NotificationSinistreType extends AbstractType
             ])
             ->add('lieu', TextType::class, [
                 'label' => "Lieu de survénance",
-                'required' => true,
                 'attr' => [
                     'placeholder' => "Lieu",
                 ],

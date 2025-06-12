@@ -20,7 +20,7 @@ class NotificationSinistre
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $referenceSinistre = null;
-
+    
     #[ORM\Column(length: 255)]
     private ?string $descriptionDeFait = null;
     
@@ -30,7 +30,7 @@ class NotificationSinistre
     #[ORM\Column]
     private ?\DateTimeImmutable $occuredAt = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true, options: ["default" => "Non défini."])]
     private ?string $lieu = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
