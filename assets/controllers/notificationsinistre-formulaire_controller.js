@@ -23,7 +23,7 @@ export default class extends Controller {
     };
 
     connect() {
-        console.log("ID NOTIFICATION SINISTRE: " + this.idnotificationsinistreValue);
+        // console.log("ID NOTIFICATION SINISTRE: " + this.idnotificationsinistreValue);
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
         //On écoute les boutons de soumission du formulaire
         this.element.addEventListener("click", event => this.ecouterClick(event));

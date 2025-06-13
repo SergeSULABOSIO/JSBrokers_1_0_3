@@ -31,7 +31,7 @@ export default class extends Controller {
 
     connect() {
         this.isSaved = false;
-        console.log("ID COTATION: " + this.idcotationValue);
+        // console.log("ID COTATION: " + this.idcotationValue);
 
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
 
@@ -113,7 +113,7 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     ecouterClick = (event) => {
-        console.log(event.target);
+        // console.log(event.target);
 
         if (event.target.type != undefined) {
             if (event.target.type == "radio") {
@@ -123,7 +123,7 @@ export default class extends Controller {
             } else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
-                    console.log("On a cliqué sur un bouton Enregistré.");
+                    // console.log("On a cliqué sur un bouton Enregistré.");
                     this.enregistrerCotation(event);
                 }
             } else {
@@ -228,7 +228,7 @@ export default class extends Controller {
             .then(response => response.json()) //.json()
             .then(data => {
                 const userObject = JSON.parse(data);
-                console.log(userObject);
+                // console.log(userObject);
 
                 event.target.disabled = false;
                 this.displayTarget.style.display = 'block';

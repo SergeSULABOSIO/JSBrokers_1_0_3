@@ -18,8 +18,8 @@ export default class extends Controller {
 
     connect() {
         this.isSaved = false;
-        console.log("MODE CALCUL" + this.modecalculTarget.selectedOptions[0].value);
-        console.log("ID TAXE: " + this.idtyperevenuValue);
+        // console.log("MODE CALCUL" + this.modecalculTarget.selectedOptions[0].value);
+        // console.log("ID TAXE: " + this.idtyperevenuValue);
         
         this.appliquerModeCalcul(this.modecalculTarget.selectedOptions[0].value);
 
@@ -60,7 +60,7 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     ecouterClick = (event) => {
-        console.log(event.target);
+        // console.log(event.target);
 
         if (event.target.type != undefined) {
             if (event.target.type == "datetime-local") {
@@ -68,7 +68,7 @@ export default class extends Controller {
             } else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
-                    console.log("On a cliqué sur un bouton Enregistré.");
+                    // console.log("On a cliqué sur un bouton Enregistré.");
                     this.enregistrer(event);
                 }
             } else {
@@ -98,7 +98,7 @@ export default class extends Controller {
         })
             .then(response => response.text()) //.json()
             .then(data => {
-                console.log(data);
+                // console.log(data);
                 event.target.disabled = false;
                 this.displayTarget.style.display = 'block';
 

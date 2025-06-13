@@ -24,7 +24,7 @@ export default class extends Controller {
 
     connect() {
         this.tabSelectedCheckBoxs = [];
-        console.log("Liste " + this.rubriqueValue);
+        // console.log("Liste " + this.rubriqueValue);
         this.updateMessage("Prêt.");
 
         //On défini les écouteurs ici

@@ -15,7 +15,7 @@ export default class extends Controller {
 
     connect() {
         this.isSaved = false;
-        console.log("ID MONNAIE: " + this.idmonnaieValue);
+        // console.log("ID MONNAIE: " + this.idmonnaieValue);
 
         //Définition de l'icone sur le bouton Enregistrer.
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
@@ -32,7 +32,7 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     ecouterClick = (event) => {
-        console.log(event.target);
+        // console.log(event.target);
         
         if (event.target.type != undefined) {
             if (event.target.type == "datetime-local") {
@@ -40,7 +40,7 @@ export default class extends Controller {
             }else if (event.target.type == "submit") {
                 //Si le bouton cliqué contient la mention 'enregistrer' en minuscule
                 if ((event.target.innerText.toLowerCase()).indexOf("enregistrer") != -1) {
-                    console.log("On a cliqué sur un bouton Enregistré.");
+                    // console.log("On a cliqué sur un bouton Enregistré.");
                     this.enregistrer(event);
                 }
             }else{
@@ -69,7 +69,7 @@ export default class extends Controller {
         })
             .then(response => response.text()) //.json()
             .then(data => {
-                console.log(data);
+                // console.log(data);
                 event.target.disabled = false;
                 this.displayTarget.style.display = 'block';
 
