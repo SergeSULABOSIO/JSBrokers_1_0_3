@@ -98,13 +98,13 @@
     {% if app.current_route starts with 'admin.notificationsinistre' %}
           <button 
             type="button" 
-            data-item-nomcontrolerphp = "notificationsinistre" 
-            data-item-nomcontrolerstimulus = "notificationsinistre-formulaire" 
             data-item-action = 0 
             data-item-objet = -1 
-            data-item-titre = {{"entreprise_bouton_new_notificationsinistre" | trans}}
+            data-item-nomcontrolerphp = "notificationsinistre" 
+            data-item-nomcontrolerstimulus = "notificationsinistre-formulaire" 
+            data-item-titre = {{"entreprise_bouton_new_notificationsinistre" | trans}} 
             data-action = "dialogue#open" 
-            class = "btn btn-secondary"
+            class = "btn btn-secondary" 
           >
             {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
             {{ "entreprise_bouton_new_notificationsinistre" | trans }}

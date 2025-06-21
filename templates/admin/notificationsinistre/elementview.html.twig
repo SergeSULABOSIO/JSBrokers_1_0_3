@@ -154,11 +154,12 @@
         {# Les actions sur l element de la liste #}
         <div class="options-du-parent">
             <button 
-                data-item-nomcontroler="notificationsinistre-formulaire" 
-                data-item-action=1 
+                data-item-action = 1 
                 data-item-objet={{notificationsinistre.id}} 
-                data-item-titre="Edition de la notification" 
-                data-action="dialogue#open" 
+                data-item-nomcontrolerphp = "notificationsinistre" 
+                data-item-nomcontrolerstimulus = "notificationsinistre-formulaire" 
+                data-item-titre="Edition de {{notificationsinistre.referenceSinistre}}" 
+                data-action = "dialogue#open"
                 class="btn btn-outline-primary btn-sm border-0" 
             >
                 {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
@@ -168,11 +169,12 @@
             <form action="{{ path('admin.notificationsinistre.remove', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" method='POST'>
                 <input type='hidden' name='_method' value='DELETE'>
                 <button 
-                    data-item-nomcontroler="" 
-                    data-item-action=2 
+                    data-item-action = 2 
                     data-item-objet={{notificationsinistre.id}} 
-                    data-item-titre="Suppression de la notification" 
-                    data-action="dialogue#open" 
+                    data-item-nomcontrolerphp = "notificationsinistre" 
+                    data-item-nomcontrolerstimulus = "notificationsinistre-formulaire" 
+                    data-item-titre="Suppression de la notification {{notificationsinistre.referenceSinistre}}" 
+                    data-action = "dialogue#open"
                     class='btn btn-outline-danger border-0 btn-sm' 
                     type='submit'
                 >

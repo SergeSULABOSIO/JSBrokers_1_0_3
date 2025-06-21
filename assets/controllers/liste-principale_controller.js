@@ -89,6 +89,51 @@ export default class extends Controller {
             });
     }
 
+
+    /**
+     * @param {Array} tabIDS 
+    */
+    supprimerElements(tabIDS) {
+        const message = "Suppression de " + tabIDS.length + " éléments en cours... Patientez svp.";
+        this.updateMessage(message);
+        console.log(message);
+        const url = '/admin/' + this.controleurphpValue + '/remove_many/' + this.identrepriseValue + '/' + tabIDS;
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.json())
+            .then(data => {
+                const serverJsonObject = JSON.parse(data);
+                // this.formTarget.innerHTML = html;
+                console.log("Réponse du server: ", serverJsonObject);
+
+                // if (serverJsonObject.reponse == "Ok") {
+                //     this.nbelementsValue--;
+                //     const elementDeleted = document.getElementById("liste_row_" + this.objetValue);
+                //     const parentElementDeleted = elementDeleted.parentElement;
+                //     parentElementDeleted.removeChild(elementDeleted);
+                //     this.updateMessage("Suppression réussie.");
+                // } else {
+                //     this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
+                // }
+            });
+    }
+
+
+    /**
+    * 
+    * @param {Event} event 
+    */
+    outils_supprimer(event) {
+        //on doit le faire en boucle
+        const tabIdObjetsToDelete = [];
+        this.tabSelectedCheckBoxs.forEach(currentCheckBox => {
+            tabIdObjetsToDelete.push(currentCheckBox.split("_")[1]);
+        });
+        // console.log("Supression des IDs:", tabIdObjetsToDelete);
+        this.supprimerElements(tabIdObjetsToDelete);
+    }
+
+
+
     /**
      * 
      * @param {number} idObjet 
@@ -230,15 +275,6 @@ export default class extends Controller {
         } else {
             this.updateMessage("Impossible d'effectuer cette opération.");
         }
-    }
-
-
-    /**
-    * 
-    * @param {Event} event 
-    */
-    outils_supprimer(event) {
-        console.log("Action Barre d'outils:", event.currentTarget);
     }
 
 

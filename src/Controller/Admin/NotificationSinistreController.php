@@ -232,6 +232,45 @@ class NotificationSinistreController extends AbstractController
         ]));
     }
 
+    #[Route('/remove_many/{idEntreprise}/{tabIDS}', name: 'remove_many', requirements: ['idEntreprise' => Requirement::DIGITS])]
+    public function remove_many($idEntreprise, $tabIDS, Request $request)
+    {
+        try {
+            // $idsString = $request->query->get('tabIDS');
+            if (null === $tabIDS || empty($tabIDS)) {
+                return $this->json(json_encode([
+                    "reponse" => "Ok - Aucun tableau n'a été envoyé au serveur",
+                ]));
+            }
+            $tabIDS_transformed = explode(',', $tabIDS); //On explose cette chaine en tableau.
+            $tabIDS_transformed = array_filter($tabIDS_transformed, 'is_numeric'); //On prends que les cellules dont les valeurs sont numérique
+            $tabIDS_transformed = array_map('intval', $tabIDS_transformed); //On prends les value entière uniquement.
+
+            // foreach ($tabIDS as $id) {
+            //     # code...
+            // }
+            /** @var NotificationSinistre $notificationsinistre */
+            // $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
+
+            // $this->manager->remove($notificationsinistre);
+            // $this->manager->flush();
+
+            return $this->json(json_encode([
+                "reponse" => "Ok - Tableau d'éléments. Total: " . count($tabIDS_transformed),
+            ]));
+        } catch (\Throwable $th) {
+            return $this->json(json_encode([
+                "reponse" => "Erreur: " . $th->getMessage(),
+            ]));
+        }
+
+
+
+        // return $this->json(json_encode([
+        //     "reponse" => "Ok - Tableau d'éléments.",
+        // ]));
+    }
+
     #[Route('/getlistelementdetails/{idEntreprise}/{idNotificationsinistre}', name: 'getlistelementdetails')]
     public function getlistelementdetails($idEntreprise, $idNotificationsinistre, Request $request)
     {

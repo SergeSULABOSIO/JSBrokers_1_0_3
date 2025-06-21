@@ -55,10 +55,11 @@ export default class extends Controller {
         event.preventDefault();
         // console.log(event.currentTarget);
         const cible = event.currentTarget;
+
         this.actionValue = cible.dataset.itemAction;
         this.objetValue = cible.dataset.itemObjet;
-        this.nomcontrolerstimulusValue = cible.dataset.itemNomcontrolerstimulus;
         this.nomcontrolerphpValue = cible.dataset.itemNomcontrolerphp;
+        this.nomcontrolerstimulusValue = cible.dataset.itemNomcontrolerstimulus;
         this.titreTarget.innerHTML = cible.dataset.itemTitre;
 
         this.formTarget.innerHTML = "Veuillez patienter svp...";
