@@ -26,6 +26,7 @@
     </button>
   </div>
   <div class="btn-group me-2 border-end" role="group" aria-label="First group">
+    {# Ajout #}
     <button 
       data-liste-principale-target="outilbtadd" 
       data-action="liste-principale#outils_ajouter" 
@@ -37,6 +38,7 @@
       {{ include('segments/icones/actions/add.html.twig', {size:'18px'}) }}
       Nouveau
     </button>
+    {# Edition #}
     <button 
       data-liste-principale-target="outilbtedit" 
       data-action="liste-principale#outils_modifier" 
@@ -47,6 +49,7 @@
     >
       {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
     </button>
+    {# Suppression #}
     <button 
       data-liste-principale-target="outilbtdelete" 
       data-action = "dialogue#open"

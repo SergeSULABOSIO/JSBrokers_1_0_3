@@ -57,7 +57,7 @@ export default class extends Controller {
         // console.log(event.currentTarget);
         const cible = event.currentTarget;
         const listeControler = this.getListeController();
-        const controleurenfant = cible.dataset.itemControleurenfant;
+        // const controleurenfant = cible.dataset.itemControleurenfant;
         const action = cible.dataset.itemAction;
         const idObjet = cible.dataset.itemObjet;
         const titre = cible.dataset.itemTitre;
@@ -104,7 +104,7 @@ export default class extends Controller {
 
         this.actionValue = action;
         this.objetValue = idObjet;
-        this.controleurenfantValue = controleurenfant;
+        this.controleurenfantValue = listeControler.controleurstimulusformulaireValue;
     }
 
 
