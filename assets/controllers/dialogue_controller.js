@@ -16,8 +16,9 @@ export default class extends Controller {
         'btFermer'
     ];
     static values = {
-        nomcontrolerphp: String,
-        nomcontrolerstimulus: String,
+        // nomcontrolerphp: String,
+        // nomcontrolerstimulus: String,
+        controleurenfant: String,
         identreprise: Number,
         action: Number,
         objet: Number,
@@ -54,9 +55,9 @@ export default class extends Controller {
         // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
         // console.log(event.currentTarget);
-        const listeControler = this.getListeController();
-
         const cible = event.currentTarget;
+        const listeControler = this.getListeController();
+        const controleurenfant = cible.dataset.itemControleurenfant;
         const action = cible.dataset.itemAction;
         const idObjet = cible.dataset.itemObjet;
         const titre = cible.dataset.itemTitre;
@@ -79,7 +80,7 @@ export default class extends Controller {
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
             }
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
-            const url = '/admin/' + listeControler.controlerphpValue + '/formulaire/' + listeControler.identrepriseValue + '/' + idObjet;
+            const url = '/admin/' + listeControler.controleurphpValue + '/formulaire/' + listeControler.identrepriseValue + '/' + idObjet;
             fetch(url) // Remplacez par l'URL de votre formulaire
                 .then(response => response.text())
                 .then(html => {
@@ -93,6 +94,10 @@ export default class extends Controller {
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
             this.formTarget.innerHTML = "Etes-vous sûre de vouloir supprimer cet enregistrement?";
         }
+
+        this.actionValue = action;
+        this.objetValue = idObjet;
+        this.controleurenfantValue = controleurenfant;
     }
 
 
@@ -127,7 +132,7 @@ export default class extends Controller {
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
             // console.log(this.formTarget.firstElementChild, this.nomcontrolerValue);
-            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.nomcontrolerstimulusValue);
+            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.controleurenfantValue);
         }
         return null;
     }
