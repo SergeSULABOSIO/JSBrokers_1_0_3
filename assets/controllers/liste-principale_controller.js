@@ -104,16 +104,18 @@ export default class extends Controller {
                 const serverJsonObject = JSON.parse(data);
                 // this.formTarget.innerHTML = html;
                 console.log("Réponse du server: ", serverJsonObject);
-
-                // if (serverJsonObject.reponse == "Ok") {
-                //     this.nbelementsValue--;
-                //     const elementDeleted = document.getElementById("liste_row_" + this.objetValue);
-                //     const parentElementDeleted = elementDeleted.parentElement;
-                //     parentElementDeleted.removeChild(elementDeleted);
-                //     this.updateMessage("Suppression réussie.");
-                // } else {
-                //     this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
-                // }
+                if (serverJsonObject.reponse == "Ok") {
+                    this.nbelementsValue = this.nbelementsValue - serverJsonObject.deletedIds.length;
+                    serverJsonObject.deletedIds.forEach(deletedID => {
+                        const elementDeleted = document.getElementById("liste_row_" + deletedID);
+                        const parentElementDeleted = elementDeleted.parentElement;
+                        parentElementDeleted.removeChild(elementDeleted);
+                        this.updateMessage("Suppression de " + deletedID + ".");
+                    });
+                    this.updateMessage("Suppression de " + serverJsonObject.deletedIds.length + " éléments réussie.");
+                } else {
+                    this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
+                }
             });
     }
 

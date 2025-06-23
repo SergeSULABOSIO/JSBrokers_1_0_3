@@ -232,43 +232,46 @@ class NotificationSinistreController extends AbstractController
         ]));
     }
 
-    #[Route('/remove_many/{idEntreprise}/{tabIDS}', name: 'remove_many', requirements: ['idEntreprise' => Requirement::DIGITS])]
-    public function remove_many($idEntreprise, $tabIDS, Request $request)
+    #[Route('/remove_many/{idEntreprise}/{tabIDString}', name: 'remove_many', requirements: ['idEntreprise' => Requirement::DIGITS])]
+    public function remove_many($idEntreprise, $tabIDString, Request $request)
     {
         try {
-            // $idsString = $request->query->get('tabIDS');
-            if (null === $tabIDS || empty($tabIDS)) {
+            $deletedIDs = [];
+            if (null === $tabIDString || empty($tabIDString)) {
                 return $this->json(json_encode([
-                    "reponse" => "Ok - Aucun tableau n'a été envoyé au serveur",
+                    "reponse" => "Ok",
+                    "message" => "Aucun tableau n'a été envoyé au serveur",
+                    "deletedIds" => $deletedIDs,
                 ]));
             }
-            $tabIDS_transformed = explode(',', $tabIDS); //On explose cette chaine en tableau.
-            $tabIDS_transformed = array_filter($tabIDS_transformed, 'is_numeric'); //On prends que les cellules dont les valeurs sont numérique
-            $tabIDS_transformed = array_map('intval', $tabIDS_transformed); //On prends les value entière uniquement.
+            $idsTab = explode(',', $tabIDString); //On explose cette chaine en tableau.
+            $idsTab = array_filter($idsTab, 'is_numeric'); //On prends que les cellules dont les valeurs sont numérique
+            $idsTab = array_map('intval', $idsTab); //On prends les value entière uniquement.
 
-            // foreach ($tabIDS as $id) {
-            //     # code...
-            // }
-            /** @var NotificationSinistre $notificationsinistre */
-            // $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
-
-            // $this->manager->remove($notificationsinistre);
-            // $this->manager->flush();
-
+            foreach ($idsTab as $id) {
+                /** @var NotificationSinistre $notification */
+                $notification = $this->notificationSinistreRepository->find($id);
+                if ($notification != null) {
+                    $this->manager->remove($notification);
+                    $this->manager->flush();
+                }
+                $notification = $this->notificationSinistreRepository->find($id);
+                if ($notification == null) {
+                    $deletedIDs[] = $id;
+                }
+            }
             return $this->json(json_encode([
-                "reponse" => "Ok - Tableau d'éléments. Total: " . count($tabIDS_transformed),
+                "reponse" => "Ok",
+                "message" => count($deletedIDs) . " éléments ont été supprimés.",
+                "deletedIds" => $deletedIDs,
             ]));
         } catch (\Throwable $th) {
             return $this->json(json_encode([
-                "reponse" => "Erreur: " . $th->getMessage(),
+                "reponse" => "Erreur",
+                "message" => $th->getMessage(),
+                "deletedIds" => $deletedIDs,
             ]));
         }
-
-
-
-        // return $this->json(json_encode([
-        //     "reponse" => "Ok - Tableau d'éléments.",
-        // ]));
     }
 
     #[Route('/getlistelementdetails/{idEntreprise}/{idNotificationsinistre}', name: 'getlistelementdetails')]

@@ -153,6 +153,7 @@
     <div class="d-flex gap-1 d-flex justify-content-end">
         {# Les actions sur l element de la liste #}
         <div class="options-du-parent">
+            {# Modification #}
             <button 
                 data-item-action = 1 
                 data-item-objet={{notificationsinistre.id}} 
@@ -166,22 +167,19 @@
             </button>
         </div>
         <div class="options-du-parent">
-            <form action="{{ path('admin.notificationsinistre.remove', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" method='POST'>
-                <input type='hidden' name='_method' value='DELETE'>
-                <button 
-                    data-item-action = 2 
-                    data-item-objet={{notificationsinistre.id}} 
-                    data-item-nomcontrolerphp = "notificationsinistre" 
-                    data-item-nomcontrolerstimulus = "notificationsinistre-formulaire" 
-                    data-item-titre="Suppression de la notification {{notificationsinistre.referenceSinistre}}" 
-                    data-action = "dialogue#open"
-                    class='btn btn-outline-danger border-0 btn-sm' 
-                    type='submit'
-                >
-                    {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
-                    {# Supprimer #}
-                </button>
-            </form>
+            <button 
+                data-item-action = 2 
+                data-item-objet={{notificationsinistre.id}} 
+                data-item-nomcontrolerphp = "notificationsinistre" 
+                data-item-nomcontrolerstimulus = "notificationsinistre-formulaire" 
+                data-item-titre="Suppression de la notification {{notificationsinistre.referenceSinistre}}" 
+                data-action = "dialogue#open"
+                class='btn btn-outline-danger border-0 btn-sm' 
+                type='submit'
+            >
+                {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
+                {# Supprimer #}
+            </button>
         </div>
     </div>
 </td>
