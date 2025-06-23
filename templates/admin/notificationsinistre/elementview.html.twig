@@ -165,13 +165,11 @@
             >
                 {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
             </button>
-            
+
             {# Suppression #}
             <button 
                 data-item-action = 2 
                 data-item-objet={{notificationsinistre.id}} 
-                data-item-nomcontrolerphp = "notificationsinistre" 
-                data-item-nomcontrolerstimulus = "notificationsinistre-formulaire" 
                 data-item-titre="Suppression de la notification {{notificationsinistre.referenceSinistre}}" 
                 data-action = "dialogue#open"
                 class='btn btn-outline-danger border-0 btn-sm' 

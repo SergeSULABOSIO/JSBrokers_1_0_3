@@ -54,42 +54,40 @@ export default class extends Controller {
         // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
         // console.log(event.currentTarget);
+        const listeControler = this.getListeController();
+
         const cible = event.currentTarget;
-
-        this.actionValue = cible.dataset.itemAction;
-        this.objetValue = cible.dataset.itemObjet;
-        this.nomcontrolerphpValue = cible.dataset.itemNomcontrolerphp;
-        this.nomcontrolerstimulusValue = cible.dataset.itemNomcontrolerstimulus;
-        this.titreTarget.innerHTML = cible.dataset.itemTitre;
-
+        const action = cible.dataset.itemAction;
+        const idObjet = cible.dataset.itemObjet;
+        const titre = cible.dataset.itemTitre;
+        this.titreTarget.innerHTML = titre;
         this.formTarget.innerHTML = "Veuillez patienter svp...";
+
         if (this.boite) {
             this.boite.show();
         } else {
             console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
         }
-        //Ouverture de la boîte:
-        // * Opération Ajout ou Modification
-        if (this.actionValue == 0 || this.actionValue == 1) {
-            if (this.actionValue == 0) {
+
+        // * Opération Ajout (0) ou Modification (1)
+        if (action == 0 || action == 1) {
+            if (action == 0) {
                 this.updateMessage("Opération: Ajout d'un élément.");
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
             } else {
-                this.updateMessage("Opération: Edition de l'élément " + this.objetValue + ".");
+                this.updateMessage("Opération: Edition de l'élément ID: " + idObjet + ".");
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
             }
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
-            const url = '/admin/'+ this.nomcontrolerphpValue +'/formulaire/' + this.identrepriseValue + '/' + this.objetValue;
+            const url = '/admin/' + listeControler.controlerphpValue + '/formulaire/' + listeControler.identrepriseValue + '/' + idObjet;
             fetch(url) // Remplacez par l'URL de votre formulaire
                 .then(response => response.text())
                 .then(html => {
                     this.formTarget.innerHTML = html;
                 });
         }
-        //Ouverture de la boîte:
         // * Opération Suppression
-        if (this.actionValue == 2) {
-            const listeControler = this.getListeController();
+        if (action == 2) {
             listeControler.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
             defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
