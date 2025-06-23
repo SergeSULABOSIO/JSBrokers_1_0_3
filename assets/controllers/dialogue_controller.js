@@ -87,12 +87,19 @@ export default class extends Controller {
                     this.formTarget.innerHTML = html;
                 });
         }
-        // * Opération Suppression
-        if (action == 2) {
+        // * Opération Suppression (2) ou Suppression Multiple (3)
+        if (action == 2 || action == 3) {
             listeControler.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
             defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
-            this.formTarget.innerHTML = "Etes-vous sûre de vouloir supprimer cet enregistrement?";
+            var messageDeletion = "";
+            const selectedCheckBoxes = listeControler.tabSelectedCheckBoxs;
+            if (selectedCheckBoxes.length != 0) {
+                messageDeletion += "Etes-vous sûr de vouloir supprimer cett séléction de " + selectedCheckBoxes.length + " élément(s)?";
+            } else {
+                messageDeletion = "Etes-vous sûre de vouloir supprimer cet élément?";
+            }
+            this.formTarget.innerHTML = messageDeletion;
         }
 
         this.actionValue = action;
@@ -166,11 +173,15 @@ export default class extends Controller {
             }
         }
         //Action: Suppression
-        if (this.actionValue == 2) {
+        if (this.actionValue == 2 || this.actionValue == 3) {
             // this.updateMessage('Suppression en cours...');
             const listeControler = this.getListeController();
-            // console.log("On lance la suppression...");
-            listeControler.supprimerElement(this.objetValue);
+            if (this.actionValue == 2) {
+                listeControler.supprimerElement(this.objetValue);
+            }
+            if (this.actionValue == 3) {
+                listeControler.outils_supprimer(event);
+            }
             // this.updateMessage('Prêt.');
             if (this.boite) {
                 this.boite.hide();

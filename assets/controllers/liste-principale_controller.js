@@ -114,6 +114,7 @@ export default class extends Controller {
                         this.updateMessage("Suppression de " + deletedID + ".");
                     });
                     this.updateMessage("Suppression de " + serverJsonObject.deletedIds.length + " éléments réussie.");
+                    this.tabSelectedCheckBoxs = [];
                 } else {
                     this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
                 }
