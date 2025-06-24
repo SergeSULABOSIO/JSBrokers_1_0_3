@@ -15,6 +15,7 @@ export default class extends Controller {
     static values = {
         controleurphp: String,
         controleursitimulus: String,
+        // controleurstimulusformulaire: String,
         objet: Number,
         identreprise: Number,
         idutilisateur: Number,

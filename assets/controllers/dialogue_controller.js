@@ -5,7 +5,7 @@ import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si v
 
 export default class extends Controller {
     /**
-     * Action [0=New, 1=Edit, 2=Delete]
+     * Action [0=New, 1=Edit, 2=Delete, 3=Delete Multiple]
      */
     static targets = [
         'titre',
@@ -15,18 +15,23 @@ export default class extends Controller {
         'btSubmit',
         'btFermer'
     ];
-    static values = {
-        // nomcontrolerphp: String,
-        // nomcontrolerstimulus: String,
-        controleurenfant: String,
-        identreprise: Number,
-        action: Number,
-        objet: Number,
-    };
-
-
+    
     connect() {
-        console.log("Connecté au contrôleur dialogue.");
+        /**
+         * LES VARIABLES GLOBALES
+         */
+        this.controleurenfant = "";
+        this.identreprise = -1;
+        this.action = -1;
+        this.objet = -1;
+        this.titre = "";
+        this.controleurDeLaListePrincipale = this.getControleurListePrincipale();
+        // Initialisation
+        this.init();
+    }
+
+
+    init(){
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
         defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
         // Initialiser la modal en désactivant le backdrop click
@@ -52,48 +57,43 @@ export default class extends Controller {
      * @param {Event} event 
      */
     open(event) {
-        // Empêcher le comportement par défaut si le bouton est un submit ou un lien
         event.preventDefault();
-        // console.log(event.currentTarget);
-        const cible = event.currentTarget;
-        const listeControler = this.getListeController();
-        // const controleurenfant = cible.dataset.itemControleurenfant;
-        const action = cible.dataset.itemAction;
-        const idObjet = cible.dataset.itemObjet;
-        const titre = cible.dataset.itemTitre;
-        this.titreTarget.innerHTML = titre;
+        this.action = event.currentTarget.dataset.itemAction;
+        this.objet = event.currentTarget.dataset.itemObjet;
+        this.titre = event.currentTarget.dataset.itemTitre;
+        this.titreTarget.innerHTML = this.titre;
         this.formTarget.innerHTML = "Veuillez patienter svp...";
-
+        //Ouverture de la boite de dialogue
         if (this.boite) {
             this.boite.show();
         } else {
             console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
         }
-
+        
         // * Opération Ajout (0) ou Modification (1)
-        if (action == 0 || action == 1) {
+        if (this.action == 0 || this.action == 1) {
             if (action == 0) {
                 this.updateMessage("Opération: Ajout d'un élément.");
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
             } else {
-                this.updateMessage("Opération: Edition de l'élément ID: " + idObjet + ".");
+                this.updateMessage("Opération: Edition de l'élément ID: " + this.objet + ".");
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
             }
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
-            const url = '/admin/' + listeControler.controleurphpValue + '/formulaire/' + listeControler.identrepriseValue + '/' + idObjet;
+            const url = '/admin/' + this.controleurDeLaListePrincipale.controleurphpValue + '/formulaire/' + this.controleurDeLaListePrincipale.identrepriseValue + '/' + this.objet;
             fetch(url) // Remplacez par l'URL de votre formulaire
-                .then(response => response.text())
-                .then(html => {
-                    this.formTarget.innerHTML = html;
-                });
+            .then(response => response.text())
+            .then(html => {
+                this.formTarget.innerHTML = html;
+            });
         }
         // * Opération Suppression (2) ou Suppression Multiple (3)
-        if (action == 2 || action == 3) {
-            listeControler.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
+        if (this.action == 2 || this.action == 3) {
+            this.controleurDeLaListePrincipale.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
             defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
             var messageDeletion = "";
-            const selectedCheckBoxes = listeControler.tabSelectedCheckBoxs;
+            const selectedCheckBoxes = this.controleurDeLaListePrincipale.tabSelectedCheckBoxs;
             if (selectedCheckBoxes.length != 0) {
                 messageDeletion += "Etes-vous sûr de vouloir supprimer cett séléction de " + selectedCheckBoxes.length + " élément(s)?";
             } else {
@@ -101,10 +101,6 @@ export default class extends Controller {
             }
             this.formTarget.innerHTML = messageDeletion;
         }
-
-        this.actionValue = action;
-        this.objetValue = idObjet;
-        this.controleurenfantValue = listeControler.controleurstimulusformulaireValue;
     }
 
 
@@ -116,18 +112,14 @@ export default class extends Controller {
         if (event) {
             event.preventDefault();
         }
-        // console.log("On ferme après action: " + this.actionValue);
-        //On ferme après Actualisation
-        if (this.actionValue == 1) {
-            const listeControler = this.getListeController();
-            listeControler.actualiserElement(this.objetValue);
+        // Edition
+        if (this.action == 1) {
+            this.controleurDeLaListePrincipale.actualiserElement(this.objet);
         }
-        //Annulation de la suppression
-        if (this.actionValue == 2) {
-            const listeControler = this.getListeController();
-            listeControler.updateMessage("Suppression annulée.");
+        // Suppression
+        if (this.action == 2) {
+            this.controleurDeLaListePrincipale.updateMessage("Suppression annulée.");
         }
-        // console.log("Méthode close appelée.");
         if (this.boite) {
             this.boite.hide();
         }
@@ -135,21 +127,19 @@ export default class extends Controller {
 
 
     // Méthode pour obtenir l'instance du contrôleur enfant
-    getChildController() {
+    getControlleurEnfant() {
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
-            // console.log(this.formTarget.firstElementChild, this.nomcontrolerValue);
-            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.controleurenfantValue);
+            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.controleurenfant);
         }
         return null;
     }
 
 
-    getListeController() {
-        const liste = document.getElementById("liste");
-        // Vérifie que l'élément 'form' est bien défini comme target
-        if (liste) {
-            return this.application.getControllerForElementAndIdentifier(liste, "liste-principale");
+    getControleurListePrincipale() {
+        const listePrincipale = document.getElementById("liste");
+        if (listePrincipale) {
+            return this.application.getControllerForElementAndIdentifier(listePrincipale, "liste-principale");
         }
         return null;
     }
@@ -159,15 +149,11 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        // console.log("Dialogue - Action: " + this.actionValue);
         //Action: Ajout ou Modification
         if (this.actionValue == 0 || this.actionValue == 1) {
-            // this.updateMessage('Enregistrement en cours...');
-            const childController = this.getChildController();
-            if (childController) {
-                // Appeler une méthode du contrôleur enfant
-                childController.triggerFromParent(event);
-                // this.updateMessage('Prêt.');
+            const controleurEnfant = this.getControlleurEnfant();
+            if (controleurEnfant) {
+                controleurEnfant.triggerFromParent(event);
             } else {
                 console.error("Contrôleur enfant non trouvé.");
             }
