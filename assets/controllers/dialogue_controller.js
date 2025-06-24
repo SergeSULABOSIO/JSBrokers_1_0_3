@@ -20,6 +20,11 @@ export default class extends Controller {
         /**
          * LES VARIABLES GLOBALES
          */
+        this.ADD = 0;
+        this.EDIT = 1;
+        this.DELETE_SINGLE = 2;
+        this.DELETE_MULTIPLE = 3;
+
         this.controleurenfant = "";
         this.identreprise = -1;
         this.action = -1;
@@ -70,6 +75,37 @@ export default class extends Controller {
     }
 
 
+    loadFormFromServer() {
+        const url = '/admin/' + this.controleurDeLaListePrincipale.controleurphpValue + '/formulaire/' + this.controleurDeLaListePrincipale.identrepriseValue + '/' + this.objet;
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.text())
+            .then(html => {
+                this.formTarget.innerHTML = html;
+            });
+    }
+
+
+    /**
+     * 
+     * @param {Number} action 
+     */
+    customizeSubmitionButtons(action) {
+        if (action == this.ADD || action == this.EDIT) {
+            if (action == this.ADD) {
+                this.updateMessage("Opération: Ajout d'un élément.");
+                defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+            } else {
+                this.updateMessage("Opération: Edition de l'élément ID: " + this.objet + ".");
+                defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
+            }
+        }else if (action == this.DELETE_SINGLE || action == this.DELETE_MULTIPLE) {
+            this.controleurDeLaListePrincipale.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
+            defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
+        }
+        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
+    }
+
+
     /**
      * 
      * @param {Event} event 
@@ -79,38 +115,24 @@ export default class extends Controller {
         this.action = event.currentTarget.dataset.itemAction;
         this.objet = event.currentTarget.dataset.itemObjet;
         this.titre = event.currentTarget.dataset.itemTitre;
-        
+
         this.titreTarget.innerHTML = this.titre;
         this.formTarget.innerHTML = "Veuillez patienter svp...";
+
         //Ouverture de la boite de dialogue
         this.showDialogue();
-
+        this.customizeSubmitionButtons(this.action);
+        
         // * Opération Ajout (0) ou Modification (1)
-        if (this.action == 0 || this.action == 1) {
-            if (action == 0) {
-                this.updateMessage("Opération: Ajout d'un élément.");
-                defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
-            } else {
-                this.updateMessage("Opération: Edition de l'élément ID: " + this.objet + ".");
-                defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
-            }
-            defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
-            const url = '/admin/' + this.controleurDeLaListePrincipale.controleurphpValue + '/formulaire/' + this.controleurDeLaListePrincipale.identrepriseValue + '/' + this.objet;
-            fetch(url) // Remplacez par l'URL de votre formulaire
-                .then(response => response.text())
-                .then(html => {
-                    this.formTarget.innerHTML = html;
-                });
+        if (this.action == this.ADD || this.action == this.EDIT) {
+            this.loadFormFromServer();
         }
         // * Opération Suppression (2) ou Suppression Multiple (3)
-        if (this.action == 2 || this.action == 3) {
-            this.controleurDeLaListePrincipale.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
-            defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
-            defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
+        if (this.action == this.DELETE_SINGLE || this.action == this.DELETE_MULTIPLE) {
             var messageDeletion = "";
             const selectedCheckBoxes = this.controleurDeLaListePrincipale.tabSelectedCheckBoxs;
             if (selectedCheckBoxes.length != 0) {
-                messageDeletion += "Etes-vous sûr de vouloir supprimer cett séléction de " + selectedCheckBoxes.length + " élément(s)?";
+                messageDeletion += "Etes-vous sûr de vouloir supprimer cette séléction de " + selectedCheckBoxes.length + " élément(s)?";
             } else {
                 messageDeletion = "Etes-vous sûre de vouloir supprimer cet élément?";
             }
