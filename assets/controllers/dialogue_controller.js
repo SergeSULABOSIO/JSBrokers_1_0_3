@@ -15,7 +15,7 @@ export default class extends Controller {
         'btSubmit',
         'btFermer'
     ];
-    
+
     connect() {
         /**
          * LES VARIABLES GLOBALES
@@ -31,9 +31,19 @@ export default class extends Controller {
     }
 
 
-    init(){
+    init() {
+        this.initBoutonValidationFermer();
+        this.initBoiteDeDialogue();
+    }
+
+
+    initBoutonValidationFermer() {
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
         defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+    }
+
+
+    initBoiteDeDialogue() {
         // Initialiser la modal en désactivant le backdrop click
         this.boite = new Modal(this.boiteTarget, {
             backdrop: 'static', // ou true si vous voulez un backdrop sans fermeture au clic
@@ -51,6 +61,14 @@ export default class extends Controller {
         this.messageTarget.innerHTML = newMessage + " | ";
     }
 
+    showDialogue() {
+        if (this.boite) {
+            this.boite.show();
+        } else {
+            console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
+        }
+    }
+
 
     /**
      * 
@@ -61,15 +79,12 @@ export default class extends Controller {
         this.action = event.currentTarget.dataset.itemAction;
         this.objet = event.currentTarget.dataset.itemObjet;
         this.titre = event.currentTarget.dataset.itemTitre;
+        
         this.titreTarget.innerHTML = this.titre;
         this.formTarget.innerHTML = "Veuillez patienter svp...";
         //Ouverture de la boite de dialogue
-        if (this.boite) {
-            this.boite.show();
-        } else {
-            console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
-        }
-        
+        this.showDialogue();
+
         // * Opération Ajout (0) ou Modification (1)
         if (this.action == 0 || this.action == 1) {
             if (action == 0) {
@@ -82,10 +97,10 @@ export default class extends Controller {
             defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
             const url = '/admin/' + this.controleurDeLaListePrincipale.controleurphpValue + '/formulaire/' + this.controleurDeLaListePrincipale.identrepriseValue + '/' + this.objet;
             fetch(url) // Remplacez par l'URL de votre formulaire
-            .then(response => response.text())
-            .then(html => {
-                this.formTarget.innerHTML = html;
-            });
+                .then(response => response.text())
+                .then(html => {
+                    this.formTarget.innerHTML = html;
+                });
         }
         // * Opération Suppression (2) ou Suppression Multiple (3)
         if (this.action == 2 || this.action == 3) {
