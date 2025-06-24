@@ -75,7 +75,15 @@ export default class extends Controller {
     }
 
 
-    loadFormFromServer() {
+
+    closeDialogue() {
+        if (this.boite) {
+            this.boite.hide();
+        }
+    }
+
+
+    loadAddEditFormFromServer() {
         const url = '/admin/' + this.controleurDeLaListePrincipale.controleurphpValue + '/formulaire/' + this.controleurDeLaListePrincipale.identrepriseValue + '/' + this.objet;
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())
@@ -98,7 +106,7 @@ export default class extends Controller {
                 this.updateMessage("Opération: Edition de l'élément ID: " + this.objet + ".");
                 defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "METTRE A JOUR");
             }
-        }else if (action == this.DELETE_SINGLE || action == this.DELETE_MULTIPLE) {
+        } else if (action == this.DELETE_SINGLE || action == this.DELETE_MULTIPLE) {
             this.controleurDeLaListePrincipale.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
             defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
         }
@@ -122,10 +130,10 @@ export default class extends Controller {
         //Ouverture de la boite de dialogue
         this.showDialogue();
         this.customizeSubmitionButtons(this.action);
-        
+
         // * Opération Ajout (0) ou Modification (1)
         if (this.action == this.ADD || this.action == this.EDIT) {
-            this.loadFormFromServer();
+            this.loadAddEditFormFromServer();
         }
         // * Opération Suppression (2) ou Suppression Multiple (3)
         if (this.action == this.DELETE_SINGLE || this.action == this.DELETE_MULTIPLE) {
@@ -150,16 +158,14 @@ export default class extends Controller {
             event.preventDefault();
         }
         // Edition
-        if (this.action == 1) {
+        if (this.action == this.EDIT) {
             this.controleurDeLaListePrincipale.actualiserElement(this.objet);
         }
         // Suppression
-        if (this.action == 2) {
+        if (this.action == this.DELETE_SINGLE || this.action == this.DELETE_MULTIPLE) {
             this.controleurDeLaListePrincipale.updateMessage("Suppression annulée.");
         }
-        if (this.boite) {
-            this.boite.hide();
-        }
+        this.closeDialogue();
     }
 
 
@@ -186,8 +192,9 @@ export default class extends Controller {
      * @param {Event} event 
     */
     submit(event) {
-        //Action: Ajout ou Modification
-        if (this.actionValue == 0 || this.actionValue == 1) {
+        //Action: Ajout (0) ou Modification (1)
+        if (this.action == this.ADD || this.action == this.EDIT) {
+            ICICICI
             const controleurEnfant = this.getControlleurEnfant();
             if (controleurEnfant) {
                 controleurEnfant.triggerFromParent(event);
