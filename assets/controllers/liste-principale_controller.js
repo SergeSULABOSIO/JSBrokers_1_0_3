@@ -15,7 +15,6 @@ export default class extends Controller {
     static values = {
         controleurphp: String,
         controleursitimulus: String,
-        // controleurstimulusformulaire: String,
         objet: Number,
         identreprise: Number,
         idutilisateur: Number,
@@ -25,14 +24,20 @@ export default class extends Controller {
 
 
     connect() {
+        this.init();
+    }
+    
+    init(){
         this.tabSelectedCheckBoxs = [];
-        // console.log("Liste " + this.rubriqueValue);
-        this.updateMessage("Prêt.");
-
+        this.controleurDeLaBoiteDeDialogue = this.getDialogueController();
         //On défini les écouteurs ici
         this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
         this.initialiserBarreDoutils();
-
+        this.initToolTips();
+        this.updateMessage("Prêt.");
+    }
+    
+    initToolTips(){
         //On initialise le tooltips
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
@@ -56,6 +61,7 @@ export default class extends Controller {
             this.outilbtdeleteTarget.style.display = "none";
         }
     }
+
 
     /**
      * @param {Event} event 
@@ -98,14 +104,11 @@ export default class extends Controller {
     supprimerElements(tabIDS) {
         const message = "Suppression de " + tabIDS.length + " éléments en cours... Patientez svp.";
         this.updateMessage(message);
-        console.log(message);
         const url = '/admin/' + this.controleurphpValue + '/remove_many/' + this.identrepriseValue + '/' + tabIDS;
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.json())
             .then(data => {
                 const serverJsonObject = JSON.parse(data);
-                // this.formTarget.innerHTML = html;
-                console.log("Réponse du server: ", serverJsonObject);
                 if (serverJsonObject.reponse == "Ok") {
                     this.nbelementsValue = this.nbelementsValue - serverJsonObject.deletedIds.length;
                     serverJsonObject.deletedIds.forEach(deletedID => {
@@ -133,7 +136,6 @@ export default class extends Controller {
         this.tabSelectedCheckBoxs.forEach(currentCheckBox => {
             tabIdObjetsToDelete.push(currentCheckBox.split("_")[1]);
         });
-        // console.log("Supression des IDs:", tabIdObjetsToDelete);
         this.supprimerElements(tabIdObjetsToDelete);
     }
 
@@ -179,9 +181,7 @@ export default class extends Controller {
      */
     cocherTousElements(event) {
         const isChecked = this.btToutCocherTarget.checked;
-        // console.log("Coché?:" + isChecked);
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
-        // console.log(event);
         this.tabSelectedCheckBoxs = [];
         checkBoxes.forEach(currentCheckBox => {
             currentCheckBox.checked = isChecked;
@@ -201,7 +201,6 @@ export default class extends Controller {
      * @param {Event} event 
      */
     cocherElement(event) {
-        // console.log("checkBox", event.currentTarget);
         const idSelectedCheckBox = event.currentTarget.getAttribute("id");
         const indexOfSelectedCheckBox = this.tabSelectedCheckBoxs.indexOf(idSelectedCheckBox);
         if (indexOfSelectedCheckBox == -1) {
@@ -209,7 +208,6 @@ export default class extends Controller {
         } else {
             this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
         }
-        // console.log(this.tabSelectedCheckBox);
         this.updateMessageSelectedCheckBoxes();
     }
 
@@ -250,14 +248,10 @@ export default class extends Controller {
      * @param {Event} event 
      */
     outils_ajouter(event) {
-        const dialogue_controler = this.getDialogueController();
         event.currentTarget.dataset.itemAction = 0;
         event.currentTarget.dataset.itemObjet = -1;
-        event.currentTarget.dataset.itemNomcontrolerphp = this.controleurphpValue;
-        event.currentTarget.dataset.itemNomcontrolerstimulus = this.controleurphpValue + "-formulaire";
         event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Nouveau";
-        // console.log("DataSet pour ajout:", event.currentTarget.dataset);
-        dialogue_controler.open(event);
+        this.controleurDeLaBoiteDeDialogue.open(event);
     }
 
 
@@ -269,13 +263,10 @@ export default class extends Controller {
         if (this.tabSelectedCheckBoxs.length == 1) {
             const objetSelected = (this.tabSelectedCheckBoxs[0].split("_"))[1];
             if (objetSelected != -1) {
-                const dialogue_controler = this.getDialogueController();
                 event.currentTarget.dataset.itemAction = 1;
                 event.currentTarget.dataset.itemObjet = objetSelected;
-                event.currentTarget.dataset.itemNomcontrolerstimulus = this.controleurphpValue + "-formulaire";
-                event.currentTarget.dataset.itemNomcontrolerphp = this.controleurphpValue;
                 event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Edition";
-                dialogue_controler.open(event);
+                this.controleurDeLaBoiteDeDialogue.open(event);
             }
         } else {
             this.updateMessage("Impossible d'effectuer cette opération.");

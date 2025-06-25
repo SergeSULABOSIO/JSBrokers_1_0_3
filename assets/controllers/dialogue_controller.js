@@ -169,6 +169,7 @@ export default class extends Controller {
     }
 
 
+    
     // Méthode pour obtenir l'instance du contrôleur enfant
     getControlleurEnfantSpecial() {
         // Vérifie que l'élément 'form' est bien défini comme target
@@ -179,6 +180,7 @@ export default class extends Controller {
     }
 
 
+
     getControleurListePrincipale() {
         const listePrincipale = document.getElementById("liste");
         if (listePrincipale) {
@@ -186,6 +188,7 @@ export default class extends Controller {
         }
         return null;
     }
+
 
 
     /**
