@@ -30,6 +30,9 @@ export default class extends Controller {
     init(){
         this.tabSelectedCheckBoxs = [];
         this.controleurDeLaBoiteDeDialogue = this.getDialogueController();
+        //il doit se faire connaitre au près du controleur parent.
+        this.controleurDeLaBoiteDeDialogue.controleurDeLaListePrincipale = this;
+
         //On défini les écouteurs ici
         this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
         this.initialiserBarreDoutils();

@@ -17,6 +17,11 @@ export default class extends Controller {
     ];
 
     connect() {
+        this.init();
+    }
+
+
+    init() {
         /**
          * LES VARIABLES GLOBALES
          */
@@ -32,11 +37,6 @@ export default class extends Controller {
         this.titre = "";
         this.controleurDeLaListePrincipale = this.getControleurListePrincipale();
         // Initialisation
-        this.init();
-    }
-
-
-    init() {
         this.initBoutonValidationFermer();
         this.initBoiteDeDialogue();
     }
@@ -89,7 +89,16 @@ export default class extends Controller {
             .then(response => response.text())
             .then(html => {
                 this.formTarget.innerHTML = html;
+                //On met à jour le controleur enfant
+                this.updateControleurEnfant();
             });
+    }
+
+
+    updateControleurEnfant() {
+        const controleursChargesSurTarget = this.formTarget.firstElementChild.getAttribute("data-controller");
+        this.controleurenfant = this.getControlleurEnfantSpecial(controleursChargesSurTarget.split(" ")[0]);
+        console.log("Controleur enfant spécial:", this.controleurenfant);
     }
 
 
@@ -169,12 +178,12 @@ export default class extends Controller {
     }
 
 
-    
+
     // Méthode pour obtenir l'instance du contrôleur enfant
-    getControlleurEnfantSpecial() {
+    getControlleurEnfantSpecial(nom) {
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
-            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.controleurenfant);
+            return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, nom);
         }
         return null;
     }
@@ -197,7 +206,7 @@ export default class extends Controller {
     submit(event) {
         //Action: Ajout (0) ou Modification (1)
         if (this.action == this.ADD || this.action == this.EDIT) {
-            this.controleurDeLaListePrincipale.triggerFromParent(event);
+            this.controleurenfant.triggerFromParent(event);
         }
         //Action: Suppression simple (2) ou Suppression Multiple (3)
         if (this.action == this.DELETE_SINGLE || this.action == this.DELETE_MULTIPLE) {
