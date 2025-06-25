@@ -170,7 +170,7 @@ export default class extends Controller {
 
 
     // Méthode pour obtenir l'instance du contrôleur enfant
-    getControlleurEnfant() {
+    getControlleurEnfantSpecial() {
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
             return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, this.controleurenfant);
@@ -194,28 +194,17 @@ export default class extends Controller {
     submit(event) {
         //Action: Ajout (0) ou Modification (1)
         if (this.action == this.ADD || this.action == this.EDIT) {
-            ICICICI
-            const controleurEnfant = this.getControlleurEnfant();
-            if (controleurEnfant) {
-                controleurEnfant.triggerFromParent(event);
-            } else {
-                console.error("Contrôleur enfant non trouvé.");
-            }
+            this.controleurDeLaListePrincipale.triggerFromParent(event);
         }
-        //Action: Suppression
-        if (this.actionValue == 2 || this.actionValue == 3) {
-            // this.updateMessage('Suppression en cours...');
-            const listeControler = this.getListeController();
-            if (this.actionValue == 2) {
-                listeControler.supprimerElement(this.objetValue);
+        //Action: Suppression simple (2) ou Suppression Multiple (3)
+        if (this.action == this.DELETE_SINGLE || this.action == this.DELETE_MULTIPLE) {
+            if (this.action == this.DELETE_SINGLE) {
+                this.controleurDeLaListePrincipale.supprimerElement(this.objetValue);
             }
-            if (this.actionValue == 3) {
-                listeControler.outils_supprimer(event);
+            if (this.actionValue == this.DELETE_MULTIPLE) {
+                this.controleurDeLaListePrincipale.outils_supprimer(event);
             }
-            // this.updateMessage('Prêt.');
-            if (this.boite) {
-                this.boite.hide();
-            }
+            this.closeDialogue();
         }
     }
 }
