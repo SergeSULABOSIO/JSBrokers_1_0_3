@@ -89,17 +89,9 @@ export default class extends Controller {
             .then(response => response.text())
             .then(html => {
                 this.formTarget.innerHTML = html;
-                //On met à jour le controleur enfant
-                this.updateControleurEnfant();
             });
     }
 
-
-    updateControleurEnfant() {
-        const controleursChargesSurTarget = this.formTarget.firstElementChild.getAttribute("data-controller");
-        this.controleurenfant = this.getControlleurEnfantSpecial(controleursChargesSurTarget.split(" ")[0]);
-        console.log("Controleur enfant spécial:", this.controleurenfant);
-    }
 
 
     /**
@@ -129,6 +121,11 @@ export default class extends Controller {
      */
     open(event) {
         event.preventDefault();
+        //A chaque fois que la boite de dialogue est appelée à s'ouvrir
+        //On doit s'assurer que celle-ci s'est connectée au controleur de la liste principale
+        if (this.controleurDeLaListePrincipale == null) {
+            this.controleurDeLaListePrincipale = this.getControleurListePrincipale();
+        }
         this.action = event.currentTarget.dataset.itemAction;
         this.objet = event.currentTarget.dataset.itemObjet;
         this.titre = event.currentTarget.dataset.itemTitre;
@@ -183,6 +180,7 @@ export default class extends Controller {
     getControlleurEnfantSpecial(nom) {
         // Vérifie que l'élément 'form' est bien défini comme target
         if (this.hasFormTarget) {
+            console.log("this.hasFormTarget: ", this.hasFormTarget);
             return this.application.getControllerForElementAndIdentifier(this.formTarget.firstElementChild, nom);
         }
         return null;
@@ -206,6 +204,7 @@ export default class extends Controller {
     submit(event) {
         //Action: Ajout (0) ou Modification (1)
         if (this.action == this.ADD || this.action == this.EDIT) {
+            console.log("Controleur enfant actuel:", this.controleurenfant);
             this.controleurenfant.triggerFromParent(event);
         }
         //Action: Suppression simple (2) ou Suppression Multiple (3)

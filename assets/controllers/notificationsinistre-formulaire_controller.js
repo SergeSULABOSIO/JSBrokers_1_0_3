@@ -38,8 +38,30 @@ export default class extends Controller {
         );
         this.updateViewAvenants(this.referencepoliceTarget.value);
         this.referencepoliceTarget.addEventListener("change", (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
-        
         this.btEnregistrerTarget.style.display = "none";
+        this.connexionAuxControleurParents();
+    }
+    
+    
+    connexionAuxControleurParents(){
+        this.controleurDeLaListePrincipale = this.getControleurListePrincipale("liste-principale");
+        this.controleurDeLaBoiteDeDialogue = this.getControleurListePrincipale("dialogue");
+        this.controleurDeLaBoiteDeDialogue.controleurenfant = this;
+        console.log("Controleur Dialogue est notifié du chargement de Notificationsinistre-formulaire", this.controleurDeLaBoiteDeDialogue);
+    }
+
+
+    /**
+     * 
+     * @param {string} nomcontroleur 
+     * @returns 
+     */
+    getControleurListePrincipale(nomcontroleur) {
+        const listePrincipale = document.getElementById("liste");
+        if (listePrincipale) {
+            return this.application.getControllerForElementAndIdentifier(listePrincipale, nomcontroleur);
+        }
+        return null;
     }
 
 
@@ -170,6 +192,10 @@ export default class extends Controller {
                     userObject.nbDocuments,
                 );
                 this.updateViewAvenants(userObject.referencePolice);
+
+                if (this.controleurDeLaListePrincipale != null) {
+                    this.controleurDeLaListePrincipale.outils_recharger(event);
+                }
             })
             .catch(errorMessage => {
                 event.target.disabled = false;

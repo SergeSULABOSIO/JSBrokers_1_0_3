@@ -1,102 +1,101 @@
 <div data-controller="dialogue" data-dialogue-identreprise-value={{entreprise.id}}>
-    {% if app.current_route starts with 'admin.monnaie' %}
+    {# {% if app.current_route starts with 'admin.monnaie' %}
         <a href="{{ path('admin.monnaie.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_monnaie" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.taxe' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.taxe' %}
         <a href="{{ path('admin.taxe.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_taxe" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.comptebancaire' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.comptebancaire' %}
         <a href="{{ path('admin.comptebancaire.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_comptebancaire" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.typerevenu' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.typerevenu' %}
         <a href="{{ path('admin.typerevenu.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_typerevenu" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.risque' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.risque' %}
         <a href="{{ path('admin.risque.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_risque" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.chargement' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.chargement' %}
         <a href="{{ path('admin.chargement.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_chargement" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.classeur' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.classeur' %}
         <a href="{{ path('admin.classeur.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_classeur" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.assureur' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.assureur' %}
         <a href="{{ path('admin.assureur.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_assureur" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.client' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.client' %}
         <a href="{{ path('admin.client.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_client" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.partenaire' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.partenaire' %}
         <a href="{{ path('admin.partenaire.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_partenaire" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {# {% if app.current_route starts with 'admin.contact' %}
         <a href="{{ path('admin.contact.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_contact" | trans }}
         </a>
     {% endif %} #}
-    {% if app.current_route starts with 'admin.modelepiecesinistre' %}
+    {# {% if app.current_route starts with 'admin.modelepiecesinistre' %}
         <a href="{{ path('admin.modelepiecesinistre.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_modelepiecesinistre" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.tache' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.tache' %}
         <a href="{{ path('admin.tache.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_tache" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.document' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.document' %}
         <a href="{{ path('admin.document.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_document" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.piste' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.piste' %}
         <a href="{{ path('admin.piste.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_piste" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.invite' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.invite' %}
         <a href="{{ path('admin.invite.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_invite" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.notificationsinistre' %}
-          {# Nouveau / Ajout #}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.notificationsinistre' %}
           <button 
             type="button" 
             data-item-action = 0 
@@ -108,31 +107,31 @@
             {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
             {{ "entreprise_bouton_new_notificationsinistre" | trans }}
           </button>
-    {% endif %}
+    {% endif %} #}
     {# {% if app.current_route starts with 'admin.feedback' %}
         <a href="{{ path('admin.feedback.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_feedback" | trans }}
         </a>
     {% endif %} #}
-    {% if app.current_route starts with 'admin.groupe' %}
+    {# {% if app.current_route starts with 'admin.groupe' %}
         <a href="{{ path('admin.groupe.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_groupe" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.bordereau' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.bordereau' %}
         <a href="{{ path('admin.bordereau.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_bordereau" | trans }}
         </a>
-    {% endif %}
-    {% if app.current_route starts with 'admin.cotation' %}
+    {% endif %} #}
+    {# {% if app.current_route starts with 'admin.cotation' %}
         <a href="{{ path('admin.cotation.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_cotation" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {# {% if app.current_route starts with 'admin.revenucourtier' %}
         <a href="{{ path('admin.revenucourtier.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
@@ -151,14 +150,14 @@
           {{ "entreprise_bouton_new_tranche" | trans }}
         </a>
     {% endif %} #}
-    {% if app.current_route starts with 'admin.note' %}
+    {# {% if app.current_route starts with 'admin.note' %}
         <a href="{{ path('admin.note.create', {'idNote':-1, 'page':1, 'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
           {{ "entreprise_bouton_new_note" | trans }}
         </a>
-    {% endif %}
+    {% endif %} #}
     {% if app.current_route starts with 'admin.entreprise' %}
-      <ul class="mb-2 mb-lg-0 btn btn-secondary">
+      {# <ul class="mb-2 mb-lg-0 btn btn-secondary">
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle fw-bold" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
@@ -191,7 +190,7 @@
             </li>
           </ul>
         </li>
-      </ul>
+      </ul> #}
     {% endif %}
     <a href="{{ path('admin.entreprise.index')}}" type="button" class="btn border-0 btn-outline-danger">
       {{ include('segments/icones/actions/exit.html.twig', {size:'18px'}) }}

@@ -11,6 +11,7 @@ export default class extends Controller {
         'outilbtadd',
         'outilbtedit',
         'outilbtdelete',
+        'outilbtrecharger',
     ];
     static values = {
         controleurphp: String,
@@ -26,8 +27,8 @@ export default class extends Controller {
     connect() {
         this.init();
     }
-    
-    init(){
+
+    init() {
         this.tabSelectedCheckBoxs = [];
         this.controleurDeLaBoiteDeDialogue = this.getDialogueController();
         //il doit se faire connaitre au près du controleur parent.
@@ -39,8 +40,8 @@ export default class extends Controller {
         this.initToolTips();
         this.updateMessage("Prêt.");
     }
-    
-    initToolTips(){
+
+    initToolTips() {
         //On initialise le tooltips
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
@@ -51,6 +52,7 @@ export default class extends Controller {
         this.outilbtexitTarget.style.display = "block";
         this.outilbtsettingsTarget.style.display = "block";
         this.outilbtaddTarget.style.display = "block";
+        this.outilbtrechargerTarget.style.display = "block";
 
         if (this.tabSelectedCheckBoxs.length != 0) {
             this.outilbtdeleteTarget.style.display = "block";
@@ -243,6 +245,31 @@ export default class extends Controller {
      */
     outils_parametrer(event) {
         console.log("Action Barre d'outils:", event.currentTarget);
+    }
+
+
+    /**
+     * 
+     * @param {Event} event 
+     */
+    outils_recharger(event) {
+        console.log("Action Barre d'outils:", event.currentTarget);
+        this.updateMessage("Actualisation des données...");
+        this.donneesTarget.disabled = true;
+        // this.donneesTarget.innerHTML = "J'actualise cette liste";
+        const url = '/admin/' + this.controleurphpValue + '/reload/' + this.identrepriseValue;
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.text())
+            .then(html => {
+                this.donneesTarget.innerHTML = html;
+                this.donneesTarget.disabled = false;
+
+                const maintenant = new Date();
+                const dateHeureLocaleSimple = maintenant.toLocaleString();
+                this.updateMessage("Dernière actualisation " + dateHeureLocaleSimple);
+                this.tabSelectedCheckBoxs = [];
+                this.updateMessageSelectedCheckBoxes();
+            });
     }
 
 

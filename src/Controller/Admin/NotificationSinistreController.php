@@ -72,6 +72,27 @@ class NotificationSinistreController extends AbstractController
     }
 
 
+    #[Route('/reload/{idEntreprise}', name: 'reload', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function reload($idEntreprise, Request $request)
+    {
+        $page = $request->query->getInt("page", 1);
+
+        /** @var Utilisateur $utilisateur */
+        $utilisateur = $this->getUser();
+
+        return $this->render('admin/notificationsinistre/donnees.html.twig', [
+            'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
+            'utilisateur' => $utilisateur,
+            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'notificationsinistres' => $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page),
+            'page' => $page,
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'activator' => $this->activator,
+        ]);
+    }
+
+
     #[Route('/create/{idEntreprise}', name: 'create')]
     public function create($idEntreprise, Request $request)
     {

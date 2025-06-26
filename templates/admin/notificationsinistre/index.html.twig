@@ -80,10 +80,7 @@
                         </tr>
                     </thead>
                     <tbody class="table-group-divider" data-liste-principale-target = "donnees">
-                        {# Boucler les donnees #}
-                        {% for notificationsinistre in notificationsinistres %}
-                            {{ include('admin/notificationsinistre/element.html.twig') }}
-                        {% endfor %}
+                        {{ include('admin/notificationsinistre/donnees.html.twig') }}
                     </tbody>
                 {% endif %}
             </table>
