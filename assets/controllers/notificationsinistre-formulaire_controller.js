@@ -167,6 +167,8 @@ export default class extends Controller {
         event.target.disabled = true;
         this.updateMessage("Enregistrement de " + this.referenceTarget.value + " en cours...");
 
+        const isNew = this.idnotificationsinistreValue == 0 ? true : false;
+
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + (this.idnotificationsinistreValue == 0 ? '-1' : this.idnotificationsinistreValue);
         // console.log("ICI", formData, this.element, url);
@@ -193,7 +195,7 @@ export default class extends Controller {
                 );
                 this.updateViewAvenants(userObject.referencePolice);
 
-                if (this.controleurDeLaListePrincipale != null) {
+                if (this.controleurDeLaListePrincipale != null && isNew == true) {
                     this.controleurDeLaListePrincipale.outils_recharger(event);
                 }
             })
