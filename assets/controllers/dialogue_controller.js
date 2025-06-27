@@ -111,7 +111,7 @@ export default class extends Controller {
             this.controleurDeLaListePrincipale.updateMessage("Opération de suppression déclanchée. Merci de confirmer dans la boîte de dialogue.");
             defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "SUPPRIMER");
         }
-        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
+        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
     }
 
 

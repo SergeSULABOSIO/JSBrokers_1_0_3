@@ -29,6 +29,14 @@ export default class extends Controller {
     }
 
     init() {
+        /**
+         * LES VARIABLES GLOBALES
+         */
+        this.ADD = 0;
+        this.EDIT = 1;
+        this.DELETE_SINGLE = 2;
+        this.DELETE_MULTIPLE = 3;
+        
         this.tabSelectedCheckBoxs = [];
         this.controleurDeLaBoiteDeDialogue = this.getDialogueController();
         //il doit se faire connaitre au près du controleur parent.
@@ -136,12 +144,17 @@ export default class extends Controller {
     * @param {Event} event 
     */
     outils_supprimer(event) {
-        //on doit le faire en boucle
+        event.currentTarget.dataset.itemAction = this.DELETE_MULTIPLE;
+        event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Suppression Multiple";
+        
+        //on doit le faire en boucle, c'est une suppression multiple
         const tabIdObjetsToDelete = [];
         this.tabSelectedCheckBoxs.forEach(currentCheckBox => {
             tabIdObjetsToDelete.push(currentCheckBox.split("_")[1]);
         });
         this.supprimerElements(tabIdObjetsToDelete);
+
+        this.controleurDeLaBoiteDeDialogue.open(event);
     }
 
 
