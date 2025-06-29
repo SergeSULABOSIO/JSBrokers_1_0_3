@@ -152,6 +152,11 @@ export default class extends Controller {
         }
         this.updateMessageSelectedCheckBoxes();
         // console.log("Action_publier selection ", this.tabSelectedCheckBoxs);
+        this.publierSelection();
+        event.stopPropagation();
+    }
+
+    publierSelection() {
         this.buildCustomEvent(
             "app:liste-principale:publier-selection",
             true,
@@ -160,7 +165,6 @@ export default class extends Controller {
                 selection: this.tabSelectedCheckBoxs,
             }
         );
-        event.stopPropagation();
     }
 
     buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
@@ -328,6 +332,7 @@ export default class extends Controller {
             }
         });
         this.updateMessageSelectedCheckBoxes();
+        this.publierSelection();
     }
 
 
