@@ -6,7 +6,7 @@
             type="checkbox" 
             value="" 
             id="check_{{notificationsinistre.id}}" 
-            data-action="liste-principale#cocherElement" 
+            data-action="liste-element#action_cocher" 
         >
     </div>
 </td>
@@ -16,8 +16,8 @@
         class="m-2 fw-bold" 
         style="text-decoration:none;" 
         data-liste-element-target="texteprincipal" 
-        data-action = "liste-principale#selectionnerElement liste-element#afficherdetails" 
-        data-item-objet={{notificationsinistre.id}}
+        data-action = "liste-element#action_selectionner liste-element#action_afficher_details" 
+        data-item-objet={{notificationsinistre.id}} 
     >
         {# href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" #}
         {{ include('segments/icones/notificationsinistre.html.twig', {size:'19px'}) }}
@@ -158,7 +158,8 @@
                 data-item-action = 1 
                 data-item-objet={{notificationsinistre.id}} 
                 data-item-titre="Edition de {{notificationsinistre.referenceSinistre}}" 
-                data-action = "dialogue#open"
+                {# data-action = "dialogue#open" #}
+                data-action = "liste-element#action_modifier"
                 class="btn btn-outline-primary btn-sm border-0" 
             >
                 {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}

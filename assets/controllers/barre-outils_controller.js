@@ -4,7 +4,7 @@ export default class extends Controller {
     static targets = [
         // Les boutons de la barre d'outils
         'btquitter',
-        'btsettings',
+        'btparametres',
         'btrecharger',
         'btajouter',
         'btmodifier',
@@ -38,7 +38,7 @@ export default class extends Controller {
 
     initialiserBarreDoutils() {
         this.btquitterTarget.style.display = "block";
-        this.btsettingsTarget.style.display = "block";
+        this.btparametresTarget.style.display = "block";
         this.btajouterTarget.style.display = "block";
         this.btrechargerTarget.style.display = "block";
     }

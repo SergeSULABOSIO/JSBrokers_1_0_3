@@ -33,23 +33,19 @@ export default class extends Controller {
         this.DELETE_SINGLE = 2;
         this.DELETE_MULTIPLE = 3;
         this.listePrincipale = document.getElementById("liste");
-
-        
         //Tab des checkbox séléctionnés
         this.tabSelectedCheckBoxs = [];
-
         this.controleurDeLaBoiteDeDialogue = this.getDialogueController();
         //il doit se faire connaitre au près du controleur parent.
         this.controleurDeLaBoiteDeDialogue.controleurDeLaListePrincipale = this;
-
         //On défini les écouteurs ici
         this.initToolTips();
         this.updateMessage("Prêt.");
         this.setEcouteurs();
     }
-    
-    
-    setEcouteurs(){
+
+
+    setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.addEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
@@ -57,6 +53,8 @@ export default class extends Controller {
         this.listePrincipale.addEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:selectionner", this.handleItemSelectionner.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:cocher", this.handleItemCocher.bind(this));
         this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
     }
 
@@ -119,6 +117,40 @@ export default class extends Controller {
     handleItemSupprimer(event) {
         console.log("EVENEMENT RECU: SUPPRESSION D'ELEMENT(S).");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+    }
+
+    /**
+     * @description Gère l'événement de séléction.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemSelectionner(event) {
+        this.appliquerSelection(event, false);
+    }
+
+    /**
+     * @description Gère l'événement de séléction.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemCocher(event) {
+        this.appliquerSelection(event, true);
+    }
+
+    appliquerSelection(event, depuisCheckBox) {
+        const { idobjet } = event.detail; // Récupère les données de l'événement
+        const idSelectedCheckBox = "check_" + idobjet;
+        if (depuisCheckBox == false) {
+            var checkBox = document.getElementById(idSelectedCheckBox);
+            checkBox.checked = checkBox.checked == true ? false : true;
+        }
+        console.log("EVENEMENT RECU: SELECTION. [id.=" + idobjet + "]", idSelectedCheckBox);
+        const indexOfSelectedCheckBox = this.tabSelectedCheckBoxs.indexOf(idSelectedCheckBox);
+        if (indexOfSelectedCheckBox == -1) {
+            this.tabSelectedCheckBoxs.push(idSelectedCheckBox);
+        } else {
+            this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
+        }
+        this.updateMessageSelectedCheckBoxes();
         event.stopPropagation();
     }
 
@@ -214,8 +246,8 @@ export default class extends Controller {
         })
         this.listePrincipale.dispatchEvent(canSupprimerMultiple);
         console.log("Événement " + eventCanSupprimerMultiple + " déclenché.");
-        
-        
+
+
         // this.controleurDeLaBoiteDeDialogue.openDialogue(
         //     this.controleurDeLaBoiteDeDialogue.TYPE_DIALOGUE_YES_NO,
         //     event.currentTarget.dataset.itemAction,
@@ -265,7 +297,7 @@ export default class extends Controller {
      * 
      * @param {Event} event 
       */
-     cocherTousElements(event) {
+    cocherTousElements(event) {
         const isChecked = this.btToutCocherTarget.checked;
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         this.tabSelectedCheckBoxs = [];
@@ -307,7 +339,6 @@ export default class extends Controller {
         } else {
             this.updateMessage("");
         }
-        this.initialiserBarreDoutils();
     }
 
 
