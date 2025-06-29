@@ -1,12 +1,14 @@
 <div 
+  id = "barre-outils" 
+  data-controller="barre-outils" 
   class="btn-toolbar shadow-bottom p-2" 
   role="toolbar" 
   aria-label="Toolbar with button groups"
 >
   <div class="btn-group me-2 border-end" role="group" aria-label="Second group">
     <button 
-      data-liste-principale-target="outilbtexit" 
-      data-action="liste-principale#outils_quitter" 
+      data-barre-outils-target="btquitter" 
+      data-action="barre-outils#action_quitte" 
       type="button" 
       class="btn btn-outline-danger btn-sm border-0" 
       style="display:block" 
@@ -15,8 +17,8 @@
       {{ include('segments/icones/actions/exit.html.twig', {size:'18px'}) }}
     </button>
     <button 
-      data-liste-principale-target="outilbtsettings" 
-      data-action="liste-principale#outils_parametrer" 
+      data-barre-outils-target="btsettings" 
+      data-action="barre-outils#action_parametrer" 
       type="button" 
       class="btn btn-outline-secondary btn-sm border-0" 
       style="display:block" 
@@ -28,8 +30,8 @@
   <div class="btn-group me-2 border-end" role="group" aria-label="First group">
     {# Actualiser #}
     <button 
-      data-liste-principale-target="outilbtrecharger" 
-      data-action="liste-principale#outils_recharger" 
+      data-barre-outils-target="btrecharger" 
+      data-action="barre-outils#action_recharger" 
       type="button" 
       class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
       style="display:none" 
@@ -39,8 +41,8 @@
     </button>
     {# Ajout #}
     <button 
-      data-liste-principale-target="outilbtadd" 
-      data-action="liste-principale#outils_ajouter" 
+      data-barre-outils-target="btajouter" 
+      data-action="barre-outils#action_ajouter" 
       type="button" 
       class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
       style="display:none" 
@@ -51,8 +53,8 @@
     </button>
     {# Edition #}
     <button 
-      data-liste-principale-target="outilbtedit" 
-      data-action="liste-principale#outils_modifier" 
+      data-barre-outils-target="btmodifier" 
+      data-action="barre-outils#action_modifier" 
       type="button" 
       class="btn btn-outline-secondary btn-sm border-0" 
       style="display:none" 
@@ -62,8 +64,8 @@
     </button>
     {# Suppression #}
     <button 
-      data-liste-principale-target="outilbtdelete" 
-      data-action = "liste-principale#outils_supprimer"
+      data-barre-outils-target="btsupprimer" 
+      data-action="barre-outils#action_supprimer" 
       type="button" 
       class="btn btn-outline-secondary btn-sm border-0" 
       style="display:none" 

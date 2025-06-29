@@ -2,25 +2,17 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
     static targets = [
-        'display',  //Champ d'affichage d'informations
-        'donnees',  //Liste conténant des élements
-        'btToutCocher',
-        // Les boutons de la barre d'outils
-        'outilbtexit',
-        'outilbtsettings',
-        'outilbtadd',
-        'outilbtedit',
-        'outilbtdelete',
-        'outilbtrecharger',
+        'display',          //Champ d'affichage d'informations
+        'donnees',          //Liste conténant des élements
+        'btToutCocher',     //Bouton pour tout cocher sur la liste
     ];
     static values = {
-        controleurphp: String,
-        controleursitimulus: String,
-        objet: Number,
         identreprise: Number,
         idutilisateur: Number,
         nbelements: Number,
         rubrique: String,
+        controleurphp: String,
+        controleursitimulus: String,
     };
 
 
@@ -28,25 +20,106 @@ export default class extends Controller {
         this.init();
     }
 
+    disconnect() {
+        // C'est très important de retirer l'écouteur quand le contrôleur se déconnecte
+        // pour éviter les fuites de mémoire.
+        this.element.removeEventListener(this.eventAjout, this.handleItemAjout.bind(this));
+    }
+
     init() {
-        /**
-         * LES VARIABLES GLOBALES
-         */
+        //LES VARIABLES GLOBALES
         this.ADD = 0;
         this.EDIT = 1;
         this.DELETE_SINGLE = 2;
         this.DELETE_MULTIPLE = 3;
+        this.listePrincipale = document.getElementById("liste");
+
         
+        //Tab des checkbox séléctionnés
         this.tabSelectedCheckBoxs = [];
+
         this.controleurDeLaBoiteDeDialogue = this.getDialogueController();
         //il doit se faire connaitre au près du controleur parent.
         this.controleurDeLaBoiteDeDialogue.controleurDeLaListePrincipale = this;
 
         //On défini les écouteurs ici
-        this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
-        this.initialiserBarreDoutils();
         this.initToolTips();
         this.updateMessage("Prêt.");
+        this.setEcouteurs();
+    }
+    
+    
+    setEcouteurs(){
+        //On attache les écouteurs d'Evenements personnalisés à la liste principale
+        this.listePrincipale.addEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:parametrer", this.handleParametrer.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
+        this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
+    }
+
+
+    /**
+     * @description Gère l'événement d'ajout.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemAjouter(event) {
+        const { titre } = event.detail; // Récupère les données de l'événement
+        console.log("EVENEMENT RECU: " + titre);
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+    }
+
+    /**
+     * @description Gère l'événement de la fermeture de l'espace de travail.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleQuitter(event) {
+        console.log("EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+    }
+
+    /**
+     * @description Gère l'événement de parametrage de la liste.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleParametrer(event) {
+        console.log("EVENEMENT RECU: PAREMETRER CETTE LISTE");
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+    }
+
+    /**
+     * @description Gère l'événement de la recharge ou actualisation de la liste.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleRecharger(event) {
+        console.log("EVENEMENT RECU: RECHARGER CETTE LISTE");
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+    }
+
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemModifier(event) {
+        console.log("EVENEMENT RECU: MODIFICATION DE L'ELEMENT DE LA LISTE");
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+    }
+
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemSupprimer(event) {
+        console.log("EVENEMENT RECU: SUPPRESSION D'ELEMENT(S).");
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
     }
 
     initToolTips() {
@@ -54,27 +127,6 @@ export default class extends Controller {
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     }
-
-
-    initialiserBarreDoutils() {
-        this.outilbtexitTarget.style.display = "block";
-        this.outilbtsettingsTarget.style.display = "block";
-        this.outilbtaddTarget.style.display = "block";
-        this.outilbtrechargerTarget.style.display = "block";
-
-        if (this.tabSelectedCheckBoxs.length != 0) {
-            this.outilbtdeleteTarget.style.display = "block";
-            if (this.tabSelectedCheckBoxs.length >= 2) {
-                this.outilbteditTarget.style.display = "none";
-            } else {
-                this.outilbteditTarget.style.display = "block";
-            }
-        } else {
-            this.outilbteditTarget.style.display = "none";
-            this.outilbtdeleteTarget.style.display = "none";
-        }
-    }
-
 
     /**
      * @param {Event} event 
@@ -144,17 +196,33 @@ export default class extends Controller {
     * @param {Event} event 
     */
     outils_supprimer(event) {
-        event.currentTarget.dataset.itemAction = this.DELETE_MULTIPLE;
-        event.currentTarget.dataset.itemTitre = this.rubriqueValue + " - Suppression Multiple";
-        
         //on doit le faire en boucle, c'est une suppression multiple
         const tabIdObjetsToDelete = [];
         this.tabSelectedCheckBoxs.forEach(currentCheckBox => {
             tabIdObjetsToDelete.push(currentCheckBox.split("_")[1]);
         });
-        this.supprimerElements(tabIdObjetsToDelete);
-
-        this.controleurDeLaBoiteDeDialogue.open(event);
+        const messageDeConfirmation = "Etes-vous sûr de vouloir supprimer ce(s) " + tabIdObjetsToDelete.length + " élement(s) séléctioné(s)?";
+        const canSupprimerMultiple = new CustomEvent(eventCanSupprimerMultiple, {
+            bubbles: true,
+            composed: true,
+            detail: {
+                action: this.DELETE_MULTIPLE,
+                tabIdObjects: tabIdObjetsToDelete,
+                message: messageDeConfirmation,
+                titre: this.rubriqueValue + " - Suppression Multiple",
+            }
+        })
+        this.listePrincipale.dispatchEvent(canSupprimerMultiple);
+        console.log("Événement " + eventCanSupprimerMultiple + " déclenché.");
+        
+        
+        // this.controleurDeLaBoiteDeDialogue.openDialogue(
+        //     this.controleurDeLaBoiteDeDialogue.TYPE_DIALOGUE_YES_NO,
+        //     event.currentTarget.dataset.itemAction,
+        //     messageDeConfirmation
+        // );
+        // this.controleurDeLaBoiteDeDialogue.open(event);
+        // this.supprimerElements(tabIdObjetsToDelete);
     }
 
 
@@ -196,8 +264,8 @@ export default class extends Controller {
     /**
      * 
      * @param {Event} event 
-     */
-    cocherTousElements(event) {
+      */
+     cocherTousElements(event) {
         const isChecked = this.btToutCocherTarget.checked;
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         this.tabSelectedCheckBoxs = [];

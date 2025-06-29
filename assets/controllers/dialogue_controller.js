@@ -30,6 +30,13 @@ export default class extends Controller {
         this.DELETE_SINGLE = 2;
         this.DELETE_MULTIPLE = 3;
 
+        /**
+         * TYPE DE DIALOGUE
+         */
+        this.TYPE_DIALOGUE_YES_NO = 0;
+        this.TYPE_DIALOGUE_YES_NO_CANCELL = 1;
+        this.TYPE_DIALOGUE_YES = 3;
+
         this.controleurenfant = "";
         this.identreprise = -1;
         this.action = -1;
@@ -78,6 +85,7 @@ export default class extends Controller {
 
     closeDialogue() {
         if (this.boite) {
+            
             this.boite.hide();
         }
     }
@@ -153,6 +161,20 @@ export default class extends Controller {
             this.formTarget.innerHTML = messageDeletion;
         }
     }
+
+
+
+    /**
+     * 
+     * @param {number} type 
+     * @param {number} action
+     * @param {string} message 
+     */
+    openDialogue(type, action, message){
+        console.log("SUPPRESSION MULTIPLE", type, action, message);
+    }
+
+
 
 
     /**
