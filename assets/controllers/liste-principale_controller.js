@@ -151,7 +151,25 @@ export default class extends Controller {
             this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
         }
         this.updateMessageSelectedCheckBoxes();
+        // console.log("Action_publier selection ", this.tabSelectedCheckBoxs);
+        this.buildCustomEvent(
+            "app:liste-principale:publier-selection",
+            true,
+            true,
+            {
+                selection: this.tabSelectedCheckBoxs,
+            }
+        );
         event.stopPropagation();
+    }
+
+    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
+        const event = new CustomEvent(nomEvent, {
+            bubbles: canBubble,
+            composed: canCompose,
+            detail: detailTab
+        });
+        this.listePrincipale.dispatchEvent(event);
     }
 
     initToolTips() {

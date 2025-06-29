@@ -28,17 +28,7 @@
     </button>
   </div>
   <div class="btn-group me-2 border-end" role="group" aria-label="First group">
-    {# Actualiser #}
-    <button 
-      data-barre-outils-target="btrecharger" 
-      data-action="barre-outils#action_recharger" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
-      style="display:none" 
-      data-bs-toggle="tooltip" data-bs-title="Recharger"
-    >
-      {{ include('segments/icones/actions/reload.html.twig', {size:'18px'}) }}
-    </button>
+    
     {# Ajout #}
     <button 
       data-barre-outils-target="btajouter" 
@@ -50,6 +40,17 @@
     >
       {{ include('segments/icones/actions/add.html.twig', {size:'18px'}) }}
       Nouveau
+    </button>
+    {# Actualiser #}
+    <button 
+      data-barre-outils-target="btrecharger" 
+      data-action="barre-outils#action_recharger" 
+      type="button" 
+      class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
+      style="display:none" 
+      data-bs-toggle="tooltip" data-bs-title="Recharger"
+    >
+      {{ include('segments/icones/actions/reload.html.twig', {size:'18px'}) }}
     </button>
     {# Edition #}
     <button 
