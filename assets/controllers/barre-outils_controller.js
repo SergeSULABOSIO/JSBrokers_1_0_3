@@ -128,7 +128,7 @@ export default class extends Controller {
             true, 
             true,
             {
-                titre: "Modification de la notification",
+                titre: "Suppression",
             }
         );
     }

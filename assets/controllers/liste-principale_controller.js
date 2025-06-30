@@ -116,6 +116,19 @@ export default class extends Controller {
      */
     handleItemSupprimer(event) {
         console.log("EVENEMENT RECU: SUPPRESSION D'ELEMENT(S).");
+        const question = "Etes-vous sûr de vouloir supprimer cet élement?";
+        if (this.tabSelectedCheckBoxs.length > 1) {
+            question = "Etes-vous sûr de vouloir supprimer ces " + this.tabSelectedCheckBoxs.length + " élements séléctionnés?";
+        }
+        this.buildCustomEvent("app:liste-principale:dialogueCanSupprimer", 
+            true, 
+            true,
+            {
+                titre: "Suppression",
+                message: question,
+                tabSelectedCheckBoxes: this.tabSelectedCheckBoxs,
+            }
+        );
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }

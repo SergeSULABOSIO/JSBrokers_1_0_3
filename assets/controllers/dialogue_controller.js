@@ -42,18 +42,31 @@ export default class extends Controller {
         this.action = -1;
         this.objet = -1;
         this.titre = "";
+        this.listePrincipale = document.getElementById("liste");
         this.controleurDeLaListePrincipale = this.getControleurListePrincipale();
         // Initialisation
-        this.initBoutonValidationFermer();
         this.initBoiteDeDialogue();
+        this.setEcouteurs();
     }
 
 
-    initBoutonValidationFermer() {
-        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
-        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+    setEcouteurs() {
+        //On attache les écouteurs d'Evenements personnalisés à la liste principale
+        this.listePrincipale.addEventListener("app:liste-principale:dialogueCanSupprimer", this.handleItemCanSupprimer.bind(this));
     }
 
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemCanSupprimer(event){
+        const { titre, message, tabSelectedCheckBoxes } = event.detail; // Récupère les données de l'événement
+        this.titreTarget.innerHTML = titre;
+        this.formTarget.innerHTML = message;
+        defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "OUI");
+        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "NON");
+        this.showDialogue();
+    }
 
     initBoiteDeDialogue() {
         // Initialiser la modal en désactivant le backdrop click
@@ -211,9 +224,8 @@ export default class extends Controller {
 
 
     getControleurListePrincipale() {
-        const listePrincipale = document.getElementById("liste");
-        if (listePrincipale) {
-            return this.application.getControllerForElementAndIdentifier(listePrincipale, "liste-principale");
+        if (this.listePrincipale) {
+            return this.application.getControllerForElementAndIdentifier(this.listePrincipale, "liste-principale");
         }
         return null;
     }
