@@ -34,7 +34,6 @@ export default class extends Controller {
 
 
     setEcouteurs() {
-        console.log("Dialogue - Ecouteur dialogueCanSupprimer");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.addEventListener("app:liste-principale:dialogueCanSupprimer", this.handleItemCanSupprimer.bind(this));
     }

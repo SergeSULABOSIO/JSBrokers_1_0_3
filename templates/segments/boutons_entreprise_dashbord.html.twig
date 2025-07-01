@@ -1,4 +1,4 @@
-<div data-controller="dialogue" data-dialogue-identreprise-value={{entreprise.id}}>
+<div>
     {# {% if app.current_route starts with 'admin.monnaie' %}
         <a href="{{ path('admin.monnaie.create', {'idEntreprise': entreprise.id})}}" type="button" class="btn btn-secondary">
           {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
@@ -200,5 +200,4 @@
       {{ include('segments/icones/actions/settings.html.twig', {size:'18px'}) }}
       {{ "entreprise_bouton_user_settings" | trans }}
     </a>
-  {{ include('segments/dialogue.html.twig') }}
 </div>

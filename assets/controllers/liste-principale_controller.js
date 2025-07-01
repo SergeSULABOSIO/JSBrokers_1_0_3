@@ -34,7 +34,6 @@ export default class extends Controller {
 
 
     setEcouteurs() {
-        console.log("Activation des écouteurs d'évènements");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.addEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
