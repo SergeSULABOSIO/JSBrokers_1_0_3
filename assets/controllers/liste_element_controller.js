@@ -12,8 +12,15 @@ export default class extends Controller {
     };
 
     connect() {
+        this.nomControleur = "LISTE-ELEMENT";
+        console.log(this.nomControleur + " - Connecté");
         this.detailsVisible = false;
         this.listePrincipale = document.getElementById("liste");
+    }
+
+    disconnect(){
+        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
+        
     }
 
 

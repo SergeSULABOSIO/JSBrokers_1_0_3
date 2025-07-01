@@ -14,11 +14,13 @@ export default class extends Controller {
     ];
 
     connect() {
+        this.nomControleur = "DIALOGUE";
+        console.log(this.nomControleur + " - Connecté");
         this.init();
     }
 
     disconnect() {
-        console.log("Dialogue - Désactivation Ecouteur dialogueCanSupprimer");
+        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         this.listePrincipale.removeEventListener("app:liste-principale:dialogueCanSupprimer", this.handleItemCanSupprimer.bind(this));
     }
 

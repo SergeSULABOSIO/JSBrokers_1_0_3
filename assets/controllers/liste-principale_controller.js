@@ -17,6 +17,8 @@ export default class extends Controller {
 
 
     connect() {
+        this.nomControleur = "LISTE-PRINCIPALE";
+        console.log(this.nomControleur + " - Connecté");
         this.init();
     }
 
@@ -46,7 +48,7 @@ export default class extends Controller {
     }
 
     disconnect() {
-        console.log("Désactivation des écouteurs d'évènements");
+        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.removeEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
