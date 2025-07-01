@@ -3,11 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
-use App\Entity\Assureur;
 use App\Entity\Entreprise;
-use App\Entity\Partenaire;
-use App\Form\AssureurType;
-use App\Form\PartenaireType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\Avenant;
@@ -15,9 +11,7 @@ use App\Entity\NotificationSinistre;
 use App\Entity\Utilisateur;
 use App\Form\NotificationSinistreType;
 use App\Repository\InviteRepository;
-use App\Repository\AssureurRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\PartenaireRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;

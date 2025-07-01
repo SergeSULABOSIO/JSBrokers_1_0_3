@@ -25,7 +25,14 @@ export default class extends Controller {
     }
     
     ecouteurs(){
+        console.log("Activation des écouteurs d'évènements");
         this.listePrincipale.addEventListener("app:liste-principale:publier-selection", this.handleItemSelection.bind(this));
+    }
+
+    disconnect() {
+        console.log("Désactivation des écouteurs d'évènements");
+        //On attache les écouteurs d'Evenements personnalisés à la liste principale
+        this.listePrincipale.removeEventListener("app:liste-principale:publier-selection", this.handleItemSelection.bind(this));
     }
 
     /**

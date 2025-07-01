@@ -6,7 +6,7 @@
           XXX
         </h5>
         {# Le bouton de fermeture n'a plus data-bs-dismiss #}
-        <button type="button" class="btn-close" data-action="dialogue#close" aria-label="Fermer"></button>
+        <button type="button" class="btn-close" data-action="dialogue#action_fermer" aria-label="Fermer"></button>
       </div>
       <div class="modal-body">
           {# Contenu de la boîte de dialogue. Action: {{action}} / Objet: {{objet}} #}
@@ -16,8 +16,8 @@
       <div class="modal-footer">
         <span class="text-secondary fw-italic" data-dialogue-target="message">Message</span>
         {# Le bouton de fermeture du footer n'a plus data-bs-dismiss #}
-        <button type="button" data-dialogue-target="btSubmit" data-action="dialogue#submit" class="btn btn-secondary">Enregistrer</button>
-        <button type="button" data-dialogue-target="btFermer" data-action="dialogue#close" class="btn btn-danger">Fermer</button>
+        <button type="button" data-dialogue-target="btSubmit" data-action="dialogue#action_accepter" class="btn btn-secondary">Enregistrer</button>
+        <button type="button" data-dialogue-target="btFermer" data-action="dialogue#action_fermer" class="btn btn-danger">Fermer</button>
       </div>
     </div>
   </div>

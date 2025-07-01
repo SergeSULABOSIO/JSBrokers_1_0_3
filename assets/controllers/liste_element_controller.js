@@ -29,6 +29,30 @@ export default class extends Controller {
         );
     }
 
+    action_supprimer() {
+        console.log("Action_supprimer ", this.idobjetValue);
+        this.action_selectionner();
+        this.buildCustomEvent("app:liste-principale:supprimer", 
+            true, 
+            true,
+            {
+                titre: "Suppression",
+            }
+        );
+    }
+
+    action_modifier() {
+        console.log("Action_modifier ", this.idobjetValue);
+        this.action_selectionner();
+        this.buildCustomEvent("app:liste-principale:modifier", 
+            true, 
+            true,
+            {
+                titre: "Modification",
+            }
+        );
+    }
+
     action_cocher(){
         console.log("Action_cocher ", this.idobjetValue);
         this.buildCustomEvent(
