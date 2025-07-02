@@ -27,33 +27,11 @@ export default class extends Controller {
     }
     
     ecouteurs(){
-        console.log("Activation des écouteurs d'évènements");
-        this.listePrincipale.addEventListener("app:liste-principale:publier-selection", this.handleItemSelection.bind(this));
+        // console.log("Activation des écouteurs d'évènements");
     }
 
     disconnect() {
-        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.removeEventListener("app:liste-principale:publier-selection", this.handleItemSelection.bind(this));
-    }
-
-    /**
-     * @description Gère l'événement de séléction.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleItemSelection(event) {
-        const { selection } = event.detail; // Récupère les données de l'événement
-        console.log("LA BARRE D'OUTILS VIENT D'ECOUTER LA SELECTION:", selection);
-        if (selection.length == 1) {
-            this.btmodifierTarget.style.display = "block";
-        }else{
-            this.btmodifierTarget.style.display = "none";
-        }
-        if (selection.length != 0) {
-            this.btsupprimerTarget.style.display = "block";
-        }else{
-            this.btsupprimerTarget.style.display = "none";
-        }
+        // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
     }
 
     getControleurListePrincipale() {

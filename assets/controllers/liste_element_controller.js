@@ -24,21 +24,8 @@ export default class extends Controller {
     }
 
 
-    action_selectionner() {
-        console.log("Action_séléctionner ", this.idobjetValue);
-        this.buildCustomEvent(
-            "app:liste-principale:selectionner",
-            true,
-            true,
-            {
-                idobjet: this.idobjetValue,
-            }
-        );
-    }
-
     action_supprimer() {
         console.log("Action_supprimer ", this.idobjetValue);
-        this.action_selectionner();
         this.buildCustomEvent("app:liste-principale:supprimer", 
             true, 
             true,
@@ -50,24 +37,11 @@ export default class extends Controller {
 
     action_modifier() {
         console.log("Action_modifier ", this.idobjetValue);
-        this.action_selectionner();
         this.buildCustomEvent("app:liste-principale:modifier", 
             true, 
             true,
             {
                 titre: "Modification",
-            }
-        );
-    }
-
-    action_cocher(){
-        console.log("Action_cocher ", this.idobjetValue);
-        this.buildCustomEvent(
-            "app:liste-principale:cocher",
-            true,
-            true,
-            {
-                idobjet: this.idobjetValue,
             }
         );
     }

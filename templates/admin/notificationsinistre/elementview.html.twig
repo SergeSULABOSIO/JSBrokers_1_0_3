@@ -6,7 +6,7 @@
             type="checkbox" 
             value="" 
             id="check_{{notificationsinistre.id}}" 
-            data-action="liste-element#action_cocher" 
+            {# data-action="liste-element#action_cocher"  #}
         >
     </div>
 </td>
@@ -16,8 +16,7 @@
         class="m-2 fw-bold" 
         style="text-decoration:none;" 
         data-liste-element-target="texteprincipal" 
-        data-action = "liste-element#action_selectionner liste-element#action_afficher_details" 
-        data-item-objet={{notificationsinistre.id}} 
+        data-action = "liste-element#action_afficher_details" 
     >
         {# href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" #}
         {{ include('segments/icones/notificationsinistre.html.twig', {size:'19px'}) }}

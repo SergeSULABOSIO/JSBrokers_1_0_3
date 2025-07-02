@@ -4,7 +4,6 @@ export default class extends Controller {
     static targets = [
         'display',          //Champ d'affichage d'informations
         'donnees',          //Liste conténant des élements
-        'btToutCocher',     //Bouton pour tout cocher sur la liste
     ];
     static values = {
         identreprise: Number,
@@ -41,9 +40,6 @@ export default class extends Controller {
         this.listePrincipale.addEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:selectionner", this.handleItemSelectionner.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:cocher", this.handleItemCocher.bind(this));
-        this.btToutCocherTarget.addEventListener('change', (event) => this.cocherTousElements(event));
     }
 
     disconnect() {
@@ -55,9 +51,6 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:selectionner", this.handleItemSelectionner.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:cocher", this.handleItemCocher.bind(this));
-        this.btToutCocherTarget.removeEventListener('change', (event) => this.cocherTousElements(event));
     }
 
 
@@ -140,14 +133,6 @@ export default class extends Controller {
      * @description Gère l'événement de séléction.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
-    handleItemSelectionner(event) {
-        this.appliquerSelection(event, false);
-    }
-
-    /**
-     * @description Gère l'événement de séléction.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
     handleItemCocher(event) {
         this.appliquerSelection(event, true);
     }
@@ -167,7 +152,6 @@ export default class extends Controller {
             this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
         }
         this.updateMessageSelectedCheckBoxes();
-        // console.log("Action_publier selection ", this.tabSelectedCheckBoxs);
         this.publierSelection();
         event.stopPropagation();
     }
@@ -198,121 +182,6 @@ export default class extends Controller {
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     }
 
-    // /**
-    //  * @param {Event} event 
-    // */
-    // selectionnerElement(event) {
-    //     const cible = event.currentTarget;
-    //     this.objetValue = cible.dataset.itemObjet;
-    //     this.updateMessage("Séléction [id.=" + this.objetValue + "]");
-    //     // console.log("Liste : Element selectionné: ", event.currentTarget, this.objetValue);
-    // }
-
-    // /**
-    //  * @param {number} idObjet 
-    // */
-    // supprimerElement(idObjet) {
-    //     this.objetValue = idObjet;
-    //     this.updateMessage("Suppression de " + idObjet + " en cours... Patientez svp.");
-    //     const url = '/admin/' + this.controleurphpValue + '/remove/' + this.identrepriseValue + '/' + this.objetValue;
-    //     fetch(url) // Remplacez par l'URL de votre formulaire
-    //         .then(response => response.json())
-    //         .then(data => {
-    //             const serverJsonObject = JSON.parse(data);
-    //             // this.formTarget.innerHTML = html;
-    //             if (serverJsonObject.reponse == "Ok") {
-    //                 this.nbelementsValue--;
-    //                 const elementDeleted = document.getElementById("liste_row_" + this.objetValue);
-    //                 const parentElementDeleted = elementDeleted.parentElement;
-    //                 parentElementDeleted.removeChild(elementDeleted);
-    //                 this.updateMessage("Suppression réussie.");
-    //             } else {
-    //                 this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
-    //             }
-    //         });
-    // }
-
-
-    // /**
-    //  * @param {Array} tabIDS 
-    // */
-    // supprimerElements(tabIDS) {
-    //     const message = "Suppression de " + tabIDS.length + " éléments en cours... Patientez svp.";
-    //     this.updateMessage(message);
-    //     const url = '/admin/' + this.controleurphpValue + '/remove_many/' + this.identrepriseValue + '/' + tabIDS;
-    //     fetch(url) // Remplacez par l'URL de votre formulaire
-    //         .then(response => response.json())
-    //         .then(data => {
-    //             const serverJsonObject = JSON.parse(data);
-    //             if (serverJsonObject.reponse == "Ok") {
-    //                 this.nbelementsValue = this.nbelementsValue - serverJsonObject.deletedIds.length;
-    //                 serverJsonObject.deletedIds.forEach(deletedID => {
-    //                     const elementDeleted = document.getElementById("liste_row_" + deletedID);
-    //                     const parentElementDeleted = elementDeleted.parentElement;
-    //                     parentElementDeleted.removeChild(elementDeleted);
-    //                     this.updateMessage("Suppression de " + deletedID + ".");
-    //                 });
-    //                 this.updateMessage("Suppression de " + serverJsonObject.deletedIds.length + " éléments réussie.");
-    //                 this.tabSelectedCheckBoxs = [];
-    //             } else {
-    //                 this.updateMessage("Suppression échouée. Merci de bien vérifier votre connexion Internet.");
-    //             }
-    //         });
-    // }
-
-
-    // /**
-    // * 
-    // * @param {Event} event 
-    // */
-    // outils_supprimer(event) {
-    //     //on doit le faire en boucle, c'est une suppression multiple
-    //     const tabIdObjetsToDelete = [];
-    //     this.tabSelectedCheckBoxs.forEach(currentCheckBox => {
-    //         tabIdObjetsToDelete.push(currentCheckBox.split("_")[1]);
-    //     });
-    //     const messageDeConfirmation = "Etes-vous sûr de vouloir supprimer ce(s) " + tabIdObjetsToDelete.length + " élement(s) séléctioné(s)?";
-    //     const canSupprimerMultiple = new CustomEvent(eventCanSupprimerMultiple, {
-    //         bubbles: true,
-    //         composed: true,
-    //         detail: {
-    //             action: this.DELETE_MULTIPLE,
-    //             tabIdObjects: tabIdObjetsToDelete,
-    //             message: messageDeConfirmation,
-    //             titre: this.rubriqueValue + " - Suppression Multiple",
-    //         }
-    //     })
-    //     this.listePrincipale.dispatchEvent(canSupprimerMultiple);
-    //     console.log("Événement " + eventCanSupprimerMultiple + " déclenché.");
-    // }
-
-
-
-    // /**
-    //  * 
-    //  * @param {number} idObjet 
-    //  */
-    // actualiserElement(idObjet) {
-    //     this.updateMessage("Actualisation de l'élement " + idObjet + " en cours...");
-    //     const url = '/admin/' + this.controleurphpValue + '/getlistelementdetails/' + this.identrepriseValue + "/" + idObjet;
-    //     fetch(url) // Remplacez par l'URL de votre formulaire
-    //         .then(response => response.text())
-    //         .then(data => {
-    //             const elementUpdated = document.getElementById("liste_row_" + idObjet);
-    //             elementUpdated.innerHTML = data;
-    //             this.updateMessage("La mise a jour réussie.");
-
-    //             //On doit rétirer cet objet de la liste des séléction car il viendra du serveur avec une checkbox décochée.
-    //             this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(idObjet), 1);
-    //             this.updateMessageSelectedCheckBoxes();
-    //         })
-    //         .catch(errorMessage => {
-    //             this.updateMessage("La mise a jour échouée. Prière de bien vérifier votre connexion Internet.");
-    //             console.error(errorMessage);
-    //         });
-    // }
-
-
     /**
      * 
      * @param {string} newMessage 
@@ -322,43 +191,26 @@ export default class extends Controller {
     }
 
 
-    // /**
-    //  * 
-    //  * @param {Event} event 
-    //   */
-    // cocherTousElements(event) {
-    //     const isChecked = this.btToutCocherTarget.checked;
-    //     const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
-    //     this.tabSelectedCheckBoxs = [];
-    //     checkBoxes.forEach(currentCheckBox => {
-    //         currentCheckBox.checked = isChecked;
-    //         if (isChecked == true) {
-    //             this.tabSelectedCheckBoxs.push(currentCheckBox.getAttribute("id"));
-    //         } else {
-    //             this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(currentCheckBox.getAttribute("id")), 1);
-    //         }
-    //     });
-    //     this.updateMessageSelectedCheckBoxes();
-    //     this.publierSelection();
-    // }
-
-
-
-    // /**
-    //  * 
-    //  * @param {Event} event 
-    //  */
-    // cocherElement(event) {
-    //     const idSelectedCheckBox = event.currentTarget.getAttribute("id");
-    //     const indexOfSelectedCheckBox = this.tabSelectedCheckBoxs.indexOf(idSelectedCheckBox);
-    //     if (indexOfSelectedCheckBox == -1) {
-    //         this.tabSelectedCheckBoxs.push(idSelectedCheckBox);
-    //     } else {
-    //         this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
-    //     }
-    //     this.updateMessageSelectedCheckBoxes();
-    // }
-
+    /**
+     * 
+     * @param {Event} event 
+      */
+    handleItemToutCocher(event) {
+        event.stopPropagation();
+        // const isChecked = this.btToutCocherTarget.checked;
+        const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
+        this.tabSelectedCheckBoxs = [];
+        checkBoxes.forEach(currentCheckBox => {
+            currentCheckBox.checked = isChecked;
+            if (isChecked == true) {
+                this.tabSelectedCheckBoxs.push(currentCheckBox.getAttribute("id"));
+            } else {
+                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(currentCheckBox.getAttribute("id")), 1);
+            }
+        });
+        this.updateMessageSelectedCheckBoxes();
+        this.publierSelection();
+    }
 
     /**
      * 
