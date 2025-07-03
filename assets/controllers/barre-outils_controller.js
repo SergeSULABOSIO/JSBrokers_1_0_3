@@ -25,8 +25,8 @@ export default class extends Controller {
         this.initToolTips();
         this.ecouteurs();
     }
-    
-    ecouteurs(){
+
+    ecouteurs() {
         console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
         this.listePrincipale.addEventListener("app:liste-principale:publier-selection", this.handleSelectedItems.bind(this));
     }
@@ -43,7 +43,19 @@ export default class extends Controller {
     handleSelectedItems(event) {
         const { selection } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: LISTE DES CHECKBOX SELECTIONNEES.", selection);
-        
+
+        if (selection.length != 0) {
+            if (selection.length == 1) {
+                this.btmodifierTarget.style.display = "block";
+            } else {
+                this.btmodifierTarget.style.display = "none";
+            }
+            this.btsupprimerTarget.style.display = "block";
+        } else {
+            this.btmodifierTarget.style.display = "none";
+            this.btsupprimerTarget.style.display = "none";
+        }
+
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -103,8 +115,8 @@ export default class extends Controller {
 
     action_ajouter() {
         console.log("Action_Ajouter");
-        this.buildCustomEvent("app:liste-principale:ajouter", 
-            true, 
+        this.buildCustomEvent("app:liste-principale:ajouter",
+            true,
             true,
             {
                 titre: "Nouvelle notification",
@@ -114,8 +126,8 @@ export default class extends Controller {
 
     action_modifier() {
         console.log("Action_Modifier");
-        this.buildCustomEvent("app:liste-principale:modifier", 
-            true, 
+        this.buildCustomEvent("app:liste-principale:modifier",
+            true,
             true,
             {
                 titre: "Modification de la notification",
@@ -125,8 +137,8 @@ export default class extends Controller {
 
     action_supprimer() {
         console.log("Action_Supprimer");
-        this.buildCustomEvent("app:liste-principale:supprimer", 
-            true, 
+        this.buildCustomEvent("app:liste-principale:supprimer",
+            true,
             true,
             {
                 titre: "Suppression",
