@@ -146,7 +146,7 @@ export default class extends Controller {
             true, 
             true,
             {
-                titre: "Suppression",
+                titre: event.detail.titre,
                 message: question,
                 tabSelectedCheckBoxes: this.tabSelectedCheckBoxs,
             }

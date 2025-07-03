@@ -43,8 +43,7 @@ export default class extends Controller {
     handleSelectedItems(event) {
         const { selection } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: LISTE DES CHECKBOX SELECTIONNEES.", selection);
-
-        if (selection.length != 0) {
+        if (selection.length >= 1) {
             if (selection.length == 1) {
                 this.btmodifierTarget.style.display = "block";
             } else {
@@ -55,7 +54,6 @@ export default class extends Controller {
             this.btmodifierTarget.style.display = "none";
             this.btsupprimerTarget.style.display = "none";
         }
-
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -141,7 +139,7 @@ export default class extends Controller {
             true,
             true,
             {
-                titre: "Suppression",
+                titre: "Suppression ",
             }
         );
     }
