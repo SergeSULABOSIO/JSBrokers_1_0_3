@@ -23,6 +23,16 @@ export default class extends Controller {
         
     }
 
+    action_cocher(){
+        console.log(this.nomControleur + " - Action_cocher ", "check_" + this.idobjetValue);
+        this.buildCustomEvent("app:liste-principale:cocher", 
+            true, 
+            true,
+            {
+                idCheckBox: "check_" + this.idobjetValue,
+            }
+        );
+    }
 
     action_supprimer() {
         console.log("Action_supprimer ", this.idobjetValue);

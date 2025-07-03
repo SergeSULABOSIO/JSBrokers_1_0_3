@@ -5,13 +5,13 @@
             class="form-check-input" 
             value="" 
             type="checkbox" 
-            id="{{ notificationsinistre.id }}" 
+            id="check_{{ notificationsinistre.id }}" 
             data-controller="checkbox-element" 
             data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
             data-action="change->checkbox-element#action_cocher" 
         >
         <label 
-            for="{{ notificationsinistre.id }}" 
+            for="check_{{ notificationsinistre.id }}" 
             class="text-secondary" 
 
         >
@@ -171,7 +171,7 @@
 
             {# Suppression #}
             <button 
-                data-action = "liste-element#action_supprimer"
+                data-action = "liste-element#action_cocher liste-element#action_supprimer"
                 class='btn btn-outline-danger border-0 btn-sm' 
             >
                 {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}

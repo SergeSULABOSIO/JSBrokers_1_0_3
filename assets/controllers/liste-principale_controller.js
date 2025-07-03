@@ -35,6 +35,7 @@ export default class extends Controller {
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.addEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:cocher", this.handleItemCocher.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:parametrer", this.handleParametrer.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
@@ -48,6 +49,7 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.removeEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
+        this.listePrincipale.removeEventListener("app:liste-principale:cocher", this.handleItemCocher.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:parametrer", this.handleParametrer.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
@@ -166,6 +168,7 @@ export default class extends Controller {
         );
     }
 
+
     /**
      * @description Gère l'événement de séléction.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
@@ -175,16 +178,14 @@ export default class extends Controller {
     }
 
     appliquerSelection(event, depuisCheckBox) {
-        const { idobjet } = event.detail; // Récupère les données de l'événement
-        const idSelectedCheckBox = "check_" + idobjet;
-        if (depuisCheckBox == false) {
-            var checkBox = document.getElementById(idSelectedCheckBox);
-            checkBox.checked = checkBox.checked == true ? false : true;
-        }
-        console.log("EVENEMENT RECU: SELECTION. [id.=" + idobjet + "]", idSelectedCheckBox);
-        const indexOfSelectedCheckBox = this.tabSelectedCheckBoxs.indexOf(idSelectedCheckBox);
+        const { idCheckBox } = event.detail; // Récupère les données de l'événement
+        var checkBox = document.getElementById(idCheckBox);
+        checkBox.checked = true;
+        
+        console.log("EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
+        const indexOfSelectedCheckBox = this.tabSelectedCheckBoxs.indexOf(idCheckBox);
         if (indexOfSelectedCheckBox == -1) {
-            this.tabSelectedCheckBoxs.push(idSelectedCheckBox);
+            this.tabSelectedCheckBoxs.push(idCheckBox);
         } else {
             this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
         }
