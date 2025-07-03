@@ -174,25 +174,24 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handleItemCocher(event) {
-        this.appliquerSelection(event, true);
-    }
-
-    appliquerSelection(event, depuisCheckBox) {
         const { idCheckBox } = event.detail; // Récupère les données de l'événement
+        
+        this.tabSelectedCheckBoxs = [];
+        const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
+        checkBoxes.forEach(currentCheckBox => {
+            currentCheckBox.checked = false;
+        });
+
         var checkBox = document.getElementById(idCheckBox);
         checkBox.checked = true;
-        
+        this.tabSelectedCheckBoxs.push(idCheckBox);
         console.log("EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
-        const indexOfSelectedCheckBox = this.tabSelectedCheckBoxs.indexOf(idCheckBox);
-        if (indexOfSelectedCheckBox == -1) {
-            this.tabSelectedCheckBoxs.push(idCheckBox);
-        } else {
-            this.tabSelectedCheckBoxs.splice(indexOfSelectedCheckBox, 1);
-        }
+        
         this.updateMessageSelectedCheckBoxes();
         this.publierSelection();
         event.stopPropagation();
     }
+
 
     publierSelection() {
         console.log("Action_publier séléction - lancée.");

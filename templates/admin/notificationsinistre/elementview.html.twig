@@ -15,7 +15,7 @@
             class="text-secondary" 
 
         >
-            [{{ notificationsinistre.id }}]
+            {{ notificationsinistre.id }}
         </label>
     </div>
 </td>
@@ -163,7 +163,7 @@
         <div class="options-du-parent">
             {# Modification #}
             <button 
-                data-action = "liste-element#action_modifier"
+                data-action = "liste-element#action_cocher liste-element#action_modifier"
                 class="btn btn-outline-primary btn-sm border-0" 
             >
                 {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
