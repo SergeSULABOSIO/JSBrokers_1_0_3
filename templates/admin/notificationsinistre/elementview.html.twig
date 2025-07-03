@@ -6,7 +6,15 @@
         data-controller="checkbox-element" 
         data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
         data-action="change->checkbox-element#action_cocher" 
-    > <label for="{{ notificationsinistre.id }}">[{{ notificationsinistre.id }}]</label>
+    >
+    <label 
+        class="fw-bold" 
+        for="{{ notificationsinistre.id }}"
+    >
+        <span class="text-secondary">
+            [{{ notificationsinistre.id }}]
+        </span>
+    </label>
 </td>
 <td class="p-2">
     {# Texte principal #}

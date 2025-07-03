@@ -55,8 +55,23 @@
                     <thead class="table-light">
                         <tr>
                             <th scope="col">
-                                {# Checkbox de selection ici #}
-                                <input type="checkbox" id="myCheckbox" name="newsletter" value="true">
+                                <div class="text-center m-1">
+                                    {# Checkbox de selection ici #}
+                                    <input 
+                                        type="checkbox" 
+                                        id="myCheckbox" 
+                                        {# data-action="change->checkbox-element#action_cocher"  #}
+                                    >
+                                    <label 
+                                        class="fw-bold" 
+                                        for="myCheckbox"
+                                    >
+                                        <span class="text-secondary">
+                                            [ id ]
+                                        </span>
+                                    </label>
+                                </div>
+                                {# <input type="checkbox" id="myCheckbox" name="newsletter" value="true"> #}
                             </th>
                             <th scope="col">
                                 <div class='d-flex justify-content-start text-secondary m-1'>
