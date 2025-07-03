@@ -77,7 +77,7 @@ export default class extends Controller {
      */
     handleItemSelectionner(event) {
         const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
-        console.log("EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
+        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
 
         let currentSelectedCheckBoxes = new Set(this.tabSelectedCheckBoxs);
         if (isChecked == true) {
@@ -99,7 +99,7 @@ export default class extends Controller {
      */
     handleItemAjouter(event) {
         const { titre } = event.detail; // Récupère les données de l'événement
-        console.log("EVENEMENT RECU: " + titre);
+        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre);
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -150,7 +150,7 @@ export default class extends Controller {
      */
     handleItemSupprimer(event) {
         event.stopPropagation();
-        console.log("EVENEMENT RECU: SUPPRESSION D'ELEMENT(S).");
+        console.log(this.nomControleur + " - EVENEMENT RECU: SUPPRESSION D'ELEMENT(S).");
         var question = "Etes-vous sûr de vouloir supprimer cet élement?";
         if (this.tabSelectedCheckBoxs.length > 1) {
             question = "Etes-vous sûr de vouloir supprimer ces " + this.tabSelectedCheckBoxs.length + " élements séléctionnés?";
