@@ -102,7 +102,7 @@ export default class extends Controller {
     }
 
     action_recharger() {
-        console.log("Action_Recharger");
+        console.log(this.nomControleur + " - Action_Recharger");
         this.buildCustomEvent(
             "app:liste-principale:recharger",
             true,

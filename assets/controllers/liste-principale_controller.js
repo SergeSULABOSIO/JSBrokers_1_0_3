@@ -285,7 +285,7 @@ export default class extends Controller {
      * @param {Event} event 
      */
     outils_recharger(event) {
-        console.log("Action Barre d'outils - RECHARGE DES VALEURS:", event.currentTarget);
+        console.log(this.nomControleur + " - Action Barre d'outils - RECHARGE DES VALEURS:", event.currentTarget);
         this.updateMessage("Actualisation des données...");
         this.donneesTarget.disabled = true;
         // this.donneesTarget.innerHTML = "J'actualise cette liste";
