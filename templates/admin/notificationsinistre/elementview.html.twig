@@ -1,20 +1,21 @@
-<td class="p-3">
+<td class="p-3 m-2" style="width:80px">
     {# La checkbox de séléction #}
-    <input 
-        type="checkbox" 
-        id="{{ notificationsinistre.id }}" 
-        data-controller="checkbox-element" 
-        data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
-        data-action="change->checkbox-element#action_cocher" 
-    >
-    <label 
-        class="fw-bold" 
-        for="{{ notificationsinistre.id }}"
-    >
-        <span class="text-secondary">
+    <div class="form-check">
+        <input 
+            class="form-check-input" 
+            value="" 
+            type="checkbox" 
+            id="{{ notificationsinistre.id }}" 
+            data-controller="checkbox-element" 
+            data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
+            data-action="change->checkbox-element#action_cocher" 
+        >
+        <label 
+            class="form-check-label text-secondary" for="{{ notificationsinistre.id }}"
+        >
             [{{ notificationsinistre.id }}]
-        </span>
-    </label>
+        </label>
+    </div>
 </td>
 <td class="p-2">
     {# Texte principal #}

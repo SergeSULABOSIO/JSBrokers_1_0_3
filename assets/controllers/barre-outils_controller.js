@@ -27,11 +27,25 @@ export default class extends Controller {
     }
     
     ecouteurs(){
-        // console.log("Activation des écouteurs d'évènements");
+        console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
+        this.listePrincipale.addEventListener("app:liste-principale:publier-selection", this.handleSelectedItems.bind(this));
     }
 
     disconnect() {
-        // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
+        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
+        this.listePrincipale.removeEventListener("app:liste-principale:publier-selection", this.handleSelectedItems.bind(this));
+    }
+
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleSelectedItems(event) {
+        const { selection } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - EVENEMENT RECU: LISTE DES CHECKBOX SELECTIONNEES.", selection);
+        
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
     }
 
     getControleurListePrincipale() {

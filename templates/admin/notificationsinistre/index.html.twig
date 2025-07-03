@@ -53,28 +53,27 @@
                 </caption>
                 {% if notificationsinistres|length != 0 %}
                     <thead class="table-light">
-                        <tr>
+                        <tr class="text-center">
                             <th scope="col">
-                                <div class="text-center m-1">
-                                    {# Checkbox de selection ici #}
+                                {# Checkbox de selection ici #}
+                                <div class="form-check m-2 justify-content-start" style="width:50px">
                                     <input 
+                                        class="form-check-input" 
+                                        value="" 
                                         type="checkbox" 
                                         id="myCheckbox" 
                                         data-action="change->liste-principale#handleItemToutCocher" 
                                     >
                                     <label 
-                                        class="fw-bold" 
+                                        class="form-check-label text-secondary" 
                                         for="myCheckbox"
                                     >
-                                        <span class="text-secondary">
-                                            [ id ]
-                                        </span>
+                                        [Id]
                                     </label>
                                 </div>
-                                {# <input type="checkbox" id="myCheckbox" name="newsletter" value="true"> #}
                             </th>
                             <th scope="col">
-                                <div class='d-flex justify-content-start text-secondary m-1'>
+                                <div class='d-flex justify-content-start text-secondary m-2'>
                                     {{ "list_of_object" | trans }}
                                 </div>
                             </th>

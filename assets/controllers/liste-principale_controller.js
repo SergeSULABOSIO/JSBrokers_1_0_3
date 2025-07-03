@@ -63,6 +63,16 @@ export default class extends Controller {
     handleItemSelectionner(event) {
         const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
         console.log("EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
+
+        let currentSelectedCheckBoxes = new Set(this.tabSelectedCheckBoxs);
+        if (isChecked == true) {
+            currentSelectedCheckBoxes.add(String(selectedCheckbox));
+        }else{
+            currentSelectedCheckBoxes.delete(String(selectedCheckbox));
+        }
+        this.tabSelectedCheckBoxs = Array.from(currentSelectedCheckBoxes);
+        this.updateMessageSelectedCheckBoxes();
+        this.publierSelection();
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -171,6 +181,7 @@ export default class extends Controller {
     }
 
     publierSelection() {
+        console.log("Action_publier séléction - lancée.");
         this.buildCustomEvent(
             "app:liste-principale:publier-selection",
             true,
