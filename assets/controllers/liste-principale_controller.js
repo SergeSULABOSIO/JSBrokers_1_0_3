@@ -211,7 +211,7 @@ export default class extends Controller {
       */
     handleItemToutCocher(event) {
         event.stopPropagation();
-        // const isChecked = this.btToutCocherTarget.checked;
+        const isChecked = event.target.checked;
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         this.tabSelectedCheckBoxs = [];
         checkBoxes.forEach(currentCheckBox => {
