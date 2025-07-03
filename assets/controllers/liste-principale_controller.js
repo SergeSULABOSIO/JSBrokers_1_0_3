@@ -40,6 +40,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
     }
 
     disconnect() {
@@ -51,6 +52,19 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
+        this.listePrincipale.removeEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
+    }
+
+
+    /**
+     * @description Gère l'événement d'ajout.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemSelectionner(event) {
+        const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
+        console.log("EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
     }
 
 

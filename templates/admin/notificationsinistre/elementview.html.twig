@@ -1,14 +1,12 @@
-<td class="p-3" style="width:5px">
+<td class="p-3">
     {# La checkbox de séléction #}
-    <div class="form-check">
-        <input 
-            class="form-check-input" 
-            type="checkbox" 
-            value="" 
-            id="check_{{notificationsinistre.id}}" 
-            {# data-action="liste-element#action_cocher"  #}
-        >
-    </div>
+    <input 
+        type="checkbox" 
+        id="{{ notificationsinistre.id }}" 
+        data-controller="checkbox-element" 
+        data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
+        data-action="change->checkbox-element#action_cocher" 
+    > <label for="{{ notificationsinistre.id }}">[{{ notificationsinistre.id }}]</label>
 </td>
 <td class="p-2">
     {# Texte principal #}
