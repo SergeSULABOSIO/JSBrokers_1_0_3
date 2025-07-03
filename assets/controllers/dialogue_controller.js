@@ -14,6 +14,11 @@ export default class extends Controller {
     ];
 
     connect() {
+        this.ACTION_SUPPRESSION = 0;
+        this.action = -1;
+        this.titre = "";
+        this.message = "";
+        this.tabSelectedCheckBoxes = [];
         this.nomControleur = "DIALOGUE";
         console.log(this.nomControleur + " - Connecté");
         this.init();
@@ -43,8 +48,12 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handleItemCanSupprimer(event) {
-        console.log("handleItemCanSupprimer", new Date());
         const { titre, message, tabSelectedCheckBoxes } = event.detail; // Récupère les données de l'événement
+        this.tabSelectedCheckBoxes = tabSelectedCheckBoxes;
+        this.titre = titre;
+        this.message = message;
+        this.action = this.ACTION_SUPPRESSION; //Suppression (0)
+        console.log("handleItemCanSupprimer", new Date());
         this.titreTarget.innerHTML = titre;
         this.formTarget.innerHTML = message;
         defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "OUI");
@@ -111,9 +120,30 @@ export default class extends Controller {
     */
     action_accepter(event) {
         event.preventDefault();
+        console.log("DIALOGUE OK", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
+        this.buildCustomEvent(
+            "app:liste-principale:dialog_ok",
+            true,
+            true,
+            {
+                titre: this.titre,
+                message: this.message,
+                action: this.action,
+                data: this.tabSelectedCheckBoxes,
+            }
+        );
         this.closeDialogue();
     }
 
+
+    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
+        const event = new CustomEvent(nomEvent, {
+            bubbles: canBubble,
+            composed: canCompose,
+            detail: detailTab
+        });
+        this.listePrincipale.dispatchEvent(event);
+    }
 
     getControleurListePrincipale() {
         if (this.listePrincipale) {

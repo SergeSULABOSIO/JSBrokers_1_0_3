@@ -41,6 +41,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
     }
 
     disconnect() {
@@ -53,6 +54,18 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
+        this.listePrincipale.removeEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
+    }
+
+    /**
+     * @description Gère l'événement d'ajout.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleDialog_ok(event) {
+        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data);
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
     }
 
 
