@@ -90,11 +90,13 @@ export default class extends Controller {
 
     execution_ajout(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - Exécution de l'ajout", event.detail);
     }
 
 
     execution_modification(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - Exécution de la modification", event.detail);
     }
 
 
@@ -107,7 +109,7 @@ export default class extends Controller {
         });
 
         const url = '/admin/' + this.controleurphpValue + '/remove_many/' + this.identrepriseValue + '/' + tabIds;
-        console.log(this.nomControleur + " - Démarrage de la suppression", data, url);
+        console.log(this.nomControleur + " - Exécution de la suppression", data, url);
         this.updateMessage("Suppression en cours... Merci de patienter.");
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.json())
@@ -179,6 +181,20 @@ export default class extends Controller {
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre);
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
+
+        console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
+        this.buildCustomEvent("app:liste-principale:dialogueCanAjouter",
+            true,
+            true,
+            {
+                titre: "Ajout - " + this.rubriqueValue,
+                entreprise: this.entrepriseValue,
+                utilisateur: this.utilisateurValue,
+                rubrique: this.rubriqueValue,
+                controleurphp: this.controleurphpValue,
+                controleursitimulus: this.controleursitimulusValue,
+            }
+        );
     }
 
     /**

@@ -14,7 +14,9 @@ export default class extends Controller {
     ];
 
     connect() {
-        this.ACTION_SUPPRESSION = 2;
+        this.ACTION_AJOUTER = 0;
+        this.ACTION_MODIFIER = 1;
+        this.ACTION_SUPPRIMER = 2;
         this.action = -1;
         this.titre = "";
         this.message = "";
@@ -27,6 +29,7 @@ export default class extends Controller {
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         this.listePrincipale.removeEventListener("app:liste-principale:dialogueCanSupprimer", this.handleItemCanSupprimer.bind(this));
+        this.listePrincipale.removeEventListener("app:liste-principale:dialogueCanAjouter", this.handleItemCanAjouter.bind(this));
     }
 
 
@@ -41,6 +44,7 @@ export default class extends Controller {
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.addEventListener("app:liste-principale:dialogueCanSupprimer", this.handleItemCanSupprimer.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:dialogueCanAjouter", this.handleItemCanAjouter.bind(this));
     }
 
     /**
@@ -53,11 +57,30 @@ export default class extends Controller {
         this.tabSelectedCheckBoxes = tabSelectedCheckBoxes;
         this.titre = titre;
         this.message = message;
-        this.action = this.ACTION_SUPPRESSION; //Suppression (0)
+        this.action = this.ACTION_SUPPRIMER; //Supprimer (2)
         this.titreTarget.innerHTML = titre;
         this.formTarget.innerHTML = message;
         defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "OUI");
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "NON");
+        this.showDialogue();
+    }
+
+    
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemCanAjouter(event) {
+        console.log(this.nomControleur + " - handleItemCanAjouter", new Date());
+        const { titre, entreprise, utilisateur, rubrique, controleurphp, controleurstimulus } = event.detail; // Récupère les données de l'événement
+        this.tabSelectedCheckBoxes = [];
+        this.titre = titre;
+        this.message = titre;
+        this.action = this.ACTION_AJOUTER; //Ajouter (0)
+        this.titreTarget.innerHTML = titre;
+        this.formTarget.innerHTML = "On va charger le formulaire de saisie de données ici!!!!";
+        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
         this.showDialogue();
     }
 
