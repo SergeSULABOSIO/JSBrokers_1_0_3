@@ -141,14 +141,11 @@ export default class extends Controller {
      */
     handleDialog_no(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+        event.stopPropagation();
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data, "ON NE FAIT RIEN.");
         console.log(this.nomControleur + " - ON NE FAIT RIEN.");
-        if (action == 0) {
-            //Si l'action a exécuter est la suppression. Action (0)
-            this.updateMessage("Suppression a été annulée.");
-        }
+        this.updateMessage("Boît de dialogue fermée.");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
-        event.stopPropagation();
     }
 
 
