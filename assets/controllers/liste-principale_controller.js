@@ -43,6 +43,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
     }
 
     disconnect() {
@@ -57,6 +58,7 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
+        this.listePrincipale.removeEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
     }
 
     /**
@@ -66,6 +68,19 @@ export default class extends Controller {
     handleDialog_ok(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data);
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+    }
+
+
+    /**
+     * @description Gère l'événement d'ajout.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleDialog_no(event) {
+        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data, "ON NE FAIT RIEN.");
+        console.log(this.nomControleur + " - ON NE FAIT RIEN.");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -156,7 +171,7 @@ export default class extends Controller {
             question = "Etes-vous sûr de vouloir supprimer ces " + this.tabSelectedCheckBoxs.length + " élements séléctionnés?";
         }
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
-        console.log("On lance un evenement dialogueCanSupprimer");
+        console.log(this.nomControleur + " - On lance un evenement dialogueCanSupprimer");
         this.buildCustomEvent("app:liste-principale:dialogueCanSupprimer", 
             true, 
             true,

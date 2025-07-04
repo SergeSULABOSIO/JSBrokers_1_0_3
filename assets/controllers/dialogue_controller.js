@@ -48,12 +48,12 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handleItemCanSupprimer(event) {
+        console.log(this.nomControleur + " - handleItemCanSupprimer", new Date());
         const { titre, message, tabSelectedCheckBoxes } = event.detail; // Récupère les données de l'événement
         this.tabSelectedCheckBoxes = tabSelectedCheckBoxes;
         this.titre = titre;
         this.message = message;
         this.action = this.ACTION_SUPPRESSION; //Suppression (0)
-        console.log("handleItemCanSupprimer", new Date());
         this.titreTarget.innerHTML = titre;
         this.formTarget.innerHTML = message;
         defineIcone(getIconeUrl(1, "delete", 19), this.btSubmitTarget, "OUI");
@@ -111,6 +111,18 @@ export default class extends Controller {
      */
     action_fermer(event) {
         event.preventDefault();
+        console.log(this.nomControleur + " - DIALOGUE FERMER", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
+        this.buildCustomEvent(
+            "app:liste-principale:dialog_no",
+            true,
+            true,
+            {
+                titre: this.titre,
+                message: this.message,
+                action: this.action,
+                data: this.tabSelectedCheckBoxes,
+            }
+        );
         this.closeDialogue();
     }
 
@@ -120,7 +132,7 @@ export default class extends Controller {
     */
     action_accepter(event) {
         event.preventDefault();
-        console.log("DIALOGUE OK", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
+        console.log(this.nomControleur + " - DIALOGUE OK", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
         this.buildCustomEvent(
             "app:liste-principale:dialog_ok",
             true,
