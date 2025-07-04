@@ -65,7 +65,7 @@ export default class extends Controller {
         this.showDialogue();
     }
 
-    
+
     /**
      * @description Gère l'événement de modification.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
@@ -78,10 +78,22 @@ export default class extends Controller {
         this.message = titre;
         this.action = this.ACTION_AJOUTER; //Ajouter (0)
         this.titreTarget.innerHTML = titre;
+
         this.formTarget.innerHTML = "On va charger le formulaire de saisie de données ici!!!!";
         defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
-        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "ANNULER");
-        this.showDialogue();
+        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
+
+        this.action_afficherMessage("Nouveau", "Chargement du formulaire...");
+        console.log(this.nomControleur + " - Chargement du formulaire...");
+        const url = '/admin/' + controleurphp + '/formulaire/' + entreprise + '/-1';
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.text())
+            .then(html => {
+                this.formTarget.innerHTML = html;
+                this.showDialogue();
+                this.action_afficherMessage("Nouveau", "Formulaire chargé sur la boîte de dialogue.");
+                console.log(this.nomControleur + " - Formulaire chargé sur la boîte de dialogue.");
+            });
     }
 
     initBoiteDeDialogue() {
@@ -118,17 +130,6 @@ export default class extends Controller {
     }
 
 
-    loadAddEditFormFromServer() {
-        const url = '/admin/' + this.controleurDeLaListePrincipale.controleurphpValue + '/formulaire/' + this.controleurDeLaListePrincipale.identrepriseValue + '/' + this.objet;
-        fetch(url) // Remplacez par l'URL de votre formulaire
-            .then(response => response.text())
-            .then(html => {
-                this.formTarget.innerHTML = html;
-            });
-    }
-
-
-
     /**
      * @param {Event} event 
      */
@@ -147,6 +148,24 @@ export default class extends Controller {
             }
         );
         this.closeDialogue();
+    }
+
+
+    /**
+     * 
+     * @param {String} titre 
+     * @param {String} textMessage 
+     */
+    action_afficherMessage(titre, textMessage) {
+        this.buildCustomEvent(
+            "app:liste-principale:afficher_message",
+            true,
+            true,
+            {
+                titre: titre,
+                message: textMessage,
+            }
+        );
     }
 
 

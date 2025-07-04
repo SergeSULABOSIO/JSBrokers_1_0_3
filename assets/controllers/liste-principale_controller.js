@@ -44,6 +44,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:afficher_message", this.handleDisplayMessage.bind(this));
     }
 
     disconnect() {
@@ -59,6 +60,7 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
+        this.listePrincipale.removeEventListener("app:liste-principale:afficher_message", this.handleDisplayMessage.bind(this));
     }
 
     /**
@@ -154,6 +156,18 @@ export default class extends Controller {
      * @description Gère l'événement d'ajout.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
+    handleDisplayMessage(event) {
+        const { titre, message } = event.detail; // Récupère les données de l'événement
+        event.stopPropagation();
+        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, message);
+        this.updateMessage(titre + ": " + message);
+    }
+
+
+    /**
+     * @description Gère l'événement d'ajout.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
     handleItemSelectionner(event) {
         const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
@@ -188,7 +202,7 @@ export default class extends Controller {
             true,
             {
                 titre: "Ajout - " + this.rubriqueValue,
-                entreprise: this.entrepriseValue,
+                entreprise: this.identrepriseValue,
                 utilisateur: this.utilisateurValue,
                 rubrique: this.rubriqueValue,
                 controleurphp: this.controleurphpValue,
