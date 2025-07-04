@@ -21,7 +21,7 @@ export default class extends Controller {
         this.init();
     }
 
-    
+
 
     init() {
         this.listePrincipale = document.getElementById("liste");
@@ -68,8 +68,66 @@ export default class extends Controller {
     handleDialog_ok(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data);
+        //ACTION AJOUT = 0
+        if (action == 0) {
+            //On exécute la suppression des données.
+            this.execution_ajout(event);
+        }
+        if (action == 1) {
+            //On exécute la suppression des données.
+            this.execution_modification(event);
+        }
+        //ACTION SUPPRESSION = 2
+        if (action == 2) {
+            //On exécute la suppression des données.
+            this.execution_suppression(event);
+        }
+        
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
+    }
+
+
+    execution_ajout(event) {
+        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+    }
+
+
+    execution_modification(event) {
+        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+    }
+
+
+    execution_suppression(event) {
+        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
+        // #[Route('/remove_many/{idEntreprise}/{tabIDString}', name: 'remove_many', requirements: ['idEntreprise' => Requirement:: DIGITS])]
+        let tabIds = [];
+        data.forEach(dataElement => {
+            tabIds.push(dataElement.split("check_")[1]);
+        });
+
+        const url = '/admin/' + this.controleurphpValue + '/remove_many/' + this.identrepriseValue + '/' + tabIds;
+        console.log(this.nomControleur + " - Démarrage de la suppression", data, url);
+        this.updateMessage("Suppression en cours... Merci de patienter.");
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.json())
+            .then(ServerJsonData => {
+                const serverJsonObject = JSON.parse(ServerJsonData);
+                console.log(this.nomControleur + " - Réponse du serveur: ", serverJsonObject);
+                if (serverJsonObject.reponse == "Ok") {
+                    serverJsonObject.deletedIds.forEach(deletedId => {
+                        let elementToDelete = document.getElementById("liste_row_" + deletedId);
+                        let parentElement = elementToDelete.parentNode;
+                        if (elementToDelete) {
+                            if (parentElement) {
+                                parentElement.removeChild(elementToDelete);
+                                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf("check_" + deletedId), 1);
+                            }
+                        }
+                    });
+                    this.updateMessage("Bien fait: " + serverJsonObject.message);
+                }
+            });
     }
 
 
@@ -81,6 +139,10 @@ export default class extends Controller {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data, "ON NE FAIT RIEN.");
         console.log(this.nomControleur + " - ON NE FAIT RIEN.");
+        if (action == 0) {
+            //Si l'action a exécuter est la suppression. Action (0)
+            this.updateMessage("Suppression a été annulée.");
+        }
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -97,7 +159,7 @@ export default class extends Controller {
         let currentSelectedCheckBoxes = new Set(this.tabSelectedCheckBoxs);
         if (isChecked == true) {
             currentSelectedCheckBoxes.add(String(selectedCheckbox));
-        }else{
+        } else {
             currentSelectedCheckBoxes.delete(String(selectedCheckbox));
         }
         this.tabSelectedCheckBoxs = Array.from(currentSelectedCheckBoxes);
@@ -124,7 +186,7 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handleQuitter(event) {
-        console.log("EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
+        console.log(this.nomControleur + " - EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -134,7 +196,7 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handleParametrer(event) {
-        console.log("EVENEMENT RECU: PAREMETRER CETTE LISTE");
+        console.log(this.nomControleur + " - EVENEMENT RECU: PAREMETRER CETTE LISTE");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -144,7 +206,7 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handleRecharger(event) {
-        console.log("EVENEMENT RECU: RECHARGER CETTE LISTE");
+        console.log(this.nomControleur + " - EVENEMENT RECU: RECHARGER CETTE LISTE");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -154,7 +216,7 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handleItemModifier(event) {
-        console.log("EVENEMENT RECU: MODIFICATION DE L'ELEMENT DE LA LISTE");
+        console.log(this.nomControleur + " - EVENEMENT RECU: MODIFICATION DE L'ELEMENT DE LA LISTE");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -172,8 +234,8 @@ export default class extends Controller {
         }
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         console.log(this.nomControleur + " - On lance un evenement dialogueCanSupprimer");
-        this.buildCustomEvent("app:liste-principale:dialogueCanSupprimer", 
-            true, 
+        this.buildCustomEvent("app:liste-principale:dialogueCanSupprimer",
+            true,
             true,
             {
                 titre: event.detail.titre,
@@ -190,7 +252,7 @@ export default class extends Controller {
      */
     handleItemCocher(event) {
         const { idCheckBox } = event.detail; // Récupère les données de l'événement
-        
+
         this.tabSelectedCheckBoxs = [];
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         checkBoxes.forEach(currentCheckBox => {
@@ -200,8 +262,8 @@ export default class extends Controller {
         var checkBox = document.getElementById(idCheckBox);
         checkBox.checked = true;
         this.tabSelectedCheckBoxs.push(idCheckBox);
-        console.log("EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
-        
+        console.log(this.nomControleur + " - EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
+
         this.updateMessageSelectedCheckBoxes();
         this.publierSelection();
         event.stopPropagation();
@@ -209,7 +271,7 @@ export default class extends Controller {
 
 
     publierSelection() {
-        console.log("Action_publier séléction - lancée.");
+        console.log(this.nomControleur + " - Action_publier séléction - lancée.");
         this.buildCustomEvent(
             "app:liste-principale:publier-selection",
             true,
@@ -282,7 +344,7 @@ export default class extends Controller {
      * @param {Event} event 
      */
     outils_quitter(event) {
-        console.log("Action Barre d'outils:", event.currentTarget);
+        console.log(this.nomControleur + " - Action Barre d'outils:", event.currentTarget);
     }
 
 
@@ -291,7 +353,7 @@ export default class extends Controller {
      * @param {Event} event 
      */
     outils_parametrer(event) {
-        console.log("Action Barre d'outils:", event.currentTarget);
+        console.log(this.nomControleur + " - Action Barre d'outils:", event.currentTarget);
     }
 
 

@@ -14,7 +14,7 @@ export default class extends Controller {
     ];
 
     connect() {
-        this.ACTION_SUPPRESSION = 0;
+        this.ACTION_SUPPRESSION = 2;
         this.action = -1;
         this.titre = "";
         this.message = "";
@@ -83,7 +83,7 @@ export default class extends Controller {
         if (this.boite) {
             this.boite.show();
         } else {
-            console.error("Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
+            console.error(this.nomControleur + " - Erreur: La modal n'est pas initialisée dans open(). Impossible d'afficher.");
         }
     }
 

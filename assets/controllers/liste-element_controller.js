@@ -35,7 +35,7 @@ export default class extends Controller {
     }
 
     action_supprimer() {
-        console.log("Action_supprimer ", this.idobjetValue);
+        console.log(this.nomControleur + " - Action_supprimer ", this.idobjetValue);
         this.buildCustomEvent("app:liste-principale:supprimer", 
             true, 
             true,
@@ -46,7 +46,7 @@ export default class extends Controller {
     }
 
     action_modifier() {
-        console.log("Action_modifier ", this.idobjetValue);
+        console.log(this.nomControleur + " - Action_modifier ", this.idobjetValue);
         this.buildCustomEvent("app:liste-principale:modifier", 
             true, 
             true,

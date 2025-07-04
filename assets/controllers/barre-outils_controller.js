@@ -82,7 +82,7 @@ export default class extends Controller {
      * LES ACTIONS
      */
     action_quitte() {
-        console.log("Action_Quitter");
+        console.log(this.nomControleur + " - Action_Quitter");
         this.buildCustomEvent(
             "app:liste-principale:quitter",
             true,
@@ -92,7 +92,7 @@ export default class extends Controller {
     }
 
     action_parametrer() {
-        console.log("Action_Parametrer");
+        console.log(this.nomControleur + " - Action_Parametrer");
         this.buildCustomEvent(
             "app:liste-principale:parametrer",
             true,
@@ -112,7 +112,7 @@ export default class extends Controller {
     }
 
     action_ajouter() {
-        console.log("Action_Ajouter");
+        console.log(this.nomControleur + " - Action_Ajouter");
         this.buildCustomEvent("app:liste-principale:ajouter",
             true,
             true,
@@ -123,7 +123,7 @@ export default class extends Controller {
     }
 
     action_modifier() {
-        console.log("Action_Modifier");
+        console.log(this.nomControleur + " - Action_Modifier");
         this.buildCustomEvent("app:liste-principale:modifier",
             true,
             true,
@@ -134,7 +134,7 @@ export default class extends Controller {
     }
 
     action_supprimer() {
-        console.log("Action_Supprimer");
+        console.log(this.nomControleur + " - Action_Supprimer");
         this.buildCustomEvent("app:liste-principale:supprimer",
             true,
             true,

@@ -22,7 +22,7 @@ export default class extends Controller {
     action_cocher(event) {
         this.isChecked = event.target.checked;
         // event.preventDefault();
-        console.log("Déclanchement - Action_cocher ID: " + this.idobjetValue, "Etat actuel: " + this.isChecked);
+        console.log(this.nomControleur + " - Déclanchement - Action_cocher ID: " + this.idobjetValue, "Etat actuel: " + this.isChecked);
         this.buildCustomEvent("app:liste-principale:selection", 
             true, 
             true,

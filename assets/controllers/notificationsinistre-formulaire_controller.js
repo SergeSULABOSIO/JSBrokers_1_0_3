@@ -23,6 +23,7 @@ export default class extends Controller {
     };
 
     connect() {
+        this.nomcontroleur = "NOTIFICATIONSINISTRE-FORMULAIRE";
         // console.log("ID NOTIFICATION SINISTRE: " + this.idnotificationsinistreValue);
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
         //On écoute les boutons de soumission du formulaire
@@ -47,7 +48,7 @@ export default class extends Controller {
         this.controleurDeLaListePrincipale = this.getControleurListePrincipale("liste-principale");
         this.controleurDeLaBoiteDeDialogue = this.getControleurListePrincipale("dialogue");
         this.controleurDeLaBoiteDeDialogue.controleurenfant = this;
-        console.log("Controleur Dialogue est notifié du chargement de Notificationsinistre-formulaire", this.controleurDeLaBoiteDeDialogue);
+        console.log(this.nomcontroleur + " - Controleur Dialogue est notifié du chargement de Notificationsinistre-formulaire", this.controleurDeLaBoiteDeDialogue);
     }
 
 
@@ -202,7 +203,7 @@ export default class extends Controller {
             .catch(errorMessage => {
                 event.target.disabled = false;
                 this.updateMessage("Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.");
-                console.error("Réponse d'erreur du serveur :", errorMessage);
+                console.error(this.nomcontroleur + " - Réponse d'erreur du serveur :", errorMessage);
             });
     }
 
