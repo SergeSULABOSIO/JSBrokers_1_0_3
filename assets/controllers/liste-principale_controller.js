@@ -72,7 +72,7 @@ export default class extends Controller {
     handleFormulaireAjoutModifReussi(event) {
         const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - ENREGISTREMENT REUSSI - On recharge la liste");
-        if (code == 0) {
+        if (code == 0) { //Ok(0), Erreur(1)
             //On demande de fermer la boite de dialogue
             this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
 
@@ -122,6 +122,7 @@ export default class extends Controller {
     execution_modification(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de la modification", event.detail);
+        this.buildCustomEvent("app:formulaire:enregistrer", true, true, {});
     }
 
 
@@ -236,7 +237,7 @@ export default class extends Controller {
      */
     handleItemAjouter(event) {
         const { titre } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre);
+        console.log(this.nomControleur + " - Titre: " + titre);
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
 
@@ -244,6 +245,8 @@ export default class extends Controller {
         this.buildCustomEvent("app:liste-principale:dialogueCanAjouter", true, true,
             {
                 titre: "Ajout - " + this.rubriqueValue,
+                idObjet: -1,
+                action: 0, //Ajout
                 entreprise: this.identrepriseValue,
                 utilisateur: this.utilisateurValue,
                 rubrique: this.rubriqueValue,
@@ -252,6 +255,33 @@ export default class extends Controller {
             }
         );
     }
+
+
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleItemModifier(event) {
+        const { titre } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - Titre: " + titre + ", Selected checkbox: " + this.tabSelectedCheckBoxs);
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
+
+        console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
+        this.buildCustomEvent("app:liste-principale:dialogueCanAjouter", true, true,
+            {
+                titre: "Edition - " + this.rubriqueValue,
+                idObjet: this.tabSelectedCheckBoxs[0].split("check_")[1],
+                action: 1, // Modification
+                entreprise: this.identrepriseValue,
+                utilisateur: this.utilisateurValue,
+                rubrique: this.rubriqueValue,
+                controleurphp: this.controleurphpValue,
+                controleursitimulus: this.controleursitimulusValue,
+            }
+        );
+    }
+    
 
     /**
      * @description Gère l'événement de la fermeture de l'espace de travail.
@@ -283,15 +313,6 @@ export default class extends Controller {
         event.stopPropagation();
     }
 
-    /**
-     * @description Gère l'événement de modification.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleItemModifier(event) {
-        console.log(this.nomControleur + " - EVENEMENT RECU: MODIFICATION DE L'ELEMENT DE LA LISTE");
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
-        event.stopPropagation();
-    }
 
     /**
      * @description Gère l'événement de modification.
@@ -450,6 +471,7 @@ export default class extends Controller {
                 this.updateMessage("Dernière actualisation " + dateHeureLocaleSimple);
                 this.tabSelectedCheckBoxs = [];
                 this.updateMessageSelectedCheckBoxes();
+                this.publierSelection();
             });
     }
 

@@ -100,26 +100,26 @@ export default class extends Controller {
      */
     handleItemCanAjouter(event) {
         console.log(this.nomControleur + " - handleItemCanAjouter", new Date());
-        const { titre, entreprise, utilisateur, rubrique, controleurphp, controleurstimulus } = event.detail; // Récupère les données de l'événement
-        this.tabSelectedCheckBoxes = [];
+        const { titre, idObjet, action, entreprise, utilisateur, rubrique, controleurphp, controleurstimulus } = event.detail; // Récupère les données de l'événement
+        // this.tabSelectedCheckBoxes = [];
         this.titre = titre;
         this.message = titre;
-        this.action = this.ACTION_AJOUTER; //Ajouter (0)
+        this.action = action; //Ajouter (0), Modifier (1)
         this.titreTarget.innerHTML = titre;
 
         // this.formTarget.innerHTML = "On va charger le formulaire de saisie de données ici!!!!";
-        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
+        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, action == 0 ? "ENREGISTRER" : "METTRE A JOUR");
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
 
-        this.action_afficherMessage("Nouveau", "Chargement du formulaire...");
+        this.action_afficherMessage(titre, "Chargement du formulaire...");
         console.log(this.nomControleur + " - Chargement du formulaire...");
-        const url = '/admin/' + controleurphp + '/formulaire/' + entreprise + '/-1';
+        const url = '/admin/' + controleurphp + '/formulaire/' + entreprise + '/' + idObjet;
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())
             .then(html => {
                 this.formTarget.innerHTML = html;
                 this.showDialogue();
-                this.action_afficherMessage("Nouveau", "Formulaire chargé sur la boîte de dialogue.");
+                this.action_afficherMessage(titre, "Formulaire chargé sur la boîte de dialogue.");
                 console.log(this.nomControleur + " - Formulaire chargé sur la boîte de dialogue.");
             });
     }
