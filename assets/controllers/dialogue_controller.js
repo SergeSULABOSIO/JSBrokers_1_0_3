@@ -31,6 +31,7 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
         this.listePrincipale.removeEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
         this.listePrincipale.removeEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
+        this.element.removeEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
     }
 
 
@@ -38,6 +39,7 @@ export default class extends Controller {
         this.app_fermer_boite = "app:dialogue:fermer_boite";
         this.app_can_supprimer = "app:liste-principale:dialogueCanSupprimer";
         this.app_can_ajouter = "app:liste-principale:dialogueCanAjouter";
+        this.app_afficher_message = "app:liste-principale:afficher_message";
         this.listePrincipale = document.getElementById("liste");
         // Initialisation
         this.initBoiteDeDialogue();
@@ -50,6 +52,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
         this.listePrincipale.addEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
         this.listePrincipale.addEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
+        this.element.addEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
     }
 
     /**
@@ -77,6 +80,16 @@ export default class extends Controller {
      */
     handleFermerBoite(event) {
         this.closeDialogue();
+    }
+
+
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleDisplayMessage(event) {
+        const { titre, message } = event.detail; // Récupère les données de l'événement
+        this.updateMessage(titre + ": " + message);
     }
 
 

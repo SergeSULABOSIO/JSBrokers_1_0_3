@@ -41,7 +41,7 @@ export default class extends Controller {
     }
 
     initNomEcouteurs() {
-        this.app_enregistrer = "app:notificationsinistre-formulaire:enregistrer";
+        this.app_enregistrer = "app:formulaire:enregistrer";
     }
 
 
@@ -208,10 +208,10 @@ export default class extends Controller {
                 );
                 this.updateViewAvenants(userObject.referencePolice);
 
-               
+                console.log(this.nomcontroleur + " - ICI.");
                 //On émet un évenement pour signaler que l'enreg s'est effectué avec succès
                 this.buildCustomEvent(
-                    "formulaire_ajout_modification_reussi", true, true,
+                    "app:liste-principale:formulaire_ajout_modification_reussi", true, true,
                     {
                         idObjet: userObject.idNotificationSinistre,
                         code: 0,
@@ -224,7 +224,7 @@ export default class extends Controller {
                 this.updateMessage("Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.");
                 console.error(this.nomcontroleur + " - Réponse d'erreur du serveur :", errorMessage);
                 this.buildCustomEvent(
-                    "formulaire_ajout_modification_reussi", true, true,
+                    "app:liste-principale:formulaire_ajout_modification_reussi", true, true,
                     {
                         idObjet: -1,
                         code: 1,

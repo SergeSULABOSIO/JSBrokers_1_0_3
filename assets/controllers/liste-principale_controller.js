@@ -115,7 +115,7 @@ export default class extends Controller {
     execution_ajout(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de l'ajout", event.detail);
-        this.buildCustomEvent("app:notificationsinistre-formulaire:enregistrer", true, true, {});
+        this.buildCustomEvent("app:formulaire:enregistrer", true, true, {});
     }
 
 
@@ -142,6 +142,10 @@ export default class extends Controller {
                 const serverJsonObject = JSON.parse(ServerJsonData);
                 console.log(this.nomControleur + " - Réponse du serveur: ", serverJsonObject);
                 if (serverJsonObject.reponse == "Ok") {
+                    //On demande de fermer la boite de dialogue
+                    this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
+                    
+                    //On actualise la liste sans consulter le serveur
                     serverJsonObject.deletedIds.forEach(deletedId => {
                         let elementToDelete = document.getElementById("liste_row_" + deletedId);
                         let parentElement = elementToDelete.parentNode;
