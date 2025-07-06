@@ -28,12 +28,16 @@ export default class extends Controller {
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.listePrincipale.removeEventListener("app:liste-principale:dialogueCanSupprimer", this.handleItemCanSupprimer.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:dialogueCanAjouter", this.handleItemCanAjouter.bind(this));
+        this.listePrincipale.removeEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
+        this.listePrincipale.removeEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
+        this.listePrincipale.removeEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
     }
 
 
     init() {
+        this.app_fermer_boite = "app:dialogue:fermer_boite";
+        this.app_can_supprimer = "app:liste-principale:dialogueCanSupprimer";
+        this.app_can_ajouter = "app:liste-principale:dialogueCanAjouter";
         this.listePrincipale = document.getElementById("liste");
         // Initialisation
         this.initBoiteDeDialogue();
@@ -43,8 +47,9 @@ export default class extends Controller {
 
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.addEventListener("app:liste-principale:dialogueCanSupprimer", this.handleItemCanSupprimer.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:dialogueCanAjouter", this.handleItemCanAjouter.bind(this));
+        this.listePrincipale.addEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
+        this.listePrincipale.addEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
+        this.listePrincipale.addEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
     }
 
     /**
@@ -70,6 +75,15 @@ export default class extends Controller {
      * @description Gère l'événement de modification.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
+    handleFermerBoite(event) {
+        this.closeDialogue();
+    }
+
+
+    /**
+     * @description Gère l'événement de modification.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
     handleItemCanAjouter(event) {
         console.log(this.nomControleur + " - handleItemCanAjouter", new Date());
         const { titre, entreprise, utilisateur, rubrique, controleurphp, controleurstimulus } = event.detail; // Récupère les données de l'événement
@@ -79,7 +93,7 @@ export default class extends Controller {
         this.action = this.ACTION_AJOUTER; //Ajouter (0)
         this.titreTarget.innerHTML = titre;
 
-        this.formTarget.innerHTML = "On va charger le formulaire de saisie de données ici!!!!";
+        // this.formTarget.innerHTML = "On va charger le formulaire de saisie de données ici!!!!";
         defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, "ENREGISTRER");
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
 
@@ -176,9 +190,7 @@ export default class extends Controller {
         event.preventDefault();
         console.log(this.nomControleur + " - DIALOGUE OK", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
         this.buildCustomEvent(
-            "app:liste-principale:dialog_ok",
-            true,
-            true,
+            "app:liste-principale:dialog_ok", true, true,
             {
                 titre: this.titre,
                 message: this.message,
@@ -186,15 +198,13 @@ export default class extends Controller {
                 data: this.tabSelectedCheckBoxes,
             }
         );
-        this.closeDialogue();
+        // this.closeDialogue();
     }
 
 
     buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
         const event = new CustomEvent(nomEvent, {
-            bubbles: canBubble,
-            composed: canCompose,
-            detail: detailTab
+            bubbles: canBubble, composed: canCompose, detail: detailTab
         });
         this.listePrincipale.dispatchEvent(event);
     }

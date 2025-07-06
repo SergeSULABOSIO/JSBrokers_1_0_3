@@ -45,6 +45,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
         this.listePrincipale.addEventListener("app:liste-principale:afficher_message", this.handleDisplayMessage.bind(this));
+        this.listePrincipale.addEventListener("app:liste-principale:formulaire_ajout_modification_reussi", this.handleFormulaireAjoutModifReussi.bind(this));
     }
 
     disconnect() {
@@ -61,6 +62,27 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
         this.listePrincipale.removeEventListener("app:liste-principale:afficher_message", this.handleDisplayMessage.bind(this));
+        this.listePrincipale.removeEventListener("app:liste-principale:formulaire_ajout_modification_reussi", this.handleFormulaireAjoutModifReussi.bind(this));
+    }
+
+    /**
+     * @description Gère l'événement d'ajout.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleFormulaireAjoutModifReussi(event) {
+        const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - ENREGISTREMENT REUSSI - On recharge la liste");
+        if (code == 0) {
+            //On demande de fermer la boite de dialogue
+            this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
+
+            //On recharge la liste principale
+            this.outils_recharger(event);
+        } else {
+            this.updateMessage(code + ": " + message);
+        }
+        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+        event.stopPropagation();
     }
 
     /**
@@ -84,7 +106,7 @@ export default class extends Controller {
             //On exécute la suppression des données.
             this.execution_suppression(event);
         }
-        
+
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -93,6 +115,7 @@ export default class extends Controller {
     execution_ajout(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de l'ajout", event.detail);
+        this.buildCustomEvent("app:notificationsinistre-formulaire:enregistrer", true, true, {});
     }
 
 
@@ -144,7 +167,7 @@ export default class extends Controller {
         event.stopPropagation();
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data, "ON NE FAIT RIEN.");
         console.log(this.nomControleur + " - ON NE FAIT RIEN.");
-        this.updateMessage("Boît de dialogue fermée.");
+        this.updateMessage("Boîte de dialogue fermée.");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
     }
 
@@ -194,9 +217,7 @@ export default class extends Controller {
         event.stopPropagation();
 
         console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        this.buildCustomEvent("app:liste-principale:dialogueCanAjouter",
-            true,
-            true,
+        this.buildCustomEvent("app:liste-principale:dialogueCanAjouter", true, true,
             {
                 titre: "Ajout - " + this.rubriqueValue,
                 entreprise: this.identrepriseValue,
@@ -389,7 +410,7 @@ export default class extends Controller {
      * @param {Event} event 
      */
     outils_recharger(event) {
-        console.log(this.nomControleur + " - Action Barre d'outils - RECHARGE DES VALEURS:", event.currentTarget);
+        console.log(this.nomControleur + " - Actualisation de la liste principale", event.currentTarget);
         this.updateMessage("Actualisation des données...");
         this.donneesTarget.disabled = true;
         // this.donneesTarget.innerHTML = "J'actualise cette liste";

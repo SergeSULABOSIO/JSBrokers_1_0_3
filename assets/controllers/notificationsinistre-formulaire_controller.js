@@ -23,14 +23,11 @@ export default class extends Controller {
     };
 
     connect() {
+        this.initNomEcouteurs();
         this.nomcontroleur = "NOTIFICATIONSINISTRE-FORMULAIRE";
-        // console.log("ID NOTIFICATION SINISTRE: " + this.idnotificationsinistreValue);
+        this.listePrincipale = document.getElementById("liste");
         defineIcone(getIconeUrl(1, "save", 19), this.btEnregistrerTarget, "ENREGISTRER");
-        //On écoute les boutons de soumission du formulaire
-        this.element.addEventListener("click", event => this.ecouterClick(event));
         this.updateMessage("Prêt.");
-
-        //On initialise les badges des onglets
         this.initBadges(
             this.nboffresValue,
             this.nbcontactsValue,
@@ -38,13 +35,28 @@ export default class extends Controller {
             this.nbdocumentsValue,
         );
         this.updateViewAvenants(this.referencepoliceTarget.value);
-        this.referencepoliceTarget.addEventListener("change", (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
         this.btEnregistrerTarget.style.display = "none";
         this.connexionAuxControleurParents();
+        this.setEcouteurs();
     }
-    
-    
-    connexionAuxControleurParents(){
+
+    initNomEcouteurs() {
+        this.app_enregistrer = "app:notificationsinistre-formulaire:enregistrer";
+    }
+
+
+    setEcouteurs() {
+        this.listePrincipale.addEventListener(this.app_enregistrer, this.handleActionEnregistrer.bind(this));
+        this.element.addEventListener("click", event => this.ecouterClick(event));
+        this.referencepoliceTarget.addEventListener("change", (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
+    }
+
+    disconnect() {
+        this.listePrincipale.removeEventListener(this.app_enregistrer, this.handleActionEnregistrer.bind(this));
+    }
+
+
+    connexionAuxControleurParents() {
         this.controleurDeLaListePrincipale = this.getControleurListePrincipale("liste-principale");
         this.controleurDeLaBoiteDeDialogue = this.getControleurListePrincipale("dialogue");
         this.controleurDeLaBoiteDeDialogue.controleurenfant = this;
@@ -196,14 +208,29 @@ export default class extends Controller {
                 );
                 this.updateViewAvenants(userObject.referencePolice);
 
-                if (this.controleurDeLaListePrincipale != null && isNew == true) {
-                    this.controleurDeLaListePrincipale.outils_recharger(event);
-                }
+               
+                //On émet un évenement pour signaler que l'enreg s'est effectué avec succès
+                this.buildCustomEvent(
+                    "formulaire_ajout_modification_reussi", true, true,
+                    {
+                        idObjet: userObject.idNotificationSinistre,
+                        code: 0,
+                        message: "Enregistrement réussi.",
+                    }
+                );
             })
             .catch(errorMessage => {
                 event.target.disabled = false;
                 this.updateMessage("Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.");
                 console.error(this.nomcontroleur + " - Réponse d'erreur du serveur :", errorMessage);
+                this.buildCustomEvent(
+                    "formulaire_ajout_modification_reussi", true, true,
+                    {
+                        idObjet: -1,
+                        code: 1,
+                        message: "Enregistrement échoué.",
+                    }
+                );
             });
     }
 
@@ -228,7 +255,16 @@ export default class extends Controller {
     /**
      * @param {Event} event 
     */
-    triggerFromParent(event) {
+    handleActionEnregistrer(event) {
         this.enregistrerNotificationSinistre(event);
+    }
+
+    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
+        const event = new CustomEvent(nomEvent, {
+            bubbles: canBubble,
+            composed: canCompose,
+            detail: detailTab
+        });
+        this.listePrincipale.dispatchEvent(event);
     }
 }

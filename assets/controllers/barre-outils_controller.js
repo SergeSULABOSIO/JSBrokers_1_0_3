@@ -2,7 +2,6 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
     static targets = [
-        // Les boutons de la barre d'outils
         'btquitter',
         'btparametres',
         'btrecharger',
@@ -84,9 +83,7 @@ export default class extends Controller {
     action_quitte() {
         console.log(this.nomControleur + " - Action_Quitter");
         this.buildCustomEvent(
-            "app:liste-principale:quitter",
-            true,
-            true,
+            "app:liste-principale:quitter", true, true,
             {}
         );
     }
@@ -94,9 +91,7 @@ export default class extends Controller {
     action_parametrer() {
         console.log(this.nomControleur + " - Action_Parametrer");
         this.buildCustomEvent(
-            "app:liste-principale:parametrer",
-            true,
-            true,
+            "app:liste-principale:parametrer", true, true,
             {}
         );
     }
@@ -104,18 +99,14 @@ export default class extends Controller {
     action_recharger() {
         console.log(this.nomControleur + " - Action_Recharger");
         this.buildCustomEvent(
-            "app:liste-principale:recharger",
-            true,
-            true,
+            "app:liste-principale:recharger", true, true,
             {}
         );
     }
 
     action_ajouter() {
         console.log(this.nomControleur + " - Action_Ajouter");
-        this.buildCustomEvent("app:liste-principale:ajouter",
-            true,
-            true,
+        this.buildCustomEvent("app:liste-principale:ajouter", true, true,
             {
                 titre: "Nouvelle notification",
             }
@@ -124,9 +115,7 @@ export default class extends Controller {
 
     action_modifier() {
         console.log(this.nomControleur + " - Action_Modifier");
-        this.buildCustomEvent("app:liste-principale:modifier",
-            true,
-            true,
+        this.buildCustomEvent("app:liste-principale:modifier", true, true,
             {
                 titre: "Modification de la notification",
             }
@@ -135,9 +124,7 @@ export default class extends Controller {
 
     action_supprimer() {
         console.log(this.nomControleur + " - Action_Supprimer");
-        this.buildCustomEvent("app:liste-principale:supprimer",
-            true,
-            true,
+        this.buildCustomEvent("app:liste-principale:supprimer", true, true,
             {
                 titre: "Suppression ",
             }
@@ -146,9 +133,7 @@ export default class extends Controller {
 
     buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
         const event = new CustomEvent(nomEvent, {
-            bubbles: canBubble,
-            composed: canCompose,
-            detail: detailTab
+            bubbles: canBubble, composed: canCompose, detail: detailTab
         });
         this.listePrincipale.dispatchEvent(event);
     }
