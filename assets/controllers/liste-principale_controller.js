@@ -135,7 +135,9 @@ export default class extends Controller {
 
         const url = '/admin/' + this.controleurphpValue + '/remove_many/' + this.identrepriseValue + '/' + tabIds;
         console.log(this.nomControleur + " - Exécution de la suppression", data, url);
-        this.updateMessage("Suppression en cours... Merci de patienter.");
+
+        this.action_afficherMessage("Suppression", "Suppression en cours... Merci de patienter.");
+
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.json())
             .then(ServerJsonData => {
@@ -144,7 +146,7 @@ export default class extends Controller {
                 if (serverJsonObject.reponse == "Ok") {
                     //On demande de fermer la boite de dialogue
                     this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
-                    
+
                     //On actualise la liste sans consulter le serveur
                     serverJsonObject.deletedIds.forEach(deletedId => {
                         let elementToDelete = document.getElementById("liste_row_" + deletedId);
@@ -156,7 +158,8 @@ export default class extends Controller {
                             }
                         }
                     });
-                    this.updateMessage("Bien fait: " + serverJsonObject.message);
+                    // this.updateMessage("Bien fait: " + serverJsonObject.message);
+                    this.action_afficherMessage("Suppression", "Bien fait: " + serverJsonObject.message);
                 }
             });
     }
@@ -173,6 +176,23 @@ export default class extends Controller {
         console.log(this.nomControleur + " - ON NE FAIT RIEN.");
         this.updateMessage("Boîte de dialogue fermée.");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
+    }
+
+    /**
+     * 
+     * @param {String} titre 
+     * @param {String} textMessage 
+     */
+    action_afficherMessage(titre, textMessage) {
+        this.buildCustomEvent(
+            "app:liste-principale:afficher_message",
+            true,
+            true,
+            {
+                titre: titre,
+                message: textMessage,
+            }
+        );
     }
 
 

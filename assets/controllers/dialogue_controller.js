@@ -31,7 +31,7 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
         this.listePrincipale.removeEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
         this.listePrincipale.removeEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
-        this.element.removeEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.removeEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
     }
 
 
@@ -52,7 +52,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
         this.listePrincipale.addEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
         this.listePrincipale.addEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
-        this.element.addEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.addEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
     }
 
     /**
@@ -90,6 +90,7 @@ export default class extends Controller {
     handleDisplayMessage(event) {
         const { titre, message } = event.detail; // Récupère les données de l'événement
         this.updateMessage(titre + ": " + message);
+        console.log(this.nomControleur + " - Titre: " + titre + ", Message: " + message);
     }
 
 
@@ -164,9 +165,7 @@ export default class extends Controller {
         event.preventDefault();
         console.log(this.nomControleur + " - DIALOGUE FERMER", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
         this.buildCustomEvent(
-            "app:liste-principale:dialog_no",
-            true,
-            true,
+            "app:liste-principale:dialog_no", true, true,
             {
                 titre: this.titre,
                 message: this.message,
@@ -185,9 +184,7 @@ export default class extends Controller {
      */
     action_afficherMessage(titre, textMessage) {
         this.buildCustomEvent(
-            "app:liste-principale:afficher_message",
-            true,
-            true,
+            "app:liste-principale:afficher_message", true, true,
             {
                 titre: titre,
                 message: textMessage,
