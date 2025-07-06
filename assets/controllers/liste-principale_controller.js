@@ -24,6 +24,19 @@ export default class extends Controller {
 
 
     init() {
+        this.app_liste_principale_ajouter = "app:liste-principale:ajouter";
+        this.app_liste_principale_cocher = "app:liste-principale:cocher";
+        this.app_liste_principale_quitter = "app:liste-principale:quitter";
+        this.app_liste_principale_parametrer = "app:liste-principale:parametrer";
+        this.app_liste_principale_recharger = "app:liste-principale:recharger";
+        this.app_liste_principale_modifier = "app:liste-principale:modifier";
+        this.app_liste_principale_supprimer = "app:liste-principale:supprimer";
+        this.app_liste_principale_selection = "app:liste-principale:selection";
+        this.app_liste_principale_dialogue_ok = "app:liste-principale:dialog_ok";
+        this.app_liste_principale_dialogue_no = "app:liste-principale:dialog_no";
+        this.app_liste_principale_afficher_message = "app:liste-principale:afficher_message";
+        this.app_liste_principale_edition_reussie = "app:liste-principale:formulaire_ajout_modification_reussi";
+
         this.listePrincipale = document.getElementById("liste");
         this.tabSelectedCheckBoxs = [];
         this.initToolTips();
@@ -34,35 +47,35 @@ export default class extends Controller {
 
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.addEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:cocher", this.handleItemCocher.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:parametrer", this.handleParametrer.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:afficher_message", this.handleDisplayMessage.bind(this));
-        this.listePrincipale.addEventListener("app:liste-principale:formulaire_ajout_modification_reussi", this.handleFormulaireAjoutModifReussi.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_ajouter, this.handleItemAjouter.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_cocher, this.handleItemCocher.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_quitter, this.handleQuitter.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_parametrer, this.handleParametrer.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_recharger, this.handleRecharger.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_modifier, this.handleItemModifier.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_supprimer, this.handleItemSupprimer.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_selection, this.handleItemSelectionner.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_dialogue_ok, this.handleDialog_ok.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_edition_reussie, this.handleFormulaireAjoutModifReussi.bind(this));
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.removeEventListener("app:liste-principale:ajouter", this.handleItemAjouter.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:cocher", this.handleItemCocher.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:quitter", this.handleQuitter.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:parametrer", this.handleParametrer.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:recharger", this.handleRecharger.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:modifier", this.handleItemModifier.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:supprimer", this.handleItemSupprimer.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:selection", this.handleItemSelectionner.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:dialog_ok", this.handleDialog_ok.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:dialog_no", this.handleDialog_no.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:afficher_message", this.handleDisplayMessage.bind(this));
-        this.listePrincipale.removeEventListener("app:liste-principale:formulaire_ajout_modification_reussi", this.handleFormulaireAjoutModifReussi.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_ajouter, this.handleItemAjouter.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_cocher, this.handleItemCocher.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_quitter, this.handleQuitter.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_parametrer, this.handleParametrer.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_recharger, this.handleRecharger.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_modifier, this.handleItemModifier.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_supprimer, this.handleItemSupprimer.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_selection, this.handleItemSelectionner.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_dialogue_ok, this.handleDialog_ok.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_edition_reussie, this.handleFormulaireAjoutModifReussi.bind(this));
     }
 
     /**
@@ -75,7 +88,6 @@ export default class extends Controller {
         if (code == 0) { //Ok(0), Erreur(1)
             //On demande de fermer la boite de dialogue
             this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
-
             //On recharge la liste principale
             this.outils_recharger(event);
         } else {
@@ -133,12 +145,9 @@ export default class extends Controller {
         data.forEach(dataElement => {
             tabIds.push(dataElement.split("check_")[1]);
         });
-
         const url = '/admin/' + this.controleurphpValue + '/remove_many/' + this.identrepriseValue + '/' + tabIds;
         console.log(this.nomControleur + " - Exécution de la suppression", data, url);
-
         this.action_afficherMessage("Suppression", "Suppression en cours... Merci de patienter.");
-
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.json())
             .then(ServerJsonData => {
@@ -147,7 +156,6 @@ export default class extends Controller {
                 if (serverJsonObject.reponse == "Ok") {
                     //On demande de fermer la boite de dialogue
                     this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
-
                     //On actualise la liste sans consulter le serveur
                     serverJsonObject.deletedIds.forEach(deletedId => {
                         let elementToDelete = document.getElementById("liste_row_" + deletedId);
@@ -159,7 +167,6 @@ export default class extends Controller {
                             }
                         }
                     });
-                    // this.updateMessage("Bien fait: " + serverJsonObject.message);
                     this.action_afficherMessage("Suppression", "Bien fait: " + serverJsonObject.message);
                 }
             });
