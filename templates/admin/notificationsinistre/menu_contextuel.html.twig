@@ -1,0 +1,52 @@
+{# Le menu contextuel, initialement caché #}
+<nav 
+    id="liste_row_context_menu_{{ notificationsinistre.id }}" 
+    data-controller="liste-element-context-menu"
+    class="context-menu" 
+>
+    <ul 
+        data-liste-element-context-menu-target="menu"
+    >
+        {# Option "Ajouter" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_ajouter"
+        >
+            {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
+            Ajouter
+        </li>
+        {# Option "Actualiser" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_actualiser"
+        >
+            {{ include('segments/icones/actions/reload.html.twig', {size:'20px'}) }}
+            Actualiser
+        </li>
+
+        {# Option "Supprimer" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_supprimer" 
+        >
+            {{ include('segments/icones/actions/delete.html.twig', {size:'20px'}) }}
+            Supprimer
+        </li>
+
+        {# Option "Séparateur" #}
+        <li class="separator"></li>
+
+        {# Option "Paramètre" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_parametrer"
+        >
+            {{ include('segments/icones/actions/settings.html.twig', {size:'20px'}) }}
+            Paramètres
+        </li>
+
+        {# Option "Quitter" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_quitter"
+        >
+            {{ include('segments/icones/actions/exit.html.twig', {size:'20px'}) }}
+            Quitter
+        </li>
+    </ul>
+</nav>

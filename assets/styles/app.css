@@ -93,3 +93,56 @@ a:active {
 .shadow-bottom {
   box-shadow: 0 8px 6px -6px rgba(0, 0, 0, 0.1); /* Exemple d'ombre en bas */
 }
+
+
+/* POUR LE MENU CONTEXTUEL */
+/* Style de l'élément cible pour le rendre visible */
+.context-target {
+    /* border: 2px dashed #007bff; */
+    /* padding: 20px; */
+    /* margin: 50px; */
+    cursor: context-menu; /* Indique qu'un menu contextuel est disponible */
+    user-select: none; /* Empêche la sélection de texte au clic droit */
+}
+
+/* Style du menu contextuel */
+.context-menu {
+    display: none; /* Cache le menu par défaut */
+    position: fixed; /* Permet un positionnement précis par rapport à la fenêtre */
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    min-width: 180px;
+    z-index: 1000; /* Assure que le menu est au-dessus des autres éléments */
+    border-radius: 4px;
+    padding: 5px 0;
+}
+
+.context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.context-menu li {
+    padding: 8px 15px;
+    cursor: pointer;
+    display: flex; /* Pour aligner l'icône et le texte */
+    align-items: center;
+    gap: 10px; /* Espace entre l'icône et le texte */
+}
+
+.context-menu li:hover {
+    background-color: #f0f0f0;
+}
+
+.context-menu li.separator {
+    border-top: 1px solid #eee;
+    margin: 5px 0;
+    padding: 0;
+}
+
+.context-menu .menu-icon {
+    width: 18px; /* Taille des icônes */
+    height: 18px;
+}
