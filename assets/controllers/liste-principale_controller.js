@@ -298,6 +298,9 @@ export default class extends Controller {
         console.log(this.nomControleur + " - EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
+
+        this.action_afficherMessage("Fermeture", "Redirection à la page d'acceuil...");
+        window.location.href = "/admin/entreprise";
     }
 
     /**
@@ -308,6 +311,9 @@ export default class extends Controller {
         console.log(this.nomControleur + " - EVENEMENT RECU: PAREMETRER CETTE LISTE");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
+        
+        this.action_afficherMessage("Paramètres", "Redirection vers la page des paramètres du compte...");
+        window.location.href = "/register";
     }
 
     /**
@@ -318,6 +324,8 @@ export default class extends Controller {
         console.log(this.nomControleur + " - EVENEMENT RECU: RECHARGER CETTE LISTE");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
+        //On lance le rechargement de la page / liste
+        this.outils_recharger(event);
     }
 
 
