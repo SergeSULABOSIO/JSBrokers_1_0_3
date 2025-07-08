@@ -36,7 +36,10 @@
             {# Barre d'outils #}
             {{ include("segments/liste_barre_outils.html.twig") }}
             {# Tableau #}
-            <table class="table table-hover table-sm caption-top p-3">
+            <table 
+                {# L'élément sur lequel l'utilisateur fera un clic droit #}
+                class="table table-hover table-sm caption-top p-3"
+            >
                 <caption>
                     <span data-liste-principale-target = "display">
                         {% if notificationsinistres|length == 0 %}
@@ -90,6 +93,7 @@
                 {% endif %}
             </table>
         </div>
+        {{ include('admin/notificationsinistre/menu_contextuel.html.twig') }}
         {{ include('segments/dialogue.html.twig') }}
     </div>
 {% endblock %}

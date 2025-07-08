@@ -5,36 +5,32 @@ export default class extends Controller {
         'menu',
     ];
 
-    static values = {
-        idobjet: Number,
-    };
-
 
     connect() {
         this.nomControleur = "LISTE-ELEMENT-CONTEXT-MENU";
-        console.log(this.nomControleur + " - Connecté - " + this.idobjetValue);
+        console.log(this.nomControleur + " - Connecté");
         this.init();
     }
 
     init() {
-        this.targetElement = document.getElementById("myContextMenuTarget_" + this.idobjetValue); // Ton élément cible (ID mis à jour)
+        // this.targetElement = document.getElementById("myContextMenuTarget"); // Ton élément cible (ID mis à jour)
         this.menu = this.menuTarget; // Le menu HTML
         this.listePrincipale = document.getElementById("liste");
-        console.log("CONTEXT MENU TARGETS:", this.targetElement, this.menuTarget);
+        // console.log("CONTEXT MENU TARGETS:", this.targetElement, this.menuTarget);
         this.setEcouteurs();
     }
 
     setEcouteurs() {
         // 1. Empêcher le menu contextuel natif du navigateur au clic droit sur l'élément cible
         this.boundHandleContextMenu = this.handleContextMenu.bind(this);
-        this.targetElement.addEventListener('contextmenu', this.boundHandleContextMenu);
+        // this.targetElement.addEventListener('contextmenu', this.boundHandleContextMenu);
 
         // 2. Cacher le menu si on clique n'importe où ailleurs dans le document
         this.boundHideMenu = this.hideMenu.bind(this);
-        document.addEventListener('click', this.boundHideMenu);
-        document.addEventListener('contextmenu', this.boundHideMenu); // Aussi au clic droit ailleurs
-        document.addEventListener('scroll', this.boundHideMenu); // Cacher si on scroll
-        window.addEventListener('resize', this.boundHideMenu); // Cacher si la fenêtre est redimensionnée
+        // document.addEventListener('click', this.boundHideMenu);
+        // document.addEventListener('contextmenu', this.boundHideMenu); // Aussi au clic droit ailleurs
+        // document.addEventListener('scroll', this.boundHideMenu); // Cacher si on scroll
+        // window.addEventListener('resize', this.boundHideMenu); // Cacher si la fenêtre est redimensionnée
 
         // Pour éviter que le clic sur une option du menu ne le cache immédiatement (stopPropagation)
         this.menu.addEventListener('click', (e) => e.stopPropagation());
@@ -42,9 +38,9 @@ export default class extends Controller {
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        if (this.targetElement && this.boundHandleContextMenu) {
-            this.targetElement.removeEventListener('contextmenu', this.boundHandleContextMenu);
-        }
+        // if (this.targetElement && this.boundHandleContextMenu) {
+            // this.targetElement.removeEventListener('contextmenu', this.boundHandleContextMenu);
+        // }
         if (this.boundHideMenu) {
             document.removeEventListener('click', this.boundHideMenu);
             document.removeEventListener('contextmenu', this.boundHideMenu);
@@ -60,6 +56,7 @@ export default class extends Controller {
         console.log("JE SUIS ICI....");
         event.preventDefault(); // Empêche le menu contextuel natif du navigateur d'apparaître
 
+        console.log("OUVERTURE DU MENU CONTEXTUEL.");
         this.menu.style.display = 'block'; // Affiche le menu
 
         // Positionne le menu près du curseur de la souris, en s'assurant qu'il reste dans la fenêtre
@@ -89,75 +86,37 @@ export default class extends Controller {
      */
     hideMenu() {
         this.menu.style.display = 'none';
-    }
-
-    /**
-     * Exécute l'action associée à l'option de menu cliquée.
-     * Cette méthode est appelée via data-action="click->context-menu#execute"
-     */
-    execute(event) {
-        event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        
-        this.hideMenu(); // Cache le menu après avoir cliqué sur une option
-
-        // Récupère les paramètres passés via data-context-menu-action-param et data-context-menu-label-param
-        const action = event.params.action; 
-        const label = event.params.label;
-
-        console.log(`Action exécutée : "${action}" (${label})`);
-
-        // Logique spécifique pour chaque option
-        switch (action) {
-            case 'new':
-                this.handleNewAction();
-                break;
-            case 'properties':
-                this.handlePropertiesAction();
-                break;
-            default:
-                console.warn(`Action "${action}" non reconnue.`);
-        }
+        console.log("FERMETURE DU MENU CONTEXTUEL.");
     }
 
     // --- Méthodes spécifiques aux actions du menu ---
 
     context_action_ajouter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        this.hideMenu(); // Cache le menu après avoir cliqué sur une option
-
-        alert("Action déclenchée !");
-        // Ici, tu mettrais le code pour créer un nouvel élément, ouvrir un modal, etc.
+        this.hideMenu();
     }
 
     context_action_actualiser(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        this.hideMenu(); // Cache le menu après avoir cliqué sur une option
-
-        alert("Action déclenchée !");
-        // Ici, tu afficherais un panneau de propriétés, un formulaire de modification, etc.
+        this.menu.style.display = 'none';
+        console.log("CLIC SUR ACTUALISER");
     }
 
     context_action_supprimer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        this.hideMenu(); // Cache le menu après avoir cliqué sur une option
-
-        alert("Action déclenchée !");
-        // Ici, tu afficherais un panneau de propriétés, un formulaire de modification, etc.
+        this.menu.style.display = 'none';
+        console.log("CLIC SUR SUPPRIMER");
     }
 
     context_action_parametrer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        this.hideMenu(); // Cache le menu après avoir cliqué sur une option
-
-        alert("Action déclenchée !");
-        // Ici, tu afficherais un panneau de propriétés, un formulaire de modification, etc.
+        this.menu.style.display = 'none';
+        console.log("CLIC SUR PARAMETRER");
     }
 
     context_action_quitter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        this.hideMenu(); // Cache le menu après avoir cliqué sur une option
-
-        alert("Action déclenchée !");
-        // Ici, tu afficherais un panneau de propriétés, un formulaire de modification, etc.
+        this.menu.style.display = 'none';
+        console.log("CLIC SUR QUITTER");
     }
 }

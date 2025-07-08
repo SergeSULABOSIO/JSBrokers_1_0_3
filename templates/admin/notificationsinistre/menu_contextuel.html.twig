@@ -1,13 +1,11 @@
 {# Le menu contextuel, initialement caché #}
 <nav 
-    id="liste_row_context_menu_{{ notificationsinistre.id }}" 
-    data-controller="liste-element-context-menu" 
-    data-liste-element-context-menu-idobjet-value = "{{ notificationsinistre.id }}"  
+    id="simpleContextMenu" 
     class="context-menu" 
+    data-controller="liste-element-context-menu" 
+    data-liste-element-context-menu-target="menu" 
 >
-    <ul 
-        data-liste-element-context-menu-target="menu" 
-    >
+    <ul>
         {# Option "Ajouter" #}
         <li 
             data-action="click->liste-element-context-menu#context_action_ajouter"
