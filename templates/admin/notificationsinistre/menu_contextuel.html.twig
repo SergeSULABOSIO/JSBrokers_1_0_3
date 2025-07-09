@@ -1,7 +1,7 @@
 {# Le menu contextuel, initialement caché #}
 <nav 
     id="simpleContextMenu" 
-    class="context-menu" 
+    class="context-menu text-secondary" 
     data-controller="liste-element-context-menu" 
     data-liste-element-context-menu-target="menu" 
 >
@@ -12,6 +12,27 @@
         >
             {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
             Ajouter
+        </li>
+        {# Option "Modifier" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_modifier"
+        >
+            {{ include('segments/icones/actions/edit.html.twig', {size:'20px'}) }}
+            Modifier
+        </li>
+        {# Option "Développer" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_developper"
+        >
+            {{ include('segments/icones/actions/edit.html.twig', {size:'20px'}) }}
+            Développer
+        </li>
+        {# Option "Tout Cocher" #}
+        <li 
+            data-action="click->liste-element-context-menu#context_action_tout_cocher"
+        >
+            {{ include('segments/icones/actions/edit.html.twig', {size:'20px'}) }}
+            Tout Cocher
         </li>
         {# Option "Actualiser" #}
         <li 
