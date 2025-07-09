@@ -28,38 +28,6 @@ export default class extends Controller {
         this.menu.removeEventListener('click', (e) => e.stopPropagation());
     }
 
-    // /**
-    //  * Gère l'événement de clic droit sur l'élément cible.
-    //  */
-    // handleContextMenu(event) {
-    //     console.log("JE SUIS ICI....");
-    //     event.preventDefault(); // Empêche le menu contextuel natif du navigateur d'apparaître
-
-    //     console.log("OUVERTURE DU MENU CONTEXTUEL.");
-    //     this.menu.style.display = 'block'; // Affiche le menu
-
-    //     // Positionne le menu près du curseur de la souris, en s'assurant qu'il reste dans la fenêtre
-    //     let menuX = event.clientX;
-    //     let menuY = event.clientY;
-
-    //     const menuWidth = this.menu.offsetWidth;
-    //     const menuHeight = this.menu.offsetHeight;
-    //     const windowWidth = window.innerWidth;
-    //     const windowHeight = window.innerHeight;
-
-    //     if (menuX + menuWidth > windowWidth) {
-    //         menuX = windowWidth - menuWidth - 5; // Décale à gauche si trop à droite
-    //     }
-    //     if (menuY + menuHeight > windowHeight) {
-    //         menuY = windowHeight - menuHeight - 5; // Décale vers le haut si trop en bas
-    //     }
-
-    //     this.menu.style.left = menuX + "px";
-    //     this.menu.style.top = menuY + "px";
-
-    //     console.log("Left: " + this.menu.style.left, "Top: " + this.menu.style.top);
-    // }
-
     /**
      * Cache le menu contextuel.
      */
@@ -74,6 +42,11 @@ export default class extends Controller {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideMenu();
         console.log("CLIC SUR AJOUTER");
+        this.buildCustomEvent("app:liste-principale:ajouter", true, true,
+            {
+                titre: "Nouvelle notification",
+            }
+        );
     }
 
     context_action_modifier(event) {
@@ -82,7 +55,7 @@ export default class extends Controller {
         console.log("CLIC SUR MODIFIER");
     }
 
-    context_action_modifier(event) {
+    context_action_developper(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideMenu();
         console.log("CLIC SUR DEVELOPPER");
@@ -116,5 +89,12 @@ export default class extends Controller {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideMenu();
         console.log("CLIC SUR QUITTER");
+    }
+
+    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
+        const event = new CustomEvent(nomEvent, {
+            bubbles: canBubble, composed: canCompose, detail: detailTab
+        });
+        this.listePrincipale.dispatchEvent(event);
     }
 }
