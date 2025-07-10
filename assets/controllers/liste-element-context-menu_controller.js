@@ -107,9 +107,7 @@ export default class extends Controller {
     context_action_developper(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideMenu();
-        console.log("CLIC SUR DEVELOPPER ID: " + this.tabSelectedCheckBoxs);
         let listElement = document.getElementById("liste_row_" + this.tabSelectedCheckBoxs[0].split("check_")[1]);
-        console.log("Element: ", listElement);
         this.buildCustomEventForElement(listElement, this.app_liste_element_developper, true, true,
             {}
         );

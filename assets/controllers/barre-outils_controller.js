@@ -19,6 +19,8 @@ export default class extends Controller {
     }
 
     init() {
+        this.tabSelectedCheckBoxs = [];
+        this.app_liste_element_developper = "app:liste-element:developper";
         this.listePrincipale = document.getElementById("liste");
         this.controleurDeLaListePrincipale = this.getControleurListePrincipale();
         //On défini les écouteurs ici
@@ -57,6 +59,7 @@ export default class extends Controller {
             this.btmodifierTarget.style.display = "none";
             this.btsupprimerTarget.style.display = "none";
         }
+        this.tabSelectedCheckBoxs = selection;
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
@@ -104,10 +107,10 @@ export default class extends Controller {
 
     action_developper() {
         console.log(this.nomControleur + " - Action Développer");
-        // this.buildCustomEvent(
-        //     "app:liste-principale:quitter", true, true,
-        //     {}
-        // );
+        let listElement = document.getElementById("liste_row_" + this.tabSelectedCheckBoxs[0].split("check_")[1]);
+        this.buildCustomEventForElement(listElement, this.app_liste_element_developper, true, true,
+            {}
+        );
     }
 
     action_parametrer() {
@@ -158,5 +161,12 @@ export default class extends Controller {
             bubbles: canBubble, composed: canCompose, detail: detailTab
         });
         this.listePrincipale.dispatchEvent(event);
+    }
+
+    buildCustomEventForElement(htmlElement, nomEvent, canBubble, canCompose, detailTab) {
+        const event = new CustomEvent(nomEvent, {
+            bubbles: canBubble, composed: canCompose, detail: detailTab
+        });
+        htmlElement.dispatchEvent(event);
     }
 }

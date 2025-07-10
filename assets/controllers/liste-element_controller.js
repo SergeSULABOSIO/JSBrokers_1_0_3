@@ -17,7 +17,7 @@ export default class extends Controller {
         this.app_liste_element_click = "click";
         this.app_liste_element_scroll = "scroll";
         this.app_liste_element_resize = "resize";
-        this.app_liste_element_developper = "app.liste-element:developper";
+        this.app_liste_element_developper = "app:liste-element:developper";
         console.log(this.nomControleur + " - Connecté");
         this.detailsVisible = false;
         this.listePrincipale = document.getElementById("liste");
