@@ -36,6 +36,8 @@ export default class extends Controller {
         this.app_liste_principale_dialogue_no = "app:liste-principale:dialog_no";
         this.app_liste_principale_afficher_message = "app:liste-principale:afficher_message";
         this.app_liste_principale_tout_cocher = "app:liste-principale:tout_cocher";
+        this.app_formulaire_enregistrer = "app:formulaire:enregistrer";
+        this.app_liste_principale_ajout_modif_reussi = "app:liste-principale:formulaire_ajout_modification_reussi";
 
         this.listePrincipale = document.getElementById("liste");
         this.tabSelectedCheckBoxs = [];
@@ -58,7 +60,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener(this.app_liste_principale_dialogue_ok, this.handleDialog_ok.bind(this));
         this.listePrincipale.addEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
         this.listePrincipale.addEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_edition_reussie, this.handleFormulaireAjoutModifReussi.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_ajout_modif_reussi, this.handleFormulaireAjoutModifReussi.bind(this));
         this.listePrincipale.addEventListener(this.app_liste_principale_tout_cocher, this.handleItemToutCocher.bind(this));
     }
 
@@ -76,7 +78,7 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener(this.app_liste_principale_dialogue_ok, this.handleDialog_ok.bind(this));
         this.listePrincipale.removeEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
         this.listePrincipale.removeEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_edition_reussie, this.handleFormulaireAjoutModifReussi.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_ajout_modif_reussi, this.handleFormulaireAjoutModifReussi.bind(this));
         this.listePrincipale.removeEventListener(this.app_liste_principale_tout_cocher, this.handleItemToutCocher.bind(this));
     }
 
@@ -129,14 +131,14 @@ export default class extends Controller {
     execution_ajout(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de l'ajout", event.detail);
-        this.buildCustomEvent("app:formulaire:enregistrer", true, true, {});
+        this.buildCustomEvent(this.app_formulaire_enregistrer, true, true, {});
     }
 
 
     execution_modification(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de la modification", event.detail);
-        this.buildCustomEvent("app:formulaire:enregistrer", true, true, {});
+        this.buildCustomEvent(this.app_formulaire_enregistrer, true, true, {});
     }
 
 

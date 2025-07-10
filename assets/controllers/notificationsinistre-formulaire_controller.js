@@ -41,18 +41,19 @@ export default class extends Controller {
     }
 
     initNomEcouteurs() {
-        this.app_enregistrer = "app:formulaire:enregistrer";
+        this.app_liste_principale_ajout_modif_reussi = "app:liste-principale:formulaire_ajout_modification_reussi";
+        this.app_formulaire_enregistrer = "app:formulaire:enregistrer";
     }
 
 
     setEcouteurs() {
-        this.listePrincipale.addEventListener(this.app_enregistrer, this.handleActionEnregistrer.bind(this));
+        this.listePrincipale.addEventListener(this.app_formulaire_enregistrer, this.handleActionEnregistrer.bind(this));
         this.element.addEventListener("click", event => this.ecouterClick(event));
         this.referencepoliceTarget.addEventListener("change", (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
     }
 
     disconnect() {
-        this.listePrincipale.removeEventListener(this.app_enregistrer, this.handleActionEnregistrer.bind(this));
+        this.listePrincipale.removeEventListener(this.app_formulaire_enregistrer, this.handleActionEnregistrer.bind(this));
     }
 
 
@@ -211,7 +212,7 @@ export default class extends Controller {
                 console.log(this.nomcontroleur + " - ICI.");
                 //On émet un évenement pour signaler que l'enreg s'est effectué avec succès
                 this.buildCustomEvent(
-                    "app:liste-principale:formulaire_ajout_modification_reussi", true, true,
+                    this.app_liste_principale_ajout_modif_reussi, true, true,
                     {
                         idObjet: userObject.idNotificationSinistre,
                         code: 0,
@@ -224,7 +225,7 @@ export default class extends Controller {
                 this.updateMessage("Désolé, une erreur s'est produite, merci de vérifier vos données ou votre connexion Internet.");
                 console.error(this.nomcontroleur + " - Réponse d'erreur du serveur :", errorMessage);
                 this.buildCustomEvent(
-                    "app:liste-principale:formulaire_ajout_modification_reussi", true, true,
+                    this.app_liste_principale_ajout_modif_reussi, true, true,
                     {
                         idObjet: -1,
                         code: 1,
