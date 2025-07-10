@@ -8,6 +8,8 @@ export default class extends Controller {
         'btajouter',
         'btmodifier',
         'btsupprimer',
+        'bttoutcocher',
+        'btdevelopper',
     ];
 
     connect() {
@@ -45,8 +47,10 @@ export default class extends Controller {
         if (selection.length >= 1) {
             if (selection.length == 1) {
                 this.btmodifierTarget.style.display = "block";
+                this.btdevelopperTarget.style.display = "block";
             } else {
                 this.btmodifierTarget.style.display = "none";
+                this.btdevelopperTarget.style.display = "none";
             }
             this.btsupprimerTarget.style.display = "block";
         } else {
@@ -75,6 +79,8 @@ export default class extends Controller {
         this.btparametresTarget.style.display = "block";
         this.btajouterTarget.style.display = "block";
         this.btrechargerTarget.style.display = "block";
+        this.bttoutcocherTarget.style.display = "block";
+        // this.btdevelopperTarget.style.display = "block";
     }
 
     /**
@@ -86,6 +92,22 @@ export default class extends Controller {
             "app:liste-principale:quitter", true, true,
             {}
         );
+    }
+
+    action_tout_cocher() {
+        console.log(this.nomControleur + " - Action_tout_cocher");
+        this.buildCustomEvent(
+            "app:liste-principale:tout_cocher", true, true,
+            {}
+        );
+    }
+
+    action_developper() {
+        console.log(this.nomControleur + " - Action Développer");
+        // this.buildCustomEvent(
+        //     "app:liste-principale:quitter", true, true,
+        //     {}
+        // );
     }
 
     action_parametrer() {

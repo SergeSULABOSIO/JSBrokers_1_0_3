@@ -35,7 +35,7 @@ export default class extends Controller {
         this.app_liste_principale_dialogue_ok = "app:liste-principale:dialog_ok";
         this.app_liste_principale_dialogue_no = "app:liste-principale:dialog_no";
         this.app_liste_principale_afficher_message = "app:liste-principale:afficher_message";
-        this.app_liste_principale_edition_reussie = "app:liste-principale:formulaire_ajout_modification_reussi";
+        this.app_liste_principale_tout_cocher = "app:liste-principale:tout_cocher";
 
         this.listePrincipale = document.getElementById("liste");
         this.tabSelectedCheckBoxs = [];
@@ -59,6 +59,7 @@ export default class extends Controller {
         this.listePrincipale.addEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
         this.listePrincipale.addEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
         this.listePrincipale.addEventListener(this.app_liste_principale_edition_reussie, this.handleFormulaireAjoutModifReussi.bind(this));
+        this.listePrincipale.addEventListener(this.app_liste_principale_tout_cocher, this.handleItemToutCocher.bind(this));
     }
 
     disconnect() {
@@ -76,6 +77,7 @@ export default class extends Controller {
         this.listePrincipale.removeEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
         this.listePrincipale.removeEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
         this.listePrincipale.removeEventListener(this.app_liste_principale_edition_reussie, this.handleFormulaireAjoutModifReussi.bind(this));
+        this.listePrincipale.removeEventListener(this.app_liste_principale_tout_cocher, this.handleItemToutCocher.bind(this));
     }
 
     /**
@@ -420,7 +422,16 @@ export default class extends Controller {
       */
     handleItemToutCocher(event) {
         event.stopPropagation();
-        const isChecked = event.target.checked;
+        let isChecked = null;
+        if (event.target.getAttribute("type") == "checkbox") {
+            isChecked = event.target.checked;
+        }else{
+            const btCkBox = document.getElementById("myCheckbox");
+            btCkBox.checked = !btCkBox.checked;
+            isChecked = btCkBox.checked;
+        }
+        console.log("TOUT COCHER !!!!", "isChecked?:" + isChecked);
+        // const isChecked = event.target.checked;
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         this.tabSelectedCheckBoxs = [];
         checkBoxes.forEach(currentCheckBox => {

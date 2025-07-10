@@ -13,6 +13,11 @@ export default class extends Controller {
 
     connect() {
         this.nomControleur = "LISTE-ELEMENT";
+        this.app_liste_element_contextmenu = "contextmenu";
+        this.app_liste_element_click = "click";
+        this.app_liste_element_scroll = "scroll";
+        this.app_liste_element_resize = "resize";
+        this.app_liste_element_developper = "app.liste-element:developper";
         console.log(this.nomControleur + " - Connecté");
         this.detailsVisible = false;
         this.listePrincipale = document.getElementById("liste");
@@ -22,30 +27,30 @@ export default class extends Controller {
     }
 
     setEcouteurs(){
-        this.contextMenuTarget.addEventListener('contextmenu', this.handleContextMenu.bind(this));
-
+        this.contextMenuTarget.addEventListener(this.app_liste_element_contextmenu, this.handleContextMenu.bind(this));
+        this.contextMenuTarget.addEventListener(this.app_liste_element_developper, this.action_afficher_details.bind(this));
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
-        document.addEventListener('click', this.boundHideContextMenu);
-        document.addEventListener('scroll', this.boundHideContextMenu); // Cacher si on scroll
-        window.addEventListener('resize', this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
+        document.addEventListener(this.app_liste_element_click, this.boundHideContextMenu);
+        document.addEventListener(this.app_liste_element_scroll, this.boundHideContextMenu); // Cacher si on scroll
+        window.addEventListener(this.app_liste_element_resize, this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
         // Pour éviter que le clic sur une option du menu ne le cache immédiatement (stopPropagation)
-        this.menu.addEventListener('click', (e) => e.stopPropagation());
-    }
-
-
-    hideContextMenu(){
-        this.menu.style.display = 'none';
-        console.log("CHECHER MENU CONTEXTUEL");
+        this.menu.addEventListener(this.app_liste_element_click, (e) => e.stopPropagation());
     }
     
     disconnect(){
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.contextMenuTarget.removeEventListener('contextmenu', this.handleContextMenu.bind(this));
+        this.contextMenuTarget.removeEventListener(this.app_liste_element_contextmenu, this.handleContextMenu.bind(this));
+        this.contextMenuTarget.removeEventListener(this.app_liste_element_developper, this.action_afficher_details.bind(this));
         if (this.boundHideContextMenu) {
-            document.removeEventListener('click', this.boundHideMenu);
-            document.removeEventListener('scroll', this.boundHideMenu); // Cacher si on scroll
-            window.removeEventListener('resize', this.boundHideMenu); // Cacher si la fenêtre est redimensionnée
+            document.removeEventListener(this.app_liste_element_click, this.boundHideMenu);
+            document.removeEventListener(this.app_liste_element_scroll, this.boundHideMenu); // Cacher si on scroll
+            window.removeEventListener(this.app_liste_element_resize, this.boundHideMenu); // Cacher si la fenêtre est redimensionnée
         }
+    }
+    
+    hideContextMenu(){
+        this.menu.style.display = 'none';
+        console.log("CHECHER MENU CONTEXTUEL");
     }
 
     /**
@@ -128,8 +133,10 @@ export default class extends Controller {
      * 
      * @param {MouseEvent} event 
      */
-    action_afficher_details = (event) => {
+    action_afficher_details(event){
         event.preventDefault(); // Empêche la soumission classique du formulaire
+        event.stopPropagation();
+        console.log("ECOUTEUR DEVELOPPER");
         if (this.detailsVisible == true) {
             this.detailsTarget.style.display = "none";
             this.detailsVisible = false;
