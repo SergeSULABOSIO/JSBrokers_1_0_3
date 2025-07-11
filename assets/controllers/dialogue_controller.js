@@ -41,7 +41,6 @@ export default class extends Controller {
         this.setEcouteurs();
     }
 
-
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         this.listePrincipale.addEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
@@ -117,7 +116,6 @@ export default class extends Controller {
     }
 
     initBoiteDeDialogue() {
-        // Initialiser la modal en désactivant le backdrop click
         this.boite = new Modal(this.boiteTarget, {
             backdrop: 'static', // ou true si vous voulez un backdrop sans fermeture au clic
             keyboard: false // Désactive la fermeture par la touche Échap si vous le souhaitez
