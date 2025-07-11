@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_RESULTAT_SUCCESS, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -24,21 +25,6 @@ export default class extends Controller {
 
 
     init() {
-        this.app_liste_principale_ajouter = "app:liste-principale:ajouter";
-        this.app_liste_principale_cocher = "app:liste-principale:cocher";
-        this.app_liste_principale_quitter = "app:liste-principale:quitter";
-        this.app_liste_principale_parametrer = "app:liste-principale:parametrer";
-        this.app_liste_principale_recharger = "app:liste-principale:recharger";
-        this.app_liste_principale_modifier = "app:liste-principale:modifier";
-        this.app_liste_principale_supprimer = "app:liste-principale:supprimer";
-        this.app_liste_principale_selection = "app:liste-principale:selection";
-        this.app_liste_principale_dialogue_ok = "app:liste-principale:dialog_ok";
-        this.app_liste_principale_dialogue_no = "app:liste-principale:dialog_no";
-        this.app_liste_principale_afficher_message = "app:liste-principale:afficher_message";
-        this.app_liste_principale_tout_cocher = "app:liste-principale:tout_cocher";
-        this.app_formulaire_enregistrer = "app:formulaire:enregistrer";
-        this.app_liste_principale_ajout_modif_reussi = "app:liste-principale:formulaire_ajout_modification_reussi";
-
         this.listePrincipale = document.getElementById("liste");
         this.tabSelectedCheckBoxs = [];
         this.initToolTips();
@@ -49,37 +35,37 @@ export default class extends Controller {
 
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.addEventListener(this.app_liste_principale_ajouter, this.handleItemAjouter.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_cocher, this.handleItemCocher.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_quitter, this.handleQuitter.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_parametrer, this.handleParametrer.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_recharger, this.handleRecharger.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_modifier, this.handleItemModifier.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_supprimer, this.handleItemSupprimer.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_selection, this.handleItemSelectionner.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_dialogue_ok, this.handleDialog_ok.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_ajout_modif_reussi, this.handleFormulaireAjoutModifReussi.bind(this));
-        this.listePrincipale.addEventListener(this.app_liste_principale_tout_cocher, this.handleItemToutCocher.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
+        this.listePrincipale.addEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
+        this.listePrincipale.addEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
+        this.listePrincipale.addEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.removeEventListener(this.app_liste_principale_ajouter, this.handleItemAjouter.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_cocher, this.handleItemCocher.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_quitter, this.handleQuitter.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_parametrer, this.handleParametrer.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_recharger, this.handleRecharger.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_modifier, this.handleItemModifier.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_supprimer, this.handleItemSupprimer.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_selection, this.handleItemSelectionner.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_dialogue_ok, this.handleDialog_ok.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_dialogue_no, this.handleDialog_no.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_afficher_message, this.handleDisplayMessage.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_ajout_modif_reussi, this.handleFormulaireAjoutModifReussi.bind(this));
-        this.listePrincipale.removeEventListener(this.app_liste_principale_tout_cocher, this.handleItemToutCocher.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
     }
 
     /**
@@ -90,14 +76,11 @@ export default class extends Controller {
         const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - ENREGISTREMENT REUSSI - On recharge la liste");
         if (code == 0) { //Ok(0), Erreur(1)
-            //On demande de fermer la boite de dialogue
-            this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
-            //On recharge la liste principale
+            this.buildCustomEvent(EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
             this.outils_recharger(event);
         } else {
             this.updateMessage(code + ": " + message);
         }
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
 
@@ -110,20 +93,15 @@ export default class extends Controller {
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data);
         //ACTION AJOUT = 0
         if (action == 0) {
-            //On exécute la suppression des données.
             this.execution_ajout(event);
         }
         if (action == 1) {
-            //On exécute la suppression des données.
             this.execution_modification(event);
         }
         //ACTION SUPPRESSION = 2
         if (action == 2) {
-            //On exécute la suppression des données.
             this.execution_suppression(event);
         }
-
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
 
@@ -131,14 +109,14 @@ export default class extends Controller {
     execution_ajout(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de l'ajout", event.detail);
-        this.buildCustomEvent(this.app_formulaire_enregistrer, true, true, {});
+        this.buildCustomEvent(EVEN_ACTION_ENREGISTRER, true, true, {});
     }
 
 
     execution_modification(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de la modification", event.detail);
-        this.buildCustomEvent(this.app_formulaire_enregistrer, true, true, {});
+        this.buildCustomEvent(EVEN_ACTION_ENREGISTRER, true, true, {});
     }
 
 
@@ -159,7 +137,7 @@ export default class extends Controller {
                 console.log(this.nomControleur + " - Réponse du serveur: ", serverJsonObject);
                 if (serverJsonObject.reponse == "Ok") {
                     //On demande de fermer la boite de dialogue
-                    this.buildCustomEvent("app:dialogue:fermer_boite", true, true, {});
+                    this.buildCustomEvent(EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
                     //On actualise la liste sans consulter le serveur
                     serverJsonObject.deletedIds.forEach(deletedId => {
                         let elementToDelete = document.getElementById("liste_row_" + deletedId);
@@ -197,9 +175,7 @@ export default class extends Controller {
      */
     action_afficherMessage(titre, textMessage) {
         this.buildCustomEvent(
-            "app:liste-principale:afficher_message",
-            true,
-            true,
+            EVEN_ACTION_AFFICHER_MESSAGE, true, true,
             {
                 titre: titre,
                 message: textMessage,
@@ -227,7 +203,6 @@ export default class extends Controller {
     handleItemSelectionner(event) {
         const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
-
         let currentSelectedCheckBoxes = new Set(this.tabSelectedCheckBoxs);
         if (isChecked == true) {
             currentSelectedCheckBoxes.add(String(selectedCheckbox));
@@ -237,7 +212,6 @@ export default class extends Controller {
         this.tabSelectedCheckBoxs = Array.from(currentSelectedCheckBoxes);
         this.updateMessageSelectedCheckBoxes();
         this.publierSelection();
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
     }
 
@@ -249,11 +223,9 @@ export default class extends Controller {
     handleItemAjouter(event) {
         const { titre } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Titre: " + titre);
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
-
         console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        this.buildCustomEvent("app:liste-principale:dialogueCanAjouter", true, true,
+        this.buildCustomEvent(EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
             {
                 titre: "Ajout - " + this.rubriqueValue,
                 idObjet: -1,
@@ -275,11 +247,9 @@ export default class extends Controller {
     handleItemModifier(event) {
         const { titre } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Titre: " + titre + ", Selected checkbox: " + this.tabSelectedCheckBoxs);
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
-
         console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        this.buildCustomEvent("app:liste-principale:dialogueCanAjouter", true, true,
+        this.buildCustomEvent(EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
             {
                 titre: "Edition - " + this.rubriqueValue,
                 idObjet: this.tabSelectedCheckBoxs[0].split("check_")[1],
@@ -300,9 +270,7 @@ export default class extends Controller {
      */
     handleQuitter(event) {
         console.log(this.nomControleur + " - EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
-
         this.action_afficherMessage("Fermeture", "Redirection à la page d'acceuil...");
         window.location.href = "/admin/entreprise";
     }
@@ -313,9 +281,7 @@ export default class extends Controller {
      */
     handleParametrer(event) {
         console.log(this.nomControleur + " - EVENEMENT RECU: PAREMETRER CETTE LISTE");
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
-        
         this.action_afficherMessage("Paramètres", "Redirection vers la page des paramètres du compte...");
         window.location.href = "/register";
     }
@@ -326,9 +292,7 @@ export default class extends Controller {
      */
     handleRecharger(event) {
         console.log(this.nomControleur + " - EVENEMENT RECU: RECHARGER CETTE LISTE");
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         event.stopPropagation();
-        //On lance le rechargement de la page / liste
         this.outils_recharger(event);
     }
 
@@ -344,11 +308,8 @@ export default class extends Controller {
         if (this.tabSelectedCheckBoxs.length > 1) {
             question = "Etes-vous sûr de vouloir supprimer ces " + this.tabSelectedCheckBoxs.length + " élements séléctionnés?";
         }
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
         console.log(this.nomControleur + " - On lance un evenement dialogueCanSupprimer");
-        this.buildCustomEvent("app:liste-principale:dialogueCanSupprimer",
-            true,
-            true,
+        this.buildCustomEvent(EVEN_QUESTION_SUPPRIMER, true, true,
             {
                 titre: event.detail.titre,
                 message: question,
@@ -364,18 +325,15 @@ export default class extends Controller {
      */
     handleItemCocher(event) {
         const { idCheckBox } = event.detail; // Récupère les données de l'événement
-
         this.tabSelectedCheckBoxs = [];
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         checkBoxes.forEach(currentCheckBox => {
             currentCheckBox.checked = false;
         });
-
         var checkBox = document.getElementById(idCheckBox);
         checkBox.checked = true;
         this.tabSelectedCheckBoxs.push(idCheckBox);
         console.log(this.nomControleur + " - EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
-
         this.updateMessageSelectedCheckBoxes();
         this.publierSelection();
         event.stopPropagation();
@@ -385,9 +343,7 @@ export default class extends Controller {
     publierSelection() {
         console.log(this.nomControleur + " - Action_publier séléction - lancée.");
         this.buildCustomEvent(
-            "app:liste-principale:publier-selection",
-            true,
-            true,
+            EVEN_ACTION_NOTIFIER_SELECTION, true, true,
             {
                 selection: this.tabSelectedCheckBoxs,
             }
@@ -432,7 +388,7 @@ export default class extends Controller {
             btCkBox.checked = !btCkBox.checked;
             isChecked = btCkBox.checked;
         }
-        console.log("TOUT COCHER !!!!", "isChecked?:" + isChecked);
+        console.log(this.nomControleur + " - TOUT COCHER !!!!", "isChecked?:" + isChecked);
         // const isChecked = event.target.checked;
         const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
         this.tabSelectedCheckBoxs = [];

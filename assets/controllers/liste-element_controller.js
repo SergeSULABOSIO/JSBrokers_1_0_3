@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { EVEN_ACTION_COCHER, EVEN_ACTION_MODIFIER, EVEN_ACTION_SUPPRIMER } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -50,7 +51,7 @@ export default class extends Controller {
     
     hideContextMenu(){
         this.menu.style.display = 'none';
-        console.log("CHECHER MENU CONTEXTUEL");
+        console.log(this.nomControleur + " - CHECHER MENU CONTEXTUEL");
     }
 
     /**
@@ -58,39 +59,29 @@ export default class extends Controller {
      */
     handleContextMenu(event) {
         event.preventDefault(); // Empêche le menu contextuel natif du navigateur d'apparaître
-
-        //On doit cocher cet élément
         this.action_cocher();
-
         this.menu.style.display = 'block'; // Affiche le menu
-
         // Positionne le menu près du curseur de la souris, en s'assurant qu'il reste dans la fenêtre
         let menuX = event.clientX;
         let menuY = event.clientY;
-
         const menuWidth = this.menu.offsetWidth;
         const menuHeight = this.menu.offsetHeight;
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
-
         if (menuX + menuWidth > windowWidth) {
             menuX = windowWidth - menuWidth - 5; // Décale à gauche si trop à droite
         }
         if (menuY + menuHeight > windowHeight) {
             menuY = windowHeight - menuHeight - 5; // Décale vers le haut si trop en bas
         }
-
         this.menu.style.left = `${menuX}px`;
         this.menu.style.top = `${menuY}px`;
-
         console.log(this.nomControleur + " ID " + this.idobjetValue + " - CLICK DROIT - PROPAGATION DE L'EVENEMENT VERS LA LISTE PRINCIPALE.", "MenuX: " + menuX, "MenuY: " + menuY, new Date());
     }
 
     action_cocher(){
         console.log(this.nomControleur + " - Action_cocher ", "check_" + this.idobjetValue);
-        this.buildCustomEvent("app:liste-principale:cocher", 
-            true, 
-            true,
+        this.buildCustomEvent(EVEN_ACTION_COCHER, true, true,
             {
                 idCheckBox: "check_" + this.idobjetValue,
             }
@@ -99,9 +90,7 @@ export default class extends Controller {
 
     action_supprimer() {
         console.log(this.nomControleur + " - Action_supprimer ", this.idobjetValue);
-        this.buildCustomEvent("app:liste-principale:supprimer", 
-            true, 
-            true,
+        this.buildCustomEvent(EVEN_ACTION_SUPPRIMER, true, true,
             {
                 titre: "Suppression",
             }
@@ -110,9 +99,7 @@ export default class extends Controller {
 
     action_modifier() {
         console.log(this.nomControleur + " - Action_modifier ", this.idobjetValue);
-        this.buildCustomEvent("app:liste-principale:modifier", 
-            true, 
-            true,
+        this.buildCustomEvent(EVEN_ACTION_MODIFIER, true, true,
             {
                 titre: "Modification",
             }
@@ -136,7 +123,7 @@ export default class extends Controller {
     action_afficher_details(event){
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.stopPropagation();
-        console.log("ECOUTEUR DEVELOPPER");
+        console.log(this.nomControleur + " - ECOUTEUR DEVELOPPER");
         if (this.detailsVisible == true) {
             this.detailsTarget.style.display = "none";
             this.detailsVisible = false;

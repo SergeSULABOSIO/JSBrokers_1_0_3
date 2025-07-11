@@ -1,6 +1,6 @@
 // assets/controllers/dialogue_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { defineIcone, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
+import { defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 export default class extends Controller {
@@ -28,20 +28,15 @@ export default class extends Controller {
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.listePrincipale.removeEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
-        this.listePrincipale.removeEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
-        this.listePrincipale.removeEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
-        this.listePrincipale.removeEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
     }
 
 
     init() {
-        this.app_fermer_boite = "app:dialogue:fermer_boite";
-        this.app_can_supprimer = "app:liste-principale:dialogueCanSupprimer";
-        this.app_can_ajouter = "app:liste-principale:dialogueCanAjouter";
-        this.app_afficher_message = "app:liste-principale:afficher_message";
         this.listePrincipale = document.getElementById("liste");
-        // Initialisation
         this.initBoiteDeDialogue();
         this.setEcouteurs();
     }
@@ -49,10 +44,10 @@ export default class extends Controller {
 
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.addEventListener(this.app_can_supprimer, this.handleItemCanSupprimer.bind(this));
-        this.listePrincipale.addEventListener(this.app_can_ajouter, this.handleItemCanAjouter.bind(this));
-        this.listePrincipale.addEventListener(this.app_fermer_boite, this.handleFermerBoite.bind(this));
-        this.listePrincipale.addEventListener(this.app_afficher_message, this.handleDisplayMessage.bind(this));
+        this.listePrincipale.addEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
     }
 
     /**
@@ -162,7 +157,7 @@ export default class extends Controller {
         event.preventDefault();
         console.log(this.nomControleur + " - DIALOGUE FERMER", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
         this.buildCustomEvent(
-            "app:liste-principale:dialog_no", true, true,
+            EVEN_QUESTION_NO, true, true,
             {
                 titre: this.titre,
                 message: this.message,
@@ -181,7 +176,7 @@ export default class extends Controller {
      */
     action_afficherMessage(titre, textMessage) {
         this.buildCustomEvent(
-            "app:liste-principale:afficher_message", true, true,
+            EVEN_ACTION_AFFICHER_MESSAGE, true, true,
             {
                 titre: titre,
                 message: textMessage,
@@ -197,7 +192,7 @@ export default class extends Controller {
         event.preventDefault();
         console.log(this.nomControleur + " - DIALOGUE OK", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
         this.buildCustomEvent(
-            "app:liste-principale:dialog_ok", true, true,
+            EVEN_QUESTION_OK, true, true,
             {
                 titre: this.titre,
                 message: this.message,

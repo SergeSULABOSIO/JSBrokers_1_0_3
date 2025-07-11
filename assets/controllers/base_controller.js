@@ -123,3 +123,23 @@ export function saveCookie(nom, valeur) {
     dateExpiration.setDate(dateExpiration.getDate() + 7)
     document.cookie = nom + "=9111986" + valeur + "; expires=" + dateExpiration.toUTCString + "; path=/";
 }
+
+export const EVEN_ACTION_DIALOGUE_OUVRIR = "app:liste-principale:dialogueCanAjouter";
+export const EVEN_ACTION_DIALOGUE_FERMER = "app:dialogue:fermer_boite";
+export const EVEN_ACTION_AJOUTER = "app:liste-principale:ajouter";
+export const EVEN_ACTION_NOTIFIER_SELECTION = "app:liste-principale:publier-selection";
+export const EVEN_ACTION_COCHER = "app:liste-principale:cocher";
+export const EVEN_ACTION_QUITTER = "app:liste-principale:quitter";
+export const EVEN_ACTION_PARAMETRER = "app:liste-principale:parametrer";
+export const EVEN_ACTION_RECHARGER = "app:liste-principale:recharger";
+export const EVEN_ACTION_MODIFIER = "app:liste-principale:modifier";
+export const EVEN_ACTION_SUPPRIMER = "app:liste-principale:supprimer";
+export const EVEN_QUESTION_SUPPRIMER = "app:liste-principale:dialogueCanSupprimer";
+export const EVEN_ACTION_SELECTIONNER = "app:liste-principale:selection";
+export const EVEN_ACTION_AFFICHER_MESSAGE = "app:liste-principale:afficher_message";
+export const EVEN_ACTION_COCHER_TOUT = "app:liste-principale:tout_cocher";
+export const EVEN_ACTION_ENREGISTRER = "app:formulaire:enregistrer";
+export const EVEN_QUESTION_OK = "app:liste-principale:dialog_ok";
+export const EVEN_QUESTION_NO = "app:liste-principale:dialog_no";
+export const EVEN_RESULTAT_SUCCESS = "app:liste-principale:formulaire_ajout_modification_reussi";
+export const EVEN_RESULTAT_ECHEC = "app:liste-principale:formulaire_ajout_modification_echoue";
