@@ -127,7 +127,6 @@ export default class extends Controller {
         fetch("/admin/avenant/viewAvenantsByReferencePolice/" + referencePolice)
             .then(response => response.text()) //.json()
             .then(data => {
-                this.action_afficherMessage("Avenant", "Avenant trouvé.");
                 this.viewavenantsTarget.innerHTML = data;
             })
             .catch(errorMessage => {
