@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, defineIcone, EVEN_ACTION_CHANGE, EVEN_ACTION_CLICK, EVEN_ACTION_ENREGISTRER, EVEN_CODE_RESULTAT_ECHEC, EVEN_CODE_RESULTAT_OK, EVEN_RESULTAT_ECHEC, EVEN_RESULTAT_SUCCESS, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
+import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_CHANGE, EVEN_ACTION_CLICK, EVEN_ACTION_ENREGISTRER, EVEN_CODE_RESULTAT_ECHEC, EVEN_CODE_RESULTAT_OK, EVEN_RESULTAT_ECHEC, EVEN_RESULTAT_SUCCESS, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 
 export default class extends Controller {
     static targets = [
@@ -122,14 +122,16 @@ export default class extends Controller {
      * @param {Number} referencePolice 
      */
     updateViewAvenants(referencePolice) {
+        this.action_afficherMessage("Avenant", "Recherche des avenants. Veuillez patienter...");
         this.viewavenantsTarget.textContent = "Actualisation des avenants...";
         fetch("/admin/avenant/viewAvenantsByReferencePolice/" + referencePolice)
             .then(response => response.text()) //.json()
             .then(data => {
-                // console.log(data);
+                this.action_afficherMessage("Avenant", "Avenant trouvé.");
                 this.viewavenantsTarget.innerHTML = data;
             })
             .catch(errorMessage => {
+                this.action_afficherMessage("Avenant", "Avenant introuvable.");
                 console.error(this.nomcontroleur + " - Réponse d'erreur du serveur :", errorMessage);
             });
     }
@@ -142,6 +144,7 @@ export default class extends Controller {
     enregistrerNotificationSinistre = (event) => {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.target.disabled = true;
+        this.action_afficherMessage("Enregistrement", "Veuillez patienter...");
         const isNew = this.idnotificationsinistreValue == 0 ? true : false;
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + (this.idnotificationsinistreValue == 0 ? '-1' : this.idnotificationsinistreValue);
@@ -164,7 +167,7 @@ export default class extends Controller {
                     userObject.nbDocuments,
                 );
                 this.updateViewAvenants(userObject.referencePolice);
-
+                this.action_afficherMessage("Prêt", "Enregistré avec succès!");
                 console.log(this.nomcontroleur + " - ICI.");
                 //On émet un évenement pour signaler que l'enreg s'est effectué avec succès
                 buildCustomEventForElement(this.listePrincipale, EVEN_RESULTAT_SUCCESS, true, true,
@@ -187,6 +190,21 @@ export default class extends Controller {
                 );
             });
     }
+
+
+    /**
+         * 
+         * @param {String} titre 
+         * @param {String} textMessage 
+         */
+        action_afficherMessage(titre, textMessage) {
+            buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_AFFICHER_MESSAGE, true, true,
+                {
+                    titre: titre,
+                    message: textMessage,
+                }
+            );
+        }
 
 
     /**
