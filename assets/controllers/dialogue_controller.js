@@ -198,7 +198,6 @@ export default class extends Controller {
                 data: this.tabSelectedCheckBoxes,
             }
         );
-        // this.closeDialogue();
     }
 
 

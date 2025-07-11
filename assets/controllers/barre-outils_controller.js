@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MODIFIER, EVEN_ACTION_NOTIFIER_SELECTION, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SUPPRIMER } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -20,10 +21,7 @@ export default class extends Controller {
 
     init() {
         this.tabSelectedCheckBoxs = [];
-        this.app_liste_element_developper = "app:liste-element:developper";
         this.listePrincipale = document.getElementById("liste");
-        this.controleurDeLaListePrincipale = this.getControleurListePrincipale();
-        //On défini les écouteurs ici
         this.initialiserBarreDoutils();
         this.initToolTips();
         this.ecouteurs();
@@ -31,12 +29,12 @@ export default class extends Controller {
 
     ecouteurs() {
         console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
-        this.listePrincipale.addEventListener("app:liste-principale:publier-selection", this.handleSelectedItems.bind(this));
+        this.listePrincipale.addEventListener(EVEN_ACTION_NOTIFIER_SELECTION, this.handleSelectedItems.bind(this));
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.listePrincipale.removeEventListener("app:liste-principale:publier-selection", this.handleSelectedItems.bind(this));
+        this.listePrincipale.removeEventListener(EVEN_ACTION_NOTIFIER_SELECTION, this.handleSelectedItems.bind(this));
     }
 
     /**
@@ -64,13 +62,6 @@ export default class extends Controller {
         event.stopPropagation();
     }
 
-    getControleurListePrincipale() {
-        if (this.listePrincipale) {
-            return this.application.getControllerForElementAndIdentifier(this.listePrincipale, "liste-principale");
-        }
-        return null;
-    }
-
     initToolTips() {
         //On initialise le tooltips
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -91,69 +82,43 @@ export default class extends Controller {
      */
     action_quitte() {
         console.log(this.nomControleur + " - Action_Quitter");
-        this.buildCustomEvent(
-            "app:liste-principale:quitter", true, true,
-            {}
-        );
+        this.buildCustomEvent(EVEN_ACTION_QUITTER, true, true, {});
     }
 
     action_tout_cocher() {
         console.log(this.nomControleur + " - Action_tout_cocher");
-        this.buildCustomEvent(
-            "app:liste-principale:tout_cocher", true, true,
-            {}
-        );
+        this.buildCustomEvent(EVEN_ACTION_COCHER_TOUT, true, true, {});
     }
 
     action_developper() {
         console.log(this.nomControleur + " - Action Développer");
         let listElement = document.getElementById("liste_row_" + this.tabSelectedCheckBoxs[0].split("check_")[1]);
-        this.buildCustomEventForElement(listElement, this.app_liste_element_developper, true, true,
-            {}
-        );
+        this.buildCustomEventForElement(listElement, EVEN_ACTION_DEVELOPPER, true, true, {});
     }
 
     action_parametrer() {
         console.log(this.nomControleur + " - Action_Parametrer");
-        this.buildCustomEvent(
-            "app:liste-principale:parametrer", true, true,
-            {}
-        );
+        this.buildCustomEvent(EVEN_ACTION_PARAMETRER, true, true, {});
     }
 
     action_recharger() {
         console.log(this.nomControleur + " - Action_Recharger");
-        this.buildCustomEvent(
-            "app:liste-principale:recharger", true, true,
-            {}
-        );
+        this.buildCustomEvent(EVEN_ACTION_RECHARGER, true, true, {});
     }
 
     action_ajouter() {
         console.log(this.nomControleur + " - Action_Ajouter");
-        this.buildCustomEvent("app:liste-principale:ajouter", true, true,
-            {
-                titre: "Nouvelle notification",
-            }
-        );
+        this.buildCustomEvent(EVEN_ACTION_AJOUTER, true, true, {titre: "Nouvelle notification"});
     }
 
     action_modifier() {
         console.log(this.nomControleur + " - Action_Modifier");
-        this.buildCustomEvent("app:liste-principale:modifier", true, true,
-            {
-                titre: "Modification de la notification",
-            }
-        );
+        this.buildCustomEvent(EVEN_ACTION_MODIFIER, true, true, {itre: "Modification de la notification"});
     }
 
     action_supprimer() {
         console.log(this.nomControleur + " - Action_Supprimer");
-        this.buildCustomEvent("app:liste-principale:supprimer", true, true,
-            {
-                titre: "Suppression ",
-            }
-        );
+        this.buildCustomEvent(EVEN_ACTION_SUPPRIMER, true, true, {titre: "Suppression "});
     }
 
     buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {

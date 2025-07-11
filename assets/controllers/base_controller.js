@@ -126,8 +126,13 @@ export function saveCookie(nom, valeur) {
 
 export const EVEN_ACTION_DIALOGUE_OUVRIR = "app:liste-principale:dialogueCanAjouter";
 export const EVEN_ACTION_DIALOGUE_FERMER = "app:dialogue:fermer_boite";
+export const EVEN_ACTION_MENU_CONTEXTUEL = "contextmenu";
+export const EVEN_ACTION_RESIZE = "resize";
+export const EVEN_ACTION_SCROLL = "scroll";
+export const EVEN_ACTION_CLICK = "click";
 export const EVEN_ACTION_AJOUTER = "app:liste-principale:ajouter";
 export const EVEN_ACTION_NOTIFIER_SELECTION = "app:liste-principale:publier-selection";
+export const EVEN_ACTION_DEVELOPPER = "app:liste-element:developper";
 export const EVEN_ACTION_COCHER = "app:liste-principale:cocher";
 export const EVEN_ACTION_QUITTER = "app:liste-principale:quitter";
 export const EVEN_ACTION_PARAMETRER = "app:liste-principale:parametrer";
