@@ -73,7 +73,6 @@ export default class extends Controller {
         this.btajouterTarget.style.display = "block";
         this.btrechargerTarget.style.display = "block";
         this.bttoutcocherTarget.style.display = "block";
-        // this.btdevelopperTarget.style.display = "block";
     }
 
     /**
