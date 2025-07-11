@@ -151,6 +151,7 @@ export const EVEN_ACTION_MENU_CONTEXTUEL = "contextmenu";
 export const EVEN_ACTION_RESIZE = "resize";
 export const EVEN_ACTION_SCROLL = "scroll";
 export const EVEN_ACTION_CLICK = "click";
+export const EVEN_ACTION_CHANGE = "change";
 export const EVEN_ACTION_AJOUTER = "app:liste-principale:ajouter";
 export const EVEN_ACTION_NOTIFIER_SELECTION = "app:liste-principale:publier-selection";
 export const EVEN_ACTION_DEVELOPPER = "app:liste-element:developper";
