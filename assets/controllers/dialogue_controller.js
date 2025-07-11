@@ -1,6 +1,6 @@
 // assets/controllers/dialogue_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
+import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 export default class extends Controller {
@@ -154,8 +154,7 @@ export default class extends Controller {
     action_fermer(event) {
         event.preventDefault();
         console.log(this.nomControleur + " - DIALOGUE FERMER", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
-        this.buildCustomEvent(
-            EVEN_QUESTION_NO, true, true,
+        buildCustomEventForElement(this.listePrincipale, EVEN_QUESTION_NO, true, true,
             {
                 titre: this.titre,
                 message: this.message,
@@ -173,8 +172,7 @@ export default class extends Controller {
      * @param {String} textMessage 
      */
     action_afficherMessage(titre, textMessage) {
-        this.buildCustomEvent(
-            EVEN_ACTION_AFFICHER_MESSAGE, true, true,
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_AFFICHER_MESSAGE, true, true,
             {
                 titre: titre,
                 message: textMessage,
@@ -189,8 +187,7 @@ export default class extends Controller {
     action_accepter(event) {
         event.preventDefault();
         console.log(this.nomControleur + " - DIALOGUE OK", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
-        this.buildCustomEvent(
-            EVEN_QUESTION_OK, true, true,
+        buildCustomEventForElement(this.listePrincipale, EVEN_QUESTION_OK, true, true,
             {
                 titre: this.titre,
                 message: this.message,
@@ -198,20 +195,5 @@ export default class extends Controller {
                 data: this.tabSelectedCheckBoxes,
             }
         );
-    }
-
-
-    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
-        const event = new CustomEvent(nomEvent, {
-            bubbles: canBubble, composed: canCompose, detail: detailTab
-        });
-        this.listePrincipale.dispatchEvent(event);
-    }
-
-    getControleurListePrincipale() {
-        if (this.listePrincipale) {
-            return this.application.getControllerForElementAndIdentifier(this.listePrincipale, "liste-principale");
-        }
-        return null;
     }
 }

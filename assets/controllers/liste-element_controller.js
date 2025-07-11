@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_RESIZE, EVEN_ACTION_SCROLL, EVEN_ACTION_SUPPRIMER } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_RESIZE, EVEN_ACTION_SCROLL, EVEN_ACTION_SUPPRIMER } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -76,38 +76,17 @@ export default class extends Controller {
 
     action_cocher(){
         console.log(this.nomControleur + " - Action_cocher ", "check_" + this.idobjetValue);
-        this.buildCustomEvent(EVEN_ACTION_COCHER, true, true,
-            {
-                idCheckBox: "check_" + this.idobjetValue,
-            }
-        );
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_COCHER, true, true,{idCheckBox: "check_" + this.idobjetValue});
     }
 
     action_supprimer() {
         console.log(this.nomControleur + " - Action_supprimer ", this.idobjetValue);
-        this.buildCustomEvent(EVEN_ACTION_SUPPRIMER, true, true,
-            {
-                titre: "Suppression",
-            }
-        );
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_SUPPRIMER, true, true, {titre: "Suppression"});
     }
 
     action_modifier() {
         console.log(this.nomControleur + " - Action_modifier ", this.idobjetValue);
-        this.buildCustomEvent(EVEN_ACTION_MODIFIER, true, true,
-            {
-                titre: "Modification",
-            }
-        );
-    }
-
-    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
-        const event = new CustomEvent(nomEvent, {
-            bubbles: canBubble,
-            composed: canCompose,
-            detail: detailTab
-        });
-        this.listePrincipale.dispatchEvent(event);
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_MODIFIER, true, true, {titre: "Modification"});
     }
 
 

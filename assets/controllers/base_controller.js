@@ -140,6 +140,11 @@ export function buildCustomEventForElement(htmlElement, nomEvent, canBubble, can
     htmlElement.dispatchEvent(event);
 }
 
+export const EVEN_CODE_ACTION_AJOUT = 0;
+export const EVEN_CODE_ACTION_MODIFICATION = 1;
+export const EVEN_CODE_ACTION_SUPPRESSION = 2;
+export const EVEN_CODE_RESULTAT_OK = 0;
+export const EVEN_CODE_RESULTAT_ECHEC = 1;
 export const EVEN_ACTION_DIALOGUE_OUVRIR = "app:liste-principale:dialogueCanAjouter";
 export const EVEN_ACTION_DIALOGUE_FERMER = "app:dialogue:fermer_boite";
 export const EVEN_ACTION_MENU_CONTEXTUEL = "contextmenu";

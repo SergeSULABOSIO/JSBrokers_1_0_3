@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_RESULTAT_SUCCESS, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION } from './base_controller.js';
+import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_RESULTAT_SUCCESS, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTANT_OK, EVEN_CODE_RESULTAT_OK } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -75,8 +75,8 @@ export default class extends Controller {
     handleFormulaireAjoutModifReussi(event) {
         const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - ENREGISTREMENT REUSSI - On recharge la liste");
-        if (code == 0) { //Ok(0), Erreur(1)
-            this.buildCustomEvent(EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
+        if (code == EVEN_CODE_RESULTAT_OK) { //Ok(0), Erreur(1)
+            buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
             this.outils_recharger(event);
         } else {
             this.updateMessage(code + ": " + message);
@@ -92,14 +92,14 @@ export default class extends Controller {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data);
         //ACTION AJOUT = 0
-        if (action == 0) {
+        if (action == EVEN_CODE_ACTION_AJOUT) {
             this.execution_ajout(event);
         }
-        if (action == 1) {
+        if (action == EVEN_CODE_ACTION_MODIFICATION) {
             this.execution_modification(event);
         }
         //ACTION SUPPRESSION = 2
-        if (action == 2) {
+        if (action == EVEN_CODE_ACTION_SUPPRESSION) {
             this.execution_suppression(event);
         }
         event.stopPropagation();
@@ -109,14 +109,14 @@ export default class extends Controller {
     execution_ajout(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de l'ajout", event.detail);
-        this.buildCustomEvent(EVEN_ACTION_ENREGISTRER, true, true, {});
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_ENREGISTRER, true, true, {});
     }
 
 
     execution_modification(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Exécution de la modification", event.detail);
-        this.buildCustomEvent(EVEN_ACTION_ENREGISTRER, true, true, {});
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_ENREGISTRER, true, true, {});
     }
 
 
@@ -137,7 +137,7 @@ export default class extends Controller {
                 console.log(this.nomControleur + " - Réponse du serveur: ", serverJsonObject);
                 if (serverJsonObject.reponse == "Ok") {
                     //On demande de fermer la boite de dialogue
-                    this.buildCustomEvent(EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
+                    buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
                     //On actualise la liste sans consulter le serveur
                     serverJsonObject.deletedIds.forEach(deletedId => {
                         let elementToDelete = document.getElementById("liste_row_" + deletedId);
@@ -174,8 +174,7 @@ export default class extends Controller {
      * @param {String} textMessage 
      */
     action_afficherMessage(titre, textMessage) {
-        this.buildCustomEvent(
-            EVEN_ACTION_AFFICHER_MESSAGE, true, true,
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_AFFICHER_MESSAGE, true, true,
             {
                 titre: titre,
                 message: textMessage,
@@ -225,11 +224,11 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Titre: " + titre);
         event.stopPropagation();
         console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        this.buildCustomEvent(EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
             {
                 titre: "Ajout - " + this.rubriqueValue,
                 idObjet: -1,
-                action: 0, //Ajout
+                action: EVEN_CODE_ACTION_AJOUT, //Ajout
                 entreprise: this.identrepriseValue,
                 utilisateur: this.utilisateurValue,
                 rubrique: this.rubriqueValue,
@@ -249,11 +248,11 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Titre: " + titre + ", Selected checkbox: " + this.tabSelectedCheckBoxs);
         event.stopPropagation();
         console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        this.buildCustomEvent(EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
             {
                 titre: "Edition - " + this.rubriqueValue,
                 idObjet: this.tabSelectedCheckBoxs[0].split("check_")[1],
-                action: 1, // Modification
+                action: EVEN_CODE_ACTION_MODIFICATION, // Modification
                 entreprise: this.identrepriseValue,
                 utilisateur: this.utilisateurValue,
                 rubrique: this.rubriqueValue,
@@ -309,7 +308,7 @@ export default class extends Controller {
             question = "Etes-vous sûr de vouloir supprimer ces " + this.tabSelectedCheckBoxs.length + " élements séléctionnés?";
         }
         console.log(this.nomControleur + " - On lance un evenement dialogueCanSupprimer");
-        this.buildCustomEvent(EVEN_QUESTION_SUPPRIMER, true, true,
+        buildCustomEventForElement(this.listePrincipale, EVEN_QUESTION_SUPPRIMER, true, true,
             {
                 titre: event.detail.titre,
                 message: question,
@@ -342,22 +341,9 @@ export default class extends Controller {
 
     publierSelection() {
         console.log(this.nomControleur + " - Action_publier séléction - lancée.");
-        this.buildCustomEvent(
-            EVEN_ACTION_NOTIFIER_SELECTION, true, true,
-            {
-                selection: this.tabSelectedCheckBoxs,
-            }
-        );
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_NOTIFIER_SELECTION, true, true, {selection: this.tabSelectedCheckBoxs});
     }
 
-    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
-        const event = new CustomEvent(nomEvent, {
-            bubbles: canBubble,
-            composed: canCompose,
-            detail: detailTab
-        });
-        this.listePrincipale.dispatchEvent(event);
-    }
 
     initToolTips() {
         //On initialise le tooltips
@@ -457,15 +443,5 @@ export default class extends Controller {
                 this.updateMessageSelectedCheckBoxes();
                 this.publierSelection();
             });
-    }
-
-
-    getDialogueController() {
-        const liste = document.getElementById("liste");
-        // Vérifie que l'élément 'form' est bien défini comme target
-        if (liste) {
-            return this.application.getControllerForElementAndIdentifier(liste, "dialogue");
-        }
-        return null;
     }
 }
