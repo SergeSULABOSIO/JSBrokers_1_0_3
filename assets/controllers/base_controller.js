@@ -124,6 +124,22 @@ export function saveCookie(nom, valeur) {
     document.cookie = nom + "=9111986" + valeur + "; expires=" + dateExpiration.toUTCString + "; path=/";
 }
 
+
+/**
+ * 
+ * @param {htmlElement} htmlElement 
+ * @param {string} nomEvent 
+ * @param {boolean} canBubble 
+ * @param {boolean} canCompose 
+ * @param {Array} detailTab 
+ */
+export function buildCustomEventForElement(htmlElement, nomEvent, canBubble, canCompose, detailTab) {
+    const event = new CustomEvent(nomEvent, {
+        bubbles: canBubble, composed: canCompose, detail: detailTab
+    });
+    htmlElement.dispatchEvent(event);
+}
+
 export const EVEN_ACTION_DIALOGUE_OUVRIR = "app:liste-principale:dialogueCanAjouter";
 export const EVEN_ACTION_DIALOGUE_FERMER = "app:dialogue:fermer_boite";
 export const EVEN_ACTION_MENU_CONTEXTUEL = "contextmenu";
