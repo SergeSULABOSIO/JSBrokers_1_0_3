@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MODIFIER, EVEN_ACTION_NOTIFIER_SELECTION, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SUPPRIMER } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MODIFIER, EVEN_ACTION_NOTIFIER_SELECTION, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SUPPRIMER, EVEN_BARRE_OUTILS_INIT_REQUEST, EVEN_BARRE_OUTILS_INITIALIZED, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_CHECK_REQUEST, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -29,13 +29,33 @@ export default class extends Controller {
 
     ecouteurs() {
         console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
-        this.listePrincipale.addEventListener(EVEN_ACTION_NOTIFIER_SELECTION, this.handleSelectedItems.bind(this));
+        document.addEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.handleInitRequest.bind(this));
+        document.addEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.handleInitialized.bind(this));
+        
+        
+        
+        // this.listePrincipale.addEventListener(EVEN_ACTION_NOTIFIER_SELECTION, this.handleSelectedItems.bind(this));
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.listePrincipale.removeEventListener(EVEN_ACTION_NOTIFIER_SELECTION, this.handleSelectedItems.bind(this));
+        document.removeEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.handleInitRequest.bind(this));
+        document.removeEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.handleInitialized.bind(this));
+        
+        
+        
+        
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_NOTIFIER_SELECTION, this.handleSelectedItems.bind(this));
     }
+
+    handleInitRequest(event){
+        console.log(this.nomControleur + " - HandleInitRequest");
+    }
+
+    handleInitialized(event){
+        console.log(this.nomControleur + " - HandleInitialized");
+    }
+
 
     /**
      * @description Gère l'événement de modification.
@@ -80,42 +100,54 @@ export default class extends Controller {
      */
     action_quitte() {
         console.log(this.nomControleur + " - Action_Quitter");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_QUITTER, true, true, {});
-    }
-
-    action_tout_cocher() {
-        console.log(this.nomControleur + " - Action_tout_cocher");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_COCHER_TOUT, true, true, {});
-    }
-
-    action_developper() {
-        console.log(this.nomControleur + " - Action Développer");
-        let listElement = document.getElementById("liste_row_" + this.tabSelectedCheckBoxs[0].split("check_")[1]);
-        buildCustomEventForElement(listElement, EVEN_ACTION_DEVELOPPER, true, true, {});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, {});
     }
 
     action_parametrer() {
         console.log(this.nomControleur + " - Action_Parametrer");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_PARAMETRER, true, true, {});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, {});
+    }
+
+    action_tout_cocher() {
+        console.log(this.nomControleur + " - Action_tout_cocher");
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, {});
+    }
+
+    action_developper() {
+        console.log(this.nomControleur + " - Action Développer");
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, true, true, {
+            selecttedCheckBox: this.tabSelectedCheckBoxs[0],
+        });
     }
 
     action_recharger() {
         console.log(this.nomControleur + " - Action_Recharger");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_RECHARGER, true, true, {});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, {});
     }
 
     action_ajouter() {
         console.log(this.nomControleur + " - Action_Ajouter");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_AJOUTER, true, true, {titre: "Nouvelle notification"});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
+            titre: "Nouvelle notification",
+            action: EVEN_CODE_ACTION_AJOUT,
+        });
     }
 
     action_modifier() {
         console.log(this.nomControleur + " - Action_Modifier");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_MODIFIER, true, true, {itre: "Modification de la notification"});
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
+            titre: "Modification de la notification",
+            action: EVEN_CODE_ACTION_MODIFICATION,
+            selectedCheckBox: this.tabSelectedCheckBoxs,
+        });
     }
 
     action_supprimer() {
         console.log(this.nomControleur + " - Action_Supprimer");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_SUPPRIMER, true, true, {titre: "Suppression "});
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
+            titre: "Suppression",
+            action: EVEN_CODE_ACTION_SUPPRESSION,
+            selectedCheckBox: this.tabSelectedCheckBoxs,
+        });
     }
 }

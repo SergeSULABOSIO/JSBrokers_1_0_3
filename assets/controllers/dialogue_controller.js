@@ -1,6 +1,6 @@
 // assets/controllers/dialogue_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
+import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, EVEN_BOITE_DIALOGUE_CANCELLED, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_BOITE_DIALOGUE_INITIALIZED, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 export default class extends Controller {
@@ -26,12 +26,111 @@ export default class extends Controller {
         this.init();
     }
 
+
+    setEcouteurs() {
+        //On attache les écouteurs d'Evenements personnalisés à la liste principale
+        document.addEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
+
+
+        // this.listePrincipale.addEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+    }
+
+
+
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.listePrincipale.removeEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
+
+
+
+        // this.listePrincipale.removeEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+    }
+
+
+    notify(event) {
+        const { titre, message } = event.detail;
+        this.updateMessage(titre + ": " + message);
+    }
+
+    handleCancelRequest(event) {
+        console.log(this.nomControleur + " - HandleCancelRequest");
+    }
+
+    handleCancelled(event) {
+        console.log(this.nomControleur + " - HandleCancelled");
+    }
+
+    handleInitRequest(event) {
+        const { titre, action, controleurPhp, idEntreprise, rubrique } = event.detail;
+        console.log(this.nomControleur + " - HandleInitRequest");
+        console.log("Titre: " + titre, "Action: " + action);
+        this.showDialogue();
+        switch (action) {
+            case EVEN_CODE_ACTION_AJOUT:
+                this.loadFormulaireEdition(
+                    titre, 
+                    "Initialisation du formulaire d'édition", 
+                    action, 
+                    -1, 
+                    controleurPhp, 
+                    idEntreprise, 
+                    rubrique
+                );
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    loadFormulaireEdition(Stitre, Smessage, Saction, idObjet, controleurPhp, idEntreprise, rubrique) {
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, { titre: Stitre, message: Smessage });
+        var titreBt = "";
+        this.titreTarget.innerHTML = Stitre + " - " + rubrique;
+        switch (Saction) {
+            case EVEN_CODE_ACTION_AJOUT:
+                titreBt = "ENREGISTRER";
+                break;
+            case EVEN_CODE_ACTION_MODIFICATION:
+                titreBt = "METTRE A JOUR";
+                break;
+            case EVEN_CODE_ACTION_SUPPRESSION:
+                titreBt = "SUPPRIMER";
+                break;
+            default:
+                break;
+        }
+        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, titreBt);
+        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
+        const url = '/admin/' + controleurPhp + '/formulaire/' + idEntreprise + '/' + idObjet;
+        fetch(url) // Remplacez par l'URL de votre formulaire
+            .then(response => response.text())
+            .then(html => {
+                this.formTarget.innerHTML = html;
+                buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INITIALIZED, true, true, {
+                    titre: Stitre,
+                    message: "Le formulaire est prêt.",
+                    action: Saction,
+                });
+            });
+    }
+
+    handleInitialized(event) {
+        console.log(this.nomControleur + " - HandleInitialized");
     }
 
 
@@ -41,13 +140,7 @@ export default class extends Controller {
         this.setEcouteurs();
     }
 
-    setEcouteurs() {
-        //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.addEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
-    }
+
 
     /**
      * @description Gère l'événement de modification.

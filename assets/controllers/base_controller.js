@@ -145,6 +145,54 @@ export const EVEN_CODE_ACTION_MODIFICATION = 1;
 export const EVEN_CODE_ACTION_SUPPRESSION = 2;
 export const EVEN_CODE_RESULTAT_OK = 0;
 export const EVEN_CODE_RESULTAT_ECHEC = 1;
+
+
+//Evenements - Liste Principale
+export const EVEN_LISTE_PRINCIPALE_NOTIFY = "app:liste-principale:notify";
+export const EVEN_LISTE_PRINCIPALE_ADD_REQUEST = "app:liste-principale:add-request";
+export const EVEN_LISTE_PRINCIPALE_ADDED = "app:liste-principale:added";
+export const EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST = "app:liste-principale:refresh-request";
+export const EVEN_LISTE_PRINCIPALE_REFRESHED = "app:liste-principale:refreshed";
+export const EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST = "app:liste-principale:all-check-request";
+export const EVEN_LISTE_PRINCIPALE_ALL_CHECKED = "app:liste-principale:all-checked";
+export const EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST = "app:liste-principale:settings-request";
+export const EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED = "app:liste-principale:settings-updated";
+export const EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST = "app:liste-principale:close-request";
+export const EVEN_LISTE_PRINCIPALE_CLOSED = "app:liste-principale:closed";
+
+//Evenements - Element Liste
+export const EVEN_LISTE_ELEMENT_DELETE_REQUEST = "app:liste-element:delete-request";
+export const EVEN_LISTE_ELEMENT_DELETED = "app:liste-element:deleted";
+export const EVEN_LISTE_ELEMENT_MODIFY_REQUEST = "app:liste-element:modify-request";
+export const EVEN_LISTE_ELEMENT_MODIFIED = "app:liste-element:modified";
+export const EVEN_LISTE_ELEMENT_CHECK_REQUEST = "app:liste-element:check-request";
+export const EVEN_LISTE_ELEMENT_CHECKED = "app:liste-element:checked";
+export const EVEN_LISTE_ELEMENT_EXPAND_REQUEST = "app:liste-element:expand-request";
+export const EVEN_LISTE_ELEMENT_EXPANDED = "app:liste-element:expanded";
+
+//Evenements - Liste Principale
+export const EVEN_MENU_CONTEXTUEL_INIT_REQUEST = "app:menu-contextuel:init-request";
+export const EVEN_MENU_CONTEXTUEL_INITIALIZED = "app:menu-contextuel:initialized";
+export const EVEN_MENU_CONTEXTUEL_SHOW = "app:menu-contextuel:show";
+export const EVEN_MENU_CONTEXTUEL_HIDE = "app:menu-contextuel:hide";
+
+//Evenements - Barre d'Outils
+export const EVEN_BARRE_OUTILS_INIT_REQUEST = "app:barre-outils:init-request";
+export const EVEN_BARRE_OUTILS_INITIALIZED = "app:barre-outils:initialized";
+
+//Evenements - Boîte de dialogue
+export const EVEN_BOITE_DIALOGUE_INIT_REQUEST = "app:boite-dialogue:init-request";
+export const EVEN_BOITE_DIALOGUE_INITIALIZED = "app:boite-dialogue:initialized";
+export const EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST = "app:boite-dialogue:submit-request";
+export const EVEN_BOITE_DIALOGUE_SUBMITTED = "app:boite-dialogue:submitted";
+export const EVEN_BOITE_DIALOGUE_CANCEL_REQUEST = "app:boite-dialogue:cancel-request";
+export const EVEN_BOITE_DIALOGUE_CANCELLED = "app:boite-dialogue:cancelled";
+
+
+
+
+
+
 export const EVEN_ACTION_DIALOGUE_OUVRIR = "app:liste-principale:dialogueCanAjouter";
 export const EVEN_ACTION_DIALOGUE_FERMER = "app:dialogue:fermer_boite";
 export const EVEN_ACTION_MENU_CONTEXTUEL = "contextmenu";

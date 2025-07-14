@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_MENU_CONTEXTUEL_INITIALIZED, EVEN_MENU_CONTEXTUEL_SHOW } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -22,17 +22,47 @@ export default class extends Controller {
     }
 
     setEcouteurs() {
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.handleContextMenuInitRequest.bind(this));
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.handleContextMenuInitialized.bind(this));
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.handleContextMenuShow.bind(this));
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.handleContextMenuHide.bind(this));
+
+
+
         // Pour éviter que le clic sur une option du menu ne le cache immédiatement (stopPropagation)
-        this.menu.addEventListener(EVEN_ACTION_CLICK, (e) => e.stopPropagation());
-        this.listePrincipale.addEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelection.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_COCHER, this.handleItemCoche.bind(this));
+        // this.menu.addEventListener(EVEN_ACTION_CLICK, (e) => e.stopPropagation());
+        // this.listePrincipale.addEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelection.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_COCHER, this.handleItemCoche.bind(this));
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.menu.removeEventListener(EVEN_ACTION_MENU_CONTEXTUEL, (e) => e.stopPropagation());
-        this.listePrincipale.removeEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelection.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER, this.handleItemCoche.bind(this));
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.handleContextMenuInitRequest.bind(this));
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.handleContextMenuInitialized.bind(this));
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.handleContextMenuShow.bind(this));
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.handleContextMenuHide.bind(this));
+
+        
+        
+        // this.menu.removeEventListener(EVEN_ACTION_MENU_CONTEXTUEL, (e) => e.stopPropagation());
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelection.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER, this.handleItemCoche.bind(this));
+    }
+
+    handleContextMenuInitRequest(event){
+        console.log(this.nomControleur + " - HandleContextMenuInitRequest");
+    }
+
+    handleContextMenuInitialized(event){
+        console.log(this.nomControleur + " - HandleContextMenuInitialized");
+    }
+
+    handleContextMenuShow(event){
+        console.log(this.nomControleur + " - HandleContextMenuShow");
+    }
+
+    handleContextMenuHide(event){
+        console.log(this.nomControleur + " - HandleContextMenuHide");
     }
 
 

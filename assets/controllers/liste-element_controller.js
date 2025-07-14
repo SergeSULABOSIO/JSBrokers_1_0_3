@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_RESIZE, EVEN_ACTION_SCROLL, EVEN_ACTION_SUPPRIMER } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_RESIZE, EVEN_ACTION_SCROLL, EVEN_ACTION_SUPPRIMER, EVEN_LISTE_ELEMENT_CHECK_REQUEST, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DELETED, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFIED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -14,7 +14,6 @@ export default class extends Controller {
 
     connect() {
         this.nomControleur = "LISTE-ELEMENT";
-        
         console.log(this.nomControleur + " - Connecté");
         this.detailsVisible = false;
         this.listePrincipale = document.getElementById("liste");
@@ -24,25 +23,80 @@ export default class extends Controller {
     }
 
     setEcouteurs(){
-        this.contextMenuTarget.addEventListener(EVEN_ACTION_MENU_CONTEXTUEL, this.handleContextMenu.bind(this));
-        this.contextMenuTarget.addEventListener(EVEN_ACTION_DEVELOPPER, this.action_afficher_details.bind(this));
-        this.boundHideContextMenu = this.hideContextMenu.bind(this);
-        document.addEventListener(EVEN_ACTION_CLICK, this.boundHideContextMenu);
-        document.addEventListener(EVEN_ACTION_SCROLL, this.boundHideContextMenu); // Cacher si on scroll
-        window.addEventListener(EVEN_ACTION_RESIZE, this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
-        this.menu.addEventListener(EVEN_ACTION_CLICK, (e) => e.stopPropagation());
+        console.log(this.nomControleur + " - Définition des écouteurs.");
+        document.addEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.handleChecked.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.handleExpandRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_MODIFIED, this.handleModified.bind(this));
+
+
+        // this.contextMenuTarget.addEventListener(EVEN_ACTION_MENU_CONTEXTUEL, this.handleContextMenu.bind(this));
+        // this.contextMenuTarget.addEventListener(EVEN_ACTION_DEVELOPPER, this.action_afficher_details.bind(this));
+        // this.boundHideContextMenu = this.hideContextMenu.bind(this);
+        // document.addEventListener(EVEN_ACTION_CLICK, this.boundHideContextMenu);
+        // document.addEventListener(EVEN_ACTION_SCROLL, this.boundHideContextMenu); // Cacher si on scroll
+        // window.addEventListener(EVEN_ACTION_RESIZE, this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
+        // this.menu.addEventListener(EVEN_ACTION_CLICK, (e) => e.stopPropagation());
     }
     
     disconnect(){
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        this.contextMenuTarget.removeEventListener(EVEN_ACTION_MENU_CONTEXTUEL, this.handleContextMenu.bind(this));
-        this.contextMenuTarget.removeEventListener(EVEN_ACTION_DEVELOPPER, this.action_afficher_details.bind(this));
-        if (this.boundHideContextMenu) {
-            document.removeEventListener(EVEN_ACTION_CLICK, this.boundHideMenu);
-            document.removeEventListener(EVEN_ACTION_SCROLL, this.boundHideMenu); // Cacher si on scroll
-            window.removeEventListener(EVEN_ACTION_RESIZE, this.boundHideMenu); // Cacher si la fenêtre est redimensionnée
-        }
+        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.handleChecked.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.handleExpandRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFIED, this.handleModified.bind(this));
+
+        
+        // this.contextMenuTarget.removeEventListener(EVEN_ACTION_MENU_CONTEXTUEL, this.handleContextMenu.bind(this));
+        // this.contextMenuTarget.removeEventListener(EVEN_ACTION_DEVELOPPER, this.action_afficher_details.bind(this));
+        // if (this.boundHideContextMenu) {
+        //     document.removeEventListener(EVEN_ACTION_CLICK, this.boundHideMenu);
+        //     document.removeEventListener(EVEN_ACTION_SCROLL, this.boundHideMenu); // Cacher si on scroll
+        //     window.removeEventListener(EVEN_ACTION_RESIZE, this.boundHideMenu); // Cacher si la fenêtre est redimensionnée
+        // }
     }
+
+    handleCheckRequest(event){
+        console.log(this.nomControleur + " - HandleCheckRequest");
+    }
+
+    handleChecked(event){
+        console.log(this.nomControleur + " - HandleChecked");
+    }
+
+    handleDeleteRequest(event){
+        console.log(this.nomControleur + " - HandleDeleteRequest");
+    }
+
+    handleDeleted(event){
+        console.log(this.nomControleur + " - HandleDeleted");
+    }
+
+    handleExpandRequest(event){
+        console.log(this.nomControleur + " - HandleExpandRequest");
+    }
+
+    handleExpanded(event){
+        console.log(this.nomControleur + " - HandleExpanded");
+    }
+
+    handleModifyRequest(event){
+        console.log(this.nomControleur + " - HandleModifyRequest");
+    }
+
+    handleModified(event){
+        console.log(this.nomControleur + " - HandleModified");
+    }
+
+
     
     hideContextMenu(){
         this.menu.style.display = 'none';

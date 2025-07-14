@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_RESULTAT_SUCCESS, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK } from './base_controller.js';
+import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_RESULTAT_SUCCESS, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -35,38 +35,129 @@ export default class extends Controller {
 
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.addEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
-        this.listePrincipale.addEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
-        this.listePrincipale.addEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
-        this.listePrincipale.addEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
-        this.listePrincipale.addEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.handleAddRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.handleAdded.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.handleRefreshRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.handleRefreshed.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.handleAllCheckRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.handleAllChecked.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.handleSettingRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.handleSettingUpdated.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.handleCloseRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
+        
+
+
+        // this.listePrincipale.addEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
+        // this.listePrincipale.addEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        this.listePrincipale.removeEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
-        this.listePrincipale.removeEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.handleAddRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.handleAdded.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.handleRefreshRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.handleRefreshed.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.handleAllCheckRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.handleAllChecked.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.handleSettingRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.handleSettingUpdated.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.handleCloseRequest.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
+        
+        
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
+        // this.listePrincipale.removeEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
     }
+
+
+    handleAddRequest(event) {
+        const { titre, action } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - handleAddRequest");
+        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+            titre: titre,
+            action: action,
+            controleurPhp: this.controleurphpValue,
+            idEntreprise: this.identrepriseValue,
+            rubrique: this.rubriqueValue,
+        });
+    }
+
+    handleAdded(event){
+        console.log(this.nomControleur + " - HandleAdded");
+    }
+
+    handleAllCheckRequest(event){
+        console.log(this.nomControleur + " - HandleAllCheckRequest");
+    }
+
+    handleAllChecked(event){
+        console.log(this.nomControleur + " - HandleAllChecked");
+    }
+
+    handleCloseRequest(event){
+        console.log(this.nomControleur + " - HandleCloseRequest");
+        this.updateMessage("Fermeture: " + "Redirection à la page d'acceuil...");
+        window.location.href = "/admin/entreprise";
+    }
+
+    handleClosed(event){
+        console.log(this.nomControleur + " - HandleClosed");
+        event.stopPropagation();
+    }
+
+    notify(event){
+        const {titre, message} = event.detail;
+        this.updateMessage(titre + ": " + message);
+    }
+
+    handleRefreshRequest(event){
+        console.log(this.nomControleur + " - HandleRefreshRequest");
+    }
+
+    handleRefreshed(event){
+        console.log(this.nomControleur + " - HandleRefreshed");
+    }
+
+    handleSettingRequest(event){
+        event.stopPropagation();
+        console.log(this.nomControleur + " - HandleSettingRequest");
+        this.updateMessage("Paramètres: " + "Redirection encours...");
+        window.location.href = "/register";
+    }
+
+    handleSettingUpdated(event){
+        console.log(this.nomControleur + " - HandleSettingUpdated");
+    }
+
+
+
+
 
     /**
      * @description Gère l'événement d'ajout.
@@ -174,7 +265,7 @@ export default class extends Controller {
      * @param {String} textMessage 
      */
     action_afficherMessage(titre, textMessage) {
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_AFFICHER_MESSAGE, true, true,
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true,
             {
                 titre: titre,
                 message: textMessage,
@@ -263,27 +354,27 @@ export default class extends Controller {
     }
     
 
-    /**
-     * @description Gère l'événement de la fermeture de l'espace de travail.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleQuitter(event) {
-        console.log(this.nomControleur + " - EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
-        event.stopPropagation();
-        this.action_afficherMessage("Fermeture", "Redirection à la page d'acceuil...");
-        window.location.href = "/admin/entreprise";
-    }
+    // /**
+    //  * @description Gère l'événement de la fermeture de l'espace de travail.
+    //  * @param {CustomEvent} event L'événement personnalisé déclenché.
+    //  */
+    // handleQuitter(event) {
+    //     console.log(this.nomControleur + " - EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
+    //     event.stopPropagation();
+    //     this.action_afficherMessage("Fermeture", "Redirection à la page d'acceuil...");
+    //     window.location.href = "/admin/entreprise";
+    // }
 
-    /**
-     * @description Gère l'événement de parametrage de la liste.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleParametrer(event) {
-        console.log(this.nomControleur + " - EVENEMENT RECU: PAREMETRER CETTE LISTE");
-        event.stopPropagation();
-        this.action_afficherMessage("Paramètres", "Redirection vers la page des paramètres du compte...");
-        window.location.href = "/register";
-    }
+    // /**
+    //  * @description Gère l'événement de parametrage de la liste.
+    //  * @param {CustomEvent} event L'événement personnalisé déclenché.
+    //  */
+    // handleParametrer(event) {
+    //     console.log(this.nomControleur + " - EVENEMENT RECU: PAREMETRER CETTE LISTE");
+    //     event.stopPropagation();
+    //     this.action_afficherMessage("Paramètres", "Redirection vers la page des paramètres du compte...");
+    //     window.location.href = "/register";
+    // }
 
     /**
      * @description Gère l'événement de la recharge ou actualisation de la liste.
