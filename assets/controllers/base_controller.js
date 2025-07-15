@@ -196,6 +196,7 @@ export const EVEN_SERVER_RESPONSED = "app:serveur-distant:responded";
 export const EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST = "app:checkbox-element:check-request";
 export const EVEN_CHECKBOX_ELEMENT_CHECKED = "app:checkbox-element:checked";
 export const EVEN_CHECKBOX_ELEMENT_UNCHECKED = "app:checkbox-element:unchecked";
+export const EVEN_CHECKBOX_PUBLISH_SELECTION = "app:checkbox-element:publier-selection";
 
 
 
@@ -208,7 +209,6 @@ export const EVEN_ACTION_SCROLL = "scroll";
 export const EVEN_ACTION_CLICK = "click";
 export const EVEN_ACTION_CHANGE = "change";
 export const EVEN_ACTION_AJOUTER = "app:liste-principale:ajouter";
-export const EVEN_ACTION_NOTIFIER_SELECTION = "app:liste-principale:publier-selection";
 export const EVEN_ACTION_DEVELOPPER = "app:liste-element:developper";
 export const EVEN_ACTION_COCHER = "app:liste-principale:cocher";
 export const EVEN_ACTION_QUITTER = "app:liste-principale:quitter";

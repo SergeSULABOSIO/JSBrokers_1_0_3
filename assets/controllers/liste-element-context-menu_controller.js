@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_MENU_CONTEXTUEL_INITIALIZED, EVEN_MENU_CONTEXTUEL_SHOW } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_MENU_CONTEXTUEL_INITIALIZED, EVEN_MENU_CONTEXTUEL_SHOW } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -26,7 +26,7 @@ export default class extends Controller {
         document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.handleContextMenuInitialized.bind(this));
         document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.handleContextMenuShow.bind(this));
         document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.handleContextMenuHide.bind(this));
-
+        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.handlePublisheSelection.bind(this));
 
 
         // Pour éviter que le clic sur une option du menu ne le cache immédiatement (stopPropagation)
@@ -41,6 +41,7 @@ export default class extends Controller {
         document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.handleContextMenuInitialized.bind(this));
         document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.handleContextMenuShow.bind(this));
         document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.handleContextMenuHide.bind(this));
+        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.handlePublisheSelection.bind(this));
 
         
         
@@ -70,16 +71,10 @@ export default class extends Controller {
      * @description Gère l'événement d'ajout.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
-    handleItemSelection(event) {
-        const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - ELEMENT SELECTIONNE: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
-        let currentSelectedCheckBoxes = new Set(this.tabSelectedCheckBoxs);
-        if (isChecked == true) {
-            currentSelectedCheckBoxes.add(String(selectedCheckbox));
-        } else {
-            currentSelectedCheckBoxes.delete(String(selectedCheckbox));
-        }
-        this.tabSelectedCheckBoxs = Array.from(currentSelectedCheckBoxes);
+    handlePublisheSelection(event) {
+        const { selection } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - handlePublishSelection", event.detail);
+        this.tabSelectedCheckBoxs = selection;
         event.stopPropagation();
     }
 
