@@ -14,7 +14,7 @@ export default class extends Controller {
 
     connect() {
         this.nomControleur = "LISTE-ELEMENT";
-        console.log(this.nomControleur + " - Connecté");
+        // console.log(this.nomControleur + " - Connecté");
         this.detailsVisible = false;
         this.listePrincipale = document.getElementById("liste");
         this.contextMenuTarget = document.getElementById("liste_row_" + this.idobjetValue);

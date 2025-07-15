@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE } from './base_controller.js';
+import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CHECKBOX_ELEMENT_CHECKED, EVEN_CHECKBOX_ELEMENT_UNCHECKED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -47,6 +47,9 @@ export default class extends Controller {
         document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
         document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
         document.addEventListener(EVEN_SERVER_RESPONSED, this.handleServerResponsed.bind(this));
+        document.addEventListener(EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
+        document.addEventListener(EVEN_CHECKBOX_ELEMENT_CHECKED, this.handleChecked.bind(this));
+        document.addEventListener(EVEN_CHECKBOX_ELEMENT_UNCHECKED, this.handleUnChecked.bind(this));
 
 
 
@@ -112,7 +115,7 @@ export default class extends Controller {
     handleAdded(event) {
         console.log(this.nomControleur + " - HandleAdded", event.detail);
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre:"Prêt", message: "Element ajouté avec succès."
+            titre: "Prêt", message: "Element ajouté avec succès."
         })
     }
 
@@ -424,20 +427,67 @@ export default class extends Controller {
      * @description Gère l'événement de séléction.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
-    handleItemCocher(event) {
-        const { idCheckBox } = event.detail; // Récupère les données de l'événement
-        this.tabSelectedCheckBoxs = [];
-        const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
-        checkBoxes.forEach(currentCheckBox => {
-            currentCheckBox.checked = false;
-        });
-        var checkBox = document.getElementById(idCheckBox);
-        checkBox.checked = true;
-        this.tabSelectedCheckBoxs.push(idCheckBox);
-        console.log(this.nomControleur + " - EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
-        this.updateMessageSelectedCheckBoxes();
-        this.publierSelection();
+    handleChecked(event) {
+        const { selectedCheckbox, isChecked } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - handleChecked", event.detail);
         event.stopPropagation();
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre: "Selection",
+            message: "Selection de " + selectedCheckbox + ". Total actuel: " + this.tabSelectedCheckBoxs.length + " élément(s).",
+        })
+    }
+
+    /**
+     * @description Gère l'événement de séléction.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleUnChecked(event) {
+        const { selectedCheckbox, isChecked } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - handleChecked", event.detail);
+        event.stopPropagation();
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre: "Selection",
+            message: "Retrait de " + selectedCheckbox + ". Total actuel: " + this.tabSelectedCheckBoxs.length + " élément(s).",
+        })
+    }
+
+
+    /**
+     * @description Gère l'événement de séléction.
+     * @param {CustomEvent} event L'événement personnalisé déclenché.
+     */
+    handleCheckRequest(event) {
+        const { selectedCheckbox, isChecked } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - handleCheckRequest", event.detail);
+        event.stopPropagation();
+        if (isChecked == true) {
+            if (this.tabSelectedCheckBoxs.includes(selectedCheckbox)) {
+                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(selectedCheckbox), 1);
+                buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_UNCHECKED, true, true, event.detail);
+            } else {
+                this.tabSelectedCheckBoxs.push(selectedCheckbox);
+                buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_CHECKED, true, true, event.detail);
+            }
+        } else {
+            if (this.tabSelectedCheckBoxs.includes(selectedCheckbox)) {
+                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(selectedCheckbox), 1);
+                buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_UNCHECKED, true, true, event.detail);
+            }
+        }
+        // this.updateMessageSelectedCheckBoxes();
+        // this.publierSelection();
+
+        // const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
+        // checkBoxes.forEach(currentCheckBox => {
+        //     currentCheckBox.checked = false;
+        // });
+        // var checkBox = document.getElementById(idCheckBox);
+        // checkBox.checked = true;
+        // this.tabSelectedCheckBoxs.push(idCheckBox);
+        // console.log(this.nomControleur + " - EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
+        // this.updateMessageSelectedCheckBoxes();
+        // this.publierSelection();
+        // event.stopPropagation();
     }
 
 

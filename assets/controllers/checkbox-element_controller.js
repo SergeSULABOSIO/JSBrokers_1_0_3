@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { buildCustomEventForElement, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static values = {
@@ -13,34 +14,18 @@ export default class extends Controller {
         this.listePrincipale = document.getElementById("liste");
     }
 
-    disconnect(){
+    disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs - ID: " + this.name);
-        
     }
 
 
     action_cocher(event) {
         this.isChecked = event.target.checked;
-        // event.preventDefault();
-        console.log(this.nomControleur + " - Déclanchement - Action_cocher ID: " + this.idobjetValue, "Etat actuel: " + this.isChecked);
-        this.buildCustomEvent("app:liste-principale:selection", 
-            true, 
-            true,
-            {
-                titre: "Sélection - checkbox",
-                idobjet: this.idobjetValue,
-                selectedCheckbox: "check_" + this.idobjetValue, 
-                isChecked: this.isChecked,
-            }
-        );
-    }
-
-    buildCustomEvent(nomEvent, canBubble, canCompose, detailTab) {
-        const event = new CustomEvent(nomEvent, {
-            bubbles: canBubble,
-            composed: canCompose,
-            detail: detailTab
+        event.stopPropagation();
+        event.preventDefault();
+        buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, true, true, {
+            selectedCheckbox: this.idobjetValue,
+            isChecked: this.isChecked,
         });
-        this.listePrincipale.dispatchEvent(event);
     }
 }

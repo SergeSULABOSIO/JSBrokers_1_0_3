@@ -2,18 +2,18 @@
     {# La checkbox de séléction #}
     <div class="form-group">
         <input 
-            class="form-check-input" 
-            value="" 
             type="checkbox" 
             id="check_{{ notificationsinistre.id }}" 
+            name="check_[]" 
+            value="selectionnee" 
+            class="form-check-input" 
             data-controller="checkbox-element" 
+            data-action="change->checkbox-element#action_cocher" 
             data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
-            {# data-action="change->checkbox-element#action_cocher"  #}
         >
         <label 
             for="check_{{ notificationsinistre.id }}" 
             class="text-secondary" 
-
         >
             {{ notificationsinistre.id }}
         </label>

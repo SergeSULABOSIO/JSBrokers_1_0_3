@@ -189,7 +189,13 @@ export const EVEN_BOITE_DIALOGUE_CANCEL_REQUEST = "app:boite-dialogue:cancel-req
 export const EVEN_BOITE_DIALOGUE_CANCELLED = "app:boite-dialogue:cancelled";
 export const EVEN_BOITE_DIALOGUE_CLOSE = "app:boite-dialogue:close";
 
+//Evenement - Serveur
 export const EVEN_SERVER_RESPONSED = "app:serveur-distant:responded";
+
+//Evenement - CheckBox
+export const EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST = "app:checkbox-element:check-request";
+export const EVEN_CHECKBOX_ELEMENT_CHECKED = "app:checkbox-element:checked";
+export const EVEN_CHECKBOX_ELEMENT_UNCHECKED = "app:checkbox-element:unchecked";
 
 
 
