@@ -1,6 +1,6 @@
 // assets/controllers/dialogue_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, EVEN_BOITE_DIALOGUE_CANCELLED, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_BOITE_DIALOGUE_INITIALIZED, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
+import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, EVEN_BOITE_DIALOGUE_CANCELLED, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_BOITE_DIALOGUE_INITIALIZED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 export default class extends Controller {
@@ -33,6 +33,8 @@ export default class extends Controller {
         document.addEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
         document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
         document.addEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, this.handleSubmitRequest.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_SUBMITTED, this.handleSubmited.bind(this));
         document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
 
 
@@ -50,8 +52,9 @@ export default class extends Controller {
         document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
         document.removeEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
         document.removeEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, this.handleSubmitRequest.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_SUBMITTED, this.handleSubmited.bind(this));
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
-
 
 
         // this.listePrincipale.removeEventListener(EVEN_QUESTION_SUPPRIMER, this.handleItemCanSupprimer.bind(this));
@@ -70,24 +73,38 @@ export default class extends Controller {
         console.log(this.nomControleur + " - HandleCancelRequest");
     }
 
+    handleSubmitRequest(event) {
+        const {action} = event.detail;
+        console.log(this.nomControleur + " - HandleSubmitRequest");
+        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_SUBMITTED, true, true,{action: action, code: EVEN_CODE_RESULTAT_OK, message: "Enregistré avec succès."});
+    }
+
+    handleSubmited(event) {
+        const {action, code, message} = event.detail;
+        console.log(this.nomControleur + " - HandleSubmited");
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true,{titre: "Résultat", message: message});
+        this.closeDialogue();
+    }
+
     handleCancelled(event) {
         console.log(this.nomControleur + " - HandleCancelled");
     }
 
     handleInitRequest(event) {
         const { titre, action, controleurPhp, idEntreprise, rubrique } = event.detail;
+        this.action = action;
         console.log(this.nomControleur + " - HandleInitRequest");
         console.log("Titre: " + titre, "Action: " + action);
         this.showDialogue();
         switch (action) {
             case EVEN_CODE_ACTION_AJOUT:
                 this.loadFormulaireEdition(
-                    titre, 
-                    "Initialisation du formulaire d'édition", 
-                    action, 
-                    -1, 
-                    controleurPhp, 
-                    idEntreprise, 
+                    titre,
+                    "Initialisation du formulaire d'édition",
+                    action,
+                    -1,
+                    controleurPhp,
+                    idEntreprise,
                     rubrique
                 );
                 break;
@@ -97,11 +114,9 @@ export default class extends Controller {
         }
     }
 
-    loadFormulaireEdition(Stitre, Smessage, Saction, idObjet, controleurPhp, idEntreprise, rubrique) {
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, { titre: Stitre, message: Smessage });
+    generateSubmissionBtLabel(action) {
         var titreBt = "";
-        this.titreTarget.innerHTML = Stitre + " - " + rubrique;
-        switch (Saction) {
+        switch (action) {
             case EVEN_CODE_ACTION_AJOUT:
                 titreBt = "ENREGISTRER";
                 break;
@@ -114,23 +129,26 @@ export default class extends Controller {
             default:
                 break;
         }
-        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, titreBt);
+        return titreBt;
+    }
+
+    loadFormulaireEdition(Stitre, Smessage, Saction, idObjet, controleurPhp, idEntreprise, rubrique) {
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, { titre: Stitre, message: Smessage });
+        this.titreTarget.innerHTML = Stitre + " - " + rubrique;
+        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, this.generateSubmissionBtLabel(Saction));
         defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
         const url = '/admin/' + controleurPhp + '/formulaire/' + idEntreprise + '/' + idObjet;
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())
             .then(html => {
                 this.formTarget.innerHTML = html;
-                buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INITIALIZED, true, true, {
-                    titre: Stitre,
-                    message: "Le formulaire est prêt.",
-                    action: Saction,
-                });
+                buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INITIALIZED, true, true, {});
             });
     }
 
     handleInitialized(event) {
         console.log(this.nomControleur + " - HandleInitialized");
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, { titre: "Etat", message: "Initialisé et prêt." });
     }
 
 
@@ -139,8 +157,6 @@ export default class extends Controller {
         this.initBoiteDeDialogue();
         this.setEcouteurs();
     }
-
-
 
     /**
      * @description Gère l'événement de modification.
@@ -160,7 +176,6 @@ export default class extends Controller {
         this.showDialogue();
     }
 
-
     /**
      * @description Gère l'événement de modification.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
@@ -168,7 +183,6 @@ export default class extends Controller {
     handleFermerBoite(event) {
         this.closeDialogue();
     }
-
 
     /**
      * @description Gère l'événement de modification.
@@ -178,34 +192,6 @@ export default class extends Controller {
         const { titre, message } = event.detail; // Récupère les données de l'événement
         this.updateMessage(titre + ": " + message);
         console.log(this.nomControleur + " - Titre: " + titre + ", Message: " + message);
-    }
-
-
-    /**
-     * @description Gère l'événement de modification.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleItemCanAjouter(event) {
-        console.log(this.nomControleur + " - handleItemCanAjouter", new Date());
-        const { titre, idObjet, action, entreprise, utilisateur, rubrique, controleurphp, controleurstimulus } = event.detail; // Récupère les données de l'événement
-        this.titre = titre;
-        this.message = titre;
-        this.action = action; //Ajouter (0), Modifier (1)
-        this.titreTarget.innerHTML = titre;
-        // this.formTarget.innerHTML = "On va charger le formulaire de saisie de données ici!!!!";
-        defineIcone(getIconeUrl(1, "save", 19), this.btSubmitTarget, action == 0 ? "ENREGISTRER" : "METTRE A JOUR");
-        defineIcone(getIconeUrl(1, "exit", 19), this.btFermerTarget, "FERMER");
-        this.action_afficherMessage(titre, "Chargement du formulaire...");
-        console.log(this.nomControleur + " - Chargement du formulaire...");
-        const url = '/admin/' + controleurphp + '/formulaire/' + entreprise + '/' + idObjet;
-        fetch(url) // Remplacez par l'URL de votre formulaire
-            .then(response => response.text())
-            .then(html => {
-                this.formTarget.innerHTML = html;
-                this.showDialogue();
-                this.action_afficherMessage(titre, "Formulaire chargé sur la boîte de dialogue.");
-                console.log(this.nomControleur + " - Formulaire chargé sur la boîte de dialogue.");
-            });
     }
 
     initBoiteDeDialogue() {
@@ -279,14 +265,7 @@ export default class extends Controller {
     */
     action_accepter(event) {
         event.preventDefault();
-        console.log(this.nomControleur + " - DIALOGUE OK", this.titre, this.message, this.action, this.tabSelectedCheckBoxes);
-        buildCustomEventForElement(this.listePrincipale, EVEN_QUESTION_OK, true, true,
-            {
-                titre: this.titre,
-                message: this.message,
-                action: this.action,
-                data: this.tabSelectedCheckBoxes,
-            }
-        );
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true,{titre:"Soumission", message:"Demande initié"});
+        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, true, true,{action: this.action});
     }
 }

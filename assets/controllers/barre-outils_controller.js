@@ -128,7 +128,7 @@ export default class extends Controller {
     action_ajouter() {
         console.log(this.nomControleur + " - Action_Ajouter");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
-            titre: "Nouvelle notification",
+            titre: "Ajout",
             action: EVEN_CODE_ACTION_AJOUT,
         });
     }
@@ -136,7 +136,7 @@ export default class extends Controller {
     action_modifier() {
         console.log(this.nomControleur + " - Action_Modifier");
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
-            titre: "Modification de la notification",
+            titre: "Modification",
             action: EVEN_CODE_ACTION_MODIFICATION,
             selectedCheckBox: this.tabSelectedCheckBoxs,
         });
@@ -147,7 +147,7 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
             titre: "Suppression",
             action: EVEN_CODE_ACTION_SUPPRESSION,
-            selectedCheckBox: this.tabSelectedCheckBoxs,
+            selectedCheckBoxes: this.tabSelectedCheckBoxs,
         });
     }
 }
