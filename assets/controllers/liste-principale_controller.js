@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_RESULTAT_SUCCESS, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED } from './base_controller.js';
+import { EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, EVEN_ACTION_NOTIFIER_SELECTION, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -46,8 +46,8 @@ export default class extends Controller {
         document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.handleCloseRequest.bind(this));
         document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
         document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
-        document.addEventListener(EVEN_BOITE_DIALOGUE_SUBMITTED, this.handleSubmitted.bind(this));
-        
+        document.addEventListener(EVEN_SERVER_RESPONSED, this.handleServerResponsed.bind(this));
+
 
 
         // this.listePrincipale.addEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
@@ -58,7 +58,6 @@ export default class extends Controller {
         // this.listePrincipale.addEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
         // this.listePrincipale.addEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
         // this.listePrincipale.addEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
         // this.listePrincipale.addEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
         // this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
         // this.listePrincipale.addEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
@@ -79,8 +78,9 @@ export default class extends Controller {
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.handleCloseRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
-        
-        
+        document.removeEventListener(EVEN_SERVER_RESPONSED, this.handleServerResponsed.bind(this));
+
+
         // this.listePrincipale.removeEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
         // this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
         // this.listePrincipale.removeEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
@@ -99,7 +99,7 @@ export default class extends Controller {
 
     handleAddRequest(event) {
         const { titre, action } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - handleAddRequest");
+        console.log(this.nomControleur + " - handleAddRequest", event.detail);
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             titre: titre,
             action: action,
@@ -109,50 +109,50 @@ export default class extends Controller {
         });
     }
 
-    handleAdded(event){
-        console.log(this.nomControleur + " - HandleAdded");
+    handleAdded(event) {
+        console.log(this.nomControleur + " - HandleAdded", event.detail);
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre:"Prêt", message: "Element ajouté avec succès."
+        })
     }
 
-    handleAllCheckRequest(event){
+    handleAllCheckRequest(event) {
         console.log(this.nomControleur + " - HandleAllCheckRequest");
     }
 
-    handleAllChecked(event){
+    handleAllChecked(event) {
         console.log(this.nomControleur + " - HandleAllChecked");
     }
 
-    handleCloseRequest(event){
+    handleCloseRequest(event) {
         console.log(this.nomControleur + " - HandleCloseRequest");
         this.updateMessage("Fermeture: " + "Redirection à la page d'acceuil...");
         window.location.href = "/admin/entreprise";
     }
 
-    handleClosed(event){
+    handleClosed(event) {
         console.log(this.nomControleur + " - HandleClosed");
         event.stopPropagation();
     }
 
-    notify(event){
-        const {titre, message} = event.detail;
+    notify(event) {
+        const { titre, message } = event.detail;
         this.updateMessage(titre + ": " + message);
     }
 
-    handleRefreshRequest(event){
-        console.log(this.nomControleur + " - HandleRefreshRequest");
+    handleRefreshRequest(event) {
+        console.log(this.nomControleur + " - HandleRefreshRequest", event.detail);
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESHED, true, true, event.detail);
     }
 
-    handleRefreshed(event){
-        console.log(this.nomControleur + " - HandleRefreshed");
-    }
-
-    handleSettingRequest(event){
+    handleSettingRequest(event) {
         event.stopPropagation();
         console.log(this.nomControleur + " - HandleSettingRequest");
         this.updateMessage("Paramètres: " + "Redirection encours...");
         window.location.href = "/register";
     }
 
-    handleSettingUpdated(event){
+    handleSettingUpdated(event) {
         console.log(this.nomControleur + " - HandleSettingUpdated");
     }
 
@@ -180,58 +180,47 @@ export default class extends Controller {
      * @description Gère l'événement d'ajout.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
-    handleDialog_ok(event) {
-        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data);
+    handleServerResponsed(event) {
+        const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
+        console.log(this.nomControleur + " - handleServerResponded", event.detail);
+        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_CLOSE, true, true, event.detail);
         //ACTION AJOUT = 0
-        if (action == EVEN_CODE_ACTION_AJOUT) {
-            this.execution_ajout(event);
+        if (code == EVEN_CODE_RESULTAT_OK) {
+            // On actualise la liste en y ajoutant l'élément créé
+            buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
+            buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADDED, true, true, event.detail);
         }
-        if (action == EVEN_CODE_ACTION_MODIFICATION) {
-            this.execution_modification(event);
-        }
-        //ACTION SUPPRESSION = 2
-        if (action == EVEN_CODE_ACTION_SUPPRESSION) {
-            this.execution_suppression(event);
-        }
-        event.stopPropagation();
+        // if (action == EVEN_CODE_ACTION_MODIFICATION) {
+
+        // }
+        // //ACTION SUPPRESSION = 2
+        // if (action == EVEN_CODE_ACTION_SUPPRESSION) {
+
+        // }
+        // event.stopPropagation();
     }
 
 
-    /**
-     * @description Gère l'événement d'ajout.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleSubmitted(event) {
-        const {action, code, message } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - HandleSubmitted");
-        //ACTION AJOUT = 0
-        if (action == EVEN_CODE_ACTION_AJOUT) {
-            this.execution_ajout(event);
-        }
-        if (action == EVEN_CODE_ACTION_MODIFICATION) {
-            this.execution_modification(event);
-        }
-        //ACTION SUPPRESSION = 2
-        if (action == EVEN_CODE_ACTION_SUPPRESSION) {
-            this.execution_suppression(event);
-        }
-        event.stopPropagation();
-    }
-
-    execution_ajout(event) {
-        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - Exécution de l'ajout", event.detail);
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_ENREGISTRER, true, true, {});
-    }
-
-
-    execution_modification(event) {
-        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - Exécution de la modification", event.detail);
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_ENREGISTRER, true, true, {});
-    }
-
+    // /**
+    //  * @description Gère l'événement d'ajout.
+    //  * @param {CustomEvent} event L'événement personnalisé déclenché.
+    //  */
+    // handleSubmitted(event) {
+    //     const {action, code, message } = event.detail; // Récupère les données de l'événement
+    //     console.log(this.nomControleur + " - HandleSubmitted");
+    //     //ACTION AJOUT = 0
+    //     if (action == EVEN_CODE_ACTION_AJOUT) {
+    //         this.execution_ajout(event);
+    //     }
+    //     if (action == EVEN_CODE_ACTION_MODIFICATION) {
+    //         this.execution_modification(event);
+    //     }
+    //     //ACTION SUPPRESSION = 2
+    //     if (action == EVEN_CODE_ACTION_SUPPRESSION) {
+    //         this.execution_suppression(event);
+    //     }
+    //     event.stopPropagation();
+    // }
 
     execution_suppression(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
@@ -374,7 +363,7 @@ export default class extends Controller {
             }
         );
     }
-    
+
 
     // /**
     //  * @description Gère l'événement de la fermeture de l'espace de travail.
@@ -454,7 +443,7 @@ export default class extends Controller {
 
     publierSelection() {
         console.log(this.nomControleur + " - Action_publier séléction - lancée.");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_NOTIFIER_SELECTION, true, true, {selection: this.tabSelectedCheckBoxs});
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_NOTIFIER_SELECTION, true, true, { selection: this.tabSelectedCheckBoxs });
     }
 
 
@@ -482,7 +471,7 @@ export default class extends Controller {
         let isChecked = null;
         if (event.target.getAttribute("type") == "checkbox") {
             isChecked = event.target.checked;
-        }else{
+        } else {
             const btCkBox = document.getElementById("myCheckbox");
             btCkBox.checked = !btCkBox.checked;
             isChecked = btCkBox.checked;
@@ -537,9 +526,12 @@ export default class extends Controller {
      * 
      * @param {Event} event 
      */
-    outils_recharger(event) {
-        console.log(this.nomControleur + " - Actualisation de la liste principale", event.currentTarget);
-        this.updateMessage("Actualisation des données...");
+    handleRefreshed(event) {
+        console.log(this.nomControleur + " - handleRefreshed", event.detail);
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre: "Liste", message: "Actualisation encours..."
+        });
+        // this.updateMessage("Actualisation des données...");
         this.donneesTarget.disabled = true;
         // this.donneesTarget.innerHTML = "J'actualise cette liste";
         const url = '/admin/' + this.controleurphpValue + '/reload/' + this.identrepriseValue;
@@ -551,7 +543,10 @@ export default class extends Controller {
 
                 const maintenant = new Date();
                 const dateHeureLocaleSimple = maintenant.toLocaleString();
-                this.updateMessage("Dernière actualisation " + dateHeureLocaleSimple);
+                // this.updateMessage("Dernière actualisation " + dateHeureLocaleSimple);
+                buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+                    titre: "Prêt", message: "Dernière actualisation " + dateHeureLocaleSimple
+                });
                 this.tabSelectedCheckBoxs = [];
                 this.updateMessageSelectedCheckBoxes();
                 this.publierSelection();

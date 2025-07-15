@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_CHANGE, EVEN_ACTION_CLICK, EVEN_ACTION_ENREGISTRER, EVEN_CODE_RESULTAT_ECHEC, EVEN_CODE_RESULTAT_OK, EVEN_RESULTAT_ECHEC, EVEN_RESULTAT_SUCCESS, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
+import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_CHANGE, EVEN_ACTION_CLICK, EVEN_ACTION_ENREGISTRER, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_CODE_RESULTAT_ECHEC, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_SERVER_RESPONSED, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 
 export default class extends Controller {
     static targets = [
@@ -37,15 +37,14 @@ export default class extends Controller {
         this.setEcouteurs();
     }
 
-
     setEcouteurs() {
-        this.listePrincipale.addEventListener(EVEN_ACTION_ENREGISTRER, this.handleActionEnregistrer.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, this.handleSubmitRequest.bind(this));
         this.element.addEventListener(EVEN_ACTION_CLICK, event => this.ecouterClick(event));
         this.referencepoliceTarget.addEventListener(EVEN_ACTION_CHANGE, (event) => this.updateViewAvenants(this.referencepoliceTarget.value));
     }
 
     disconnect() {
-        this.listePrincipale.removeEventListener(EVEN_ACTION_ENREGISTRER, this.handleActionEnregistrer.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, this.handleSubmitRequest.bind(this));
     }
 
 
@@ -137,18 +136,36 @@ export default class extends Controller {
     }
 
 
+
     /**
      * 
-     * @param {MouseEvent} event 
+     * @param {String} titre 
+     * @param {String} textMessage 
+     */
+    action_afficherMessage(titre, textMessage) {
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_AFFICHER_MESSAGE, true, true,
+            {
+                titre: titre,
+                message: textMessage,
+            }
+        );
+    }
+
+
+    /**
+     * @param {Event} event 
     */
-    enregistrerNotificationSinistre = (event) => {
-        event.preventDefault(); // Empêche la soumission classique du formulaire
+    handleSubmitRequest(event) {
+        const { action } = event.detail;
+        console.log(this.nomcontroleur + " - HandleSubmitRequest", event.detail);
         event.target.disabled = true;
-        this.action_afficherMessage("Enregistrement", "Veuillez patienter...");
-        const isNew = this.idnotificationsinistreValue == 0 ? true : false;
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre: "Demande de soumission",
+            message: "Veuillez patienter stp...",
+        });
         const formData = new FormData(this.element); // 'this.element' fait référence à l'élément <form>
         const url = '/admin/notificationsinistre/formulaire/' + this.identrepriseValue + '/' + (this.idnotificationsinistreValue == 0 ? '-1' : this.idnotificationsinistreValue);
-        // console.log("ICI", formData, this.element, url);
+        // console.log(url);
         fetch(url, {
             method: this.element.method,
             body: formData,
@@ -167,10 +184,9 @@ export default class extends Controller {
                     userObject.nbDocuments,
                 );
                 this.updateViewAvenants(userObject.referencePolice);
-                this.action_afficherMessage("Prêt", "Enregistré avec succès!");
-                console.log(this.nomcontroleur + " - ICI.");
+                
                 //On émet un évenement pour signaler que l'enreg s'est effectué avec succès
-                buildCustomEventForElement(this.listePrincipale, EVEN_RESULTAT_SUCCESS, true, true,
+                buildCustomEventForElement(document, EVEN_SERVER_RESPONSED, true, true,
                     {
                         idObjet: userObject.idNotificationSinistre,
                         code: EVEN_CODE_RESULTAT_OK,
@@ -181,7 +197,7 @@ export default class extends Controller {
             .catch(errorMessage => {
                 event.target.disabled = false;
                 console.error(this.nomcontroleur + " - Réponse d'erreur du serveur :", errorMessage);
-                buildCustomEventForElement(this.listePrincipale, EVEN_RESULTAT_ECHEC, true, true,
+                buildCustomEventForElement(document, EVEN_SERVER_RESPONSED, true, true,
                     {
                         idObjet: -1,
                         code: EVEN_CODE_RESULTAT_ECHEC,
@@ -189,28 +205,7 @@ export default class extends Controller {
                     }
                 );
             });
-    }
-
-
-    /**
-         * 
-         * @param {String} titre 
-         * @param {String} textMessage 
-         */
-        action_afficherMessage(titre, textMessage) {
-            buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_AFFICHER_MESSAGE, true, true,
-                {
-                    titre: titre,
-                    message: textMessage,
-                }
-            );
-        }
-
-
-    /**
-     * @param {Event} event 
-    */
-    handleActionEnregistrer(event) {
-        this.enregistrerNotificationSinistre(event);
+        //Juste après soumission de la requête vers le serveur
+        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_SUBMITTED, true, true, event.detail);
     }
 }
