@@ -498,8 +498,6 @@ export default class extends Controller {
     updateMessageSelectedCheckBoxes() {
         if (this.tabSelectedCheckBoxs.length != 0) {
             this.updateMessage(this.tabSelectedCheckBoxs.length + " éléments cochés.");
-        } else {
-            this.updateMessage("");
         }
     }
 

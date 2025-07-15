@@ -128,7 +128,7 @@ export default class extends Controller {
         console.log(this.nomControleur + " ID " + this.idobjetValue + " - CLICK DROIT - PROPAGATION DE L'EVENEMENT VERS LA LISTE PRINCIPALE.", "MenuX: " + menuX, "MenuY: " + menuY, new Date());
     }
 
-    action_cocher(){
+    action_cocher(event){
         console.log(this.nomControleur + " - Action_cocher ", "check_" + this.idobjetValue);
         buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_COCHER, true, true,{idCheckBox: "check_" + this.idobjetValue});
     }

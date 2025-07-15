@@ -29,8 +29,8 @@ export default class extends Controller {
 
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        // document.addEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
-        // document.addEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
+        document.addEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
         document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
         document.addEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
         document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
@@ -48,8 +48,8 @@ export default class extends Controller {
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        // document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
-        // document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
+        document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
         document.removeEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
         document.removeEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));

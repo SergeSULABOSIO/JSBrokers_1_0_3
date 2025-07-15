@@ -187,7 +187,7 @@ export const EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST = "app:boite-dialogue:submit-req
 export const EVEN_BOITE_DIALOGUE_SUBMITTED = "app:boite-dialogue:submitted";
 export const EVEN_BOITE_DIALOGUE_CANCEL_REQUEST = "app:boite-dialogue:cancel-request";
 export const EVEN_BOITE_DIALOGUE_CANCELLED = "app:boite-dialogue:cancelled";
-export const EVEN_BOITE_DIALOGUE_CLOSE = "app:boite-dialogue:cancelled";
+export const EVEN_BOITE_DIALOGUE_CLOSE = "app:boite-dialogue:close";
 
 export const EVEN_SERVER_RESPONSED = "app:serveur-distant:responded";
 

@@ -1,6 +1,6 @@
 <td class="p-3 m-2" style="width:80px">
     {# La checkbox de séléction #}
-    <div class="form-check">
+    <div class="form-group">
         <input 
             class="form-check-input" 
             value="" 
@@ -8,7 +8,7 @@
             id="check_{{ notificationsinistre.id }}" 
             data-controller="checkbox-element" 
             data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
-            data-action="change->checkbox-element#action_cocher" 
+            {# data-action="change->checkbox-element#action_cocher"  #}
         >
         <label 
             for="check_{{ notificationsinistre.id }}" 
