@@ -119,9 +119,9 @@ export default class extends Controller {
         });
     }
 
-    action_recharger() {
+    action_recharger(event) {
         console.log(this.nomControleur + " - Action_Recharger");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, {});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
     }
 
     action_ajouter() {

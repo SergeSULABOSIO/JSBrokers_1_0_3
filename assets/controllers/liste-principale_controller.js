@@ -532,7 +532,9 @@ export default class extends Controller {
 
     publierSelection() {
         console.log(this.nomControleur + " - Action_publier séléction - lancée.");
-        // buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_NOTIFIER_SELECTION, true, true, { selection: this.tabSelectedCheckBoxs });
+        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
+            selection: this.tabSelectedCheckBoxs,
+        });
     }
 
 
@@ -614,6 +616,10 @@ export default class extends Controller {
                 buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
                     titre: "Prêt", message: "Dernière actualisation " + dateHeureLocaleSimple
                 });
+
+                const btCkBox = document.getElementById("myCheckbox");
+                btCkBox.checked = false;
+
                 this.tabSelectedCheckBoxs = [];
                 this.updateMessageSelectedCheckBoxes();
                 this.publierSelection();
