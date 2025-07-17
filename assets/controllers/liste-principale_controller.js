@@ -123,11 +123,46 @@ export default class extends Controller {
     }
 
     handleAllCheckRequest(event) {
-        console.log(this.nomControleur + " - HandleAllCheckRequest");
+        console.log(this.nomControleur + " - HandleAllCheckRequest", event);
+        let isChecked = null;
+        if (typeof event.target === 'function') {
+            if (event.target.getAttribute("type") == "checkbox") {
+                isChecked = event.target.checked;
+            }
+        } else {
+            const btCkBox = document.getElementById("myCheckbox");
+            btCkBox.checked = !btCkBox.checked;
+            isChecked = btCkBox.checked;
+        }
+        const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
+        this.tabSelectedCheckBoxs = [];
+        checkBoxes.forEach(currentCheckBox => {
+            currentCheckBox.checked = isChecked;
+            if (isChecked == true) {
+                this.tabSelectedCheckBoxs.push(currentCheckBox.getAttribute("id"));
+            } else {
+                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(currentCheckBox.getAttribute("id")), 1);
+            }
+        });
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, true, true, {
+            selection: this.tabSelectedCheckBoxs,
+        });
     }
 
     handleAllChecked(event) {
-        console.log(this.nomControleur + " - HandleAllChecked");
+        console.log(this.nomControleur + " - HandleAllChecked", event);
+        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
+            selection: this.tabSelectedCheckBoxs,
+        });
+        // this.updateMessageSelectedCheckBoxes();
+        // this.publierSelection();
+    }
+
+    handleItemToutCocher(event) {
+        console.log(this.nomControleur + " - handleItemToutCocher", event);
+        event.stopPropagation();
+        this.handleAllCheckRequest(event);
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, {});
     }
 
     handleCloseRequest(event) {
@@ -161,10 +196,6 @@ export default class extends Controller {
     handleSettingUpdated(event) {
         console.log(this.nomControleur + " - HandleSettingUpdated");
     }
-
-
-
-
 
     /**
      * @description Gère l'événement d'ajout.
@@ -521,35 +552,15 @@ export default class extends Controller {
     }
 
 
-    /**
-     * 
-     * @param {Event} event 
-      */
-    handleItemToutCocher(event) {
-        event.stopPropagation();
-        let isChecked = null;
-        if (event.target.getAttribute("type") == "checkbox") {
-            isChecked = event.target.checked;
-        } else {
-            const btCkBox = document.getElementById("myCheckbox");
-            btCkBox.checked = !btCkBox.checked;
-            isChecked = btCkBox.checked;
-        }
-        console.log(this.nomControleur + " - TOUT COCHER !!!!", "isChecked?:" + isChecked);
-        // const isChecked = event.target.checked;
-        const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
-        this.tabSelectedCheckBoxs = [];
-        checkBoxes.forEach(currentCheckBox => {
-            currentCheckBox.checked = isChecked;
-            if (isChecked == true) {
-                this.tabSelectedCheckBoxs.push(currentCheckBox.getAttribute("id"));
-            } else {
-                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(currentCheckBox.getAttribute("id")), 1);
-            }
-        });
-        this.updateMessageSelectedCheckBoxes();
-        this.publierSelection();
-    }
+    // /**
+    //  * 
+    //  * @param {Event} event 
+    //   */
+    // handleItemToutCocher(event) {
+    //     event.stopPropagation();
+    //     console.log(this.nomControleur + " - handleToutCocher", event);
+    //     buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
+    // }
 
     /**
      * 

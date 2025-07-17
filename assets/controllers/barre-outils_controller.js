@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_BARRE_OUTILS_INIT_REQUEST, EVEN_BARRE_OUTILS_INITIALIZED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_BARRE_OUTILS_INIT_REQUEST, EVEN_BARRE_OUTILS_INITIALIZED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -74,6 +74,10 @@ export default class extends Controller {
         }
         this.tabSelectedCheckBoxs = selection;
         event.stopPropagation();
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre:"Etat",
+            message: "Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
+        });
     }
 
     initToolTips() {
@@ -93,19 +97,19 @@ export default class extends Controller {
     /**
      * LES ACTIONS
      */
-    action_quitte() {
+    action_quitte(event) {
         console.log(this.nomControleur + " - Action_Quitter");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, {});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event);
     }
 
-    action_parametrer() {
+    action_parametrer(event) {
         console.log(this.nomControleur + " - Action_Parametrer");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, {});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event);
     }
 
-    action_tout_cocher() {
+    action_tout_cocher(event) {
         console.log(this.nomControleur + " - Action_tout_cocher");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, {});
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
     }
 
     action_developper() {

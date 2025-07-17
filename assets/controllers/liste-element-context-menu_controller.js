@@ -76,6 +76,7 @@ export default class extends Controller {
         console.log(this.nomControleur + " - handlePublishSelection", event.detail);
         this.tabSelectedCheckBoxs = selection;
         event.stopPropagation();
+        //A partir d'ici il faut personnaliser les elements du menu contextuel avant qu'il ne puisse s'afficher.
     }
 
 
