@@ -513,20 +513,6 @@ export default class extends Controller {
                 buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_UNCHECKED, true, true, event.detail);
             }
         }
-        // this.updateMessageSelectedCheckBoxes();
-        // this.publierSelection();
-
-        // const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
-        // checkBoxes.forEach(currentCheckBox => {
-        //     currentCheckBox.checked = false;
-        // });
-        // var checkBox = document.getElementById(idCheckBox);
-        // checkBox.checked = true;
-        // this.tabSelectedCheckBoxs.push(idCheckBox);
-        // console.log(this.nomControleur + " - EVENEMENT RECU: SELECTION. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
-        // this.updateMessageSelectedCheckBoxes();
-        // this.publierSelection();
-        // event.stopPropagation();
     }
 
 
