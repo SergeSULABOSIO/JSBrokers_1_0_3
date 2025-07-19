@@ -276,12 +276,6 @@ export default class extends Controller {
     }
 
     execution_suppression() {
-        // const { selection } = event.detail; // Récupère les données de l'événement
-        // #[Route('/remove_many/{idEntreprise}/{tabIDString}', name: 'remove_many', requirements: ['idEntreprise' => Requirement:: DIGITS])]
-        // let tabIds = selection;
-        // data.forEach(dataElement => {
-        //     tabIds.push(dataElement.split("check_")[1]);
-        // });
         const url = '/admin/' + this.controleurPhp + '/remove_many/' + this.idEntreprise + '/' + this.tabSelectedCheckBoxes;
         console.log(this.nomControleur + " - Exécution de la suppression", this.tabSelectedCheckBoxes, url);
         //Notification
@@ -289,7 +283,6 @@ export default class extends Controller {
             titre: "Suppression",
             message: "Suppression en cours... Merci de patienter.",
         });
-
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.json())
             .then(ServerJsonData => {
@@ -301,7 +294,6 @@ export default class extends Controller {
                         titre: "Actualisation",
                         message: "Suppression Réussie! Veuillez patienter svp...",
                     });
-
                     //On actualise la liste sans consulter le serveur
                     serverJsonObject.deletedIds.forEach(deletedId => {
                         let elementToDelete = document.getElementById("liste_row_" + deletedId);
