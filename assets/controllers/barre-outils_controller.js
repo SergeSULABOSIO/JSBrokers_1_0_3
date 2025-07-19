@@ -62,13 +62,13 @@ export default class extends Controller {
         if (selection.length >= 1) {
             if (selection.length == 1) {
                 this.btmodifierTarget.style.display = "block";
-                this.btdevelopperTarget.style.display = "block";
             } else {
                 this.btmodifierTarget.style.display = "none";
-                this.btdevelopperTarget.style.display = "none";
             }
+            this.btdevelopperTarget.style.display = "block";
             this.btsupprimerTarget.style.display = "block";
         } else {
+            this.btdevelopperTarget.style.display = "none";
             this.btmodifierTarget.style.display = "none";
             this.btsupprimerTarget.style.display = "none";
         }
@@ -76,7 +76,7 @@ export default class extends Controller {
         event.stopPropagation();
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
             titre:"Etat",
-            message: "Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
+            message: "{" + selection  + "}. Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
         });
     }
 
@@ -112,11 +112,12 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
     }
 
-    action_developper() {
-        console.log(this.nomControleur + " - Action Développer");
+    action_developper(event) {
+        console.log(this.nomControleur + " - Action Développer", event);
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, true, true, {
-            selecttedCheckBox: this.tabSelectedCheckBoxs[0],
+            selection: this.tabSelectedCheckBoxs,
         });
+        event.stopPropagation();
     }
 
     action_recharger(event) {
@@ -137,7 +138,7 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
             titre: "Modification",
             action: EVEN_CODE_ACTION_MODIFICATION,
-            selectedCheckBox: this.tabSelectedCheckBoxs,
+            selectedId: this.tabSelectedCheckBoxs[0],
         });
     }
 
@@ -146,7 +147,7 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
             titre: "Suppression",
             action: EVEN_CODE_ACTION_SUPPRESSION,
-            selectedCheckBoxes: this.tabSelectedCheckBoxs,
+            selection: this.tabSelectedCheckBoxs,
         });
     }
 }

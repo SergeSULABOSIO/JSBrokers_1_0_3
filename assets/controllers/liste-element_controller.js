@@ -10,6 +10,7 @@ export default class extends Controller {
 
     static values = {
         idobjet: Number,
+        isShown: Boolean,
     };
 
     connect() {
@@ -22,18 +23,13 @@ export default class extends Controller {
         this.setEcouteurs();
     }
 
-    setEcouteurs(){
+    setEcouteurs() {
         console.log(this.nomControleur + " - Définition des écouteurs.");
         document.addEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.handleChecked.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.handleExpandRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_MODIFIED, this.handleModified.bind(this));
-
-
+        
+        
         // this.contextMenuTarget.addEventListener(EVEN_ACTION_MENU_CONTEXTUEL, this.handleContextMenu.bind(this));
         // this.contextMenuTarget.addEventListener(EVEN_ACTION_DEVELOPPER, this.action_afficher_details.bind(this));
         // this.boundHideContextMenu = this.hideContextMenu.bind(this);
@@ -42,18 +38,13 @@ export default class extends Controller {
         // window.addEventListener(EVEN_ACTION_RESIZE, this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
         // this.menu.addEventListener(EVEN_ACTION_CLICK, (e) => e.stopPropagation());
     }
-    
-    disconnect(){
+
+    disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         document.removeEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.handleChecked.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.handleExpandRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFIED, this.handleModified.bind(this));
-
+        
         
         // this.contextMenuTarget.removeEventListener(EVEN_ACTION_MENU_CONTEXTUEL, this.handleContextMenu.bind(this));
         // this.contextMenuTarget.removeEventListener(EVEN_ACTION_DEVELOPPER, this.action_afficher_details.bind(this));
@@ -64,41 +55,28 @@ export default class extends Controller {
         // }
     }
 
-    handleCheckRequest(event){
+
+    handleExpandRequest(event) {
+        const { selection } = event.detail;
+        event.stopPropagation();
+        selection.forEach(selectedId => {
+            if (this.idobjetValue === selectedId) {
+                console.log(this.nomControleur + " - HandleExpandRequest", event.detail, this.idobjetValue, this.isShownValue);
+                this.action_afficher_details(event);
+            }
+        });
+    }
+
+    handleCheckRequest(event) {
         console.log(this.nomControleur + " - HandleCheckRequest");
     }
 
-    handleChecked(event){
+    handleChecked(event) {
         console.log(this.nomControleur + " - HandleChecked");
     }
 
-    handleDeleteRequest(event){
-        console.log(this.nomControleur + " - HandleDeleteRequest");
-    }
 
-    handleDeleted(event){
-        console.log(this.nomControleur + " - HandleDeleted");
-    }
-
-    handleExpandRequest(event){
-        console.log(this.nomControleur + " - HandleExpandRequest");
-    }
-
-    handleExpanded(event){
-        console.log(this.nomControleur + " - HandleExpanded");
-    }
-
-    handleModifyRequest(event){
-        console.log(this.nomControleur + " - HandleModifyRequest");
-    }
-
-    handleModified(event){
-        console.log(this.nomControleur + " - HandleModified");
-    }
-
-
-    
-    hideContextMenu(){
+    hideContextMenu() {
         this.menu.style.display = 'none';
         console.log(this.nomControleur + " - CHECHER MENU CONTEXTUEL");
     }
@@ -128,19 +106,19 @@ export default class extends Controller {
         console.log(this.nomControleur + " ID " + this.idobjetValue + " - CLICK DROIT - PROPAGATION DE L'EVENEMENT VERS LA LISTE PRINCIPALE.", "MenuX: " + menuX, "MenuY: " + menuY, new Date());
     }
 
-    action_cocher(event){
+    action_cocher(event) {
         console.log(this.nomControleur + " - Action_cocher ", "check_" + this.idobjetValue);
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_COCHER, true, true,{idCheckBox: "check_" + this.idobjetValue});
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_COCHER, true, true, { idCheckBox: "check_" + this.idobjetValue });
     }
 
     action_supprimer() {
         console.log(this.nomControleur + " - Action_supprimer ", this.idobjetValue);
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_SUPPRIMER, true, true, {titre: "Suppression"});
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_SUPPRIMER, true, true, { titre: "Suppression" });
     }
 
     action_modifier() {
         console.log(this.nomControleur + " - Action_modifier ", this.idobjetValue);
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_MODIFIER, true, true, {titre: "Modification"});
+        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_MODIFIER, true, true, { titre: "Modification" });
     }
 
 
@@ -148,16 +126,20 @@ export default class extends Controller {
      * 
      * @param {MouseEvent} event 
      */
-    action_afficher_details(event){
+    action_afficher_details(event) {
         event.preventDefault(); // Empêche la soumission classique du formulaire
         event.stopPropagation();
-        console.log(this.nomControleur + " - ECOUTEUR DEVELOPPER");
-        if (this.detailsVisible == true) {
+        if (this.isShownValue == true) {
             this.detailsTarget.style.display = "none";
-            this.detailsVisible = false;
+            this.isShownValue = false;
         } else {
             this.detailsTarget.style.display = "block";
-            this.detailsVisible = true;
+            this.isShownValue = true;
         }
+
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_EXPANDED, true, true, {
+            expandedCheckBox: this.idobjetValue,
+            selection : event.detail.selection,
+        });
     }
 }
