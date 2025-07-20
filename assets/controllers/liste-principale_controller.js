@@ -55,22 +55,6 @@ export default class extends Controller {
         document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
-        
-        
-        
-    
-        // this.listePrincipale.addEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
     }
 
     disconnect() {
@@ -95,40 +79,12 @@ export default class extends Controller {
         document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
-        
-
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_AJOUTER, this.handleItemAjouter.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER, this.handleItemCocher.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_QUITTER, this.handleQuitter.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_PARAMETRER, this.handleParametrer.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_RECHARGER, this.handleRecharger.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_MODIFIER, this.handleItemModifier.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_SUPPRIMER, this.handleItemSupprimer.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_SELECTIONNER, this.handleItemSelectionner.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_QUESTION_OK, this.handleDialog_ok.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_QUESTION_NO, this.handleDialog_no.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_COCHER_TOUT, this.handleItemToutCocher.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_RESULTAT_SUCCESS, this.handleFormulaireAjoutModifReussi.bind(this));
     }
-
-    // boundHandleContextMenu(event) {
-    //     const {idObjet} = event.detail;
-    //     event.preventDefault(); 
-    //     event.stopPropagation();
-    //     console.log(this.nomControleur + " - boundHandleContextMenu", event.detail);
-    //     buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, true, true, {
-    //         idObjet: this.idobjetValue,
-    //     });
-    // }
 
     boundHideContextMenu(event) {
         console.log(this.nomControleur + " - boundHideContextMenu");
         buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_HIDE, true, true, event);
     }
-
-    
-
 
     handleDeleteRequest(event) {
         const {titre, action, selection} = event.detail;
@@ -315,8 +271,8 @@ export default class extends Controller {
     handleDialog_no(event) {
         const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
         event.stopPropagation();
-        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data, "ON NE FAIT RIEN.");
-        console.log(this.nomControleur + " - ON NE FAIT RIEN.");
+        // console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data, "ON NE FAIT RIEN.");
+        // console.log(this.nomControleur + " - ON NE FAIT RIEN.");
         this.updateMessage("Boîte de dialogue fermée.");
         // Tu peux aussi prévenir la propagation de l'événement si nécessaire
     }
@@ -343,7 +299,7 @@ export default class extends Controller {
     handleDisplayMessage(event) {
         const { titre, message } = event.detail; // Récupère les données de l'événement
         event.stopPropagation();
-        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, message);
+        // console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, message);
         this.updateMessage(titre + ": " + message);
     }
 
@@ -354,7 +310,7 @@ export default class extends Controller {
      */
     handleItemSelectionner(event) {
         const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
+        // console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
         let currentSelectedCheckBoxes = new Set(this.tabSelectedCheckBoxs);
         if (isChecked == true) {
             currentSelectedCheckBoxes.add(String(selectedCheckbox));
@@ -376,7 +332,7 @@ export default class extends Controller {
         const { titre } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Titre: " + titre);
         event.stopPropagation();
-        console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
+        // console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
         buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
             {
                 titre: "Ajout - " + this.rubriqueValue,
@@ -400,7 +356,7 @@ export default class extends Controller {
         const { titre } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - Titre: " + titre + ", Selected checkbox: " + this.tabSelectedCheckBoxs);
         event.stopPropagation();
-        console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
+        // console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
         buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
             {
                 titre: "Edition - " + this.rubriqueValue,
@@ -416,28 +372,6 @@ export default class extends Controller {
     }
 
 
-    // /**
-    //  * @description Gère l'événement de la fermeture de l'espace de travail.
-    //  * @param {CustomEvent} event L'événement personnalisé déclenché.
-    //  */
-    // handleQuitter(event) {
-    //     console.log(this.nomControleur + " - EVENEMENT RECU: QUITTER CET ESPACE DE TRAVAIL");
-    //     event.stopPropagation();
-    //     this.action_afficherMessage("Fermeture", "Redirection à la page d'acceuil...");
-    //     window.location.href = "/admin/entreprise";
-    // }
-
-    // /**
-    //  * @description Gère l'événement de parametrage de la liste.
-    //  * @param {CustomEvent} event L'événement personnalisé déclenché.
-    //  */
-    // handleParametrer(event) {
-    //     console.log(this.nomControleur + " - EVENEMENT RECU: PAREMETRER CETTE LISTE");
-    //     event.stopPropagation();
-    //     this.action_afficherMessage("Paramètres", "Redirection vers la page des paramètres du compte...");
-    //     window.location.href = "/register";
-    // }
-
     /**
      * @description Gère l'événement de la recharge ou actualisation de la liste.
      * @param {CustomEvent} event L'événement personnalisé déclenché.
@@ -447,7 +381,6 @@ export default class extends Controller {
         event.stopPropagation();
         this.outils_recharger(event);
     }
-
 
 
     /**
@@ -532,17 +465,6 @@ export default class extends Controller {
         this.displayTarget.innerHTML = "Résultat: " + this.nbelementsValue + " élement(s) | " + newMessage;
     }
 
-
-    // /**
-    //  * 
-    //  * @param {Event} event 
-    //   */
-    // handleItemToutCocher(event) {
-    //     event.stopPropagation();
-    //     console.log(this.nomControleur + " - handleToutCocher", event);
-    //     buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
-    // }
-
     /**
      * 
      */
@@ -580,9 +502,7 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
             titre: "Liste", message: "Actualisation encours..."
         });
-        // this.updateMessage("Actualisation des données...");
         this.donneesTarget.disabled = true;
-        // this.donneesTarget.innerHTML = "J'actualise cette liste";
         const url = '/admin/' + this.controleurphpValue + '/reload/' + this.identrepriseValue;
         fetch(url) // Remplacez par l'URL de votre formulaire
             .then(response => response.text())
@@ -592,7 +512,6 @@ export default class extends Controller {
 
                 const maintenant = new Date();
                 const dateHeureLocaleSimple = maintenant.toLocaleString();
-                // this.updateMessage("Dernière actualisation " + dateHeureLocaleSimple);
                 buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
                     titre: "Prêt", message: "Dernière actualisation " + dateHeureLocaleSimple
                 });
