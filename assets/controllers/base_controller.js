@@ -223,5 +223,3 @@ export const EVEN_ACTION_COCHER_TOUT = "app:liste-principale:tout_cocher";
 export const EVEN_ACTION_ENREGISTRER = "app:formulaire:enregistrer";
 export const EVEN_QUESTION_OK = "app:liste-principale:dialog_ok";
 export const EVEN_QUESTION_NO = "app:liste-principale:dialog_no";
-// export const EVEN_RESULTAT_SUCCESS = "app:liste-principale:formulaire_ajout_modification_reussi";
-// export const EVEN_RESULTAT_ECHEC = "app:liste-principale:formulaire_ajout_modification_echoue";
