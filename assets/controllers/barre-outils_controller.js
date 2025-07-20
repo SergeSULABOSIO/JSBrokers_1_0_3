@@ -57,8 +57,19 @@ export default class extends Controller {
     handlePublisheSelection(event) {
         const { selection } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - handlePublishSelection", selection);
+        event.stopPropagation();
         
         //On réorganise les boutons en fonction de la selection actuelle
+        this.organizeButtons(selection);
+
+        this.tabSelectedCheckBoxs = selection;
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre:"Etat",
+            message: "{" + selection  + "}. Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
+        });
+    }
+
+    organizeButtons(selection){
         if (selection.length >= 1) {
             if (selection.length == 1) {
                 this.btmodifierTarget.style.display = "block";
@@ -72,12 +83,6 @@ export default class extends Controller {
             this.btmodifierTarget.style.display = "none";
             this.btsupprimerTarget.style.display = "none";
         }
-        this.tabSelectedCheckBoxs = selection;
-        event.stopPropagation();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre:"Etat",
-            message: "{" + selection  + "}. Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
-        });
     }
 
     initToolTips() {
