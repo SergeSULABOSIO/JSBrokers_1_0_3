@@ -162,18 +162,34 @@
     <div class="d-flex gap-1 d-flex justify-content-end">
         {# Les actions sur l element de la liste #}
         <div class="options-du-parent">
+            {# Cocher #}
+            <button 
+                data-action = "liste-element#action_cocher"
+                class="btn btn-outline-secondary btn-sm border-0" 
+            >
+                {{ include('segments/icones/actions/check.html.twig', {size:'18px'}) }}
+            </button>
+
+            {# Développer #}
+            <button 
+                data-action = "liste-element#action_afficher_details"
+                class="btn btn-outline-secondary btn-sm border-0" 
+            >
+                {{ include('segments/icones/actions/open.html.twig', {size:'18px'}) }}
+            </button>
+
             {# Modification #}
             <button 
-                data-action = "liste-element#action_cocher liste-element#action_modifier"
-                class="btn btn-outline-primary btn-sm border-0" 
+                data-action = "liste-element#action_modifier"
+                class="btn btn-outline-secondary btn-sm border-0" 
             >
                 {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
             </button>
 
             {# Suppression #}
             <button 
-                data-action = "liste-element#action_cocher liste-element#action_supprimer"
-                class='btn btn-outline-danger border-0 btn-sm' 
+                data-action = "liste-element#action_supprimer"
+                class='btn btn-outline-secondary border-0 btn-sm' 
             >
                 {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
                 {# Supprimer #}
