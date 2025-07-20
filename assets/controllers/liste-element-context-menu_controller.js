@@ -137,10 +137,8 @@ export default class extends Controller {
      */
     handlePublisheSelection(event) {
         const { selection } = event.detail; // Récupère les données de l'événement
-        // console.log(this.nomControleur + " - handlePublishSelection", event.detail);
         this.tabSelectedCheckBoxs = selection;
         event.stopPropagation();
-        //A partir d'ici il faut personnaliser les elements du menu contextuel avant qu'il ne puisse s'afficher.
     }
 
 
@@ -150,7 +148,6 @@ export default class extends Controller {
      */
     handleItemCoche(event) {
         const { idCheckBox } = event.detail; // Récupère les données de l'événement
-        // console.log(this.nomControleur + " - ELEMENT COCHE. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
         this.tabSelectedCheckBoxs = [];
         this.tabSelectedCheckBoxs.push(idCheckBox);
         event.stopPropagation();
@@ -161,7 +158,6 @@ export default class extends Controller {
      */
     boundHideContextMenu() {
         this.menu.style.display = 'none';
-        // console.log(this.nomControleur + " - FERMETURE DU MENU CONTEXTUEL.");
     }
 
     /**
@@ -177,7 +173,6 @@ export default class extends Controller {
     context_action_ajouter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // console.log(this.nomControleur + " - CLIC SUR AJOUTER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
             titre: "Ajout",
             action: EVEN_CODE_ACTION_AJOUT,
@@ -187,7 +182,6 @@ export default class extends Controller {
     context_action_modifier(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // console.log(this.nomControleur + " - CLIC SUR MODIFIER", this.idObjet, this.tabSelectedCheckBoxs);
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
             titre: "Modification",
             action: EVEN_CODE_ACTION_MODIFICATION,
@@ -216,21 +210,18 @@ export default class extends Controller {
     context_action_tout_cocher(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // console.log(this.nomControleur + " - CLIC SUR TOUT COCHER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
     }
 
     context_action_actualiser(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // console.log(this.nomControleur + " - CLIC SUR ACTUALISER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
     }
 
     context_action_supprimer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // console.log(this.nomControleur + " - CLIC SUR SUPPRIMER");
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
             titre: "Suppression",
             action: EVEN_CODE_ACTION_SUPPRESSION,
@@ -241,14 +232,12 @@ export default class extends Controller {
     context_action_parametrer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // console.log(this.nomControleur + " - CLIC SUR PARAMETRER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event.detail);
     }
 
     context_action_quitter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // console.log(this.nomControleur + " - CLIC SUR QUITTER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event.detail);
     }
 }
