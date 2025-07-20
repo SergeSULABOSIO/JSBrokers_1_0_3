@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_MENU_CONTEXTUEL_INITIALIZED, EVEN_MENU_CONTEXTUEL_SHOW } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_AJOUTER, EVEN_ACTION_CLICK, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_DEVELOPPER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_MENU_CONTEXTUEL_INITIALIZED, EVEN_MENU_CONTEXTUEL_SHOW } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -90,6 +90,7 @@ export default class extends Controller {
 
         //On affiche le menu contextuel
         this.boundShowContextMenu(event);
+        buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, {});
     }
 
 
@@ -113,14 +114,20 @@ export default class extends Controller {
 
     handleContextMenuInitialized(event) {
         console.log(this.nomControleur + " - HandleContextMenuInitialized");
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+            titre: "Prêt",
+            message: "Le ménu contextuel est initialisé. Position: " + this.idObjet,
+        });
     }
 
     handleContextMenuShow(event) {
         console.log(this.nomControleur + " - HandleContextMenuShow");
+        this.boundShowContextMenu(event);
     }
 
     handleContextMenuHide(event) {
         console.log(this.nomControleur + " - HandleContextMenuHide");
+        this.hideContextMenu();
     }
 
 
@@ -130,7 +137,7 @@ export default class extends Controller {
      */
     handlePublisheSelection(event) {
         const { selection } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - handlePublishSelection", event.detail);
+        // console.log(this.nomControleur + " - handlePublishSelection", event.detail);
         this.tabSelectedCheckBoxs = selection;
         event.stopPropagation();
         //A partir d'ici il faut personnaliser les elements du menu contextuel avant qu'il ne puisse s'afficher.
@@ -143,7 +150,7 @@ export default class extends Controller {
      */
     handleItemCoche(event) {
         const { idCheckBox } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - ELEMENT COCHE. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
+        // console.log(this.nomControleur + " - ELEMENT COCHE. [id.=" + idCheckBox.split("check_")[1] + "]", idCheckBox);
         this.tabSelectedCheckBoxs = [];
         this.tabSelectedCheckBoxs.push(idCheckBox);
         event.stopPropagation();
@@ -154,7 +161,7 @@ export default class extends Controller {
      */
     boundHideContextMenu() {
         this.menu.style.display = 'none';
-        console.log(this.nomControleur + " - FERMETURE DU MENU CONTEXTUEL.");
+        // console.log(this.nomControleur + " - FERMETURE DU MENU CONTEXTUEL.");
     }
 
     /**
@@ -162,7 +169,6 @@ export default class extends Controller {
      */
     boundShowContextMenu(event) {
         this.menu.style.display = 'block'; // Affiche le menu
-        // console.log(this.nomControleur + " - OUVERTURE DU MENU CONTEXTUEL.");
         buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, event);
     }
 
@@ -171,7 +177,7 @@ export default class extends Controller {
     context_action_ajouter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        console.log(this.nomControleur + " - CLIC SUR AJOUTER");
+        // console.log(this.nomControleur + " - CLIC SUR AJOUTER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
             titre: "Ajout",
             action: EVEN_CODE_ACTION_AJOUT,
@@ -181,7 +187,7 @@ export default class extends Controller {
     context_action_modifier(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        console.log(this.nomControleur + " - CLIC SUR MODIFIER", this.idObjet, this.tabSelectedCheckBoxs);
+        // console.log(this.nomControleur + " - CLIC SUR MODIFIER", this.idObjet, this.tabSelectedCheckBoxs);
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
             titre: "Modification",
             action: EVEN_CODE_ACTION_MODIFICATION,
@@ -210,21 +216,21 @@ export default class extends Controller {
     context_action_tout_cocher(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        console.log(this.nomControleur + " - CLIC SUR TOUT COCHER");
+        // console.log(this.nomControleur + " - CLIC SUR TOUT COCHER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
     }
 
     context_action_actualiser(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        console.log(this.nomControleur + " - CLIC SUR ACTUALISER");
+        // console.log(this.nomControleur + " - CLIC SUR ACTUALISER");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
     }
 
     context_action_supprimer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        console.log(this.nomControleur + " - CLIC SUR SUPPRIMER");
+        // console.log(this.nomControleur + " - CLIC SUR SUPPRIMER");
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
             titre: "Suppression",
             action: EVEN_CODE_ACTION_SUPPRESSION,
@@ -234,15 +240,15 @@ export default class extends Controller {
 
     context_action_parametrer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        this.hideMenu();
-        console.log(this.nomControleur + " - CLIC SUR PARAMETRER");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_PARAMETRER, true, true, {});
+        this.hideContextMenu();
+        // console.log(this.nomControleur + " - CLIC SUR PARAMETRER");
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event.detail);
     }
 
     context_action_quitter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
-        this.hideMenu();
-        console.log(this.nomControleur + " - CLIC SUR QUITTER");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_QUITTER, true, true, {});
+        this.hideContextMenu();
+        // console.log(this.nomControleur + " - CLIC SUR QUITTER");
+        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event.detail);
     }
 }
