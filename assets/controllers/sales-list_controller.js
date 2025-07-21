@@ -1,5 +1,6 @@
 // assets/controllers/sales-list_controller.js
 import { Controller } from '@hotwired/stimulus';
+import { buildCustomEventForElement, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["listBody", "rowCheckbox", "selectAllCheckbox"];
@@ -7,13 +8,13 @@ export default class extends Controller {
     connect() {
         // EVENT_LISTE_PRINCIPALE_INITIALIZED
         // Informe que la liste est prête pour un premier calcul.
-        this.dispatch('initialized');
+        this.dispatch(EVEN_LISTE_PRINCIPALE_REFRESHED);
     }
 
     toggleRow() {
         // EVEN_ELEMENT_LISTE_CHECKED
         this.updateSelectAllCheckboxState();
-        this.dispatch('element-checked');
+        this.dispatch(EVEN_LISTE_ELEMENT_CHECKED);
     }
 
     toggleAll(event) {
@@ -22,7 +23,7 @@ export default class extends Controller {
             checkbox.checked = isChecked;
         });
         // EVEN_LISTE_PRINCIPALE_ALL_CHECKED
-        this.dispatch('all-checked');
+        this.dispatch(EVEN_LISTE_PRINCIPALE_ALL_CHECKED);
     }
 
     updateSelectAllCheckboxState() {
@@ -46,7 +47,6 @@ export default class extends Controller {
      * @param {string} name Le nom de l'événement (ex: 'initialized')
      */
     dispatch(name, detail = {}) {
-        const eventName = `sales-list:${name}`;
-        window.dispatchEvent(new CustomEvent(eventName, { detail }));
+        buildCustomEventForElement(document, name, true, true, detail);
     }
 }

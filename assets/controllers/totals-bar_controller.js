@@ -1,5 +1,7 @@
 // assets/controllers/totals-bar_controller.js
 import { Controller } from '@hotwired/stimulus';
+import { EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
+
 
 export default class extends Controller {
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
@@ -7,18 +9,18 @@ export default class extends Controller {
     connect() {
         // Écoute les événements déclenchés par la liste des ventes
         this.boundRecalculate = this.recalculate.bind(this);
-        window.addEventListener('sales-list:initialized', this.boundRecalculate);
-        window.addEventListener('sales-list:refreshed', this.boundRecalculate);
-        window.addEventListener('sales-list:element-checked', this.boundRecalculate);
-        window.addEventListener('sales-list:all-checked', this.boundRecalculate);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
+        document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundRecalculate);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundRecalculate);
     }
     
     disconnect() {
         // Nettoyage des écouteurs pour éviter les fuites de mémoire
-        window.removeEventListener('sales-list:initialized', this.boundRecalculate);
-        window.removeEventListener('sales-list:refreshed', this.boundRecalculate);
-        window.removeEventListener('sales-list:element-checked', this.boundRecalculate);
-        window.removeEventListener('sales-list:all-checked', this.boundRecalculate);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundRecalculate);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundRecalculate);
     }
 
     recalculate() {
