@@ -1,0 +1,17 @@
+{# templates/pages/sales_demo.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Démo Barre des Totaux{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+    <h1 class="mb-4">Liste des Ventes</h1>
+
+    {# 1. Inclusion de la barre des totaux #}
+    {{ include('components/_totals_bar.html.twig') }}
+
+    {# 2. Inclusion de la liste des ventes en passant les données #}
+    {{ include('components/_sales_list.html.twig', { sales: sales }) }}
+
+</div>
+{% endblock %}

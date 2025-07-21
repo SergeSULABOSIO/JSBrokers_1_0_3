@@ -3,22 +3,23 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use DateTimeImmutable;
+use App\Entity\Avenant;
 use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
-use App\Entity\Avenant;
+use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
-use App\Entity\Utilisateur;
-use App\Form\NotificationSinistreType;
 use App\Repository\InviteRepository;
+use App\Form\NotificationSinistreType;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\NotificationSinistreRepository;
-use App\Services\ServiceMonnaies;
-use DateTimeImmutable;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -311,6 +312,36 @@ class NotificationSinistreController extends AbstractController
             'utilisateur' => $user,
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
+        ]);
+    }
+
+
+
+    #[Route('/sales-demo', name: 'app_sales_demo')]
+    public function salesDemo(): Response
+    {
+        // Génération de 10 ventes de démonstration
+        $sales = [];
+        $clients = ['TechCorp', 'Innovate SARL', 'Digital Solutions', 'Global Systems'];
+        $items = ['Laptop Pro X', 'Écran 4K Ultra', 'Souris Gamer RGB', 'Clavier Mécanique'];
+
+        for ($i = 1; in_array($i, range(1, 10)); $i++) {
+            $invoiced = rand(500, 2000) * 100; // en centimes
+            $paid = rand(0, $invoiced);
+
+            $sales[] = [
+                'id' => 'sale-' . $i,
+                'clientName' => $clients[array_rand($clients)],
+                'saleDate' => (new \DateTime())->modify('-' . rand(1, 30) . ' days'),
+                'itemName' => $items[array_rand($items)],
+                'amountInvoiced' => $invoiced,
+                'amountPaid' => $paid,
+                'balance' => $invoiced - $paid,
+            ];
+        }
+
+        return $this->render('pages/sales_demo.html.twig', [
+            'sales' => $sales,
         ]);
     }
 }
