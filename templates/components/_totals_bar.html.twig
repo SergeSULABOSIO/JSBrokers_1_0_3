@@ -1,14 +1,14 @@
 {# templates/components/_totals_bar.html.twig #}
  <div
      data-controller="totals-bar"
-     class="d-flex align-items-center justify-content-between p-2 mb-4 border-bottom"
-     style="background-color: #f8f9fa; --bs-border-opacity: .15;"
+     class="d-flex align-items-center justify-content-between mb-0 mt-2"
+     {# style="background-color: #f8f9fa; --bs-border-opacity: .15;" #}
  >
      {# Sous-ensemble 1: Choix de l'attribut (inchangé) #}
      <div class="d-flex align-items-center">
-         <label for="attribute-select" class="form-label me-2 mb-0 fw-bold" style="color: #212529;">Totaliser :</label>
+         <label for="attribute-select" class="form-label me-2 mb-0 small" style="color: gray;">Totaliser :</label>
          <select
-             class="form-select form-select-sm"
+             class="form-select form-select-sm text-secondary text-muted small"
              id="attribute-select"
              style="width: auto;"
              data-action="totals-bar#recalculate"
@@ -22,25 +22,25 @@
  
      {# Sous-ensemble 2: Total Global (modifié) #}
      <div class="d-flex align-items-center gap-2">
-         <span class="text-muted small text-uppercase">Total Global:</span>
+         <span class="text-muted small">Total Global:</span>
          <span
              class="small fw-bolder"
              data-totals-bar-target="globalTotal"
-             style="color: #212529;"
+             style="color: #6c757d;"
          >
-             Calcul...
+            0,00 $
          </span>
      </div>
  
      {# Sous-ensemble 3: Total de la Sélection (modifié) #}
      <div class="d-flex align-items-center gap-2">
-         <span class="text-muted small text-uppercase">Total Sélection:</span>
+         <span class="text-muted small">Total Sélection:</span>
          <span
              class="small fw-bold"
              data-totals-bar-target="selectionTotal"
              style="color: #6c757d;"
          >
-             0,00 €
+            0,00 $
          </span>
      </div>
  </div>

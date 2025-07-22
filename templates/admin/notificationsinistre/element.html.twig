@@ -3,7 +3,11 @@
     data-controller="liste-element" 
     data-liste-element-isShown-value = false 
     data-liste-element-idobjet-value = {{notificationsinistre.id}} 
-    class="element-a-encadrer parent-a-options context-target" 
+    class="element-a-encadrer parent-a-options context-target align-middle" 
+    {# Les data-attributes stockent les valeurs numériques brutes (en centimes) #}
+    data-amount-invoiced-value=10
+    data-amount-paid-value=7
+    data-balance-value=3
 >
     {{ include("admin/notificationsinistre/elementview.html.twig") }}
 </tr>

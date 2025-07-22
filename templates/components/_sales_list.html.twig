@@ -40,9 +40,9 @@
                         <div class="small text-muted">{{ sale.saleDate|date('d/m/Y') }}</div>
                     </td>
                     <td>{{ sale.itemName }}</td>
-                    <td class="text-end">{{ (sale.amountInvoiced / 100)|number_format(2, ',', ' ') }} €</td>
-                    <td class="text-end text-success fw-bold">{{ (sale.amountPaid / 100)|number_format(2, ',', ' ') }} €</td>
-                    <td class="text-end text-danger fw-bold">{{ (sale.balance / 100)|number_format(2, ',', ' ') }} €</td>
+                    <td class="text-end">{{ (sale.amountInvoiced / 100)|number_format(2, ',', ' ') }} $</td>
+                    <td class="text-end text-success fw-bold">{{ (sale.amountPaid / 100)|number_format(2, ',', ' ') }} $</td>
+                    <td class="text-end text-danger fw-bold">{{ (sale.balance / 100)|number_format(2, ',', ' ') }} $</td>
                 </tr>
             {% endfor %}
         </tbody>

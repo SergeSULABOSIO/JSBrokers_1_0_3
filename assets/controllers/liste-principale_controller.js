@@ -5,6 +5,8 @@ export default class extends Controller {
     static targets = [
         'display',          //Champ d'affichage d'informations
         'donnees',          //Liste conténant des élements
+        'selectAllCheckbox',
+        'rowCheckbox',
     ];
     static values = {
         identreprise: Number,
@@ -79,6 +81,22 @@ export default class extends Controller {
         document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
+    }
+
+    updateSelectAllCheckboxState() {
+        const allChecked = this.rowCheckboxTargets.every(checkbox => checkbox.checked);
+        const someChecked = this.rowCheckboxTargets.some(checkbox => checkbox.checked);
+        
+        if (allChecked) {
+            this.selectAllCheckboxTarget.checked = true;
+            this.selectAllCheckboxTarget.indeterminate = false;
+        } else if (someChecked) {
+            this.selectAllCheckboxTarget.checked = false;
+            this.selectAllCheckboxTarget.indeterminate = true;
+        } else {
+            this.selectAllCheckboxTarget.checked = false;
+            this.selectAllCheckboxTarget.indeterminate = false;
+        }
     }
 
     boundHideContextMenu(event) {
@@ -391,6 +409,7 @@ export default class extends Controller {
         const { selectedCheckbox, isChecked } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - handleChecked", event.detail);
         event.stopPropagation();
+        this.updateSelectAllCheckboxState();
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
             titre: "Selection",
             message: "Selection de " + selectedCheckbox + ". Total actuel: " + this.tabSelectedCheckBoxs.length + " élément(s).",
@@ -415,6 +434,7 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
             selection: this.tabSelectedCheckBoxs,
         });
+        this.updateSelectAllCheckboxState();
     }
 
 

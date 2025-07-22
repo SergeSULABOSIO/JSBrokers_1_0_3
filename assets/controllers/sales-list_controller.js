@@ -1,6 +1,6 @@
 // assets/controllers/sales-list_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["listBody", "rowCheckbox", "selectAllCheckbox"];
@@ -14,7 +14,7 @@ export default class extends Controller {
     toggleRow() {
         // EVEN_ELEMENT_LISTE_CHECKED
         this.updateSelectAllCheckboxState();
-        this.dispatch(EVEN_LISTE_ELEMENT_CHECKED);
+        this.dispatch(EVEN_CHECKBOX_PUBLISH_SELECTION);
     }
 
     toggleAll(event) {
@@ -23,7 +23,7 @@ export default class extends Controller {
             checkbox.checked = isChecked;
         });
         // EVEN_LISTE_PRINCIPALE_ALL_CHECKED
-        this.dispatch(EVEN_LISTE_PRINCIPALE_ALL_CHECKED);
+        this.dispatch(EVEN_CHECKBOX_PUBLISH_SELECTION);
     }
 
     updateSelectAllCheckboxState() {

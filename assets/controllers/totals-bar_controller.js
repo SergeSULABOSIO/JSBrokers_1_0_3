@@ -1,26 +1,24 @@
 // assets/controllers/totals-bar_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
+import { EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
 
 
 export default class extends Controller {
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
 
     connect() {
+        this.nomControleur = "TOTALS-BAR";
         // Écoute les événements déclenchés par la liste des ventes
         this.boundRecalculate = this.recalculate.bind(this);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
-        document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundRecalculate);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundRecalculate);
+        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundRecalculate);
+        this.recalculate();
     }
     
     disconnect() {
         // Nettoyage des écouteurs pour éviter les fuites de mémoire
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundRecalculate);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundRecalculate);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundRecalculate);
+        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundRecalculate);
     }
 
     recalculate() {
@@ -29,6 +27,8 @@ export default class extends Controller {
 
         const allRows = document.querySelectorAll(`tr[${dataAttribute}]`);
         const checkedRows = this.getCheckedRows(dataAttribute);
+
+        console.log(this.nomControleur + " - recalculate", allRows, checkedRows);
 
         // Calcul du total global
         const globalTotal = this.sumValues(allRows, dataAttribute);
@@ -59,7 +59,7 @@ export default class extends Controller {
         const amount = valueInCents / 100;
         return new Intl.NumberFormat('fr-FR', {
             style: 'currency',
-            currency: 'EUR',
+            currency: 'USD',
         }).format(amount);
     }
     
