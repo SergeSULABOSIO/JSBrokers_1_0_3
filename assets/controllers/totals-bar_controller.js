@@ -28,7 +28,7 @@ export default class extends Controller {
         const allRows = document.querySelectorAll(`tr[${dataAttribute}]`);
         const checkedRows = this.getCheckedRows(dataAttribute);
 
-        console.log(this.nomControleur + " - recalculate", allRows, checkedRows);
+        // console.log(this.nomControleur + " - recalculate", allRows, checkedRows);
 
         // Calcul du total global
         const globalTotal = this.sumValues(allRows, dataAttribute);

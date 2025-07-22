@@ -8,7 +8,7 @@
     <h1 class="mb-4">Liste des Ventes</h1>
 
     {# 1. Inclusion de la barre des totaux #}
-    {{ include('components/_totals_bar.html.twig') }}
+    {{ include('components/_totals_bar.html.twig', { numericAttributes: numericAttributes }) }}
 
     {# 2. Inclusion de la liste des ventes en passant les données #}
     {{ include('components/_sales_list.html.twig', { sales: sales }) }}

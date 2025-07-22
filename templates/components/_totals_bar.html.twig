@@ -14,9 +14,12 @@
              data-action="totals-bar#recalculate"
              data-totals-bar-target="attributeSelector"
          >
-             <option value="amountInvoiced" selected>Montant Facturé</option>
-             <option value="amountPaid">Montant Payé</option>
-             <option value="balance">Solde Restant</option>
+            {# Boucle pour générer les options dynamiquement #}
+            {% for key, label in numericAttributes %}
+                <option value="{{ key }}" {{ loop.first ? 'selected' : '' }}>
+                    {{ label }}
+                </option>
+            {% endfor %}
          </select>
      </div>
  

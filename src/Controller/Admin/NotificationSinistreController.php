@@ -63,6 +63,7 @@ class NotificationSinistreController extends AbstractController
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
+            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
         ]);
     }
 
@@ -320,6 +321,13 @@ class NotificationSinistreController extends AbstractController
     #[Route('/sales-demo', name: 'app_sales_demo')]
     public function salesDemo(): Response
     {
+        // 1. Définir les attributs numériques et leurs libellés ici
+        $numericAttributes = [
+            "amount-invoiced" => "Montant Facturé",
+            'amount-paid' => "Montant Payé",
+            "balance" => "Solde Restant",
+        ];
+
         // Génération de 10 ventes de démonstration
         $sales = [];
         $clients = ['TechCorp', 'Innovate SARL', 'Digital Solutions', 'Global Systems'];
@@ -328,6 +336,14 @@ class NotificationSinistreController extends AbstractController
         for ($i = 1; in_array($i, range(1, 10)); $i++) {
             $invoiced = rand(500, 2000) * 100; // en centimes
             $paid = rand(0, $invoiced);
+            $balance = $invoiced - $paid;
+
+            // 2. Créer le nouvel attribut `numericValues` pour chaque vente
+            $numericValues = [
+                'amount-invoiced' => $invoiced,
+                'amount-paid' => $paid,
+                'balance' => $balance,
+            ];
 
             $sales[] = [
                 'id' => 'sale-' . $i,
@@ -337,11 +353,13 @@ class NotificationSinistreController extends AbstractController
                 'amountInvoiced' => $invoiced,
                 'amountPaid' => $paid,
                 'balance' => $invoiced - $paid,
+                'numericValues' => $numericValues, // Ajout du tableau associatif
             ];
         }
 
         return $this->render('pages/sales_demo.html.twig', [
             'sales' => $sales,
+            'numericAttributes' => $numericAttributes,
         ]);
     }
 }

@@ -5918,7 +5918,7 @@ class Constante
                     }
                     return ($dateA > $dateB) ? -1 : 1;
                 });
-                
+
                 //On récupère les dates
                 if (count($effectDates) != 0) {
                     $tabDetails['effectDate'] = $effectDates[0];
@@ -6149,5 +6149,40 @@ class Constante
         $tabFinaleOrdonne[] = $dataSet;
 
         return $tabFinaleOrdonne;
+    }
+
+    public function getNumericAttributes($object): array
+    {
+        if ($object instanceof NotificationSinistre) {
+            return [
+                "dommage-avant-evaluation" => "Dommage avant évaluation",
+                'dommage-apres-evaluation' => "Dommage après évaluation",
+                'franchise' => "Franchise",
+                "compensation-totale" => "Compensation totale",
+                "compensation-versee" => "Compensation versée",
+                "compensation-due" => "Compensation due",
+            ];
+        }
+
+        return [];
+    }
+
+    public function getNumericValues($object): array
+    {
+        if ($object instanceof NotificationSinistre) {
+            /**
+             * @var NotificationSinistre $object
+             */
+            return [
+                "dommage-avant-evaluation" => $object->getDommage() * 100,
+                'dommage-apres-evaluation' => $object->getEvaluationChiffree() * 100,
+                'franchise' => $this->Notification_Sinistre_getFranchise($object) * 100,
+                "compensation-totale" => $this->Notification_Sinistre_getCompensation($object) * 100,
+                "compensation-versee" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
+                "compensation-due" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
+            ];
+        }
+
+        return [];
     }
 }

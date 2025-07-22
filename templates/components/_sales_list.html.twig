@@ -22,10 +22,10 @@
             {% for sale in sales %}
                 <tr
                     class="align-middle"
-                    {# Les data-attributes stockent les valeurs numériques brutes (en centimes) #}
-                    data-amount-invoiced-value="{{ sale.amountInvoiced }}"
-                    data-amount-paid-value="{{ sale.amountPaid }}"
-                    data-balance-value="{{ sale.balance }}"
+                    {# Boucle pour générer dynamiquement les data-attributes numériques #}
+                    {% for key, value in sale.numericValues %}
+                        data-{{ key }}-value="{{ value }}"
+                    {% endfor %}
                 >
                     <td class="text-center">
                         <input
