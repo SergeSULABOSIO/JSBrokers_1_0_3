@@ -6155,12 +6155,12 @@ class Constante
     {
         if ($object instanceof NotificationSinistre) {
             return [
-                "dommage-avant-evaluation" => "Dommage avant évaluation",
-                'dommage-apres-evaluation' => "Dommage après évaluation",
-                'franchise' => "Franchise",
-                "compensation-totale" => "Compensation totale",
-                "compensation-versee" => "Compensation versée",
-                "compensation-due" => "Compensation due",
+                "dommage-avant-evaluation" => "la somme des dommages avant évaluation",
+                'dommage-apres-evaluation' => "la somme des dommages après évaluation",
+                'franchise' => "la somme des franchises",
+                "compensation-totale" => "la somme des compensations totales",
+                "compensation-versee" => "la somme des compensations versées",
+                "compensation-due" => "la somme des compensations dues",
             ];
         }
 
