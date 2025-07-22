@@ -180,6 +180,10 @@ export const EVEN_MENU_CONTEXTUEL_HIDE = "app:menu-contextuel:hide";
 export const EVEN_BARRE_OUTILS_INIT_REQUEST = "app:barre-outils:init-request";
 export const EVEN_BARRE_OUTILS_INITIALIZED = "app:barre-outils:initialized";
 
+//Toast - Message de notification sur l'écran
+export const EVEN_SHOW_TOAST = "app:message-toast:show";
+
+
 //Evenements - Boîte de dialogue
 export const EVEN_BOITE_DIALOGUE_INIT_REQUEST = "app:boite-dialogue:init-request";
 export const EVEN_BOITE_DIALOGUE_INITIALIZED = "app:boite-dialogue:initialized";

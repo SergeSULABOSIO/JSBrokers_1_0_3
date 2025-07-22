@@ -1,6 +1,6 @@
 // assets/controllers/sales-list_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_SHOW_TOAST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["listBody", "rowCheckbox", "selectAllCheckbox"];
@@ -15,6 +15,10 @@ export default class extends Controller {
         // EVEN_ELEMENT_LISTE_CHECKED
         this.updateSelectAllCheckboxState();
         this.dispatch(EVEN_CHECKBOX_PUBLISH_SELECTION);
+
+        // Déclencher l'événement global pour afficher la notification
+        const detail = { text: 'Modifications enregistrées !', type: 'success' };
+        this.dispatch(EVEN_SHOW_TOAST, detail);
     }
 
     toggleAll(event) {
@@ -24,12 +28,16 @@ export default class extends Controller {
         });
         // EVEN_LISTE_PRINCIPALE_ALL_CHECKED
         this.dispatch(EVEN_CHECKBOX_PUBLISH_SELECTION);
+
+        // Déclencher l'événement global pour afficher la notification
+        const detail = { text: 'Une erreur est survenue.', type: 'error' };
+        this.dispatch(EVEN_SHOW_TOAST, detail);
     }
 
     updateSelectAllCheckboxState() {
         const allChecked = this.rowCheckboxTargets.every(checkbox => checkbox.checked);
         const someChecked = this.rowCheckboxTargets.some(checkbox => checkbox.checked);
-        
+
         if (allChecked) {
             this.selectAllCheckboxTarget.checked = true;
             this.selectAllCheckboxTarget.indeterminate = false;
@@ -41,7 +49,7 @@ export default class extends Controller {
             this.selectAllCheckboxTarget.indeterminate = false;
         }
     }
-    
+
     /**
      * Dispatche un événement customisé sur la fenêtre.
      * @param {string} name Le nom de l'événement (ex: 'initialized')
