@@ -129,6 +129,9 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
             titre: "Prêt", message: "Suppression effectuée avec succès."
         });
+
+        // Déclencher l'événement global pour afficher la notification
+        buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Suppression réussie !', type: 'success' });
     }
 
 
@@ -173,6 +176,9 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
             titre: "Prêt", message: "Element ajouté avec succès."
         });
+
+        // Déclencher l'événement global pour afficher la notification
+        buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Element ajouté avec succès !', type: 'success' });
     }
 
     handleAllCheckRequest(event) {
@@ -272,6 +278,7 @@ export default class extends Controller {
     handleServerResponsed(event) {
         const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - handleServerResponded", event.detail);
+        
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_CLOSE, true, true, event.detail);
         //ACTION AJOUT = 0
         if (code == EVEN_CODE_RESULTAT_OK) {
@@ -544,8 +551,7 @@ export default class extends Controller {
                 this.publierSelection();
 
                 // Déclencher l'événement global pour afficher la notification
-                const detail = { text: 'Liste actualisée avec succès !', type: 'success' };
-                buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, detail);
+                buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Liste actualisée avec succès !', type: 'info' });
             });
     }
 }
