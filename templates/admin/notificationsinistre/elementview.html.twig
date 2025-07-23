@@ -7,10 +7,9 @@
             name="check_[]" 
             value="selectionnee" 
             class="form-check-input" 
-            data-controller="checkbox-element" 
-            data-action="change->checkbox-element#action_cocher" 
+            data-action="change->liste-principale#handleCheckboxChange" 
             data-liste-principale-target="rowCheckbox"
-            data-checkbox-element-idobjet-value="{{ notificationsinistre.id }}"  
+            data-idobjet-value="{{ notificationsinistre.id }}"  
         >
         <label 
             for="check_{{ notificationsinistre.id }}" 

@@ -50,9 +50,6 @@ export default class extends Controller {
         document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
         document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
         document.addEventListener(EVEN_SERVER_RESPONSED, this.handleServerResponsed.bind(this));
-        document.addEventListener(EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
-        document.addEventListener(EVEN_CHECKBOX_ELEMENT_CHECKED, this.handleChecked.bind(this));
-        document.addEventListener(EVEN_CHECKBOX_ELEMENT_UNCHECKED, this.handleUnChecked.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
@@ -74,13 +71,29 @@ export default class extends Controller {
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
         document.removeEventListener(EVEN_SERVER_RESPONSED, this.handleServerResponsed.bind(this));
-        document.removeEventListener(EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
-        document.removeEventListener(EVEN_CHECKBOX_ELEMENT_CHECKED, this.handleChecked.bind(this));
-        document.removeEventListener(EVEN_CHECKBOX_ELEMENT_UNCHECKED, this.handleUnChecked.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
+    }
+
+    handleCheckboxChange(event) {
+        const checkbox = event.currentTarget;
+        const idObjet = checkbox.dataset.idobjetValue;
+        const isChecked = checkbox.checked;
+
+        if (isChecked) {
+            if (!this.tabSelectedCheckBoxs.includes(idObjet)) {
+                this.tabSelectedCheckBoxs.push(idObjet);
+            }
+        } else {
+            const index = this.tabSelectedCheckBoxs.indexOf(idObjet);
+            if (index > -1) {
+                this.tabSelectedCheckBoxs.splice(index, 1);
+            }
+        }
+        this.updateSelectAllCheckboxState();
+        this.publierSelection();
     }
 
     updateSelectAllCheckboxState() {
@@ -408,66 +421,7 @@ export default class extends Controller {
     }
 
 
-    /**
-     * @description Gère l'événement de séléction.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleChecked(event) {
-        const { selectedCheckbox, isChecked } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - handleChecked", event.detail);
-        event.stopPropagation();
-        this.updateSelectAllCheckboxState();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Selection",
-            message: "Selection de " + selectedCheckbox + ". Total actuel: " + this.tabSelectedCheckBoxs.length + " élément(s).",
-        });
-        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
-            selection: this.tabSelectedCheckBoxs,
-        });
-    }
-
-    /**
-     * @description Gère l'événement de séléction.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleUnChecked(event) {
-        const { selectedCheckbox, isChecked } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - handleChecked", event.detail);
-        event.stopPropagation();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Selection",
-            message: "Retrait de " + selectedCheckbox + ". Total actuel: " + this.tabSelectedCheckBoxs.length + " élément(s).",
-        });
-        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
-            selection: this.tabSelectedCheckBoxs,
-        });
-        this.updateSelectAllCheckboxState();
-    }
-
-
-    /**
-     * @description Gère l'événement de séléction.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleCheckRequest(event) {
-        const { selectedCheckbox, isChecked } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - handleCheckRequest", event.detail);
-        event.stopPropagation();
-        if (isChecked == true) {
-            if (this.tabSelectedCheckBoxs.includes(selectedCheckbox)) {
-                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(selectedCheckbox), 1);
-                buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_UNCHECKED, true, true, event.detail);
-            } else {
-                this.tabSelectedCheckBoxs.push(selectedCheckbox);
-                buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_CHECKED, true, true, event.detail);
-            }
-        } else {
-            if (this.tabSelectedCheckBoxs.includes(selectedCheckbox)) {
-                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(selectedCheckbox), 1);
-                buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_UNCHECKED, true, true, event.detail);
-            }
-        }
-    }
+    
 
 
     publierSelection() {
