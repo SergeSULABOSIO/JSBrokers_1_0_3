@@ -21,22 +21,25 @@ export default class extends Controller {
 
         // Map pour associer un type à une classe Bootstrap et une icône
         const options = {
-            success: { class: 'text-bg-success', icon: '✅' },
-            error: { class: 'text-bg-danger', icon: '❌' },
-            info: { class: 'text-bg-info', icon: 'ℹ️' },
-            warning: { class: 'text-bg-warning', icon: '⚠️' }
+            success: { bg: 'bg-success', text: 'text-white', icon: '✅' },
+            error: { bg: 'bg-danger', text: 'text-white', icon: '❌' },
+            info: { bg: 'bg-info', text: 'text-dark', icon: 'ℹ️' },
+            warning: { bg: 'bg-warning', text: 'text-dark', icon: '⚠️' }
         };
 
         const config = options[type];
 
+        // Détermine la classe du bouton de fermeture en fonction du fond
+        const closeButtonClass = (config.text === 'text-white') ? 'btn-close-white' : '';
+
         // Création dynamique de l'HTML du toast
         const toastHTML = `
-            <div class="toast align-items-center ${config.class} border-0 p-2 m-1" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast align-items-center ${config.bg} ${config.text} bg-opacity-75 border border-secondary p-2 m-1" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex">
                     <div class="toast-body">
                         ${config.icon} ${text}
                     </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    <button type="button" class="btn-close ${closeButtonClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
             </div>
         `;
