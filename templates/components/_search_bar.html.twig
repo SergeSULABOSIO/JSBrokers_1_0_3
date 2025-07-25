@@ -1,0 +1,54 @@
+{# templates/components/_search_bar.html.twig #}
+<div {{ attributes }}
+     data-controller="search-bar"
+     {# data-action="EVEN_LISTE_PRINCIPALE_CRITERES_DEFINED@document->search-bar#handleCriteriaDefined" #}
+>
+    <div class="search-bar-row-1 p-2 d-flex align-items-center bg-white rounded-top shadow-sm">
+        <div class="input-group flex-grow-1">
+            <span class="input-group-text bg-transparent border-0 pe-2">
+                <twig:ux:icon name="lucide:search" class="text-secondary search-summary-icon" />
+            </span>
+            <input type="text"
+                   class="form-control border-0 search-bar-input"
+                   data-search-bar-target="simpleSearchInput"
+                   data-action="keydown.enter->search-bar#submitSimpleSearch"
+                   placeholder="Rechercher...">
+        </div>
+
+        <div class="ms-3 d-flex align-items-center">
+            <button class="btn btn-sm btn-light" title="Recherche avancée" data-action="click->search-bar#openAdvancedSearch">
+                <twig:ux:icon name="lucide:sliders-horizontal" class="search-summary-icon"/>
+            </button>
+            <button class="btn btn-sm btn-light ms-1" title="Réinitialiser la recherche" data-action="click->search-bar#reset">
+                <twig:ux:icon name="lucide:rotate-cw" class="search-summary-icon"/>
+            </button>
+        </div>
+    </div>
+
+    <div class="search-bar-row-2 d-flex align-items-center p-2 bg-light rounded-bottom small text-muted" data-search-bar-target="summaryContainer">
+        <twig:ux:icon name="lucide:info" class="me-2 flex-shrink-0 search-summary-icon" />
+        <div data-search-bar-target="summary" class="flex-grow-1">
+            <span>Recherche simple activée.</span>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100">
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-search-bar-target="advancedSearchToast">
+            <div class="toast-header">
+                <twig:ux:icon name="lucide:sliders-horizontal" class="me-2 search-summary-icon" />
+                <strong class="me-auto">Recherche Avancée</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <form data-action="keydown.enter->search-bar#submitAdvancedSearch">
+                    <div data-search-bar-target="advancedFormContainer">
+                        </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="button" class="btn btn-secondary btn-sm me-2" data-action="click->search-bar#cancelAdvancedSearch">Annuler</button>
+                        <button type="button" class="btn btn-primary btn-sm" data-action="click->search-bar#submitAdvancedSearch">Rechercher</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

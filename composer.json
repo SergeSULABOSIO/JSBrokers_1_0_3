@@ -44,6 +44,7 @@
         "symfony/ux-chartjs": "^2.21",
         "symfony/ux-icons": "^2.22",
         "symfony/ux-toggle-password": "^2.20",
+        "symfony/ux-twig-component": "^2.27",
         "symfony/validator": "7.1.*",
         "symfony/web-link": "7.1.*",
         "symfony/yaml": "7.1.*",
