@@ -1,8 +1,5 @@
 {# templates/components/_search_bar.html.twig #}
-<div {{ attributes }}
-     data-controller="search-bar"
-     {# data-action="EVEN_LISTE_PRINCIPALE_CRITERES_DEFINED@document->search-bar#handleCriteriaDefined" #}
->
+<div {{ attributes }} data-controller="search-bar">
     <div class="search-bar-row-1 p-2 d-flex align-items-center bg-white rounded-top shadow-sm">
         <div class="input-group flex-grow-1">
             <span class="input-group-text bg-transparent border-0 pe-2">
@@ -42,7 +39,7 @@
             <div class="toast-body">
                 <form data-action="keydown.enter->search-bar#submitAdvancedSearch">
                     <div data-search-bar-target="advancedFormContainer">
-                        </div>
+                    </div>
                     <div class="d-flex justify-content-end mt-3">
                         <button type="button" class="btn btn-secondary btn-sm me-2" data-action="click->search-bar#cancelAdvancedSearch">Annuler</button>
                         <button type="button" class="btn btn-primary btn-sm" data-action="click->search-bar#submitAdvancedSearch">Rechercher</button>
