@@ -8,8 +8,8 @@ export default class extends Controller {
         "simpleSearchInput",
         "advancedSearchToast",
         "advancedFormContainer",
-        "summaryContainer", // Le conteneur de la ligne 2
-        "summary" // La div qui contiendra les badges
+        "summaryContainer",
+        "summary"
     ];
 
     static values = {
@@ -17,28 +17,109 @@ export default class extends Controller {
         defaultCriterion: Object
     }
 
-    // Objet pour stocker l'état actuel des filtres actifs
     activeFilters = {};
 
     connect() {
         this.nomControleur = "SEARCH_BAR";
         this.toast = new Toast(this.advancedSearchToastTarget);
+
+        // Nouvelle méthode : Lier la fonction de mise à jour de la position pour pouvoir l'ajouter/supprimer
+        this.boundUpdateToastPosition = this.updateToastPosition.bind(this);
+
+        // Nouvelle méthode : Nettoyer les écouteurs si le toast est fermé (par ex: par le bouton close)
+        this.advancedSearchToastTarget.addEventListener('hide.bs.toast', () => {
+            window.removeEventListener('scroll', this.boundUpdateToastPosition);
+            window.removeEventListener('resize', this.boundUpdateToastPosition);
+        });
+
         document.addEventListener("EVEN_LISTE_PRINCIPALE_CRITERES_DEFINED", this.handleCriteriaDefined.bind(this));
         this.handleRequestCriteres();
     }
 
-    disconnect(){
+    disconnect() {
         document.removeEventListener("EVEN_LISTE_PRINCIPALE_CRITERES_DEFINED", this.handleCriteriaDefined.bind(this));
+        // Nouvelle méthode : S'assurer que les écouteurs sont supprimés si le contrôleur est déconnecté
+        window.removeEventListener('scroll', this.boundUpdateToastPosition);
+        window.removeEventListener('resize', this.boundUpdateToastPosition);
     }
 
+    // --- Actions de l'utilisateur (logique mise à jour) ---
+
+    openAdvancedSearch() {
+        // Nouvelle méthode : Mettre à jour la position avant d'afficher
+        this.updateToastPosition();
+        this.toast.show();
+        // Nouvelle méthode : Écouter le scroll et le redimensionnement pour garder le toast aligné
+        window.addEventListener('scroll', this.boundUpdateToastPosition, { passive: true });
+        window.addEventListener('resize', this.boundUpdateToastPosition);
+    }
+
+    cancelAdvancedSearch() {
+        this.toast.hide();
+        // Nouvelle méthode : Arrêter d'écouter les événements pour ne pas impacter les performances
+        window.removeEventListener('scroll', this.boundUpdateToastPosition);
+        window.removeEventListener('resize', this.boundUpdateToastPosition);
+        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
+    }
+
+    submitAdvancedSearch(event) {
+        event.preventDefault();
+        const inputs = this.advancedFormContainerTarget.querySelectorAll('[data-criterion-name]');
+
+        inputs.forEach(input => {
+            const name = input.dataset.criterionName;
+            const value = input.value.trim();
+
+            if (value) {
+                if (input.type === 'number') {
+                    const operatorSelect = this.advancedFormContainerTarget.querySelector(`[data-criterion-operator-for="${name}"]`);
+                    this.activeFilters[name] = { operator: operatorSelect.value, value: value };
+                } else {
+                    this.activeFilters[name] = value;
+                }
+            } else {
+                delete this.activeFilters[name];
+            }
+        });
+
+        this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
+        this.dispatchSearchEvent();
+    }
+
+    reset() {
+        this.simpleSearchInputTarget.value = '';
+        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
+        this.activeFilters = {};
+        this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
+        this.dispatchSearchEvent();
+    }
+
+    // --- Nouvelle méthode pour la position ---
+
+    /**
+     * Calcule et met à jour la position du toast de recherche avancée
+     * pour qu'il s'aligne juste en dessous de la barre de recherche.
+     */
+    updateToastPosition() {
+        if (!this.element.isConnected) return;
+
+        const rect = this.element.getBoundingClientRect();
+        const toastEl = this.advancedSearchToastTarget;
+
+        toastEl.style.position = 'fixed';
+        toastEl.style.top = `${rect.bottom + 5}px`; // 5px de marge en dessous
+        toastEl.style.left = `${rect.left}px`;
+        toastEl.style.width = `${rect.width}px`;
+    }
+
+    // --- Méthodes existantes (inchangées) ---
+
     handleRequestCriteres() {
-        console.log(this.nomControleur + " - handleRequestCriteres");
         this.dispatch("EVEN_LISTE_PRINCIPALE_CRITERES_REQUEST", { bubbles: true });
     }
 
     handleCriteriaDefined(event) {
         this.criteriaValue = event.detail;
-        console.log(this.nomControleur + " - handleCriteriaDefined", event.detail);
         const defaultCriterion = this.criteriaValue.find(c => c.isDefault === true);
         if (defaultCriterion) {
             this.defaultCriterionValue = defaultCriterion;
@@ -48,8 +129,6 @@ export default class extends Controller {
     }
 
     buildAdvancedForm() {
-        // Le code de cette fonction reste identique à la version précédente.
-        // ... (voir le code dans la réponse précédente si besoin)
         let html = '';
         const advancedCriteria = this.criteriaValue.filter(c => c.isDefault !== true);
         advancedCriteria.forEach(criterion => {
@@ -86,20 +165,15 @@ export default class extends Controller {
         this.advancedFormContainerTarget.innerHTML = html;
     }
 
-    // --- Actions de l'utilisateur (logique mise à jour) ---
-
-    openAdvancedSearch() {
-        this.toast.show();
-    }
-
-    cancelAdvancedSearch() {
-        this.toast.hide();
-        // Optionnel : vider les champs avancés lors de l'annulation
-        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
-    }
-
     submitSimpleSearch(event) {
         event.preventDefault();
+
+        // Empêche l'erreur si le critère par défaut n'est pas encore chargé
+        if (!this.hasDefaultCriterionValue) {
+            console.warn("Recherche annulée : le critère par défaut n'est pas encore défini.");
+            return;
+        }
+
         const value = this.simpleSearchInputTarget.value.trim();
         const key = this.defaultCriterionValue.Nom;
 
@@ -112,79 +186,26 @@ export default class extends Controller {
         this.dispatchSearchEvent();
     }
 
-    submitAdvancedSearch(event) {
-        event.preventDefault();
-        const inputs = this.advancedFormContainerTarget.querySelectorAll('[data-criterion-name]');
-
-        inputs.forEach(input => {
-            const name = input.dataset.criterionName;
-            const value = input.value.trim();
-
-            if (value) {
-                if (input.type === 'number') {
-                    const operatorSelect = this.advancedFormContainerTarget.querySelector(`[data-criterion-operator-for="${name}"]`);
-                    this.activeFilters[name] = { operator: operatorSelect.value, value: value };
-                } else {
-                    this.activeFilters[name] = value;
-                }
-            } else {
-                delete this.activeFilters[name];
-            }
-        });
-
-        this.toast.hide();
-        this.dispatchSearchEvent();
-    }
-
-    /**
-     * NOUVELLE MÉTHODE: Supprime un filtre individuel depuis un badge.
-     */
     removeFilter(event) {
         const keyToRemove = event.currentTarget.dataset.filterKey;
-
-        // Supprime le filtre de notre objet d'état
         delete this.activeFilters[keyToRemove];
-
-        // Vide le champ correspondant dans le formulaire
         if (keyToRemove === this.defaultCriterionValue.Nom) {
             this.simpleSearchInputTarget.value = '';
         } else {
             const inputToClear = this.advancedFormContainerTarget.querySelector(`[data-criterion-name="${keyToRemove}"]`);
             if (inputToClear) inputToClear.value = '';
         }
-
-        // Relance la recherche avec les filtres restants
         this.dispatchSearchEvent();
     }
 
-    reset() {
-        // Vide tous les champs
-        this.simpleSearchInputTarget.value = '';
-        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
-
-        // Réinitialise l'état et lance une recherche vide
-        this.activeFilters = {};
-        this.toast.hide();
-        this.dispatchSearchEvent();
-    }
-
-    // --- Méthodes utilitaires (logique mise à jour) ---
-
-    /**
-     * Émet l'événement avec l'état actuel des filtres.
-     */
     dispatchSearchEvent() {
         this.dispatch("EVEN_LISTE_PRINCIPALE_SEARCH_REQUEST", {
             bubbles: true,
             detail: { criteria: this.activeFilters }
         });
-        // Met à jour l'UI après chaque action
         this.updateSummary();
     }
 
-    /**
-     * Met à jour la ligne de résumé avec des badges interactifs.
-     */
     updateSummary() {
         const activeCriteria = Object.entries(this.activeFilters);
 
@@ -192,13 +213,11 @@ export default class extends Controller {
             this.summary.innerHTML = '<span>Recherche simple activée.</span>';
             this.summaryContainerTarget.classList.add('text-muted');
             this.summaryContainerTarget.classList.remove('text-dark', 'fw-bold');
-            this.summaryContainerTarget.querySelector('i').className = 'bi-info-circle me-2 flex-shrink-0'; // icone info
             return;
         }
 
         this.summaryContainerTarget.classList.remove('text-muted');
         this.summaryContainerTarget.classList.add('text-dark', 'fw-bold');
-        this.summaryContainerTarget.querySelector('i').className = 'bi-filter me-2 flex-shrink-0'; // icone filtre
 
         let summaryHtml = '';
         activeCriteria.forEach(([key, val]) => {
@@ -219,10 +238,6 @@ export default class extends Controller {
         this.summary.innerHTML = summaryHtml;
     }
 
-    /**
-     * Dispatche un événement customisé sur la fenêtre.
-     * @param {string} name Le nom de l'événement (ex: 'initialized')
-     */
     dispatch(name, detail = {}) {
         buildCustomEventForElement(document, name, true, true, detail);
     }
