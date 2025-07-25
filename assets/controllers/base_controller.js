@@ -146,6 +146,10 @@ export const EVEN_CODE_ACTION_SUPPRESSION = 2;
 export const EVEN_CODE_RESULTAT_OK = 0;
 export const EVEN_CODE_RESULTAT_ECHEC = 1;
 
+//Evenements - Moteur de recherche
+export const EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST = "app:moteur-recherche:criteres-request";
+export const EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST = "app:moteur-recherche:search-request";
+export const EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED = "app:moteur-recherche:criteres-defined";
 
 //Evenements - Liste Principale
 export const EVEN_LISTE_PRINCIPALE_NOTIFY = "app:liste-principale:notify";

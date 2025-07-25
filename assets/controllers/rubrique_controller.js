@@ -1,6 +1,6 @@
 // assets/controllers/sales-list_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_SHOW_TOAST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["listBody", "rowCheckbox", "selectAllCheckbox"];
@@ -13,14 +13,14 @@ export default class extends Controller {
         this.nomControleur = "RUBRIQUE - " + this.nomValue;
         console.log(this.nomControleur);
         // Ecoute l'évènement de demande des critères
-        document.addEventListener("EVEN_LISTE_PRINCIPALE_CRITERES_REQUEST", this.provideCriteria.bind(this));
+        document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, this.provideCriteria.bind(this));
         // Écoute l'événement de recherche pour mettre à jour la liste des ventes
-        document.addEventListener("EVEN_LISTE_PRINCIPALE_SEARCH_REQUEST", this.handleSearch.bind(this));
+        document.addEventListener(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, this.handleSearch.bind(this));
     }
 
     disconnect(){
-        document.removeEventListener("EVEN_LISTE_PRINCIPALE_CRITERES_REQUEST", this.provideCriteria.bind(this));
-        document.removeEventListener("EVEN_LISTE_PRINCIPALE_SEARCH_REQUEST", this.handleSearch.bind(this));
+        document.removeEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, this.provideCriteria.bind(this));
+        document.removeEventListener(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, this.handleSearch.bind(this));
     }
 
 
@@ -40,7 +40,7 @@ export default class extends Controller {
         ];
 
         // Émet l'événement de réponse avec les données
-        this.dispatch("EVEN_LISTE_PRINCIPALE_CRITERES_DEFINED", criteriaDefinition);
+        this.dispatch(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, criteriaDefinition);
     }
 
     /**

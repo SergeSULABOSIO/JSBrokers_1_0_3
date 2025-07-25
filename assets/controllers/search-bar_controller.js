@@ -1,7 +1,7 @@
 // assets/controllers/search-bar_controller.js
 import { Controller } from '@hotwired/stimulus';
 import { Toast } from 'bootstrap';
-import { buildCustomEventForElement } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -32,12 +32,12 @@ export default class extends Controller {
             window.removeEventListener('resize', this.boundUpdateToastPosition);
         });
 
-        document.addEventListener("EVEN_LISTE_PRINCIPALE_CRITERES_DEFINED", this.handleCriteriaDefined.bind(this));
+        document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.handleCriteriaDefined.bind(this));
         this.handleRequestCriteres();
     }
 
     disconnect() {
-        document.removeEventListener("EVEN_LISTE_PRINCIPALE_CRITERES_DEFINED", this.handleCriteriaDefined.bind(this));
+        document.removeEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.handleCriteriaDefined.bind(this));
         // Nouvelle méthode : S'assurer que les écouteurs sont supprimés si le contrôleur est déconnecté
         window.removeEventListener('scroll', this.boundUpdateToastPosition);
         window.removeEventListener('resize', this.boundUpdateToastPosition);
@@ -115,7 +115,7 @@ export default class extends Controller {
     // --- Méthodes existantes (inchangées) ---
 
     handleRequestCriteres() {
-        this.dispatch("EVEN_LISTE_PRINCIPALE_CRITERES_REQUEST", { bubbles: true });
+        this.dispatch(EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST);
     }
 
     handleCriteriaDefined(event) {
@@ -199,9 +199,7 @@ export default class extends Controller {
     }
 
     dispatchSearchEvent() {
-        this.dispatch("EVEN_LISTE_PRINCIPALE_SEARCH_REQUEST", {
-            criteria: this.activeFilters
-        });
+        this.dispatch(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, {criteria: this.activeFilters});
         this.updateSummary();
     }
 
