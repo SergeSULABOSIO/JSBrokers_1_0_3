@@ -155,7 +155,7 @@ export default class extends Controller {
                     html += `<select id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-select form-select-sm">`;
                     html += `<option value="">Toutes</option>`;
                     for (const [key, value] of Object.entries(criterion.Valeur)) {
-                         html += `<option value="${key}" title="${value}">${value}</option>`;
+                        html += `<option value="${key}" title="${value}">${value}</option>`;
                     }
                     html += `</select>`;
                     break;
@@ -200,8 +200,7 @@ export default class extends Controller {
 
     dispatchSearchEvent() {
         this.dispatch("EVEN_LISTE_PRINCIPALE_SEARCH_REQUEST", {
-            bubbles: true,
-            detail: { criteria: this.activeFilters }
+            criteria: this.activeFilters
         });
         this.updateSummary();
     }
@@ -210,7 +209,7 @@ export default class extends Controller {
         const activeCriteria = Object.entries(this.activeFilters);
 
         if (activeCriteria.length === 0) {
-            this.summary.innerHTML = '<span>Recherche simple activée.</span>';
+            this.summaryTarget.innerHTML = '<span>Recherche simple activée.</span>';
             this.summaryContainerTarget.classList.add('text-muted');
             this.summaryContainerTarget.classList.remove('text-dark', 'fw-bold');
             return;
@@ -226,16 +225,16 @@ export default class extends Controller {
                 <span class="badge text-bg-secondary me-1 mb-1 d-inline-flex align-items-center">
                     ${text}
                     <button type="button" 
-                            class="btn-close btn-close-white ms-2"
-                            style="font-size: 0.6em;"
-                            aria-label="Remove filter" 
-                            data-action="click->search-bar#removeFilter"
-                            data-filter-key="${key}">
+                        class="btn-close btn-close-white ms-2"
+                        style="font-size: 0.6em;"
+                        aria-label="Remove filter" 
+                        data-action="click->search-bar#removeFilter"
+                        data-filter-key="${key}">
                     </button>
                 </span>
             `;
         });
-        this.summary.innerHTML = summaryHtml;
+        this.summaryTarget.innerHTML = summaryHtml;
     }
 
     dispatch(name, detail = {}) {
