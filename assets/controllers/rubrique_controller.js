@@ -48,7 +48,7 @@ export default class extends Controller {
      */
     handleSearch(event) {
         const { criteria } = event.detail;
-        console.log(this.nomControleur + " - New search requested with criteria:", criteria);
+        console.log(this.nomControleur + " - handleSearch with criteria:", criteria);
 
         // Ici, vous feriez votre appel AJAX (fetch/Turbo) vers le serveur
         // pour filtrer et rafraîchir la liste des ventes.
