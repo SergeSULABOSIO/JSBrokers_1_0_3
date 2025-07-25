@@ -12,10 +12,10 @@
     <h1 class="mb-4">Liste des Ventes</h1>
 
     {# 1. Inclusion de la barre des totaux #}
-    {{ include('components/_totals_bar.html.twig', { numericAttributes: numericAttributes }) }}
+    {{ component('_search_bar') }}
 
     {# 2. La barre de recherche #}
-    {{ component('_search_bar') }}
+    {{ include('components/_totals_bar.html.twig', { numericAttributes: numericAttributes }) }}
 
 
     {# 3. Inclusion de la liste des ventes en passant les données #}
