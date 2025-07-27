@@ -123,7 +123,7 @@ export default class extends Controller {
         const defaultCriterion = this.criteriaValue.find(c => c.isDefault === true);
         if (defaultCriterion) {
             this.defaultCriterionValue = defaultCriterion;
-            this.simpleSearchInputTarget.placeholder = defaultCriterion.Nom;
+            this.simpleSearchInputTarget.placeholder = "Tapez du texte pour filtrer dans l'attribut '" + defaultCriterion.Display + "'.";
         }
         this.buildAdvancedForm();
     }
@@ -133,7 +133,8 @@ export default class extends Controller {
         const advancedCriteria = this.criteriaValue.filter(c => c.isDefault !== true);
         advancedCriteria.forEach(criterion => {
             const criterionId = `criterion_${criterion.Nom.replace(/\s+/g, '_')}`;
-            html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Nom}</label>`;
+            // html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Nom}</label>`;
+            html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Display}</label>`;
             switch (criterion.Type) {
                 case 'Text':
                     html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm">`;
@@ -153,7 +154,7 @@ export default class extends Controller {
                     break;
                 case 'Options':
                     html += `<select id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-select form-select-sm">`;
-                    html += `<option value="">Toutes</option>`;
+                    html += `<option value="">Tout</option>`;
                     for (const [key, value] of Object.entries(criterion.Valeur)) {
                         html += `<option value="${key}" title="${value}">${value}</option>`;
                     }
@@ -182,8 +183,10 @@ export default class extends Controller {
         } else {
             delete this.activeFilters[key];
         }
-
-        this.dispatchSearchEvent();
+        // console.log("ICICICIC", value);
+        if (value) {
+            this.dispatchSearchEvent();
+        }
     }
 
     removeFilter(event) {

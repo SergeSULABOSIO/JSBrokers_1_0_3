@@ -30,14 +30,46 @@ export default class extends Controller {
     provideCriteria(event) {
         console.log(this.nomControleur + " - Request for criteria received. Providing data...", event.detail);
         const criteriaDefinition = [
-            { Nom: 'descriptionDeFait', Type: 'Text', Valeur: '', isDefault: true },
-            { Nom: 'referenceSinistre', Type: 'Text', Valeur: '', isDefault: false },
-            { Nom: 'referencePolice', Type: 'Text', Valeur: '', isDefault: false },
-            { Nom: 'dommage', Type: 'Number', Valeur: 0, isDefault: false },
-            // { Nom: 'Risque', Type: 'Options', Valeur: { 'fap': 'INCENDIE ET RISQUES DIVERS', 'mtpl': 'RC AUTOMOBILE' }, isDefault: false },
-            // { Nom: 'Status', Type: 'Options', Valeur: { 'closed': 'Clôturé', 'ongoing': 'En cours' }, isDefault: false },
-            // { Nom: 'Assureur', Type: 'Options', Valeur: { 'Activa': 'ACTIVA', 'sfa': 'SFA', 'rawsursa': 'RAWSUR SA', 'sunu': 'SUNU' }, isDefault: false },
-            // { Nom: 'Compensation à verser', Type: 'Number', Valeur: 0, isDefault: false },
+            { 
+                Nom: 'descriptionDeFait', 
+                Display: "Description des faits", 
+                Type: 'Text', 
+                Valeur: '', 
+                isDefault: true 
+            },
+            { 
+                Nom: 'referenceSinistre', 
+                Display: "Référence du sinistre", 
+                Type: 'Text', 
+                Valeur: '', 
+                isDefault: false 
+            },
+            { 
+                Nom: 'referencePolice', 
+                Display: "Référence de la police", 
+                Type: 'Text', 
+                Valeur: '', 
+                isDefault: false 
+            },
+            { 
+                Nom: 'dommage', 
+                Display: "Dommage", 
+                Type: 'Number', 
+                Valeur: 0, 
+                isDefault: false 
+            },
+            { 
+                Nom: 'Risque', 
+                Display: "Risque (Couverture)", 
+                Type: 'Options', 
+                Valeur: { 
+                    "fap": "INCENDIE ET RISQUES DIVERS", 
+                    "mtpl": "RC AUTOMOBILE", 
+                    "mtcomp": "TOUS RISQUES AUTOMOBILES", 
+                    "pdbi": "PERTE D'EXPLOITATION", 
+                }, 
+                isDefault: false 
+            },
         ];
 
         // Émet l'événement de réponse avec les données
@@ -50,25 +82,7 @@ export default class extends Controller {
     handleSearch(event) {
         const { criteria } = event.detail;
         console.log(this.nomControleur + " - handleSearch with criteria:", criteria);
-
-        // Ici, vous feriez votre appel AJAX (fetch/Turbo) vers le serveur
-        // pour filtrer et rafraîchir la liste des ventes.
-        // Exemple:
-        // const query = new URLSearchParams(criteria).toString();
-        // Turbo.visit(`/ventes?${query}`);
-
-        // const event = new CustomEvent(EVEN_DATA_BASE_SELECTION_REQUEST, {
-        //     bubbles: true,
-        //     detail: {
-        //         entityName: 'NotificationSinistre', // Le nom de l'entité à interroger
-        //         criteria: criteria
-        //     }
-        // });
-        this.dispatch(EVEN_DATA_BASE_SELECTION_REQUEST, {
-            // entityName: 'NotificationSinistre', // Le nom de l'entité à interroger
-            criteria: criteria
-        });
-        // this.dispatch(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST);
+        this.dispatch(EVEN_DATA_BASE_SELECTION_REQUEST, {criteria: criteria});
     }
 
     /**

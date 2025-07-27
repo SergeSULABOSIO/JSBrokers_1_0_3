@@ -88,54 +88,7 @@ export default class extends Controller {
 
 
 
-    handleDBResult(event) {
-        const { results, error, isSuccess } = event.detail;
-        console.log(this.nomControleur + " - handleDBResult", event.detail);
-    }
-
-
-
-    /**
-     * Gère l'événement de demande de recherche.
-     * @param {CustomEvent} event - L'événement doit contenir { detail: { entityName: '...', criteria: {...} } }
-     */
-    async handleDBRequest(event) {
-        const { criteria } = event.detail;
-        const entityName = this.entiteValue;
-
-        if (!entityName || !criteria) {
-            console.error('Event "app:base-données:sélection-request" is missing "entityName" or "criteria" in detail.', event.detail);
-            this.dispatchResponse(null, 'Missing parameters in event detail.');
-            return;
-        }
-
-        try {
-            const response = await fetch(this.urlAPIDynamicQuery, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({ entityName, criteria }),
-            });
-
-            const responseData = await response.json();
-
-            if (!response.ok) {
-                // Gère les erreurs HTTP (4xx, 5xx)
-                console.error(this.nomControleur + ' - Error from server:', responseData);
-                this.dispatchResponse(null, responseData.error || `HTTP error! Status: ${response.status}`);
-            } else {
-                // Succès : propage les résultats
-                this.dispatchResponse(responseData.data, null);
-            }
-
-        } catch (error) {
-            // Gère les erreurs réseau ou de parsing JSON
-            console.error(this.nomControleur + ' - Fetch error:', error);
-            this.dispatchResponse(null, error.message);
-        }
-    }
+    
 
 
     /**
@@ -550,6 +503,58 @@ export default class extends Controller {
      */
     outils_parametrer(event) {
         console.log(this.nomControleur + " - Action Barre d'outils:", event.currentTarget);
+    }
+
+    /**
+     * Gère l'événement de demande de recherche.
+     * @param {CustomEvent} event - L'événement doit contenir { detail: { entityName: '...', criteria: {...} } }
+     */
+    async handleDBRequest(event) {
+        const { criteria } = event.detail;
+        const entityName = this.entiteValue;
+
+        console.log(this.nomControleur + " - ICI: ", entityName, criteria);
+
+        if (!entityName || !criteria) {
+            console.error('Event "app:base-données:sélection-request" is missing "entityName" or "criteria" in detail.', event.detail);
+            this.dispatchResponse(null, 'Missing parameters in event detail.');
+            return;
+        }
+
+        try {
+            const response = await fetch(this.urlAPIDynamicQuery, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ entityName, criteria }),
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                // Gère les erreurs HTTP (4xx, 5xx)
+                console.error(this.nomControleur + ' - Error from server:', responseData);
+                this.dispatchResponse(null, responseData.error || `HTTP error! Status: ${response.status}`);
+            } else {
+                // Succès : propage les résultats
+                this.dispatchResponse(responseData.data, null);
+            }
+
+        } catch (error) {
+            // Gère les erreurs réseau ou de parsing JSON
+            console.error(this.nomControleur + ' - Fetch error:', error);
+            this.dispatchResponse(null, error.message);
+        }
+    }
+
+
+    handleDBResult(event) {
+        const { results, error, isSuccess } = event.detail;
+        console.log(this.nomControleur + " - handleDBResult", event.detail);
+        //Ici on redessine la liste des données
+        this.donneesTarget.innerText = "ICICIC - SULA - Il faut cherger les données.";
     }
 
 
