@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CHECKBOX_ELEMENT_CHECKED, EVEN_CHECKBOX_ELEMENT_UNCHECKED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DELETED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_SHOW_TOAST } from './base_controller.js';
+import { EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CHECKBOX_ELEMENT_CHECKED, EVEN_CHECKBOX_ELEMENT_UNCHECKED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DELETED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_SHOW_TOAST, EVEN_DATA_BASE_SELECTION_REQUEST, EVEN_DATA_BASE_SELECTION_EXECUTED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -13,12 +13,14 @@ export default class extends Controller {
         idutilisateur: Number,
         nbelements: Number,
         rubrique: String,
+        entite: String,
         controleurphp: String,
         controleursitimulus: String,
     };
 
 
     connect() {
+        this.urlAPIDynamicQuery = "/admin/" + this.controleurphpValue + "/api/dynamic-query";
         this.nomControleur = "LISTE-PRINCIPALE";
         console.log(this.nomControleur + " - Connecté");
         this.init();
@@ -54,6 +56,10 @@ export default class extends Controller {
         document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
         document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
+        // Ajoute un écouteur d'événement sur l'élément du contrôleur.
+        // L'événement va "buller" (bubble up), donc un composant enfant peut le déclencher.
+        document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.handleDBRequest.bind(this));
+        document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.handleDBResult.bind(this));
     }
 
     disconnect() {
@@ -75,7 +81,80 @@ export default class extends Controller {
         document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
         document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
+        // Nettoie l'écouteur d'événement lorsque le contrôleur est déconnecté du DOM.
+        document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.handleDBRequest.bind(this));
+        document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.handleDBResult.bind(this));
     }
+
+
+
+    handleDBResult(event) {
+        const { results, error, isSuccess } = event.detail;
+        console.log(this.nomControleur + " - handleDBResult", event.detail);
+    }
+
+
+
+    /**
+     * Gère l'événement de demande de recherche.
+     * @param {CustomEvent} event - L'événement doit contenir { detail: { entityName: '...', criteria: {...} } }
+     */
+    async handleDBRequest(event) {
+        const { criteria } = event.detail;
+        const entityName = this.entiteValue;
+
+        if (!entityName || !criteria) {
+            console.error('Event "app:base-données:sélection-request" is missing "entityName" or "criteria" in detail.', event.detail);
+            this.dispatchResponse(null, 'Missing parameters in event detail.');
+            return;
+        }
+
+        try {
+            const response = await fetch(this.urlAPIDynamicQuery, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ entityName, criteria }),
+            });
+
+            const responseData = await response.json();
+
+            if (!response.ok) {
+                // Gère les erreurs HTTP (4xx, 5xx)
+                console.error(this.nomControleur + ' - Error from server:', responseData);
+                this.dispatchResponse(null, responseData.error || `HTTP error! Status: ${response.status}`);
+            } else {
+                // Succès : propage les résultats
+                this.dispatchResponse(responseData.data, null);
+            }
+
+        } catch (error) {
+            // Gère les erreurs réseau ou de parsing JSON
+            console.error(this.nomControleur + ' - Fetch error:', error);
+            this.dispatchResponse(null, error.message);
+        }
+    }
+
+
+    /**
+     * Propage un événement de réponse personnalisé contenant les résultats ou une erreur.
+     * @param {object[]|null} results - Les données de la base de données.
+     * @param {string|null} error - Le message d'erreur, le cas échéant.
+     */
+    dispatchResponse(results, error) {
+        const event = new CustomEvent(EVEN_DATA_BASE_SELECTION_EXECUTED, {
+            bubbles: true, // Permet à l'événement de "buller" dans le DOM
+            detail: {
+                results: results,
+                error: error,
+                isSuccess: !error,
+            }
+        });
+        document.dispatchEvent(event);
+    }
+
 
     handleCheckboxChange(event) {
         const checkbox = event.currentTarget;

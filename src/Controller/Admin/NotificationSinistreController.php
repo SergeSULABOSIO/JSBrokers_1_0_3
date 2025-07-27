@@ -20,6 +20,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\NotificationSinistreRepository;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -31,11 +32,28 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class NotificationSinistreController extends AbstractController
 {
     public MenuActivator $activator;
+    /**
+     * @var string[] Liste des entités autorisées pour la recherche.
+     * Ajoutez ici toutes les entités que vous souhaitez rendre consultables.
+     * Ceci est une mesure de sécurité pour empêcher l'interrogation de n'importe quelle table.
+     */
+    private array $allowedEntities = [
+        'NotificationSinistre',
+        // 'User',
+        // 'Product',
+    ];
+
+    /**
+     * @var string[] Liste des opérateurs de comparaison autorisés.
+     * Ceci est une mesure de sécurité pour empêcher l'injection de code dans la requête.
+     */
+    private array $allowedOperators = ['=', '!=', '<', '<=', '>', '>=', 'LIKE'];
+
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private NotificationSinistreRepository $notificationSinistreRepository,
@@ -112,8 +130,8 @@ class NotificationSinistreController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($notificationsinistre);
-            $this->manager->flush();
+            $this->em->persist($notificationsinistre);
+            $this->em->flush();
 
             return $this->getJsonData($notificationsinistre);
         }
@@ -144,8 +162,8 @@ class NotificationSinistreController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
+            $this->em->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->em->flush();
 
             //Le serveur renvoie un objet JSON
             return $this->getJsonData($notificationsinistre);
@@ -207,8 +225,8 @@ class NotificationSinistreController extends AbstractController
                 }
             }
 
-            $this->manager->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
+            $this->em->persist($notificationsinistre); //On peut ignorer cette instruction car la fonction flush suffit.
+            $this->em->flush();
             //Le serveur renvoie un objet JSON
             return $this->getJsonData($notificationsinistre);
         }
@@ -241,8 +259,8 @@ class NotificationSinistreController extends AbstractController
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
 
-        $this->manager->remove($notificationsinistre);
-        $this->manager->flush();
+        $this->em->remove($notificationsinistre);
+        $this->em->flush();
 
         return $this->json(json_encode([
             "reponse" => "Ok",
@@ -269,8 +287,8 @@ class NotificationSinistreController extends AbstractController
                 /** @var NotificationSinistre $notification */
                 $notification = $this->notificationSinistreRepository->find($id);
                 if ($notification != null) {
-                    $this->manager->remove($notification);
-                    $this->manager->flush();
+                    $this->em->remove($notification);
+                    $this->em->flush();
                 }
                 $notification = $this->notificationSinistreRepository->find($id);
                 if ($notification == null) {
@@ -361,5 +379,72 @@ class NotificationSinistreController extends AbstractController
             'sales' => $sales,
             'numericAttributes' => $numericAttributes,
         ]);
+    }
+
+    #[Route('/api/dynamic-query', name: 'app_dynamic_query', methods: ['POST'])]
+    public function query(Request $request): JsonResponse
+    {
+        // 1. Récupérer et décoder les données de la requête POST
+        $data = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new JsonResponse(['error' => 'Invalid JSON format'], 400);
+        }
+
+        $entityName = $data['entityName'] ?? null;
+        $criteria = $data['criteria'] ?? null;
+
+        // 2. Valider les données d'entrée
+        if (!$entityName || !$criteria || !is_array($criteria)) {
+            return new JsonResponse(['error' => 'Missing or invalid parameters: entityName and criteria are required.'], 400);
+        }
+
+        // 3. Vérifier si l'entité est autorisée
+        if (!in_array($entityName, $this->allowedEntities, true)) {
+            return new JsonResponse(['error' => "Querying the entity '{$entityName}' is not allowed."], 403);
+        }
+
+        try {
+            // 4. Construire la requête avec QueryBuilder
+            $repository = $this->em->getRepository('App\\Entity\\' . $entityName);
+            $qb = $repository->createQueryBuilder('e'); // 'e' est l'alias de notre entité
+
+            $parameterIndex = 0; // Pour garantir des noms de paramètres uniques
+
+            foreach ($criteria as $field => $value) {
+                // Le nom du champ doit correspondre à une propriété de l'entité (ex: 'dommageEvalue')
+                $parameterName = 'param' . $parameterIndex++;
+
+                if (is_array($value) && isset($value['operator'], $value['value'])) {
+                    // Cas d'un critère numérique/complexe (ex: >= 100)
+                    $operator = strtoupper($value['operator']);
+                    
+                    // Sécurité : valider l'opérateur
+                    if (!in_array($operator, $this->allowedOperators, true)) {
+                        return new JsonResponse(['error' => "Operator '{$operator}' is not allowed."], 400);
+                    }
+                    
+                    $qb->andWhere($qb->expr()->comparison('e.' . $field, $operator, ':' . $parameterName))
+                       ->setParameter($parameterName, $value['value']);
+
+                } else {
+                    // Cas d'un critère simple (chaîne de caractères)
+                    // On utilise LIKE pour une recherche plus flexible.
+                    $qb->andWhere($qb->expr()->like('e.' . $field, ':' . $parameterName))
+                       ->setParameter($parameterName, '%' . $value . '%');
+                }
+            }
+            
+            // 5. Exécuter la requête et récupérer les résultats
+            $results = $qb->getQuery()->getArrayResult();
+
+            return new JsonResponse(['data' => $results]);
+
+        } catch (\Doctrine\ORM\Mapping\MappingException $e) {
+            // L'entité ou le champ n'existe pas
+            return new JsonResponse(['error' => "Invalid entity or field name provided.", 'details' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            // Autre erreur inattendue
+            return new JsonResponse(['error' => 'An unexpected error occurred.', 'details' => $e->getMessage()], 500);
+        }
     }
 }

@@ -151,6 +151,10 @@ export const EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST = "app:moteur-recherche:crit
 export const EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST = "app:moteur-recherche:search-request";
 export const EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED = "app:moteur-recherche:criteres-defined";
 
+//Evenements - Base de données
+export const EVEN_DATA_BASE_SELECTION_REQUEST = "app:base-données:sélection-request";
+export const EVEN_DATA_BASE_SELECTION_EXECUTED = "app:base-données:sélection-executed";
+
 //Evenements - Liste Principale
 export const EVEN_LISTE_PRINCIPALE_NOTIFY = "app:liste-principale:notify";
 export const EVEN_LISTE_PRINCIPALE_ADD_REQUEST = "app:liste-principale:add-request";

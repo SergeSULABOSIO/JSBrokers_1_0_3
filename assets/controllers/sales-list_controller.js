@@ -68,8 +68,7 @@ export default class extends Controller {
         this.dispatch(EVEN_CHECKBOX_PUBLISH_SELECTION);
 
         // Déclencher l'événement global pour afficher la notification
-        const detail = { text: 'Modifications enregistrées !', type: 'success' };
-        this.dispatch(EVEN_SHOW_TOAST, detail);
+        this.dispatch(EVEN_SHOW_TOAST, { text: 'Modifications enregistrées !', type: 'success' });
     }
 
     toggleAll(event) {
@@ -81,8 +80,7 @@ export default class extends Controller {
         this.dispatch(EVEN_CHECKBOX_PUBLISH_SELECTION);
 
         // Déclencher l'événement global pour afficher la notification
-        const detail = { text: 'Une erreur est survenue.', type: 'error' };
-        this.dispatch(EVEN_SHOW_TOAST, detail);
+        this.dispatch(EVEN_SHOW_TOAST, { text: 'Une erreur est survenue.', type: 'error' });
     }
 
     updateSelectAllCheckboxState() {
