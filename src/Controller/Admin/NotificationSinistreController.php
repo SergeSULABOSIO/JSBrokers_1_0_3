@@ -439,7 +439,6 @@ class NotificationSinistreController extends AbstractController
             $results = $qb->getQuery()->getArrayResult();
 
             return new JsonResponse(['data' => $results]);
-            // return "SULA BOSIO BARBE";
 
         } catch (\Doctrine\ORM\Mapping\MappingException $e) {
             // L'entité ou le champ n'existe pas
