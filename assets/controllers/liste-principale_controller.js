@@ -20,7 +20,7 @@ export default class extends Controller {
 
 
     connect() {
-        this.urlAPIDynamicQuery = "/admin/" + this.controleurphpValue + "/api/dynamic-query";
+        this.urlAPIDynamicQuery = "/admin/" + this.controleurphpValue + "/api/dynamic-query/" + this.identrepriseValue;
         this.nomControleur = "LISTE-PRINCIPALE";
         console.log(this.nomControleur + " - Connecté");
         this.init();
@@ -88,7 +88,7 @@ export default class extends Controller {
 
 
 
-    
+
 
 
     /**
@@ -323,7 +323,7 @@ export default class extends Controller {
     handleServerResponsed(event) {
         const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - handleServerResponded", event.detail);
-        
+
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_CLOSE, true, true, event.detail);
         //ACTION AJOUT = 0
         if (code == EVEN_CODE_RESULTAT_OK) {
@@ -453,7 +453,7 @@ export default class extends Controller {
     }
 
 
-    
+
 
 
     publierSelection() {
@@ -512,6 +512,8 @@ export default class extends Controller {
     async handleDBRequest(event) {
         const { criteria } = event.detail;
         const entityName = this.entiteValue;
+        const page = 1;
+        const limit = 100;
 
         console.log(this.nomControleur + " - ICI: ", entityName, criteria);
 
@@ -528,19 +530,24 @@ export default class extends Controller {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
                 },
-                body: JSON.stringify({ entityName, criteria }),
+                body: JSON.stringify({ entityName, criteria, page, limit }),
             });
 
-            const responseData = await response.json();
+            const responseData = await response.text();
+            console.log(this.nomControleur + " - REPONSE DU SERVEUR BRUTE:", responseData);
+            // Succès : propage les résultats
+            this.dispatchResponse(responseData, null);
 
-            if (!response.ok) {
-                // Gère les erreurs HTTP (4xx, 5xx)
-                console.error(this.nomControleur + ' - Error from server:', responseData);
-                this.dispatchResponse(null, responseData.error || `HTTP error! Status: ${response.status}`);
-            } else {
-                // Succès : propage les résultats
-                this.dispatchResponse(responseData.data, null);
-            }
+
+            // const responseData = await response.json();
+            // if (!response.ok) {
+            //     // Gère les erreurs HTTP (4xx, 5xx)
+            //     console.error(this.nomControleur + ' - Error from server:', responseData);
+            //     this.dispatchResponse(null, responseData.error || `HTTP error! Status: ${response.status}`);
+            // } else {
+            //     // Succès : propage les résultats
+            //     this.dispatchResponse(responseData.data, null);
+            // }
 
         } catch (error) {
             // Gère les erreurs réseau ou de parsing JSON
@@ -554,7 +561,7 @@ export default class extends Controller {
         const { results, error, isSuccess } = event.detail;
         console.log(this.nomControleur + " - handleDBResult", event.detail);
         //Ici on redessine la liste des données
-        this.donneesTarget.innerText = "ICICIC - SULA - Il faut cherger les données.";
+        this.donneesTarget.innerHTML = results;
     }
 
 

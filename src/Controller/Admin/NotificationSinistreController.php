@@ -20,6 +20,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\NotificationSinistreRepository;
+use Doctrine\ORM\Mapping\MappingException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -382,70 +383,299 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/dynamic-query', name: 'app_dynamic_query', methods: ['POST'])]
-    public function query(Request $request): JsonResponse
+    #[Route('/api/dynamic-query/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
+    public function query($idEntreprise, Request $request)
     {
+        /** @var Utilisateur $utilisateur */
+        $utilisateur = $this->getUser();
+
+        // Initialisation du statut et des données.
+        $status = [
+            "error" => null,
+            "code" => null,
+        ];
+        $dataResultat = []; // Les résultats de la requête Doctrine
+
         // 1. Récupérer et décoder les données de la requête POST
         $data = json_decode($request->getContent(), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return new JsonResponse(['error' => 'Invalid JSON format'], 400);
+            $status = [
+                "error" => 'Format JSON invalide.',
+                "code" => 400,
+            ];
+            // Puisque nous rendons un template, nous continuons l'exécution pour que le template puisse afficher l'erreur.
         }
 
         $entityName = $data['entityName'] ?? null;
         $criteria = $data['criteria'] ?? null;
 
+        // Pagination
+        $page = (int) ($data['page'] ?? 1); // Page par défaut: 1
+        $limit = (int) ($data['limit'] ?? 10); // Limite par défaut: 10 éléments par page
+
+        // Assurez-vous que page et limit sont des valeurs raisonnables
+        $page = max(1, $page);
+        $limit = max(1, min(100, $limit)); // Limite max de 100 pour éviter les abus de requêtes
+
         // 2. Valider les données d'entrée
-        if (!$entityName || !$criteria || !is_array($criteria)) {
-            return new JsonResponse(['error' => 'Missing or invalid parameters: entityName and criteria are required.'], 400);
+        // Nous vérifions si $status n'a pas déjà été défini par une erreur précédente (JSON invalide)
+        if ($status['error'] === null && (!$entityName || !$criteria || !is_array($criteria))) {
+            $status = [
+                "error" => 'Paramètres manquants ou invalides : entityName et criteria sont requis.',
+                "code" => 400,
+            ];
         }
 
         // 3. Vérifier si l'entité est autorisée
-        if (!in_array($entityName, $this->allowedEntities, true)) {
-            return new JsonResponse(['error' => "Querying the entity '{$entityName}' is not allowed."], 403);
+        if ($status['error'] === null && !in_array($entityName, $this->allowedEntities, true)) {
+            $status = [
+                "error" => "L'interrogation de l'entité '{$entityName}' n'est pas autorisée.",
+                "code" => 403,
+            ];
         }
 
-        try {
-            // 4. Construire la requête avec QueryBuilder
-            $repository = $this->em->getRepository('App\\Entity\\' . $entityName);
-            $qb = $repository->createQueryBuilder('e'); // 'e' est l'alias de notre entité
+        // Exécuter la logique de requête seulement si aucune erreur de validation initiale n'est présente
+        if ($status['error'] === null) {
+            try {
+                // Obtenir le repository de l'entité demandée
+                $repository = $this->em->getRepository('App\\Entity\\' . $entityName);
+                $qb = $repository->createQueryBuilder('e'); // 'e' est l'alias de notre entité principale
 
-            $parameterIndex = 0; // Pour garantir des noms de paramètres uniques
+                // Tableau pour stocker les alias des entités déjà jointes
+                // Cela évite de joindre la même entité plusieurs fois si elle apparaît dans plusieurs critères
+                $joinedEntities = [];
 
-            foreach ($criteria as $field => $value) {
-                // Le nom du champ doit correspondre à une propriété de l'entité (ex: 'dommageEvalue')
-                $parameterName = 'param' . $parameterIndex++;
+                $parameterIndex = 0; // Pour garantir des noms de paramètres uniques
 
-                if (is_array($value) && isset($value['operator'], $value['value'])) {
-                    // Cas d'un critère numérique/complexe (ex: >= 100)
-                    $operator = strtoupper($value['operator']);
-                    
-                    // Sécurité : valider l'opérateur
-                    if (!in_array($operator, $this->allowedOperators, true)) {
-                        return new JsonResponse(['error' => "Operator '{$operator}' is not allowed."], 400);
+                foreach ($criteria as $field => $value) {
+                    $parameterName = 'param' . $parameterIndex++;
+
+                    // --- DÉBUT DE LA LOGIQUE DE GESTION DES RELATIONS (CAS A) ---
+                    // Sépare "relation.field" en ["relation", "field"] si un point est présent
+                    $fieldParts = explode('.', $field);
+                    // Alias de l'entité que nous interrogeons (commence par l'entité principale 'e')
+                    $currentAlias = 'e';
+                    // Le nom du champ réel à utiliser dans la clause WHERE (par défaut, c'est le champ tel quel)
+                    $actualField = $field;
+
+                    // Si le champ contient un point, c'est une relation (ex: "risque.nom")
+                    if (count($fieldParts) > 1) {
+                        $relationName = $fieldParts[0]; // ex: "risque"
+                        $actualField = $fieldParts[1]; // ex: "nom"
+
+                        // Vérifie si cette relation n'a pas déjà été jointe
+                        if (!isset($joinedEntities[$relationName])) {
+                            // Génère un alias unique pour la nouvelle entité jointe. 
+                            // substr($relationName, 0, 1) prend la première lettre de la relation (ex: 'r' pour risque).
+                            // md5(uniqid(rand(), true)) ajoute un hash unique pour éviter les collisions d'alias.
+                            $newAlias = strtolower(substr($relationName, 0, 1)) . md5(uniqid(rand(), true));
+
+                            // Effectue une LEFT JOIN. 
+                            // Utilisez INNER JOIN si le critère DOIT exister dans la relation (ex: si le sinistre doit avoir un risque).
+                            // LEFT JOIN est plus souple et inclura les NotificationSinistre même s'il n'y a pas de Risque.
+                            $qb->leftJoin($currentAlias . '.' . $relationName, $newAlias);
+                            $joinedEntities[$relationName] = $newAlias; // Stocke l'alias pour référence future
+                        }
+                        // Met à jour l'alias courant pour qu'il pointe vers l'entité jointe
+                        $currentAlias = $joinedEntities[$relationName];
                     }
-                    
-                    $qb->andWhere($qb->expr()->comparison('e.' . $field, $operator, ':' . $parameterName))
-                       ->setParameter($parameterName, $value['value']);
+                    // --- FIN DE LA LOGIQUE DE GESTION DES RELATIONS ---
 
-                } else {
-                    // Cas d'un critère simple (chaîne de caractères)
-                    // On utilise LIKE pour une recherche plus flexible.
-                    $qb->andWhere($qb->expr()->like('e.' . $field, ':' . $parameterName))
-                       ->setParameter($parameterName, '%' . $value . '%');
+                    // Le reste de la logique de filtrage utilise maintenant $currentAlias et $actualField
+                    if (is_array($value) && isset($value['operator'], $value['value'])) {
+                        $operator = strtoupper($value['operator']);
+
+                        // Sécurité : valider l'opérateur
+                        if (!in_array($operator, $this->allowedOperators, true)) {
+                            $status = [
+                                "error" => "Opérateur '{$operator}' non autorisé.",
+                                "code" => 400,
+                            ];
+                        }
+
+                        switch ($operator) {
+                            case '=':
+                                $qb->andWhere($qb->expr()->eq($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            case '!=': // Ajout de l'opérateur '!=' (différent de)
+                                $qb->andWhere($qb->expr()->neq($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            case '>':
+                                $qb->andWhere($qb->expr()->gt($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            case '<':
+                                $qb->andWhere($qb->expr()->lt($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            case '>=':
+                                $qb->andWhere($qb->expr()->gte($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            case '<=':
+                                $qb->andWhere($qb->expr()->lte($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            case 'LIKE':
+                                $qb->andWhere($qb->expr()->like($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                // Pour LIKE, la valeur doit être entourée de % pour une recherche partielle
+                                $value['value'] = '%' . $value['value'] . '%';
+                                break;
+                            case 'IN':
+                                if (!is_array($value['value'])) {
+                                    $status = [
+                                        "error" => "La valeur pour l'opérateur '{$operator}' doit être un tableau.",
+                                        "code" => 400,
+                                    ];
+                                }
+                                $qb->andWhere($qb->expr()->in($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            case 'NOT IN':
+                                if (!is_array($value['value'])) {
+                                    $status = [
+                                        "error" => "La valeur pour l'opérateur '{$operator}' doit être un tableau.",
+                                        "code" => 400,
+                                    ];
+                                }
+                                $qb->andWhere($qb->expr()->notIn($currentAlias . '.' . $actualField, ':' . $parameterName));
+                                break;
+                            default:
+                                $status = [
+                                    "error" => "Opérateur non supporté '{$operator}' pour les critères complexes.",
+                                    "code" => 400,
+                                ];
+                        }
+                        $qb->setParameter($parameterName, $value['value']); // La valeur est définie une seule fois
+                    } else {
+                        // Cas d'un critère simple (chaîne de caractères), utilise LIKE par défaut
+                        // Ceci s'applique aussi bien aux champs directs qu'aux champs de relation
+                        $qb->andWhere($qb->expr()->like($currentAlias . '.' . $actualField, ':' . $parameterName))
+                            ->setParameter($parameterName, '%' . $value . '%');
+                    }
                 }
+
+                // Appliquer la pagination
+                $offset = ($page - 1) * $limit;
+                $qb->setFirstResult($offset) // Définir l'offset (à partir de quel élément commencer)
+                    ->setMaxResults($limit); // Définir la limite (nombre maximum d'éléments à retourner)
+
+                // 5. Exécuter la requête et récupérer les résultats
+                $dataResultat = $qb->getQuery()->getResult(); // Retourne des objets entités Doctrine
+
+                // --- DÉBUT DE LA LOGIQUE DE COMPTAGE DES ÉLÉMENTS TOTAUX ---
+                // Il faut un QueryBuilder de comptage séparé qui utilise les MÊMES jointures et critères
+                $totalItemsQb = $repository->createQueryBuilder('e_count');
+                $joinedEntitiesCount = []; // Les jointures pour le comptage doivent être indépendantes
+
+                // Réappliquer les mêmes critères et jointures pour le comptage
+                // Utilise un index de paramètre différent pour éviter les conflits avec le QB principal
+                $parameterIndexCount = 0;
+                foreach ($criteria as $field => $value) {
+                    $parameterNameCount = 'param_count' . $parameterIndexCount++;
+
+                    $fieldParts = explode('.', $field);
+                    $currentAliasCount = 'e_count'; // Alias pour le QueryBuilder de comptage
+                    $actualFieldCount = $field;
+
+                    if (count($fieldParts) > 1) {
+                        $relationName = $fieldParts[0];
+                        $actualFieldCount = $fieldParts[1];
+
+                        if (!isset($joinedEntitiesCount[$relationName])) {
+                            // Alias unique pour le comptage (différent de celui du QB principal)
+                            $newAliasCount = strtolower(substr($relationName, 0, 1)) . 'c' . md5(uniqid(rand(), true));
+                            $totalItemsQb->leftJoin($currentAliasCount . '.' . $relationName, $newAliasCount);
+                            $joinedEntitiesCount[$relationName] = $newAliasCount;
+                        }
+                        $currentAliasCount = $joinedEntitiesCount[$relationName];
+                    }
+
+                    if (is_array($value) && isset($value['operator'], $value['value'])) {
+                        $operator = strtoupper($value['operator']);
+
+                        // Pas de re-validation des opérateurs ici, elle a déjà été faite plus haut.
+                        switch ($operator) {
+                            case '=':
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->eq($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            case '!=':
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->neq($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            case '>':
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->gt($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            case '<':
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->lt($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            case '>=':
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->gte($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            case '<=':
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->lte($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            case 'LIKE':
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->like($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                $value['value'] = '%' . $value['value'] . '%';
+                                break;
+                            case 'IN':
+                                // On ne revérifie pas si c'est un tableau, car la validation a déjà été faite pour le QB principal.
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->in($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            case 'NOT IN':
+                                // On ne revérifie pas si c'est un tableau.
+                                $totalItemsQb->andWhere($totalItemsQb->expr()->notIn($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount));
+                                break;
+                            default:
+                                // Ignorer les opérateurs non supportés pour le comptage ou loguer une erreur si nécessaire
+                                break;
+                        }
+                        // Définir le paramètre seulement si l'opérateur est géré et qu'il nécessite un paramètre
+                        if (in_array($operator, ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IN', 'NOT IN'])) {
+                            $totalItemsQb->setParameter($parameterNameCount, $value['value']);
+                        }
+                    } else {
+                        $totalItemsQb->andWhere($totalItemsQb->expr()->like($currentAliasCount . '.' . $actualFieldCount, ':' . $parameterNameCount))
+                            ->setParameter($parameterNameCount, '%' . $value . '%');
+                    }
+                }
+
+                // Obtenir le nom du champ d'identifiant pour le COUNT (généralement 'id')
+                // Utilise le metadata de la classe pour obtenir le champ d'ID, plus robuste.
+                $identifierField = $repository->getClassMetadata()->getSingleIdentifierFieldName();
+                $totalItems = $totalItemsQb->select('count(' . $currentAliasCount . '.' . $identifierField . ')')
+                    ->getQuery()
+                    ->getSingleScalarResult();
+                $totalPages = ceil($totalItems / $limit);
+
+                // Ajouter les informations de pagination au tableau de statut pour le template Twig
+                $status['pagination'] = [
+                    'currentPage' => $page,
+                    'itemsPerPage' => $limit,
+                    'totalItems' => $totalItems,
+                    'totalPages' => $totalPages,
+                ];
+            } catch (MappingException $e) {
+                // Erreur si l'entité, le champ ou le chemin de relation n'existe pas
+                $status = [
+                    "error" => "Entité, nom de champ ou chemin de relation invalide. Message : " . $e->getMessage(),
+                    "code" => 400,
+                ];
+            } catch (\Exception $e) {
+                // Toute autre erreur inattendue lors de l'exécution de la requête
+                $status = [
+                    "error" => "Une erreur inattendue est survenue. Message : " . $e->getMessage(),
+                    "code" => 500,
+                ];
             }
-            
-            // 5. Exécuter la requête et récupérer les résultats
-            $results = $qb->getQuery()->getArrayResult();
-
-            return new JsonResponse(['data' => $results]);
-
-        } catch (\Doctrine\ORM\Mapping\MappingException $e) {
-            // L'entité ou le champ n'existe pas
-            return new JsonResponse(['error' => "Invalid entity or field name provided.", 'details' => $e->getMessage()], 400);
-        } catch (\Exception $e) {
-            // Autre erreur inattendue
-            return new JsonResponse(['error' => 'An unexpected error occurred.', 'details' => $e->getMessage()], 500);
         }
+
+        // Rendre le template Twig avec les données filtrées et les informations de statut/pagination
+        return $this->render('admin/notificationsinistre/donnees.html.twig', [
+            'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
+            'utilisateur' => $utilisateur,
+            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'notificationsinistres' => $dataResultat, // Les entités NotificationSinistre trouvées
+            'page' => $page, // La page actuelle, utile si la pagination est gérée côté client dans le template
+            'constante' => $this->constante,
+            'serviceMonnaie' => $this->serviceMonnaies,
+            'status' => $status, // Contient l'erreur ou les infos de pagination
+            'activator' => $this->activator,
+        ]);
     }
 }

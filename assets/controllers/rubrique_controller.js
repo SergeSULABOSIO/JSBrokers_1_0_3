@@ -59,14 +59,21 @@ export default class extends Controller {
                 isDefault: false 
             },
             { 
-                Nom: 'Risque', 
+                Nom: 'assure.nom', 
+                Display: "Client (assuré)", 
+                Type: 'Text', 
+                Valeur: '', 
+                isDefault: false 
+            },
+            { 
+                Nom: 'risque.code', 
                 Display: "Risque (Couverture)", 
                 Type: 'Options', 
                 Valeur: { 
-                    "fap": "INCENDIE ET RISQUES DIVERS", 
-                    "mtpl": "RC AUTOMOBILE", 
-                    "mtcomp": "TOUS RISQUES AUTOMOBILES", 
-                    "pdbi": "PERTE D'EXPLOITATION", 
+                    "imr": "INCENDIE ET RISQUES DIVERS", 
+                    "motor": "RC AUTOMOBILE", 
+                    "vie": "VIE ET EPARGNE", 
+                    "git": "TRANSPORT DES FACULTES", 
                 }, 
                 isDefault: false 
             },

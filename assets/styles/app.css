@@ -185,3 +185,37 @@ a:active {
     width: 1.1em;
     height: 1.1em;
 }
+
+
+/* assets/styles/app.scss (ou un fichier CSS approprié) */
+
+.form-scrollable-content {
+    max-height: 200px; /* Hauteur maximale fixe pour le formulaire */
+    overflow-y: auto;  /* Active le défilement vertical si le contenu dépasse */
+    padding-right: 15px; /* Ajoute un peu de padding pour éviter que le contenu ne touche la barre de défilement */
+}
+
+/* Styles personnalisés pour la barre de défilement (WebKit - Chrome, Safari) */
+.form-scrollable-content::-webkit-scrollbar {
+    width: 8px; /* Largeur de la barre de défilement */
+}
+
+.form-scrollable-content::-webkit-scrollbar-track {
+    background: #f1f1f1; /* Couleur de la piste de la barre de défilement (gris clair) */
+    border-radius: 10px; /* Bords arrondis pour la piste */
+}
+
+.form-scrollable-content::-webkit-scrollbar-thumb {
+    background: #888; /* Couleur du "pouce" de la barre de défilement (gris foncé) */
+    border-radius: 10px; /* Bords arrondis pour le pouce */
+}
+
+.form-scrollable-content::-webkit-scrollbar-thumb:hover {
+    background: #555; /* Couleur du pouce au survol (gris encore plus foncé) */
+}
+
+/* Styles pour Firefox (plus limité que WebKit) */
+.form-scrollable-content {
+    scrollbar-width: thin; /* Rend la barre de défilement plus fine */
+    scrollbar-color: #888 #f1f1f1; /* Couleur du pouce puis couleur de la piste */
+}

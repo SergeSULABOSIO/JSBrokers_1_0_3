@@ -1,4 +1,19 @@
-{# Boucler les donnees #}
-{% for notificationsinistre in notificationsinistres %}
-    {{ include('admin/notificationsinistre/element.html.twig') }}
-{% endfor %}
+{% if notificationsinistres|length == 0 %}
+    <tr>
+        <td></td>
+        <td>
+            Aucune information trouvée!<BR>
+            {% if status.code %}
+                Code: {{status.code}}.<BR>
+                Message: {{status.error}}.<BR>
+            {% endif %}
+        </td>
+        <td></td>
+    </tr>
+{% else %}
+    {# Boucler les donnees #}
+    {% for notificationsinistre in notificationsinistres %}
+        {{ include('admin/notificationsinistre/element.html.twig') }}
+    {% endfor %}
+{% endif %}
+
