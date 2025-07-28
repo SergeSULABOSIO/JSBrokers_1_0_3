@@ -1,3 +1,11 @@
+<div 
+    data-controller="donnees"
+    data-donnees-status-value='{{ status|json_encode }}'
+    data-donnees-page-value={{ page }}
+    data-donnees-limit-value={{ limit }}
+    data-donnees-totalitems-value={{ totalItems }}
+>
+</div>
 {% if notificationsinistres|length == 0 %}
     <tr>
         <td class="p-3 m-2" style="width:80px"></td>

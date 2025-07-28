@@ -69,16 +69,26 @@ class NotificationSinistreController extends AbstractController
     public function index($idEntreprise, Request $request)
     {
         $page = $request->query->getInt("page", 1);
+        $status = [
+            "error" => "Données",
+            "code" => 200,
+            "message" => "Initialisation réussi."
+        ];
+
+        $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page);
 
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
 
         return $this->render('admin/notificationsinistre/index.html.twig', [
+            'status' => $status, // Contient l'erreur ou les infos de pagination
             'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
             'utilisateur' => $utilisateur,
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'notificationsinistres' => $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page),
+            'notificationsinistres' => $data,
             'page' => $page,
+            'limit' => 100,            // La limite par page
+            'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
@@ -95,6 +105,12 @@ class NotificationSinistreController extends AbstractController
 
         /** @var Utilisateur $user */
         $user = $this->getUser();
+
+        $status = [
+            "error" => "Données",
+            "code" => 200,
+            "message" => "Chargement réussi."
+        ];
 
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
@@ -116,6 +132,7 @@ class NotificationSinistreController extends AbstractController
             return $this->getJsonData($notificationsinistre);
         }
         return $this->render('admin/notificationsinistre/create.html.twig', [
+            'status' => $status, // Contient l'erreur ou les infos de pagination
             'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
             'utilisateur' => $user,
             'notificationsinistre' => $notificationsinistre,
@@ -135,6 +152,12 @@ class NotificationSinistreController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
+        $status = [
+            "error" => "Données",
+            "code" => 200,
+            "message" => "Chargement réussi."
+        ];
+
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
 
@@ -150,6 +173,7 @@ class NotificationSinistreController extends AbstractController
         }
         //On se dirie vers la page le formulaire d'édition
         return $this->render('admin/notificationsinistre/edit.html.twig', [
+            'status' => $status, // Contient l'erreur ou les infos de pagination
             'pageName' => $this->translator->trans("notificationsinistre_page_name_update", [
                 ":notificationsinistre" => $notificationsinistre->getDescriptionDeFait(),
             ]),
@@ -367,10 +391,17 @@ class NotificationSinistreController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
+        $status = [
+            "error" => "Données",
+            "code" => 200,
+            "message" => "Chargement réussi."
+        ];
+
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
 
         return $this->render('admin/notificationsinistre/donnees.html.twig', [
+            'status' => $status, // Contient l'erreur ou les infos de pagination
             'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
             'utilisateur' => $utilisateur,
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
