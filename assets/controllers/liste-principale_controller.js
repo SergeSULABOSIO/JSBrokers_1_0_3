@@ -86,7 +86,7 @@ export default class extends Controller {
         document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.handleDBRequest.bind(this));
         document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.handleDBResult.bind(this));
         document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.handleDonneesLoaded.bind(this));
-        
+
     }
 
 
@@ -482,10 +482,15 @@ export default class extends Controller {
     }
 
 
-    handleDonneesLoaded(event){
+    handleDonneesLoaded(event) {
         const { status, page, limit, totalitems } = event.detail;
-        console.log(this.nomControleur + " - handleDonneesLoaded" + event.datil);
+
         this.nbelementsValue = totalitems;
+        this.tabSelectedCheckBoxs = [];
+        this.updateMessageSelectedCheckBoxes();
+        this.publierSelection();
+
+        console.log(this.nomControleur + " - handleDonneesLoaded" + event.datil);
         this.updateMessage(status.message);
     }
 

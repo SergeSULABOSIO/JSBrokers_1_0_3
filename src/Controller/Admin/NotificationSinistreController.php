@@ -394,8 +394,10 @@ class NotificationSinistreController extends AbstractController
         $status = [
             "error" => "Données",
             "code" => 200,
-            "message" => "Chargement réussi."
+            "message" => "Actualisation réussi."
         ];
+
+        $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page);
 
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
@@ -405,8 +407,10 @@ class NotificationSinistreController extends AbstractController
             'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
             'utilisateur' => $utilisateur,
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'notificationsinistres' => $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page),
+            'notificationsinistres' => $data,
             'page' => $page,
+            'limit' => 100,            // La limite par page
+            'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
