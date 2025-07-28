@@ -1,6 +1,6 @@
 // assets/controllers/sales-list_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_SHOW_TOAST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_DATA_BASE_DONNEES_LOADED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_SHOW_TOAST } from './base_controller.js';
 
 export default class extends Controller {
 
@@ -22,13 +22,15 @@ export default class extends Controller {
             const statusMessage = this.statusValue.message;
             const statusDetails = this.statusValue.error;
 
-            buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {titre:"Réponse du serveur", message:statusCode + " - " + statusMessage + ". Total: " + this.totalitemsValue});
+            // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {titre:"Réponse du serveur", message:statusCode + " - " + statusMessage + ". Total: " + this.totalitemsValue});
             buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: statusMessage, type: 'info' });
+            buildCustomEventForElement(document, EVEN_DATA_BASE_DONNEES_LOADED, true, true, {
+                status: this.statusValue,
+                page: this.pageValue,
+                limit: this.limitValue,
+                totalitems: this.totalitemsValue,
+            });
         }
-
-        // Ecoute l'évènement de demande des critères
-        // document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, this.provideCriteria.bind(this));
-        // Écoute l'événement de recherche pour mettre à jour la liste des ventes
     }
 
     disconnect() {
