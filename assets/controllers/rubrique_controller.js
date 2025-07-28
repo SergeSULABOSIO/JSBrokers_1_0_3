@@ -30,52 +30,66 @@ export default class extends Controller {
     provideCriteria(event) {
         console.log(this.nomControleur + " - Request for criteria received. Providing data...", event.detail);
         const criteriaDefinition = [
-            { 
-                Nom: 'descriptionDeFait', 
-                Display: "Description des faits", 
-                Type: 'Text', 
-                Valeur: '', 
-                isDefault: true 
+            {
+                Nom: 'descriptionDeFait',
+                Display: "Description des faits",
+                Type: 'Text',
+                Valeur: '',
+                isDefault: true
             },
-            { 
-                Nom: 'referenceSinistre', 
-                Display: "Référence du sinistre", 
-                Type: 'Text', 
-                Valeur: '', 
-                isDefault: false 
+            {
+                Nom: 'notifiedAt', // Le nom de l'attribut sur lequel on filtre la plage
+                Display: "Date de notification", // Libellé principal affiché à l'utilisateur
+                Type: 'DateTimeRange', // <-- NOUVEAU TYPE DE CRITÈRE : 'DateTimeRange'
+                Valeur: { from: '', to: '' }, // Valeurs par défaut pour la plage
+                isDefault: false
             },
-            { 
-                Nom: 'referencePolice', 
-                Display: "Référence de la police", 
-                Type: 'Text', 
-                Valeur: '', 
-                isDefault: false 
+            {
+                Nom: 'referenceSinistre',
+                Display: "Référence du sinistre",
+                Type: 'Text',
+                Valeur: '',
+                isDefault: false
             },
-            { 
-                Nom: 'dommage', 
-                Display: "Dommage", 
-                Type: 'Number', 
-                Valeur: 0, 
-                isDefault: false 
+            {
+                Nom: 'referencePolice',
+                Display: "Référence de la police",
+                Type: 'Text',
+                Valeur: '',
+                isDefault: false
             },
-            { 
-                Nom: 'assure.nom', 
-                Display: "Client (assuré)", 
-                Type: 'Text', 
-                Valeur: '', 
-                isDefault: false 
+            {
+                Nom: 'dommage',
+                Display: "Dommage",
+                Type: 'Number',
+                Valeur: 0,
+                isDefault: false
             },
-            { 
-                Nom: 'risque.code', 
-                Display: "Risque (Couverture)", 
-                Type: 'Options', 
-                Valeur: { 
-                    "imr": "INCENDIE ET RISQUES DIVERS", 
-                    "motor": "RC AUTOMOBILE", 
-                    "vie": "VIE ET EPARGNE", 
-                    "git": "TRANSPORT DES FACULTES", 
-                }, 
-                isDefault: false 
+            {
+                Nom: 'assure.nom',
+                Display: "Client (assuré)",
+                Type: 'Text',
+                Valeur: '',
+                isDefault: false
+            },
+            {
+                Nom: 'assureur.nom',
+                Display: "Assureur",
+                Type: 'Text',
+                Valeur: "",
+                isDefault: false
+            },
+            {
+                Nom: 'risque.code',
+                Display: "Risque (Couverture)",
+                Type: 'Options',
+                Valeur: {
+                    "imr": "INCENDIE ET RISQUES DIVERS",
+                    "motor": "RC AUTOMOBILE",
+                    "vie": "VIE ET EPARGNE",
+                    "git": "TRANSPORT DES FACULTES",
+                },
+                isDefault: false
             },
         ];
 
@@ -89,7 +103,7 @@ export default class extends Controller {
     handleSearch(event) {
         const { criteria } = event.detail;
         console.log(this.nomControleur + " - handleSearch with criteria:", criteria);
-        this.dispatch(EVEN_DATA_BASE_SELECTION_REQUEST, {criteria: criteria});
+        this.dispatch(EVEN_DATA_BASE_SELECTION_REQUEST, { criteria: criteria });
     }
 
     /**

@@ -66,21 +66,64 @@ export default class extends Controller {
         event.preventDefault();
         const inputs = this.advancedFormContainerTarget.querySelectorAll('[data-criterion-name]');
 
+        // Réinitialiser activeFilters pour s'assurer que les plages sont bien re-traitées
+        this.activeFilters = {};
+
+        // Pour gérer les plages, nous allons regrouper les inputs par leur data-criterion-name
+        const groupedInputs = {};
         inputs.forEach(input => {
             const name = input.dataset.criterionName;
-            const value = input.value.trim();
-
-            if (value) {
-                if (input.type === 'number') {
-                    const operatorSelect = this.advancedFormContainerTarget.querySelector(`[data-criterion-operator-for="${name}"]`);
-                    this.activeFilters[name] = { operator: operatorSelect.value, value: value };
-                } else {
-                    this.activeFilters[name] = value;
-                }
-            } else {
-                delete this.activeFilters[name];
+            if (!groupedInputs[name]) {
+                groupedInputs[name] = [];
             }
+            groupedInputs[name].push(input);
         });
+
+        for (const name in groupedInputs) {
+            if (groupedInputs.hasOwnProperty(name)) {
+                const currentInputs = groupedInputs[name];
+
+                // Cherchons la définition du critère pour déterminer son type
+                const criterionDef = this.criteriaValue.find(c => c.Nom === name);
+
+                if (!criterionDef) {
+                    console.warn(`Definition for criterion "${name}" not found.`);
+                    continue; // Skip if no definition
+                }
+
+                if (criterionDef.Type === 'DateTimeRange') {
+                    const fromInput = currentInputs.find(input => input.dataset.criterionPart === 'from');
+                    const toInput = currentInputs.find(input => input.dataset.criterionPart === 'to');
+
+                    const fromValue = fromInput ? fromInput.value.trim() : '';
+                    const toValue = toInput ? toInput.value.trim() : '';
+
+                    if (fromValue || toValue) { // Si au moins une des deux dates est renseignée
+                        this.activeFilters[name] = {
+                            operator: 'BETWEEN', // L'opérateur est implicite
+                            value: { from: fromValue, to: toValue }
+                        };
+                    } else {
+                        delete this.activeFilters[name]; // Si les deux sont vides, supprimer le filtre
+                    }
+                } else {
+                    // Logique existante pour les autres types (Text, Number, Options)
+                    const input = currentInputs[0]; // Pour les types non-plage, il n'y a qu'un seul input par nom
+                    const value = input.value.trim();
+
+                    if (value) {
+                        if (input.type === 'number' || input.type === 'date') {
+                            const operatorSelect = this.advancedFormContainerTarget.querySelector(`[data-criterion-operator-for="${name}"]`);
+                            this.activeFilters[name] = { operator: operatorSelect.value, value: value };
+                        } else {
+                            this.activeFilters[name] = value;
+                        }
+                    } else {
+                        delete this.activeFilters[name];
+                    }
+                }
+            }
+        }
 
         this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
         this.dispatchSearchEvent();
@@ -152,6 +195,29 @@ export default class extends Controller {
                                 <input type="number" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm">
                             </div>`;
                     break;
+
+                // --- NOUVEAU CASE POUR DATETIME RANGE ---
+                case 'DateTimeRange':
+                    // Pour une plage de dates, nous aurons deux champs de date.
+                    // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.
+                    html += `<div class="input-group input-group-sm">
+                    <span class="input-group-text">Entre</span>
+                    <input type="date" 
+                           id="${criterionId}_from" 
+                           data-criterion-name="${criterion.Nom}" 
+                           data-criterion-part="from" 
+                           class="form-control form-control-sm"
+                           placeholder="Date de début">
+                    <span class="input-group-text">et</span>
+                    <input type="date" 
+                           id="${criterionId}_to" 
+                           data-criterion-name="${criterion.Nom}" 
+                           data-criterion-part="to" 
+                           class="form-control form-control-sm"
+                           placeholder="Date de fin">
+                    </div>`;
+                    break;
+                // -----------------------------------
                 case 'Options':
                     html += `<select id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-select form-select-sm">`;
                     html += `<option value="">Tout</option>`;
@@ -183,10 +249,7 @@ export default class extends Controller {
         } else {
             delete this.activeFilters[key];
         }
-        // console.log("ICICICIC", value);
-        if (value) {
-            this.dispatchSearchEvent();
-        }
+        this.dispatchSearchEvent();
     }
 
     removeFilter(event) {
@@ -202,7 +265,7 @@ export default class extends Controller {
     }
 
     dispatchSearchEvent() {
-        this.dispatch(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, {criteria: this.activeFilters});
+        this.dispatch(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, { criteria: this.activeFilters });
         this.updateSummary();
     }
 
@@ -221,19 +284,43 @@ export default class extends Controller {
 
         let summaryHtml = '';
         activeCriteria.forEach(([key, val]) => {
-            let text = typeof val === 'object' ? `${key} ${val.operator} ${val.value}` : `${key}: "${val}"`;
+            let text = '';
+            // Récupérer la définition du critère pour son Display name
+            const criterionDef = this.criteriaValue.find(c => c.Nom === key);
+            const displayName = criterionDef ? criterionDef.Display : key; // Utilise Display ou le Nom si non trouvé
+
+            if (typeof val === 'object' && val.operator === 'BETWEEN' && typeof val.value === 'object' && (val.value.from || val.value.to)) {
+                // Cas du DateTimeRange
+                let from = val.value.from;
+                let to = val.value.to;
+
+                if (from && to) {
+                    text = `${displayName}: du ${from} au ${to}`;
+                } else if (from) {
+                    text = `${displayName}: à partir du ${from}`;
+                } else if (to) {
+                    text = `${displayName}: jusqu'au ${to}`;
+                }
+            } else if (typeof val === 'object' && val.operator && val.value) {
+                // Cas des nombres ou dates uniques (si vous les gardez)
+                text = `${displayName} ${val.operator} ${val.value}`;
+            } else {
+                // Cas des textes et options
+                text = `${displayName}: "${val}"`;
+            }
+
             summaryHtml += `
-                <span class="badge text-bg-secondary me-1 mb-1 d-inline-flex align-items-center">
-                    ${text}
-                    <button type="button" 
-                        class="btn-close btn-close-white ms-2"
-                        style="font-size: 0.6em;"
-                        aria-label="Remove filter" 
-                        data-action="click->search-bar#removeFilter"
-                        data-filter-key="${key}">
-                    </button>
-                </span>
-            `;
+            <span class="badge text-bg-secondary me-1 mb-1 d-inline-flex align-items-center">
+                ${text}
+                <button type="button" 
+                    class="btn-close btn-close-white ms-2"
+                    style="font-size: 0.6em;"
+                    aria-label="Remove filter" 
+                    data-action="click->search-bar#removeFilter"
+                    data-filter-key="${key}">
+                </button>
+            </span>
+        `;
         });
         this.summaryTarget.innerHTML = summaryHtml;
     }

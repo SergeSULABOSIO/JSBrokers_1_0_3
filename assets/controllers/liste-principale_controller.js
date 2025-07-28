@@ -515,7 +515,7 @@ export default class extends Controller {
         const page = 1;
         const limit = 100;
 
-        console.log(this.nomControleur + " - ICI: ", entityName, criteria);
+        // console.log(this.nomControleur + " - ICI: ", entityName, criteria);
 
         if (!entityName || !criteria) {
             console.error('Event "app:base-données:sélection-request" is missing "entityName" or "criteria" in detail.', event.detail);
@@ -524,6 +524,10 @@ export default class extends Controller {
         }
 
         try {
+            buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
+                text: 'Chargement, veuillez patiener...', type: 'info'
+            });
+
             const response = await fetch(this.urlAPIDynamicQuery, {
                 method: 'POST',
                 headers: {
@@ -534,25 +538,17 @@ export default class extends Controller {
             });
 
             const responseData = await response.text();
-            console.log(this.nomControleur + " - REPONSE DU SERVEUR BRUTE:", responseData);
+            // console.log(this.nomControleur + " - REPONSE DU SERVEUR BRUTE:", responseData);
             // Succès : propage les résultats
             this.dispatchResponse(responseData, null);
-
-
-            // const responseData = await response.json();
-            // if (!response.ok) {
-            //     // Gère les erreurs HTTP (4xx, 5xx)
-            //     console.error(this.nomControleur + ' - Error from server:', responseData);
-            //     this.dispatchResponse(null, responseData.error || `HTTP error! Status: ${response.status}`);
-            // } else {
-            //     // Succès : propage les résultats
-            //     this.dispatchResponse(responseData.data, null);
-            // }
-
         } catch (error) {
             // Gère les erreurs réseau ou de parsing JSON
             console.error(this.nomControleur + ' - Fetch error:', error);
             this.dispatchResponse(null, error.message);
+
+            buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
+                text: error.message, type: 'error'
+            });
         }
     }
 
