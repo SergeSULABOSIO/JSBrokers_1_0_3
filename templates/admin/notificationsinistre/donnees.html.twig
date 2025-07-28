@@ -1,12 +1,8 @@
 {% if notificationsinistres|length == 0 %}
     <tr>
-        <td></td>
-        <td>
-            Aucune information trouvée!<BR>
-            {% if status.code %}
-                Code: {{status.code}}.<BR>
-                Message: {{status.error}}.<BR>
-            {% endif %}
+        <td class="p-3 m-2" style="width:80px"></td>
+        <td class="p-2">
+            Aucune information trouvée!
         </td>
         <td></td>
     </tr>

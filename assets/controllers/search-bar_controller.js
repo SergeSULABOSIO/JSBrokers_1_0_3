@@ -198,6 +198,14 @@ export default class extends Controller {
 
                 // --- NOUVEAU CASE POUR DATETIME RANGE ---
                 case 'DateTimeRange':
+                    // Obtenir la date du jour au format YYYY-MM-DD
+                    // Cela garantit que la date est formatée correctement pour un input type="date"
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0'); // Mois commence à 0
+                    const day = String(today.getDate()).padStart(2, '0');
+                    const defaultDate = `${year}-${month}-${day}`;
+
                     // Pour une plage de dates, nous aurons deux champs de date.
                     // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.
                     html += `<div class="input-group input-group-sm">
@@ -207,11 +215,13 @@ export default class extends Controller {
                            data-criterion-name="${criterion.Nom}" 
                            data-criterion-part="from" 
                            class="form-control form-control-sm"
+                           value="${defaultDate}"  
                            placeholder="Date de début">
                     <span class="input-group-text">et</span>
                     <input type="date" 
                            id="${criterionId}_to" 
                            data-criterion-name="${criterion.Nom}" 
+                           value="${defaultDate}"  
                            data-criterion-part="to" 
                            class="form-control form-control-sm"
                            placeholder="Date de fin">
