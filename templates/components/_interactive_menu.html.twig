@@ -1,0 +1,92 @@
+{% set menu = menu_data %}
+<div {{ stimulus_controller('espace-de-travail') }}>
+    {# Barre de progression globale, contrôlée par Stimulus #}
+    <div data-espace-de-travail-target="progressBar" class="progress-bar"></div>
+    <div class="interactive-menu">
+        {# COLONNE 1 : Navigation principale #}
+        <div class="menu-col-1">
+            {# Ligne 1: Tableau de bord #}
+            <div class="menu-col-1-row-1">
+                <div class="nav-item"
+                    data-action="click->espace-de-travail#loadComponent"
+                    data-espace-de-travail-component-name-param="{{ menu.colonne_1.tableau_de_bord.composant_twig }}"
+                    data-espace-de-travail-description-param="{{ menu.colonne_1.tableau_de_bord.description }}"
+                >
+                    <twig:ux:icon name="{{ menu.colonne_1.tableau_de_bord.icone }}" class="nav-icon"/>
+                    <span class="nav-text">{{ menu.colonne_1.tableau_de_bord.nom }}</span>
+                </div>
+            </div>
+
+            {# Ligne 2: Groupes #}
+            <div class="menu-col-1-row-2">
+                {% for group_name, group_data in menu.colonne_1.groupes %}
+                    <div class="nav-item"
+                        data-action="mouseenter->espace-de-travail#showGroupDescription mouseleave->espace-de-travail#clearDescription click->espace-de-travail#showGroupRubriques"
+                        data-espace-de-travail-group-name-param="{{ group_name }}"
+                        data-espace-de-travail-description-param="{{ group_data.description }}"
+                    >
+                        <twig:ux:icon name="{{ group_data.icone }}" class="nav-icon"/>
+                        <span class="nav-text">{{ group_name }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+
+            {# Ligne 3: Paramètres #}
+            <div class="menu-col-1-row-3">
+                {% for param_name, param_data in menu.colonne_1.parametres %}
+                    <div class="nav-item"
+                        data-action="click->espace-de-travail#loadComponent"
+                        data-espace-de-travail-component-name-param="{{ param_data.composant_twig }}"
+                        data-espace-de-travail-description-param="{{ param_data.description }}"
+                    >
+                        <twig:ux:icon name="{{ param_data.icone }}" class="nav-icon"/>
+                        <span class="nav-text">{{ param_name }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# COLONNE 2 : Rubriques & Descriptions #}
+        <div class="menu-col-2">
+            {# Ligne 1: Infos Entreprise #}
+            <div class="menu-col-2-row-1">
+                <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
+                <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
+                <p class="company-description">{{ menu.colonne_2.description }}</p>
+                <span class="company-version">Version {{ menu.colonne_2.version }}</span>
+            </div>
+            {# Ligne 2: Zone dynamique pour descriptions et rubriques #}
+            <div class="menu-col-2-row-2" data-espace-de-travail-target="contentZone">
+                {# Contenu injecté par Stimulus #}
+            </div>
+        </div>
+
+        {# COLONNE 3 : Espace de travail #}
+        <div class="menu-col-3" data-espace-de-travail-target="workspace">
+            {# Le composant Twig chargé apparaîtra ici #}
+            <div class="workspace-placeholder">
+                <p>Sélectionnez un élément dans le menu pour commencer.</p>
+            </div>
+        </div>
+
+        {# Template caché pour générer la liste des rubriques (utilisé par Stimulus) #}
+        <template data-espace-de-travail-target="rubriquesTemplate">
+            <div class="rubriques-list">
+                {% for group_name, group_data in menu.colonne_1.groupes %}
+                    <div id="rubriques-{{ group_name|replace({' ': '_'}) }}">
+                        {% for rubrique_name, rubrique_data in group_data.rubriques %}
+                            <div class="rubrique-item"
+                                data-action="click->espace-de-travail#loadComponent"
+                                data-espace-de-travail-component-name-param="{{ rubrique_data.composant_twig }}"
+                                data-espace-de-travail-description-param="" {# Les rubriques n'ont pas de description à afficher #}
+                            >
+                                <twig:ux:icon name="{{ rubrique_data.icone }}" class="rubrique-icon" />
+                                <span class="rubrique-text">{{ rubrique_name }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        </template>
+    </div>
+</div>
