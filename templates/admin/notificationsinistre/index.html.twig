@@ -1,55 +1,37 @@
-{% extends 'base.html.twig' %}
-
-{% block title %}
-	{{pageName}}
-{% endblock %}
-
-{% block section_utilisateur %}
-	{% include 'segments/boutons_entreprise_dashbord.html.twig' %}
-{% endblock %}
-
-{%  block titreRubrique %}
-	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
-{% endblock %}
-
-{% block descriptionRubrique %}
-	{{ "notificationsinistre_description" | trans }}
-{% endblock %}
-
-{% block menuLateraleGauche %}
-	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
-{% endblock %}
-
-{% block body %}
+<div 
+    data-controller = "rubrique" 
+    data-rubrique-nom-value = "Notification Sinistre"
+    class="d-flex flex-column h-100"
+>
     <div 
-        data-controller = "rubrique" 
-        data-rubrique-nom-value = "VENTE"
-        class="container mt-5"
+        id = "liste" 
+        class="flex-grow-1 d-flex flex-column" 
+        data-controller="dialogue liste-principale" 
+        data-liste-principale-identreprise-value={{entreprise.id}} 
+        data-liste-principale-idutilisateur-value={{utilisateur.id}} 
+        data-liste-principale-nbelements-value={{notificationsinistres|length}} 
+        data-liste-principale-rubrique-value="Notification Sinistre" 
+        data-liste-principale-entite-value="NotificationSinistre" 
+        data-liste-principale-controleurphp-value="notificationsinistre" 
+        data-liste-principale-controleurstimulus-value="notificationsinistre-formulaire" 
+        {# data-liste-principale-controleurstimulusformulaire-value="notificationsinistre-formulaire"  #}
     >
-        <div 
-            id = "liste" 
-            data-controller="dialogue liste-principale" 
-            data-liste-principale-identreprise-value={{entreprise.id}} 
-            data-liste-principale-idutilisateur-value={{utilisateur.id}} 
-            data-liste-principale-nbelements-value={{notificationsinistres|length}} 
-            data-liste-principale-rubrique-value="Notification Sinistre" 
-            data-liste-principale-entite-value="NotificationSinistre" 
-            data-liste-principale-controleurphp-value="notificationsinistre" 
-            data-liste-principale-controleurstimulus-value="notificationsinistre-formulaire" 
-            {# data-liste-principale-controleurstimulusformulaire-value="notificationsinistre-formulaire"  #}
-        >
-            <div class="shadow-sm sensible bg-white">
-                {# Barre d'outils #}
+        {# Ce conteneur va aussi utiliser flexbox et cacher tout débordement #}
+        <div class="shadow-sm sensible bg-white d-flex flex-column flex-grow-1" style="overflow: hidden;">
+            {# Les barres d'outils ne grandissent pas #}
+            <div class="flex-shrink-0">
+                {# Barre d'outils #} 
                 {{ include("components/_liste_barre_outils.html.twig") }}
                 {# Barre de Recherche #}
                 {{ component('_search_bar') }}
                 {# Barre des totaux #}
                 {{ include('components/_totals_bar.html.twig') }}
+            </div>
+
+            {# NOUVEAU : Un wrapper pour le tableau qui gère le défilement #}
+            <div class="table-scroll-wrapper flex-grow-1">
                 {# Tableau #}
-                <table 
-                    {# L'élément sur lequel l'utilisateur fera un clic droit #}
-                    class="table table-hover table-sm caption-top p-3"
-                >
+                <table class="table table-hover table-sm caption-top p-3">
                     <caption>
                         <span data-liste-principale-target = "display">
                             {% if notificationsinistres|length == 0 %}
@@ -65,7 +47,8 @@
                         </div>
                     </caption>
                     {% if notificationsinistres|length != 0 %}
-                        <thead class="table-light">
+                        {# MODIFICATION : On ajoute une classe pour rendre l'en-tête collant #}
+                        <thead class="table-light sticky-header">
                             <tr class="text-center">
                                 <th scope="col">
                                     {# Checkbox de selection ici #}
@@ -104,8 +87,11 @@
                     {% endif %}
                 </table>
             </div>
-            {{ include('admin/notificationsinistre/menu_contextuel.html.twig') }}
-            {{ include('components/_dialogue.html.twig') }}
+
+
+            
         </div>
+        {{ include('admin/notificationsinistre/menu_contextuel.html.twig') }}
+        {{ include('components/_dialogue.html.twig') }}
     </div>
-{% endblock %}
+</div>

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use Twig\Environment;
 use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,10 +13,57 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-#[Route('/espace/de/travail/component', name: 'app_espace_de_travail_component.')]
+#[Route('/espacedetravail', name: 'app_espace_de_travail_component.')]
 #[IsGranted('ROLE_USER')]
 class EspaceDeTravailComponentController extends AbstractController
 {
+
+    /**
+     * @var array<string, string>
+     * Table de correspondance entre le nom du composant et l'action du contrôleur à appeler.
+     * Format : 'nom_du_composant' => 'Namespace\Controller::methode'
+     */
+    private const COMPONENT_MAP = [
+        '_tableau_de_bord_component.html.twig' => 'App\Controller\Admin\EntrepriseDashbordController::index',
+        '_monnaies_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_comptes_bancaires_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_taxes_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_tranches_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_types_chargements_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_notes_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_paiements_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_bordereaux_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_revenus_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_pistes_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_taches_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_feedbacks_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_groupes_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_clients_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_assureurs_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_contacts_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_risques_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_avenants_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_intermediaires_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_propositions_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_types_pieces_sinistres_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_notifications_sinistres_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_reglements_sinistres_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_documents_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_classeurs_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_invites_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_mon_compte_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+        '_types_revenus_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
+
+        // '_tableau_de_bord_component.html.twig' => 'App\Controller\TableauDeBordController::index',
+        // '_monnaies_component.html.twig'        => 'App\Controller\MonnaiesController::index',
+        // '_comptes_bancaires_component.html.twig' => 'App\Controller\ComptesBancairesController::index',
+        // ... Ajoutez ici toutes les correspondances pour vos composants
+    ];
+
+
+
+
     #[Route('/{id}', name: 'index', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index(Entreprise $entreprise, Request $request): Response
     {
@@ -137,7 +185,7 @@ class EspaceDeTravailComponentController extends AbstractController
                         "rubriques" => [
                             "Types pièces" => [
                                 "icone" => "codex:file", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_types_pièces_sinistres_component.html.twig",
+                                "composant_twig" => "_types_pieces_sinistres_component.html.twig",
                             ],
                             "Notifications" => [
                                 "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
@@ -145,7 +193,7 @@ class EspaceDeTravailComponentController extends AbstractController
                             ],
                             "Règlements" => [
                                 "icone" => "icon-park-outline:funds", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_reglements-sinistres_component.html.twig",
+                                "composant_twig" => "_reglements_sinistres_component.html.twig",
                             ],
                         ],
                     ],
@@ -195,7 +243,7 @@ class EspaceDeTravailComponentController extends AbstractController
             'menu_data' => $menuData,
         ]);
     }
-    
+
 
 
 
@@ -208,67 +256,29 @@ class EspaceDeTravailComponentController extends AbstractController
      * @return Response
      */
     #[Route('/api/load-component', name: 'app_load_component', methods: ['GET'])]
-    public function loadComponent(Request $request, Environment $twig, LoggerInterface $logger): Response
+    // public function loadComponent(Request $request, Environment $twig, LoggerInterface $logger): Response
+    public function loadComponent(Request $request): Response
     {
-        $componentName = $request->query->get('component');
+        /** @var Utilisateur $utilisateur */
+        $utilisateur = $this->getUser();
 
-        if (!$componentName) {
-            return new Response('Aucun composant spécifié.', Response::HTTP_BAD_REQUEST);
+        // On récupère le nom du composant depuis la requête AJAX
+        $componentKey = $request->query->get('component');
+
+        // 1. Sécurité : Vérifier que le composant demandé est bien dans notre liste autorisée
+        if (!$componentKey || !isset(self::COMPONENT_MAP[$componentKey])) {
+            return new Response('Composant non autorisé ou non trouvé.', Response::HTTP_FORBIDDEN);
         }
 
-        // --- Pour la sécurité : Valider les noms de composants autorisés ---
-        // Ceci empêche un utilisateur de demander le rendu de n'importe quel fichier.
-        $allowedComponents = [
-            '_tableau_de_bord_component.html.twig', '_monnaies_component.html.twig',
-            '_comptes_bancaires_component.html.twig', '_taxes_component.html.twig', // Note : Le nom était "_taxess_component.html.twig" dans le prompt
-            '_tranches_component.html.twig', '_types_chargements_component.html.twig',
-            '_notes_component.html.twig', '_paiements_component.html.twig',
-            '_bordereaux_component.html.twig', '_revenus_component.html.twig',
-            '_pistes_component.html.twig', '_taches_component.html.twig',
-            '_feedbacks_component.html.twig', '_groupes_component.html.twig',
-            '_clients_component.html.twig', '_assureurs_component.html.twig',
-            '_contacts_component.html.twig', '_risques_component.html.twig',
-            '_avenants_component.html.twig', '_intermediaires_component.html.twig',
-            '_propositions_component.html.twig', '_types_pieces_sinistres_component.html.twig',
-            '_notifications_sinistres_component.html.twig', '_reglements_sinistres_component.html.twig',
-            '_documents_component.html.twig', '_classeurs_component.html.twig',
-            '_invites_component.html.twig', '_mon_compte_component.html.twig',
-            '_licence_component.html.twig', '_types_revenus_component.html.twig',
-        ];
+        // 2. Récupérer l'action du contrôleur correspondant
+        $controllerAction = self::COMPONENT_MAP[$componentKey];
 
-        //[cite_start] Le nom du composant dans la demande est "_comptes_bancaires_component.html.twig" pour Types Revenus. [cite: 43]
-        // On s'assure de l'ajouter à la liste si ce n'est pas déjà fait pour éviter des erreurs.
-        // if (!in_array('_comptes_bancaires_component.html.twig', $allowedComponents)) {
-        //     $allowedComponents[] = '_comptes_bancaires_component.html.twig';
-        // }
-
-
-        if (!in_array($componentName, $allowedComponents)) {
-            $logger->warning("Tentative de chargement d'un composant non autorisé : " . $componentName);
-            return new Response('Composant non autorisé.', Response::HTTP_FORBIDDEN);
-        }
-        
-        $templatePath = 'components/pages/' . $componentName;
-
-        // Vérifier si le template existe
-        if (!$twig->getLoader()->exists($templatePath)) {
-            $logger->error("Le template de composant n'existe pas : " . $templatePath);
-            return new Response('Composant non trouvé.', Response::HTTP_NOT_FOUND);
-        }
-
-        // Pour la démo, nous générons un titre et un paragraphe aléatoires.
-        $randomTitle = "Contenu de " . str_replace(['.html.twig', '_', '-component'], '', $componentName);
-        $randomContent = "Ceci est le contenu généré dynamiquement pour le composant " . $componentName . ". " .
-                         "Dans une application réelle, ce composant contiendrait des formulaires, des tableaux de données, etc.";
-
-
-        // Rendre le composant avec des données aléatoires
-        $html = $this->renderView($templatePath, [
-            'title' => ucfirst($randomTitle),
-            'content' => $randomContent,
+        // 3. Exécuter la sous-requête vers le contrôleur dédié et retourner sa réponse
+        // C'est ici que la magie opère. Symfony va appeler TableauDeBordController::index()
+        // et nous donner son rendu HTML.
+        return $this->forward($controllerAction, [
+            // Vous pouvez même passer des paramètres au contrôleur cible si nécessaire
+            'idEntreprise' => $utilisateur->getConnectedTo()->getId(),
         ]);
-
-        return new Response($html);
     }
-
 }

@@ -8,6 +8,7 @@ use App\Entity\Utilisateur;
 use App\Constantes\MenuActivator;
 use App\Form\RechercheDashBordType;
 use App\DTO\CriteresRechercheDashBordDTO;
+use App\Repository\EntrepriseRepository;
 use App\Services\JSBTableauDeBordBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,18 +29,21 @@ class EntrepriseDashbordController extends AbstractController
     public function __construct(
         private UrlGeneratorInterface $urlGenerator,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager
-
+        private EntityManagerInterface $manager,
+        private EntrepriseRepository $entrepriseRepository,
     ) {
         $this->activator = new MenuActivator(-1);
     }
 
 
-    #[Route('/{id}', name: 'dashbord', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function dashbord(Entreprise $entreprise, Request $request, JSBTableauDeBordBuilder $jSBTableauDeBordBuilder)
+    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index($idEntreprise, Request $request, JSBTableauDeBordBuilder $jSBTableauDeBordBuilder)
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+
+        /** @var Entreprise $ese */
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         //on signale que le user s'est connecté à cette entreprise
         $user->setConnectedTo($entreprise);
@@ -75,23 +79,34 @@ class EntrepriseDashbordController extends AbstractController
             $jSBTableauDeBordBuilder->build($criteres);
         }
 
-        if ($user->isVerified()) {
-            return $this->render('admin/dashbord/index.html.twig', [
-                'pageName' => $this->translator->trans("company_dashboard_page_name"),
-                'utilisateur' => $user,
-                'entreprise' => $entreprise,
-                'activator' => $this->activator,
-                'page' => $request->query->getInt("page", 1),
-                'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
-                'formulaire_recherche' => $formulaire_recherche,
-                'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
-            ]);
-        } else {
-            $this->addFlash("warning", $this->translator->trans("entreprise_your_email_is_not_verified", [
-                ':user' => $user->getNom(),
-                ':email' => $user->getEmail()
-            ]));
-            return new RedirectResponse($this->urlGenerator->generate("app_login"));
-        }
+        // if ($user->isVerified()) {
+        //     return $this->render('admin/dashbord/index.html.twig', [
+        //         'pageName' => $this->translator->trans("company_dashboard_page_name"),
+        //         'utilisateur' => $user,
+        //         'entreprise' => $entreprise,
+        //         'activator' => $this->activator,
+        //         'page' => $request->query->getInt("page", 1),
+        //         'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
+        //         'formulaire_recherche' => $formulaire_recherche,
+        //         'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
+        //     ]);
+        // } else {
+        //     $this->addFlash("warning", $this->translator->trans("entreprise_your_email_is_not_verified", [
+        //         ':user' => $user->getNom(),
+        //         ':email' => $user->getEmail()
+        //     ]));
+        //     return new RedirectResponse($this->urlGenerator->generate("app_login"));
+        // }
+
+        return $this->render('admin/dashbord/index.html.twig', [
+            'pageName' => $this->translator->trans("company_dashboard_page_name"),
+            'utilisateur' => $user,
+            'entreprise' => $entreprise,
+            'activator' => $this->activator,
+            'page' => $request->query->getInt("page", 1),
+            'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
+            'formulaire_recherche' => $formulaire_recherche,
+            'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
+        ]);
     }
 }

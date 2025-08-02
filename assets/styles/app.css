@@ -219,3 +219,39 @@ a:active {
     scrollbar-width: thin; /* Rend la barre de défilement plus fine */
     scrollbar-color: #888 #f1f1f1; /* Couleur du pouce puis couleur de la piste */
 }
+
+/*
+ * Permet aux conteneurs de prendre 100% de la hauteur de leur parent.
+ * Indispensable pour que la mise en page s'étire jusqu'en bas.
+ */
+.h-100 {
+    height: 100%;
+}
+
+/*
+ * Ce wrapper grandit pour remplir l'espace restant et active 
+ * le défilement vertical si le contenu (le tableau) est trop grand.
+ */
+.table-scroll-wrapper {
+    overflow-y: auto;
+}
+
+/*
+ * Rend les cellules de l'en-tête (th) "collantes" en haut 
+ * du conteneur qui défile.
+ */
+.sticky-header th {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* S'assure que l'en-tête passe au-dessus du contenu */
+}
+
+/*
+ * Optionnel mais recommandé : 
+ * Applique une couleur de fond opaque à l'en-tête collant pour 
+ * éviter que le texte du corps ne soit visible à travers.
+ * On utilise ici la couleur par défaut de la classe .table-light de Bootstrap.
+ */
+.table-light.sticky-header th {
+    background-color: #f8f9fa;
+}

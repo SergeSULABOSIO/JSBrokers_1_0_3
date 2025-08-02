@@ -97,8 +97,9 @@ export default class extends Controller {
         this.progressBarTarget.style.display = 'block';
 
         try {
-            // exe: https://127.0.0.1:8000/espace/de/travail/component/api/load-component?component=_taxes_component.html.twig
-            var url = "/espace/de/travail/component/api/load-component?component=" + componentName;
+            // exe: https://127.0.0.1:8000/espacedetravail/api/load-component?component=_taxes_component.html.twig
+            var url = "/espacedetravail/api/load-component?component=" + componentName;
+            console.log(this.nomControleur + " - loadComponent:", url);
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Erreur du serveur: ${response.statusText}`);
@@ -124,7 +125,7 @@ export default class extends Controller {
      * @param {HTMLElement} currentElement L'élément qui vient d'être cliqué.
      */
     updateActiveState(currentElement) {
-        console.log(this.nomControleur + " - updateActiveState:", currentElement);
+        // console.log(this.nomControleur + " - updateActiveState:", currentElement);
         // Gérer les éléments de la colonne 1
         if (currentElement.closest('.menu-col-1')) {
             if (this.activeNavItem) {
@@ -171,6 +172,6 @@ export default class extends Controller {
     dispatchOpenedEvent() {
         const event = new CustomEvent(EVEN_NAVIGATION_RUBRIQUE_OPENNED, { bubbles: true });
         document.dispatchEvent(event);
-        console.log(this.nomControleur + " - Even lancé: " + EVEN_NAVIGATION_RUBRIQUE_OPENNED);
+        // console.log(this.nomControleur + " - Even lancé: " + EVEN_NAVIGATION_RUBRIQUE_OPENNED);
     }
 }
