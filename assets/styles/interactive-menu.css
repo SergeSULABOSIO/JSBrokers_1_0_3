@@ -100,7 +100,7 @@ body, html {
 
 /* Colonne 2 : Info & Rubriques */
 .menu-col-2 {
-    width: 300px; /* [cite_start] [cite: 211] */
+    width: 280px; /* [cite_start] [cite: 211] */
     flex-shrink: 0;
     background-color: #e7e7e7; /* [cite_start] [cite: 212] */
     display: flex;
@@ -108,9 +108,9 @@ body, html {
 }
 
 .menu-col-2-row-1 {
-    height: 300px; /* [cite_start] [cite: 218] */
+    height: 280px; /* [cite_start] [cite: 218] */
     flex-shrink: 0;
-    padding: 2rem;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;

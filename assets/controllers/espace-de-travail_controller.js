@@ -42,22 +42,6 @@ export default class extends Controller {
         this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
     }
 
-
-    // /**
-    //  * [cite_start]Affiche les rubriques d'un groupe lors du clic. [cite: 204]
-    //  * @param {MouseEvent} event
-    //  */
-    // showGroupRubriques(event) {
-    //     const groupName = event.currentTarget.dataset.espaceDeTravailGroupNameParam.replace(/ /g, '_');
-    //     const templateContent = this.rubriquesTemplateTarget.content.querySelector(`#rubriques-${groupName}`);
-
-    //     if (templateContent) {
-    //         this.contentZoneTarget.innerHTML = templateContent.outerHTML;
-    //         this.updateActiveState(event.currentTarget);
-    //     }
-    // }
-
-
     /**
      * MISE À JOUR: Utilise la nouvelle fonction pour afficher les rubriques.
      * @param {MouseEvent} event
@@ -74,12 +58,6 @@ export default class extends Controller {
      * @param {MouseEvent} event 
      */
     clearDescription(event) {
-        // Ne rien faire si un groupe est déjà sélectionné (cliqué)
-        // if (this.activeNavItem && this.activeNavItem.dataset.menuGroupNameParam) {
-        //     return;
-        // }
-        // this.contentZoneTarget.innerHTML = '';
-
         if (this.activeNavItem) {
             // Si l'élément actif est un groupe, on réaffiche ses rubriques
             if (this.activeNavItem.dataset.espaceDeTravailGroupNameParam) {
@@ -105,38 +83,32 @@ export default class extends Controller {
 
         // 1. Sauvegarder l'élément cliqué immédiatement dans une variable.
         const clickedElement = event.currentTarget;
-        // console.log(this.nomControleur + " - LoadComponent", clickedElement);
         const componentName = clickedElement.dataset.espaceDeTravailComponentNameParam;
         const description = clickedElement.dataset.espaceDeTravailDescriptionParam;
 
         if (!componentName) return;
-
         // On utilise la même classe CSS ici aussi
         if (description) {
             this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
         }
 
-        // [cite_start] 1. Dispatcher l'événement de début de chargement et afficher la barre de progression [cite: 243, 246, 235]
+        // 1. Dispatcher l'événement de début de chargement et afficher la barre de progression [cite: 243, 246, 235]
         this.dispatchRequestEvent(clickedElement.dataset);
         this.progressBarTarget.style.display = 'block';
 
         try {
             // exe: https://127.0.0.1:8000/espace/de/travail/component/api/load-component?component=_taxes_component.html.twig
             var url = "/espace/de/travail/component/api/load-component?component=" + componentName;
-            // console.log(this.nomControleur + " - URL: " + url);
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Erreur du serveur: ${response.statusText}`);
             }
             const html = await response.text();
-
             // 2. Charger le contenu dans l'espace de travail [cite: 228]
             this.workspaceTarget.innerHTML = html;
-
             // 2. Utiliser la variable sauvegardée au lieu de event.currentTarget.
             this.updateActiveState(clickedElement);
-
-            // [cite_start] 3. Dispatcher l'événement de fin de chargement et cacher la barre de progression [cite: 247, 248, 236]
+            // 3. Dispatcher l'événement de fin de chargement et cacher la barre de progression [cite: 247, 248, 236]
             this.dispatchOpenedEvent();
 
         } catch (error) {
@@ -191,7 +163,6 @@ export default class extends Controller {
             }
         });
         document.dispatchEvent(event);
-        // console.log(this.nomControleur + " - Even lancé: " + EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST);
     }
 
     /**

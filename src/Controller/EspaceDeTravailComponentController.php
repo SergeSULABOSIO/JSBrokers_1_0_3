@@ -184,7 +184,7 @@ class EspaceDeTravailComponentController extends AbstractController
             "colonne_2" => [
                 "logo" => "images/entreprises/logofav.png", //source: dans le dossier "public/images/entreprises/logofav.png"
                 "titre" => "JS Brokers",
-                "description" => "Votre partenaire fiable pour optimisation la gestion de votre porte-feuille client.",
+                "description" => "Votre partenaire fiable pour optimiser la gestion de votre porte-feuille client.",
                 "version" => "1.1.0",
             ],
         ];
