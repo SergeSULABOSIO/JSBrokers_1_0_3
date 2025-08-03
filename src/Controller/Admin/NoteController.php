@@ -75,6 +75,8 @@ class NoteController extends AbstractController
 
         return $this->render('admin/note/index.html.twig', [
             'pageName' => $this->translator->trans("note_page_name_new"),
+            'current_route' => "https://127.0.0.1:8000/admin/note/index/1",
+            'current_param' => $_GET,
             'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'notes' => $this->noteRepository->paginateForEntreprise($idEntreprise, $page),

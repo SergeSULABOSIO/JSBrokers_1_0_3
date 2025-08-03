@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPENNED } from './base_controller.js';
 
 export default class extends Controller {
-    static targets = ["progressBar", "contentZone", "workspace", "rubriquesTemplate"];
+    static targets = ["progressBar", "contentZone", "workspace", "rubriquesTemplate", "dashboardItem"];
 
     // Cible pour l'élément de menu actuellement actif
     activeNavItem = null;
@@ -11,6 +11,11 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "Espace de travail";
         // Logique à exécuter lorsque le contrôleur est attaché au DOM
+        // 2. Vérifiez si la cible existe et simulez un clic dessus
+        // Ceci va automatiquement déclencher votre méthode loadComponent
+        if (this.hasDashboardItemTarget) {
+            this.dashboardItemTarget.click();
+        }
     }
 
     /**

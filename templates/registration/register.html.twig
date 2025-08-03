@@ -3,24 +3,19 @@
 {% block title %}Register{% endblock %}
 
 {% block body %}
-    <div class="container">
+	<div class="container">
 		<h3>{{ pageName }}</h3>
-		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<p>
-                    {% for flash_error in app.flashes('verify_email_error') %}
-                        <div class="alert alert-danger" role="alert">{{ flash_error }}</div>
-                    {% endfor %}
-					<strong>Cher visiteur</strong>, 
-					<br>Nous vous prions de remplir puis de soumettre le formulaire ci-dessous afin d'avoir un compte utilisateur qui vous permettra de profiter de JS Brokers.
-				</p>
-                <p class="d-flex justify-content-center">
-                    <img class="rounded" src="/images/utilisateurs/default_utilisateur.jpg" alt="Image de l'entreprise" width="620px" height="350px">
-                </p>
-                <hr>
-				{{ form(registrationForm) }}
-				</div>
-			</div>
-		</div>
+		<p>
+			{% for flash_error in app.flashes('verify_email_error') %}
+				<div class="alert alert-danger" role="alert">{{ flash_error }}</div>
+			{% endfor %}
+			<strong>Cher visiteur</strong>, 
+			<br>Nous vous prions de remplir puis de soumettre le formulaire ci-dessous afin d'avoir un compte utilisateur qui vous permettra de profiter de JS Brokers.
+		</p>
+		<p class="d-flex justify-content-center">
+			<img class="rounded" src="/images/utilisateurs/default_utilisateur.jpg" alt="Image de l'entreprise" width="620px" height="350px">
+		</p>
+		<hr>
+		{{ form(registrationForm) }}
 	</div>
 {% endblock %}

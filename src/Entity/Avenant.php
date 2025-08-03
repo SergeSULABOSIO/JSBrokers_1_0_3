@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\AvenantRepository;
+use BadFunctionCallException;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -200,5 +201,10 @@ class Avenant
         $this->numero = $numero;
 
         return $this;
+    }
+
+    public function __toString()
+    {
+        return $this->numero;
     }
 }

@@ -109,7 +109,8 @@
 													{# Autres #}
 												</a>
 												<ul class="dropdown-menu">
-													{% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %}
+													{# {% set currentURL = absolute_url(path(app.current_route, app.request.attributes.get('_route_params'))) %} #}
+													{% set currentURL = "https://127.0.0.1:8000/admin/note/index/1" %}
 													{% if panier != null %}
 														{% if panier.idNote != note.id %}
 															<li>
