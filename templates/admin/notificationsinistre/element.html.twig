@@ -1,3 +1,4 @@
+{# Ajoutez une action de clic sur la ligne entière #}
 <tr 
     id="liste_row_{{ notificationsinistre.id }}" 
     data-controller="liste-element" 
@@ -9,6 +10,7 @@
     {% for key, value in constante.getNumericValues(notificationsinistre) %}
         data-{{ key }}-value="{{ value }}"
     {% endfor %}
+    data-action="click->liste-principale#toggleRowSelection"
 >
     {{ include("admin/notificationsinistre/elementview.html.twig") }}
 </tr>

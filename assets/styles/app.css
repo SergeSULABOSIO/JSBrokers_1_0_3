@@ -255,3 +255,51 @@ a:active {
 .table-light.sticky-header th {
     background-color: #f8f9fa;
 }
+
+/* Améliorations générales pour le tableau */
+.table-enhanced {
+    border-collapse: separate; /* Nécessaire pour les bordures personnalisées */
+    border-spacing: 0;
+}
+
+/* Améliorer la lisibilité des cellules */
+.table-enhanced th,
+.table-enhanced td {
+    /* padding: 0.8rem 1rem; Plus d'espacement vertical et horizontal */
+    border-bottom: 1px solid #dee2e6; /* Une seule bordure en bas */
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    text-align: left; /* Aligner tout le texte à gauche par défaut */
+    vertical-align: middle; /* Centrer verticalement le contenu */
+}
+
+/* Rendre l'en-tête plus distinctif */
+.table-enhanced thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    /* font-size: 0.75rem; */
+    /* letter-spacing: 0.5px; */
+    color: #6c757d; /* Couleur de texte plus douce */
+}
+
+/* Adoucir la couleur du texte dans le corps du tableau */
+.table-enhanced tbody td {
+    color: #495057;
+}
+
+/* Style pour la ligne sélectionnée (très important pour le feedback UX) */
+.table-enhanced tbody tr.row-selected {
+    background-color: #e6f7ff; /* Un bleu très clair et non agressif */
+}
+
+/* Améliorer le survol */
+.table-enhanced tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+
+/* Supprimer la bordure de la dernière ligne pour un design plus net */
+.table-enhanced tbody tr:last-child td {
+    border-bottom: none;
+}
