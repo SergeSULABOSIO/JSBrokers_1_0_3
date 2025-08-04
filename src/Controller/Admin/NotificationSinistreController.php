@@ -781,6 +781,7 @@ class NotificationSinistreController extends AbstractController
             'totalItems' => $totalItems,  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
+            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
             'activator' => $this->activator,
         ]);
     }
