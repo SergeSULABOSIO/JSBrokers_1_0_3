@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_COCHER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_CHECK_REQUEST, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFIED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_COCHER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_CHECK_REQUEST, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DOUBLE_CLICKED, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFIED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -141,13 +141,7 @@ export default class extends Controller {
             return;
         }
 
-        const customEvent = new CustomEvent("app:liste-principale:elément-double-clicked", {
-            bubbles: true, // L'événement peut remonter dans le DOM
-            detail: {
-                objet: this.objetValue // Propagation d'une copie de l'objet
-            }
-        });
-        document.dispatchEvent(customEvent);
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DOUBLE_CLICKED, true, true,{objet: this.objetValue});
         console.log(`Événement 'app:liste-principale:elément-double-clicked' émis pour l'objet ID: ${this.idobjetValue}`);
     }
 }
