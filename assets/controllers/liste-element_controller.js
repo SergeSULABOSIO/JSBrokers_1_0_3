@@ -11,6 +11,7 @@ export default class extends Controller {
     static values = {
         idobjet: Number,
         isShown: Boolean,
+        objet: Object // Nous ajoutons cette valeur pour récupérer l'objet complet
     };
 
     connect() {
@@ -123,5 +124,30 @@ export default class extends Controller {
             expandedCheckBox: this.idobjetValue,
             selection: event.detail.selection,
         });
+    }
+
+    /**
+     * Emet un événement personnalisé sur le document lorsqu'une ligne est
+     * double-cliquée, en propageant les données de l'objet.
+     * @param {Event} event L'événement de double-clic.
+     */
+    dispatchDoubleClick(event) {
+        // Empêche le double-clic de déclencher aussi l'événement de simple clic (sélection)
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!this.hasObjetValue) {
+            console.error("L'objet n'a pas été passé au contrôleur Stimulus 'liste-element'.");
+            return;
+        }
+
+        const customEvent = new CustomEvent("app:liste-principale:elément-double-clicked", {
+            bubbles: true, // L'événement peut remonter dans le DOM
+            detail: {
+                objet: this.objetValue // Propagation d'une copie de l'objet
+            }
+        });
+        document.dispatchEvent(customEvent);
+        console.log(`Événement 'app:liste-principale:elément-double-clicked' émis pour l'objet ID: ${this.idobjetValue}`);
     }
 }

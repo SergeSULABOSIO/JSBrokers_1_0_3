@@ -50,8 +50,12 @@
                         {# MODIFICATION : On ajoute une classe pour rendre l'en-tête collant #}
                         <thead class="table-light sticky-header">
                             <tr class="text-center">
-                                {# Titre pour case à cocher #}
-                                <th scope="col">
+                                {# ============================================================ #}
+                                {# DÉBUT MODIFICATION : EN-TÊTES DE COLONNES DYNAMIQUES        #}
+                                {# ============================================================ #}
+
+                                {# Colonne 1 : Statique pour la case à cocher et l'ID #}
+                                <th scope="col" style="width: 80px;">
                                     <div class="form-check m-2 justify-content-start">
                                         <input 
                                             class="form-check-input" 
@@ -69,21 +73,33 @@
                                         </label>
                                     </div>
                                 </th>
-                                {# Titre Colonne Principale #}
-                                <th scope="col">
-                                    <div class='d-flex justify-content-start text-secondary m-2'>
-                                        Titre Colonne principale
-                                    </div>
-                                </th>
-                                {# Titres pour Colonnes numériques : #}
-                                {# Titre colonne numérique 1 #}
-                                <th scope="col" style="width:100px" >
-                                    <div class='d-flex justify-content-end'>
-                                        Dommage
-                                    </div>
-                                </th>
+                                
+                                {# Colonne 2 : Titre de la colonne principale depuis ListeCanvas #}
+                                {% if listeCanvas.colonne_principale is defined %}
+                                    <th scope="col">
+                                        <div class='d-flex justify-content-start text-secondary m-2'>
+                                            {{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}
+                                        </div>
+                                    </th>
+                                {% endif %}
+
+                                {# Colonnes suivantes : Titres des colonnes numériques depuis ListeCanvas #}
+                                {% if listeCanvas.colonnes_numeriques is defined %}
+                                    {% for colonne in listeCanvas.colonnes_numeriques %}
+                                        <th scope="col" style="width:150px"> {# Largeur fixe pour l'alignement #}
+                                            <div class='d-flex justify-content-end text-secondary m-2'>
+                                                {{ colonne.titre_colonne | default('Valeur') }}
+                                            </div>
+                                        </th>
+                                    {% endfor %}
+                                {% endif %}
+
+                                {# ============================================================ #}
+                                {# FIN MODIFICATION : EN-TÊTES DE COLONNES DYNAMIQUES           #}
+                                {# ============================================================ #}
                             </tr>
                         </thead>
+
                         {# CONTENU DU TABLEAU #}
                         <tbody class="table-group-divider context-target" data-liste-principale-target = "donnees">
                             <div 
@@ -102,64 +118,121 @@
                                 </tr>
                             {% else %}
                                 {# Boucler les donnees #}
-                                {% for notificationsinistre in notificationsinistres %}
-                                    {# LIGNE DU TABLEAU #}
-                                    <tr 
-                                        id="liste_row_{{ notificationsinistre.id }}" 
-                                        data-controller="liste-element" 
-                                        data-liste-element-isShown-value = false 
-                                        data-liste-element-idobjet-value = {{notificationsinistre.id}} 
-                                        class="element-a-encadrer parent-a-options context-target align-middle" 
+                                {% for entity in notificationsinistres %}
+                                    {# ================================================================= #}
+                                    {# DÉBUT MODIFICATION : LIGNES ET CELLULES DU TABLEAU DYNAMIQUES   #}
+                                    {# ================================================================= #}
+                                    <tr
+                                        id="liste_row_{{ entity.id }}"
+                                        data-controller="liste-element"
+                                        data-liste-element-is-shown-value="false"
+                                        data-liste-element-idobjet-value="{{ entity.id }}"
+                                        class="element-a-encadrer parent-a-options context-target align-middle"
                                         
-                                        {# Boucle pour générer dynamiquement les data-attributes numériques #}
-                                        {% for key, value in constante.getNumericValues(notificationsinistre) %}
+                                        {# Boucle pour les attributs numériques (inchangée) #}
+                                        {% for key, value in constante.getNumericValues(entity) %}
                                             data-{{ key }}-value="{{ value }}"
                                         {% endfor %}
-                                        data-action="click->liste-principale#toggleRowSelection"
+                                        
+                                        {# Actions existantes #}
+                                        data-action="
+                                            click->liste-principale#toggleRowSelection
+                                            dblclick->liste-element#dispatchDoubleClick
+                                        "
+                                        {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
+                                        {# data-liste-element-objet-value='{{ entity | serialize('json') | e('html_attr') }}' #}
+                                        data-liste-element-objet-value='{{ entity|json_encode }}'
                                     >
-                                        {# COLONNE 1 DU TABLEAU #}
+                                        {# Colonne 1 : Statique (Case à cocher et ID) #}
                                         <td class="p-3 m-2" style="width:80px">
-                                            {# ... votre checkbox ... #}
                                             <div class="form-group">
-                                                <input 
-                                                    type="checkbox" 
-                                                    id="check_{{ notificationsinistre.id }}" 
-                                                    name="check_[]" 
-                                                    value="selectionnee" 
-                                                    class="form-check-input" 
-                                                    data-action="change->liste-principale#handleCheckboxChange" 
+                                                <input
+                                                    type="checkbox"
+                                                    id="check_{{ entity.id }}"
+                                                    name="check_[]"
+                                                    value="selectionnee"
+                                                    class="form-check-input"
+                                                    data-action="change->liste-principale#handleCheckboxChange"
                                                     data-liste-principale-target="rowCheckbox"
-                                                    data-idobjet-value="{{ notificationsinistre.id }}"  
+                                                    data-idobjet-value="{{ entity.id }}"
                                                 >
-                                                <label 
-                                                    for="check_{{ notificationsinistre.id }}" 
-                                                    class="text-secondary" 
-                                                >
-                                                    {{ notificationsinistre.id }}
+                                                <label for="check_{{ entity.id }}" class="text-secondary">
+                                                    {{ entity.id }}
                                                 </label>
                                             </div>
                                         </td>
 
-                                        {# COLONNE 2 DU TABLEAU #}
+                                        {# Colonne 2 : Cellule principale dynamique #}
                                         <td class="p-2">
-                                            {# texte principal #}
-                                            <span class="text-secondary">
-                                                {{ include('segments/icones/notificationsinistre.html.twig', {size:'19px'}) }}
-                                                "{{ notificationsinistre.descriptionDeFait|slice(0, 75) }} [...]"
-                                            </span><br/>
-                                            {# texte secondaire #}
-                                            <small  class="m-2">
-                                                <span class="text-secondary">
-                                                    {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
-                                                    {{ notificationsinistre.assure.nom }}
-                                                </span>
+                                            {% set col_principale = listeCanvas.colonne_principale %}
+
+                                            {# Ligne 1: Texte principal #}
+                                            <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
+                                                {# Icône #}
+                                                {% if col_principale.texte_principal.icone is defined %}
+                                                    <twig:UX:Icon name="{{ col_principale.texte_principal.icone }}" style="width: {{ col_principale.texte_principal.icone_taille }}; height: {{ col_principale.texte_principal.icone_taille }};" />
+                                                {% endif %}
+
+                                                {# --- MODIFICATION ICI --- #}
+                                                {# Ajout de la logique de troncature pour le texte principal #}
+
+                                                {# Préfixe et Texte#}
+                                                {{ col_principale.texte_principal.attribut_prefixe }}
+
+                                                {# Valeur formatée et tronquée si nécessaire #}
+                                                {% set texte_principal = col_principale.texte_principal %}
+                                                {% set valeur_principale = attribute(entity, texte_principal.attribut_code) %}
+                                                
+                                                {% if texte_principal.attribut_taille_max is defined and texte_principal.attribut_taille_max is not null and valeur_principale|length > texte_principal.attribut_taille_max %}
+                                                    "{{ valeur_principale|slice(0, texte_principal.attribut_taille_max) ~ '...' }}"
+                                                {% else %}
+                                                    "{{ valeur_principale }}"
+                                                {% endif %}
+                                            </div>
+
+                                            {# Ligne 2: Textes secondaires #}
+                                            <small class="text-secondary d-flex align-items-center mt-1">
+                                                {% for texte in col_principale.textes_secondaires %}
+                                                    <span class="d-inline-flex align-items-center">
+                                                        {# Icône #}
+                                                        {% if texte.icone is defined %}
+                                                            <twig:UX:Icon name="{{ texte.icone }}" style="width: {{ texte.icone_taille }}; height: {{ texte.icone_taille }}; margin-right: 4px;" />
+                                                        {% endif %}
+
+                                                        {# Préfixe #}
+                                                        {{ texte.attribut_prefixe }}
+
+                                                        {# Valeur formatée #}
+                                                        {% set valeur = attribute(entity, texte.attribut_code) %}
+                                                        
+                                                        {% if texte.attribut_type == 'date' and valeur is not null %}
+                                                            {{ valeur|date('d/m/Y') }}
+                                                        {% elseif texte.attribut_type == 'text' and texte.attribut_taille_max is not null and valeur|length > texte.attribut_taille_max %}
+                                                            {{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}
+                                                        {% else %}
+                                                            {{ valeur }}
+                                                        {% endif %}
+                                                    </span>
+                                                    {# Séparateur #}
+                                                    {% if not loop.last %}
+                                                        <span class="mx-2">{{ col_principale.textes_secondaires_separateurs | raw }}</span>
+                                                    {% endif %}
+                                                {% endfor %}
                                             </small>
                                         </td>
-                                        {# COLONNE 3 DU TABLEAU #}
-                                        <td>
-                                            0.000,00 USD
-                                        </td>
+
+                                        {# Colonnes suivantes : Cellules numériques dynamiques #}
+                                        {% for colonne in listeCanvas.colonnes_numeriques %}
+                                            <td class="text-end" style="font-weight: bold; color: #495057;"> {# Gris foncé #}
+                                                {% set valeur_numerique = attribute(entity, colonne.attribut_code) %}
+                                                {{ colonne.attribut_unité }} {{ valeur_numerique | number_format(2, ',', ' ') }}
+                                            </td>
+                                        {% endfor %}
+
                                     </tr>
+                                    {# ================================================================= #}
+                                    {# FIN MODIFICATION : LIGNES ET CELLULES DU TABLEAU DYNAMIQUES     #}
+                                    {# ================================================================= #}
                                 {% endfor %}
                             {% endif %}
                         </tbody>
