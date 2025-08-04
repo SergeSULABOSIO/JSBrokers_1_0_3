@@ -1,16 +1,29 @@
-{# Ajoutez une action de clic sur la ligne entière #}
-<tr 
-    id="liste_row_{{ notificationsinistre.id }}" 
-    data-controller="liste-element" 
-    data-liste-element-isShown-value = false 
-    data-liste-element-idobjet-value = {{notificationsinistre.id}} 
-    class="element-a-encadrer parent-a-options context-target align-middle" 
+{# ================================================================= #}
+{# DÉBUT MODIFICATION : LIGNES ET CELLULES DU TABLEAU DYNAMIQUES   #}
+{# ================================================================= #}
+<tr
+    id="liste_row_{{ entity.id }}"
+    data-controller="liste-element"
+    data-liste-element-is-shown-value="false"
+    data-liste-element-idobjet-value="{{ entity.id }}"
+    class="element-a-encadrer parent-a-options context-target align-middle"
     
-    {# Boucle pour générer dynamiquement les data-attributes numériques #}
-    {% for key, value in constante.getNumericValues(notificationsinistre) %}
+    {# Boucle pour les attributs numériques (inchangée) #}
+    {% for key, value in constante.getNumericValues(entity) %}
         data-{{ key }}-value="{{ value }}"
     {% endfor %}
-    data-action="click->liste-principale#toggleRowSelection"
+    
+    {# Actions existantes #}
+    data-action="
+        click->liste-principale#toggleRowSelection
+        dblclick->liste-element#dispatchDoubleClick
+    "
+    {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
+    {# data-liste-element-objet-value='{{ entity | serialize('json') | e('html_attr') }}' #}
+    data-liste-element-objet-value='{{ entity|json_encode }}'
 >
-    {{ include("admin/notificationsinistre/elementview.html.twig") }}
+    {{ include('admin/notificationsinistre/elementview.html.twig') }}
 </tr>
+{# ================================================================= #}
+{# FIN MODIFICATION : LIGNES ET CELLULES DU TABLEAU DYNAMIQUES     #}
+{# ================================================================= #}

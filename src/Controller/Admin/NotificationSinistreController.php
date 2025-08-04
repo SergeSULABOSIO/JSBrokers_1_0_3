@@ -91,7 +91,6 @@ class NotificationSinistreController extends AbstractController
             'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
-            // 'activator' => $this->activator,
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
         ]);
@@ -335,6 +334,7 @@ class NotificationSinistreController extends AbstractController
             'entreprise' => $entreprise,
             'utilisateur' => $user,
             'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
             'serviceMonnaie' => $this->serviceMonnaies,
         ]);
     }
@@ -414,6 +414,7 @@ class NotificationSinistreController extends AbstractController
             'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
+            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
             'activator' => $this->activator,
         ]);
     }
