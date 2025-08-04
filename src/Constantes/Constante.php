@@ -6167,6 +6167,67 @@ class Constante
         return [];
     }
 
+    public function getListeCanvas($object): array
+    {
+        if ($object instanceof NotificationSinistre) {
+            return [
+                "colonne_principale" => [
+                    "titre_colonne" => "Notifications",
+                    "texte_principal" => [
+                        "attribut_prefixe" => "",
+                        "attribut_code" => "descriptionDeFait",
+                        "attribut_type" => "text",
+                        "attribut_taille_max" => 30,
+                        "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
+                        "icone_taille" => "19px", //largeur = hauteur
+                    ],
+                    "textes_secondaires_separateurs" => " • ",
+                    "textes_secondaires" => [
+                        0 => [
+                            "attribut_prefixe" => "Le ",
+                            "attribut_code" => "occuredAt",
+                            "attribut_type" => "date",
+                            "attribut_taille_max" => null,
+                            "icone" => "fluent-mdl2:date-time-mirrored", //source: https://ux.symfony.com/icons
+                            "icone_taille" => "16px", //largeur = hauteur
+                        ],
+                        1 => [
+                            "attribut_prefixe" => "Pol.: ",
+                            "attribut_code" => "referencePolice",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 30,
+                            "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
+                            "icone_taille" => "16px", //largeur = hauteur
+                        ],
+                        2 => [
+                            "attribut_prefixe" => "Sin.: ",
+                            "attribut_code" => "referenceSinistre",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 30,
+                            "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
+                            "icone_taille" => "16px", //largeur = hauteur
+                        ],
+                    ],
+                ],
+                "colonnes_numeriques" => [
+                    0 => [
+                        "titre_colonne" => "Dommage",
+                        "attribut_unité" => "USD",
+                        "attribut_code" => "dommage",
+                        "attribut_type" => "nombre",
+                    ],
+                    0 => [
+                        "titre_colonne" => "Dom. évaluée",
+                        "attribut_unité" => "USD",
+                        "attribut_code" => "evaluationChiffree",
+                        "attribut_type" => "nombre",
+                    ],
+                ],
+            ];
+        }
+        return [];
+    }
+
     public function getNumericValues($object): array
     {
         if ($object instanceof NotificationSinistre) {

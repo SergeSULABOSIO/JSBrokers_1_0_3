@@ -80,43 +80,6 @@ class NotificationSinistreController extends AbstractController
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
 
-        $list_canvas = [
-            "texte_principal" => [
-                "attribut_prefixe" => "",
-                "attribut_code" => "descriptionDeFait",
-                "attribut_type" => "text",
-                "attribut_taille_max" => 30,
-                "icone" => "emojione-monotone:fire",//source: https://ux.symfony.com/icons
-                "icone_taille" => "19px", //largeur = hauteur
-            ],
-            "textes_secondaires" => [
-                0 => [
-                    "attribut_prefixe" => "Le ",
-                    "attribut_code" => "occuredAt",
-                    "attribut_type" => "date",
-                    "attribut_taille_max" => null,
-                    "icone" => "fluent-mdl2:date-time-mirrored", //source: https://ux.symfony.com/icons
-                    "icone_taille" => "16px", //largeur = hauteur
-                ],
-                1 => [
-                    "attribut_prefixe" => "Pol.: ",
-                    "attribut_code" => "referencePolice",
-                    "attribut_type" => "text",
-                    "attribut_taille_max" => 30,
-                    "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
-                    "icone_taille" => "16px", //largeur = hauteur
-                ],
-                2 => [
-                    "attribut_prefixe" => "Sin.: ",
-                    "attribut_code" => "referenceSinistre",
-                    "attribut_type" => "text",
-                    "attribut_taille_max" => 30,
-                    "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
-                    "icone_taille" => "16px", //largeur = hauteur
-                ],
-            ],
-        ];
-
         return $this->render('admin/notificationsinistre/index.html.twig', [
             'status' => $status, // Contient l'erreur ou les infos de pagination
             'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
@@ -128,8 +91,9 @@ class NotificationSinistreController extends AbstractController
             'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
-            'activator' => $this->activator,
+            // 'activator' => $this->activator,
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
+            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
         ]);
     }
 

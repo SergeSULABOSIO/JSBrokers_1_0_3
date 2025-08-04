@@ -50,8 +50,8 @@
                         {# MODIFICATION : On ajoute une classe pour rendre l'en-tête collant #}
                         <thead class="table-light sticky-header">
                             <tr class="text-center">
+                                {# Titre pour case à cocher #}
                                 <th scope="col">
-                                    {# Checkbox de selection ici #}
                                     <div class="form-check m-2 justify-content-start">
                                         <input 
                                             class="form-check-input" 
@@ -69,18 +69,22 @@
                                         </label>
                                     </div>
                                 </th>
+                                {# Titre Colonne Principale #}
                                 <th scope="col">
                                     <div class='d-flex justify-content-start text-secondary m-2'>
-                                        {{ "list_of_object" | trans }}
+                                        Titre Colonne principale
                                     </div>
                                 </th>
+                                {# Titres pour Colonnes numériques : #}
+                                {# Titre colonne numérique 1 #}
                                 <th scope="col" style="width:100px" >
                                     <div class='d-flex justify-content-end'>
-                                        {# {{ "note_list_actions" | trans }} #}
+                                        Dommage
                                     </div>
                                 </th>
                             </tr>
                         </thead>
+                        {# CONTENU DU TABLEAU #}
                         <tbody class="table-group-divider context-target" data-liste-principale-target = "donnees">
                             <div 
                                 data-controller="donnees"
@@ -93,9 +97,7 @@
                             {% if notificationsinistres|length == 0 %}
                                 <tr>
                                     <td class="p-3 m-2" style="width:80px"></td>
-                                    <td class="p-2">
-                                        Aucune information trouvée!
-                                    </td>
+                                    <td class="p-2">Aucune information trouvée!</td>
                                     <td></td>
                                 </tr>
                             {% else %}
@@ -140,184 +142,22 @@
 
                                         {# COLONNE 2 DU TABLEAU #}
                                         <td class="p-2">
-                                            {# Texte principal #}
-                                            <a 
-                                                id="texte_principal_{{ notificationsinistre.id }}" 
-                                                class="m-2 fw-bold" 
-                                                style="text-decoration:none;" 
-                                                data-liste-element-target="texteprincipal" 
-                                                data-action = "liste-element#action_afficher_details" 
-                                            >
-                                                {# href="{{ path('admin.notificationsinistre.edit', {'idNotificationsinistre':notificationsinistre.id, 'idEntreprise': entreprise.id})}}" #}
+                                            {# texte principal #}
+                                            <span class="text-secondary">
                                                 {{ include('segments/icones/notificationsinistre.html.twig', {size:'19px'}) }}
                                                 "{{ notificationsinistre.descriptionDeFait|slice(0, 75) }} [...]"
-                                            </a><br/>
+                                            </span><br/>
                                             {# texte secondaire #}
-                                            <small 
-                                                class="m-2" 
-                                                data-liste-element-target="textesecondaire" 
-                                            >
-                                                {% if notificationsinistre.occuredAt != null %}
-                                                    <span class="text-secondary">
-                                                        {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
-                                                        Le {{ notificationsinistre.occuredAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
-                                                    </span>
-                                                {% endif %}
-                                                {% if notificationsinistre.lieu != null %}
-                                                    <span class="text-secondary">
-                                                        à {{ notificationsinistre.lieu }}
-                                                    </span>
-                                                {% endif %}
-                                                {% if notificationsinistre.notifiedAt != null %}
-                                                    <span class="text-secondary">
-                                                        • {{ include('segments/icones/datetime.html.twig', {size:'16px'}) }}
-                                                        Notifié le {{ notificationsinistre.notifiedAt|format_datetime('short', 'none', locale: utilisateur.locale) }}
-                                                    </span>
-                                                {% endif %}
-                                                {% if notificationsinistre.referenceSinistre != null %}
-                                                    <span class="text-secondary">
-                                                        • {{ include('segments/icones/notificationsinistre.html.twig', {size:'16px'}) }}
-                                                        Réf.: {{ notificationsinistre.referenceSinistre }}
-                                                    </span>
-                                                {% endif %}
-                                            </small><br/>
-                                            {# Texte détails synthèse #}
-                                            <div 
-                                                style="display:none;" 
-                                                data-liste-element-target="details" 
-                                            >
-                                                <small class="m-2">
-                                                    {% if notificationsinistre.assure != null %}
-                                                        <span class="text-secondary">
-                                                            {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
-                                                            {{ notificationsinistre.assure.nom }}
-                                                        </span>
-                                                    {% endif %}
-                                                    {% if notificationsinistre.referencePolice != null %}
-                                                        <span class="text-secondary">
-                                                            • {{ include('segments/icones/avenant.html.twig', {size:'16px'}) }}
-                                                            Police: {{ notificationsinistre.referencePolice }}
-                                                        </span>
-                                                    {% endif %}
-                                                    {% if notificationsinistre.assureur != null %}
-                                                        <span class="text-secondary">
-                                                            • 
-                                                            {{ include('segments/icones/assureur.html.twig', {size:'16px'}) }}
-                                                            {{ notificationsinistre.assureur.nom }}
-                                                        </span>
-                                                    {% endif %}
-                                                    {% if notificationsinistre.risque != null %}
-                                                        <span class="text-secondary">
-                                                            • 
-                                                            {{ include('segments/icones/risque.html.twig', {size:'16px'}) }}
-                                                            {{ notificationsinistre.risque.code }}
-                                                        </span>
-                                                    {% endif %}
-                                                </small><br/>
-                                                <small class="m-2">
-                                                    <span class="text-secondary">
-                                                        {{ include('segments/icones/offreindemnisation.html.twig', {size:'16px'}) }}
-                                                        Dommage: {{ notificationsinistre.dommage|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                                    </span> 
-                                                    <span class="text-secondary"> • Evaluation de l'expert: {{ notificationsinistre.evaluationChiffree|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                                    <span class="text-secondary"> • Franchise: {{ constante.Notification_Sinistre_getFranchise(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}</span> 
-                                                </small><br/>
-                                                <small class="m-2 fw-bold">
-                                                    <span class="text-secondary">
-                                                        {{ include('segments/icones/offreindemnisation.html.twig', {size:'16px'}) }}
-                                                        Compensation: {{ constante.Notification_Sinistre_getCompensation(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                                    </span> 
-                                                    <span class="text-secondary">
-                                                        • versée: {{ constante.Notification_Sinistre_getCompensationVersee(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                                    </span> 
-                                                    {% set couleur = "text-secondary" %}
-                                                    {% if constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre) != 0 %}
-                                                        {% set couleur = "text-danger" %}
-                                                    {% endif %}
-                                                    <span class="{{couleur}}">
-                                                        • Solde: {{ constante.Notification_Sinistre_getSoldeAVerser(notificationsinistre)|format_currency(serviceMonnaie.codeMonnaieAffichage, locale: utilisateur.locale) }}
-                                                    </span> 
-                                                </small><br/>
-                                                {% set statusDoc = constante.Notification_Sinistre_getStatusDocumentsAttendus(notificationsinistre) %}
-                                                <small class="m-2">
-                                                    <span class="text-secondary">
-                                                        {{ include('segments/icones/modelepiecesinistre.html.twig', {size:'16px'}) }}
-                                                        Attendu ({{ statusDoc['Docs_attendus']|length }})
-                                                    </span> 
-                                                    <span class="text-secondary">
-                                                        • Fournis ({{ statusDoc['Docs_fournis']|length }})
-                                                    </span> 
-                                                    <span class="text-danger">
-                                                        • Manquants ({{ statusDoc['Docs_manquants']|length }})
-                                                    </span> 
-                                                </small><br/>
-                                                {% if statusDoc['Docs_manquants']|length != 0 %}
-                                                    <small class="m-2 fw-bold">
-                                                        <span class="text-danger">Les documents suivants sont manquants:</span>
-                                                    </small><br/>
-                                                    {% set index = 1 %}
-                                                    {% for manquant in statusDoc['Docs_manquants'] %}
-                                                        <small class="m-2">
-                                                            <span class="text-danger"> {{ index}}) {{ manquant.nom }}
-                                                            {% if manquant.obligatoire == true %}
-                                                                <span class="fw-bold">(obligatoire)</span>
-                                                            {% endif %}
-                                                            : {{ manquant.description }}</span><br/>
-                                                        </small>
-                                                    {% set index = index + 1 %}
-                                                    {% endfor %}
-                                                {% endif %}
-                                                {% if constante.Notification_Sinistre_getDureeReglement(notificationsinistre)|length > 0 %}
-                                                    <small class="m-2">
-                                                        <span class="text-secondary">
-                                                            {{ include('segments/icones/actions/description.html.twig', {size:'16px'}) }}
-                                                            Sinistre indemnisé en {{ constante.Notification_Sinistre_getDureeReglement(notificationsinistre) }} jours
-                                                        </span> 
-                                                        <span class="text-secondary"> • entre le {{ notificationsinistre.notifiedAt|format_datetime('short', 'none', locale: utilisateur.locale) }} et le {{ constante.Notification_Sinistre_getDateDernierRgelement(notificationsinistre)|format_datetime('short', 'none', locale: utilisateur.locale) }}, jour du dernier reglèment.</span> 
-                                                    </small><br/>
-                                                {% endif %}
-                                            </div>
+                                            <small  class="m-2">
+                                                <span class="text-secondary">
+                                                    {{ include('segments/icones/client.html.twig', {size:'16px'}) }}
+                                                    {{ notificationsinistre.assure.nom }}
+                                                </span>
+                                            </small>
                                         </td>
-
                                         {# COLONNE 3 DU TABLEAU #}
                                         <td>
-                                            <div class="d-flex gap-1 d-flex justify-content-end">
-                                                {# Les actions sur l element de la liste #}
-                                                <div class="options-du-parent">
-                                                    {# Cocher #}
-                                                    <button 
-                                                        data-action = "liste-element#action_cocher"
-                                                        class="btn btn-outline-secondary btn-sm border-0" 
-                                                    >
-                                                        {{ include('segments/icones/actions/check.html.twig', {size:'18px'}) }}
-                                                    </button>
-
-                                                    {# Développer #}
-                                                    <button 
-                                                        data-action = "liste-element#action_afficher_details"
-                                                        class="btn btn-outline-secondary btn-sm border-0" 
-                                                    >
-                                                        {{ include('segments/icones/actions/open.html.twig', {size:'18px'}) }}
-                                                    </button>
-
-                                                    {# Modification #}
-                                                    <button 
-                                                        data-action = "liste-element#action_modifier"
-                                                        class="btn btn-outline-secondary btn-sm border-0" 
-                                                    >
-                                                        {{ include('segments/icones/actions/edit.html.twig', {size:'18px'}) }}
-                                                    </button>
-
-                                                    {# Suppression #}
-                                                    <button 
-                                                        data-action = "liste-element#action_supprimer"
-                                                        class='btn btn-outline-secondary border-0 btn-sm' 
-                                                    >
-                                                        {{ include('segments/icones/actions/delete.html.twig', {size:'18px'}) }}
-                                                        {# Supprimer #}
-                                                    </button>
-                                                </div>
-                                            </div>
+                                            0.000,00 USD
                                         </td>
                                     </tr>
                                 {% endfor %}
