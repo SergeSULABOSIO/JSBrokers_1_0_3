@@ -142,6 +142,6 @@ export default class extends Controller {
         }
 
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DOUBLE_CLICKED, true, true,{objet: this.objetValue});
-        console.log(`Événement 'app:liste-principale:elément-double-clicked' émis pour l'objet ID: ${this.idobjetValue}`);
+        console.log(`Événement 'app:liste-principale:elément-double-clicked' émis pour l'objet ID: ${this.idobjetValue}`, this.objetValue);
     }
 }
