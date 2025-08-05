@@ -405,19 +405,21 @@ class NotificationSinistreController extends AbstractController
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
 
-        return $this->render('admin/notificationsinistre/donnees.html.twig', [
-            'status' => $status, // Contient l'erreur ou les infos de pagination
-            'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
-            'utilisateur' => $utilisateur,
+        return $this->render('components/_list_donnees.html.twig', [
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'notificationsinistres' => $data,
+            'utilisateur' => $utilisateur,
+            'status' => $status, // Contient l'erreur ou les infos de pagination
+            'rubrique_nom' => "Notification Sinistre",
+            'entite_nom' => "NotificationSinistre",
+            'racine_url_controleur_php_nom' => "notificationsinistre",
+            'controleur_stimulus_nom' => "notificationsinistre-formulaire",
+            'data' => $data,
             'page' => $page,
             'limit' => 100,            // La limite par page
             'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
+            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
-            'activator' => $this->activator,
         ]);
     }
 
