@@ -25,28 +25,33 @@ export default class extends Controller {
     }
 
     setEcouteurs() {
+        this.boundHandleCheckRequest = this.handleCheckRequest.bind(this);
+        this.boundHandleChecked = this.handleChecked.bind(this);
+        this.boundHandleExpandRequest = this.handleExpandRequest.bind(this);
+        this.boundHandleContextMenu = this.handleContextMenu.bind(this);
+
+
         console.log(this.nomControleur + " - Définition des écouteurs.");
-        document.addEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.handleChecked.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.handleExpandRequest.bind(this));
+        document.addEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
+        document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
+        document.addEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.boundHandleExpandRequest);
         //Pour le menu contextuel
-        this.contextMenuTarget.addEventListener('contextmenu', this.boundHandleContextMenu.bind(this));
+        this.contextMenuTarget.addEventListener('contextmenu', this.boundHandleContextMenu);
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.handleCheckRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.handleChecked.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.handleExpandRequest.bind(this));
-        //Pour le menu contextuel
-        this.contextMenuTarget.removeEventListener('contextmenu', this.boundHandleContextMenu.bind(this));
+        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.boundHandleExpandRequest);
+        this.contextMenuTarget.removeEventListener('contextmenu', this.boundHandleContextMenu);
     }
 
 
-    boundHandleContextMenu(event) {
+    handleContextMenu(event) {
         event.preventDefault();
         event.stopPropagation();
-        console.log(this.nomControleur + " - boundHandleContextMenu");
+        console.log(this.nomControleur + " - HandleContextMenu");
         buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, true, true, {
             idObjet: this.idobjetValue,
             menuX: event.clientX,
@@ -131,17 +136,17 @@ export default class extends Controller {
      * double-cliquée, en propageant les données de l'objet.
      * @param {Event} event L'événement de double-clic.
      */
-    dispatchDoubleClick(event) {
-        // Empêche le double-clic de déclencher aussi l'événement de simple clic (sélection)
-        event.preventDefault();
-        event.stopPropagation();
+    // dispatchDoubleClick(event) {
+    //     // Empêche le double-clic de déclencher aussi l'événement de simple clic (sélection)
+    //     event.preventDefault();
+    //     event.stopPropagation();
 
-        if (!this.hasObjetValue) {
-            console.error("L'objet n'a pas été passé au contrôleur Stimulus 'liste-element'.");
-            return;
-        }
+    //     if (!this.hasObjetValue) {
+    //         console.error("L'objet n'a pas été passé au contrôleur Stimulus 'liste-element'.");
+    //         return;
+    //     }
 
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DOUBLE_CLICKED, true, true,{objet: this.objetValue});
-        console.log(`Événement 'app:liste-principale:elément-double-clicked' émis pour l'objet ID: ${this.idobjetValue}`, this.objetValue);
-    }
+    //     buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DOUBLE_CLICKED, true, true,{objet: this.objetValue});
+    //     console.log(`Événement 'app:liste-principale:elément-double-clicked' émis pour l'objet ID: ${this.idobjetValue}`, this.objetValue);
+    // }
 }

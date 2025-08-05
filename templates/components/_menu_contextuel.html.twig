@@ -14,6 +14,14 @@
             {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
             Ajouter
         </li>
+        {# Option "Ouvrir" #}
+        <li 
+            data-liste-element-context-menu-target="btDevelopper" 
+            data-action="click->liste-element-context-menu#context_action_developper"
+        >
+            {{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }}
+            Développer
+        </li>
         {# Option "Modifier" #}
         <li 
             data-liste-element-context-menu-target="btModifier" 
@@ -21,14 +29,6 @@
         >
             {{ include('segments/icones/actions/edit.html.twig', {size:'20px'}) }}
             Modifier
-        </li>
-        {# Option "Développer" #}
-        <li 
-            data-liste-element-context-menu-target="btDevelopper" 
-            data-action="click->liste-element-context-menu#context_action_developper"
-        >
-            {{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }}
-            Développer
         </li>
         {# Option "Tout Cocher" #}
         <li 

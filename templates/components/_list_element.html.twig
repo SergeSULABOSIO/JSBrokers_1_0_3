@@ -16,7 +16,7 @@
     {# Actions existantes #}
     data-action="
         click->liste-principale#toggleRowSelection
-        dblclick->liste-element#dispatchDoubleClick
+        {# dblclick->liste-element#dispatchDoubleClick #}
     "
     {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
     data-liste-element-objet-value='{{ entity|json_encode }}'
