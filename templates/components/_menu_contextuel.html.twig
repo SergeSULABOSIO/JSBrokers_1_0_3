@@ -16,11 +16,11 @@
         </li>
         {# Option "Ouvrir" #}
         <li 
-            data-liste-element-context-menu-target="btDevelopper" 
-            data-action="click->liste-element-context-menu#context_action_developper"
+            data-liste-element-context-menu-target="btOuvrir" {# MODIFIÉ #}
+            data-action="click->liste-element-context-menu#context_action_ouvrir" {# MODIFIÉ #}
         >
-            {{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }}
-            Développer
+            {{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }} {# L'icône "open" est déjà parfaite ! #}
+            Ouvrir {# MODIFIÉ #}
         </li>
         {# Option "Modifier" #}
         <li 
