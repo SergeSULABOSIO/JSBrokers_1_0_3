@@ -28,35 +28,42 @@ export default class extends Controller {
     }
 
     setEcouteurs() {
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.handleContextMenuInitRequest.bind(this));
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.handleContextMenuInitialized.bind(this));
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.handleContextMenuShow.bind(this));
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.handleContextMenuHide.bind(this));
-        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.handlePublisheSelection.bind(this));
+        this.boundHandleContextMenuInitRequest = this.handleContextMenuInitRequest.bind(this);
+        this.boundHandleContextMenuInitialized = this.handleContextMenuInitialized.bind(this);
+        this.boundHandleContextMenuShow = this.handleContextMenuShow.bind(this);
+        this.boundHandleContextMenuHide = this.handleContextMenuHide.bind(this);
+        this.boundHandlePublisheSelection = this.handlePublisheSelection.bind(this);
+        this.boundHideContextMenu = this.hideContextMenu.bind(this);
+
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
+        document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
+        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandlePublisheSelection);
         //Pour le menu contextuel
-        document.addEventListener("click", this.boundHideContextMenu.bind(this));
-        document.addEventListener("scroll", this.boundHideContextMenu.bind(this)); // Cacher si on scroll
-        window.addEventListener("resize", this.boundHideContextMenu.bind(this)); // Cacher si la fenêtre est redimensionnée
+        document.addEventListener("click", this.boundHideContextMenu);
+        document.addEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
+        window.addEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
         this.menu.addEventListener("click", (e) => e.stopPropagation());
     }
 
     disconnect() {
-        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.handleContextMenuInitRequest.bind(this));
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.handleContextMenuInitialized.bind(this));
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.handleContextMenuShow.bind(this));
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.handleContextMenuHide.bind(this));
-        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.handlePublisheSelection.bind(this));
+        // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
+        document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
+        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandlePublisheSelection);
         //Pour le menu contextuel
-        document.removeEventListener("click", this.boundHideContextMenu.bind(this));
-        document.removeEventListener("scroll", this.boundHideContextMenu.bind(this)); // Cacher si on scroll
-        window.removeEventListener("resize", this.boundHideContextMenu.bind(this)); // Cacher si la fenêtre est redimensionnée
+        document.removeEventListener("click", this.boundHideContextMenu);
+        document.removeEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
+        window.removeEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
         this.menu.removeEventListener("click", (e) => e.stopPropagation());
     }
 
     hideContextMenu() {
         this.menu.style.display = 'none';
-        console.log(this.nomControleur + " - CHECHER MENU CONTEXTUEL");
+        // console.log(this.nomControleur + " - CACHER MENU CONTEXTUEL");
     }
 
     handleContextMenuInitRequest(event) {
@@ -151,13 +158,6 @@ export default class extends Controller {
         this.tabSelectedCheckBoxs = [];
         this.tabSelectedCheckBoxs.push(idCheckBox);
         event.stopPropagation();
-    }
-
-    /**
-     * Cache le menu contextuel.
-     */
-    boundHideContextMenu() {
-        this.menu.style.display = 'none';
     }
 
     /**

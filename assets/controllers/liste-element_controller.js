@@ -30,8 +30,7 @@ export default class extends Controller {
         this.boundHandleExpandRequest = this.handleExpandRequest.bind(this);
         this.boundHandleContextMenu = this.handleContextMenu.bind(this);
 
-
-        console.log(this.nomControleur + " - Définition des écouteurs.");
+        // console.log(this.nomControleur + " - Définition des écouteurs.");
         document.addEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
         document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
         document.addEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.boundHandleExpandRequest);
@@ -40,7 +39,7 @@ export default class extends Controller {
     }
 
     disconnect() {
-        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
+        // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         document.removeEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
         document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
         document.removeEventListener(EVEN_LISTE_ELEMENT_EXPAND_REQUEST, this.boundHandleExpandRequest);
