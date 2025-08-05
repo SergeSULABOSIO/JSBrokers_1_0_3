@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_COCHER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_CHECK_REQUEST, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DOUBLE_CLICKED, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFIED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_ACTION_COCHER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_CHECK_REQUEST, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFIED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -102,45 +102,4 @@ export default class extends Controller {
             selectedId: this.idobjetValue,
         });
     }
-
-
-    // /**
-    //  * 
-    //  * @param {MouseEvent} event 
-    //  */
-    // action_afficher_details(event) {
-    //     event.preventDefault(); // Empêche la soumission classique du formulaire
-    //     event.stopPropagation();
-    //     if (this.isShownValue == true) {
-    //         this.detailsTarget.style.display = "none";
-    //         this.isShownValue = false;
-    //     } else {
-    //         this.detailsTarget.style.display = "block";
-    //         this.isShownValue = true;
-    //     }
-
-    //     buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_EXPANDED, true, true, {
-    //         expandedCheckBox: this.idobjetValue,
-    //         selection: event.detail.selection,
-    //     });
-    // }
-
-    /**
-     * Emet un événement personnalisé sur le document lorsqu'une ligne est
-     * double-cliquée, en propageant les données de l'objet.
-     * @param {Event} event L'événement de double-clic.
-     */
-    // dispatchDoubleClick(event) {
-    //     // Empêche le double-clic de déclencher aussi l'événement de simple clic (sélection)
-    //     event.preventDefault();
-    //     event.stopPropagation();
-
-    //     if (!this.hasObjetValue) {
-    //         console.error("L'objet n'a pas été passé au contrôleur Stimulus 'liste-element'.");
-    //         return;
-    //     }
-
-    //     buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DOUBLE_CLICKED, true, true,{objet: this.objetValue});
-    //     console.log(`Événement 'app:liste-principale:elément-double-clicked' émis pour l'objet ID: ${this.idobjetValue}`, this.objetValue);
-    // }
 }
