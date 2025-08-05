@@ -85,7 +85,7 @@ class NotificationSinistreController extends AbstractController
             'utilisateur' => $utilisateur,
             'status' => $status, // Contient l'erreur ou les infos de pagination
             'rubrique_nom' => "Notification Sinistre",
-            'entite_nom' => "notificationsinistre",
+            'entite_nom' => "NotificationSinistre",
             'racine_url_controleur_php_nom' => "notificationsinistre",
             'controleur_stimulus_nom' => "notificationsinistre-formulaire",
             'data' => $data,
@@ -428,6 +428,8 @@ class NotificationSinistreController extends AbstractController
     {
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser(); // Vous pouvez l'utiliser pour des logiques de droits si nécessaire.
+
+        $results = [];
 
         $status = [
             "error" => null,
@@ -773,19 +775,21 @@ class NotificationSinistreController extends AbstractController
         }
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
-        return $this->render('admin/notificationsinistre/donnees.html.twig', [
-            'status' => $status, // Contient l'erreur ou les infos de pagination
-            'notificationsinistres' => $results, // Les entités NotificationSinistre trouvées
-            'pageName' => $this->translator->trans("notificationsinistre_page_name_new"),
-            'utilisateur' => $utilisateur,
+        return $this->render('components/_list_donnees.html.twig', [
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'utilisateur' => $utilisateur,
+            'status' => $status, // Contient l'erreur ou les infos de pagination
+            'rubrique_nom' => "Notification Sinistre",
+            'entite_nom' => "NotificationSinistre",
+            'racine_url_controleur_php_nom' => "notificationsinistre",
+            'controleur_stimulus_nom' => "notificationsinistre-formulaire",
+            'data' => $results, // Les entités NotificationSinistre trouvées
             'page' => $page, // La page actuelle, utile si la pagination est gérée côté client dans le template
             'limit' => $limit,            // La limite par page
             'totalItems' => $totalItems,  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
+            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
-            'activator' => $this->activator,
         ]);
     }
 }
