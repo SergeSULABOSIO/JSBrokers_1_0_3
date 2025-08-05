@@ -61,6 +61,7 @@ export default class extends Controller {
 
     handleOpenRequest(event) {
         const { selection } = event.detail;
+        event.preventDefault();
         event.stopPropagation();
         console.log(this.nomControleur + " - Demande d'ouverture pour les éléments :", selection);
         
