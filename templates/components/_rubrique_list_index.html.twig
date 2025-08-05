@@ -1,6 +1,6 @@
 <div 
     data-controller = "rubrique" 
-    data-rubrique-nom-value = "Notification Sinistre"
+    data-rubrique-nom-value={{rubrique_nom}}
     class="d-flex flex-column h-100"
 >
     <div 
@@ -9,12 +9,11 @@
         data-controller="dialogue liste-principale" 
         data-liste-principale-identreprise-value={{entreprise.id}} 
         data-liste-principale-idutilisateur-value={{utilisateur.id}} 
-        data-liste-principale-nbelements-value={{notificationsinistres|length}} 
-        data-liste-principale-rubrique-value="Notification Sinistre" 
-        data-liste-principale-entite-value="NotificationSinistre" 
-        data-liste-principale-controleurphp-value="notificationsinistre" 
-        data-liste-principale-controleurstimulus-value="notificationsinistre-formulaire" 
-        {# data-liste-principale-controleurstimulusformulaire-value="notificationsinistre-formulaire"  #}
+        data-liste-principale-nbelements-value={{data|length}} 
+        data-liste-principale-rubrique-value={{rubrique_nom}} 
+        data-liste-principale-entite-value={{entite_nom}} 
+        data-liste-principale-controleurphp-value={{racine_url_controleur_php_nom}} 
+        data-liste-principale-controleurstimulus-value={{controleur_stimulus_nom}} 
     >
         {# Ce conteneur va aussi utiliser flexbox et cacher tout débordement #}
         <div class="shadow-sm sensible bg-white d-flex flex-column flex-grow-1" style="overflow: hidden;">
@@ -34,19 +33,19 @@
                 <table class="table table-hover table-sm caption-top p-3 table-enhanced">
                     <caption>
                         <span data-liste-principale-target = "display">
-                            {% if notificationsinistres|length == 0 %}
+                            {% if data|length == 0 %}
                                 {{ "list_filter_result_empty" | trans}}
                             {% else %}
                                 {{ "list_filter_result_elements" | trans({
-                                    ':number': notificationsinistres|length
+                                    ':number': data|length
                                 })}}
                             {% endif %}
                         </span>
                         <div class="d-flex gap-1">
-                            {{ knp_pagination_render(notificationsinistres) }}
+                            {{ knp_pagination_render(data) }}
                         </div>
                     </caption>
-                    {% if notificationsinistres|length != 0 %}
+                    {% if data|length != 0 %}
                         {# MODIFICATION : On ajoute une classe pour rendre l'en-tête collant #}
                         <thead class="table-light sticky-header">
                             <tr class="text-center">
@@ -102,7 +101,7 @@
 
                         {# CONTENU DU TABLEAU #}
                         <tbody class="table-group-divider context-target" data-liste-principale-target = "donnees">
-                            {{ include('admin/notificationsinistre/donnees.html.twig') }}
+                            {{ include('components/_list_donnees.html.twig') }}
                         </tbody>
                     {% endif %}
                 </table>

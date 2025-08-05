@@ -6,7 +6,7 @@
     data-donnees-limit-value={{ limit }}
     data-donnees-totalitems-value={{ totalItems }}
 ></div>
-{% if notificationsinistres|length == 0 %}
+{% if data|length == 0 %}
     <tr>
         <td class="p-3 m-2" style="width:80px"></td>
         <td class="p-2">Aucune information trouvée!</td>
@@ -14,7 +14,7 @@
     </tr>
 {% else %}
     {# Boucler les donnees #}
-    {% for entity in notificationsinistres %}
-        {{ include('admin/notificationsinistre/element.html.twig') }}
+    {% for entity in data %}
+        {{ include('components/_list_element.html.twig') }}
     {% endfor %}
 {% endif %}
