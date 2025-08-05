@@ -19,7 +19,7 @@
         {# dblclick->liste-element#dispatchDoubleClick #}
     "
     {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
-    data-liste-element-objet-value='{{ entity|json_encode }}'
+    data-liste-principale-objet-value='{{ entity|json_encode }}'
 >
     {{ include('components/_list_element_view.html.twig') }}
 </tr>

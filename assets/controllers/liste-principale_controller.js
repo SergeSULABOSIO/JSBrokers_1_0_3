@@ -9,6 +9,7 @@ export default class extends Controller {
         'rowCheckbox',
     ];
     static values = {
+        objet: Object,
         identreprise: Number,
         idutilisateur: Number,
         nbelements: Number,
@@ -650,5 +651,7 @@ export default class extends Controller {
 
         // Déclencher manuellement un événement "change" pour que vos autres logiques (ex: tout cocher) fonctionnent
         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+
+        console.log(this.nomControleur + " - Objet:", this.objetValue);
     }
 }
