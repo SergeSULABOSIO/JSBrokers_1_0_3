@@ -80,7 +80,6 @@ class NotificationSinistreController extends AbstractController
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
 
-        // return $this->render('admin/notificationsinistre/index.html.twig', [
         return $this->render('components/_rubrique_list_index.html.twig', [
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'utilisateur' => $utilisateur,
