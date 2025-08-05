@@ -79,7 +79,9 @@
 {# Colonnes suivantes : Cellules numériques dynamiques #}
 {% for colonne in listeCanvas.colonnes_numeriques %}
     <td class="text-end" style="font-weight: bold; color: #495057;"> {# Gris foncé #}
-        {% set valeur_numerique = attribute(entity, colonne.attribut_code) %}
-        {{ colonne.attribut_unité }} {{ valeur_numerique | number_format(2, ',', ' ') }}
+        <small>
+            {% set valeur_numerique = attribute(entity, colonne.attribut_code) %}
+            {{ colonne.attribut_unité }}{{ valeur_numerique | number_format(2, ',', ' ') }}
+        </small>
     </td>
 {% endfor %}
