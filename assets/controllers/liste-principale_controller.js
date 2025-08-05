@@ -39,54 +39,69 @@ export default class extends Controller {
 
 
     setEcouteurs() {
+        this.boundHandleAddRequest = this.handleAddRequest.bind(this);
+        this.boundHandleAdded = this.handleAdded.bind(this);
+        this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
+        this.boundHandleRefreshed = this.handleRefreshed.bind(this);
+        this.boundHandleAllCheckRequest = this.handleAllCheckRequest.bind(this);
+        this.boundHandleAllChecked = this.handleAllChecked.bind(this);
+        this.boundHandleSettingRequest = this.handleSettingRequest.bind(this);
+        this.boundHandleSettingUpdated = this.handleSettingUpdated.bind(this);
+        this.boundHandleCloseRequest = this.handleCloseRequest.bind(this);
+        this.boundHandleClosed = this.handleClosed.bind(this);
+        this.boundNotify = this.notify.bind(this);
+        this.boundHandleServerResponsed = this.handleServerResponsed.bind(this);
+        this.boundHandleExpanded = this.handleExpanded.bind(this);
+        this.boundHandleModifyRequest = this.handleModifyRequest.bind(this);
+        this.boundHandleDeleteRequest = this.handleDeleteRequest.bind(this);
+        this.boundHandleDeleted = this.handleDeleted.bind(this);
+        this.boundHandleDBRequest = this.handleDBRequest.bind(this);
+        this.boundHandleDBResult = this.handleDBResult.bind(this);
+        this.boundHandleDonneesLoaded = this.handleDonneesLoaded.bind(this);
+
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.handleAddRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.handleAdded.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.handleRefreshRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.handleRefreshed.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.handleAllCheckRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.handleAllChecked.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.handleSettingRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.handleSettingUpdated.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.handleCloseRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
-        document.addEventListener(EVEN_SERVER_RESPONSED, this.handleServerResponsed.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
-        document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
-        // Ajoute un écouteur d'événement sur l'élément du contrôleur.
-        // L'événement va "buller" (bubble up), donc un composant enfant peut le déclencher.
-        document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.handleDBRequest.bind(this));
-        document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.handleDBResult.bind(this));
-        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.handleDonneesLoaded.bind(this));
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
+        document.addEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
+        document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
+        document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
+        document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
+        document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
+        document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
+        document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
+        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
     }
 
     disconnect() {
-        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.handleAddRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.handleAdded.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.handleRefreshRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.handleRefreshed.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.handleAllCheckRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.handleAllChecked.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.handleSettingRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.handleSettingUpdated.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.handleCloseRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.handleClosed.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
-        document.removeEventListener(EVEN_SERVER_RESPONSED, this.handleServerResponsed.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.handleExpanded.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.handleModifyRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.handleDeleteRequest.bind(this));
-        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.handleDeleted.bind(this));
-        // Nettoie l'écouteur d'événement lorsque le contrôleur est déconnecté du DOM.
-        document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.handleDBRequest.bind(this));
-        document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.handleDBResult.bind(this));
-        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.handleDonneesLoaded.bind(this));
-
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
+        document.removeEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
+        document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
+        document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
+        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
     }
 
 
