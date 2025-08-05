@@ -200,6 +200,7 @@ export default class extends Controller {
     }
 
     context_action_ouvrir(event) {
+        event.preventDefault();
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, {
