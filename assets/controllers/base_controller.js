@@ -351,7 +351,7 @@ export const EVEN_LISTE_ELEMENT_CHECKED = "app:liste-element:checked";
 export const EVEN_LISTE_ELEMENT_EXPAND_REQUEST = "app:liste-element:expand-request";
 export const EVEN_LISTE_ELEMENT_EXPANDED = "app:liste-element:expanded";
 export const EVEN_LISTE_ELEMENT_OPEN_REQUEST = "app:liste-element:open-request";
-export const EVEN_LISTE_ELEMENT_OPENNED = "app:liste-element:openned";
+export const EVEN_LISTE_ELEMENT_OPENNED = "app:liste-element:details-openned";
 
 //Evenements - Liste Principale
 export const EVEN_MENU_CONTEXTUEL_INIT_REQUEST = "app:menu-contextuel:init-request";
