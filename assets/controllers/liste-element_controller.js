@@ -27,13 +27,11 @@ export default class extends Controller {
     setEcouteurs() {
         this.boundHandleCheckRequest = this.handleCheckRequest.bind(this);
         this.boundHandleChecked = this.handleChecked.bind(this);
-        // this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
         this.boundHandleContextMenu = this.handleContextMenu.bind(this);
 
         // console.log(this.nomControleur + " - Définition des écouteurs.");
         document.addEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
         document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
-        // document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
         //Pour le menu contextuel
         this.contextMenuTarget.addEventListener('contextmenu', this.boundHandleContextMenu);
     }
@@ -42,7 +40,6 @@ export default class extends Controller {
         // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         document.removeEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
         document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
-        // document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
         this.contextMenuTarget.removeEventListener('contextmenu', this.boundHandleContextMenu);
     }
 
@@ -57,15 +54,6 @@ export default class extends Controller {
             menuY: event.clientY,
         });
     }
-
-
-    // handleOpenRequest(event) {
-    //     const { selection } = event.detail;
-    //     event.preventDefault();
-    //     event.stopPropagation();
-    //     console.log(this.nomControleur + " - Demande d'ouverture pour les éléments :", selection);
-        
-    // }
 
     handleCheckRequest(event) {
         console.log(this.nomControleur + " - HandleCheckRequest");
