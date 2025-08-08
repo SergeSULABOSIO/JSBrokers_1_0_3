@@ -293,18 +293,33 @@ html {
 }
 
 .tab-item-close {
-  margin-left: 12px;
   border: none;
   background: transparent;
+  padding: 3px; /* Léger espace intérieur */
+  margin-left: 12px;
   cursor: pointer;
-  font-weight: bold;
-  padding: 2px 5px;
-  border-radius: 50%;
+  border-radius: 50%; /* Pour un effet de survol circulaire */
+  line-height: 0; /* Empêche les hauteurs de ligne indésirables */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+/* Cible directement l'icône SVG pour contrôler sa taille */
+.tab-item-close svg {
+  width: 16px;
+  height: 16px;
+  color: #cd380e; /* Couleur de l'icône mise à jour en rouge */
+  transition: color 0.2s ease;
 }
 
 .tab-item-close:hover {
-  background-color: #ff5555;
-  color: white;
+  background-color: #f2e1e1; /* Fond rouge très clair au survol */
+}
+
+.tab-item-close:hover svg {
+  color: #c9302c; /* Rouge plus foncé au survol */
 }
 
 /* --- Styles pour le contenu d'un onglet --- */
@@ -321,73 +336,73 @@ html {
 
 /* --- Styles pour l'accordéon --- */
 .accordion-item {
-    border: 1px solid #d1d1d1;    /* Bordure subtile pour délimiter l'élément */
-    border-radius: 6px;             /* Bordures arrondies pour l'ensemble */
-    margin-bottom: 8px;             /* Espace entre les éléments de l'accordéon */
-    overflow: hidden;               /* Assure que le contenu ne dépasse pas les coins arrondis */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Ombre légère pour un effet de profondeur */
+  border: 1px solid #d1d1d1; /* Bordure subtile pour délimiter l'élément */
+  border-radius: 6px; /* Bordures arrondies pour l'ensemble */
+  margin-bottom: 8px; /* Espace entre les éléments de l'accordéon */
+  overflow: hidden; /* Assure que le contenu ne dépasse pas les coins arrondis */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Ombre légère pour un effet de profondeur */
 }
 
 /* Le titre cliquable de l'accordéon */
 .accordion-title {
-    display: flex;                  /* Permet d'aligner le titre et l'icône '+' */
-    justify-content: flex-start;
-    align-items: center;            /* Centre verticalement les éléments */
-    background-color: #dcdcdc;     /* Votre couleur de fond */
-    color: #000;                    /* Votre couleur de texte */
-    font-weight: bold;
-    padding: 5px 5px;
-    cursor: pointer;
-    transition: background-color 0.2s ease; /* Transition douce pour le survol */
+  display: flex; /* Permet d'aligner le titre et l'icône '+' */
+  justify-content: flex-start;
+  align-items: center; /* Centre verticalement les éléments */
+  background-color: #dcdcdc; /* Votre couleur de fond */
+  color: #000; /* Votre couleur de texte */
+  font-weight: bold;
+  padding: 5px 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease; /* Transition douce pour le survol */
 }
 
 /* Effet au survol de la souris */
 .accordion-title:hover {
-    background-color: #cacaca; /* Assombrit légèrement le fond au survol */
+  background-color: #cacaca; /* Assombrit légèrement le fond au survol */
 }
 
 .accordion-toggle {
-    font-size: 1.2em;      /* Agrandit légèrement l'icône */
-    font-weight: bold;
-    transition: transform 0.3s ease; /* Ajoute une animation de rotation à l'icône */
-    margin-right: 8px; 
+  font-size: 1.2em; /* Agrandit légèrement l'icône */
+  font-weight: bold;
+  transition: transform 0.3s ease; /* Ajoute une animation de rotation à l'icône */
+  margin-right: 8px;
 }
 
 /* Le contenu de l'accordéon (panneau qui se déplie) */
 .accordion-content {
-    padding: 0 15px;                /* Padding horizontal, le vertical sera géré par l'animation */
-    background-color: #f7f7f7;      /* Un fond très légèrement différent pour le contenu */
-    border-top: 1px solid #d1d1d1;  /* Ligne de séparation avec le titre */
-    
-    /* Propriétés pour l'animation de dépliage */
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.2s ease-in-out, padding 0.2s ease-in-out;
+  padding: 0 15px; /* Padding horizontal, le vertical sera géré par l'animation */
+  background-color: #f7f7f7; /* Un fond très légèrement différent pour le contenu */
+  border-top: 1px solid #d1d1d1; /* Ligne de séparation avec le titre */
+
+  /* Propriétés pour l'animation de dépliage */
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-in-out, padding 0.2s ease-in-out;
 }
 
 /* Classe ajoutée par JavaScript pour ouvrir le panneau */
 .accordion-content.open {
-    padding: 15px;
-    max-height: 1000px; /* Une hauteur max suffisante pour contenir n'importe quel contenu */
+  padding: 15px;
+  max-height: 1000px; /* Une hauteur max suffisante pour contenir n'importe quel contenu */
 }
 
 /* S'applique à la barre de défilement de l'en-tête des onglets */
 .tab-header::-webkit-scrollbar {
-    height: 5px; /* Hauteur réduite de la barre */
+  height: 5px; /* Hauteur réduite de la barre */
 }
 
 /* Le fond de la barre (la piste) */
 .tab-header::-webkit-scrollbar-track {
-    background: #f1f1f1; 
+  background: #f1f1f1;
 }
 
 /* La partie mobile de la barre (le curseur) */
 .tab-header::-webkit-scrollbar-thumb {
-    background: #a8a8a8;
-    border-radius: 5px;
+  background: #a8a8a8;
+  border-radius: 5px;
 }
 
 /* Le curseur au survol de la souris */
 .tab-header::-webkit-scrollbar-thumb:hover {
-    background: #888;
+  background: #888;
 }
