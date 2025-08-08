@@ -151,8 +151,9 @@ export default class extends Controller {
 
         const content = document.createElement('div');
         content.className = 'accordion-content';
-        // Contenu visible par défaut [cite: 79]
-        content.style.display = 'block';
+
+        // Modification 2 : On ajoute la classe 'open' pour qu'il soit déplié par défaut
+        content.classList.add('open');
 
         const rawValue = entity[attribute.code];
         content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite); // [cite: 66, 68, 69]
@@ -224,12 +225,17 @@ export default class extends Controller {
         const content = title.nextElementSibling;
         const toggleIcon = title.querySelector('.accordion-toggle');
 
-        if (content.style.display === "block") {
-            content.style.display = "none";
-            toggleIcon.textContent = '+'; // [cite: 61]
+        // Vérifie si le panneau est déjà ouvert
+        const isOpen = content.classList.contains('open');
+
+        if (isOpen) {
+            // Si oui, on le ferme
+            content.classList.remove('open');
+            toggleIcon.textContent = '+';
         } else {
-            content.style.display = "block";
-            toggleIcon.textContent = '-'; // [cite: 61]
+            // Si non, on l'ouvre
+            content.classList.add('open');
+            toggleIcon.textContent = '-';
         }
     }
 

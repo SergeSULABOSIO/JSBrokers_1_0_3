@@ -232,7 +232,7 @@ html {
   height: 100%; /* [cite: 29] */
   background-color: #f0f0f0; /* Même fond que la colonne 2 [cite: 30] */
   color: #333; /* Même couleur de texte que la colonne 2 [cite: 30] */
-  border-left: 1px solid #ccc;
+  /* border-left: 1px solid #ccc; */
   font-size: 0.9em; /* Texte légèrement plus petit [cite: 30] */
 }
 
@@ -321,28 +321,52 @@ html {
 
 /* --- Styles pour l'accordéon --- */
 .accordion-item {
-  margin-bottom: 2px;
+    border: 1px solid #d1d1d1;    /* Bordure subtile pour délimiter l'élément */
+    border-radius: 6px;             /* Bordures arrondies pour l'ensemble */
+    margin-bottom: 8px;             /* Espace entre les éléments de l'accordéon */
+    overflow: hidden;               /* Assure que le contenu ne dépasse pas les coins arrondis */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Ombre légère pour un effet de profondeur */
 }
 
+/* Le titre cliquable de l'accordéon */
 .accordion-title {
-  background-color: #ccc; /* Gris foncé [cite: 62] */
-  color: black; /* [cite: 62] */
-  font-weight: bold; /* [cite: 62] */
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 5px; /* Bordures arrondies */
-  margin-bottom: 0px; /* Léger espace entre les titres */
+    display: flex;                  /* Permet d'aligner le titre et l'icône '+' */
+    justify-content: flex-start;
+    align-items: center;            /* Centre verticalement les éléments */
+    background-color: #dcdcdc;     /* Votre couleur de fond */
+    color: #000;                    /* Votre couleur de texte */
+    font-weight: bold;
+    padding: 5px 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease; /* Transition douce pour le survol */
+}
+
+/* Effet au survol de la souris */
+.accordion-title:hover {
+    background-color: #cacaca; /* Assombrit légèrement le fond au survol */
 }
 
 .accordion-toggle {
-  margin-right: 10px;
-  font-family: monospace;
+    font-size: 1.2em;      /* Agrandit légèrement l'icône */
+    font-weight: bold;
+    transition: transform 0.3s ease; /* Ajoute une animation de rotation à l'icône */
+    margin-right: 8px; 
 }
 
+/* Le contenu de l'accordéon (panneau qui se déplie) */
 .accordion-content {
-  background-color: #e9e9e9; /* Gris clair [cite: 63] */
-  border: 1px solid #ddd;
-  border-top: none;
-  padding: 10px;
-  display: none; /* Caché par défaut, géré par JS */
+    padding: 0 15px;                /* Padding horizontal, le vertical sera géré par l'animation */
+    background-color: #f7f7f7;      /* Un fond très légèrement différent pour le contenu */
+    border-top: 1px solid #d1d1d1;  /* Ligne de séparation avec le titre */
+    
+    /* Propriétés pour l'animation de dépliage */
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-in-out, padding 0.2s ease-in-out;
+}
+
+/* Classe ajoutée par JavaScript pour ouvrir le panneau */
+.accordion-content.open {
+    padding: 15px;
+    max-height: 1000px; /* Une hauteur max suffisante pour contenir n'importe quel contenu */
 }
