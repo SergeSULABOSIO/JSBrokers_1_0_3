@@ -175,7 +175,9 @@ html {
 
 /* Colonne 3 : Espace de travail */
 .menu-col-3 {
-  flex-grow: 1; /* Prend tout l'espace restant */
+  flex-grow: 1;
+  height: 100%; /* S'assurer que la colonne a une hauteur définie */
+  overflow-y: auto; /* Afficher la barre de défilement verticale si nécessaire */
   transition: width 0.3s ease-in-out;
 }
 
@@ -223,121 +225,124 @@ html {
 
 /* Colonne de visualisation  */
 .menu-col-4 {
-    display: none; /* Cachée par défaut [cite: 22, 31] */
-    flex-direction: column;
-    min-width: 300px; /* Même largeur que la colonne 2 [cite: 29] */
-    max-width: 300px;
-    height: 100%; /* [cite: 29] */
-    background-color: #f0f0f0; /* Même fond que la colonne 2 [cite: 30] */
-    color: #333; /* Même couleur de texte que la colonne 2 [cite: 30] */
-    border-left: 1px solid #ccc;
-    font-size: 0.9em; /* Texte légèrement plus petit [cite: 30] */
+  display: none; /* Cachée par défaut [cite: 22, 31] */
+  flex-direction: column;
+  min-width: 300px; /* Même largeur que la colonne 2 [cite: 29] */
+  max-width: 300px;
+  height: 100%; /* [cite: 29] */
+  background-color: #f0f0f0; /* Même fond que la colonne 2 [cite: 30] */
+  color: #333; /* Même couleur de texte que la colonne 2 [cite: 30] */
+  border-left: 1px solid #ccc;
+  font-size: 0.9em; /* Texte légèrement plus petit [cite: 30] */
 }
 
 /* Ajustement de la largeur lorsque la colonne 4 est visible */
 .interactive-menu.visualization-visible .menu-col-3 {
-    /* La largeur s'ajustera automatiquement grâce à flex-grow */
+  /* La largeur s'ajustera automatiquement grâce à flex-grow */
 }
 
 /* --- Styles pour le panneau à onglets --- */
 .tab-panel-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%; /* [cite: 37] */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%; /* [cite: 37] */
 }
 
 .tab-header {
-    display: flex;
-    flex-shrink: 0;
-    overflow-x: auto;
-    border-bottom: 2px solid #ccc;
+  display: flex;
+  flex-shrink: 0;
+  overflow-x: auto;
+  border-bottom: 2px solid #ccc;
 }
 
 .tab-content-container {
-    flex-grow: 1;
-    position: relative;
-    overflow-y: auto; /* [cite: 38] */
+  flex-grow: 1;
+  position: relative;
+  overflow-y: auto; /* [cite: 38] */
 }
 
 /* --- Styles pour un onglet individuel --- */
 .tab-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    cursor: pointer;
-    border-right: 1px solid #ddd;
-    background-color: #e9e9e9;
-    white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-right: 1px solid #ddd;
+  background-color: #e9e9e9;
+  white-space: nowrap;
 }
 
 .tab-item:hover {
-    background-color: #dcdcdc;
+  background-color: #dcdcdc;
 }
 
 .tab-item.active {
-    background-color: #f0f0f0; /* Couleur du fond de la colonne */
-    border-bottom: 2px solid transparent;
+  background-color: #f0f0f0; /* Couleur du fond de la colonne */
+  border-bottom: 2px solid transparent;
 }
 
 .tab-item.active .tab-item-icon,
 .tab-item.active .tab-item-title {
-    font-weight: bold; /* [cite: 44] */
+  font-weight: bold; /* [cite: 44] */
 }
 
 .tab-item-icon {
-    margin-right: 8px; /* [cite: 52] */
+  margin-right: 8px; /* [cite: 52] */
+  width: 18px;
 }
 
 .tab-item-close {
-    margin-left: 12px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-weight: bold;
-    padding: 2px 5px;
-    border-radius: 50%;
+  margin-left: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: 50%;
 }
 
 .tab-item-close:hover {
-    background-color: #ff5555;
-    color: white;
+  background-color: #ff5555;
+  color: white;
 }
 
 /* --- Styles pour le contenu d'un onglet --- */
 .tab-content {
-    display: none; /* Contenu caché par défaut [cite: 43] */
-    padding: 10px;
-    height: 100%;
-    width: 100%;
+  display: none; /* Contenu caché par défaut [cite: 43] */
+  padding: 10px;
+  height: 100%;
+  width: 100%;
 }
 
 .tab-content.active {
-    display: block; /* Seul le contenu de l'onglet actif est visible [cite: 41, 43] */
+  display: block; /* Seul le contenu de l'onglet actif est visible [cite: 41, 43] */
 }
 
 /* --- Styles pour l'accordéon --- */
 .accordion-item {
-    margin-bottom: 2px;
+  margin-bottom: 2px;
 }
 
 .accordion-title {
-    background-color: #4a4a4a; /* Gris foncé [cite: 62] */
-    color: white; /* [cite: 62] */
-    font-weight: bold; /* [cite: 62] */
-    padding: 8px;
-    cursor: pointer;
+  background-color: #ccc; /* Gris foncé [cite: 62] */
+  color: black; /* [cite: 62] */
+  font-weight: bold; /* [cite: 62] */
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 5px; /* Bordures arrondies */
+  margin-bottom: 0px; /* Léger espace entre les titres */
 }
 
 .accordion-toggle {
-    margin-right: 10px;
-    font-family: monospace;
+  margin-right: 10px;
+  font-family: monospace;
 }
 
 .accordion-content {
-    background-color: #e9e9e9; /* Gris clair [cite: 63] */
-    border: 1px solid #ddd;
-    border-top: none;
-    padding: 10px;
-    display: none; /* Caché par défaut, géré par JS */
+  background-color: #e9e9e9; /* Gris clair [cite: 63] */
+  border: 1px solid #ddd;
+  border-top: none;
+  padding: 10px;
+  display: none; /* Caché par défaut, géré par JS */
 }
