@@ -100,7 +100,7 @@ export default class extends Controller {
         tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
 
         // --- Création du contenu de l'onglet (accordéon) ---
-        const contentElement = this.tabContentTemplate.content.cloneNode(true).firstElementChild;
+        const contentElement = this.tabContentTemplateTarget.content.cloneNode(true).firstElementChild;
         const accordionContainer = contentElement.querySelector('.accordion');
 
         if (entityCanvas.length > 0) {

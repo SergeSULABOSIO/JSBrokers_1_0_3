@@ -15,7 +15,7 @@
     
     {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
     data-entity-type="{{entite_nom}}"
-    data-entity='{{ entity|json_encode|e('html_attr') }}' 
+    data-entity='{{ entity|serialize('json', {groups: 'list:read'})|e('html_attr') }}' 
     data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}'
 
     {# Actions existantes #}

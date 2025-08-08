@@ -666,6 +666,7 @@ export default class extends Controller {
         const element = event.currentTarget;
         const entityCanvasData = element.dataset.canvas;
         const entityData = element.dataset.entity;
+        const entityType = element.dataset.entityType;
 
         if (!entityData || !entityCanvasData) {
             console.error("Attributs data-entity ou data-entity-canvas manquants sur l'élément cliqué.", element);
@@ -683,7 +684,7 @@ export default class extends Controller {
                 return;
             }
 
-            console.log(this.nomControleur + " - Objet:", this.objetValue, canvas, entity, entityType);
+            console.log(this.nomControleur + " - Objet:", this.objetValue, entityCanvas, entity, entityType);
             // 3. On crée et on envoie l'événement
             buildCustomEventForElement(
                 document,

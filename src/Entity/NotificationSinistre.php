@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\NotificationSinistreRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -13,39 +14,48 @@ class NotificationSinistre
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])] // [MODIFICATION 2] Autoriser la sérialisation de l'ID
     private ?int $id = null;
     
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $referencePolice = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $referenceSinistre = null;
     
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $descriptionDeFait = null;
     
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Client $assure = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $occuredAt = null;
 
     #[ORM\Column(length: 255, nullable: true, options: ["default" => "Non défini."])]
+    #[Groups(['list:read'])]
     private ?string $lieu = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Risque $risque = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Invite $invite = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $dommage = null;
 
     /**
@@ -76,12 +86,14 @@ class NotificationSinistre
     private ?float $evaluationChiffree = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $notifiedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Assureur $assureur = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $descriptionVictimes = null;
 
     public function __construct()
