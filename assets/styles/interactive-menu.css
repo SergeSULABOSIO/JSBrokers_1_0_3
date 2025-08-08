@@ -370,3 +370,24 @@ html {
     padding: 15px;
     max-height: 1000px; /* Une hauteur max suffisante pour contenir n'importe quel contenu */
 }
+
+/* S'applique à la barre de défilement de l'en-tête des onglets */
+.tab-header::-webkit-scrollbar {
+    height: 5px; /* Hauteur réduite de la barre */
+}
+
+/* Le fond de la barre (la piste) */
+.tab-header::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+}
+
+/* La partie mobile de la barre (le curseur) */
+.tab-header::-webkit-scrollbar-thumb {
+    background: #a8a8a8;
+    border-radius: 5px;
+}
+
+/* Le curseur au survol de la souris */
+.tab-header::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
