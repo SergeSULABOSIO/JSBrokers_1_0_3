@@ -59,7 +59,7 @@ export default class extends Controller {
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
         this.boundHandleDBResult = this.handleDBResult.bind(this);
         this.boundHandleDonneesLoaded = this.handleDonneesLoaded.bind(this);
-        this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
+        // this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
 
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
@@ -81,8 +81,8 @@ export default class extends Controller {
         document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
         document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
         document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
-        
+        // document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+
     }
 
     disconnect() {
@@ -106,18 +106,18 @@ export default class extends Controller {
         document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
         document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
         document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
-        
+        // document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+
     }
 
 
-    handleOpenRequest(event) {
-        const { selection } = event.detail;
-        event.preventDefault();
-        event.stopPropagation();
-        console.log(this.nomControleur + " - Demande d'ouverture pour les éléments :", selection);
-        
-    }
+    // handleOpenRequest(event) {
+    //     const { selection } = event.detail;
+    //     event.preventDefault();
+    //     event.stopPropagation();
+    //     console.log(this.nomControleur + " - Demande d'ouverture pour les éléments :", selection);
+
+    // }
 
 
 
@@ -663,6 +663,43 @@ export default class extends Controller {
         // Déclencher manuellement un événement "change" pour que vos autres logiques (ex: tout cocher) fonctionnent
         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
 
-        console.log(this.nomControleur + " - Objet:", this.objetValue);
+        const element = event.currentTarget;
+        const entityCanvasData = element.dataset.canvas;
+        const entityData = element.dataset.entity;
+
+        if (!entityData || !entityCanvasData) {
+            console.error("Attributs data-entity ou data-entity-canvas manquants sur l'élément cliqué.", element);
+            return;
+        }
+
+        try {
+            // 1. On parse les données JSON
+            const entity = JSON.parse(entityData);
+            const entityCanvas = JSON.parse(entityCanvasData);
+
+            // 2. (Optionnel mais recommandé) On vérifie que l'ID existe avant d'envoyer
+            if (typeof entity.id === 'undefined' || entity.id === null) {
+                console.error("L'entité parsée n'a pas d'ID valide.", entity);
+                return;
+            }
+
+            console.log(this.nomControleur + " - Objet:", this.objetValue, canvas, entity, entityType);
+            // 3. On crée et on envoie l'événement
+            buildCustomEventForElement(
+                document,
+                EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true,
+                {
+                    entity: entity,
+                    entityType: entityType,
+                    entityCanvas: entityCanvas
+                }
+            );
+
+        } catch (e) {
+            console.error("Erreur de parsing JSON dans 'liste-principale_controller'. Vérifiez les données dans le template Twig.", {
+                error: e,
+                entityData: entityData
+            });
+        }
     }
 }

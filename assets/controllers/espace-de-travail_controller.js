@@ -1,8 +1,25 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPENNED } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_ELEMENT_OPENNED, EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPENNED } from './base_controller.js';
 
 export default class extends Controller {
-    static targets = ["progressBar", "contentZone", "workspace", "rubriquesTemplate", "dashboardItem"];
+    static targets = [
+        "progressBar",
+        "contentZone",
+        "workspace",
+        "rubriquesTemplate",
+        "dashboardItem",
+        // Nouveaux targets pour le panneau à onglets
+        "visualizationColumn",
+        "tabContainer",
+        "tabContentContainer",
+        "tabTemplate",
+        "tabContentTemplate",
+    ];
+
+    // [MODIFICATION 3] Ajouter les nouvelles values
+    // static values = {
+    //     entityCanvas: Array
+    // }
 
     // Cible pour l'élément de menu actuellement actif
     activeNavItem = null;
@@ -16,7 +33,231 @@ export default class extends Controller {
         if (this.hasDashboardItemTarget) {
             this.dashboardItemTarget.click();
         }
+
+        this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
+        // [MODIFICATION 4] Ajouter l'écouteur d'événement pour l'ouverture des entités [cite: 7, 23, 745]
+        document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+
+        // Initialiser un contrôleur pour l'accordéon
+        this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
+
+    disconnect() {
+        document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+    }
+
+
+    /**
+     * Gère la requête d'ouverture d'un élément de la liste principale.
+     * @param {CustomEvent} event
+     */
+    handleOpenRequest(event) {
+        // Get both the entity and its canvas from the event detail
+        const { entity, entityType, entityCanvas } = event.detail;
+        // --- Validation améliorée ---
+        // 1. Valider l'entité
+        if (!entity || typeof entity !== 'object' || typeof entity.id === 'undefined' || entity.id === null) {
+            console.error("Validation échouée : l'objet 'entity' est invalide ou ne contient pas d'ID.", event.detail);
+            return;
+        }
+
+        // 2. Valider le canvas de l'entité
+        if (!Array.isArray(entityCanvas)) {
+            console.error("Validation échouée : 'entityCanvas' n'est pas un tableau (Array).", event.detail);
+            return;
+        }
+
+        // const entityId = entity.id;
+        // const entityType = entity.__class_name__; // Supposant que le nom de la classe est transmis
+
+        // Vérifier si un onglet pour cet objet existe déjà 
+        const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
+
+        if (existingTab) {
+            // Si l'onglet existe, on l'active simplement [cite: 47]
+            this.activateTab({ currentTarget: existingTab });
+        } else {
+            // Pass the canvas from the event directly to the createTab method
+            this.createTab(entity, entityType, entityCanvas);
+        }
+
+        // Afficher la colonne de visualisation si elle est cachée [cite: 26]
+        this.element.classList.add('visualization-visible');
+        this.visualizationColumnTarget.style.display = 'flex';
+    }
+
+
+    /**
+     * Crée un nouvel onglet et son contenu.
+     * @param {object} entity 
+     * @param {string} entityType 
+     */
+    createTab(entity, entityType, entityCanvas) {
+        // --- Création de l'en-tête de l'onglet ---
+        const tabElement = this.tabTemplateTarget.content.cloneNode(true).firstElementChild;
+        tabElement.dataset.entityId = entity.id;
+        tabElement.dataset.entityType = entityType;
+        tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
+
+        // --- Création du contenu de l'onglet (accordéon) ---
+        const contentElement = this.tabContentTemplate.content.cloneNode(true).firstElementChild;
+        const accordionContainer = contentElement.querySelector('.accordion');
+
+        if (entityCanvas.length > 0) {
+            entityCanvas.forEach(attribute => {
+                const accordionItem = this.createAccordionItem(attribute, entity);
+                accordionContainer.appendChild(accordionItem);
+            });
+        } else {
+            accordionContainer.innerHTML = `<div class="p-4 text-muted">Aucun champ à afficher pour cet objet.</div>`;
+        }
+
+        // Lier le contenu à l'onglet via un ID unique
+        const tabId = `tab-content-${entityType}-${entity.id}`;
+        contentElement.id = tabId;
+        tabElement.dataset.tabContentId = tabId;
+
+        // Ajouter les nouveaux éléments au DOM
+        this.tabContainerTarget.appendChild(tabElement);
+        this.tabContentContainerTarget.appendChild(contentElement);
+
+        // Activer le nouvel onglet créé
+        this.activateTab({ currentTarget: tabElement });
+
+        // Émettre l'événement de confirmation d'ouverture [cite: 10, 747]
+        // const detailsOpenedEvent = new CustomEvent(EVEN_LISTE_ELEMENT_OPENNED, {
+        //     bubbles: true,
+        //     detail: { entity }
+        // });
+        // document.dispatchEvent(detailsOpenedEvent);
+
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, { entity: entity })
+    }
+
+    /**
+     * Crée un item (ligne) pour l'accordéon.
+     * @param {object} attribute - La description de l'attribut depuis entityCanvas
+     * @param {object} entity - L'objet de données
+     */
+    createAccordionItem(attribute, entity) {
+        const item = document.createElement('div');
+        item.className = 'accordion-item';
+
+        const title = document.createElement('div');
+        title.className = 'accordion-title';
+        title.dataset.action = 'click->espace-de-travail#toggleAccordion';
+        // Titre en gras, avec préfixe "-" par défaut (déplié) [cite: 61, 62, 79]
+        title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
+
+        const content = document.createElement('div');
+        content.className = 'accordion-content';
+        // Contenu visible par défaut [cite: 79]
+        content.style.display = 'block';
+
+        const rawValue = entity[attribute.code];
+        content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite); // [cite: 66, 68, 69]
+
+        item.appendChild(title);
+        item.appendChild(content);
+        return item;
+    }
+
+    /**
+     * Active un onglet spécifique et affiche son contenu. [cite: 50]
+     * @param {Event} event 
+     */
+    activateTab(event) {
+        const clickedTab = event.currentTarget;
+
+        // Désactiver tous les autres onglets
+        this.tabContainerTarget.querySelectorAll('.tab-item').forEach(tab => {
+            tab.classList.remove('active');
+            const content = this.tabContentContainerTarget.querySelector(`#${tab.dataset.tabContentId}`);
+            if (content) {
+                content.classList.remove('active');
+            }
+        });
+
+        // Activer l'onglet cliqué et son contenu [cite: 41, 44]
+        clickedTab.classList.add('active');
+        const activeContent = this.tabContentContainerTarget.querySelector(`#${clickedTab.dataset.tabContentId}`);
+        if (activeContent) {
+            activeContent.classList.add('active');
+        }
+    }
+
+
+    /**
+     * Ferme un onglet et son contenu. [cite: 53]
+     * @param {Event} event 
+     */
+    closeTab(event) {
+        event.stopPropagation(); // Empêche l'événement de "bubbler" vers activateTab
+
+        const tabToClose = event.currentTarget.closest('.tab-item');
+        const contentToClose = this.tabContentContainerTarget.querySelector(`#${tabToClose.dataset.tabContentId}`);
+
+        // Supprimer l'onglet et son contenu du DOM
+        if (tabToClose) tabToClose.remove();
+        if (contentToClose) contentToClose.remove();
+
+        // S'il ne reste plus d'onglets, cacher la colonne de visualisation [cite: 26, 31]
+        if (this.tabContainerTarget.children.length === 0) {
+            this.element.classList.remove('visualization-visible');
+            this.visualizationColumnTarget.style.display = 'none';
+        } else {
+            // Activer le premier onglet restant s'il y en a un
+            const firstTab = this.tabContainerTarget.querySelector('.tab-item');
+            if (firstTab) {
+                this.activateTab({ currentTarget: firstTab });
+            }
+        }
+    }
+
+
+    /**
+     * Bascule l'affichage d'un item d'accordéon. [cite: 60]
+     * @param {Event} event 
+     */
+    toggleAccordion(event) {
+        const title = event.currentTarget;
+        const content = title.nextElementSibling;
+        const toggleIcon = title.querySelector('.accordion-toggle');
+
+        if (content.style.display === "block") {
+            content.style.display = "none";
+            toggleIcon.textContent = '+'; // [cite: 61]
+        } else {
+            content.style.display = "block";
+            toggleIcon.textContent = '-'; // [cite: 61]
+        }
+    }
+
+
+    /**
+     * Formate une valeur en fonction de son type.
+     */
+    formatValue(value, type, unit = '') {
+        if (value === null || typeof value === 'undefined') return 'N/A';
+
+        const unitePrefix = unit ? `${unit} ` : ''; // [cite: 67]
+
+        switch (type) {
+            case 'Nombre': // [cite: 66]
+                return unitePrefix + new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+            case 'Date': // [cite: 68]
+                // Gérer les dates sous forme de string (ex: "2025-06-30T00:00:00+00:00") ou d'objet
+                const date = new Date(value);
+                if (isNaN(date.getTime())) {
+                    return value; // Retourner la valeur originale si la date est invalide
+                }
+                return date.toLocaleDateString('fr-FR'); // ex: 30/06/2025
+            case 'Texte': // [cite: 69]
+            default:
+                return value;
+        }
+    }
+
 
     /**
      * NOUVEAU: Affiche les rubriques pour un élément de groupe donné.
@@ -67,7 +308,7 @@ export default class extends Controller {
             // Si l'élément actif est un groupe, on réaffiche ses rubriques
             if (this.activeNavItem.dataset.espaceDeTravailGroupNameParam) {
                 this.displayRubriquesForGroup(this.activeNavItem);
-            } 
+            }
             // Si c'est un autre type d'élément (Tableau de bord, Paramètres), on réaffiche sa description
             else if (this.activeNavItem.dataset.espaceDeTravailDescriptionParam) {
                 const description = this.activeNavItem.dataset.espaceDeTravailDescriptionParam;

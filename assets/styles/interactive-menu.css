@@ -1,220 +1,343 @@
 /* Barre de progression */
 .progress-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 4px; /* [cite_start] [cite: 235] */
-    background-color: #0052FF;
-    display: none; /* [cite_start] [cite: 236] */
-    z-index: 9999;
-    animation: progress-animation 1.5s infinite linear;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px; /* [cite_start] [cite: 235] */
+  background-color: #0052ff;
+  display: none; /* [cite_start] [cite: 236] */
+  z-index: 9999;
+  animation: progress-animation 1.5s infinite linear;
 }
 
 @keyframes progress-animation {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
-
 /* Layout Principal */
-body, html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    width: 100%;
-    overflow: hidden; /* Empêche le défilement du body */
-    font-family: sans-serif;
+body,
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* Empêche le défilement du body */
+  font-family: sans-serif;
 }
 
 .interactive-menu {
-    display: flex;
-    height: 100vh; /* [cite_start][cite: 187] */
-    width: 100%; /* [cite_start][cite: 186] */
+  display: flex;
+  width: 100%;
+  height: 100vh; /* ou la hauteur de son conteneur */
 }
 
 /* Colonne 1 : Navigation */
 .menu-col-1 {
-    width: 130px; /* [cite_start] [cite: 191] */
-    flex-shrink: 0;
-    background-color: #676767; /* [cite_start][cite: 192] */
-    display: flex;
-    flex-direction: column;
-    color: #e7e7e7; /* [cite_start] [cite: 193] */
+  width: 130px; /* [cite_start] [cite: 191] */
+  flex-shrink: 0;
+  background-color: #676767; /* [cite_start][cite: 192] */
+  display: flex;
+  flex-direction: column;
+  color: #e7e7e7; /* [cite_start] [cite: 193] */
 }
 
 .menu-col-1-row-1 {
-    height: 100px; /* [cite_start] [cite: 198] */
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  height: 100px; /* [cite_start] [cite: 198] */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .menu-col-1-row-2 {
-    flex-grow: 1; /* [cite_start] [cite: 201] */
-    overflow-y: auto; /* [cite_start] [cite: 201] */
-    padding: 20px 0;
+  flex-grow: 1; /* [cite_start] [cite: 201] */
+  overflow-y: auto; /* [cite_start] [cite: 201] */
+  padding: 20px 0;
 }
 
 .menu-col-1-row-3 {
-    height: 200px; /* [cite_start] NOTE: 600px comme demandé [cite: 206] est très grand. J'utilise 200px pour un design plus pratique. */
-    flex-shrink: 0;
-    padding: 20px 0;
+  height: 200px; /* [cite_start] NOTE: 600px comme demandé [cite: 206] est très grand. J'utilise 200px pour un design plus pratique. */
+  flex-shrink: 0;
+  padding: 20px 0;
 }
 
 .nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 15px;
-    cursor: pointer;
-    text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  cursor: pointer;
+  text-align: center;
 }
 
 .nav-icon {
-    width: 30px;
-    height: 30px;
-    margin-bottom: 8px;
-    color: #e7e7e7; /* [cite_start] [cite: 193] */
+  width: 30px;
+  height: 30px;
+  margin-bottom: 8px;
+  color: #e7e7e7; /* [cite_start] [cite: 193] */
 }
 
 .nav-text {
-    font-size: 0.9rem;
-    color: #e7e7e7; /* [cite_start] [cite: 193] */
+  font-size: 0.9rem;
+  color: #e7e7e7; /* [cite_start] [cite: 193] */
 }
 
 .nav-item:hover .nav-icon,
 .nav-item:hover .nav-text {
-    color: #fafafa; /* [cite_start] [cite: 194] */
-    font-weight: bold; /* [cite_start][cite: 196] */
+  color: #fafafa; /* [cite_start] [cite: 194] */
+  font-weight: bold; /* [cite_start][cite: 196] */
 }
 
 .nav-item.active .nav-icon,
 .nav-item.active .nav-text {
-    color: white; /* [cite_start] [cite: 195] */
-    font-weight: bold; /* [cite_start] [cite: 196] */
+  color: white; /* [cite_start] [cite: 195] */
+  font-weight: bold; /* [cite_start] [cite: 196] */
 }
-
 
 /* Colonne 2 : Info & Rubriques */
 .menu-col-2 {
-    width: 280px; /* [cite_start] [cite: 211] */
-    flex-shrink: 0;
-    background-color: #e7e7e7; /* [cite_start] [cite: 212] */
-    display: flex;
-    flex-direction: column;
+  min-width: 300px; /* Example width */
+  max-width: 300px;
+  background-color: #f0f0f0; /* Exemple de gris clair [cite: 63] */
+  color: #333;
 }
 
 .menu-col-2-row-1 {
-    height: 280px; /* [cite_start] [cite: 218] */
-    flex-shrink: 0;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    border-bottom: 1px solid #dcdcdc;
+  height: 280px; /* [cite_start] [cite: 218] */
+  flex-shrink: 0;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-bottom: 1px solid #dcdcdc;
 }
 
 .company-logo {
-    max-width: 80px;
-    margin-bottom: 1rem;
+  max-width: 80px;
+  margin-bottom: 1rem;
 }
 
 .company-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #333;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
 }
 
 .company-description {
-    color: #555;
-    margin: 0.5rem 0;
+  color: #555;
+  margin: 0.5rem 0;
 }
 
 .company-version {
-    font-size: 0.8rem;
-    color: #888;
-    margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 1rem;
 }
 
 .menu-col-2-row-2 {
-    flex-grow: 1; /* [cite_start] [cite: 223] */
-    overflow-y: auto; /* [cite_start] [cite: 223] */
+  flex-grow: 1; /* [cite_start] [cite: 223] */
+  overflow-y: auto; /* [cite_start] [cite: 223] */
 }
 
 /* Style des rubriques dans la colonne 2 */
-.rubriques-list, .rubrique-item {
-    padding: 0 1rem;
+.rubriques-list,
+.rubrique-item {
+  padding: 0 1rem;
 }
 .rubrique-item {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    cursor: pointer;
-    border-radius: 8px;
-    margin: 4px 0;
-    color: #333;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 4px 0;
+  color: #333;
 }
 .rubrique-icon {
-    width: 18px; /* [cite_start] [cite: 226] */
-    height: 18px; /* [cite_start] [cite: 226] */
-    margin-right: 12px;
+  width: 18px; /* [cite_start] [cite: 226] */
+  height: 18px; /* [cite_start] [cite: 226] */
+  margin-right: 12px;
 }
-.rubrique-item:hover, .rubrique-item.active {
-    font-weight: bold; /* [cite_start] [cite: 227] */
-    background-color: #dcdcdc;
+.rubrique-item:hover,
+.rubrique-item.active {
+  font-weight: bold; /* [cite_start] [cite: 227] */
+  background-color: #dcdcdc;
 }
-
 
 /* Colonne 3 : Espace de travail */
 .menu-col-3 {
-    flex-grow: 1; /* [cite_start] [cite: 230] */
-    overflow: auto; /* [cite_start] [cite: 232] */
-    background-color: #fdfdfd;
-}
-.workspace-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #aaa;
-    font-size: 1.2rem;
+  flex-grow: 1; /* Prend tout l'espace restant */
+  transition: width 0.3s ease-in-out;
 }
 
+.workspace-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #aaa;
+  font-size: 1.2rem;
+}
 
 /* Style de la barre de défilement */
 ::-webkit-scrollbar {
-    width: 8px;
+  width: 8px;
 }
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+  background: #f1f1f1;
 }
 ::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
+  background: #888;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #555;
+  background: #555;
 }
 .menu-col-1 ::-webkit-scrollbar-track {
-    background: #676767;
+  background: #676767;
 }
 .menu-col-1 ::-webkit-scrollbar-thumb {
-    background: #e7e7e7;
+  background: #e7e7e7;
 }
 /* Style pour la zone de description dans la colonne 2 */
 .description-wrapper {
-    padding: 2rem;
-    margin: 1.5rem;
-    background-color: rgba(0, 0, 0, 0.02); /* Fond très subtil */
-    border-left: 4px solid #b0b0b0; /* Bordure décorative à gauche */
-    color: #444; /* Couleur de texte plus douce */
-    font-size: 0.95rem;
-    line-height: 1.6; /* Hauteur de ligne pour une meilleure lisibilité */
-    font-style: italic; /* Style italique pour marquer que c'est une description */
-    border-radius: 0 8px 8px 0; /* Coins arrondis */
+  padding: 2rem;
+  margin: 1.5rem;
+  background-color: rgba(0, 0, 0, 0.02); /* Fond très subtil */
+  border-left: 4px solid #b0b0b0; /* Bordure décorative à gauche */
+  color: #444; /* Couleur de texte plus douce */
+  font-size: 0.95rem;
+  line-height: 1.6; /* Hauteur de ligne pour une meilleure lisibilité */
+  font-style: italic; /* Style italique pour marquer que c'est une description */
+  border-radius: 0 8px 8px 0; /* Coins arrondis */
+}
+
+/* Colonne de visualisation  */
+.menu-col-4 {
+    display: none; /* Cachée par défaut [cite: 22, 31] */
+    flex-direction: column;
+    min-width: 300px; /* Même largeur que la colonne 2 [cite: 29] */
+    max-width: 300px;
+    height: 100%; /* [cite: 29] */
+    background-color: #f0f0f0; /* Même fond que la colonne 2 [cite: 30] */
+    color: #333; /* Même couleur de texte que la colonne 2 [cite: 30] */
+    border-left: 1px solid #ccc;
+    font-size: 0.9em; /* Texte légèrement plus petit [cite: 30] */
+}
+
+/* Ajustement de la largeur lorsque la colonne 4 est visible */
+.interactive-menu.visualization-visible .menu-col-3 {
+    /* La largeur s'ajustera automatiquement grâce à flex-grow */
+}
+
+/* --- Styles pour le panneau à onglets --- */
+.tab-panel-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%; /* [cite: 37] */
+}
+
+.tab-header {
+    display: flex;
+    flex-shrink: 0;
+    overflow-x: auto;
+    border-bottom: 2px solid #ccc;
+}
+
+.tab-content-container {
+    flex-grow: 1;
+    position: relative;
+    overflow-y: auto; /* [cite: 38] */
+}
+
+/* --- Styles pour un onglet individuel --- */
+.tab-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-right: 1px solid #ddd;
+    background-color: #e9e9e9;
+    white-space: nowrap;
+}
+
+.tab-item:hover {
+    background-color: #dcdcdc;
+}
+
+.tab-item.active {
+    background-color: #f0f0f0; /* Couleur du fond de la colonne */
+    border-bottom: 2px solid transparent;
+}
+
+.tab-item.active .tab-item-icon,
+.tab-item.active .tab-item-title {
+    font-weight: bold; /* [cite: 44] */
+}
+
+.tab-item-icon {
+    margin-right: 8px; /* [cite: 52] */
+}
+
+.tab-item-close {
+    margin-left: 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 50%;
+}
+
+.tab-item-close:hover {
+    background-color: #ff5555;
+    color: white;
+}
+
+/* --- Styles pour le contenu d'un onglet --- */
+.tab-content {
+    display: none; /* Contenu caché par défaut [cite: 43] */
+    padding: 10px;
+    height: 100%;
+    width: 100%;
+}
+
+.tab-content.active {
+    display: block; /* Seul le contenu de l'onglet actif est visible [cite: 41, 43] */
+}
+
+/* --- Styles pour l'accordéon --- */
+.accordion-item {
+    margin-bottom: 2px;
+}
+
+.accordion-title {
+    background-color: #4a4a4a; /* Gris foncé [cite: 62] */
+    color: white; /* [cite: 62] */
+    font-weight: bold; /* [cite: 62] */
+    padding: 8px;
+    cursor: pointer;
+}
+
+.accordion-toggle {
+    margin-right: 10px;
+    font-family: monospace;
+}
+
+.accordion-content {
+    background-color: #e9e9e9; /* Gris clair [cite: 63] */
+    border: 1px solid #ddd;
+    border-top: none;
+    padding: 10px;
+    display: none; /* Caché par défaut, géré par JS */
 }

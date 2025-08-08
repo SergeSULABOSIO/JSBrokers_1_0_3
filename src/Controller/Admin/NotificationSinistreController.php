@@ -95,6 +95,7 @@ class NotificationSinistreController extends AbstractController
             'constante' => $this->constante,
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
+            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
         ]);
     }
 

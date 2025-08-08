@@ -13,13 +13,13 @@
         data-{{ key }}-value="{{ value }}"
     {% endfor %}
     
-    {# Actions existantes #}
-    data-action="
-        click->liste-principale#toggleRowSelection
-        {# dblclick->liste-element#dispatchDoubleClick #}
-    "
     {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
-    data-liste-principale-objet-value='{{ entity|json_encode }}'
+    data-entity-type="{{entite_nom}}"
+    data-entity='{{ entity|json_encode|e('html_attr') }}' 
+    data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}'
+
+    {# Actions existantes #}
+    data-action="click->liste-principale#toggleRowSelection"
 >
     {{ include('components/_list_element_view.html.twig') }}
 </tr>

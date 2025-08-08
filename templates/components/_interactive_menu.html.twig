@@ -1,5 +1,8 @@
 {% set menu = menu_data %}
-<div {{ stimulus_controller('espace-de-travail') }}>
+<div 
+    {{ stimulus_controller('espace-de-travail') }} 
+    {# data-espace-de-travail-entity-canvas-value="{{ entityCanvas|json_encode }}" #}
+>
     {# Barre de progression globale, contrôlée par Stimulus #}
     <div data-espace-de-travail-target="progressBar" class="progress-bar"></div>
     <div class="interactive-menu">
@@ -70,24 +73,56 @@
             </div>
         </div>
 
-        {# Template caché pour générer la liste des rubriques (utilisé par Stimulus) #}
-        <template data-espace-de-travail-target="rubriquesTemplate">
-            <div class="rubriques-list">
-                {% for group_name, group_data in menu.colonne_1.groupes %}
-                    <div id="rubriques-{{ group_name|replace({' ': '_'}) }}">
-                        {% for rubrique_name, rubrique_data in group_data.rubriques %}
-                            <div class="rubrique-item"
-                                data-action="click->espace-de-travail#loadComponent"
-                                data-espace-de-travail-component-name-param="{{ rubrique_data.composant_twig }}"
-                                data-espace-de-travail-description-param="" {# Les rubriques n'ont pas de description à afficher #}
-                            >
-                                <twig:ux:icon name="{{ rubrique_data.icone }}" class="rubrique-icon" />
-                                <span class="rubrique-text">{{ rubrique_name }}</span>
-                            </div>
-                        {% endfor %}
+        {# [MODIFICATION 2] AJOUT DE LA COLONNE 4 : COLONNE DE VISUALISATION #}
+        <div class="menu-col-4" data-espace-de-travail-target="visualizationColumn">
+            <div class="tab-panel-container">
+                {# La barre où les titres des onglets apparaîtront #}
+                <div class="tab-header" data-espace-de-travail-target="tabContainer">
                     </div>
-                {% endfor %}
+                {# La zone où le contenu de l'onglet actif s'affichera #}
+                <div class="tab-content-container" data-espace-de-travail-target="tabContentContainer">
+                    </div>
             </div>
-        </template>
+        </div>
     </div>
+
+    {# Template caché pour générer la liste des rubriques (utilisé par Stimulus) #}
+    <template data-espace-de-travail-target="rubriquesTemplate">
+        <div class="rubriques-list">
+            {% for group_name, group_data in menu.colonne_1.groupes %}
+                <div id="rubriques-{{ group_name|replace({' ': '_'}) }}">
+                    {% for rubrique_name, rubrique_data in group_data.rubriques %}
+                        <div class="rubrique-item"
+                            data-action="click->espace-de-travail#loadComponent"
+                            data-espace-de-travail-component-name-param="{{ rubrique_data.composant_twig }}"
+                            data-espace-de-travail-description-param="" {# Les rubriques n'ont pas de description à afficher #}
+                        >
+                            <twig:ux:icon name="{{ rubrique_data.icone }}" class="rubrique-icon" />
+                            <span class="rubrique-text">{{ rubrique_name }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    </template>
+
+    {# [MODIFICATION 3] AJOUT DES TEMPLATES POUR LES ONGLETS ET LEUR CONTENU #}
+
+    {# Template pour un seul onglet (le titre cliquable) #}
+    <template data-espace-de-travail-target="tabTemplate">
+        <div class="tab-item" data-action="click->espace-de-travail#activateTab">
+            <span class="tab-item-icon">{{ ux_icon('mage:file-2') }}</span> {# [cite: 55] #}
+            <span class="tab-item-title" data-role="tab-title"></span> {# L'ID de l'objet ira ici [cite: 52] #}
+            <button class="tab-item-close" data-action="click->espace-de-travail#closeTab">X</button> {# [cite: 53] #}
+        </div>
+    </template>
+
+    {# Template pour le contenu d'un onglet (l'accordéon) #}
+    <template data-espace-de-travail-target="tabContentTemplate">
+        <div class="tab-content">
+            <div class="accordion" data-controller="accordion">
+                {# L'accordéon avec les détails de l'entité sera généré ici par Stimulus #}
+            </div>
+        </div>
+    </template>
 </div>
