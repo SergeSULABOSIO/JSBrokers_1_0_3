@@ -121,7 +121,7 @@ export default class extends Controller {
         event.stopPropagation();
 
         console.log(this.nomControleur + " - Demande d'ouverture pour les éléments séléctionnés", this.tabSelectedEntities, this.selectedEntitiesType, this.selectedEntitiesCanvas);
-
+        
         this.tabSelectedEntities.forEach(selectedEntity => {
             buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, {
                 entity: selectedEntity, 
