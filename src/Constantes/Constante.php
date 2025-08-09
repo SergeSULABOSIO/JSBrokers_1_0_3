@@ -6177,7 +6177,7 @@ class Constante
                         "attribut_prefixe" => "",
                         "attribut_code" => "descriptionDeFait",
                         "attribut_type" => "text",
-                        "attribut_taille_max" => 100,
+                        "attribut_taille_max" => 50,
                         "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
                         "icone_taille" => "19px", //largeur = hauteur
                     ],
@@ -6195,7 +6195,7 @@ class Constante
                             "attribut_prefixe" => "Pol.: ",
                             "attribut_code" => "referencePolice",
                             "attribut_type" => "text",
-                            "attribut_taille_max" => 10,
+                            "attribut_taille_max" => 15,
                             "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
                             "icone_taille" => "16px", //largeur = hauteur
                         ],
@@ -6203,7 +6203,7 @@ class Constante
                             "attribut_prefixe" => "Sin.: ",
                             "attribut_code" => "referenceSinistre",
                             "attribut_type" => "text",
-                            "attribut_taille_max" => 20,
+                            "attribut_taille_max" => 30,
                             "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
                             "icone_taille" => "16px", //largeur = hauteur
                         ],
