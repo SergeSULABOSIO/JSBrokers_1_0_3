@@ -24,7 +24,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class EntrepriseDashbordController extends AbstractController
 {
-    private MenuActivator $activator;
 
     public function __construct(
         private UrlGeneratorInterface $urlGenerator,
@@ -32,7 +31,6 @@ class EntrepriseDashbordController extends AbstractController
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
     ) {
-        $this->activator = new MenuActivator(-1);
     }
 
 
@@ -50,8 +48,6 @@ class EntrepriseDashbordController extends AbstractController
         $this->manager->persist($user);
         $this->manager->flush();
 
-        // dd($user);
-
         //Initialisation du formulaire de recherche
         /** @var CriteresRechercheDashBordDTO $criteres */
         $criteres = (new CriteresRechercheDashBordDTO())
@@ -65,44 +61,14 @@ class EntrepriseDashbordController extends AbstractController
         // Très important de vérifier si le formulaire est soumis
         if ($formulaire_recherche->isSubmitted() && $formulaire_recherche->isValid()) {
             $jSBTableauDeBordBuilder->build($formulaire_recherche->getData());
-            return $this->render('admin/dashbord/index.html.twig', [
-                'pageName' => $this->translator->trans("company_dashboard_page_name"),
-                'utilisateur' => $user,
-                'entreprise' => $entreprise,
-                'activator' => $this->activator,
-                'page' => $request->query->getInt("page", 1),
-                'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
-                'formulaire_recherche' => $formulaire_recherche,
-                'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
-            ]);
         } else {
             $jSBTableauDeBordBuilder->build($criteres);
         }
-
-        // if ($user->isVerified()) {
-        //     return $this->render('admin/dashbord/index.html.twig', [
-        //         'pageName' => $this->translator->trans("company_dashboard_page_name"),
-        //         'utilisateur' => $user,
-        //         'entreprise' => $entreprise,
-        //         'activator' => $this->activator,
-        //         'page' => $request->query->getInt("page", 1),
-        //         'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
-        //         'formulaire_recherche' => $formulaire_recherche,
-        //         'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
-        //     ]);
-        // } else {
-        //     $this->addFlash("warning", $this->translator->trans("entreprise_your_email_is_not_verified", [
-        //         ':user' => $user->getNom(),
-        //         ':email' => $user->getEmail()
-        //     ]));
-        //     return new RedirectResponse($this->urlGenerator->generate("app_login"));
-        // }
-
         return $this->render('admin/dashbord/index.html.twig', [
             'pageName' => $this->translator->trans("company_dashboard_page_name"),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
-            'activator' => $this->activator,
+            // 'activator' => $this->activator,
             'page' => $request->query->getInt("page", 1),
             'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
             'formulaire_recherche' => $formulaire_recherche,
