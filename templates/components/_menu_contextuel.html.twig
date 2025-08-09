@@ -19,9 +19,8 @@
             data-liste-element-context-menu-target="btOuvrir" {# MODIFIÉ #}
             data-action="click->liste-element-context-menu#context_action_ouvrir" {# MODIFIÉ #}
             data-entity-type="{{entite_nom}}"
-            {# data-entity="{{ entity|json_encode }}" #}
         >
-            {{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }} {# L'icône "open" est déjà parfaite ! #}
+            {{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }}
             Ouvrir {# MODIFIÉ #}
         </li>
         {# Option "Modifier" #}

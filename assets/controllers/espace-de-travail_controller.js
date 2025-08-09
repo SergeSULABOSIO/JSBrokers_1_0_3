@@ -29,16 +29,16 @@ export default class extends Controller {
             this.dashboardItemTarget.click();
         }
 
-        this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
+        this.boundHandleOpenned = this.handleOpenned.bind(this);
         // [MODIFICATION 4] Ajouter l'écouteur d'événement pour l'ouverture des entités [cite: 7, 23, 745]
-        document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+        document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundHandleOpenned);
 
         // Initialiser un contrôleur pour l'accordéon
         this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
     disconnect() {
-        document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundHandleOpenned);
     }
 
 
@@ -46,7 +46,7 @@ export default class extends Controller {
      * Gère la requête d'ouverture d'un élément de la liste principale.
      * @param {CustomEvent} event
      */
-    handleOpenRequest(event) {
+    handleOpenned(event) {
         // Get both the entity and its canvas from the event detail
         const { entity, entityType, entityCanvas } = event.detail;
         // --- Validation améliorée ---
@@ -116,7 +116,8 @@ export default class extends Controller {
         // Activer le nouvel onglet créé
         this.activateTab({ currentTarget: tabElement });
 
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, { entity: entity })
+        //buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, { entity: entity })
+        console.log(this.nomControleur + " - Onglet ouvert:", entity);
     }
 
     /**

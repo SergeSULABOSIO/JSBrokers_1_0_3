@@ -18,6 +18,8 @@ export default class extends Controller {
     connect() {
         this.tabSelectedCheckBoxs = [];
         this.tabSelectedEntities = [];
+        this.selectedEntitiesType = null;
+        this.selectedEntitiesCanvas = null;
         this.nomControleur = "LISTE-ELEMENT-CONTEXT-MENU";
         console.log(this.nomControleur + " - Connecté");
         this.init();
@@ -144,9 +146,11 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handlePublisheSelection(event) {
-        const { selection, selectedEntities } = event.detail; // Récupère les données de l'événement
+        const { selection, entities, canvas, entityType } = event.detail; // Récupère les données de l'événement
         this.tabSelectedCheckBoxs = selection;
-        this.tabSelectedEntities = selectedEntities;
+        this.tabSelectedEntities = entities;
+        this.selectedEntitiesType = entityType;
+        this.selectedEntitiesCanvas = canvas;
         event.stopPropagation();
     }
 
@@ -205,20 +209,7 @@ export default class extends Controller {
         event.preventDefault();
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-
-        const element = event.currentTarget;
-
-        // Récupérer l'objet entité. Il est souvent stocké dans un data-attribute sous forme de JSON.
-        const entity = JSON.parse(element.dataset.entity);
-
-        // Il est important d'ajouter le nom de la classe pour une identification unique
-        // si vous gérez plusieurs types d'entités.
-        entity.__class_name__ = element.dataset.entityType; // ex: 'NotificationSinistre'
-
-
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, {
-            entity: entity,
-        });
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, event);
     }
 
     context_action_tout_cocher(event) {

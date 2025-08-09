@@ -9,7 +9,11 @@
             class="form-check-input"
             data-action="change->liste-principale#handleCheckboxChange"
             data-liste-principale-target="rowCheckbox"
-            data-idobjet-value="{{ entity.id }}"
+            data-idobjet-value="{{ entity.id }}" 
+            {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
+            data-entity-type="{{entite_nom}}" 
+            data-entity='{{ entity|serialize('json', {groups: 'list:read'})|e('html_attr') }}' 
+            data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}' 
         >
         <label for="check_{{ entity.id }}" class="text-secondary">
             {{ entity.id }}
@@ -27,9 +31,6 @@
         {% if col_principale.texte_principal.icone is defined %}
             <twig:UX:Icon name="{{ col_principale.texte_principal.icone }}" style="width: {{ col_principale.texte_principal.icone_taille }}; height: {{ col_principale.texte_principal.icone_taille }};" />
         {% endif %}
-
-        {# --- MODIFICATION ICI --- #}
-        {# Ajout de la logique de troncature pour le texte principal #}
 
         {# Préfixe et Texte#}
         {{ col_principale.texte_principal.attribut_prefixe }}

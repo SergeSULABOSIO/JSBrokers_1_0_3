@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CHECKBOX_ELEMENT_CHECKED, EVEN_CHECKBOX_ELEMENT_UNCHECKED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DELETED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_SHOW_TOAST, EVEN_DATA_BASE_SELECTION_REQUEST, EVEN_DATA_BASE_SELECTION_EXECUTED, EVEN_DATA_BASE_DONNEES_LOADED, EVEN_LISTE_ELEMENT_OPEN_REQUEST } from './base_controller.js';
+import { EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CHECKBOX_ELEMENT_CHECKED, EVEN_CHECKBOX_ELEMENT_UNCHECKED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DELETED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_SHOW_TOAST, EVEN_DATA_BASE_SELECTION_REQUEST, EVEN_DATA_BASE_SELECTION_EXECUTED, EVEN_DATA_BASE_DONNEES_LOADED, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_ELEMENT_OPENNED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -30,9 +30,13 @@ export default class extends Controller {
 
 
     init() {
+        this.tabSelectedEntities = [];
+        this.selectedEntitiesType = null;
+        this.selectedEntitiesCanvas = null;
+        this.tabSelectedCheckBoxs = [];
+
         this.menu = document.getElementById("simpleContextMenu");
         this.listePrincipale = document.getElementById("liste");
-        this.tabSelectedCheckBoxs = [];
         this.initToolTips();
         this.updateMessage("Prêt.");
         this.setEcouteurs();
@@ -59,7 +63,7 @@ export default class extends Controller {
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
         this.boundHandleDBResult = this.handleDBResult.bind(this);
         this.boundHandleDonneesLoaded = this.handleDonneesLoaded.bind(this);
-        // this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
+        this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
 
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
@@ -81,7 +85,7 @@ export default class extends Controller {
         document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
         document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
         document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        // document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+        document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
 
     }
 
@@ -106,18 +110,26 @@ export default class extends Controller {
         document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
         document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
         document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        // document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
 
     }
 
 
-    // handleOpenRequest(event) {
-    //     const { selection } = event.detail;
-    //     event.preventDefault();
-    //     event.stopPropagation();
-    //     console.log(this.nomControleur + " - Demande d'ouverture pour les éléments :", selection);
+    handleOpenRequest(event) {
+        // const { selection } = event.detail;
+        event.preventDefault();
+        event.stopPropagation();
 
-    // }
+        console.log(this.nomControleur + " - Demande d'ouverture pour les éléments séléctionnés", this.tabSelectedEntities, this.selectedEntitiesType, this.selectedEntitiesCanvas);
+
+        this.tabSelectedEntities.forEach(selectedEntity => {
+            buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, {
+                entity: selectedEntity, 
+                entityType: this.selectedEntitiesType, 
+                entityCanvas: this.selectedEntitiesCanvas
+            });
+        });
+    }
 
 
 
@@ -144,19 +156,71 @@ export default class extends Controller {
         const idObjet = checkbox.dataset.idobjetValue;
         const isChecked = checkbox.checked;
 
+        //Utiles pour le panneau à onglets
+        const entityType = checkbox.dataset.entityType;
+        const entity = checkbox.dataset.entity;
+        const canvas = checkbox.dataset.canvas;
+
+        const entityJSON = null;
+        const canvasJSON = null;
+
+        if (!entity || !canvas) {
+            console.error("Attributs data-entity ou data-entity-canvas manquants sur l'élément cliqué.", element);
+            return;
+        }
+
+        try {
+            // 1. On parse les données JSON
+            const entityJSON = JSON.parse(entity);
+            const canvasJSON = JSON.parse(canvas);
+
+            // 2. (Optionnel mais recommandé) On vérifie que l'ID existe avant d'envoyer
+            if (typeof entityJSON.id === 'undefined' || entityJSON.id === null) {
+                console.error("L'entité parsée n'a pas d'ID valide.", entityJSON);
+                return;
+            }
+            console.log(this.nomControleur + " - Objet:", idObjet, canvasJSON, entityJSON, entityType);
+        } catch (e) {
+            console.error("Erreur de parsing JSON dans 'liste-principale_controller'. Vérifiez les données dans le template Twig.", {
+                error: e,
+                entityData: entity
+            });
+        }
+
+
         if (isChecked) {
             if (!this.tabSelectedCheckBoxs.includes(idObjet)) {
                 this.tabSelectedCheckBoxs.push(idObjet);
+                if (entityJSON && canvasJSON) {
+                    //Utiles pour le panneau à onglets
+                    this.tabSelectedEntities.push(entityJSON);
+                    this.selectedEntitiesType = entityType;
+                    this.selectedEntitiesCanvas = canvasJSON;
+                }
+
             }
         } else {
             const index = this.tabSelectedCheckBoxs.indexOf(idObjet);
             if (index > -1) {
                 this.tabSelectedCheckBoxs.splice(index, 1);
             }
+
+            if (entityJSON && canvasJSON) {
+                //Utile pour le panneau à onglets
+                const indexEntity = this.tabSelectedEntities.indexOf(entityJSON);
+                if (indexEntity > -1) {
+                    this.tabSelectedEntities.splice(indexEntity, 1);
+                    if (this.tabSelectedEntities.length == 0) {
+                        this.selectedEntitiesType = null;
+                        this.selectedEntitiesCanvas = null;
+                    }
+                }
+            }
         }
         this.updateSelectAllCheckboxState();
         this.publierSelection();
     }
+
 
     updateSelectAllCheckboxState() {
         const allChecked = this.rowCheckboxTargets.every(checkbox => checkbox.checked);
@@ -490,6 +554,9 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Action_publier séléction - lancée.");
         buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
             selection: this.tabSelectedCheckBoxs,
+            entities: this.tabSelectedEntities,
+            canvas: this.selectedEntitiesCanvas,
+            entityType: this.selectedEntitiesType,
         });
     }
 
@@ -662,45 +729,5 @@ export default class extends Controller {
 
         // Déclencher manuellement un événement "change" pour que vos autres logiques (ex: tout cocher) fonctionnent
         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-
-        const element = event.currentTarget;
-        const entityCanvasData = element.dataset.canvas;
-        const entityData = element.dataset.entity;
-        const entityType = element.dataset.entityType;
-
-        if (!entityData || !entityCanvasData) {
-            console.error("Attributs data-entity ou data-entity-canvas manquants sur l'élément cliqué.", element);
-            return;
-        }
-
-        try {
-            // 1. On parse les données JSON
-            const entity = JSON.parse(entityData);
-            const entityCanvas = JSON.parse(entityCanvasData);
-
-            // 2. (Optionnel mais recommandé) On vérifie que l'ID existe avant d'envoyer
-            if (typeof entity.id === 'undefined' || entity.id === null) {
-                console.error("L'entité parsée n'a pas d'ID valide.", entity);
-                return;
-            }
-
-            console.log(this.nomControleur + " - Objet:", this.objetValue, entityCanvas, entity, entityType);
-            // 3. On crée et on envoie l'événement
-            buildCustomEventForElement(
-                document,
-                EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true,
-                {
-                    entity: entity,
-                    entityType: entityType,
-                    entityCanvas: entityCanvas
-                }
-            );
-
-        } catch (e) {
-            console.error("Erreur de parsing JSON dans 'liste-principale_controller'. Vérifiez les données dans le template Twig.", {
-                error: e,
-                entityData: entityData
-            });
-        }
     }
 }
