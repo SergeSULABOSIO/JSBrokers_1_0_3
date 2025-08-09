@@ -4,22 +4,6 @@
 	{{pageName}}
 {% endblock %}
 
-{% block section_utilisateur %}
-	{% include 'segments/boutons_entreprise_dashbord.html.twig' %}
-{% endblock %}
-
-{%  block titreRubrique %}
-	{{ utilisateur.nom }}>{{ entreprise.nom }}><strong>{{ pageName }}</strong>
-{% endblock %}
-
-{% block descriptionRubrique %}
-	{{ "company_dashboard_page_description" | trans({':companyName': entreprise.nom}) | raw }}
-{% endblock %}
-
-{% block menuLateraleGauche %}
-	{% include 'segments/menu_entreprise_dashbord.html.twig' %}
-{% endblock %}
-
 {% block body %}
 	<div class="container">
 		{# Ligne 0 #}
