@@ -16,11 +16,6 @@ export default class extends Controller {
         "tabContentTemplate",
     ];
 
-    // [MODIFICATION 3] Ajouter les nouvelles values
-    // static values = {
-    //     entityCanvas: Array
-    // }
-
     // Cible pour l'élément de menu actuellement actif
     activeNavItem = null;
     activeRubriqueItem = null;
@@ -66,9 +61,6 @@ export default class extends Controller {
             console.error("Validation échouée : 'entityCanvas' n'est pas un tableau (Array).", event.detail);
             return;
         }
-
-        // const entityId = entity.id;
-        // const entityType = entity.__class_name__; // Supposant que le nom de la classe est transmis
 
         // Vérifier si un onglet pour cet objet existe déjà 
         const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
@@ -123,13 +115,6 @@ export default class extends Controller {
 
         // Activer le nouvel onglet créé
         this.activateTab({ currentTarget: tabElement });
-
-        // Émettre l'événement de confirmation d'ouverture [cite: 10, 747]
-        // const detailsOpenedEvent = new CustomEvent(EVEN_LISTE_ELEMENT_OPENNED, {
-        //     bubbles: true,
-        //     detail: { entity }
-        // });
-        // document.dispatchEvent(detailsOpenedEvent);
 
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, { entity: entity })
     }
@@ -407,15 +392,11 @@ export default class extends Controller {
      * @param {object} detail Les données à propager.
      */
     dispatchRequestEvent(detail) {
-        const event = new CustomEvent(EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, {
-            bubbles: true,
-            detail: {
-                nom: detail.espaceDeTravailGroupNameParam,// || detail.textContent.trim(),
-                description: detail.espaceDeTravailDescriptionParam,
-                composant_twig: detail.espaceDeTravailComponentNameParam
-            }
+        buildCustomEventForElement(document, EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, true, true, {
+            nom: detail.espaceDeTravailGroupNameParam,
+            description: detail.espaceDeTravailDescriptionParam,
+            composant_twig: detail.espaceDeTravailComponentNameParam
         });
-        document.dispatchEvent(event);
     }
 
     /**
@@ -424,6 +405,5 @@ export default class extends Controller {
     dispatchOpenedEvent() {
         const event = new CustomEvent(EVEN_NAVIGATION_RUBRIQUE_OPENNED, { bubbles: true });
         document.dispatchEvent(event);
-        // console.log(this.nomControleur + " - Even lancé: " + EVEN_NAVIGATION_RUBRIQUE_OPENNED);
     }
 }
