@@ -60,11 +60,6 @@ class EspaceDeTravailComponentController extends AbstractController
         //PARAMETRES
         '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
         '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
-
-        // '_tableau_de_bord_component.html.twig' => 'App\Controller\TableauDeBordController::index',
-        // '_monnaies_component.html.twig'        => 'App\Controller\MonnaiesController::index',
-        // '_comptes_bancaires_component.html.twig' => 'App\Controller\ComptesBancairesController::index',
-        // ... Ajoutez ici toutes les correspondances pour vos composants
     ];
 
 
