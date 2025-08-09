@@ -55,7 +55,6 @@ class EntrepriseDashbordController extends AbstractController
             ->setDateFin(new DateTimeImmutable("12/31/" . date('Y') . " 23:59"));
 
         $formulaire_recherche = $this->createForm(RechercheDashBordType::class, $criteres);
-
         $formulaire_recherche->handleRequest($request);
 
         // Très important de vérifier si le formulaire est soumis
