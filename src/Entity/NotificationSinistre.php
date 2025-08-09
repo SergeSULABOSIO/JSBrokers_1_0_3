@@ -83,6 +83,7 @@ class NotificationSinistre
     private Collection $taches;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $evaluationChiffree = null;
 
     #[ORM\Column(nullable: true)]

@@ -236,11 +236,6 @@ html {
   font-size: 0.9em; /* Texte légèrement plus petit [cite: 30] */
 }
 
-/* Ajustement de la largeur lorsque la colonne 4 est visible */
-.interactive-menu.visualization-visible .menu-col-3 {
-  /* La largeur s'ajustera automatiquement grâce à flex-grow */
-}
-
 /* --- Styles pour le panneau à onglets --- */
 .tab-panel-container {
   display: flex;
