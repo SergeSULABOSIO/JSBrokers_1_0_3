@@ -337,8 +337,9 @@ class NotificationSinistreController extends AbstractController
             'entreprise' => $entreprise,
             'utilisateur' => $user,
             'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
             'serviceMonnaie' => $this->serviceMonnaies,
+            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
+            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
         ]);
     }
 
@@ -421,6 +422,7 @@ class NotificationSinistreController extends AbstractController
             'constante' => $this->constante,
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
+            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
         ]);
     }
 
@@ -432,6 +434,30 @@ class NotificationSinistreController extends AbstractController
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser(); // Vous pouvez l'utiliser pour des logiques de droits si nécessaire.
 
+        $reponseData = $this->chercher($request);
+
+        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
+        return $this->render('components/_list_donnees.html.twig', [
+            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'utilisateur' => $utilisateur,
+            'constante' => $this->constante,
+            'rubrique_nom' => "Notification Sinistre",
+            'entite_nom' => "NotificationSinistre",
+            'racine_url_controleur_php_nom' => "notificationsinistre",
+            'controleur_stimulus_nom' => "notificationsinistre-formulaire",
+            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
+            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
+            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
+            'page' => $reponseData["page"], // La page actuelle, utile si la pagination est gérée côté client dans le template
+            'limit' => $reponseData["limit"],            // La limite par page
+            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
+            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
+            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
+        ]);
+    }
+
+    public function chercher(Request $request): array
+    {
         $results = [];
 
         $status = [
@@ -776,23 +802,12 @@ class NotificationSinistreController extends AbstractController
             // Enregistrez l'exception complète pour le débogage (ex: via un service Logger)
             error_log("Erreur dans dynamic-query: " . $e->getMessage() . " sur la ligne " . $e->getLine() . " dans " . $e->getFile());
         }
-
-        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
-        return $this->render('components/_list_donnees.html.twig', [
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'utilisateur' => $utilisateur,
-            'status' => $status, // Contient l'erreur ou les infos de pagination
-            'rubrique_nom' => "Notification Sinistre",
-            'entite_nom' => "NotificationSinistre",
-            'racine_url_controleur_php_nom' => "notificationsinistre",
-            'controleur_stimulus_nom' => "notificationsinistre-formulaire",
-            'data' => $results, // Les entités NotificationSinistre trouvées
+        return [
+            'status' => $status,
+            'data' => $results,
             'page' => $page, // La page actuelle, utile si la pagination est gérée côté client dans le template
             'limit' => $limit,            // La limite par page
-            'totalItems' => $totalItems,  // Le nombre total d'éléments (pour la pagination)
-            'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
-            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
-        ]);
+            'totalItems' => $totalItems,
+        ];
     }
 }

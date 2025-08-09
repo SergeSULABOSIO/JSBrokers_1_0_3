@@ -6203,7 +6203,7 @@ class Constante
                             "attribut_prefixe" => "Sin.: ",
                             "attribut_code" => "referenceSinistre",
                             "attribut_type" => "text",
-                            "attribut_taille_max" => 30,
+                            "attribut_taille_max" => 20,
                             "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
                             "icone_taille" => "16px", //largeur = hauteur
                         ],
