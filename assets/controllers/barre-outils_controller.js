@@ -64,7 +64,7 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handlePublisheSelection(event) {
-        console.log(this.nomControleur + " - handlePublishSelection", event.detail);
+        // console.log(this.nomControleur + " - handlePublishSelection", event.detail);
         const { selection, entities, canvas, entityType } = event.detail; // Récupère les données de l'événement
         this.tabSelectedCheckBoxs = selection;
         this.tabSelectedEntities = entities;

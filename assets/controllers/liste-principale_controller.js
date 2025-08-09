@@ -121,11 +121,11 @@ export default class extends Controller {
         event.stopPropagation();
 
         console.log(this.nomControleur + " - Demande d'ouverture pour les éléments séléctionnés", this.tabSelectedEntities, this.selectedEntitiesType, this.selectedEntitiesCanvas);
-        
+
         this.tabSelectedEntities.forEach(selectedEntity => {
             buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, {
-                entity: selectedEntity, 
-                entityType: this.selectedEntitiesType, 
+                entity: selectedEntity,
+                entityType: this.selectedEntitiesType,
                 entityCanvas: this.selectedEntitiesCanvas
             });
         });
@@ -161,8 +161,8 @@ export default class extends Controller {
         const entity = checkbox.dataset.entity;
         const canvas = checkbox.dataset.canvas;
 
-        const entityJSON = null;
-        const canvasJSON = null;
+        var entityJSON = null;
+        var canvasJSON = null;
 
         if (!entity || !canvas) {
             console.error("Attributs data-entity ou data-entity-canvas manquants sur l'élément cliqué.", element);
@@ -171,52 +171,55 @@ export default class extends Controller {
 
         try {
             // 1. On parse les données JSON
-            const entityJSON = JSON.parse(entity);
-            const canvasJSON = JSON.parse(canvas);
+            entityJSON = JSON.parse(entity);
+            canvasJSON = JSON.parse(canvas);
 
             // 2. (Optionnel mais recommandé) On vérifie que l'ID existe avant d'envoyer
             if (typeof entityJSON.id === 'undefined' || entityJSON.id === null) {
                 console.error("L'entité parsée n'a pas d'ID valide.", entityJSON);
                 return;
             }
-            console.log(this.nomControleur + " - Objet:", idObjet, canvasJSON, entityJSON, entityType);
+            // console.log(this.nomControleur + " - Objet:", idObjet, canvasJSON, entityJSON, entityType);
         } catch (e) {
-            console.error("Erreur de parsing JSON dans 'liste-principale_controller'. Vérifiez les données dans le template Twig.", {
-                error: e,
-                entityData: entity
-            });
+            console.error("Erreur de parsing JSON dans 'liste-principale_controller'. Vérifiez les données dans le template Twig.", { error: e, entityData: entity });
+            return;
         }
 
 
         if (isChecked) {
             if (!this.tabSelectedCheckBoxs.includes(idObjet)) {
                 this.tabSelectedCheckBoxs.push(idObjet);
-                if (entityJSON && canvasJSON) {
-                    //Utiles pour le panneau à onglets
-                    this.tabSelectedEntities.push(entityJSON);
-                    this.selectedEntitiesType = entityType;
-                    this.selectedEntitiesCanvas = canvasJSON;
-                }
-
+                //Utiles pour le panneau à onglets
+                this.tabSelectedEntities.push(entityJSON);
+                this.selectedEntitiesType = entityType;
+                this.selectedEntitiesCanvas = canvasJSON;
             }
         } else {
             const index = this.tabSelectedCheckBoxs.indexOf(idObjet);
             if (index > -1) {
                 this.tabSelectedCheckBoxs.splice(index, 1);
             }
+            // console.log(this.nomControleur + " -- ICI", index, idObjet);
 
             if (entityJSON && canvasJSON) {
                 //Utile pour le panneau à onglets
-                const indexEntity = this.tabSelectedEntities.indexOf(entityJSON);
+                // const indexEntity = this.tabSelectedEntities.indexOf(entityJSON);
+                // On cherche l'index de l'entité dont l'ID correspond à 'idObjet'.
+                const indexEntity = this.tabSelectedEntities.findIndex(e => e.id == idObjet);
                 if (indexEntity > -1) {
                     this.tabSelectedEntities.splice(indexEntity, 1);
-                    if (this.tabSelectedEntities.length == 0) {
+
+                    // Ajouté : Si la liste des entités sélectionnées est maintenant vide...
+                    if (this.tabSelectedEntities.length === 0) {
+                        // ...on réinitialise le type et le canvas.
                         this.selectedEntitiesType = null;
                         this.selectedEntitiesCanvas = null;
                     }
                 }
+                // console.log(this.nomControleur + " -- ICI", indexEntity, entityJSON);
             }
         }
+        // console.log(this.nomControleur + " -- ICI", this.tabSelectedEntities, this.tabSelectedCheckBoxs);
         this.updateSelectAllCheckboxState();
         this.publierSelection();
     }

@@ -88,14 +88,17 @@ export default class extends Controller {
         this.menu.style.left = `${menuX}px`;
         this.menu.style.top = `${menuY}px`;
 
+        event.detail['selection'] = this.tabSelectedCheckBoxs;
+
         //On réorganise les boutons en fonction de la selection actuelle
-        if (this.tabSelectedCheckBoxs.length != 0) {
-            event.detail['selection'] = this.tabSelectedCheckBoxs;
-        } else {
-            let newTab = [];
-            newTab.push(idObjet);
-            event.detail['selection'] = newTab;
-        }
+        // if (this.tabSelectedCheckBoxs.length != 0) {
+        //     event.detail['selection'] = this.tabSelectedCheckBoxs;
+        // }
+        //  else {
+        //     let newTab = [];
+        //     newTab.push(idObjet);
+        //     event.detail['selection'] = newTab;
+        // }
         this.organizeButtons(event);
 
         //On affiche le menu contextuel
@@ -106,20 +109,34 @@ export default class extends Controller {
 
     organizeButtons(event) {
         let { idObjet, menuX, menuY, selection } = event.detail;
-        // console.log(this.nomControleur + " - Organisation des boutons", event.detail);
-        if (selection.length >= 1) {
+        
+        this.btOuvrirTarget.style.display = "none";
+        this.btModifierTarget.style.display = "none";
+        this.btSupprimerTarget.style.display = "none";
+        
+        console.log(this.nomControleur + " - Organisation des boutons - selection:", selection);
+        
+        if (selection.length != 0) {
             if (selection.length == 1) {
                 this.btModifierTarget.style.display = "block";
-            } else {
-                this.btModifierTarget.style.display = "none";
             }
             this.btOuvrirTarget.style.display = "block";
             this.btSupprimerTarget.style.display = "block";
-        } else {
-            this.btOuvrirTarget.style.display = "none";
-            this.btModifierTarget.style.display = "none";
-            this.btSupprimerTarget.style.display = "none";
+
         }
+        // if (selection.length >= 1) {
+        //     if (selection.length == 1) {
+        //         this.btModifierTarget.style.display = "block";
+        //     } else {
+        //         this.btModifierTarget.style.display = "none";
+        //     }
+        //     this.btOuvrirTarget.style.display = "block";
+        //     this.btSupprimerTarget.style.display = "block";
+        // } else {
+        //     this.btOuvrirTarget.style.display = "none";
+        //     this.btModifierTarget.style.display = "none";
+        //     this.btSupprimerTarget.style.display = "none";
+        // }
     }
 
     handleContextMenuInitialized(event) {
