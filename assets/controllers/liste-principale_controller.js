@@ -353,10 +353,12 @@ export default class extends Controller {
             this.tabSelectedEntities = this.getAllEntities();
             this.selectedEntitiesType = this.rowCheckboxTargets[0].dataset.entityType;
             this.selectedEntitiesCanvas = JSON.parse(this.rowCheckboxTargets[0].dataset.canvas);
+            console.log(this.nomControleur + " - ICI Chargement des objets réussi:", this.tabSelectedEntities);
         }else{
             this.tabSelectedEntities = [];
             this.selectedEntitiesType = null;
             this.selectedEntitiesCanvas = null;
+            console.log(this.nomControleur + " - ICI Suppression des objets réussi:", this.tabSelectedEntities);
         }
 
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, true, true, {
