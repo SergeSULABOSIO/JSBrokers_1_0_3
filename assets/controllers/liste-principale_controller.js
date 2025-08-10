@@ -46,8 +46,8 @@ export default class extends Controller {
     setEcouteurs() {
         this.boundHandleAddRequest = this.handleAddRequest.bind(this);
         this.boundHandleAdded = this.handleAdded.bind(this);
-        this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
-        this.boundHandleRefreshed = this.handleRefreshed.bind(this);
+        // this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
+        // this.boundHandleRefreshed = this.handleRefreshed.bind(this);
         this.boundHandleAllCheckRequest = this.handleAllCheckRequest.bind(this);
         this.boundHandleAllChecked = this.handleAllChecked.bind(this);
         this.boundHandleSettingRequest = this.handleSettingRequest.bind(this);
@@ -68,8 +68,8 @@ export default class extends Controller {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
@@ -93,8 +93,8 @@ export default class extends Controller {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
@@ -348,9 +348,40 @@ export default class extends Controller {
                 this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(idObjet), 1);
             }
         });
+
+        if (this.isChecked == true) {
+            this.tabSelectedEntities = this.getAllEntities();
+            this.selectedEntitiesType = this.rowCheckboxTargets[0].dataset.entityType;
+            this.selectedEntitiesCanvas = JSON.parse(this.rowCheckboxTargets[0].dataset.canvas);
+        }else{
+            this.tabSelectedEntities = [];
+            this.selectedEntitiesType = null;
+            this.selectedEntitiesCanvas = null;
+        }
+
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, true, true, {
             selection: this.tabSelectedCheckBoxs,
         });
+    }
+
+    /**
+     * Récupère toutes les entités de la liste actuellement affichée à l'écran.
+     * @returns {Array<Object>} Un tableau contenant tous les objets entité.
+     */
+    getAllEntities() {
+        // 'this.rowCheckboxTargets' est un tableau fourni par Stimulus
+        // contenant tous les éléments <input> ayant le target "rowCheckbox".
+        return this.rowCheckboxTargets.map(checkbox => {
+            // Pour chaque case à cocher, on lit son attribut data-entity.
+            const entityData = checkbox.dataset.entity;
+            try {
+                // On parse la chaîne JSON pour la transformer en véritable objet JavaScript.
+                return JSON.parse(entityData);
+            } catch (e) {
+                console.error("Erreur de parsing JSON sur une ligne :", entityData, e);
+                return null; // Retourne null si une donnée est corrompue
+            }
+        }).filter(entity => entity !== null); // On retire les éventuelles erreurs de parsing
     }
 
     handleAllChecked(event) {
@@ -381,10 +412,10 @@ export default class extends Controller {
         this.updateMessage(titre + ": " + message);
     }
 
-    handleRefreshRequest(event) {
-        console.log(this.nomControleur + " - HandleRefreshRequest", event.detail);
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESHED, true, true, event.detail);
-    }
+    // handleRefreshRequest(event) {
+    //     console.log(this.nomControleur + " - HandleRefreshRequest", event.detail);
+    //     buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESHED, true, true, event.detail);
+    // }
 
     handleSettingRequest(event) {
         event.stopPropagation();
@@ -673,41 +704,6 @@ export default class extends Controller {
         this.donneesTarget.innerHTML = results;
     }
 
-
-    /**
-     * 
-     * @param {Event} event 
-     */
-    handleRefreshed(event) {
-        console.log(this.nomControleur + " - handleRefreshed", event.detail);
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Liste", message: "Actualisation encours..."
-        });
-        this.donneesTarget.disabled = true;
-        const url = '/admin/' + this.controleurphpValue + '/reload/' + this.identrepriseValue;
-        fetch(url) // Remplacez par l'URL de votre formulaire
-            .then(response => response.text())
-            .then(html => {
-                this.donneesTarget.innerHTML = html;
-                this.donneesTarget.disabled = false;
-
-                const maintenant = new Date();
-                const dateHeureLocaleSimple = maintenant.toLocaleString();
-                buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-                    titre: "Prêt", message: "Dernière actualisation " + dateHeureLocaleSimple
-                });
-
-                const btCkBox = document.getElementById("myCheckbox");
-                btCkBox.checked = false;
-
-                this.tabSelectedCheckBoxs = [];
-                this.updateMessageSelectedCheckBoxes();
-                this.publierSelection();
-
-                // Déclencher l'événement global pour afficher la notification
-                buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Liste actualisée avec succès !', type: 'info' });
-            });
-    }
 
     toggleRowSelection(event) {
         // Trouve la checkbox à l'intérieur de la ligne cliquée (tr)

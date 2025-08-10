@@ -71,7 +71,7 @@ export default class extends Controller {
 
     handleContextMenuInitRequest(event) {
         let { idObjet, menuX, menuY } = event.detail;
-        this.idObjet = idObjet;
+        // this.idObjet = idObjet;
         console.log(this.nomControleur + " - HandleContextMenuInitRequest", event.detail, this.tabSelectedCheckBoxs);
         event.preventDefault(); // Empêche le menu contextuel natif du navigateur d'apparaître
         // Positionne le menu près du curseur de la souris, en s'assurant qu'il reste dans la fenêtre
@@ -90,15 +90,6 @@ export default class extends Controller {
 
         event.detail['selection'] = this.tabSelectedCheckBoxs;
 
-        //On réorganise les boutons en fonction de la selection actuelle
-        // if (this.tabSelectedCheckBoxs.length != 0) {
-        //     event.detail['selection'] = this.tabSelectedCheckBoxs;
-        // }
-        //  else {
-        //     let newTab = [];
-        //     newTab.push(idObjet);
-        //     event.detail['selection'] = newTab;
-        // }
         this.organizeButtons(event);
 
         //On affiche le menu contextuel
@@ -124,19 +115,6 @@ export default class extends Controller {
             this.btSupprimerTarget.style.display = "block";
 
         }
-        // if (selection.length >= 1) {
-        //     if (selection.length == 1) {
-        //         this.btModifierTarget.style.display = "block";
-        //     } else {
-        //         this.btModifierTarget.style.display = "none";
-        //     }
-        //     this.btOuvrirTarget.style.display = "block";
-        //     this.btSupprimerTarget.style.display = "block";
-        // } else {
-        //     this.btOuvrirTarget.style.display = "none";
-        //     this.btModifierTarget.style.display = "none";
-        //     this.btSupprimerTarget.style.display = "none";
-        // }
     }
 
     handleContextMenuInitialized(event) {

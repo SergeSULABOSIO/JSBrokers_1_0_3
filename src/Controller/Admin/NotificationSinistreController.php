@@ -377,58 +377,16 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/reload/{idEntreprise}', name: 'reload', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function reload($idEntreprise, Request $request)
-    {
-        $page = $request->query->getInt("page", 1);
-
-        $status = [
-            "error" => "Données",
-            "code" => 200,
-            "message" => "Actualisation réussi."
-        ];
-
-        $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page);
-
-        /** @var Utilisateur $utilisateur */
-        $utilisateur = $this->getUser();
-
-        return $this->render('components/_list_donnees.html.twig', [
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'utilisateur' => $utilisateur,
-            'status' => $status, // Contient l'erreur ou les infos de pagination
-            'rubrique_nom' => "Notification Sinistre",
-            'entite_nom' => "NotificationSinistre",
-            'racine_url_controleur_php_nom' => "notificationsinistre",
-            'controleur_stimulus_nom' => "notificationsinistre-formulaire",
-            'data' => $data,
-            'page' => $page,
-            'limit' => 100,            // La limite par page
-            'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
-            'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
-            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
-            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
-        ]);
-    }
-
-
-
     #[Route('/api/dynamic-query/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
     public function query($idEntreprise, Request $request)
     {
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser(); // Vous pouvez l'utiliser pour des logiques de droits si nécessaire.
 
-        // $reponseData = $this->chercher($request);
-
         // On récupère les données JSON du corps de la requête
         $requestData = json_decode($request->getContent(), true) ?? [];
-
         // On appelle le service pour obtenir les résultats
         $reponseData = $this->searchService->search($requestData);
-
-
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
         return $this->render('components/_list_donnees.html.twig', [

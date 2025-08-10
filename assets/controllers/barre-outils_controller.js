@@ -115,32 +115,32 @@ export default class extends Controller {
      * LES ACTIONS
      */
     action_quitte(event) {
-        console.log(this.nomControleur + " - Action_Quitter");
+        // console.log(this.nomControleur + " - Action_Quitter");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event);
     }
 
     action_parametrer(event) {
-        console.log(this.nomControleur + " - Action_Parametrer");
+        // console.log(this.nomControleur + " - Action_Parametrer");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event);
     }
 
     action_tout_cocher(event) {
-        console.log(this.nomControleur + " - Action_tout_cocher");
+        // console.log(this.nomControleur + " - Action_tout_cocher");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
     }
 
     action_ouvrir(event) {
-        console.log(this.nomControleur + " - Action Ouvrir", event);
+        // console.log(this.nomControleur + " - Action Ouvrir", event);
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, event);
     }
 
     action_recharger(event) {
-        console.log(this.nomControleur + " - Action_Recharger");
+        // console.log(this.nomControleur + " - Action_Recharger");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
     }
 
     action_ajouter() {
-        console.log(this.nomControleur + " - Action_Ajouter");
+        // console.log(this.nomControleur + " - Action_Ajouter");
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
             titre: "Ajout",
             action: EVEN_CODE_ACTION_AJOUT,

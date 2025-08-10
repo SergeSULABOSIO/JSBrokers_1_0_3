@@ -1,7 +1,7 @@
 // assets/controllers/search-bar_controller.js
 import { Controller } from '@hotwired/stimulus';
 import { Toast } from 'bootstrap';
-import { buildCustomEventForElement, EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -22,9 +22,14 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "SEARCH_BAR";
         this.toast = new Toast(this.advancedSearchToastTarget);
-
+        
+        this.boundhandleCriteriaDefined = this.handleCriteriaDefined.bind(this);
+        
         // Nouvelle méthode : Lier la fonction de mise à jour de la position pour pouvoir l'ajouter/supprimer
         this.boundUpdateToastPosition = this.updateToastPosition.bind(this);
+
+        // --- AJOUT 1/3 : Lier la nouvelle méthode de gestion ---
+        this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
         // Nouvelle méthode : Nettoyer les écouteurs si le toast est fermé (par ex: par le bouton close)
         this.advancedSearchToastTarget.addEventListener('hide.bs.toast', () => {
@@ -32,15 +37,20 @@ export default class extends Controller {
             window.removeEventListener('resize', this.boundUpdateToastPosition);
         });
 
-        document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.handleCriteriaDefined.bind(this));
+        document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
+        // --- AJOUT 2/3 : Ajouter l'écouteur d'événement ---
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
+        
         this.handleRequestCriteres();
     }
 
     disconnect() {
-        document.removeEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.handleCriteriaDefined.bind(this));
+        document.removeEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
         // Nouvelle méthode : S'assurer que les écouteurs sont supprimés si le contrôleur est déconnecté
         window.removeEventListener('scroll', this.boundUpdateToastPosition);
         window.removeEventListener('resize', this.boundUpdateToastPosition);
+        // --- AJOUT 3/3 : Supprimer l'écouteur pour éviter les fuites de mémoire ---
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
     }
 
     // --- Actions de l'utilisateur (logique mise à jour) ---
@@ -271,6 +281,18 @@ export default class extends Controller {
             const inputToClear = this.advancedFormContainerTarget.querySelector(`[data-criterion-name="${keyToRemove}"]`);
             if (inputToClear) inputToClear.value = '';
         }
+        this.dispatchSearchEvent();
+    }
+
+    /**
+     * NOUVELLE MÉTHODE
+     * Gère une demande d'actualisation externe.
+     * @param {CustomEvent} event L'événement reçu.
+     */
+    handleExternalRefresh(event) {
+        console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
+        
+        // On réutilise simplement la fonction existante pour lancer la recherche
         this.dispatchSearchEvent();
     }
 

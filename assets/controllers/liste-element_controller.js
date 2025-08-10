@@ -49,7 +49,7 @@ export default class extends Controller {
         event.stopPropagation();
         console.log(this.nomControleur + " - HandleContextMenu");
         buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, true, true, {
-            idObjet: this.idobjetValue,
+            // idObjet: this.idobjetValue,
             menuX: event.clientX,
             menuY: event.clientY,
         });
