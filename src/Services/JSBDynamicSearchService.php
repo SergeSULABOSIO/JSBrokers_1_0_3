@@ -20,6 +20,7 @@ class JSBDynamicSearchService
         'Police',
         'Monnaie',
         'Invite',
+        'OffreIndemnisationSinistre',
         // Ajoutez ici toutes les autres entités que vous voulez rendre cherchables
     ];
 

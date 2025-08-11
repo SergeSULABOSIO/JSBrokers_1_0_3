@@ -131,50 +131,96 @@ export default class extends Controller {
     createAccordionItem(attribute, entity) {
         const item = document.createElement('div');
         item.className = 'accordion-item';
-
         const title = document.createElement('div');
         title.className = 'accordion-title';
         title.dataset.action = 'click->espace-de-travail#toggleAccordion';
-        // Titre en gras, avec préfixe "-" par défaut (déplié) [cite: 61, 62, 79]
         title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
 
         const content = document.createElement('div');
         content.className = 'accordion-content open';
 
-        // --- MODIFICATION : GESTION DU TYPE "RELATION" ---
-        if (attribute.type === 'Relation') {
-            const relatedEntity = entity[attribute.code]; // Récupère l'objet lié (ex: entity.assure)
+        switch (attribute.type) {
+            case 'Relation':
+                const relatedEntity = entity[attribute.code];
+                if (relatedEntity && relatedEntity.id) {
+                    const link = document.createElement('a');
+                    link.href = "#";
+                    link.textContent = relatedEntity[attribute.displayField];
+                    link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                    link.dataset.entityId = relatedEntity.id;
+                    link.dataset.entityType = attribute.targetEntity;
+                    content.appendChild(link);
+                } else {
+                    content.innerHTML = 'N/A';
+                }
+                break;
 
-            if (relatedEntity && relatedEntity.id) {
-                // Crée un lien <a> au lieu d'un simple texte
-                const link = document.createElement('a');
-                link.href = "#"; // Lien factice, le comportement est géré en JS
-                link.textContent = relatedEntity[attribute.displayField]; // Affiche le nom (ex: relatedEntity.nomComplet)
+            // --- NOUVEAU BLOC POUR LE TYPE "COLLECTION" ---
+            case 'Collection':
+                const collection = entity[attribute.code]; // Récupère le tableau d'objets
+                if (collection && collection.length > 0) {
+                    const ul = document.createElement('ul');
+                    ul.className = 'list-unstyled'; // Pour un style propre
 
-                // Ajoute une action pour gérer le clic
-                link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                    collection.forEach(item => {
+                        const li = document.createElement('li');
+                        const link = document.createElement('a');
+                        link.href = "#";
+                        link.textContent = item[attribute.displayField]; // Affiche le champ de l'item
+                        link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                        link.dataset.entityId = item.id;
+                        link.dataset.entityType = attribute.targetEntity;
 
-                // Stocke les informations nécessaires pour ouvrir le nouvel onglet
-                link.dataset.entityId = relatedEntity.id;
-                link.dataset.entityType = attribute.targetEntity; // ex: "Client"
+                        li.appendChild(link);
+                        ul.appendChild(li);
+                    });
+                    content.appendChild(ul);
+                } else {
+                    content.innerHTML = 'Aucun élément.';
+                }
+                break;
+            // --- FIN DU NOUVEAU BLOC ---
 
-                content.appendChild(link);
-            } else {
-                content.innerHTML = 'N/A';
-            }
-        } else {
-            // Logique existante pour les autres types (Nombre, Date, Texte)
-            const rawValue = entity[attribute.code];
-            content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite);
+            default: // Gère 'Nombre', 'Date', 'Texte'
+                const rawValue = entity[attribute.code];
+                content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite);
+                break;
         }
-        // --- FIN DE LA MODIFICATION ---
-
-        // const rawValue = entity[attribute.code];
-        // content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite); // [cite: 66, 68, 69]
 
         item.appendChild(title);
         item.appendChild(content);
         return item;
+
+        // // --- MODIFICATION : GESTION DU TYPE "RELATION" ---
+        // if (attribute.type === 'Relation') {
+        //     const relatedEntity = entity[attribute.code]; // Récupère l'objet lié (ex: entity.assure)
+
+        //     if (relatedEntity && relatedEntity.id) {
+        //         // Crée un lien <a> au lieu d'un simple texte
+        //         const link = document.createElement('a');
+        //         link.href = "#"; // Lien factice, le comportement est géré en JS
+        //         link.textContent = relatedEntity[attribute.displayField]; // Affiche le nom (ex: relatedEntity.nomComplet)
+
+        //         // Ajoute une action pour gérer le clic
+        //         link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+
+        //         // Stocke les informations nécessaires pour ouvrir le nouvel onglet
+        //         link.dataset.entityId = relatedEntity.id;
+        //         link.dataset.entityType = attribute.targetEntity; // ex: "Client"
+
+        //         content.appendChild(link);
+        //     } else {
+        //         content.innerHTML = 'N/A';
+        //     }
+        // } else {
+        //     // Logique existante pour les autres types (Nombre, Date, Texte)
+        //     const rawValue = entity[attribute.code];
+        //     content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite);
+        // }
+
+        // item.appendChild(title);
+        // item.appendChild(content);
+        // return item;
     }
 
 

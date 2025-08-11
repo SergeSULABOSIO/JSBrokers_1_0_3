@@ -6305,6 +6305,14 @@ class Constante
                         "intitule" => "Victimes",
                         "type" => "Texte",
                     ],
+                    // NOUVEAU BLOC POUR LA COLLECTION
+                    [
+                        "code" => "offreIndemnisationSinistres", // La propriété dans NotificationSinistre
+                        "intitule" => "Offres d'indemnisation",
+                        "type" => "Collection",
+                        "targetEntity" => "OffreIndemnisationSinistre", // Le nom de la classe des entités dans la collection
+                        "displayField" => "nom" // Le champ à afficher pour chaque offre
+                    ],
                     [
                         "code" => "invite",
                         "intitule" => "Invité",
@@ -6428,6 +6436,49 @@ class Constante
                         "code" => "email",
                         "intitule" => "Email",
                         "type" => "Texte",
+                    ],
+                ],
+            ];
+        } else if ($object instanceof OffreIndemnisationSinistre) {
+            return [
+                "parametres" => [
+                    "description" => "Offre d'indemnisation",
+                ],
+                "liste" => [
+                    [
+                        "code" => "id",
+                        "intitule" => "Identifiant",
+                        "type" => "Nombre",
+                        "unite" => "",
+                    ],
+                    [
+                        "code" => "nom",
+                        "intitule" => "Intitulé ou Nom",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "franchiseAppliquee",
+                        "intitule" => "Franchise appliquée",
+                        "type" => "Nombre",
+                        "unite" => "$",
+                    ],
+                    [
+                        "code" => "montantPayable",
+                        "intitule" => "Montant Payable",
+                        "type" => "Nombre",
+                        "unite" => "$",
+                    ],
+                    [
+                        "code" => "beneficiaire",
+                        "intitule" => "Bénéficiaire",
+                        "type" => "Texte",
+                        "unite" => "",
+                    ],
+                    [
+                        "code" => "referenceBancaire",
+                        "intitule" => "Réf. Bancaire",
+                        "type" => "Texte",
+                        "unite" => "",
                     ],
                 ],
             ];
