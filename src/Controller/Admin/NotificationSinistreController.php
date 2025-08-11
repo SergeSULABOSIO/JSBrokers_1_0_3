@@ -20,15 +20,11 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\NotificationSinistreRepository;
-use App\Service\DynamicSearchService;
-use App\Services\DynamicSearchService as ServicesDynamicSearchService;
-use Doctrine\ORM\Mapping\MappingException;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
 
 #[Route("/admin/notificationsinistre", name: 'admin.notificationsinistre.')]
 #[IsGranted('ROLE_USER')]
@@ -45,7 +41,7 @@ class NotificationSinistreController extends AbstractController
         private NotificationSinistreRepository $notificationSinistreRepository,
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
-        private ServicesDynamicSearchService $searchService, // Ajoutez cette ligne
+        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
     }

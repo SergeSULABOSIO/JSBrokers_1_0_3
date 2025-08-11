@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\ClientRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -15,76 +16,94 @@ class Client
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[Assert\NotBlank()]
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $adresse = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $telephone = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $email = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $exonere = null;
 
     #[ORM\ManyToOne(inversedBy: 'clients')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Contact>
      */
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $contacts;
 
     /**
      * @var Collection<int, Piste>
      */
     #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'client')]
+    #[Groups(['list:read'])]
     private Collection $pistes;
 
     /**
      * @var Collection<int, NotificationSinistre>
      */
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'assure')]
+    // #[Groups(['list:read'])] // POUR NE TOMBER DANS LA BOUCLE INFINIE QUAND IL FERA LA SERIALISATION DES ENTITES
     private Collection $notificationSinistres;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    // #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\ManyToOne(inversedBy: 'clients')]
+    #[Groups(['list:read'])]
     private ?Groupe $groupe = null;
 
     /**
      * @var Collection<int, Note>
      */
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'client')]
+    // #[Groups(['list:read'])]
     private Collection $notes;
 
     /**
      * @var Collection<int, Partenaire>
      */
     #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'clients')]
+    // #[Groups(['list:read'])]
     private Collection $partenaires;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $numimpot = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $rccm = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $idnat = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?int $civilite = null;
     //Les civilités possible
     public const CIVILITE_Mr = 0;

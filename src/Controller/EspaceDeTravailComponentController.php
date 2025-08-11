@@ -2,9 +2,12 @@
 
 namespace App\Controller;
 
+use App\Constantes\Constante;
 use Twig\Environment;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use App\Services\JSBDynamicSearchService;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,11 +15,20 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 #[Route('/espacedetravail', name: 'app_espace_de_travail_component.')]
 #[IsGranted('ROLE_USER')]
 class EspaceDeTravailComponentController extends AbstractController
 {
+
+    public function __construct(
+        private EntityManagerInterface $em,
+        private Constante $constante,
+        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+    ) {
+    }
 
     /**
      * @var array<string, string>
@@ -281,5 +293,32 @@ class EspaceDeTravailComponentController extends AbstractController
             // Vous pouvez même passer des paramètres au contrôleur cible si nécessaire
             'idEntreprise' => $utilisateur->getConnectedTo()->getId(),
         ]);
+    }
+
+    #[Route('/api/get-entity-details/{entityType}/{id}', name: 'api_get_entity_details')]
+    public function getEntityDetails(
+        string $entityType, 
+        int $id, 
+        EntityManagerInterface $em, 
+        Constante $constante
+    ): JsonResponse {
+        // Sécurité : Vérifier si l'entité est autorisée
+        if (!in_array($entityType, $this->searchService::$allowedEntities)) {
+            throw $this->createAccessDeniedException("Cette entité n'est pas accessible.");
+        }
+
+        $entityClass = 'App\\Entity\\' . $entityType;
+        $entity = $em->getRepository($entityClass)->find($id);
+
+        if (!$entity) {
+            throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
+        }
+
+        // On retourne à la fois l'entité et son canvas
+        return $this->json([
+            'entity' => $entity,
+            'entityType' => $entityType,
+            'entityCanvas' => $constante->getEntityCanvas($entity)
+        ], 200, [], ['groups' => 'list:read']); // Important d'utiliser le groupe de sérialisation
     }
 }

@@ -29,16 +29,16 @@ export default class extends Controller {
             this.dashboardItemTarget.click();
         }
 
-        this.boundHandleOpenned = this.handleOpenned.bind(this);
+        this.boundOpenTab = this.openTab.bind(this);
         // [MODIFICATION 4] Ajouter l'écouteur d'événement pour l'ouverture des entités [cite: 7, 23, 745]
-        document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundHandleOpenned);
+        document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
 
         // Initialiser un contrôleur pour l'accordéon
         this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
     disconnect() {
-        document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundHandleOpenned);
+        document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
     }
 
 
@@ -46,7 +46,7 @@ export default class extends Controller {
      * Gère la requête d'ouverture d'un élément de la liste principale.
      * @param {CustomEvent} event
      */
-    handleOpenned(event) {
+    openTab(event) {
         // Get both the entity and its canvas from the event detail
         const { entity, entityType, entityCanvas } = event.detail;
         // --- Validation améliorée ---
@@ -72,24 +72,6 @@ export default class extends Controller {
 
         this.element.classList.add('visualization-visible');
         this.visualizationColumnTarget.style.display = 'flex';
-
-        // // 2. Valider le canvas de l'entité
-        // if (!Array.isArray(entityCanvas)) {
-        //     console.error("Validation échouée : 'entityCanvas' n'est pas un tableau (Array).", event.detail);
-        //     return;
-        // }
-        // // Vérifier si un onglet pour cet objet existe déjà 
-        // const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
-        // if (existingTab) {
-        //     // Si l'onglet existe, on l'active simplement [cite: 47]
-        //     this.activateTab({ currentTarget: existingTab });
-        // } else {
-        //     // Pass the canvas from the event directly to the createTab method
-        //     this.createTab(entity, entityType, entityCanvas);
-        // }
-        // // Afficher la colonne de visualisation si elle est cachée [cite: 26]
-        // this.element.classList.add('visualization-visible');
-        // this.visualizationColumnTarget.style.display = 'flex';
     }
 
 
@@ -157,18 +139,80 @@ export default class extends Controller {
         title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
 
         const content = document.createElement('div');
-        content.className = 'accordion-content';
+        content.className = 'accordion-content open';
 
-        // Modification 2 : On ajoute la classe 'open' pour qu'il soit déplié par défaut
-        content.classList.add('open');
+        // --- MODIFICATION : GESTION DU TYPE "RELATION" ---
+        if (attribute.type === 'Relation') {
+            const relatedEntity = entity[attribute.code]; // Récupère l'objet lié (ex: entity.assure)
 
-        const rawValue = entity[attribute.code];
-        content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite); // [cite: 66, 68, 69]
+            if (relatedEntity && relatedEntity.id) {
+                // Crée un lien <a> au lieu d'un simple texte
+                const link = document.createElement('a');
+                link.href = "#"; // Lien factice, le comportement est géré en JS
+                link.textContent = relatedEntity[attribute.displayField]; // Affiche le nom (ex: relatedEntity.nomComplet)
+
+                // Ajoute une action pour gérer le clic
+                link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+
+                // Stocke les informations nécessaires pour ouvrir le nouvel onglet
+                link.dataset.entityId = relatedEntity.id;
+                link.dataset.entityType = attribute.targetEntity; // ex: "Client"
+
+                content.appendChild(link);
+            } else {
+                content.innerHTML = 'N/A';
+            }
+        } else {
+            // Logique existante pour les autres types (Nombre, Date, Texte)
+            const rawValue = entity[attribute.code];
+            content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite);
+        }
+        // --- FIN DE LA MODIFICATION ---
+
+        // const rawValue = entity[attribute.code];
+        // content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite); // [cite: 66, 68, 69]
 
         item.appendChild(title);
         item.appendChild(content);
         return item;
     }
+
+
+    async openRelatedEntity(event) {
+        event.preventDefault(); // Empêche le lien de remonter en haut de la page
+        event.stopPropagation(); // Empêche d'autres clics de se déclencher
+
+        const link = event.currentTarget;
+        const entityId = link.dataset.entityId;
+        const entityType = link.dataset.entityType;
+
+        // 1. Afficher la barre de progression
+        this.progressBarTarget.style.display = 'block';
+
+        try {
+            // Appel AJAX pour récupérer les détails complets (entité + canvas)
+            const response = await fetch(`/espacedetravail/api/get-entity-details/${entityType}/${entityId}`);
+            if (!response.ok) {
+                throw new Error("Réponse du serveur non valide.");
+            }
+            const details = await response.json();
+
+            // Une fois les détails reçus, on déclenche l'événement standard d'ouverture d'onglet
+            this.dispatch(EVEN_LISTE_ELEMENT_OPENNED, details);
+
+        } catch (error) {
+            console.error("Impossible de charger les détails de l'entité liée :", error);
+            // Afficher une notification d'erreur à l'utilisateur ici
+        } finally {
+            // 2. Cacher la barre de progression (toujours exécuté, même en cas d'erreur)
+            this.progressBarTarget.style.display = 'none';
+        }
+    }
+
+    dispatch(name, detail = {}) {
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    }
+
 
     /**
      * Active un onglet spécifique et affiche son contenu. [cite: 50]

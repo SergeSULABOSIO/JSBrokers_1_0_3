@@ -5,7 +5,7 @@ namespace App\Services;
 
 use Doctrine\ORM\EntityManagerInterface;
 
-class DynamicSearchService
+class JSBDynamicSearchService
 {
     private EntityManagerInterface $em;
 
@@ -13,7 +13,7 @@ class DynamicSearchService
      * @var string[] Liste blanche des entités autorisées pour la recherche.
      * C'est ici que vous centraliserez la gestion des entités consultables.
      */
-    private array $allowedEntities = [
+    public static array $allowedEntities = [
         'NotificationSinistre',
         'Client',
         'Assureur',

@@ -30,6 +30,7 @@ class NotificationSinistre
     private ?string $descriptionDeFait = null;
     
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
+    #[Groups(['list:read'])]
     private ?Client $assure = null;
 
     #[ORM\Column]
@@ -41,6 +42,7 @@ class NotificationSinistre
     private ?string $lieu = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
+    #[Groups(['list:read'])]
     private ?Risque $risque = null;
 
     #[ORM\Column]
@@ -52,6 +54,7 @@ class NotificationSinistre
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     #[ORM\Column(nullable: true)]
@@ -62,24 +65,28 @@ class NotificationSinistre
      * @var Collection<int, OffreIndemnisationSinistre>
      */
     #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $offreIndemnisationSinistres;
     
     /**
      * @var Collection<int, PieceSinistre>
      */
     #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $pieces;
 
     /**
      * @var Collection<int, Contact>
      */
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $contacts;
 
     /**
      * @var Collection<int, Tache>
      */
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $taches;
 
     #[ORM\Column(nullable: true)]
@@ -91,6 +98,7 @@ class NotificationSinistre
     private ?\DateTimeImmutable $notifiedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
+    #[Groups(['list:read'])]
     private ?Assureur $assureur = null;
 
     #[ORM\Column(length: 255, nullable: true)]
