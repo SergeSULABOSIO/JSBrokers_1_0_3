@@ -159,8 +159,8 @@ export default class extends Controller {
             case 'Collection':
                 const collection = entity[attribute.code]; // Récupère le tableau d'objets
                 if (collection && collection.length > 0) {
-                    const ul = document.createElement('ul');
-                    ul.className = 'list-unstyled'; // Pour un style propre
+                    const ul = document.createElement('ol');
+                    ul.className = 'accordion-collection-list'; // Pour un style propre
 
                     collection.forEach(item => {
                         const li = document.createElement('li');
