@@ -6305,9 +6305,16 @@ class Constante
                         "intitule" => "Victimes",
                         "type" => "Texte",
                     ],
+                    [
+                        "code" => "invite",
+                        "intitule" => "Invité",
+                        "type" => "Relation",
+                        "targetEntity" => "Invite", // Le nom de la classe de l'entité liée
+                        "displayField" => "email" // Le champ à afficher pour le nom du client
+                    ],
                 ],
             ];
-        }else if ($object instanceof Client) {
+        } else if ($object instanceof Client) {
             return [
                 "parametres" => [
                     "description" => "Client",
@@ -6356,7 +6363,7 @@ class Constante
                     ],
                 ],
             ];
-        }else if ($object instanceof Assureur) {
+        } else if ($object instanceof Assureur) {
             return [
                 "parametres" => [
                     "description" => "Assureur",
@@ -6401,6 +6408,25 @@ class Constante
                     [
                         "code" => "idnat",
                         "intitule" => "N° d'ident. nationale",
+                        "type" => "Texte",
+                    ],
+                ],
+            ];
+        } else if ($object instanceof Invite) {
+            return [
+                "parametres" => [
+                    "description" => "Invité",
+                ],
+                "liste" => [
+                    [
+                        "code" => "id",
+                        "intitule" => "Identifiant",
+                        "type" => "Nombre",
+                        "unite" => "",
+                    ],
+                    [
+                        "code" => "email",
+                        "intitule" => "Email",
                         "type" => "Texte",
                     ],
                 ],

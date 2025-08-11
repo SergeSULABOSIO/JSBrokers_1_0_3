@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\InviteRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -20,10 +21,12 @@ class Invite
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[Assert\NotBlank()]
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $email = null;
 
     #[ORM\Column]
