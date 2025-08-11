@@ -6253,6 +6253,21 @@ class Constante
                         "intitule" => "Réf. du sinistre",
                         "type" => "Texte",
                     ],
+                    // NOUVEAU BLOC POUR LA RELATION
+                    [
+                        "code" => "assure", // La propriété dans NotificationSinistre
+                        "intitule" => "Assuré (Client)",
+                        "type" => "Relation",
+                        "targetEntity" => "Client", // Le nom de la classe de l'entité liée
+                        "displayField" => "nom" // Le champ à afficher pour le nom du client
+                    ],
+                    [
+                        "code" => "assureur", // La propriété dans NotificationSinistre
+                        "intitule" => "Assureur",
+                        "type" => "Relation",
+                        "targetEntity" => "Assureur", // Le nom de la classe de l'entité liée
+                        "displayField" => "nom" // Le champ à afficher pour le nom du client
+                    ],
                     [
                         "code" => "descriptionDeFait",
                         "intitule" => "Description des faits",
@@ -6290,14 +6305,6 @@ class Constante
                         "intitule" => "Victimes",
                         "type" => "Texte",
                     ],
-                    // NOUVEAU BLOC POUR LA RELATION
-                    [
-                        "code" => "assure", // La propriété dans NotificationSinistre
-                        "intitule" => "Assuré (Client)",
-                        "type" => "Relation",
-                        "targetEntity" => "Client", // Le nom de la classe de l'entité liée
-                        "displayField" => "nom" // Le champ à afficher pour le nom du client
-                    ],
                 ],
             ];
         }else if ($object instanceof Client) {
@@ -6325,6 +6332,55 @@ class Constante
                     [
                         "code" => "telephone",
                         "intitule" => "N° de téléphone",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "email",
+                        "intitule" => "Adresse mail",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "numimpot",
+                        "intitule" => "N° Impôt",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "rccm",
+                        "intitule" => "N° du registre de commerce",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "idnat",
+                        "intitule" => "N° d'ident. nationale",
+                        "type" => "Texte",
+                    ],
+                ],
+            ];
+        }else if ($object instanceof Assureur) {
+            return [
+                "parametres" => [
+                    "description" => "Assureur",
+                ],
+                "liste" => [
+                    [
+                        "code" => "id",
+                        "intitule" => "Identifiant",
+                        "type" => "Nombre",
+                        "unite" => "",
+                    ],
+                    [
+                        "code" => "nom",
+                        "intitule" => "Nom du client",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "adressePhysique",
+                        "intitule" => "Adresse physique",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "url",
+                        "intitule" => "URL du site Internet",
                         "type" => "Texte",
                     ],
                     [
