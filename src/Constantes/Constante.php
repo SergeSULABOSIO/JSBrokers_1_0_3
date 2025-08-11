@@ -6233,58 +6233,63 @@ class Constante
     {
         if ($object instanceof NotificationSinistre) {
             return [
-                [
-                    "code" => "id",
-                    "intitule" => "Identifiant",
-                    "type" => "Nombre",
-                    "unite" => "",
+                "parametres" => [
+                    "description" => "Notification Sinistre",
                 ],
-                [
-                    "code" => "referencePolice",
-                    "intitule" => "Réf. de la police",
-                    "type" => "Texte",
-                ],
-                [
-                    "code" => "referenceSinistre",
-                    "intitule" => "Réf. du sinistre",
-                    "type" => "Texte",
-                ],
-                [
-                    "code" => "descriptionDeFait",
-                    "intitule" => "Description des faits",
-                    "type" => "Texte",
-                ],
-                [
-                    "code" => "occuredAt",
-                    "intitule" => "Date de l'occurrence",
-                    "type" => "Date",
-                ],
-                [
-                    "code" => "notifiedAt",
-                    "intitule" => "Date de notification",
-                    "type" => "Date",
-                ],
-                [
-                    "code" => "lieu",
-                    "intitule" => "Lieu de l'incident",
-                    "type" => "Texte",
-                ],
-                [
-                    "code" => "dommage",
-                    "intitule" => "Dommage subbi",
-                    "type" => "Nombre",
-                    "unite" => "$",
-                ],
-                [
-                    "code" => "evaluationChiffree",
-                    "intitule" => "Dommage évalué",
-                    "type" => "Nombre",
-                    "unite" => "$",
-                ],
-                [
-                    "code" => "descriptionVictimes",
-                    "intitule" => "Victimes",
-                    "type" => "Texte",
+                "liste" => [
+                    [
+                        "code" => "id",
+                        "intitule" => "Identifiant",
+                        "type" => "Nombre",
+                        "unite" => "",
+                    ],
+                    [
+                        "code" => "referencePolice",
+                        "intitule" => "Réf. de la police",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "referenceSinistre",
+                        "intitule" => "Réf. du sinistre",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "descriptionDeFait",
+                        "intitule" => "Description des faits",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "occuredAt",
+                        "intitule" => "Date de l'occurrence",
+                        "type" => "Date",
+                    ],
+                    [
+                        "code" => "notifiedAt",
+                        "intitule" => "Date de notification",
+                        "type" => "Date",
+                    ],
+                    [
+                        "code" => "lieu",
+                        "intitule" => "Lieu de l'incident",
+                        "type" => "Texte",
+                    ],
+                    [
+                        "code" => "dommage",
+                        "intitule" => "Dommage subbi",
+                        "type" => "Nombre",
+                        "unite" => "$",
+                    ],
+                    [
+                        "code" => "evaluationChiffree",
+                        "intitule" => "Dommage évalué",
+                        "type" => "Nombre",
+                        "unite" => "$",
+                    ],
+                    [
+                        "code" => "descriptionVictimes",
+                        "intitule" => "Victimes",
+                        "type" => "Texte",
+                    ],
                 ],
             ];
         }

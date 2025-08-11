@@ -56,33 +56,48 @@ export default class extends Controller {
             return;
         }
 
-        // 2. Valider le canvas de l'entité
-        if (!Array.isArray(entityCanvas)) {
-            console.error("Validation échouée : 'entityCanvas' n'est pas un tableau (Array).", event.detail);
+        // --- MODIFICATION 1 : Valider la nouvelle structure de entityCanvas ---
+        if (!entityCanvas || typeof entityCanvas.parametres !== 'object' || !Array.isArray(entityCanvas.liste)) {
+            console.error("Validation échouée : 'entityCanvas' n'a pas la bonne structure ({paramètres:{...}, liste:[...]}).", event.detail);
             return;
         }
 
-        // Vérifier si un onglet pour cet objet existe déjà 
         const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
 
         if (existingTab) {
-            // Si l'onglet existe, on l'active simplement [cite: 47]
             this.activateTab({ currentTarget: existingTab });
         } else {
-            // Pass the canvas from the event directly to the createTab method
             this.createTab(entity, entityType, entityCanvas);
         }
 
-        // Afficher la colonne de visualisation si elle est cachée [cite: 26]
         this.element.classList.add('visualization-visible');
         this.visualizationColumnTarget.style.display = 'flex';
+
+        // // 2. Valider le canvas de l'entité
+        // if (!Array.isArray(entityCanvas)) {
+        //     console.error("Validation échouée : 'entityCanvas' n'est pas un tableau (Array).", event.detail);
+        //     return;
+        // }
+        // // Vérifier si un onglet pour cet objet existe déjà 
+        // const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
+        // if (existingTab) {
+        //     // Si l'onglet existe, on l'active simplement [cite: 47]
+        //     this.activateTab({ currentTarget: existingTab });
+        // } else {
+        //     // Pass the canvas from the event directly to the createTab method
+        //     this.createTab(entity, entityType, entityCanvas);
+        // }
+        // // Afficher la colonne de visualisation si elle est cachée [cite: 26]
+        // this.element.classList.add('visualization-visible');
+        // this.visualizationColumnTarget.style.display = 'flex';
     }
 
 
     /**
      * Crée un nouvel onglet et son contenu.
-     * @param {object} entity 
-     * @param {string} entityType 
+     * @param {object} entity
+     * @param {string} entityType
+     * @param {object} entityCanvas - La nouvelle structure avec "paramètres" et "liste"
      */
     createTab(entity, entityType, entityCanvas) {
         // --- Création de l'en-tête de l'onglet ---
@@ -91,12 +106,18 @@ export default class extends Controller {
         tabElement.dataset.entityType = entityType;
         tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
 
+        // --- NOUVELLE LOGIQUE D'ICÔNE PAR CLONAGE ---
+        const params = entityCanvas.parametres;
+        tabElement.title = params.description;
+
         // --- Création du contenu de l'onglet (accordéon) ---
         const contentElement = this.tabContentTemplateTarget.content.cloneNode(true).firstElementChild;
         const accordionContainer = contentElement.querySelector('.accordion');
 
-        if (entityCanvas.length > 0) {
-            entityCanvas.forEach(attribute => {
+        // --- MODIFICATION 3 : Utiliser entityCanvas.liste pour l'accordéon ---
+        const accordionList = entityCanvas.liste; // 
+        if (accordionList.length > 0) {
+            accordionList.forEach(attribute => {
                 const accordionItem = this.createAccordionItem(attribute, entity);
                 accordionContainer.appendChild(accordionItem);
             });
