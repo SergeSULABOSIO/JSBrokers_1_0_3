@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\NotificationSinistreRepository;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -105,6 +106,32 @@ class NotificationSinistre
     #[Groups(['list:read'])]
     private ?string $descriptionVictimes = null;
 
+
+    //Attributs calculés
+    #[Groups(['list:read'])]
+    public ?int $attributTest;
+
+    #[Groups(['list:read'])]
+    public ?DateTimeImmutable $dateDernierReglement;
+
+    #[Groups(['list:read'])]
+    public ?int $dureeReglement;
+
+    #[Groups(['list:read'])]
+    public ?array $statusDocumentsAttendus;
+
+    #[Groups(['list:read'])]
+    public ?float $compensationFranchise;
+
+    #[Groups(['list:read'])]
+    public ?float $compensationSoldeAverser;
+
+    #[Groups(['list:read'])]
+    public ?float $compensationVersee;
+
+    #[Groups(['list:read'])]
+    public ?float $compensation;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();
@@ -112,6 +139,9 @@ class NotificationSinistre
         $this->offreIndemnisationSinistres = new ArrayCollection();
         $this->taches = new ArrayCollection();
     }
+
+    
+
 
     public function getId(): ?int
     {

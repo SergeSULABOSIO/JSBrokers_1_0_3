@@ -183,7 +183,29 @@ export default class extends Controller {
                 // Pour un calcul, la valeur est déjà dans 'entity'. On la formate simplement.
                 const calculatedValue = entity[attribute.code];
                 const formatAs = attribute.format || 'Texte'; // Lit le format désiré
-                content.innerHTML = this.formatValue(calculatedValue, formatAs, attribute.unite);
+                // --- NOUVELLE LOGIQUE POUR LE FORMAT ArrayAssoc ---
+                if (formatAs === 'ArrayAssoc' && typeof calculatedValue === 'object' && calculatedValue !== null) {
+                    const list = document.createElement('ul');
+                    list.className = 'accordion-key-value-list';
+
+                    // On boucle sur les paires clé-valeur de l'objet
+                    for (const [key, value] of Object.entries(calculatedValue)) {
+                        const item = document.createElement('li');
+
+                        // On vérifie si la valeur est un nombre pour la formater
+                        const formattedValue = typeof value === 'number'
+                            ? new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+                            : value;
+
+                        item.innerHTML = `<strong>${key} :</strong> <span>${formattedValue}</span>`;
+                        list.appendChild(item);
+                    }
+                    content.appendChild(list);
+
+                } else {
+                    // Comportement par défaut pour les autres formats ('Nombre', 'Date', 'Texte')
+                    content.innerHTML = this.formatValue(calculatedValue, formatAs, attribute.unite);
+                }
                 break;
 
             default: // Gère 'Nombre', 'Date', 'Texte'

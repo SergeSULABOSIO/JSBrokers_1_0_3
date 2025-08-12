@@ -5094,13 +5094,24 @@ class Constante
     public function Notification_Sinistre_getStatusDocumentsAttendus(?NotificationSinistre $notification_sinistre)
     {
         $tabDocuments = [
-            "Docs_attendus" => [],
-            "Docs_fournis" => [],
-            "Docs_manquants" => [],
+            "Attendus" => [],
+            "Fournis" => [],
+            "Manquants" => [],
         ];
         if ($notification_sinistre != null) {
-            $tabDocuments['Docs_attendus'] = $this->getEnterprise()->getModelePieceSinistres();
-            $tabDocuments['Docs_fournis'] = $notification_sinistre->getPieces();
+            $strgDocs = "";
+            foreach ($this->getEnterprise()->getModelePieceSinistres() as $modele) {
+                $strgDocs .= $modele->getNom() . ", ";
+            }
+            $tabDocuments['Attendus'] = $this->getEnterprise()->getModelePieceSinistres();
+            // $tabDocuments['Docs_attendus'] = $this->getEnterprise()->getModelePieceSinistres();
+
+            $strgDocs = "";
+            foreach ($notification_sinistre->getPieces() as $pieceSinistre) {
+                $strgDocs .= $pieceSinistre->getType()->getNom() . ", ";
+            }
+            $tabDocuments['Fournis'] = $notification_sinistre->getPieces();
+            // $tabDocuments['Docs_fournis'] = $notification_sinistre->getPieces();
 
             $manquants = new ArrayCollection();
             foreach ($this->getEnterprise()->getModelePieceSinistres() as $typePiece) {
@@ -5112,15 +5123,28 @@ class Constante
                 }
                 if ($isFournis == false) {
                     if (!$manquants->contains($typePiece)) {
-                        $manquants->add($typePiece);
+                        $manquants->add($typePiece->getNom());
                     }
                 }
             }
-            $tabDocuments['Docs_manquants'] = $manquants;
+            $tabDocuments['Manquants'] = $manquants;
             // dd($tabDocuments, count($tabDocuments['Docs_attendus']), count($tabDocuments['Docs_fournis']));
         }
         return $tabDocuments;
     }
+
+    public function Notification_Sinistre_getStatusDocumentsAttendusNumbers(?NotificationSinistre $notification_sinistre)
+    {
+        $tabDocuments = $this->Notification_Sinistre_getStatusDocumentsAttendus($notification_sinistre);
+        
+        return [
+            "Attendus" => count($tabDocuments["Attendus"]) . " pc(s)",
+            "Fournis" => count($tabDocuments["Fournis"]) . " pc(s)",
+            "Manquants" => count($tabDocuments["Manquants"]) . " pc(s)",
+        ];
+    }
+
+
     public function Notification_Sinistre_getDureeReglement(?NotificationSinistre $notification_sinistre)
     {
         $duree = -1;
@@ -5873,7 +5897,7 @@ class Constante
         }
 
         $statusPieces = $this->Notification_Sinistre_getStatusDocumentsAttendus($notification);
-        $status['texte'] = "Pièces (" . count($statusPieces['Docs_fournis']) . "/" . count($statusPieces['Docs_attendus']) . ")"; //" . count($statusPieces['Docs_manquants']);
+        $status['texte'] = "Pièces (" . count($statusPieces['Fournis']) . "/" . count($statusPieces['Attendus']) . ")"; //" . count($statusPieces['Docs_manquants']);
 
         //extraction d'informations sur la police d'assurance se basant sur la référence fournie
         $policyDetails = $this->Police_getPolicyArrayDetails($notification->getReferencePolice());
@@ -6375,8 +6399,8 @@ class Constante
                         "intitule" => "Status sur pièces attendues",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => "",
-                        "format" => "Texte",
-                        "fonction" => "Notification_Sinistre_getStatusDocumentsAttendus", // Cette fonction prendra l'objet Client entier
+                        "format" => "ArrayAssoc",
+                        "fonction" => "Notification_Sinistre_getStatusDocumentsAttendusNumbers", // Cette fonction prendra l'objet Client entier
                         // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
                     ],
                     [
@@ -6395,15 +6419,6 @@ class Constante
                         "unite" => "",
                         "format" => "Date",
                         "fonction" => "Notification_Sinistre_getDateDernierRgelement", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
-                    ],
-                    [
-                        "code" => "attributTest",
-                        "intitule" => "Ceci est juste pour un test",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => "",
-                        "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getTest", // Cette fonction prendra l'objet Client entier
                         // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
                     ],
                 ],

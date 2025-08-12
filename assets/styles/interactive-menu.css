@@ -441,3 +441,32 @@ html {
     color: #003d7e; /* Un bleu plus foncé au survol */
     text-decoration: underline;
 }
+
+/* Style pour la liste clé-valeur dans l'accordéon */
+.accordion-key-value-list {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0;
+}
+
+.accordion-key-value-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #e9e9e9;
+    font-size: 0.95em;
+}
+
+.accordion-key-value-list li:last-child {
+    border-bottom: none;
+}
+
+.accordion-key-value-list li strong {
+    color: #555;
+    margin-right: 15px;
+}
+
+.accordion-key-value-list li span {
+    font-weight: 500;
+    text-align: right;
+}
