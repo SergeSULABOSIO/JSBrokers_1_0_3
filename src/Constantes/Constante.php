@@ -5136,7 +5136,7 @@ class Constante
     public function Notification_Sinistre_getStatusDocumentsAttendusNumbers(?NotificationSinistre $notification_sinistre)
     {
         $tabDocuments = $this->Notification_Sinistre_getStatusDocumentsAttendus($notification_sinistre);
-        
+
         return [
             "Attendus" => count($tabDocuments["Attendus"]) . " pc(s)",
             "Fournis" => count($tabDocuments["Fournis"]) . " pc(s)",
@@ -6259,8 +6259,10 @@ class Constante
 
     public function getEntityCanvas($object): array
     {
+        $canvas = []; // On initialise un tableau vide
+
         if ($object instanceof NotificationSinistre) {
-            return [
+            $canvas = [
                 "parametres" => [
                     "description" => "Notification Sinistre",
                 ],
@@ -6424,7 +6426,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof Client) {
-            return [
+            $canvas = [
                 "parametres" => [
                     "description" => "Client",
                 ],
@@ -6473,7 +6475,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof Assureur) {
-            return [
+            $canvas = [
                 "parametres" => [
                     "description" => "Assureur",
                 ],
@@ -6522,7 +6524,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof Invite) {
-            return [
+            $canvas = [
                 "parametres" => [
                     "description" => "Invité",
                 ],
@@ -6541,7 +6543,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof OffreIndemnisationSinistre) {
-            return [
+            $canvas = [
                 "parametres" => [
                     "description" => "Offre d'indemnisation",
                 ],
@@ -6584,6 +6586,20 @@ class Constante
                 ],
             ];
         }
+
+        // --- AJOUT : Application automatique de la règle ---
+        // Si un canvas a été défini, on le parcourt pour appliquer la règle.
+        if (!empty($canvas['liste'])) {
+            $canvas['liste'] = array_map(function ($field) {
+                // Si le code est 'id', on force le type à 'Entier'.
+                if ($field['code'] === 'id') {
+                    $field['type'] = 'Entier';
+                }
+                return $field;
+            }, $canvas['liste']);
+        }
+        // --- FIN DE L'AJOUT ---
+
         return [];
     }
 

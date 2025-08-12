@@ -383,6 +383,14 @@ export default class extends Controller {
 
         // 1. D'abord, on formate la valeur principale en fonction de son type
         switch (type) {
+            // --- AJOUT DU NOUVEAU TYPE ---
+            case 'Entier':
+                formattedValue = new Intl.NumberFormat('fr-FR', {
+                    maximumFractionDigits: 0 // La clé est ici : pas de décimales
+                }).format(value);
+                break;
+            // --- FIN DE L'AJOUT ---
+
             case 'Nombre':
                 formattedValue = new Intl.NumberFormat('fr-FR', {
                     minimumFractionDigits: 2,
@@ -392,7 +400,6 @@ export default class extends Controller {
 
             case 'Date':
                 const date = new Date(value);
-                // Si la date est invalide, on retourne la valeur brute
                 formattedValue = isNaN(date.getTime()) ? value : date.toLocaleDateString('fr-FR');
                 break;
 
