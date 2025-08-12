@@ -6378,7 +6378,7 @@ class Constante
                     ],
                     [
                         "code" => "compensationSoldeAverser",
-                        "intitule" => "Solde à versée",
+                        "intitule" => "Solde à verser",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
@@ -6405,9 +6405,9 @@ class Constante
                     ],
                     [
                         "code" => "dureeReglement",
-                        "intitule" => "Durée de règlement",
+                        "intitule" => "Vitesse de règlement",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => "Nombre des jours: ",
+                        "unite" => "En nombre des jours: ",
                         "format" => "Texte",
                         "fonction" => "Notification_Sinistre_getDureeReglement", // Cette fonction prendra l'objet Client entier
                         // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
