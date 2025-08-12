@@ -489,9 +489,9 @@ html {
 }
 
 .accordion-search-bar .search-icon {
-  width: 25px;
-  height: 25px;
-  color: white; /* Gris clair */
+  width: 23px;
+  height: 23px;
+  color: white;
   margin-right: 8px;
   flex-shrink: 0;
   stroke-width: 10;
@@ -502,7 +502,7 @@ html {
   background: transparent;
   border: none;
   outline: none;
-  color: #f0f0f0; /* Gris clair */
+  color: white;
   font-size: 1em;
   min-width: 0;
 
