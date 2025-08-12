@@ -127,6 +127,7 @@ export default class extends Controller {
      * Crée un item (ligne) pour l'accordéon.
      * @param {object} attribute - La description de l'attribut depuis entityCanvas
      * @param {object} entity - L'objet de données
+     * @returns {HTMLElement} L'élément DOM de l'item d'accordéon.
      */
     createAccordionItem(attribute, entity) {
         const item = document.createElement('div');
@@ -143,9 +144,19 @@ export default class extends Controller {
             case 'Relation':
                 const relatedEntity = entity[attribute.code];
                 if (relatedEntity && relatedEntity.id) {
+                    // const link = document.createElement('a');
+                    // link.href = "#";
+                    // link.textContent = relatedEntity[attribute.displayField];
+                    // link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                    // link.dataset.entityId = relatedEntity.id;
+                    // link.dataset.entityType = attribute.targetEntity;
+                    // content.appendChild(link);
                     const link = document.createElement('a');
                     link.href = "#";
-                    link.textContent = relatedEntity[attribute.displayField];
+
+                    const displayText = relatedEntity[attribute.displayField];
+                    link.textContent = (displayText !== undefined && displayText !== null) ? displayText : 'Information non disponible';
+
                     link.dataset.action = "click->espace-de-travail#openRelatedEntity";
                     link.dataset.entityId = relatedEntity.id;
                     link.dataset.entityType = attribute.targetEntity;
@@ -156,24 +167,50 @@ export default class extends Controller {
                 break;
 
             case 'Collection':
-                const collection = entity[attribute.code]; // Récupère le tableau d'objets
+                // const collection = entity[attribute.code]; // Récupère le tableau d'objets
+                // if (collection && collection.length > 0) {
+                //     const ul = document.createElement('ol');
+                //     ul.className = 'accordion-collection-list'; // Pour un style propre
+
+                //     collection.forEach(item => {
+                //         const li = document.createElement('li');
+                //         const link = document.createElement('a');
+                //         link.href = "#";
+                //         link.textContent = item[attribute.displayField]; // Affiche le champ de l'item
+                //         link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                //         link.dataset.entityId = item.id;
+                //         link.dataset.entityType = attribute.targetEntity;
+
+                //         li.appendChild(link);
+                //         ul.appendChild(li);
+                //     });
+                //     content.appendChild(ul);
+                // } else {
+                //     content.innerHTML = 'Aucun élément.';
+                // }
+                const collection = entity[attribute.code];
                 if (collection && collection.length > 0) {
-                    const ul = document.createElement('ol');
-                    ul.className = 'accordion-collection-list'; // Pour un style propre
+                    const ol = document.createElement('ol');
+                    ol.className = 'accordion-collection-list';
 
                     collection.forEach(item => {
-                        const li = document.createElement('li');
-                        const link = document.createElement('a');
-                        link.href = "#";
-                        link.textContent = item[attribute.displayField]; // Affiche le champ de l'item
-                        link.dataset.action = "click->espace-de-travail#openRelatedEntity";
-                        link.dataset.entityId = item.id;
-                        link.dataset.entityType = attribute.targetEntity;
+                        if (item && item.id) {
+                            const li = document.createElement('li');
+                            const link = document.createElement('a');
+                            link.href = "#";
 
-                        li.appendChild(link);
-                        ul.appendChild(li);
+                            const itemDisplayText = item[attribute.displayField];
+                            link.textContent = (itemDisplayText !== undefined && itemDisplayText !== null) ? itemDisplayText : 'Information non disponible';
+
+                            link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                            link.dataset.entityId = item.id;
+                            link.dataset.entityType = attribute.targetEntity;
+
+                            li.appendChild(link);
+                            ol.appendChild(li);
+                        }
                     });
-                    content.appendChild(ul);
+                    content.appendChild(ol);
                 } else {
                     content.innerHTML = 'Aucun élément.';
                 }
@@ -337,24 +374,40 @@ export default class extends Controller {
      * Formate une valeur en fonction de son type.
      */
     formatValue(value, type, unit = '') {
-        if (value === null || typeof value === 'undefined') return 'N/A';
-
-        const unitePrefix = unit ? `${unit} ` : ''; // [cite: 67]
-
-        switch (type) {
-            case 'Nombre': // [cite: 66]
-                return unitePrefix + new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-            case 'Date': // [cite: 68]
-                // Gérer les dates sous forme de string (ex: "2025-06-30T00:00:00+00:00") ou d'objet
-                const date = new Date(value);
-                if (isNaN(date.getTime())) {
-                    return value; // Retourner la valeur originale si la date est invalide
-                }
-                return date.toLocaleDateString('fr-FR'); // ex: 30/06/2025
-            case 'Texte': // [cite: 69]
-            default:
-                return value;
+        // Gère les cas où la valeur est inexistante
+        if (value === null || typeof value === 'undefined') {
+            return 'N/A';
         }
+
+        let formattedValue;
+
+        // 1. D'abord, on formate la valeur principale en fonction de son type
+        switch (type) {
+            case 'Nombre':
+                formattedValue = new Intl.NumberFormat('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(value);
+                break;
+
+            case 'Date':
+                const date = new Date(value);
+                // Si la date est invalide, on retourne la valeur brute
+                formattedValue = isNaN(date.getTime()) ? value : date.toLocaleDateString('fr-FR');
+                break;
+
+            case 'Texte':
+            default:
+                formattedValue = value;
+                break;
+        }
+
+        // 2. Ensuite, on ajoute l'unité comme préfixe si elle est définie
+        if (unit) {
+            return `${unit} ${formattedValue}`;
+        }
+
+        return formattedValue;
     }
 
 
