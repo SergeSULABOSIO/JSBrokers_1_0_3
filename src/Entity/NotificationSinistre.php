@@ -4,7 +4,6 @@ namespace App\Entity;
 
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\NotificationSinistreRepository;
-use DateTime;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -113,7 +112,7 @@ class NotificationSinistre
     public ?int $attributTest;
 
     #[Groups(['list:read'])]
-    public ?DateTime $dateDernierReglement;
+    public ?DateTimeImmutable $dateDernierReglement;
 
     #[Groups(['list:read'])]
     public ?int $dureeReglement;
