@@ -14,6 +14,7 @@ export default class extends Controller {
         "tabContentContainer",
         "tabTemplate",
         "tabContentTemplate",
+        "accordionSearchInput",
     ];
 
     // Cible pour l'élément de menu actuellement actif
@@ -40,6 +41,86 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
     }
+
+
+    /**
+     * Filtre les éléments de l'accordéon en fonction de la saisie.
+     * Déclenché par l'événement "input".
+     */
+    filterAccordion(event) {
+        const input = event.currentTarget;
+        const searchTerm = input.value.trim(); // Pas besoin de toLowerCase() ici
+        const tabContent = input.closest('.tab-content');
+        const accordion = tabContent.querySelector('.accordion');
+        const noResultsMessage = tabContent.querySelector('.no-results-message');
+        const items = accordion.querySelectorAll('.accordion-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const titleElement = item.querySelector('.accordion-title');
+            const toggleIcon = titleElement.querySelector('.accordion-toggle');
+
+            // On s'assure que l'icône existe avant de continuer
+            if (!toggleIcon) return;
+
+            // Étape 1 : Stocker le titre original PROPRE (sans l'icône) une seule fois.
+            if (!titleElement.dataset.originalTitle) {
+                // On clone l'élément, on enlève l'icône, puis on prend le texte restant.
+                const tempClone = titleElement.cloneNode(true);
+                tempClone.querySelector('.accordion-toggle').remove();
+                titleElement.dataset.originalTitle = tempClone.textContent.trim();
+            }
+
+            const originalTitleText = titleElement.dataset.originalTitle;
+
+            // La recherche se fait en ignorant la casse
+            if (originalTitleText.toLowerCase().includes(searchTerm.toLowerCase())) {
+                item.style.display = '';
+                visibleCount++;
+
+                // Étape 2 : Appliquer le surlignage uniquement si un terme est recherché
+                if (searchTerm) {
+                    // Regex pour trouver le terme de recherche sans être sensible à la casse
+                    const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+                    // '$&' dans la chaîne de remplacement réinsère la correspondance originale (préservant la casse)
+                    const highlightedText = originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`);
+                    titleElement.innerHTML = `${toggleIcon.outerHTML} ${highlightedText}`;
+                } else {
+                    // Pas de terme de recherche, on restaure le titre original
+                    titleElement.innerHTML = `${toggleIcon.outerHTML} ${originalTitleText}`;
+                }
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Gérer le message "aucun résultat"
+        noResultsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    /**
+     * Réinitialise le champ de recherche et le filtre.
+     */
+    resetFilter(event) {
+        const input = event.currentTarget.closest('.accordion-search-bar').querySelector('.accordion-search-input');
+        if (input) {
+            input.value = '';
+            // Déclenche manuellement l'événement 'input' pour mettre à jour la liste
+            input.dispatchEvent(new Event('input'));
+        }
+    }
+
+    /**
+     * Donne le focus au champ de recherche quand on clique sur la barre.
+     */
+    focusSearch(event) {
+        // Empêche le focus si on clique sur un bouton
+        if (event.target.tagName.toLowerCase() === 'button' || event.target.closest('button')) {
+            return;
+        }
+        event.currentTarget.querySelector('.accordion-search-input').focus();
+    }
+
 
 
     /**
@@ -325,25 +406,50 @@ export default class extends Controller {
     closeTab(event) {
         event.stopPropagation(); // Empêche l'événement de "bubbler" vers activateTab
 
-        const tabToClose = event.currentTarget.closest('.tab-item');
-        const contentToClose = this.tabContentContainerTarget.querySelector(`#${tabToClose.dataset.tabContentId}`);
+        // const tabToClose = event.currentTarget.closest('.tab-item');
+        // const contentToClose = this.tabContentContainerTarget.querySelector(`#${tabToClose.dataset.tabContentId}`);
 
-        // Supprimer l'onglet et son contenu du DOM
+        // // Supprimer l'onglet et son contenu du DOM
+        // if (tabToClose) tabToClose.remove();
+        // if (contentToClose) contentToClose.remove();
+
+        // // S'il ne reste plus d'onglets, cacher la colonne de visualisation [cite: 26, 31]
+        // if (this.tabContainerTarget.children.length === 0) {
+        //     this.element.classList.remove('visualization-visible');
+        //     this.visualizationColumnTarget.style.display = 'none';
+        // } else {
+        //     // Activer le premier onglet restant s'il y en a un
+        //     const firstTab = this.tabContainerTarget.querySelector('.tab-item');
+        //     if (firstTab) {
+        //         this.activateTab({ currentTarget: firstTab });
+        //     }
+        // }
+
+        let tabToClose;
+        let contentToClose;
+
+        // Détermine si le clic vient de l'en-tête ou de la barre de recherche
+        const headerButton = event.currentTarget.closest('.tab-item');
+        if (headerButton) {
+            tabToClose = headerButton;
+            contentToClose = this.tabContentContainerTarget.querySelector(`#${tabToClose.dataset.tabContentId}`);
+        } else {
+            contentToClose = event.currentTarget.closest('.tab-content');
+            tabToClose = this.tabContainerTarget.querySelector(`[data-tab-content-id='${contentToClose.id}']`);
+        }
+
         if (tabToClose) tabToClose.remove();
         if (contentToClose) contentToClose.remove();
 
-        // S'il ne reste plus d'onglets, cacher la colonne de visualisation [cite: 26, 31]
         if (this.tabContainerTarget.children.length === 0) {
             this.element.classList.remove('visualization-visible');
             this.visualizationColumnTarget.style.display = 'none';
         } else {
-            // Activer le premier onglet restant s'il y en a un
-            const firstTab = this.tabContainerTarget.querySelector('.tab-item');
-            if (firstTab) {
-                this.activateTab({ currentTarget: firstTab });
-            }
+            const lastTab = this.tabContainerTarget.querySelector('.tab-item:last-child');
+            if (lastTab) this.activateTab({ currentTarget: lastTab });
         }
     }
+
 
 
     /**

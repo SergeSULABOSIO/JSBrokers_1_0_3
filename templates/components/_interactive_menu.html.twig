@@ -125,8 +125,27 @@
     {# Template pour le contenu d'un onglet (l'accordéon) #}
     <template data-espace-de-travail-target="tabContentTemplate">
         <div class="tab-content">
+            <div class="accordion-search-bar" data-action="click->espace-de-travail#focusSearch">
+                {{ ux_icon('heroicons:magnifying-glass-solid', { class: 'search-icon' }) }}
+                <input type="text" 
+                    class="accordion-search-input"
+                    placeholder="Filtrer Ici"
+                    data-action="input->espace-de-travail#filterAccordion"
+                    data-espace-de-travail-target="accordionSearchInput"
+                >
+                <button type="button" class="icon-button" data-action="click->espace-de-travail#resetFilter" title="Réinitialiser">
+                    {{ ux_icon('heroicons:x-mark') }}
+                </button>
+                <span class="separator"></span>
+                <button type="button" class="icon-button" data-action="click->espace-de-travail#closeTab" title="Fermer l'onglet">
+                    {{ ux_icon('lucide:log-out') }}
+                </button>
+            </div>
             <div class="accordion" data-controller="accordion">
                 {# L'accordéon avec les détails de l'entité sera généré ici par Stimulus #}
+            </div>
+            <div class="no-results-message" style="display: none;">
+                Aucun attribut ne correspond à votre recherche.
             </div>
         </div>
     </template>
