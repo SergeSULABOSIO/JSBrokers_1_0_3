@@ -5136,6 +5136,10 @@ class Constante
         }
         return $duree;
     }
+    public function Notification_Sinistre_getTest(?NotificationSinistre $notification_sinistre)
+    {
+        return 1986;
+    }
     public function Notification_Sinistre_getDateDernierRgelement(?NotificationSinistre $notification_sinistre)
     {
         $dateDernierRgelement = null;
@@ -6391,6 +6395,15 @@ class Constante
                         "unite" => "",
                         "format" => "Date",
                         "fonction" => "Notification_Sinistre_getDateDernierRgelement", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "attributTest",
+                        "intitule" => "Ceci est juste pour un test",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => "",
+                        "format" => "Nombre",
+                        "fonction" => "Notification_Sinistre_getTest", // Cette fonction prendra l'objet Client entier
                         // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
                     ],
                 ],
