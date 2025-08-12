@@ -5136,7 +5136,7 @@ class Constante
     public function Notification_Sinistre_getStatusDocumentsAttendusNumbers(?NotificationSinistre $notification_sinistre)
     {
         $tabDocuments = $this->Notification_Sinistre_getStatusDocumentsAttendus($notification_sinistre);
-
+        
         return [
             "Attendus" => count($tabDocuments["Attendus"]) . " pc(s)",
             "Fournis" => count($tabDocuments["Fournis"]) . " pc(s)",
@@ -6259,10 +6259,8 @@ class Constante
 
     public function getEntityCanvas($object): array
     {
-        $canvas = []; // On initialise un tableau vide
-
         if ($object instanceof NotificationSinistre) {
-            $canvas = [
+            return [
                 "parametres" => [
                     "description" => "Notification Sinistre",
                 ],
@@ -6270,7 +6268,7 @@ class Constante
                     [
                         "code" => "id",
                         "intitule" => "Identifiant",
-                        "type" => "Nombre",
+                        "type" => "Entier",
                         "unite" => "",
                     ],
                     [
@@ -6426,7 +6424,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof Client) {
-            $canvas = [
+            return [
                 "parametres" => [
                     "description" => "Client",
                 ],
@@ -6434,7 +6432,7 @@ class Constante
                     [
                         "code" => "id",
                         "intitule" => "Identifiant",
-                        "type" => "Nombre",
+                        "type" => "Entier",
                         "unite" => "",
                     ],
                     [
@@ -6475,7 +6473,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof Assureur) {
-            $canvas = [
+            return [
                 "parametres" => [
                     "description" => "Assureur",
                 ],
@@ -6483,7 +6481,7 @@ class Constante
                     [
                         "code" => "id",
                         "intitule" => "Identifiant",
-                        "type" => "Nombre",
+                        "type" => "Entier",
                         "unite" => "",
                     ],
                     [
@@ -6524,7 +6522,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof Invite) {
-            $canvas = [
+            return [
                 "parametres" => [
                     "description" => "Invité",
                 ],
@@ -6532,7 +6530,7 @@ class Constante
                     [
                         "code" => "id",
                         "intitule" => "Identifiant",
-                        "type" => "Nombre",
+                        "type" => "Entier",
                         "unite" => "",
                     ],
                     [
@@ -6543,7 +6541,7 @@ class Constante
                 ],
             ];
         } else if ($object instanceof OffreIndemnisationSinistre) {
-            $canvas = [
+            return [
                 "parametres" => [
                     "description" => "Offre d'indemnisation",
                 ],
@@ -6551,7 +6549,7 @@ class Constante
                     [
                         "code" => "id",
                         "intitule" => "Identifiant",
-                        "type" => "Nombre",
+                        "type" => "Entier",
                         "unite" => "",
                     ],
                     [
@@ -6586,20 +6584,6 @@ class Constante
                 ],
             ];
         }
-
-        // --- AJOUT : Application automatique de la règle ---
-        // Si un canvas a été défini, on le parcourt pour appliquer la règle.
-        if (!empty($canvas['liste'])) {
-            $canvas['liste'] = array_map(function ($field) {
-                // Si le code est 'id', on force le type à 'Entier'.
-                if ($field['code'] === 'id') {
-                    $field['type'] = 'Entier';
-                }
-                return $field;
-            }, $canvas['liste']);
-        }
-        // --- FIN DE L'AJOUT ---
-
         return [];
     }
 
