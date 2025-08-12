@@ -155,7 +155,6 @@ export default class extends Controller {
                 }
                 break;
 
-            // --- NOUVEAU BLOC POUR LE TYPE "COLLECTION" ---
             case 'Collection':
                 const collection = entity[attribute.code]; // Récupère le tableau d'objets
                 if (collection && collection.length > 0) {
@@ -179,7 +178,13 @@ export default class extends Controller {
                     content.innerHTML = 'Aucun élément.';
                 }
                 break;
-            // --- FIN DU NOUVEAU BLOC ---
+
+            case 'Calcul':
+                // Pour un calcul, la valeur est déjà dans 'entity'. On la formate simplement.
+                const calculatedValue = entity[attribute.code];
+                const formatAs = attribute.format || 'Texte'; // Lit le format désiré
+                content.innerHTML = this.formatValue(calculatedValue, formatAs, attribute.unite);
+                break;
 
             default: // Gère 'Nombre', 'Date', 'Texte'
                 const rawValue = entity[attribute.code];

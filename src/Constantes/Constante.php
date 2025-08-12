@@ -6292,13 +6292,13 @@ class Constante
                         "code" => "dommage",
                         "intitule" => "Dommage subbi",
                         "type" => "Nombre",
-                        "unite" => "$",
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     ],
                     [
                         "code" => "evaluationChiffree",
                         "intitule" => "Dommage évalué",
                         "type" => "Nombre",
-                        "unite" => "$",
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     ],
                     [
                         "code" => "descriptionVictimes",
@@ -6319,6 +6319,79 @@ class Constante
                         "type" => "Relation",
                         "targetEntity" => "Invite", // Le nom de la classe de l'entité liée
                         "displayField" => "email" // Le champ à afficher pour le nom du client
+                    ],
+                    // //EXEMPLE AVEC LES PARAMS
+                    // [
+                    //     "code" => "solde",
+                    //     "intitule" => "Solde Dû",
+                    //     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                    //     "unite" => "$",
+                    //     "fonction" => "calculerSoldeClient", // La méthode à appeler sur $constante
+                    //     "params" => ["montantTotalFacture", "montantTotalPaye"]
+                    // ],
+                    //EXEMPLE SANS PARAMS = Càd que la fonction du calculateur a besoin de l'entité elle-même en paramètre pour faire son tavail
+                    [
+                        "code" => "compensation",
+                        "intitule" => "Compensation",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "format" => "Nombre",
+                        "fonction" => "Notification_Sinistre_getCompensation", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "compensationVersee",
+                        "intitule" => "Compensation versée",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "format" => "Nombre",
+                        "fonction" => "Notification_Sinistre_getCompensationVersee", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "compensationSoldeAverser",
+                        "intitule" => "Solde à versée",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "format" => "Nombre",
+                        "fonction" => "Notification_Sinistre_getSoldeAVerser", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "compensationFranchise",
+                        "intitule" => "Franchise appliquée à la compensation",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "format" => "Nombre",
+                        "fonction" => "Notification_Sinistre_getFranchise", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "statusDocumentsAttendus",
+                        "intitule" => "Status sur pièces attendues",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => "",
+                        "format" => "Texte",
+                        "fonction" => "Notification_Sinistre_getStatusDocumentsAttendus", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "dureeReglement",
+                        "intitule" => "Durée de règlement",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => "Nombre des jours: ",
+                        "format" => "Texte",
+                        "fonction" => "Notification_Sinistre_getDureeReglement", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "dateDernierReglement",
+                        "intitule" => "Date du dernier règlement",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => "",
+                        "format" => "Date",
+                        "fonction" => "Notification_Sinistre_getDateDernierRgelement", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
                     ],
                 ],
             ];
@@ -6385,7 +6458,7 @@ class Constante
                     ],
                     [
                         "code" => "nom",
-                        "intitule" => "Nom du client",
+                        "intitule" => "Nom de l'assureur",
                         "type" => "Texte",
                     ],
                     [

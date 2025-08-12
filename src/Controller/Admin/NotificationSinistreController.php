@@ -48,7 +48,7 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    public function index($idEntreprise, Request $request, Constante $constante)
     {
         $page = $request->query->getInt("page", 1);
         $status = [
@@ -57,7 +57,14 @@ class NotificationSinistreController extends AbstractController
             "message" => "Initialisation réussi."
         ];
 
+        // 1. On récupère les données brutes de la base de données
         $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page);
+
+        // 2. On récupère la "recette" d'affichage depuis le canvas
+        $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
+
+        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
+        $this->loadCalculatedValue($entityCanvas, $data, $constante);
 
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
@@ -70,15 +77,51 @@ class NotificationSinistreController extends AbstractController
             'entite_nom' => "NotificationSinistre",
             'racine_url_controleur_php_nom' => "notificationsinistre",
             'controleur_stimulus_nom' => "notificationsinistre-formulaire",
-            'data' => $data,
+            'data' => $data, // $data contient maintenant les entités avec les champs calculés
             'page' => $page,
             'limit' => 100,            // La limite par page
             'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
-            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
+            'entityCanvas' => $entityCanvas,
         ]);
+    }
+
+
+    public function loadCalculatedValue($entityCanvas, $data, Constante $constante)
+    {
+        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
+        // On parcourt chaque entité pour y ajouter les valeurs calculées.
+        foreach ($data as $entity) {
+            // On parcourt la définition du canvas pour trouver les calculs à faire.
+            foreach ($entityCanvas['liste'] as $field) {
+                if ($field['type'] === 'Calcul') {
+                    $functionName = $field['fonction'];
+                    $args = [];
+
+                    if (!empty($field['params'])) {
+                        // Cas 1 : Des paramètres spécifiques sont listés
+                        $paramNames = $field['params'];
+                        $args = array_map(function ($paramName) use ($entity) {
+                            $getter = 'get' . ucfirst($paramName);
+                            return method_exists($entity, $getter) ? $entity->$getter() : null;
+                        }, $paramNames);
+                    } else {
+                        // Cas 2 : On passe l'entité entière
+                        $args[] = $entity;
+                    }
+
+                    // On appelle la fonction du service 'constante'
+                    if (method_exists($constante, $functionName)) {
+                        $calculatedValue = $constante->$functionName(...$args);
+                        // On ajoute la propriété virtuelle à l'objet entité
+                        $entity->{$field['code']} = $calculatedValue;
+                    }
+                }
+            }
+        }
+        // --- FIN DE L'AJOUT ---
     }
 
 
@@ -299,7 +342,7 @@ class NotificationSinistreController extends AbstractController
     }
 
     #[Route('/getlistelementdetails/{idEntreprise}/{idNotificationsinistre}', name: 'getlistelementdetails')]
-    public function getlistelementdetails($idEntreprise, $idNotificationsinistre, Request $request)
+    public function getlistelementdetails($idEntreprise, $idNotificationsinistre, Request $request, Constante $constante)
     {
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -312,16 +355,23 @@ class NotificationSinistreController extends AbstractController
 
         /** @var NotificationSinistre $notificationsinistre */
         $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
+        $data[] = $notificationsinistre;
+
+        // 2. On récupère la "recette" d'affichage depuis le canvas
+        $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
+
+        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
+        $this->loadCalculatedValue($entityCanvas, $data, $constante);
 
         //On se dirie vers la page le formulaire d'édition
         return $this->render('admin/notificationsinistre/elementview.html.twig', [
-            'notificationsinistre' => $notificationsinistre,
+            'notificationsinistre' => $data[0],
             'entreprise' => $entreprise,
             'utilisateur' => $user,
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
-            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
+            'entityCanvas' => $entityCanvas,
         ]);
     }
 
@@ -374,7 +424,7 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/dynamic-query/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
-    public function query($idEntreprise, Request $request)
+    public function query($idEntreprise, Request $request, Constante $constante)
     {
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser(); // Vous pouvez l'utiliser pour des logiques de droits si nécessaire.
@@ -383,6 +433,12 @@ class NotificationSinistreController extends AbstractController
         $requestData = json_decode($request->getContent(), true) ?? [];
         // On appelle le service pour obtenir les résultats
         $reponseData = $this->searchService->search($requestData);
+
+        // 2. On récupère la "recette" d'affichage depuis le canvas
+        $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
+
+        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
+        $this->loadCalculatedValue($entityCanvas, $reponseData["data"], $constante);
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
         return $this->render('components/_list_donnees.html.twig', [
@@ -400,7 +456,7 @@ class NotificationSinistreController extends AbstractController
             'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
-            'entityCanvas' => $this->constante->getEntityCanvas(new NotificationSinistre()),
+            'entityCanvas' => $entityCanvas,
         ]);
     }
 }

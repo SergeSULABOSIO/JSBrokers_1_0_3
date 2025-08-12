@@ -27,8 +27,7 @@ class EspaceDeTravailComponentController extends AbstractController
         private EntityManagerInterface $em,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
-    ) {
-    }
+    ) {}
 
     /**
      * @var array<string, string>
@@ -297,9 +296,9 @@ class EspaceDeTravailComponentController extends AbstractController
 
     #[Route('/api/get-entity-details/{entityType}/{id}', name: 'api_get_entity_details')]
     public function getEntityDetails(
-        string $entityType, 
-        int $id, 
-        EntityManagerInterface $em, 
+        string $entityType,
+        int $id,
+        EntityManagerInterface $em,
         Constante $constante
     ): JsonResponse {
         // Sécurité : Vérifier si l'entité est autorisée
@@ -314,11 +313,50 @@ class EspaceDeTravailComponentController extends AbstractController
             throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
         }
 
-        // On retourne à la fois l'entité et son canvas
-        return $this->json([
+        $entityCanvas = $constante->getEntityCanvas($entity);
+        $responseData = [
             'entity' => $entity,
             'entityType' => $entityType,
-            'entityCanvas' => $constante->getEntityCanvas($entity)
-        ], 200, [], ['groups' => 'list:read']); // Important d'utiliser le groupe de sérialisation
+            'entityCanvas' => $entityCanvas
+        ];
+        $this->loadCalculatedValues($entityCanvas, $entity, $constante);
+
+        // On retourne à la fois l'entité et son canvas
+        return $this->json($responseData, 200, [], ['groups' => 'list:read']); // Important d'utiliser le groupe de sérialisation
+    }
+
+    public function loadCalculatedValues($entityCanvas, $entity, Constante $constante)
+    {
+        // --- MODIFICATION : AJOUT DES VALEURS CALCULÉES ---
+        foreach ($entityCanvas['liste'] as $field) {
+            if ($field['type'] === 'Calcul') {
+                $functionName = $field['fonction'];
+                $args = []; // Initialiser le tableau d'arguments
+
+                // On vérifie si la clé "params" existe et n'est pas vide
+                if (!empty($field['params'])) {
+                    // CAS 1 : Des paramètres spécifiques sont listés (logique existante)
+                    $paramNames = $field['params'];
+                    $args = array_map(function ($paramName) use ($entity) {
+                        $getter = 'get' . ucfirst($paramName);
+                        if (method_exists($entity, $getter)) {
+                            return $entity->$getter();
+                        }
+                        return null;
+                    }, $paramNames);
+                } else {
+                    // CAS 2 : La clé "params" est absente, on passe l'entité entière
+                    $args[] = $entity;
+                }
+
+                // On appelle la fonction du service avec les arguments préparés
+                if (method_exists($constante, $functionName)) {
+                    $calculatedValue = $constante->$functionName(...$args);
+                    // On ajoute le résultat à l'objet entité pour la sérialisation
+                    $entity->{$field['code']} = $calculatedValue;
+                }
+            }
+        }
+        // --- FIN DE LA MODIFICATION ---
     }
 }
