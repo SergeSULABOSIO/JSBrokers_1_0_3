@@ -303,3 +303,63 @@ a:active {
 .table-enhanced tbody tr:last-child td {
     border-bottom: none;
 }
+
+
+/* Style pour la boîte de dialogue de formulaire */
+#form-dialog-modal .modal-content {
+    border-radius: 15px;
+    border: none;
+    overflow: hidden;
+}
+
+#form-dialog-modal .modal-header {
+    background-color: #676767; /* Gris foncé */
+    color: #f0f0f0; /* Gris clair */
+    border-bottom: none;
+    padding: 1.2rem 1.5rem;
+}
+
+#form-dialog-modal .modal-body {
+    background-color: #f0f0f0; /* Gris clair */
+    padding: 1.5rem;
+}
+
+#form-dialog-modal .modal-footer {
+    background-color: #f0f0f0; /* Gris clair */
+    border-top: 1px solid #ddd;
+    padding: 1rem 1.5rem;
+}
+
+/* Style des champs de formulaire */
+#form-dialog-modal .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+#form-dialog-modal .form-control {
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    padding: 0.75rem 1rem;
+}
+
+#form-dialog-modal .form-control:focus {
+    border-color: #0052ff;
+    box-shadow: 0 0 0 0.25rem rgba(0, 82, 255, 0.25);
+}
+
+/* Style pour les messages d'erreur */
+#form-dialog-modal .form-control.is-invalid {
+    border-color: #dc3545;
+}
+
+#form-dialog-modal .invalid-feedback {
+    font-weight: 500;
+}
+
+/* Style du conteneur de feedback (succès/erreur) */
+#form-dialog-modal .feedback-container {
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+}

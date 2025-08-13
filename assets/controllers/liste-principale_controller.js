@@ -17,6 +17,7 @@ export default class extends Controller {
         entite: String,
         controleurphp: String,
         controleursitimulus: String,
+        entityFormCanvas: Object,
     };
 
 
@@ -253,17 +254,17 @@ export default class extends Controller {
         if (selection.length > 1) {
             question = "Etes-vous sûr de vouloir supprimer ces " + selection.length + " élements séléctionnés?";
         }
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-            titre: titre,
-            message: question,
-            action: action,
-            idObjet: -1,
-            selection: selection,
-            controleurPhp: this.controleurphpValue,
-            controleurSitimulus: this.controleurphpValue,
-            idEntreprise: this.identrepriseValue,
-            rubrique: this.rubriqueValue,
-        });
+        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+        //     titre: titre,
+        //     message: question,
+        //     action: action,
+        //     idObjet: -1,
+        //     selection: selection,
+        //     controleurPhp: this.controleurphpValue,
+        //     controleurSitimulus: this.controleurphpValue,
+        //     idEntreprise: this.identrepriseValue,
+        //     rubrique: this.rubriqueValue,
+        // });
     }
 
     handleDeleted(event) {
@@ -290,26 +291,39 @@ export default class extends Controller {
     handleModifyRequest(event) {
         const { titre, action, selectedId } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - handleModifyRequest", event.detail);
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-            titre: titre,
-            action: action,
-            idObjet: selectedId,
-            controleurPhp: this.controleurphpValue,
-            idEntreprise: this.identrepriseValue,
-            rubrique: this.rubriqueValue,
-        });
+        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+        //     titre: titre,
+        //     action: action,
+        //     idObjet: selectedId,
+        //     controleurPhp: this.controleurphpValue,
+        //     idEntreprise: this.identrepriseValue,
+        //     rubrique: this.rubriqueValue,
+        // });
     }
 
     handleAddRequest(event) {
         const { titre, action } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - handleAddRequest", event.detail);
+
+        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+        //     titre: titre,
+        //     action: action,
+        //     idObjet: -1,
+        //     controleurPhp: this.controleurphpValue,
+        //     idEntreprise: this.identrepriseValue,
+        //     rubrique: this.rubriqueValue,
+        // });
+
+        // 1. On crée une entité vide
+        const newEntity = {}; // Ou avec des valeurs par défaut si besoin
+
+        // 2. On récupère le canvas du formulaire (il est déjà dans les data-attributes)
+        const formCanvas = JSON.parse(this.entityFormCanvasValue);
+        
+        // 3. On déclenche l'événement
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-            titre: titre,
-            action: action,
-            idObjet: -1,
-            controleurPhp: this.controleurphpValue,
-            idEntreprise: this.identrepriseValue,
-            rubrique: this.rubriqueValue,
+            entity: newEntity,
+            entityFormCanvas: formCanvas
         });
     }
 
@@ -354,7 +368,7 @@ export default class extends Controller {
             this.selectedEntitiesType = this.rowCheckboxTargets[0].dataset.entityType;
             this.selectedEntitiesCanvas = JSON.parse(this.rowCheckboxTargets[0].dataset.canvas);
             console.log(this.nomControleur + " - ICI Chargement des objets réussi:", this.tabSelectedEntities);
-        }else{
+        } else {
             this.tabSelectedEntities = [];
             this.selectedEntitiesType = null;
             this.selectedEntitiesCanvas = null;

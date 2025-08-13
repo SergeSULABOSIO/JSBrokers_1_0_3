@@ -1,6 +1,6 @@
 // assets/controllers/dialogue_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, EVEN_BOITE_DIALOGUE_CANCELLED, EVEN_BOITE_DIALOGUE_CLOSE, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_BOITE_DIALOGUE_INITIALIZED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_ELEMENT_DELETED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_QUESTION_SUPPRIMER, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
+import { buildCustomEventForElement, defineIcone, EVEN_ACTION_AFFICHER_MESSAGE, EVEN_BOITE_DIALOGUE_INITIALIZED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_QUESTION_NO, getIconeUrl } from './base_controller.js'; // après que l'importation soit automatiquement pas VS Code, il faut ajouter l'extension ".js" à la fin!!!!
 import { Modal } from 'bootstrap'; // ou import { Modal } from 'bootstrap'; si vous voulez seulement Modal
 
 export default class extends Controller {
@@ -34,36 +34,26 @@ export default class extends Controller {
 
     setEcouteurs() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        document.addEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
-        document.addEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
-        document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
-        document.addEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
-        document.addEventListener(EVEN_BOITE_DIALOGUE_CLOSE, this.handleClose.bind(this));
-        document.addEventListener(EVEN_BOITE_DIALOGUE_SUBMITTED, this.handleSubmitted.bind(this));
-
-
-        // this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
-        // this.listePrincipale.addEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+        // document.addEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
+        // document.addEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
+        // document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
+        // document.addEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
+        // document.addEventListener(EVEN_BOITE_DIALOGUE_CLOSE, this.handleClose.bind(this));
+        // document.addEventListener(EVEN_BOITE_DIALOGUE_SUBMITTED, this.handleSubmitted.bind(this));
     }
 
 
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
-        document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
-        document.removeEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
-        document.removeEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
-        document.removeEventListener(EVEN_BOITE_DIALOGUE_CLOSE, this.handleClose.bind(this));
-        document.removeEventListener(EVEN_BOITE_DIALOGUE_SUBMITTED, this.handleSubmitted.bind(this));
-
-
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_OUVRIR, this.handleItemCanAjouter.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_DIALOGUE_FERMER, this.handleFermerBoite.bind(this));
-        // this.listePrincipale.removeEventListener(EVEN_ACTION_AFFICHER_MESSAGE, this.handleDisplayMessage.bind(this));
+        // document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCEL_REQUEST, this.handleCancelRequest.bind(this));
+        // document.removeEventListener(EVEN_BOITE_DIALOGUE_CANCELLED, this.handleCancelled.bind(this));
+        // document.removeEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.handleInitRequest.bind(this));
+        // document.removeEventListener(EVEN_BOITE_DIALOGUE_INITIALIZED, this.handleInitialized.bind(this));
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.notify.bind(this));
+        // document.removeEventListener(EVEN_BOITE_DIALOGUE_CLOSE, this.handleClose.bind(this));
+        // document.removeEventListener(EVEN_BOITE_DIALOGUE_SUBMITTED, this.handleSubmitted.bind(this));
     }
 
 

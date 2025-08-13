@@ -14,6 +14,7 @@
         data-liste-principale-entite-value={{entite_nom}} 
         data-liste-principale-controleurphp-value={{racine_url_controleur_php_nom}} 
         data-liste-principale-controleurstimulus-value={{controleur_stimulus_nom}} 
+        data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
     >
         {# Ce conteneur va aussi utiliser flexbox et cacher tout débordement #}
         <div class="shadow-sm sensible bg-white d-flex flex-column flex-grow-1" style="overflow: hidden;">

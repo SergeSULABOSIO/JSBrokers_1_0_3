@@ -31,29 +31,7 @@
 		>
 			{# Les toasts seront injectés ici par Stimulus #}
 		</div>
-
 		{# LA QUOQUE DE LA BOITE DE DIALOGUE #}
-		<div data-controller="form-dialog" class="modal fade" tabindex="-1" id="form-dialog-modal">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <form data-action="submit->form-dialog#submitForm">
-                        <div class="modal-header">
-                            <h5 class="modal-title" data-form-dialog-target="title">Chargement...</h5>
-                            <button type="button" class="btn-close btn-close-white" data-action="click->form-dialog#close"></button>
-                        </div>
-                        <div class="modal-body" data-form-dialog-target="formBody"></div>
-                        <div class="modal-footer">
-                            <div class="feedback-container me-auto" data-form-dialog-target="feedback"></div>
-                            <button type="button" class="btn btn-secondary" data-action="click->form-dialog#close">Annuler</button>
-                            <button type="submit" class="btn btn-primary" data-form-dialog-target="submitButton">
-                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                                Enregistrer
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-		{# FIN DE LA QUOQUE DE LA BOITE DE DIALOGUE #}
+		{{ include("components/_new_dialogue.html.twig") }}
 	</body>
 </html>
