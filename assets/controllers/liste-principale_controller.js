@@ -317,13 +317,10 @@ export default class extends Controller {
         // 1. On crée une entité vide
         const newEntity = {}; // Ou avec des valeurs par défaut si besoin
 
-        // 2. On récupère le canvas du formulaire (il est déjà dans les data-attributes)
-        const formCanvas = JSON.parse(this.entityFormCanvasValue);
-        
-        // 3. On déclenche l'événement
+        // 2. On déclenche l'événement
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: newEntity,
-            entityFormCanvas: formCanvas
+            entityFormCanvas: this.entityFormCanvasValue
         });
     }
 
