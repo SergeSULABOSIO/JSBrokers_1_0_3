@@ -6275,7 +6275,7 @@ class Constante
                         "requis" => true,
                         "placeholder" => "Choisir le client",
                         // L'URL de l'API qui fournira la liste des options (ex: tous les clients)
-                        "source_url" => "/api/get-entities/Client/" . $idEntreprise,
+                        "source_url" => "/espacedetravail/api/get-entities/Client/" . $idEntreprise,
                         // La clé de l'objet retourné à utiliser pour la valeur de l'option (généralement 'id')
                         "option_value" => "id",
                         // La clé de l'objet retourné à utiliser pour le texte de l'option

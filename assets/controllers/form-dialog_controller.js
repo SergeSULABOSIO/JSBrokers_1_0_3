@@ -22,7 +22,7 @@ export default class extends Controller {
         const { entity, entityFormCanvas } = event.detail;
         this.entity = entity;
         this.canvas = entityFormCanvas;
-        
+
         this.clearFeedback();
         this.buildForm();
         this.modal.show();
@@ -32,21 +32,30 @@ export default class extends Controller {
     buildForm() {
         // Définit le titre (création vs modification)
         const isEditMode = this.entity && this.entity.id;
-        let title = isEditMode 
+        let title = isEditMode
             ? this.canvas.parametres.titre_modification.replace('%id%', this.entity.id)
             : this.canvas.parametres.titre_creation;
         this.titleTarget.textContent = title;
 
         this.formBodyTarget.innerHTML = ''; // Vide le formulaire précédent
-        
+
         this.canvas.champs.forEach(field => {
             const value = this.entity[field.code] || '';
             let inputHtml = '';
-            
-            switch(field.type) {
+
+            switch (field.type) {
                 case 'textarea':
                     inputHtml = `<textarea id="form_${field.code}" name="${field.code}" class="form-control" ${field.requis ? 'required' : ''}>${value}</textarea>`;
                     break;
+
+                // NOUVEAU BLOC POUR LE TYPE "RELATION"
+                case 'relation':
+                    // On crée un <select> avec un ID unique pour le peupler plus tard
+                    inputHtml = `<select id="form_${field.code}" name="${field.code}" class="form-select" ${field.requis ? 'required' : ''}><option value="">Chargement...</option></select>`;
+                    // On lance le chargement des options en arrière-plan
+                    this.loadOptionsForSelect(field, value);
+                    break;
+
                 // Ajoutez d'autres 'case' pour 'select', 'relation', etc.
                 default:
                     inputHtml = `<input type="${field.type}" id="form_${field.code}" name="${field.code}" value="${value}" class="form-control" placeholder="${field.placeholder || ''}" ${field.requis ? 'required' : ''}>`;
@@ -62,6 +71,35 @@ export default class extends Controller {
             this.formBodyTarget.insertAdjacentHTML('beforeend', formGroupHtml);
         });
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INITIALIZED, true, true, {});
+    }
+
+    /**
+     * NOUVELLE FONCTION
+     * Charge les options pour un <select> via un appel AJAX.
+     */
+    async loadOptionsForSelect(fieldConfig, selectedValue) {
+        try {
+            const response = await fetch(fieldConfig.source_url);
+            if (!response.ok) throw new Error('Erreur réseau');
+            
+            const options = await response.json();
+            
+            const selectElement = this.formBodyTarget.querySelector(`#form_${fieldConfig.code}`);
+            selectElement.innerHTML = '<option value="">-- Veuillez sélectionner --</option>'; // Option par défaut
+
+            options.forEach(option => {
+                const isSelected = option[fieldConfig.option_value] == selectedValue;
+                selectElement.insertAdjacentHTML('beforeend', 
+                    `<option value="${option[fieldConfig.option_value]}" ${isSelected ? 'selected' : ''}>
+                        ${option[fieldConfig.option_text]}
+                    </option>`
+                );
+            });
+        } catch (error) {
+            console.error(`Impossible de charger les options pour ${fieldConfig.code}:`, error);
+            const selectElement = this.formBodyTarget.querySelector(`#form_${fieldConfig.code}`);
+            selectElement.innerHTML = '<option value="">Erreur de chargement</option>';
+        }
     }
 
     // Soumet le formulaire en AJAX
@@ -90,7 +128,7 @@ export default class extends Controller {
             if (response.ok) {
                 this.showFeedback('success', result.message);
                 // Émet un événement pour dire aux autres composants (ex: la liste) de se rafraîchir
-                document.dispatchEvent(new CustomEvent('app:list:refresh')); 
+                document.dispatchEvent(new CustomEvent('app:list:refresh'));
                 setTimeout(() => this.modal.hide(), 1500);
             } else {
                 this.showFeedback('danger', result.message);
@@ -132,12 +170,12 @@ export default class extends Controller {
     toggleLoading(isLoading) {
         const buttonText = this.submitButtonTarget.childNodes[2];
         const spinner = this.submitButtonTarget.querySelector('.spinner-border');
-        
+
         this.submitButtonTarget.disabled = isLoading;
         spinner.style.display = isLoading ? 'inline-block' : 'none';
         buttonText.textContent = isLoading ? ' Enregistrement...' : 'Enregistrer';
     }
-    
+
     close() {
         this.modal.hide();
     }
