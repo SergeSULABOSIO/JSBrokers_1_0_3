@@ -361,10 +361,10 @@ class EspaceDeTravailComponentController extends AbstractController
     }
 
     #[Route('/api/get-entities/{entityType}/{idEntreprise}', name: 'api_get_entities', methods: ['GET'])]
-    public function getEntities(string $entityType, int $idEntreprise, EntityManagerInterface $em, JSBDynamicSearchService $jSBDynamicSearchService): JsonResponse
+    public function getEntities(string $entityType, int $idEntreprise, EntityManagerInterface $em): JsonResponse
     {
         // Sécurité : Vérifier si l'entité est autorisée
-        if (!in_array($entityType, jSBDynamicSearchService::$allowedEntities)) {
+        if (!in_array($entityType, JSBDynamicSearchService::$allowedEntities)) {
             throw $this->createAccessDeniedException("Cette entité n'est pas accessible.");
         }
 

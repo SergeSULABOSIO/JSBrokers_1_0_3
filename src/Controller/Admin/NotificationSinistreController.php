@@ -71,8 +71,10 @@ class NotificationSinistreController extends AbstractController
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
 
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
         return $this->render('components/_rubrique_list_index.html.twig', [
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
+            'entreprise' => $entreprise,
             'utilisateur' => $utilisateur,
             'status' => $status, // Contient l'erreur ou les infos de pagination
             'rubrique_nom' => "Notification Sinistre",
@@ -87,7 +89,7 @@ class NotificationSinistreController extends AbstractController
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
             'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre()),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $entreprise->getId()),
         ]);
     }
 
