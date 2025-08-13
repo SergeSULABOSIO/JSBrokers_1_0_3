@@ -359,4 +359,22 @@ class EspaceDeTravailComponentController extends AbstractController
         }
         // --- FIN DE LA MODIFICATION ---
     }
+
+    #[Route('/api/get-entities/{entityType}/{idEntreprise}', name: 'api_get_entities', methods: ['GET'])]
+    public function getEntities(string $entityType, int $idEntreprise, EntityManagerInterface $em, JSBDynamicSearchService $jSBDynamicSearchService): JsonResponse
+    {
+        // Sécurité : Vérifier si l'entité est autorisée
+        if (!in_array($entityType, jSBDynamicSearchService::$allowedEntities)) {
+            throw $this->createAccessDeniedException("Cette entité n'est pas accessible.");
+        }
+
+        $entityClass = 'App\\Entity\\' . $entityType;
+        $repository = $em->getRepository($entityClass);
+        
+        // On récupère toutes les entités. Pour de grandes listes, il faudrait paginer.
+        $entities = $repository->findAll();
+
+        // On retourne les entités en utilisant le groupe de sérialisation
+        return $this->json($entities, 200, [], ['groups' => 'list:read']);
+    }
 }

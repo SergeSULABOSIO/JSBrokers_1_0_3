@@ -5136,7 +5136,7 @@ class Constante
     public function Notification_Sinistre_getStatusDocumentsAttendusNumbers(?NotificationSinistre $notification_sinistre)
     {
         $tabDocuments = $this->Notification_Sinistre_getStatusDocumentsAttendus($notification_sinistre);
-        
+
         return [
             "Attendus" => count($tabDocuments["Attendus"]) . " pc(s)",
             "Fournis" => count($tabDocuments["Fournis"]) . " pc(s)",
@@ -6257,7 +6257,7 @@ class Constante
     }
 
 
-    public function getEntityFormCanvas($object): array
+    public function getEntityFormCanvas($object, $idEntreprise): array
     {
         if ($object instanceof NotificationSinistre) {
             return [
@@ -6265,9 +6265,22 @@ class Constante
                     "titre_creation" => "Nouvelle Notification de Sinistre",
                     "titre_modification" => "Modification de la Notification #%id%", // %id% sera remplacé par l'ID
                     // L'URL de l'API qui recevra les données du formulaire
-                    "endpoint_url" => "/admin/notificationsinistre/api/submit" 
+                    "endpoint_url" => "/admin/notificationsinistre/api/submit"
                 ],
                 "champs" => [
+                    [
+                        "code" => "assure",
+                        "intitule" => "Client ou Assouré",
+                        "type" => "relation",
+                        "requis" => true,
+                        "placeholder" => "Choisir le client",
+                        // L'URL de l'API qui fournira la liste des options (ex: tous les clients)
+                        "source_url" => "/api/get-entities/Client/" . $idEntreprise,
+                        // La clé de l'objet retourné à utiliser pour la valeur de l'option (généralement 'id')
+                        "option_value" => "id",
+                        // La clé de l'objet retourné à utiliser pour le texte de l'option
+                        "option_text" => "nom"
+                    ],
                     [
                         "code" => "referencePolice",
                         "intitule" => "Référence de la police d'assurance",
