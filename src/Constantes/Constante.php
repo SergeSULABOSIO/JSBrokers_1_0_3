@@ -6257,6 +6257,80 @@ class Constante
     }
 
 
+    public function getEntityFormCanvas($object): array
+    {
+        if ($object instanceof NotificationSinistre) {
+            return [
+                "parametres" => [
+                    "titre_creation" => "Nouvelle Notification de Sinistre",
+                    "titre_modification" => "Modification de la Notification #%id%", // %id% sera remplacé par l'ID
+                    // L'URL de l'API qui recevra les données du formulaire
+                    "endpoint_url" => "/admin/notificationsinistre/api/submit" 
+                ],
+                "champs" => [
+                    [
+                        "code" => "referencePolice",
+                        "intitule" => "Référence de la police d'assurance",
+                        "type" => "text", // Corresponds à <input type="text">
+                        "requis" => true,
+                        "placeholder" => "Ex: POL-2025-12345"
+                    ],
+                    [
+                        "code" => "referenceSinistre",
+                        "intitule" => "Référence du sinistre",
+                        "type" => "text", // Corresponds à <input type="text">
+                        "requis" => false,
+                        "placeholder" => "Ex: SIN-2025-12345"
+                    ],
+                    [
+                        "code" => "descriptionDeFait",
+                        "intitule" => "Description détaillée des faits",
+                        "type" => "textarea", // Sera un <textarea>
+                        "requis" => true,
+                        "placeholder" => "Ce qu'il s'est passé ici"
+                    ],
+                    [
+                        "code" => "lieu",
+                        "intitule" => "Lieu où s'est déroulé le fait",
+                        "type" => "text", // Corresponds à <input type="text">
+                        "requis" => false,
+                        "placeholder" => "Ex: Kinshasa"
+                    ],
+                    [
+                        "code" => "descriptionVictimes",
+                        "intitule" => "Détails sur la ou les victimes",
+                        "type" => "text", // Corresponds à <input type="text">
+                        "requis" => true,
+                        "placeholder" => "Ex: Mr. Tom, n°+243828727745, etc."
+                    ],
+                    [
+                        "code" => "occuredAt",
+                        "intitule" => "Date de l'incident",
+                        "type" => "date", // Sera un <input type="date">
+                        "requis" => true,
+                    ],
+                    [
+                        "code" => "dommage",
+                        "intitule" => "Dommages estimés",
+                        "type" => "number", // Sera un <input type="number">
+                        "requis" => false,
+                        "placeholder" => "0.00"
+                    ],
+                    [
+                        "code" => "evaluationChiffree",
+                        "intitule" => "Evaluation chiffrée",
+                        "type" => "number", // Sera un <input type="number">
+                        "requis" => false,
+                        "placeholder" => "0.00"
+                    ],
+                    // Ajoutez d'autres champs de votre entité ici...
+                ]
+            ];
+        }
+        return [];
+    }
+
+
     public function getEntityCanvas($object): array
     {
         if ($object instanceof NotificationSinistre) {

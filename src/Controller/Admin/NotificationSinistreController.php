@@ -25,6 +25,8 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route("/admin/notificationsinistre", name: 'admin.notificationsinistre.')]
 #[IsGranted('ROLE_USER')]
@@ -85,8 +87,12 @@ class NotificationSinistreController extends AbstractController
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
             'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre()),
         ]);
     }
+
+
+
 
 
     public function loadCalculatedValue($entityCanvas, $data, Constante $constante)
@@ -122,6 +128,70 @@ class NotificationSinistreController extends AbstractController
             }
         }
         // --- FIN DE L'AJOUT ---
+    }
+
+
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): JsonResponse
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var Entreprise $entreprise */
+        $entreprise = $invite->getEntreprise();
+
+        /** @var NotificationSinistre $notification */
+        $notification = null;
+
+        $data = json_decode($request->getContent(), true);
+        $notificationId = $data['id'] ?? null;
+
+        if ($notificationId) {
+            // Mode "Modification"
+            $notification = $this->notificationSinistreRepository->find($notificationId);
+            if (!$notification) {
+                return $this->json(['success' => false, 'message' => 'Entité non trouvée.'], 404);
+            }
+        } else {
+            // Mode "Création"
+            $notification = new NotificationSinistre();
+            //Paramètres par défaut
+            $notification->setOccuredAt(new DateTimeImmutable("now"));
+            $notification->setNotifiedAt(new DateTimeImmutable("now"));
+            $notification->setCreatedAt(new DateTimeImmutable("now"));
+            $notification->setInvite($invite);
+        }
+        $notification->setUpdatedAt(new DateTimeImmutable("now"));
+
+        // Utiliser les formulaires Symfony pour la validation est une bonne pratique
+        $form = $this->createForm(NotificationSinistreType::class, $notification);
+        // Le 'false' permet de ne soumettre que les champs présents dans $data
+        $form->submit($data, false);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($notification);
+            $em->flush();
+            return $this->json([
+                'success' => true,
+                'message' => 'Enregistrement réussi !',
+                'entity' => $notification // On peut renvoyer l'entité mise à jour
+            ], 200, [], ['groups' => 'list:read']);
+        }
+
+        // Si le formulaire n'est pas valide, on retourne les erreurs
+        $errors = [];
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
+        }
+
+        return $this->json([
+            'success' => false,
+            'message' => 'Des erreurs de validation sont survenues.',
+            'errors' => $errors
+        ], 422); // 422 = Unprocessable Entity (erreur de validation)
     }
 
 
