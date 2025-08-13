@@ -1,7 +1,7 @@
 // assets/controllers/form-dialog_controller.js
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
-import { buildCustomEventForElement, EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_BOITE_DIALOGUE_INITIALIZED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["title", "formBody", "feedback", "submitButton"];
