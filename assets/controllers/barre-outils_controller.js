@@ -152,7 +152,6 @@ export default class extends Controller {
         buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
             titre: "Modification",
             action: EVEN_CODE_ACTION_MODIFICATION,
-            selectedId: this.tabSelectedCheckBoxs[0],
         });
     }
 

@@ -35,8 +35,11 @@ export default class extends Controller {
      */
     async loadAndBuildForm() {
         const isEditMode = this.entity && this.entity.id;
-        // Le titre peut être simple, le formulaire contiendra les labels détaillés
-        this.titleTarget.textContent = isEditMode ? this.canvas.parametres.titre_modification : this.canvas.parametres.titre_creation;
+        // Définit le titre (création vs modification)
+        let title = isEditMode
+            ? this.canvas.parametres.titre_modification.replace('%id%', this.entity.id)
+            : this.canvas.parametres.titre_creation;
+        this.titleTarget.textContent = title;
 
         // let url = '/admin/notificationsinistre/api/get-form';
         let url = this.canvas.parametres.endpoint_form_url;
@@ -48,11 +51,12 @@ export default class extends Controller {
 
         try {
             const response = await fetch(url);
-            // if (!response.ok) throw new Error('Erreur réseau lors du chargement du formulaire.');
+            if (!response.ok) throw new Error('Erreur réseau lors du chargement du formulaire.');
             const html = await response.text();
             this.formBodyTarget.innerHTML = html;
         } catch (e) {
             this.formBodyTarget.innerHTML = '<div class="alert alert-danger">Impossible de charger le formulaire.</div>';
+            console.error(e);        
         }
     }
 
