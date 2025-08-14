@@ -403,3 +403,15 @@ a:active {
     box-shadow: 0 0 0 0.25rem rgba(0, 82, 255, 0.25);
     outline: none;
 }
+
+/* Style pour les lignes de formulaire avec une couleur de fond personnalisée */
+.form-row-colored {
+    padding-top: 1rem;
+    /* On ajoute un padding horizontal pour que la couleur ne touche pas les bords de la modale */
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+}

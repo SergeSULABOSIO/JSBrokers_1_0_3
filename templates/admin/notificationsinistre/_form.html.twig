@@ -10,8 +10,13 @@
         
         {# Boucle 1 : On parcourt chaque LIGNE ("row") définie dans le layout #}
         {% for row in entityFormCanvas.parametres.form_layout %}
-            <div class="row gx-3"> {# gx-3 ajoute un espacement horizontal entre les colonnes #}
-                
+            {# --- DÉBUT DE LA MODIFICATION --- #}
+            {# On prépare les attributs de style et de classe #}
+            {% set row_style = (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' %}
+            {% set row_class = (row.couleur_fond is defined and row.couleur_fond) ? 'form-row-colored' : '' %}
+
+            <div class="row gx-3 {{ row_class }}" style="{{ row_style }}">
+            {# --- FIN DE LA MODIFICATION --- #}
                 {# On calcule la classe de colonne Bootstrap (ex: 2 colonnes -> col-md-6) #}
                 {% set col_class = 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
 

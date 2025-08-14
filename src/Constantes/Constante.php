@@ -6256,7 +6256,7 @@ class Constante
         return [];
     }
 
-    
+
     public function getEntityFormCanvas($object, $idEntreprise): array
     {
         if ($object instanceof NotificationSinistre) {
@@ -6270,6 +6270,7 @@ class Constante
                     "form_layout" => [
                         // Ligne 1 : 2 colonnes
                         [
+                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["assure"]],
                                 ["champs" => ["assureur"]]
@@ -6277,12 +6278,14 @@ class Constante
                         ],
                         // Ligne 2 : 1 colonne
                         [
+                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["risque"]]
                             ]
                         ],
                         // Ligne 3 : 2 colonnes
                         [
+                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["referencePolice"]],
                                 ["champs" => ["referenceSinistre"]]
@@ -6290,12 +6293,14 @@ class Constante
                         ],
                         // Ligne 4 : 1 colonne
                         [
+                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["descriptionDeFait"]]
                             ]
                         ],
                         // Ligne 5 : 3 colonnes
                         [
+                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["occuredAt"]],
                                 ["champs" => ["notifiedAt"]],
@@ -6304,12 +6309,14 @@ class Constante
                         ],
                         // Ligne 6 : 1 colonne
                         [
+                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["descriptionVictimes"]]
                             ]
                         ],
                         // Ligne 7 : 2 colonnes
                         [
+                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["dommage"]],
                                 ["champs" => ["evaluationChiffree"]]
