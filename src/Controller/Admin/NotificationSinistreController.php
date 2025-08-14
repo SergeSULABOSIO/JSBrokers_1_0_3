@@ -176,11 +176,8 @@ class NotificationSinistreController extends AbstractController
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
-
         /** @var NotificationSinistre $notification */
-        $notification = null;
+        $notification = new NotificationSinistre();
 
         $data = json_decode($request->getContent(), true);
         $notificationId = $data['id'] ?? null;
@@ -199,13 +196,14 @@ class NotificationSinistreController extends AbstractController
             $notification->setNotifiedAt(new DateTimeImmutable("now"));
             $notification->setCreatedAt(new DateTimeImmutable("now"));
             $notification->setInvite($invite);
+            $notification->setDescriptionDeFait("RAS");
         }
         $notification->setUpdatedAt(new DateTimeImmutable("now"));
 
         // Utiliser les formulaires Symfony pour la validation est une bonne pratique
         $form = $this->createForm(NotificationSinistreType::class, $notification);
         // Le 'false' permet de ne soumettre que les champs présents dans $data
-        $form->submit($data, false);
+        $form->submit($data, false); //puisque les données sont fournies ici sous forme de JSON. On ne peut pas utiliser handleRequest
 
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($notification);
@@ -218,14 +216,16 @@ class NotificationSinistreController extends AbstractController
         }
 
         // Si le formulaire n'est pas valide, on retourne les erreurs
+        $messages = "";
         $errors = [];
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
+            $messages .= $error->getMessage() . " | ";
         }
 
         return $this->json([
             'success' => false,
-            'message' => 'Des erreurs de validation sont survenues.',
+            'message' => 'Des erreurs de validation sont survenues. ' . $messages,
             'errors' => $errors
         ], 422); // 422 = Unprocessable Entity (erreur de validation)
     }

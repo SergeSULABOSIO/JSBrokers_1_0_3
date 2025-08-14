@@ -34,22 +34,22 @@ class NotificationSinistreType extends AbstractType
                 'choice_label' => 'nom',
                 'searchable_fields' => ['nom', 'email'],
             ])
-            // ->add('risque', BaseEntityAutocompleteType::class, [
-            //     'class' => Risque::class,
-            //     'label' => "Couverture d'assurance concernée",
-            //     'placeholder' => 'Taper pour chercher un risque...',
-            //     'required' => true,
-            //     'choice_label' => 'nomComplet',
-            //     'searchable_fields' => ['nomComplet', 'code'],
-            // ])
-            // ->add('assure', BaseEntityAutocompleteType::class, [
-            //     'class' => Client::class,
-            //     'label' => "Client concernée",
-            //     'placeholder' => 'Taper pour chercher le client...',
-            //     'required' => true,
-            //     'choice_label' => 'nom',
-            //     'searchable_fields' => ['nom', 'code'],
-            // ])
+            ->add('risque', RisqueAutocompleteField::class, [
+                'class' => Risque::class,
+                'label' => "Couverture d'assurance concernée",
+                'placeholder' => 'Taper pour chercher un risque...',
+                'required' => true,
+                'choice_label' => 'nomComplet',
+                'searchable_fields' => ['nomComplet', 'code'],
+            ])
+            ->add('assure', ClientAutocompleteField::class, [
+                'class' => Client::class,
+                'label' => "Client concernée",
+                'placeholder' => 'Taper pour chercher le client...',
+                'required' => true,
+                'choice_label' => 'nom',
+                'searchable_fields' => ['nom', 'code'],
+            ])
             ->add('referencePolice')
             ->add('referenceSinistre')
             ->add('descriptionDeFait')
@@ -69,6 +69,21 @@ class NotificationSinistreType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => NotificationSinistre::class,
+            // AJOUT 1: Désactive la protection CSRF pour ce formulaire API
+            'csrf_protection' => false,
+
+            // AJOUT 2: Autorise les champs non définis dans le form (comme 'id') à être envoyés
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    /**
+     * AJOUTEZ CETTE MÉTHODE
+     * * En retournant une chaîne vide, on dit à Symfony de ne pas
+     * préfixer les champs du formulaire. Le formulaire n'aura pas de nom racine.
+     */
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

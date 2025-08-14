@@ -20,8 +20,8 @@ class ClientAutocompleteField extends AbstractType
     {
         $resolver->setDefaults([
             'class' => Client::class,
-            'placeholder' => 'Séléctionner le client',
-            'choice_label' => 'nom',
+            // 'placeholder' => 'Séléctionner le client',
+            // 'choice_label' => 'nom',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
 
             // choose which fields to use in the search

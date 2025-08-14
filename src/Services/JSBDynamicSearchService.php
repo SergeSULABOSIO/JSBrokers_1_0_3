@@ -63,7 +63,7 @@ class JSBDynamicSearchService
         $page = max(1, $page);
         $limit = max(1, min(100, $limit));
 
-        if (!$entityName || !in_array($entityName, $this->allowedEntities, true)) {
+        if (!$entityName || !in_array($entityName, self::$allowedEntities, true)) {
             $status = [
                 "error" => "Entité non autorisée.",
                 "code" => 403,

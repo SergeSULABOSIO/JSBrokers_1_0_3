@@ -1,12 +1,13 @@
 // assets/controllers/form-dialog_controller.js
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
-import { buildCustomEventForElement, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_BOITE_DIALOGUE_INITIALIZED } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_BOITE_DIALOGUE_INITIALIZED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["title", "formBody", "feedback", "submitButton"];
 
     connect() {
+        this.nomControleur = "FORM-DIALOG";
         this.modal = new Modal(this.element);
         // Garde une référence à la fonction liée pour le removeEventListener
         this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
@@ -36,13 +37,13 @@ export default class extends Controller {
         const isEditMode = this.entity && this.entity.id;
         // Le titre peut être simple, le formulaire contiendra les labels détaillés
         this.titleTarget.textContent = isEditMode ? this.canvas.parametres.titre_modification : this.canvas.parametres.titre_creation;
-        
+
         // let url = '/admin/notificationsinistre/api/get-form';
         let url = this.canvas.parametres.endpoint_form_url;
         if (isEditMode) {
             url += `/${this.entity.id}`;
         }
-        
+
         this.formBodyTarget.innerHTML = '<div class="text-center p-5"><span class="spinner-border"></span></div>'; // Affiche un spinner de chargement
 
         try {
@@ -50,7 +51,7 @@ export default class extends Controller {
             // if (!response.ok) throw new Error('Erreur réseau lors du chargement du formulaire.');
             const html = await response.text();
             this.formBodyTarget.innerHTML = html;
-        } catch(e) {
+        } catch (e) {
             this.formBodyTarget.innerHTML = '<div class="alert alert-danger">Impossible de charger le formulaire.</div>';
         }
     }
@@ -69,6 +70,10 @@ export default class extends Controller {
             data.id = this.entity.id; // Ajoute l'ID pour la modification
         }
 
+        // --- AJOUTEZ CETTE LIGNE DE DÉBOGAGE ---
+        console.log(this.nomControleur + " - Données envoyées au serveur :", data);
+        // ------------------------------------
+
         try {
             const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
                 method: 'POST',
@@ -81,7 +86,7 @@ export default class extends Controller {
             if (response.ok) {
                 this.showFeedback('success', result.message);
                 // Émet un événement pour dire aux autres composants (ex: la liste) de se rafraîchir
-                document.dispatchEvent(new CustomEvent('app:list:refresh'));
+                document.dispatchEvent(new CustomEvent(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST));
                 setTimeout(() => this.modal.hide(), 1500);
             } else {
                 this.showFeedback('danger', result.message);

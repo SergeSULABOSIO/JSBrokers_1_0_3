@@ -26,7 +26,7 @@ class NotificationSinistre
     #[Groups(['list:read'])]
     private ?string $referenceSinistre = null;
     
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $descriptionDeFait = null;
     
