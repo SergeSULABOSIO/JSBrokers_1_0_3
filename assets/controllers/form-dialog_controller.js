@@ -35,7 +35,7 @@ export default class extends Controller {
     async loadAndBuildForm() {
         const isEditMode = this.entity && this.entity.id;
         // Le titre peut être simple, le formulaire contiendra les labels détaillés
-        this.titleTarget.textContent = isEditMode ? `Modification` : `Création`;
+        this.titleTarget.textContent = isEditMode ? this.canvas.parametres.titre_modification : this.canvas.parametres.titre_creation;
         
         // let url = '/admin/notificationsinistre/api/get-form';
         let url = this.canvas.parametres.endpoint_form_url;
