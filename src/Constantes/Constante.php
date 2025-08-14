@@ -6266,7 +6266,7 @@ class Constante
                     "titre_modification" => "Modification de la Notification #%id%", // %id% sera remplacé par l'ID
                     "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
                     "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
-                    
+
                     // C'est ici que l'on décrit la mise en page souhaitée
                     "form_layout" => [
                         // Ligne 1 : 1 colonne pour l'assuré
@@ -6289,11 +6289,11 @@ class Constante
                         // Ligne 4 : 2 colonnes
                         ["colonnes" => [
                             ["champs" => ["occuredAt"]],
-                            ["champs" => ["notifiedAt"]]
+                            ["champs" => ["notifiedAt"]],
+                            ["champs" => ["lieu"]]
                         ]],
                         ["colonnes" => [
                             ["champs" => ["descriptionVictimes"]],
-                            ["champs" => ["lieu"]]
                         ]],
                         ["colonnes" => [
                             ["champs" => ["dommage"]],
