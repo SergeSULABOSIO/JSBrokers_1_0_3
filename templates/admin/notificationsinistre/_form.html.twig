@@ -9,7 +9,26 @@
                     <div class="{{ col_class }}">
                         {% for field_code in col.champs %}
                             {% if form[field_code] is defined %}
-                                {{ form_row(form[field_code]) }}
+
+                                {# --- DÉBUT DE LA MODIFICATION --- #}
+                                <div class="mb-3">
+                                    {# 1. On affiche le label (le CSS le mettra en italique) #}
+                                    {{ form_label(form[field_code]) }}
+                                    
+                                    {# 2. On crée le conteneur pour l'icône et le champ #}
+                                    <div class="form-input-with-icon">
+                                        {# On affiche l'icône "stylo" choisie #}
+                                        {{ ux_icon('mage:edit-pen', { class: 'input-icon' }) }}
+                                        
+                                        {# On affiche le champ lui-même (input, select, etc.) #}
+                                        {{ form_widget(form[field_code]) }}
+                                    </div>
+                                    
+                                    {# 3. On affiche les erreurs de validation #}
+                                    <div class="form-text text-danger">{{ form_errors(form[field_code]) }}</div>
+                                </div>
+                                {# --- FIN DE LA MODIFICATION --- #}
+
                             {% endif %}
                         {% endfor %}
                     </div>

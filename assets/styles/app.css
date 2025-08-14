@@ -415,3 +415,46 @@ a:active {
     margin-bottom: 1rem;
     border-radius: 8px;
 }
+
+/* Rend tous les labels de formulaire dans la modale en italique */
+#form-dialog-modal .form-label {
+    font-style: italic;
+}
+
+/* Conteneur pour le champ et son icône */
+.form-input-with-icon {
+    position: relative;
+}
+
+/* Positionnement de l'icône permanente */
+.form-input-with-icon .input-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: #b0b0b0; /* Gris clair */
+    pointer-events: none; /* Permet de cliquer sur le champ "à travers" l'icône */
+}
+
+/* Ajoute un padding à gauche sur les champs pour faire de la place à l'icône */
+.form-input-with-icon .form-control,
+.form-input-with-icon .form-select,
+.form-input-with-icon .tom-select-control {
+    padding-left: 40px !important;
+}
+
+/*
+ * Règle spécifique pour corriger l'affichage de l'icône
+ * lorsque le champ est dans un "input-group" de Bootstrap.
+*/
+.input-group > .form-input-with-icon {
+    /*
+     * On s'assure que notre conteneur se comporte comme un élément flexible
+     * pour qu'il s'intègre correctement dans la ligne du "input-group".
+    */
+    display: flex;
+    flex: 1 1 auto;
+    width: 1%;
+}
