@@ -6267,6 +6267,40 @@ class Constante
                     "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
                     "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
                 ],
+                // C'est ici que l'on décrit la mise en page souhaitée
+                "form_layout" => [
+                    // Ligne 1 : 1 colonne pour l'assuré
+                    ["colonnes" => [
+                        ["champs" => ["assure"]],
+                        ["champs" => ["assureur"]]
+                    ]],
+                    ["colonnes" => [
+                        ["champs" => ["risque"]]
+                    ]],
+                    // Ligne 2 : 2 colonnes
+                    ["colonnes" => [
+                        ["champs" => ["referencePolice"]],
+                        ["champs" => ["referenceSinistre"]]
+                    ]],
+                    // Ligne 3 : 1 colonne large
+                    ["colonnes" => [
+                        ["champs" => ["descriptionDeFait"]]
+                    ]],
+                    // Ligne 4 : 2 colonnes
+                    ["colonnes" => [
+                        ["champs" => ["occuredAt"]],
+                        ["champs" => ["notifiedAt"]]
+                    ]],
+                    ["colonnes" => [
+                        ["champs" => ["descriptionVictimes"]],
+                        ["champs" => ["lieu"]]
+                    ]],
+                    ["colonnes" => [
+                        ["champs" => ["dommage"]],
+                        ["champs" => ["evaluationChiffree"]]
+                    ]],
+                    // ... Ajoutez d'autres lignes et champs selon vos besoins
+                ]
             ];
         }
         return [];
