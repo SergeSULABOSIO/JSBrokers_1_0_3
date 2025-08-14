@@ -1,31 +1,44 @@
-{# {{ form_start(form) }}
-    {{ form_widget(form) }}
-{{ form_end(form) }} #}
-
 {# templates/admin/notificationsinistre/_form.html.twig #}
+
+{# On crée une "map" des champs pour retrouver facilement leur configuration par leur "code" #}
+{% set champs_map = {} %}
+{% for champ in entityFormCanvas.liste %}
+    {% set champs_map = champs_map|merge({ (champ.code): champ }) %}
+{% endfor %}
+
 {{ form_start(form) }}
     
-    {# On vérifie que la structure de layout existe dans le canvas #}
+    {# On utilise la structure de layout si elle est définie #}
     {% if entityFormCanvas.parametres.form_layout is defined and entityFormCanvas.parametres.form_layout is not empty %}
         
-        {# Boucle 1 : On parcourt chaque LIGNE ("row") définie dans le layout #}
         {% for row in entityFormCanvas.parametres.form_layout %}
-            <div class="row gx-3"> {# gx-3 ajoute un espacement horizontal entre les colonnes #}
-                
-                {# On calcule la classe de colonne Bootstrap (ex: 2 colonnes -> col-md-6) #}
+            <div class="row gx-3">
                 {% set col_class = 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
-
-                {# Boucle 2 : On parcourt chaque COLONNE ("col") de la ligne #}
                 {% for col in row.colonnes %}
                     <div class="{{ col_class }}">
-
-                        {# Boucle 3 : On parcourt chaque CHAMP ("field_code") de la colonne #}
                         {% for field_code in col.champs %}
-                            
-                            {# On vérifie que ce champ existe bien dans le formulaire avant de l'afficher #}
                             {% if form[field_code] is defined %}
-                                {# On affiche le champ complet (label, widget, erreurs) #}
-                                {{ form_row(form[field_code]) }}
+                                {# On récupère la configuration complète du champ depuis notre map #}
+                                {% set field_config = champs_map[field_code] ?? null %}
+                                
+                                <div class="mb-3">
+                                    {# 1. On affiche le label du champ #}
+                                    {{ form_label(form[field_code], field_config.intitule|default(null)) }}
+                                    
+                                    {# 2. On crée un conteneur pour l'icône et le champ #}
+                                    <div class="form-input-with-icon">
+                                        {# On affiche l'icône si elle est définie dans le canvas #}
+                                        {% if field_config and field_config.icone is defined and field_config.icone %}
+                                            {{ ux_icon(field_config.icone, { class: 'input-icon' }) }}
+                                        {% endif %}
+                                        
+                                        {# On affiche le champ lui-même (input, select, etc.) #}
+                                        {{ form_widget(form[field_code]) }}
+                                    </div>
+                                    
+                                    {# 3. On affiche les erreurs de validation #}
+                                    <div class="form-text text-danger">{{ form_errors(form[field_code]) }}</div>
+                                </div>
                             {% endif %}
                         {% endfor %}
                     </div>
@@ -34,11 +47,9 @@
         {% endfor %}
 
     {% else %}
-        {# Comportement par défaut si "form_layout" n'est pas défini : on affiche tout #}
         {{ form_widget(form) }}
     {% endif %}
 
-    {# form_rest(form) affiche les champs que nous n'avons pas placés manuellement #}
     {{ form_rest(form) }}
 
 {{ form_end(form) }}

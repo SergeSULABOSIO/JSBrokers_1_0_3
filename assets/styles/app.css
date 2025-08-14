@@ -373,3 +373,52 @@ a:active {
     border: none;
     background: transparent;
 }
+
+#form-dialog-modal .form-control,
+#form-dialog-modal .form-select {
+    font-weight: normal; /* Annule tout style "gras" hérité */
+    font-style: normal;  /* Annule tout style "italique" hérité */
+}
+
+/* Supprime les bordures de tous les champs de formulaire dans la modale */
+#form-dialog-modal .form-control,
+#form-dialog-modal .form-select,
+#form-dialog-modal .tom-select-control {
+    border: none;
+    /* ou border-width: 0; */
+}
+
+/* * IMPORTANT : Pour l'accessibilité, nous conservons un effet visuel
+ * lorsque l'utilisateur sélectionne un champ (au focus).
+ * TomSelect (autocomplete) utilise la classe .focus au lieu de la pseudo-classe :focus.
+*/
+#form-dialog-modal .form-control:focus,
+#form-dialog-modal .form-select:focus,
+#form-dialog-modal .tom-select-control.focus {
+    box-shadow: 0 0 0 0.25rem rgba(0, 82, 255, 0.25);
+    outline: none;
+}
+
+/* Conteneur pour le champ et son icône */
+.form-input-with-icon {
+    position: relative;
+}
+
+/* Positionnement de l'icône à l'intérieur du champ */
+.form-input-with-icon .input-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    color: #9ca3af; /* Couleur grise pour l'icône */
+    pointer-events: none; /* Permet de cliquer "à travers" l'icône sur le champ */
+}
+
+/* On décale le texte des champs pour faire de la place à l'icône */
+.form-input-with-icon .form-control,
+.form-input-with-icon .form-select,
+.form-input-with-icon .tom-select-control {
+    padding-left: 40px !important; /* !important est utile ici pour surcharger Bootstrap/TomSelect */
+}
