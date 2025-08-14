@@ -95,7 +95,7 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi($id): Response
+    public function getFormApi($id, Constante $constante): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -126,7 +126,8 @@ class NotificationSinistreController extends AbstractController
 
         // On rend un template qui contient uniquement le formulaire
         return $this->render('admin/notificationsinistre/_form.html.twig', [
-            'form' => $form->createView()
+            'form' => $form->createView(),
+            'entityFormCanvas' => $constante->getEntityFormCanvas(new NotificationSinistre(), $entreprise->getId())
         ]);
     }
 
