@@ -6256,57 +6256,7 @@ class Constante
         return [];
     }
 
-
-    // public function getEntityFormCanvas($object, $idEntreprise): array
-    // {
-    //     if ($object instanceof NotificationSinistre) {
-    //         return [
-    //             "parametres" => [
-    //                 "titre_creation" => "Nouvelle Notification de Sinistre",
-    //                 "titre_modification" => "Modification de la Notification #%id%", // %id% sera remplacé par l'ID
-    //                 "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
-    //                 "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
-
-    //                 // C'est ici que l'on décrit la mise en page souhaitée
-    //                 "form_layout" => [
-    //                     // Ligne 1 : 1 colonne pour l'assuré
-    //                     ["colonnes" => [
-    //                         ["champs" => ["assure"]],
-    //                         ["champs" => ["assureur"]]
-    //                     ]],
-    //                     ["colonnes" => [
-    //                         ["champs" => ["risque"]]
-    //                     ]],
-    //                     // Ligne 2 : 2 colonnes
-    //                     ["colonnes" => [
-    //                         ["champs" => ["referencePolice"]],
-    //                         ["champs" => ["referenceSinistre"]]
-    //                     ]],
-    //                     // Ligne 3 : 1 colonne large
-    //                     ["colonnes" => [
-    //                         ["champs" => ["descriptionDeFait"]]
-    //                     ]],
-    //                     // Ligne 4 : 2 colonnes
-    //                     ["colonnes" => [
-    //                         ["champs" => ["occuredAt"]],
-    //                         ["champs" => ["notifiedAt"]],
-    //                         ["champs" => ["lieu"]]
-    //                     ]],
-    //                     ["colonnes" => [
-    //                         ["champs" => ["descriptionVictimes"]],
-    //                     ]],
-    //                     ["colonnes" => [
-    //                         ["champs" => ["dommage"]],
-    //                         ["champs" => ["evaluationChiffree"]]
-    //                     ]],
-    //                     // ... Ajoutez d'autres lignes et champs selon vos besoins
-    //                 ],
-    //             ],
-    //         ];
-    //     }
-    //     return [];
-    // }
-
+    
     public function getEntityFormCanvas($object, $idEntreprise): array
     {
         if ($object instanceof NotificationSinistre) {
