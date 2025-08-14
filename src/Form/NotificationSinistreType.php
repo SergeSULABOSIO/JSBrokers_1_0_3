@@ -12,12 +12,9 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
-// 1. Assurez-vous que cette ligne 'use' est bien présente
-use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
-use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
 
 
-#[AsEntityAutocompleteField]
+
 class NotificationSinistreType extends AbstractType
 {
     public function __construct(
@@ -29,7 +26,7 @@ class NotificationSinistreType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('assureur', BaseEntityAutocompleteType::class, [
+            ->add('assureur', AssureurAutocompleteField::class, [
                 'class' => Assureur::class,
                 'label' => "Assureur concerné",
                 'placeholder' => "Taper pour chercher l'assureur...",
@@ -37,22 +34,22 @@ class NotificationSinistreType extends AbstractType
                 'choice_label' => 'nom',
                 'searchable_fields' => ['nom', 'email'],
             ])
-            ->add('risque', BaseEntityAutocompleteType::class, [
-                'class' => Risque::class,
-                'label' => "Couverture d'assurance concernée",
-                'placeholder' => 'Taper pour chercher un risque...',
-                'required' => true,
-                'choice_label' => 'nomComplet',
-                'searchable_fields' => ['nomComplet', 'code'],
-            ])
-            ->add('assure', BaseEntityAutocompleteType::class, [
-                'class' => Client::class,
-                'label' => "Client concernée",
-                'placeholder' => 'Taper pour chercher le client...',
-                'required' => true,
-                'choice_label' => 'nom',
-                'searchable_fields' => ['nom', 'code'],
-            ])
+            // ->add('risque', BaseEntityAutocompleteType::class, [
+            //     'class' => Risque::class,
+            //     'label' => "Couverture d'assurance concernée",
+            //     'placeholder' => 'Taper pour chercher un risque...',
+            //     'required' => true,
+            //     'choice_label' => 'nomComplet',
+            //     'searchable_fields' => ['nomComplet', 'code'],
+            // ])
+            // ->add('assure', BaseEntityAutocompleteType::class, [
+            //     'class' => Client::class,
+            //     'label' => "Client concernée",
+            //     'placeholder' => 'Taper pour chercher le client...',
+            //     'required' => true,
+            //     'choice_label' => 'nom',
+            //     'searchable_fields' => ['nom', 'code'],
+            // ])
             ->add('referencePolice')
             ->add('referenceSinistre')
             ->add('descriptionDeFait')

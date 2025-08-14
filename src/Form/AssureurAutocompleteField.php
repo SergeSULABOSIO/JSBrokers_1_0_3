@@ -15,14 +15,14 @@ class AssureurAutocompleteField extends AbstractType
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
     ) {}
-    
+
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'class' => Assureur::class,
-            'placeholder' => "Séléctionnez l'assureur",
-            'choice_label' => 'nom',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
+            // 'placeholder' => "Séléctionnez l'assureur",
+            // 'choice_label' => 'nom',
 
             // choose which fields to use in the search
             // if not passed, *all* fields are used
