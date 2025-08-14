@@ -94,6 +94,40 @@ class NotificationSinistreController extends AbstractController
     }
 
 
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi($id): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var Entreprise $entreprise */
+        $entreprise = $invite->getEntreprise();
+
+        /** @var NotificationSinistre $notification */
+        $notification = null;
+
+        if ($id) {
+            $notification = $this->notificationSinistreRepository->find($id);
+            if (!$notification) {
+                return new Response('Entité non trouvée', 404);
+            }
+        } else {
+            $notification = new NotificationSinistre();
+            $notification->setCreatedAt(new DateTimeImmutable("now"));
+            $notification->setInvite($invite);
+        }
+        $notification->setUpdatedAt(new DateTimeImmutable("now"));
+
+        $form = $this->createForm(NotificationSinistreType::class, $notification);
+
+        // On rend un template qui contient uniquement le formulaire
+        return $this->render('admin/notificationsinistre/_form.html.twig', [
+            'form' => $form->createView()
+        ]);
+    }
 
 
 

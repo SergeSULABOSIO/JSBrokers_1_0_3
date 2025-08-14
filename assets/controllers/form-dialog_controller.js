@@ -24,81 +24,34 @@ export default class extends Controller {
         this.canvas = entityFormCanvas;
 
         this.clearFeedback();
-        this.buildForm();
+        this.loadAndBuildForm();
         this.modal.show();
     }
 
-    // Construit le formulaire à partir du canvas
-    buildForm() {
-        // Définit le titre (création vs modification)
-        const isEditMode = this.entity && this.entity.id;
-        let title = isEditMode
-            ? this.canvas.parametres.titre_modification.replace('%id%', this.entity.id)
-            : this.canvas.parametres.titre_creation;
-        this.titleTarget.textContent = title;
-
-        this.formBodyTarget.innerHTML = ''; // Vide le formulaire précédent
-
-        this.canvas.champs.forEach(field => {
-            const value = this.entity[field.code] || '';
-            let inputHtml = '';
-
-            switch (field.type) {
-                case 'textarea':
-                    inputHtml = `<textarea id="form_${field.code}" name="${field.code}" class="form-control" ${field.requis ? 'required' : ''}>${value}</textarea>`;
-                    break;
-
-                // NOUVEAU BLOC POUR LE TYPE "RELATION"
-                case 'relation':
-                    // On crée un <select> avec un ID unique pour le peupler plus tard
-                    inputHtml = `<select id="form_${field.code}" name="${field.code}" class="form-select" ${field.requis ? 'required' : ''}><option value="">Chargement...</option></select>`;
-                    // On lance le chargement des options en arrière-plan
-                    this.loadOptionsForSelect(field, value);
-                    break;
-
-                // Ajoutez d'autres 'case' pour 'select', 'relation', etc.
-                default:
-                    inputHtml = `<input type="${field.type}" id="form_${field.code}" name="${field.code}" value="${value}" class="form-control" placeholder="${field.placeholder || ''}" ${field.requis ? 'required' : ''}>`;
-            }
-
-            const formGroupHtml = `
-                <div class="mb-3">
-                    <label for="form_${field.code}" class="form-label">${field.intitule}</label>
-                    ${inputHtml}
-                    <div class="invalid-feedback"></div>
-                </div>
-            `;
-            this.formBodyTarget.insertAdjacentHTML('beforeend', formGroupHtml);
-        });
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INITIALIZED, true, true, {});
-    }
-
     /**
-     * NOUVELLE FONCTION
-     * Charge les options pour un <select> via un appel AJAX.
+     * NOUVELLE FONCTION (remplace l'ancienne 'buildForm')
+     * Charge le HTML du formulaire via AJAX et l'injecte dans la modale.
      */
-    async loadOptionsForSelect(fieldConfig, selectedValue) {
-        try {
-            const response = await fetch(fieldConfig.source_url);
-            if (!response.ok) throw new Error('Erreur réseau');
-            
-            const options = await response.json();
-            
-            const selectElement = this.formBodyTarget.querySelector(`#form_${fieldConfig.code}`);
-            selectElement.innerHTML = '<option value="">-- Veuillez sélectionner --</option>'; // Option par défaut
+    async loadAndBuildForm() {
+        const isEditMode = this.entity && this.entity.id;
+        // Le titre peut être simple, le formulaire contiendra les labels détaillés
+        this.titleTarget.textContent = isEditMode ? `Modification` : `Création`;
+        
+        // let url = '/admin/notificationsinistre/api/get-form';
+        let url = this.canvas.parametres.endpoint_form_url;
+        if (isEditMode) {
+            url += `/${this.entity.id}`;
+        }
+        
+        this.formBodyTarget.innerHTML = '<div class="text-center p-5"><span class="spinner-border"></span></div>'; // Affiche un spinner de chargement
 
-            options.forEach(option => {
-                const isSelected = option[fieldConfig.option_value] == selectedValue;
-                selectElement.insertAdjacentHTML('beforeend', 
-                    `<option value="${option[fieldConfig.option_value]}" ${isSelected ? 'selected' : ''}>
-                        ${option[fieldConfig.option_text]}
-                    </option>`
-                );
-            });
-        } catch (error) {
-            console.error(`Impossible de charger les options pour ${fieldConfig.code}:`, error);
-            const selectElement = this.formBodyTarget.querySelector(`#form_${fieldConfig.code}`);
-            selectElement.innerHTML = '<option value="">Erreur de chargement</option>';
+        try {
+            const response = await fetch(url);
+            // if (!response.ok) throw new Error('Erreur réseau lors du chargement du formulaire.');
+            const html = await response.text();
+            this.formBodyTarget.innerHTML = html;
+        } catch(e) {
+            this.formBodyTarget.innerHTML = '<div class="alert alert-danger">Impossible de charger le formulaire.</div>';
         }
     }
 
@@ -117,7 +70,7 @@ export default class extends Controller {
         }
 
         try {
-            const response = await fetch(this.canvas.parametres.endpoint_url, {
+            const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(data)

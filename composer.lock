@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d438622684b76f50d27d4bbfb807ae44",
+    "content-hash": "560aa32ae05931db3ecdb8c898023bb6",
     "packages": [
         {
             "name": "composer/semver",
@@ -7064,25 +7064,25 @@
         },
         {
             "name": "symfony/ux-autocomplete",
-            "version": "v2.22.1",
+            "version": "v2.29.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/ux-autocomplete.git",
-                "reference": "12a298a06dfee5f447ff4a53edb868ac6de214f9"
+                "reference": "852ca8b7434c8e4ba2ceeb90ef69ab49d51a84fd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/ux-autocomplete/zipball/12a298a06dfee5f447ff4a53edb868ac6de214f9",
-                "reference": "12a298a06dfee5f447ff4a53edb868ac6de214f9",
+                "url": "https://api.github.com/repos/symfony/ux-autocomplete/zipball/852ca8b7434c8e4ba2ceeb90ef69ab49d51a84fd",
+                "reference": "852ca8b7434c8e4ba2ceeb90ef69ab49d51a84fd",
                 "shasum": ""
             },
             "require": {
                 "php": ">=8.1",
-                "symfony/dependency-injection": "^6.3|^7.0",
+                "symfony/dependency-injection": "^6.3|^7.0|^8.0",
                 "symfony/deprecation-contracts": "^2.5|^3",
-                "symfony/http-foundation": "^6.3|^7.0",
-                "symfony/http-kernel": "^6.3|^7.0",
-                "symfony/property-access": "^6.3|^7.0"
+                "symfony/http-foundation": "^6.3|^7.0|^8.0",
+                "symfony/http-kernel": "^6.3|^7.0|^8.0",
+                "symfony/property-access": "^6.3|^7.0|^8.0"
             },
             "conflict": {
                 "doctrine/orm": "2.9.0 || 2.9.1"
@@ -7093,18 +7093,18 @@
                 "doctrine/orm": "^2.9.4|^3.0",
                 "fakerphp/faker": "^1.22",
                 "mtdowling/jmespath.php": "^2.6",
-                "symfony/form": "^6.3|^7.0",
-                "symfony/framework-bundle": "^6.3|^7.0",
+                "symfony/form": "^6.3|^7.0|^8.0",
+                "symfony/framework-bundle": "^6.3|^7.0|^8.0",
                 "symfony/maker-bundle": "^1.40",
-                "symfony/options-resolver": "^6.3|^7.0",
-                "symfony/phpunit-bridge": "^6.3|^7.0",
-                "symfony/process": "^6.3|^7.0",
-                "symfony/security-bundle": "^6.3|^7.0",
-                "symfony/twig-bundle": "^6.3|^7.0",
-                "symfony/uid": "^6.3|^7.0",
+                "symfony/options-resolver": "^6.3|^7.0|^8.0",
+                "symfony/phpunit-bridge": "^6.3|^7.0|^8.0",
+                "symfony/process": "^6.3|^7.0|^8.0",
+                "symfony/security-bundle": "^6.3|^7.0|^8.0",
+                "symfony/twig-bundle": "^6.3|^7.0|^8.0",
+                "symfony/uid": "^6.3|^7.0|^8.0",
                 "twig/twig": "^2.14.7|^3.0.4",
                 "zenstruck/browser": "^1.1",
-                "zenstruck/foundry": "1.37.*"
+                "zenstruck/foundry": "^2.0"
             },
             "type": "symfony-bundle",
             "extra": {
@@ -7134,7 +7134,7 @@
                 "symfony-ux"
             ],
             "support": {
-                "source": "https://github.com/symfony/ux-autocomplete/tree/v2.22.1"
+                "source": "https://github.com/symfony/ux-autocomplete/tree/v2.29.1"
             },
             "funding": [
                 {
@@ -7146,11 +7146,15 @@
                     "type": "github"
                 },
                 {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
                     "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-12-05T14:25:02+00:00"
+            "time": "2025-08-08T11:38:41+00:00"
         },
         {
             "name": "symfony/ux-chartjs",

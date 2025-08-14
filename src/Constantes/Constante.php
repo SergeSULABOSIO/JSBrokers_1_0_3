@@ -6264,80 +6264,9 @@ class Constante
                 "parametres" => [
                     "titre_creation" => "Nouvelle Notification de Sinistre",
                     "titre_modification" => "Modification de la Notification #%id%", // %id% sera remplacé par l'ID
-                    // L'URL de l'API qui recevra les données du formulaire
-                    "endpoint_url" => "/admin/notificationsinistre/api/submit"
+                    "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
+                    "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
                 ],
-                "champs" => [
-                    [
-                        "code" => "assure",
-                        "intitule" => "Client ou Assouré",
-                        "type" => "relation",
-                        "requis" => true,
-                        "placeholder" => "Choisir le client",
-                        // L'URL de l'API qui fournira la liste des options (ex: tous les clients)
-                        "source_url" => "/espacedetravail/api/get-entities/Client/" . $idEntreprise,
-                        // La clé de l'objet retourné à utiliser pour la valeur de l'option (généralement 'id')
-                        "option_value" => "id",
-                        // La clé de l'objet retourné à utiliser pour le texte de l'option
-                        "option_text" => "nom"
-                    ],
-                    [
-                        "code" => "referencePolice",
-                        "intitule" => "Référence de la police d'assurance",
-                        "type" => "text", // Corresponds à <input type="text">
-                        "requis" => true,
-                        "placeholder" => "Ex: POL-2025-12345"
-                    ],
-                    [
-                        "code" => "referenceSinistre",
-                        "intitule" => "Référence du sinistre",
-                        "type" => "text", // Corresponds à <input type="text">
-                        "requis" => false,
-                        "placeholder" => "Ex: SIN-2025-12345"
-                    ],
-                    [
-                        "code" => "descriptionDeFait",
-                        "intitule" => "Description détaillée des faits",
-                        "type" => "textarea", // Sera un <textarea>
-                        "requis" => true,
-                        "placeholder" => "Ce qu'il s'est passé ici"
-                    ],
-                    [
-                        "code" => "lieu",
-                        "intitule" => "Lieu où s'est déroulé le fait",
-                        "type" => "text", // Corresponds à <input type="text">
-                        "requis" => false,
-                        "placeholder" => "Ex: Kinshasa"
-                    ],
-                    [
-                        "code" => "descriptionVictimes",
-                        "intitule" => "Détails sur la ou les victimes",
-                        "type" => "text", // Corresponds à <input type="text">
-                        "requis" => true,
-                        "placeholder" => "Ex: Mr. Tom, n°+243828727745, etc."
-                    ],
-                    [
-                        "code" => "occuredAt",
-                        "intitule" => "Date de l'incident",
-                        "type" => "date", // Sera un <input type="date">
-                        "requis" => true,
-                    ],
-                    [
-                        "code" => "dommage",
-                        "intitule" => "Dommages estimés",
-                        "type" => "number", // Sera un <input type="number">
-                        "requis" => false,
-                        "placeholder" => "0.00"
-                    ],
-                    [
-                        "code" => "evaluationChiffree",
-                        "intitule" => "Evaluation chiffrée",
-                        "type" => "number", // Sera un <input type="number">
-                        "requis" => false,
-                        "placeholder" => "0.00"
-                    ],
-                    // Ajoutez d'autres champs de votre entité ici...
-                ]
             ];
         }
         return [];

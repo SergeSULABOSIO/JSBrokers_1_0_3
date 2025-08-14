@@ -48,4 +48,12 @@ return [
         'version' => '5.3.6',
         'type' => 'css',
     ],
+    'tom-select/dist/css/tom-select.default.css' => [
+        'version' => '2.4.3',
+        'type' => 'css',
+    ],
+    'tom-select/dist/css/tom-select.bootstrap4.css' => [
+        'version' => '2.4.3',
+        'type' => 'css',
+    ],
 ];
