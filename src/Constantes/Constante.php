@@ -6270,7 +6270,7 @@ class Constante
                     "form_layout" => [
                         // Ligne 1 : 2 colonnes
                         [
-                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            // "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
                             "colonnes" => [
                                 ["champs" => ["assure"]],
                                 ["champs" => ["assureur"]]
