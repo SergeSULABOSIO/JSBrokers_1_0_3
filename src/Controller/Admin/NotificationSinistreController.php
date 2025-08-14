@@ -117,6 +117,7 @@ class NotificationSinistreController extends AbstractController
         } else {
             $notification = new NotificationSinistre();
             $notification->setCreatedAt(new DateTimeImmutable("now"));
+            $notification->setNotifiedAt(new DateTimeImmutable("now"));
             $notification->setInvite($invite);
         }
         $notification->setUpdatedAt(new DateTimeImmutable("now"));

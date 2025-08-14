@@ -322,6 +322,16 @@ a:active {
 #form-dialog-modal .modal-body {
     background-color: #f0f0f0; /* Gris clair */
     padding: 1.5rem;
+
+    /*
+     * Définit une hauteur maximale à 70% de la hauteur de la fenêtre.
+     * Cela laisse de la place pour l'en-tête et le pied de page de la modale.
+     * Vous pouvez ajuster cette valeur (ex: 65vh, 80vh) selon vos préférences.
+    */
+    max-height: 70vh;
+
+    /* Affiche une barre de défilement verticale uniquement si le contenu dépasse la max-height. */
+    overflow-y: auto;
 }
 
 #form-dialog-modal .modal-footer {
