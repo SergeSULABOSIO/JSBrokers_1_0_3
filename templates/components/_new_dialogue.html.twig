@@ -10,11 +10,21 @@
         <div class="modal-body" data-form-dialog-target="formBody"></div>
         <div class="modal-footer">
           <div class="feedback-container" data-form-dialog-target="feedback"></div>
-          <button type="button" class="btn btn-secondary" data-action="click->form-dialog#close">Annuler</button>
-          <button type="submit" class="btn btn-primary" data-form-dialog-target="submitButton">
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-            Enregistrer
+          
+          {# --- MODIFICATION BOUTON ANNULER --- #}
+          <button type="button" class="btn btn-secondary" data-action="click->form-dialog#close">
+              <twig:UX:Icon name="fluent:calendar-cancel-24-regular" style="width: 25px;" />
+              <span>Annuler</span>
           </button>
+          
+          {# --- MODIFICATION BOUTON ENREGISTRER --- #}
+          <button type="submit" class="btn btn-primary" data-form-dialog-target="submitButton">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+              <twig:UX:Icon name="fa-solid:save" style="width: 23px;" />
+              <span>Enregistrer</span>
+          </button>
+
+
         </div>
       </form>
     </div>
