@@ -36,6 +36,7 @@ export default class extends Controller {
 
         try {
             const response = await fetch(this.listUrlValue);
+            console.log("ICI", this.listUrlValue);
             if (!response.ok) throw new Error('Network response was not ok.');
             const html = await response.text();
             this.listContainerTarget.innerHTML = html;
@@ -192,10 +193,20 @@ export default class extends Controller {
             }
         };
 
+        // --- AJOUT : EXTRAIRE L'ID DU PARENT ---
+        // Extrait l'ID numérique depuis une URL comme "/admin/notificationsinistre/api/102/contacts"
+        const match = this.listUrlValue.match(/\/api\/(\d+)\/contacts/);
+        const parentId = match ? match[1] : null;
+
         // Dispatch un événement global que le contrôleur form-dialog va intercepter
         this.element.dispatchEvent(new CustomEvent(EVEN_BOITE_DIALOGUE_INIT_REQUEST, {
             bubbles: true,
-            detail: { entity, entityFormCanvas }
+            detail: { 
+                entity, 
+                entityFormCanvas,
+                // On passe l'ID du parent dans un objet "context"
+                context: { notificationSinistreId: parentId } 
+            }
         }));
     }
 }

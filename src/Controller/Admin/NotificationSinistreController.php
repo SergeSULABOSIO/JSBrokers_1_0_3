@@ -127,7 +127,7 @@ class NotificationSinistreController extends AbstractController
         // On rend un template qui contient uniquement le formulaire
         return $this->render('admin/notificationsinistre/_form.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas(new NotificationSinistre(), $entreprise->getId())
+            'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId())
         ]);
     }
 
@@ -572,8 +572,44 @@ class NotificationSinistreController extends AbstractController
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
     #[Route('/api/{id}/contacts', name: 'admin.api.notificationsinistre.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(NotificationSinistre $notificationSinistre): Response
+    public function getContactsListApi(int $id, NotificationSinistre $notificationSinistre): Response
     {
+
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var NotificationSinistre $notification */
+        $notification = null;
+
+        // Si l'ID est 0, nous sommes en mode création. On crée une entité vide
+        // pour que le template puisse l'utiliser sans erreur.
+        if ($id === 0) {
+            $notification = new NotificationSinistre();
+            $notification->setCreatedAt(new DateTimeImmutable("now"));
+            $notification->setUpdatedAt(new DateTimeImmutable("now"));
+            $notification->setNotifiedAt(new DateTimeImmutable("now"));
+            $notification->setOccuredAt(new DateTimeImmutable("now"));
+            $notification->setInvite($invite);
+        } else {
+            // Si l'ID est différent de 0, on cherche l'entité en base de données.
+            $notification = $this->notificationSinistreRepository->find($id);
+
+            // Si aucun objet n'est trouvé avec cet ID, on retourne aussi un objet vide
+            // pour éviter une erreur côté client.
+            if (!$notification) {
+                $notification = new NotificationSinistre();
+                $notification->setCreatedAt(new DateTimeImmutable("now"));
+                $notification->setUpdatedAt(new DateTimeImmutable("now"));
+                $notification->setNotifiedAt(new DateTimeImmutable("now"));
+                $notification->setOccuredAt(new DateTimeImmutable("now"));
+                $notification->setInvite($invite);
+            }
+        }
+
+
         return $this->render('admin/notificationsinistre/_contacts_list.html.twig', [
             'notification' => $notificationSinistre,
         ]);

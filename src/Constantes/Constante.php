@@ -6336,10 +6336,10 @@ class Constante
                                         "field_code" => "contacts",
                                         "widget" => "collection-manager",
                                         "options" => [
-                                            "endpoint_list_url" => "/admin/notificationsinistre/api/" . $notificationId . "/contacts",
-                                            "endpoint_item_form_url" => "/admin/contact/api/get-form",
-                                            "endpoint_item_submit_url" => "/admin/contact/api/submit",
-                                            "endpoint_item_delete_url" => "/admin/contact/api/delete",
+                                            "listUrl" => "/admin/notificationsinistre/api/" . $notificationId . "/contacts",
+                                            "itemFormUrl" => "/admin/contact/api/get-form",
+                                            "itemSubmitUrl" => "/admin/contact/api/submit",
+                                            "itemDeleteUrl" => "/admin/contact/api/delete",
                                         ]
                                     ]
                                 ]

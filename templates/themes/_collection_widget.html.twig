@@ -1,7 +1,5 @@
 {# templates/themes/_collection_widget.html.twig #}
 {% block collection_widget %}
-    {% set manager_options = form.vars.attr['data-manager-options'] %}
-
     <div {{ stimulus_controller('collection-manager', manager_options) }} class="collection-manager-accordion">
 
         {# TITRE DE L'ACCORDÉON #}

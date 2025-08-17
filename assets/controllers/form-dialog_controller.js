@@ -20,9 +20,10 @@ export default class extends Controller {
 
     // Ouvre et prépare la boîte de dialogue
     handleOpenRequest(event) {
-        const { entity, entityFormCanvas } = event.detail;
+        const { entity, entityFormCanvas, context } = event.detail;
         this.entity = entity;
         this.canvas = entityFormCanvas;
+        this.context = context || {}; // On stocke le contexte
 
         this.clearFeedback();
         this.loadAndBuildForm();
@@ -74,6 +75,11 @@ export default class extends Controller {
             data.id = this.entity.id; // Ajoute l'ID pour la modification
         }
 
+        // --- AJOUT : INJECTER L'ID DU PARENT ---
+        if (this.context.notificationSinistreId) {
+            data.notificationSinistre = this.context.notificationSinistreId;
+        }
+
         // --- AJOUTEZ CETTE LIGNE DE DÉBOGAGE ---
         console.log(this.nomControleur + " - Données envoyées au serveur :", data);
         // ------------------------------------
@@ -102,7 +108,7 @@ export default class extends Controller {
                         submitUrl: this.canvas.parametres.endpoint_submit_url // L'URL qui a été utilisée
                     }
                 }));
-                
+
                 setTimeout(() => this.modal.hide(), 1500);
             } else {
                 this.showFeedback('danger', result.message);

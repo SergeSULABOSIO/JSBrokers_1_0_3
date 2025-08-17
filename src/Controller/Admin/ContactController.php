@@ -2,26 +2,27 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Contact;
+use App\Entity\Assureur;
+use App\Form\ContactType;
 use App\Entity\Entreprise;
+use App\Form\AssureurType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
-use App\Entity\Assureur;
-use App\Entity\Contact;
-use App\Form\AssureurType;
-use App\Form\ContactType;
-use App\Repository\AssureurRepository;
-use App\Repository\ContactRepository;
+use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
+use App\Repository\ContactRepository;
+use App\Repository\AssureurRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/contact", name: 'admin.contact.')]
 #[IsGranted('ROLE_USER')]
@@ -148,7 +149,7 @@ class ContactController extends AbstractController
     /**
      * Fournit le formulaire HTML pour un contact (nouveau ou existant).
      */
-    #[Route('/get-form/{id?}', name: 'admin.api.contact.get_form', methods: ['GET'])]
+    #[Route('/api/get-form/{id?}', name: 'admin.api.contact.get_form', methods: ['GET'])]
     public function getFormApi(?Contact $contact): Response
     {
         if (!$contact) {
@@ -165,10 +166,11 @@ class ContactController extends AbstractController
     /**
      * Traite la soumission du formulaire de contact (création ou modification).
      */
-    #[Route('/submit', name: 'admin.api.contact.submit', methods: ['POST'])]
+    #[Route('/api/submit', name: 'admin.api.contact.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
         $data = json_decode($request->getContent(), true);
+        /** @var Contact $contact */
         $contact = isset($data['id']) && $data['id'] ? $em->getRepository(Contact::class)->find($data['id']) : new Contact();
 
         if (!$contact) {
@@ -179,6 +181,15 @@ class ContactController extends AbstractController
         $form->submit($data, false); // Le 'false' permet de ne pas vider les champs non soumis
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // --- AJOUT : ASSOCIER LA NOTIFICATION PARENTE ---
+            if (isset($data['notificationSinistre'])) {
+                $notification = $em->getRepository(NotificationSinistre::class)->find($data['notificationSinistre']);
+                if ($notification) {
+                    $contact->setNotificationSinistre($notification);
+                }
+            }
+            // --- FIN DE L'AJOUT ---
+
             $em->persist($contact);
             $em->flush();
             return $this->json([
@@ -198,7 +209,7 @@ class ContactController extends AbstractController
     /**
      * Supprime un contact.
      */
-    #[Route('/delete/{id}', name: 'admin.api.contact.delete', methods: ['DELETE'])]
+    #[Route('/api/delete/{id}', name: 'admin.api.contact.delete', methods: ['DELETE'])]
     public function deleteApi(Contact $contact, EntityManagerInterface $em): Response
     {
         try {
