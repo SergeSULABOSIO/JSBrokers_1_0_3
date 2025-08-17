@@ -16,6 +16,7 @@ use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 
 
@@ -122,9 +123,30 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Evaluation ciffrée",
                 ],
             ])
+            
+            // ->add('contacts', CollectionType::class, [
+            //     'label' => "Liste des personnes clées, à contacter pour tout ce qui concerne cette reclamation.",
+            //     'entry_type' => ContactType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => true,
+            //     'allow_delete' => true,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            // ])
+            ->add('contacts', CollectionType::class, [
+                'label' => "Liste des contacts", // Sera surchargé par le widget mais bon à garder
+                'help' => "Personnes clées, à contacter pour tout ce qui concerne cette réclamation.",
+                'entry_type' => ContactType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                // On indique que ce champ ne doit pas être mappé directement
+                // car on le gère entièrement en AJAX.
+                'mapped' => false,
+            ])
 
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            //->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 

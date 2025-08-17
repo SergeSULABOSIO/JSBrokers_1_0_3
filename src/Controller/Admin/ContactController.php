@@ -144,4 +144,69 @@ class ContactController extends AbstractController
             'idEntreprise' => $idEntreprise,
         ]);
     }
+
+    /**
+     * Fournit le formulaire HTML pour un contact (nouveau ou existant).
+     */
+    #[Route('/get-form/{id?}', name: 'admin.api.contact.get_form', methods: ['GET'])]
+    public function getFormApi(?Contact $contact): Response
+    {
+        if (!$contact) {
+            $contact = new Contact();
+        }
+
+        $form = $this->createForm(ContactType::class, $contact);
+
+        return $this->render('admin/contact/_form.html.twig', [
+            'form' => $form->createView(),
+        ]);
+    }
+
+    /**
+     * Traite la soumission du formulaire de contact (création ou modification).
+     */
+    #[Route('/submit', name: 'admin.api.contact.submit', methods: ['POST'])]
+    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        $contact = isset($data['id']) && $data['id'] ? $em->getRepository(Contact::class)->find($data['id']) : new Contact();
+
+        if (!$contact) {
+            return $this->json(['message' => 'Contact non trouvé'], Response::HTTP_NOT_FOUND);
+        }
+
+        $form = $this->createForm(ContactType::class, $contact);
+        $form->submit($data, false); // Le 'false' permet de ne pas vider les champs non soumis
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($contact);
+            $em->flush();
+            return $this->json([
+                'message' => 'Contact enregistré avec succès!',
+                'contact' => ['id' => $contact->getId()] // Retourne l'ID pour référence
+            ]);
+        }
+
+        // Gestion des erreurs de validation
+        $errors = [];
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
+        }
+        return $this->json(['message' => 'Veuillez corriger les erreurs', 'errors' => $errors], Response::HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * Supprime un contact.
+     */
+    #[Route('/delete/{id}', name: 'admin.api.contact.delete', methods: ['DELETE'])]
+    public function deleteApi(Contact $contact, EntityManagerInterface $em): Response
+    {
+        try {
+            $em->remove($contact);
+            $em->flush();
+            return $this->json(['message' => 'Contact supprimé avec succès.']);
+        } catch (\Exception $e) {
+            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

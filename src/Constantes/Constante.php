@@ -6260,6 +6260,10 @@ class Constante
     public function getEntityFormCanvas($object, $idEntreprise): array
     {
         if ($object instanceof NotificationSinistre) {
+            // L'ID est nécessaire pour construire les endpoints, assurons-nous qu'il est accessible.
+            // En mode création, l'ID sera null, nous gérerons ce cas côté client.
+            $notificationId = $object->getId() ?? 0;
+
             return [
                 "parametres" => [
                     "titre_creation" => "Nouvelle Notification de Sinistre",
@@ -6270,7 +6274,7 @@ class Constante
                     "form_layout" => [
                         // Ligne 1 : 2 colonnes
                         [
-                            // "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            // "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["assure"]],
                                 ["champs" => ["assureur"]]
@@ -6278,14 +6282,14 @@ class Constante
                         ],
                         // Ligne 2 : 1 colonne
                         [
-                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["risque"]]
                             ]
                         ],
                         // Ligne 3 : 2 colonnes
                         [
-                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["referencePolice"]],
                                 ["champs" => ["referenceSinistre"]]
@@ -6293,14 +6297,14 @@ class Constante
                         ],
                         // Ligne 4 : 1 colonne
                         [
-                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["descriptionDeFait"]]
                             ]
                         ],
                         // Ligne 5 : 3 colonnes
                         [
-                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["occuredAt"]],
                                 ["champs" => ["notifiedAt"]],
@@ -6309,17 +6313,36 @@ class Constante
                         ],
                         // Ligne 6 : 1 colonne
                         [
-                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["descriptionVictimes"]]
                             ]
                         ],
                         // Ligne 7 : 2 colonnes
                         [
-                            "couleur_fond" => "white", // Un bleu très clair (AliceBlue)
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["dommage"]],
                                 ["champs" => ["evaluationChiffree"]]
+                            ]
+                        ],
+                        // Ligne 8 : Collection des contacts
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                // Dans la section "champs" de form_layout
+                                "champs" => [
+                                    [
+                                        "field_code" => "contacts",
+                                        "widget" => "collection-manager",
+                                        "options" => [
+                                            "endpoint_list_url" => "/admin/notificationsinistre/api/" . $notificationId . "/contacts",
+                                            "endpoint_item_form_url" => "/admin/contact/api/get-form",
+                                            "endpoint_item_submit_url" => "/admin/contact/api/submit",
+                                            "endpoint_item_delete_url" => "/admin/contact/api/delete",
+                                        ]
+                                    ]
+                                ]
                             ]
                         ],
                     ],

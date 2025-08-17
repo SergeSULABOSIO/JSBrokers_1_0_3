@@ -422,3 +422,131 @@ a:active {
     align-items: center;
     gap: 0.5rem; /* Crée un espace entre l'icône and le texte */
 }
+
+/* --- Conteneur principal de l'accordéon --- */
+.collection-manager-accordion {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+/* --- Titre de l'accordéon --- */
+.accordion-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.title-left-block {
+    flex-grow: 1;
+}
+
+.title-line-1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-icon {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #6c757d;
+    width: 20px;
+    text-align: center;
+}
+
+.field-label {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #343a40; /* Gris foncé [cite: 22] */
+}
+
+.badge {
+    font-style: italic; /* Italique [cite: 23] */
+    font-weight: bold;
+    transform: translateY(-5px); /* Décalage vers le haut [cite: 24] */
+    background-color: #0d6efd !important; /* Bleu cobalt [cite: 23] */
+}
+
+.title-line-2 {
+    padding-left: 30px; /* Aligner avec le label */
+    font-size: 0.8em;
+    color: #a0a0a0; /* Gris clair [cite: 26] */
+}
+
+.title-right-block {
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 0; /* Caché par défaut */
+    visibility: hidden;
+}
+
+/* --- Contenu de l'accordéon (liste) --- */
+.accordion-content {
+    padding: 5px;
+    background-color: #ffffff;
+    max-height: 400px; /* Hauteur fixe [cite: 31] */
+    overflow-y: auto; /* Barre de défilement si nécessaire [cite: 31] */
+}
+
+/* --- Style pour un élément de la liste --- */
+.collection-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.collection-item:last-child {
+    border-bottom: none;
+}
+
+.collection-item:hover {
+    background-color: #f5f5f5; /* Sensible au survol [cite: 32] */
+}
+
+.collection-item.selected {
+    background-color: #e7f1ff; /* Couleur pour la sélection [cite: 32] */
+}
+
+.item-icon {
+    margin-right: 12px;
+    color: #6c757d;
+}
+
+.item-text {
+    flex-grow: 1;
+}
+
+.text-main {
+    font-weight: 500;
+}
+
+.text-secondary {
+    font-size: 0.85em;
+    color: #a0a0a0; /* Gris clair, italique [cite: 37] */
+}
+
+/* --- Boutons d'action flottants --- */
+.item-actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 5px;
+    padding: 2px 5px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    opacity: 0; /* Caché par défaut */
+    transition: opacity 0.2s ease;
+}
+.item-actions .btn {
+    color: #343a40;
+}

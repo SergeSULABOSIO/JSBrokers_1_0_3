@@ -53,13 +53,6 @@ class ContactType extends AbstractType
                     'placeholder' => "Fonction",
                 ],
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
         ;
     }
 
@@ -67,7 +60,21 @@ class ContactType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Contact::class,
-            'parent_object' => null, // l'objet parent
+            // AJOUT 1: Désactive la protection CSRF pour ce formulaire API
+            'csrf_protection' => false,
+
+            // AJOUT 2: Autorise les champs non définis dans le form (comme 'id') à être envoyés
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    /**
+     * AJOUTEZ CETTE MÉTHODE
+     * * En retournant une chaîne vide, on dit à Symfony de ne pas
+     * préfixer les champs du formulaire. Le formulaire n'aura pas de nom racine.
+     */
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

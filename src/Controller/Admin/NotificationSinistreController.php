@@ -567,4 +567,15 @@ class NotificationSinistreController extends AbstractController
             'entityCanvas' => $entityCanvas,
         ]);
     }
+
+    /**
+     * Retourne la liste des contacts pour une notification de sinistre donnée.
+     */
+    #[Route('/api/{id}/contacts', name: 'admin.api.notificationsinistre.get_contacts', methods: ['GET'])]
+    public function getContactsListApi(NotificationSinistre $notificationSinistre): Response
+    {
+        return $this->render('admin/notificationsinistre/_contacts_list.html.twig', [
+            'notification' => $notificationSinistre,
+        ]);
+    }
 }

@@ -89,8 +89,20 @@ export default class extends Controller {
 
             if (response.ok) {
                 this.showFeedback('success', result.message);
-                // Émet un événement pour dire aux autres composants (ex: la liste) de se rafraîchir
+
+                // ÉVÉNEMENT 1: Pour rafraîchir la liste principale (ex: table des notifications)
                 document.dispatchEvent(new CustomEvent(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST));
+
+                // NOUVEL ÉVÉNEMENT 2: Pour notifier les autres composants (comme notre collection-manager)
+                this.element.dispatchEvent(new CustomEvent('form-dialog:success', {
+                    bubbles: true,
+                    detail: {
+                        message: result.message,
+                        entity: result.contact, // L'entité retournée par le serveur
+                        submitUrl: this.canvas.parametres.endpoint_submit_url // L'URL qui a été utilisée
+                    }
+                }));
+                
                 setTimeout(() => this.modal.hide(), 1500);
             } else {
                 this.showFeedback('danger', result.message);

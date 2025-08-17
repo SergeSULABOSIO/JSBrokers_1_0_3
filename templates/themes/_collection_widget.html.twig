@@ -1,0 +1,46 @@
+{# templates/themes/_collection_widget.html.twig #}
+{% block collection_widget %}
+    {% set manager_options = form.vars.attr['data-manager-options'] %}
+
+    <div {{ stimulus_controller('collection-manager', manager_options) }} class="collection-manager-accordion">
+
+        {# TITRE DE L'ACCORDÉON #}
+        <div class="accordion-title"
+             data-action="
+                mouseenter->collection-manager#showAddButton
+                mouseleave->collection-manager#hideAddButton
+             "
+        >
+            <div class="title-left-block">
+                {# Ligne 1 #}
+                <div class="title-line-1">
+                    <span class="toggle-icon" data-action="click->collection-manager#toggleAccordion">+</span>
+                    <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
+                    <span class="badge bg-primary" data-collection-manager-target="countBadge" style="display: none;">0</span>
+                </div>
+                {# Ligne 2 (Help text) #}
+                {% if form.vars.help %}
+                    <div class="title-line-2 form-text"><em>{{ form.vars.help }}</em></div>
+                {% endif %}
+            </div>
+            <div class="title-right-block" data-collection-manager-target="addButtonContainer">
+                <button type="button" class="btn btn-sm btn-light" data-action="click->collection-manager#addItem">
+                    <twig:UX:Icon name="gridicons:add" style="width: 18px;" />
+                </button>
+            </div>
+        </div>
+
+        {# CONTENU DE L'ACCORDÉON (la liste) #}
+        <div class="accordion-content" data-collection-manager-target="contentPanel" style="display: none;">
+            <div class="list-container" data-collection-manager-target="listContainer">
+                {# La liste des contacts sera chargée ici via AJAX #}
+                <div class="text-center p-5"><span class="spinner-border"></span> Chargement...</div>
+            </div>
+        </div>
+    </div>
+
+    {# On cache le rendu par défaut de Symfony #}
+    <div style="display:none;">
+        {{- form_widget(form) -}}
+    </div>
+{% endblock %}
