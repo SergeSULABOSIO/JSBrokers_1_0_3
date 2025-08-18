@@ -290,7 +290,7 @@ export default class extends Controller {
 
     handleModifyRequest(event) {
         const { titre, action } = event.detail; // Récupère les données de l'événement
-        // console.log(this.nomControleur + " - handleModifyRequest", event.detail, this.tabSelectedEntities);
+        console.log(this.nomControleur + " - handleModifyRequest", event.detail, this.tabSelectedEntities);
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: this.tabSelectedEntities[0],
             entityFormCanvas: this.entityFormCanvasValue

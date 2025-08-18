@@ -9,6 +9,15 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "FORM-DIALOG";
         this.modal = new Modal(this.element);
+
+        // --- AJOUTEZ CE BLOC DE DÉBOGAGE ---
+        console.log("FORM-DIALOG Controller connected to:", this.element);
+        if (!this.hasFormBodyTarget) {
+            console.error("ERREUR: La cible 'formBody' est manquante lors de la connexion du contrôleur !");
+        }
+        // --- FIN DU BLOC DE DÉBOGAGE ---
+
+        
         // Garde une référence à la fonction liée pour le removeEventListener
         this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
         document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.boundHandleOpenRequest);
@@ -24,6 +33,7 @@ export default class extends Controller {
         this.entity = entity;
         this.canvas = entityFormCanvas;
         this.context = context || {}; // On stocke le contexte
+        console.log(this.nomControleur + " - handleOpenRequest", event.detail);
 
         this.clearFeedback();
         this.loadAndBuildForm();
@@ -142,9 +152,19 @@ export default class extends Controller {
     }
 
     clearFeedback() {
-        this.formBodyTarget.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        this.feedbackTarget.className = '';
-        this.feedbackTarget.textContent = '';
+        // VÉRIFICATION : On utilise "has...Target" pour s'assurer que la cible existe
+        if (this.hasFormBodyTarget) {
+            console.log(this.nomControleur + " - clearFeedback", this.formBodyTarget);
+            this.formBodyTarget.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        }
+        if (this.hasFeedbackTarget) {
+            this.feedbackTarget.className = '';
+            this.feedbackTarget.textContent = '';
+        }
+        
+        // this.formBodyTarget.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        // this.feedbackTarget.className = '';
+        // this.feedbackTarget.textContent = '';
     }
 
     toggleLoading(isLoading) {
