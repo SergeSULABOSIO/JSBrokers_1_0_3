@@ -18,7 +18,7 @@
 			<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 		{% endblock %}
 	</head>
-	<body>
+	<body data-controller="dialog-manager">
 		{# Conteneur pour le corps de la page #}
 		{% block body %}{% endblock %}
 		{# Conteneur pour les notifications (toasts) #}
@@ -31,7 +31,5 @@
 		>
 			{# Les toasts seront injectés ici par Stimulus #}
 		</div>
-		{# LA QUOQUE DE LA BOITE DE DIALOGUE #}
-		{{ include("components/_new_dialogue.html.twig") }}
 	</body>
 </html>
