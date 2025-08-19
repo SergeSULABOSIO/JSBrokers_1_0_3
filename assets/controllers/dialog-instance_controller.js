@@ -8,24 +8,40 @@ import { Modal } from 'bootstrap';
 export default class extends Controller {
 
     /**
+     * La méthode connect() est appelée par Stimulus LUI-MÊME
+     * une fois que le contrôleur est bien attaché à l'élément du DOM.
+     * C'est le moment idéal et garanti pour démarrer notre logique.
+     */
+    connect() {
+        // On récupère les données que le dialog-manager a cachées pour nous.
+        const detail = this.element.dialogDetail;
+
+        if (detail) {
+            // On lance notre logique d'initialisation.
+            this.start(detail);
+        } else {
+            console.error("L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !");
+        }
+    }
+
+
+    /**
      * Initialise le contrôleur avec les données de la demande.
      * C'est le point d'entrée après sa création par le dialog-manager.
      */
-    async initialize(detail) {
+    async start(detail) {
         this.canvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.context = detail.context || {};
         
-        // Charge le contenu complet (header, body, footer) de la modale
         await this.loadFullDialogContent();
 
-        // Initialise et affiche la modale Bootstrap
-        this.modal = new Modal(this.element.closest('.modal'));
+        const modalNode = this.element.closest('.modal');
+        this.modal = new Modal(modalNode);
         this.modal.show();
 
-        // Ajoute un écouteur pour s'auto-détruire du DOM après la fermeture
-        this.element.closest('.modal').addEventListener('hidden.bs.modal', () => {
-            this.element.closest('.modal').remove();
+        modalNode.addEventListener('hidden.bs.modal', () => {
+            modalNode.remove();
         });
     }
 

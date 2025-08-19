@@ -100,13 +100,13 @@ export default class extends Controller {
 
     organizeButtons(event) {
         let { idObjet, menuX, menuY, selection } = event.detail;
-        
+
         this.btOuvrirTarget.style.display = "none";
         this.btModifierTarget.style.display = "none";
         this.btSupprimerTarget.style.display = "none";
-        
+
         console.log(this.nomControleur + " - Organisation des boutons - selection:", selection);
-        
+
         if (selection.length != 0) {
             if (selection.length == 1) {
                 this.btModifierTarget.style.display = "block";
@@ -183,10 +183,11 @@ export default class extends Controller {
     context_action_modifier(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
-            titre: "Modification",
-            action: EVEN_CODE_ACTION_MODIFICATION,
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
+        //     titre: "Modification",
+        //     action: EVEN_CODE_ACTION_MODIFICATION,
+        // });
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {});
     }
 
     getUnifiedElementSelectionnes() {

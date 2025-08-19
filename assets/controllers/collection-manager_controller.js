@@ -1,8 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
+import { EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
-    static targets = ["countBadge", "addButtonContainer", "contentPanel", "listContainer"];
     static values = {
         // Les endpoints seront passés depuis Twig via les data-attributes
         listUrl: String,
@@ -12,16 +11,20 @@ export default class extends Controller {
     };
 
     connect() {
-        this.hideTimeout = null; // Pour gérer le délai de disparition du bouton "+"
+        this.componentId = crypto.randomUUID();
         this.loadItemList();
-
-        // Écoute l'événement de succès de la boîte de dialogue principale
-        // pour savoir quand rafraîchir la liste.
-        document.addEventListener('form-dialog:success', this.handleDialogSuccess.bind(this));
+        this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
+        document.addEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
     }
 
     disconnect() {
-        document.removeEventListener('form-dialog:success', this.handleDialogSuccess.bind(this));
+        document.removeEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
+    }
+
+    handleRefreshRequest(event) {
+        if (event.detail.originatorId === this.componentId) {
+            this.loadItemList();
+        }
     }
 
     /**
@@ -193,20 +196,20 @@ export default class extends Controller {
             }
         };
 
-        // --- AJOUT : EXTRAIRE L'ID DU PARENT ---
-        // Extrait l'ID numérique depuis une URL comme "/admin/notificationsinistre/api/102/contacts"
         const match = this.listUrlValue.match(/\/api\/(\d+)\/contacts/);
         const parentId = match ? match[1] : null;
 
-        // Dispatch un événement global que le contrôleur form-dialog va intercepter
-        this.element.dispatchEvent(new CustomEvent(EVEN_BOITE_DIALOGUE_INIT_REQUEST, {
-            bubbles: true,
+        // Émet l'événement générique. Le dialog-manager s'occupera du reste.
+        // this.dispatch('dialog:open-request', {
+        this.dispatch(EVEN_BOITE_DIALOGUE_INIT_REQUEST, {
             detail: { 
                 entity, 
                 entityFormCanvas,
-                // On passe l'ID du parent dans un objet "context"
-                context: { notificationSinistreId: parentId } 
+                context: { 
+                    notificationSinistreId: parentId,
+                    originatorId: this.componentId 
+                }
             }
-        }));
+        });
     }
 }

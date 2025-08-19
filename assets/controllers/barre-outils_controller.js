@@ -149,10 +149,11 @@ export default class extends Controller {
 
     action_modifier() {
         console.log(this.nomControleur + " - Action_Modifier");
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
-            titre: "Modification",
-            action: EVEN_CODE_ACTION_MODIFICATION,
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
+        //     titre: "Modification",
+        //     action: EVEN_CODE_ACTION_MODIFICATION,
+        // });
+        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {});
     }
 
     action_supprimer() {

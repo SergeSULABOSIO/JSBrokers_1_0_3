@@ -24,6 +24,7 @@ export default class extends Controller {
     `;
 
     connect() {
+        this.nomControlleur = "Dialogue-Manager";
         this.boundOpen = this.open.bind(this);
         // Écoute l'événement générique pour ouvrir N'IMPORTE QUEL dialogue
         document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.boundOpen);
@@ -41,21 +42,19 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement contenant les détails du dialogue à ouvrir.
      */
     open(event) {
+        console.log(this.nomControlleur + " - (1) Open", event.detail);
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
         const modalElement = this.createModalElement();
-        
-        // 2. Ajoute ce nouvel élément directement au body
+        // --- MODIFICATION MAJEURE ICI ---
+        // Au lieu d'essayer de récupérer le contrôleur, nous allons "cacher" les données
+        // de l'événement directement sur l'élément qui portera le contrôleur.
+        // C'est une astuce simple et efficace pour passer des données à un contrôleur
+        // qui n'existe pas encore.
+        const instanceElement = modalElement.querySelector('[data-controller="dialog-instance"]');
+        instanceElement.dialogDetail = event.detail; // On attache les données ici
+
+        // On ajoute l'élément au body. Stimulus va maintenant le détecter et connecter le contrôleur.
         document.body.appendChild(modalElement);
-
-        // 3. Récupère l'instance du contrôleur 'dialog-instance' que Stimulus vient d'attacher
-        const dialogInstanceController = this.application.getControllerForElementAndIdentifier(
-            modalElement.querySelector('[data-controller="dialog-instance"]'),
-            'dialog-instance'
-        );
-
-        // 4. Passe les détails de la demande (formulaire à charger, contexte, etc.)
-        //    au nouveau contrôleur pour qu'il puisse s'initialiser et prendre le relais.
-        dialogInstanceController.initialize(event.detail);
     }
     
     /**
