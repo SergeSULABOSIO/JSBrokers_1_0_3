@@ -13,8 +13,12 @@ export default class extends Controller {
      * C'est le moment idéal et garanti pour démarrer notre logique.
      */
     connect() {
+        this.nomControlleur = "Dialog-Instance";
         // On récupère les données que le dialog-manager a cachées pour nous.
         const detail = this.element.dialogDetail;
+        this.contentDialogue = this.element;
+
+        console.log(this.nomControlleur + " - connect", this.contentDialogue);
 
         if (detail) {
             // On lance notre logique d'initialisation.
@@ -30,13 +34,14 @@ export default class extends Controller {
      * C'est le point d'entrée après sa création par le dialog-manager.
      */
     async start(detail) {
+        console.log(this.nomControlleur + " - start", detail);
         this.canvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.context = detail.context || {};
         
         await this.loadFullDialogContent();
 
-        const modalNode = this.element.closest('.modal');
+        const modalNode = this.contentDialogue.closest('.modal');
         this.modal = new Modal(modalNode);
         this.modal.show();
 
@@ -49,12 +54,14 @@ export default class extends Controller {
      * Charge le squelette HTML de la modale (form, header, footer) et le corps du formulaire.
      */
     async loadFullDialogContent() {
+        console.log(this.nomControlleur + " - loadFullDialogContent", this.contentDialogue);
+
         const isEditMode = this.entity && this.entity.id;
         const title = isEditMode
             ? this.canvas.parametres.titre_modification.replace('%id%', this.entity.id)
             : this.canvas.parametres.titre_creation;
 
-        this.element.innerHTML = `
+        this.contentDialogue.innerHTML = `
             <form data-action="submit->dialog-instance#submitForm">
                 <div class="modal-header">
                     <h5 class="modal-title">${title}</h5>
@@ -77,7 +84,7 @@ export default class extends Controller {
         }
         
         const response = await fetch(url);
-        this.element.querySelector('.modal-body').innerHTML = await response.text();
+        this.contentDialogue.querySelector('.modal-body').innerHTML = await response.text();
     }
     
     /**
@@ -85,7 +92,7 @@ export default class extends Controller {
      */
     async submitForm(event) {
         event.preventDefault();
-        const feedbackContainer = this.element.querySelector('.feedback-container');
+        const feedbackContainer = this.contentDialogue.querySelector('.feedback-container');
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
 
