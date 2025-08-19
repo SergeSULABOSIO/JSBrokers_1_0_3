@@ -2,6 +2,9 @@ import { Controller } from '@hotwired/stimulus';
 import { EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
+    // --- AJOUT : DÉCLARATION DES CIBLES ---
+    static targets = ["countBadge", "addButtonContainer", "contentPanel", "listContainer"];
+
     static values = {
         // Les endpoints seront passés depuis Twig via les data-attributes
         listUrl: String,
@@ -39,7 +42,6 @@ export default class extends Controller {
 
         try {
             const response = await fetch(this.listUrlValue);
-            console.log("ICI", this.listUrlValue);
             if (!response.ok) throw new Error('Network response was not ok.');
             const html = await response.text();
             this.listContainerTarget.innerHTML = html;

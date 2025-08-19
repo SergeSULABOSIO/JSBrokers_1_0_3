@@ -1,5 +1,8 @@
 {# templates/themes/_collection_widget.html.twig #}
 {% block collection_widget %}
+    {# On récupère les options passées par form_row() #}
+    {% set manager_options = manager_options|default({}) %}
+    
     <div {{ stimulus_controller('collection-manager', manager_options) }} class="collection-manager-accordion">
 
         {# TITRE DE L'ACCORDÉON #}
