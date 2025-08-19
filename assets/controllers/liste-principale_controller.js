@@ -289,8 +289,6 @@ export default class extends Controller {
 
 
     handleModifyRequest(event) {
-        // const { titre, action } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - handleModifyRequest", event.detail);
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: this.tabSelectedEntities[0],
             entityFormCanvas: this.entityFormCanvasValue
@@ -298,11 +296,6 @@ export default class extends Controller {
     }
 
     handleAddRequest(event) {
-        const { titre, action } = event.detail; // Récupère les données de l'événement
-        // console.log(this.nomControleur + " - handleAddRequest", event.detail);
-        // 1. On crée une entité vide
-        // const newEntity = {}; // Ou avec des valeurs par défaut si besoin
-        // 2. On déclenche l'événement
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: {},
             entityFormCanvas: this.entityFormCanvasValue

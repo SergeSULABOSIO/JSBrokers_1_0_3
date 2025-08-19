@@ -13,6 +13,8 @@ export default class extends Controller {
     };
 
     connect() {
+        this.nomControlleur = "Collection - Manager";
+        // Pour être absolument sûr, ajoutons un log ici
         this.componentId = crypto.randomUUID();
         this.loadItemList();
         this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
@@ -34,9 +36,9 @@ export default class extends Controller {
      */
     async loadItemList() {
         if (!this.listUrlValue || this.listUrlValue.endsWith('/0')) {
-             this.listContainerTarget.innerHTML = '<div class="text-center p-4 text-muted"><em>La liste des contacts apparaîtra ici après la création de la notification.</em></div>';
-             this.updateBadge(0);
-             return;
+            this.listContainerTarget.innerHTML = '<div class="text-center p-4 text-muted"><em>La liste des contacts apparaîtra ici après la création de la notification.</em></div>';
+            this.updateBadge(0);
+            return;
         }
 
         try {
@@ -204,12 +206,12 @@ export default class extends Controller {
         // Émet l'événement générique. Le dialog-manager s'occupera du reste.
         // this.dispatch('dialog:open-request', {
         this.dispatch(EVEN_BOITE_DIALOGUE_INIT_REQUEST, {
-            detail: { 
-                entity, 
+            detail: {
+                entity,
                 entityFormCanvas,
-                context: { 
+                context: {
                     notificationSinistreId: parentId,
-                    originatorId: this.componentId 
+                    originatorId: this.componentId
                 }
             }
         });
