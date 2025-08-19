@@ -8,6 +8,7 @@
         {# TITRE DE L'ACCORDÉON #}
         <div class="accordion-title"
              data-action="
+                click->collection-manager#toggleAccordion 
                 mouseenter->collection-manager#showAddButton
                 mouseleave->collection-manager#hideAddButton
              "
@@ -15,7 +16,7 @@
             <div class="title-left-block">
                 {# Ligne 1 #}
                 <div class="title-line-1">
-                    <span class="toggle-icon" data-action="click->collection-manager#toggleAccordion">+</span>
+                    <span class="toggle-icon">+</span>
                     <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
                     <span class="badge bg-primary" data-collection-manager-target="countBadge" style="display: none;">0</span>
                 </div>

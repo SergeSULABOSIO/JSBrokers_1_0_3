@@ -2,7 +2,6 @@ import { Controller } from '@hotwired/stimulus';
 import { EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
-    // --- AJOUT : DÉCLARATION DES CIBLES ---
     static targets = ["countBadge", "addButtonContainer", "contentPanel", "listContainer"];
 
     static values = {
@@ -67,13 +66,14 @@ export default class extends Controller {
     // --- Gestion de l'UI de l'accordéon ---
 
     toggleAccordion(event) {
-        const icon = event.currentTarget;
-        if (this.contentPanelTarget.style.display === 'none') {
-            this.openAccordion();
-            icon.textContent = '-';
-        } else {
-            this.closeAccordion();
-            icon.textContent = '+';
+        // On bascule simplement la présence d'une classe CSS sur le panneau de contenu.
+        this.contentPanelTarget.classList.toggle('is-open');
+
+        // On cherche l'icône à l'intérieur de l'élément sur lequel on a cliqué.
+        const icon = event.currentTarget.querySelector('.toggle-icon');
+        if (icon) {
+            // On met à jour l'icône en fonction de la présence de la classe.
+            icon.textContent = this.contentPanelTarget.classList.contains('is-open') ? '-' : '+';
         }
     }
 

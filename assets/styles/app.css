@@ -1,119 +1,104 @@
 body {
-  background-color: #f3f3f3;
+    background-color: #f3f3f3;
 }
 
 a:link {
-  text-decoration: none;
+    text-decoration: none;
 }
 
 a:visited {
-  text-decoration: none;
+    text-decoration: none;
 }
 
 a:hover {
-  text-decoration: none;
-  font-weight: bold;
+    text-decoration: none;
+    font-weight: bold;
 }
 
 a:active {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 .sensible:hover {
-  /* background-color: #ECECEC; */
-  background-color: #ececec;
-  border: 4px solid darkgray;  /* Bordure grise claire par défaut */
+    background-color: #ececec;
+    border: 4px solid darkgray;
 }
 
 .sensible {
-  background-color: white;
-  border-radius: 10px;
-  border: 4px solid white; /* Bordure grise claire par défaut */
-  padding: 10px; /* Pour un peu d'espace autour du contenu */
-  margin: 3px; /* Pour un peu d'espace autour du contenu */
-  transition: border-color 0.3s ease-in-out; /* Animation douce pour la couleur de la bordure */
+    background-color: white;
+    border-radius: 10px;
+    border: 4px solid white;
+    padding: 10px;
+    margin: 3px;
+    transition: border-color 0.3s ease-in-out;
 }
 
 .bg-income {
-  background-color: #e0f9ee;
+    background-color: #e0f9ee;
 }
 
 .cacherComposant {
-  display: none;
+    display: none;
 }
 
 .afficherComposant {
-  display: block;
+    display: block;
 }
 
 .gras {
-  font-weight: bold;
+    font-weight: bold;
 }
 
 .parent-a-options {
-  cursor: pointer;
-  /* border-bottom: 1px solid #ccc; */
-  position: relative; /* Important pour positionner correctement les enfants absolus ou fixes */
-  /* Autres styles pour le parent */
+    cursor: pointer;
+    position: relative;
 }
 
 .options-du-parent {
-  display: none; /* Cache initialement le sous-élément */
-  /* background-color: black; */
-  /* Autres styles pour le sous-élément (positionnement, apparence, etc.) */
+    display: none;
 }
 
 .parent-a-options:hover .options-du-parent {
-  display: block; /* Affiche le sous-élément au survol du parent (comme un élément de bloc) */
-  /* Ou display: inline-block; ou display: inline; selon vos besoins */
+    display: block;
 }
 
 .form-select, input[type=date], input[type=text], input[type=password], input[type=number], input[type=email], input[type=file] {
-  border: none;
-  /* border: 0.5px solid #ccc; */
-  border-bottom: 2px solid gray;
-  font-weight: bold;
+    border: none;
+    border-bottom: 2px solid gray;
+    font-weight: bold;
 }
 
 .editeur-riche {
-  /* width: 100px; */
-  height: 150px;
-  padding: 10px;
-  /* border: 0.5px solid #ccc; */
-  border: none;
-  border-bottom: 2px solid gray;
-  border-radius: 10px;
-  font-family: sans-serif;
-  font-size: 14px;
-  font-weight: bold;
-  line-height: 1.5;
-  resize: vertical; /* Permet de redimensionner verticalement */
+    height: 150px;
+    padding: 10px;
+    border: none;
+    border-bottom: 2px solid gray;
+    border-radius: 10px;
+    font-family: sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1.5;
+    resize: vertical;
 }
 
 .shadow-bottom {
-  box-shadow: 0 8px 6px -6px rgba(0, 0, 0, 0.1); /* Exemple d'ombre en bas */
+    box-shadow: 0 8px 6px -6px rgba(0, 0, 0, 0.1);
 }
-
 
 /* POUR LE MENU CONTEXTUEL */
-/* Style de l'élément cible pour le rendre visible */
 .context-target {
-    /* border: 2px dashed #007bff; */
-    /* padding: 20px; */
-    /* margin: 50px; */
-    cursor: context-menu; /* Indique qu'un menu contextuel est disponible */
-    user-select: none; /* Empêche la sélection de texte au clic droit */
+    cursor: context-menu;
+    user-select: none;
 }
 
-/* Style du menu contextuel */
 .context-menu {
-    display: none; /* Cache le menu par défaut */
-    position: fixed; /* Permet un positionnement précis par rapport à la fenêtre */
+    display: none;
+    position: fixed;
     background-color: #fff;
     border: 1px solid #ccc;
     box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
     min-width: 180px;
-    z-index: 1000; /* Assure que le menu est au-dessus des autres éléments */
+    z-index: 1000;
     border-radius: 4px;
     padding: 5px 0;
 }
@@ -127,9 +112,9 @@ a:active {
 .context-menu li {
     padding: 8px 15px;
     cursor: pointer;
-    display: flex; /* Pour aligner l'icône et le texte */
+    display: flex;
     align-items: center;
-    gap: 10px; /* Espace entre l'icône et le texte */
+    gap: 10px;
 }
 
 .context-menu li:hover {
@@ -145,269 +130,111 @@ a:active {
 }
 
 .context-menu .menu-icon {
-    width: 18px; /* Taille des icônes */
+    width: 18px;
     height: 18px;
 }
 
-/* assets/styles/app.css */
+/* STYLES POUR LA BARRE DE RECHERCHE */
 .search-bar-input {
     font-size: 1.1rem;
     background-color: transparent !important;
+    color: #212529;
+    font-style: normal;
+    font-weight: bold;
 }
-
 .search-bar-input::placeholder {
     color: #adb5bd;
     font-style: italic;
     font-weight: normal;
     font-size: 0.95rem;
 }
-
 .search-bar-input:focus {
     box-shadow: none !important;
 }
-
-.search-bar-input {
-    color: #212529;
-    font-style: normal;
-    font-weight: bold;
-}
-
 .search-bar-row-1, .search-bar-row-2 {
     font-size: 0.9rem;
 }
-
-/* Optionnel: pour un meilleur alignement du texte et des badges */
 .search-bar-row-2 {
     line-height: 1.8;
 }
-
 .search-summary-icon {
     width: 1.1em;
     height: 1.1em;
 }
 
-
-/* assets/styles/app.scss (ou un fichier CSS approprié) */
-
+/* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (non utilisé par les dialogues) */
 .form-scrollable-content {
-    max-height: 200px; /* Hauteur maximale fixe pour le formulaire */
-    overflow-y: auto;  /* Active le défilement vertical si le contenu dépasse */
-    padding-right: 15px; /* Ajoute un peu de padding pour éviter que le contenu ne touche la barre de défilement */
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 15px;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f1f1f1;
 }
-
-/* Styles personnalisés pour la barre de défilement (WebKit - Chrome, Safari) */
 .form-scrollable-content::-webkit-scrollbar {
-    width: 8px; /* Largeur de la barre de défilement */
+    width: 8px;
 }
-
 .form-scrollable-content::-webkit-scrollbar-track {
-    background: #f1f1f1; /* Couleur de la piste de la barre de défilement (gris clair) */
-    border-radius: 10px; /* Bords arrondis pour la piste */
+    background: #f1f1f1;
+    border-radius: 10px;
 }
-
 .form-scrollable-content::-webkit-scrollbar-thumb {
-    background: #888; /* Couleur du "pouce" de la barre de défilement (gris foncé) */
-    border-radius: 10px; /* Bords arrondis pour le pouce */
+    background: #888;
+    border-radius: 10px;
 }
-
 .form-scrollable-content::-webkit-scrollbar-thumb:hover {
-    background: #555; /* Couleur du pouce au survol (gris encore plus foncé) */
+    background: #555;
 }
 
-/* Styles pour Firefox (plus limité que WebKit) */
-.form-scrollable-content {
-    scrollbar-width: thin; /* Rend la barre de défilement plus fine */
-    scrollbar-color: #888 #f1f1f1; /* Couleur du pouce puis couleur de la piste */
-}
-
-/*
- * Permet aux conteneurs de prendre 100% de la hauteur de leur parent.
- * Indispensable pour que la mise en page s'étire jusqu'en bas.
- */
+/* STYLES POUR LES TABLEAUX */
 .h-100 {
     height: 100%;
 }
-
-/*
- * Ce wrapper grandit pour remplir l'espace restant et active 
- * le défilement vertical si le contenu (le tableau) est trop grand.
- */
 .table-scroll-wrapper {
     overflow-y: auto;
 }
-
-/*
- * Rend les cellules de l'en-tête (th) "collantes" en haut 
- * du conteneur qui défile.
- */
 .sticky-header th {
     position: sticky;
     top: 0;
-    z-index: 10; /* S'assure que l'en-tête passe au-dessus du contenu */
+    z-index: 10;
 }
-
-/*
- * Optionnel mais recommandé : 
- * Applique une couleur de fond opaque à l'en-tête collant pour 
- * éviter que le texte du corps ne soit visible à travers.
- * On utilise ici la couleur par défaut de la classe .table-light de Bootstrap.
- */
 .table-light.sticky-header th {
     background-color: #f8f9fa;
 }
-
-/* Améliorations générales pour le tableau */
 .table-enhanced {
-    border-collapse: separate; /* Nécessaire pour les bordures personnalisées */
+    border-collapse: separate;
     border-spacing: 0;
 }
-
-/* Améliorer la lisibilité des cellules */
 .table-enhanced th,
 .table-enhanced td {
-    /* padding: 0.8rem 1rem; Plus d'espacement vertical et horizontal */
-    border-bottom: 1px solid #dee2e6; /* Une seule bordure en bas */
+    border-bottom: 1px solid #dee2e6;
     border-top: none;
     border-left: none;
     border-right: none;
-    text-align: left; /* Aligner tout le texte à gauche par défaut */
-    vertical-align: middle; /* Centrer verticalement le contenu */
+    text-align: left;
+    vertical-align: middle;
 }
-
-/* Rendre l'en-tête plus distinctif */
 .table-enhanced thead th {
     font-weight: 600;
     text-transform: uppercase;
-    /* font-size: 0.75rem; */
     letter-spacing: 0.5px;
-    color: #6c757d; /* Couleur de texte plus douce */
+    color: #6c757d;
 }
-
-/* Adoucir la couleur du texte dans le corps du tableau */
 .table-enhanced tbody td {
     color: #495057;
 }
-
-/* Style pour la ligne sélectionnée (très important pour le feedback UX) */
 .table-enhanced tbody tr.row-selected {
-    background-color: #e6f7ff; /* Un bleu très clair et non agressif */
+    background-color: #e6f7ff;
 }
-
-/* Améliorer le survol */
 .table-enhanced tbody tr:hover {
     background-color: #f8f9fa;
 }
-
-
-/* Supprimer la bordure de la dernière ligne pour un design plus net */
 .table-enhanced tbody tr:last-child td {
     border-bottom: none;
 }
 
-
-/* Style pour la boîte de dialogue de formulaire */
-#form-dialog-modal .modal-content {
-    border-radius: 15px;
-    border: none;
-    overflow: hidden;
-}
-
-#form-dialog-modal .modal-header {
-    background-color: #676767; /* Gris foncé */
-    color: #f0f0f0; /* Gris clair */
-    border-bottom: none;
-    padding: 1.2rem 1.5rem;
-}
-
-#form-dialog-modal .modal-body {
-    background-color: #f0f0f0; /* Gris clair */
-    padding: 1.5rem;
-
-    /*
-     * Définit une hauteur maximale à 70% de la hauteur de la fenêtre.
-     * Cela laisse de la place pour l'en-tête et le pied de page de la modale.
-     * Vous pouvez ajuster cette valeur (ex: 65vh, 80vh) selon vos préférences.
-    */
-    max-height: 70vh;
-
-    /* Affiche une barre de défilement verticale uniquement si le contenu dépasse la max-height. */
-    overflow-y: auto;
-}
-
-#form-dialog-modal .modal-footer {
-    background-color: #f0f0f0; /* Gris clair */
-    border-top: 1px solid #ddd;
-    padding: 1rem 1.5rem;
-}
-
-/* Style des champs de formulaire */
-#form-dialog-modal .form-label {
-    font-weight: 600;
-    color: #495057;
-}
-
-#form-dialog-modal .form-control {
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    padding: 0.75rem 1rem;
-}
-
-#form-dialog-modal .form-control:focus {
-    border-color: #0052ff;
-    box-shadow: 0 0 0 0.25rem rgba(0, 82, 255, 0.25);
-}
-
-/* Style pour les messages d'erreur */
-#form-dialog-modal .form-control.is-invalid {
-    border-color: #dc3545;
-}
-
-#form-dialog-modal .invalid-feedback {
-    font-weight: 500;
-}
-
-/* Style du conteneur de feedback (succès/erreur) */
-#form-dialog-modal .feedback-container {
-    padding: 0;
-    margin: 0;
-    border: none;
-    background: transparent;
-}
-
-#form-dialog-modal .form-control,
-#form-dialog-modal .form-select {
-    font-weight: normal; /* Annule tout style "gras" hérité */
-    font-style: normal;  /* Annule tout style "italique" hérité */
-}
-
-/* Supprime les bordures de tous les champs de formulaire dans la modale */
-#form-dialog-modal .form-control,
-#form-dialog-modal .input-group-text,
-#form-dialog-modal .form-select,
-#form-dialog-modal .tom-select-control {
-    border: none;
-    /* ou border-width: 0; */
-}
-
-#form-dialog-modal .input-group-text {
-    background: transparent;
-}
-
-/* * IMPORTANT : Pour l'accessibilité, nous conservons un effet visuel
- * lorsque l'utilisateur sélectionne un champ (au focus).
- * TomSelect (autocomplete) utilise la classe .focus au lieu de la pseudo-classe :focus.
-*/
-#form-dialog-modal .form-control:focus,
-#form-dialog-modal .form-select:focus,
-#form-dialog-modal .tom-select-control.focus {
-    box-shadow: 0 0 0 0.25rem rgba(0, 82, 255, 0.25);
-    outline: none;
-}
-
-/* Style pour les lignes de formulaire avec une couleur de fond personnalisée */
+/* STYLE POUR LES LIGNES DE FORMULAIRE COLORÉES */
 .form-row-colored {
     padding-top: 1rem;
-    /* On ajoute un padding horizontal pour que la couleur ne touche pas les bords de la modale */
     padding-left: 0.75rem;
     padding-right: 0.75rem;
     margin-left: 0;
@@ -416,14 +243,12 @@ a:active {
     border-radius: 8px;
 }
 
-/* Améliore l'alignement des boutons avec icônes dans la modale */
-#form-dialog-modal .modal-footer .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem; /* Crée un espace entre l'icône and le texte */
-}
-
-/* --- Conteneur principal de l'accordéon --- */
+/*
+===================================================================
+ SECTION: COMPOSANT ACCORDÉON (Gestionnaire de Collection)
+ (Ce code est conservé tel quel)
+===================================================================
+*/
 .collection-manager-accordion {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -431,8 +256,6 @@ a:active {
     margin-bottom: 1.5rem;
     overflow: hidden;
 }
-
-/* --- Titre de l'accordéon --- */
 .accordion-title {
     display: flex;
     justify-content: space-between;
@@ -441,17 +264,14 @@ a:active {
     cursor: pointer;
     border-bottom: 1px solid #e0e0e0;
 }
-
 .title-left-block {
     flex-grow: 1;
 }
-
 .title-line-1 {
     display: flex;
     align-items: center;
     gap: 10px;
 }
-
 .toggle-icon {
     font-size: 1.5em;
     font-weight: bold;
@@ -459,41 +279,36 @@ a:active {
     width: 20px;
     text-align: center;
 }
-
 .field-label {
     font-size: 1rem;
     font-weight: bold;
-    color: #343a40; /* Gris foncé [cite: 22] */
+    color: #343a40;
 }
-
 .badge {
-    font-style: italic; /* Italique [cite: 23] */
+    font-style: italic;
     font-weight: bold;
-    transform: translateY(-5px); /* Décalage vers le haut [cite: 24] */
-    background-color: #0d6efd !important; /* Bleu cobalt [cite: 23] */
+    transform: translateY(-5px);
+    background-color: #0d6efd !important;
 }
-
 .title-line-2 {
-    padding-left: 30px; /* Aligner avec le label */
+    padding-left: 30px;
     font-size: 0.8em;
-    color: #a0a0a0; /* Gris clair [cite: 26] */
+    color: #a0a0a0;
 }
-
 .title-right-block {
     transition: opacity 0.3s ease, visibility 0.3s ease;
-    opacity: 0; /* Caché par défaut */
+    opacity: 0;
     visibility: hidden;
 }
-
-/* --- Contenu de l'accordéon (liste) --- */
 .accordion-content {
-    padding: 5px;
-    background-color: #ffffff;
-    max-height: 400px; /* Hauteur fixe [cite: 31] */
-    overflow-y: auto; /* Barre de défilement si nécessaire [cite: 31] */
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
 }
-
-/* --- Style pour un élément de la liste --- */
+.accordion-content.is-open {
+    max-height: 400px;
+    overflow-y: auto;
+}
 .collection-item {
     display: flex;
     align-items: center;
@@ -503,38 +318,29 @@ a:active {
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
-
 .collection-item:last-child {
     border-bottom: none;
 }
-
 .collection-item:hover {
-    background-color: #f5f5f5; /* Sensible au survol [cite: 32] */
+    background-color: #f5f5f5;
 }
-
 .collection-item.selected {
-    background-color: #e7f1ff; /* Couleur pour la sélection [cite: 32] */
+    background-color: #e7f1ff;
 }
-
 .item-icon {
     margin-right: 12px;
     color: #6c757d;
 }
-
 .item-text {
     flex-grow: 1;
 }
-
 .text-main {
     font-weight: 500;
 }
-
 .text-secondary {
     font-size: 0.85em;
-    color: #a0a0a0; /* Gris clair, italique [cite: 37] */
+    color: #a0a0a0;
 }
-
-/* --- Boutons d'action flottants --- */
 .item-actions {
     position: absolute;
     right: 10px;
@@ -544,9 +350,137 @@ a:active {
     border-radius: 5px;
     padding: 2px 5px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-    opacity: 0; /* Caché par défaut */
+    opacity: 0;
     transition: opacity 0.2s ease;
 }
 .item-actions .btn {
     color: #343a40;
+}
+
+/*
+===================================================================
+ SECTION: STYLE CORRIGÉ POUR LES BOÎTES DE DIALOGUE DYNAMIQUES
+ (Ceci remplace votre ancien bloc #form-dialog-modal)
+===================================================================
+*/
+
+/* 1. MISE EN PAGE FLEXBOX POUR LE DÉFILEMENT (VERSION CORRIGÉE) */
+
+/* Le conteneur du dialogue définit la hauteur maximale et le contexte flex */
+.app-dialog .modal-dialog {
+    display: flex;
+    max-height: 90vh;
+}
+
+/* * Le contenu ET le formulaire doivent s'étirer pour remplir l'espace.
+ * C'EST LA CORRECTION CLÉ.
+ */
+.app-dialog .modal-content,
+.app-dialog .modal-content form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Force l'élément à prendre toute la hauteur disponible */
+    overflow: hidden; /* Empêche ce conteneur de défiler */
+}
+
+.app-dialog .modal-content {
+    border-radius: 15px;
+    border: none;
+}
+
+/* 2. STYLE DES COULEURS ET DES SECTIONS */
+.app-dialog .modal-header {
+    background-color: #676767;
+    color: #f0f0f0;
+    border-bottom: none;
+    padding: 1.2rem 1.5rem;
+    flex-shrink: 0;
+}
+.app-dialog .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.app-dialog .modal-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+    flex-shrink: 0;
+}
+
+/* 3. ACTIVATION DU DÉFILEMENT SUR LE CORPS */
+.app-dialog .modal-body {
+    background-color: #f0f0f0;
+    padding: 1.5rem;
+    flex-grow: 1;
+    overflow-y: auto; 
+}
+
+/* 4. STYLE DE LA BARRE DE DÉFILEMENT */
+.app-dialog .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+.app-dialog .modal-body::-webkit-scrollbar-track {
+    background: #e9ecef;
+}
+.app-dialog .modal-body::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 4px;
+}
+.app-dialog .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #495057;
+}
+
+/* 5. STYLES SPÉCIFIQUES AUX FORMULAIRES DANS LES DIALOGUES */
+.app-dialog .form-label {
+    font-weight: 600;
+    color: #495057;
+}
+.app-dialog .form-control,
+.app-dialog .form-select,
+.app-dialog .tom-select-control {
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    padding: 0.75rem 1rem;
+    font-weight: normal;
+}
+.app-dialog .form-control:focus,
+.app-dialog .form-select:focus,
+.app-dialog .tom-select-control.focus {
+    border-color: #0052ff;
+    box-shadow: 0 0 0 0.25rem rgba(0, 82, 255, 0.25);
+    outline: none;
+}
+
+/*
+===================================================================
+ SECTION: STYLE GLOBAL POUR LES CHAMPS DE FORMULAIRE (SANS BORDURE)
+===================================================================
+*/
+
+/* * Cible tous les types d'inputs, selects, et textareas de manière globale.
+ * Cette règle unifie le style "flat" pour toute l'application.
+ */
+.form-control,
+.form-select,
+.editeur-riche,
+input[type=text],
+input[type=date],
+input[type=password],
+input[type=number],
+input[type=email],
+input[type=file],
+select,
+textarea {
+    border: none !important; /* Supprime toutes les bordures (haut, bas, côtés) */
+}
+
+/* * Améliore l'expérience utilisateur en donnant un retour visuel clair
+ * lorsque l'utilisateur clique sur un champ.
+ */
+.form-control:focus,
+.form-select:focus,
+.editeur-riche:focus,
+.tom-select-control.focus { /* Cible aussi les champs autocomplete */
+    border: none !important; /* Répète pour être sûr */
 }

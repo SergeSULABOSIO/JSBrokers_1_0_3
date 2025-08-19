@@ -10,7 +10,7 @@ export default class extends Controller {
     // Le template HTML d'une modale vide.
     // Il contient le contrôleur 'dialog-instance' qui prendra le relais.
     modalTemplate = `
-        <div class="modal fade" tabindex="-1">
+        <div class="modal fade app-dialog" tabindex="-1">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content" data-controller="dialog-instance">
                     <div class="modal-body text-center p-5">
