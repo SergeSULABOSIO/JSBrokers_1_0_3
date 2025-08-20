@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["countBadge", "addButtonContainer", "contentPanel", "listContainer"];
@@ -19,10 +19,17 @@ export default class extends Controller {
         this.loadItemList();
         this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
         document.addEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
+
+        // --- AJOUT : ÉCOUTER L'ÉVÉNEMENT DE SUPPRESSION CONFIRMÉE ---
+        // On crée un nom d'événement unique pour chaque instance du composant
+        this.deleteEventName = `collection:${this.componentId}:perform-delete`;
+        this.boundPerformDelete = this.performDelete.bind(this);
+        document.addEventListener(this.deleteEventName, this.boundPerformDelete);
     }
 
     disconnect() {
         document.removeEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
+        document.removeEventListener(this.deleteEventName, this.boundPerformDelete);
     }
 
     handleRefreshRequest(event) {
@@ -168,24 +175,41 @@ export default class extends Controller {
         const itemId = item.dataset.id;
         const itemName = item.querySelector('.text-main').textContent;
 
-        if (confirm(`Êtes-vous sûr de vouloir supprimer le contact "${itemName}" ?`)) {
-            try {
-                const response = await fetch(`${this.itemDeleteUrlValue}/${itemId}`, { method: 'DELETE' });
-                const result = await response.json();
+        buildCustomEventForElement(document, 'confirmation:open-request', true, true, {
+            title: '<twig:UX:Icon name="bi:exclamation-triangle-fill" /> Attention',
+            body: `Êtes-vous sûr de vouloir supprimer le contact "<strong>${itemName}</strong>" ?<br><small>Cette action est irréversible.</small>`,
 
-                if (!response.ok) throw new Error(result.message || 'Erreur de suppression.');
-
-                // TODO: Afficher une notification de succès (toast)
-                console.log(result.message);
-                this.loadItemList(); // Rafraîchir la liste
-
-            } catch (error) {
-                // TODO: Afficher une notification d'erreur (toast)
-                console.error('Delete error:', error);
-                alert(error.message);
+            // On prépare l'événement qui devra être déclenché si l'utilisateur confirme
+            onConfirm: {
+                eventName: this.deleteEventName,
+                detail: { itemId: itemId }
             }
+        });
+    }
+
+    /**
+     * NOUVEAU : Cette fonction exécute la suppression APRÈS confirmation.
+     */
+    async performDelete(event) {
+        const { itemId } = event.detail;
+
+        try {
+            const response = await fetch(`${this.itemDeleteUrlValue}/${itemId}`, { method: 'DELETE' });
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.message || 'Erreur de suppression.');
+
+            // TODO: Afficher une notification de succès (toast)
+            console.log(result.message);
+            this.loadItemList(); // Rafraîchir la liste
+
+        } catch (error) {
+            // TODO: Afficher une notification d'erreur (toast)
+            console.error('Delete error:', error);
+            alert(error.message);
         }
     }
+
 
     /**
      * Ouvre la boîte de dialogue principale en lui envoyant les bonnes informations.
@@ -203,16 +227,12 @@ export default class extends Controller {
         const match = this.listUrlValue.match(/\/api\/(\d+)\/contacts/);
         const parentId = match ? match[1] : null;
 
-        // Émet l'événement générique. Le dialog-manager s'occupera du reste.
-        // this.dispatch('dialog:open-request', {
-        this.dispatch(EVEN_BOITE_DIALOGUE_INIT_REQUEST, {
-            detail: {
-                entity,
-                entityFormCanvas,
-                context: {
-                    notificationSinistreId: parentId,
-                    originatorId: this.componentId
-                }
+        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+            entity: entity,
+            entityFormCanvas: entityFormCanvas,
+            context: {
+                notificationSinistreId: parentId,
+                originatorId: this.componentId
             }
         });
     }

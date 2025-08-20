@@ -7,18 +7,10 @@ import { Modal } from 'bootstrap';
  */
 export default class extends Controller {
 
-    /**
-     * La méthode connect() est appelée par Stimulus LUI-MÊME
-     * une fois que le contrôleur est bien attaché à l'élément du DOM.
-     * C'est le moment idéal et garanti pour démarrer notre logique.
-     */
     connect() {
-        this.nomControlleur = "Dialog-Instance";
-        // On récupère les données que le dialog-manager a cachées pour nous.
+        // On récupère les données que le dialog-manager a attachées à l'élément.
         const detail = this.element.dialogDetail;
-        this.contentDialogue = this.element;
-
-        console.log(this.nomControlleur + " - connect", this.contentDialogue);
+        this.elementContenu = this.element;
 
         if (detail) {
             // On lance notre logique d'initialisation.
@@ -28,63 +20,77 @@ export default class extends Controller {
         }
     }
 
-
     /**
-     * Initialise le contrôleur avec les données de la demande.
-     * C'est le point d'entrée après sa création par le dialog-manager.
+     * Reçoit les détails, AFFICHE la modale avec un spinner, PUIS charge le formulaire.
      */
     async start(detail) {
-        console.log(this.nomControlleur + " - start", detail);
         this.canvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.context = detail.context || {};
         
-        await this.loadFullDialogContent();
-
-        const modalNode = this.contentDialogue.closest('.modal');
-        this.modal = new Modal(modalNode);
-        this.modal.show();
-
-        modalNode.addEventListener('hidden.bs.modal', () => {
-            modalNode.remove();
-        });
-    }
-
-    /**
-     * Charge le squelette HTML de la modale (form, header, footer) et le corps du formulaire.
-     */
-    async loadFullDialogContent() {
-        console.log(this.nomControlleur + " - loadFullDialogContent", this.contentDialogue);
-
+        // 1. On construit immédiatement la structure de la modale avec un spinner dans le corps.
         const isEditMode = this.entity && this.entity.id;
         const title = isEditMode
             ? this.canvas.parametres.titre_modification.replace('%id%', this.entity.id)
             : this.canvas.parametres.titre_creation;
 
-        this.contentDialogue.innerHTML = `
+        this.elementContenu.innerHTML = `
             <form data-action="submit->dialog-instance#submitForm">
                 <div class="modal-header">
                     <h5 class="modal-title">${title}</h5>
                     <button type="button" class="btn-close btn-close-white" data-action="click->dialog-instance#close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="text-center p-5"><span class="spinner-border"></span></div>
+                    <div class="text-center p-5">
+                        <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <div class="feedback-container"></div>
-                    <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                     <div class="feedback-container"></div>
+                    <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
+                        <span>Annuler</span>
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg>
+                        <span>Enregistrer</span>
+                    </button>
                 </div>
             </form>
         `;
 
-        let url = this.canvas.parametres.endpoint_form_url;
-        if (isEditMode) {
-            url += `/${this.entity.id}`;
+        // 2. On initialise et on AFFICHE la modale. L'utilisateur voit maintenant le spinner.
+        const modalNode = this.elementContenu.closest('.modal');
+        this.modal = new Modal(modalNode);
+        this.modal.show();
+
+        modalNode.addEventListener('hidden.bs.modal', () => {
+            modalNode.remove();
+        });
+
+        // 3. SEULEMENT MAINTENANT, on lance le chargement asynchrone du formulaire.
+        await this.loadFormBody();
+    }
+
+    /**
+     * Charge le contenu du formulaire et le place dans le .modal-body.
+     */
+    async loadFormBody() {
+        try {
+            let url = this.canvas.parametres.endpoint_form_url;
+            if (this.entity && this.entity.id) {
+                url += `/${this.entity.id}`;
+            }
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
+            
+            this.elementContenu.querySelector('.modal-body').innerHTML = await response.text();
+        } catch (error) {
+            this.elementContenu.querySelector('.modal-body').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
         }
-        
-        const response = await fetch(url);
-        this.contentDialogue.querySelector('.modal-body').innerHTML = await response.text();
     }
     
     /**
@@ -92,7 +98,7 @@ export default class extends Controller {
      */
     async submitForm(event) {
         event.preventDefault();
-        const feedbackContainer = this.contentDialogue.querySelector('.feedback-container');
+        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
 
@@ -109,7 +115,6 @@ export default class extends Controller {
 
             if (!response.ok) throw result;
 
-            // En cas de succès, on notifie les autres composants
             document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', {
                 detail: { originatorId: this.context.originatorId }
             }));

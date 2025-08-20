@@ -1,0 +1,28 @@
+{# ====================================================== #}
+{# == DIALOGUE DE CONFIRMATION (pour la suppression)   == #}
+{# ====================================================== #}
+<div data-controller="confirmation-dialog" class="modal fade" tabindex="-1" id="confirmation-dialog-modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" data-confirmation-dialog-target="title">Confirmation requise</h5>
+                <button type="button" class="btn-close btn-close-white" data-action="click->confirmation-dialog#close"></button>
+            </div>
+            <div class="modal-body" data-confirmation-dialog-target="body">
+                <p>Êtes-vous sûr de vouloir continuer ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="click->confirmation-dialog#close">
+                    {# AJOUT DE L'ICÔNE "ANNULER" #}
+                    <twig:UX:Icon name="fluent:calendar-cancel-24-regular" style="width: 20px;" />
+                    <span>Annuler</span>    
+                </button>
+                <button type="button" class="btn btn-danger" data-action="click->confirmation-dialog#confirm">
+                    {# AJOUT DE L'ICÔNE "CONFIRMER" #}
+                    <twig:UX:Icon name="fluent:delete-20-filled" style="width: 20px;" />
+                    <span>Confirmer</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
