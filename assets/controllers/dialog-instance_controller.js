@@ -21,7 +21,7 @@ export default class extends Controller {
         }
     }
 
-    disconnect(){
+    disconnect() {
         this.modalNode.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
@@ -32,7 +32,7 @@ export default class extends Controller {
         this.canvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.context = detail.context || {};
-        
+
         // 1. On construit immédiatement la structure de la modale avec un spinner dans le corps.
         const isEditMode = this.entity && this.entity.id;
         const title = isEditMode
@@ -89,15 +89,20 @@ export default class extends Controller {
      * NOUVELLE FONCTION : Corrige le z-index si plusieurs modales sont ouvertes.
      */
     adjustZIndex() {
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        // S'il y a plus d'un backdrop, cela signifie qu'il y a des modales superposées.
-        if (backdrops.length > 1) {
-            const modalNode = this.elementContenu.closest('.modal');
-            const modalZIndex = parseInt(window.getComputedStyle(modalNode).zIndex);
-            const topBackdrop = backdrops[backdrops.length - 1];
+        const modals = Array.from(document.querySelectorAll('.modal.show'));
+        const backdrops = Array.from(document.querySelectorAll('.modal-backdrop.show'));
 
-            // On force le backdrop à être juste en dessous de notre modale.
-            topBackdrop.style.zIndex = modalZIndex - 1;
+        if (modals.length > 1) {
+            let zIndexBase = 1050; // z-index de base de Bootstrap
+
+            modals.forEach((modal, index) => {
+                const backdrop = backdrops[index];
+                zIndexBase += 10; // On augmente de 10 pour chaque nouvelle modale
+                modal.style.zIndex = zIndexBase + 5;
+                if (backdrop) {
+                    backdrop.style.zIndex = zIndexBase;
+                }
+            });
         }
     }
 
@@ -112,13 +117,13 @@ export default class extends Controller {
             }
             const response = await fetch(url);
             if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
-            
+
             this.elementContenu.querySelector('.modal-body').innerHTML = await response.text();
         } catch (error) {
             this.elementContenu.querySelector('.modal-body').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
         }
     }
-    
+
     /**
      * Gère la soumission du formulaire via AJAX.
      */
