@@ -11,6 +11,7 @@ export default class extends Controller {
         // On récupère les données que le dialog-manager a attachées à l'élément.
         const detail = this.element.dialogDetail;
         this.elementContenu = this.element;
+        this.boundAdjustZIndex = this.adjustZIndex.bind(this);
 
         if (detail) {
             // On lance notre logique d'initialisation.
@@ -18,6 +19,10 @@ export default class extends Controller {
         } else {
             console.error("L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !");
         }
+    }
+
+    disconnect(){
+        this.modalNode.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     /**
@@ -63,16 +68,37 @@ export default class extends Controller {
         `;
 
         // 2. On initialise et on AFFICHE la modale. L'utilisateur voit maintenant le spinner.
-        const modalNode = this.elementContenu.closest('.modal');
-        this.modal = new Modal(modalNode);
+        this.modalNode = this.elementContenu.closest('.modal');
+        this.modal = new Modal(this.modalNode);
         this.modal.show();
 
-        modalNode.addEventListener('hidden.bs.modal', () => {
-            modalNode.remove();
+        this.modalNode.addEventListener('hidden.bs.modal', () => {
+            this.modalNode.remove();
         });
+
+        // --- AJOUT DE LA CORRECTION ---
+        // On écoute l'événement 'shown.bs.modal' qui est déclenché quand la modale est visible.
+        this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
+        // --- FIN DE L'AJOUT ---
 
         // 3. SEULEMENT MAINTENANT, on lance le chargement asynchrone du formulaire.
         await this.loadFormBody();
+    }
+
+    /**
+     * NOUVELLE FONCTION : Corrige le z-index si plusieurs modales sont ouvertes.
+     */
+    adjustZIndex() {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        // S'il y a plus d'un backdrop, cela signifie qu'il y a des modales superposées.
+        if (backdrops.length > 1) {
+            const modalNode = this.elementContenu.closest('.modal');
+            const modalZIndex = parseInt(window.getComputedStyle(modalNode).zIndex);
+            const topBackdrop = backdrops[backdrops.length - 1];
+
+            // On force le backdrop à être juste en dessous de notre modale.
+            topBackdrop.style.zIndex = modalZIndex - 1;
+        }
     }
 
     /**

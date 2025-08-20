@@ -12,15 +12,19 @@
                 <p>Êtes-vous sûr de vouloir continuer ?</p>
             </div>
             <div class="modal-footer">
+                {# AJOUT: Conteneur pour les messages d'erreur #}
+                <div class="feedback-container w-100 text-danger mb-2" data-confirmation-dialog-target="feedback"></div>
+
                 <button type="button" class="btn btn-secondary" data-action="click->confirmation-dialog#close">
                     {# AJOUT DE L'ICÔNE "ANNULER" #}
-                    <twig:UX:Icon name="fluent:calendar-cancel-24-regular" style="width: 20px;" />
+                    <twig:UX:Icon name="bi:x-circle" style="width: 20px;" />
                     <span>Annuler</span>    
                 </button>
-                <button type="button" class="btn btn-danger" data-action="click->confirmation-dialog#confirm">
-                    {# AJOUT DE L'ICÔNE "CONFIRMER" #}
-                    <twig:UX:Icon name="fluent:delete-20-filled" style="width: 20px;" />
-                    <span>Confirmer</span>
+                 {# MODIFICATION: Ajout du target et du spinner #}
+                <button type="button" class="btn btn-danger" data-action="click->confirmation-dialog#confirm" data-confirmation-dialog-target="confirmButton">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                    <twig:UX:Icon name="bi:check-circle-fill" class="button-icon" style="width: 20px;" />
+                    <span class="button-text">Confirmer</span>
                 </button>
             </div>
         </div>

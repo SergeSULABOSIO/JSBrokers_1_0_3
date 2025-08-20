@@ -199,14 +199,17 @@ export default class extends Controller {
 
             if (!response.ok) throw new Error(result.message || 'Erreur de suppression.');
 
-            // TODO: Afficher une notification de succès (toast)
-            console.log(result.message);
             this.loadItemList(); // Rafraîchir la liste
 
+            // --- AJOUT : Annonce le succès de la suppression ---
+            // this.dispatch('delete:success');
+            buildCustomEventForElement(document, "delete:success", true, true, {});
         } catch (error) {
             // TODO: Afficher une notification d'erreur (toast)
             console.error('Delete error:', error);
-            alert(error.message);
+            // --- AJOUT : Annonce l'échec de la suppression avec le message d'erreur ---
+            // this.dispatch('delete:error', { detail: { message: error.message } });
+            buildCustomEventForElement(document, 'delete:error', true, true, {message: error.message});
         }
     }
 
