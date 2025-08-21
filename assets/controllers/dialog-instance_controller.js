@@ -127,7 +127,7 @@ export default class extends Controller {
         this.toggleLoading(true);
 
         // On cherche le conteneur de feedback manuellement
-        const feedbackContainer = this.element.querySelector('.feedback-container');
+        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
         feedbackContainer.innerHTML = '';
 
         
@@ -165,17 +165,6 @@ export default class extends Controller {
      * AJOUT : Gère l'état visuel du bouton de soumission.
      */
     toggleLoading(isLoading) {
-        // 1. D'abord, on vérifie si la cible "submitButton" existe.
-        //    Si elle n'existe pas, on quitte la fonction pour éviter toute erreur.
-        if (!this.hasSubmitButtonTarget) {
-            console.log(this.nomControlleur + " - toggleLoading", this.submitButtonTarget);
-            return;
-        }
-
-        // 2. Maintenant que nous sommes sûrs que la cible existe, on peut l'utiliser
-        //    en toute sécurité.
-        // const button = this.submitButtonTarget;
-
         // On cherche le bouton manuellement juste quand on en a besoin
         const button = this.element.querySelector('button[type="submit"]');
         if (!button) return;
