@@ -6,23 +6,26 @@ import { Modal } from 'bootstrap';
  * Il est créé dynamiquement par 'dialog-manager' et se détruit à la fermeture.
  */
 export default class extends Controller {
+    // static targets = ["submitButton", "feedback"];
 
     connect() {
-        // On récupère les données que le dialog-manager a attachées à l'élément.
+        this.nomControlleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
         this.elementContenu = this.element;
         this.boundAdjustZIndex = this.adjustZIndex.bind(this);
 
         if (detail) {
-            // On lance notre logique d'initialisation.
             this.start(detail);
+            // console.log(this.nomControlleur + " - connect", this.elementContenu, this.targets);
         } else {
             console.error("L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !");
         }
     }
 
     disconnect() {
-        this.modalNode.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
+        if (this.modalNode) {
+            this.modalNode.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
+        }
     }
 
     /**
@@ -53,35 +56,27 @@ export default class extends Controller {
                     </div>
                 </div>
                 <div class="modal-footer">
-                     <div class="feedback-container"></div>
+                    <div class="feedback-container w-100 text-danger mb-2" data-dialog-instance-target="feedback"></div>
                     <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">
                         <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
                         <span>Annuler</span>
                     </button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" data-dialog-instance-target="submitButton">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg>
-                        <span>Enregistrer</span>
+                        <span class="button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg></span>
+                        <span class="button-text">Enregistrer</span>
                     </button>
                 </div>
             </form>
         `;
 
-        // 2. On initialise et on AFFICHE la modale. L'utilisateur voit maintenant le spinner.
         this.modalNode = this.elementContenu.closest('.modal');
         this.modal = new Modal(this.modalNode);
         this.modal.show();
 
-        this.modalNode.addEventListener('hidden.bs.modal', () => {
-            this.modalNode.remove();
-        });
-
-        // --- AJOUT DE LA CORRECTION ---
-        // On écoute l'événement 'shown.bs.modal' qui est déclenché quand la modale est visible.
+        this.modalNode.addEventListener('hidden.bs.modal', () => {this.modalNode.remove();});
         this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
-        // --- FIN DE L'AJOUT ---
 
-        // 3. SEULEMENT MAINTENANT, on lance le chargement asynchrone du formulaire.
         await this.loadFormBody();
     }
 
@@ -129,13 +124,17 @@ export default class extends Controller {
      */
     async submitForm(event) {
         event.preventDefault();
-        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        this.toggleLoading(true);
+
+        // On cherche le conteneur de feedback manuellement
+        const feedbackContainer = this.element.querySelector('.feedback-container');
+        feedbackContainer.innerHTML = '';
+
+        
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
-
         if (this.entity && this.entity.id) data.id = this.entity.id;
         if (this.context.notificationSinistreId) data.notificationSinistre = this.context.notificationSinistreId;
-
         try {
             const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
                 method: 'POST',
@@ -143,19 +142,15 @@ export default class extends Controller {
                 body: JSON.stringify(data)
             });
             const result = await response.json();
-
             if (!response.ok) throw result;
-
             document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', {
                 detail: { originatorId: this.context.originatorId }
             }));
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
-
             this.close();
-
         } catch (error) {
-            feedbackContainer.className = 'alert alert-danger';
-            feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
+            this.feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
+            this.toggleLoading(false); // On réactive le bouton en cas d'erreur
         }
     }
 
@@ -164,5 +159,41 @@ export default class extends Controller {
      */
     close() {
         this.modal.hide();
+    }
+
+    /**
+     * AJOUT : Gère l'état visuel du bouton de soumission.
+     */
+    toggleLoading(isLoading) {
+        // 1. D'abord, on vérifie si la cible "submitButton" existe.
+        //    Si elle n'existe pas, on quitte la fonction pour éviter toute erreur.
+        if (!this.hasSubmitButtonTarget) {
+            console.log(this.nomControlleur + " - toggleLoading", this.submitButtonTarget);
+            return;
+        }
+
+        // 2. Maintenant que nous sommes sûrs que la cible existe, on peut l'utiliser
+        //    en toute sécurité.
+        // const button = this.submitButtonTarget;
+
+        // On cherche le bouton manuellement juste quand on en a besoin
+        const button = this.element.querySelector('button[type="submit"]');
+        if (!button) return;
+
+        const spinner = button.querySelector('.spinner-border');
+        const icon = button.querySelector('.button-icon');
+        const text = button.querySelector('.button-text');
+
+        if (isLoading) {
+            button.disabled = true;
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+            text.textContent = 'Enregistrement...';
+        } else {
+            button.disabled = false;
+            spinner.style.display = 'none';
+            icon.style.display = 'inline-block';
+            text.textContent = 'Enregistrer';
+        }
     }
 }
