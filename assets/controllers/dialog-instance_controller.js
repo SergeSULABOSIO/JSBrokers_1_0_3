@@ -166,7 +166,7 @@ export default class extends Controller {
      */
     toggleLoading(isLoading) {
         // On cherche le bouton manuellement juste quand on en a besoin
-        const button = this.element.querySelector('button[type="submit"]');
+        const button = this.elementContenu.querySelector('button[type="submit"]');
         if (!button) return;
 
         const spinner = button.querySelector('.spinner-border');
