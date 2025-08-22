@@ -123,17 +123,6 @@ class NotificationSinistreType extends AbstractType
                     'placeholder' => "Evaluation ciffrée",
                 ],
             ])
-            
-            // ->add('contacts', CollectionType::class, [
-            //     'label' => "Liste des personnes clées, à contacter pour tout ce qui concerne cette reclamation.",
-            //     'entry_type' => ContactType::class,
-            //     'by_reference' => false,
-            //     'allow_add' => true,
-            //     'allow_delete' => true,
-            //     'entry_options' => [
-            //         'label' => false,
-            //     ],
-            // ])
             ->add('contacts', CollectionType::class, [
                 'label' => "Liste des contacts", // Sera surchargé par le widget mais bon à garder
                 'help' => "Personnes clées, à contacter pour tout ce qui concerne cette réclamation.",
