@@ -6274,7 +6274,7 @@ class Constante
                     "form_layout" => [
                         // Ligne 1 : 2 colonnes
                         [
-                            // "couleur_fond" => "white",
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["assure"]],
                                 ["champs" => ["assureur"]]

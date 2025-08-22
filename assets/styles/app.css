@@ -62,12 +62,6 @@ a:active {
     display: block;
 }
 
-.form-select, input[type=date], input[type=text], input[type=password], input[type=number], input[type=email], input[type=file] {
-    border: none;
-    border-bottom: 2px solid gray;
-    font-weight: bold;
-}
-
 .editeur-riche {
     height: 150px;
     padding: 10px;
@@ -441,59 +435,6 @@ a:active {
     background: #495057;
 }
 
-/* 5. STYLES SPÉCIFIQUES AUX FORMULAIRES DANS LES DIALOGUES */
-.app-dialog .form-label {
-    font-weight: 600;
-    color: #495057;
-}
-.app-dialog .form-control,
-.app-dialog .form-select,
-.app-dialog .tom-select-control {
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    padding: 0.75rem 1rem;
-    font-weight: normal;
-}
-.app-dialog .form-control:focus,
-.app-dialog .form-select:focus,
-.app-dialog .tom-select-control.focus {
-    border-color: #0052ff;
-    box-shadow: 0 0 0 0.25rem rgba(0, 82, 255, 0.25);
-    outline: none;
-}
-
-/*
-===================================================================
- SECTION: STYLE GLOBAL POUR LES CHAMPS DE FORMULAIRE (SANS BORDURE)
-===================================================================
-*/
-
-/* * Cible tous les types d'inputs, selects, et textareas de manière globale.
- * Cette règle unifie le style "flat" pour toute l'application.
- */
-.form-control,
-.form-select,
-.editeur-riche,
-input[type=text],
-input[type=date],
-input[type=password],
-input[type=number],
-input[type=email],
-input[type=file],
-select,
-textarea {
-    border: none !important; /* Supprime toutes les bordures (haut, bas, côtés) */
-}
-
-/* * Améliore l'expérience utilisateur en donnant un retour visuel clair
- * lorsque l'utilisateur clique sur un champ.
- */
-.form-control:focus,
-.form-select:focus,
-.editeur-riche:focus,
-.tom-select-control.focus { /* Cible aussi les champs autocomplete */
-    border: none !important; /* Répète pour être sûr */
-}
 
 /*
 ===================================================================
@@ -555,4 +496,79 @@ textarea {
    mais au-dessus de la première boîte de dialogue. */
 .modal-backdrop.show ~ .modal-backdrop.show {
     z-index: 1069;
+}
+
+.input-group span {
+    border: none;
+    background-color: transparent;
+}
+
+/*
+===================================================================
+ SECTION: STYLE GLOBAL POUR LES CHAMPS DE FORMULAIRE (STYLE "FLAT" UNIFIÉ)
+===================================================================
+*/
+
+/* --- Style par défaut pour tous les champs --- */
+.form-control,
+.form-select,
+.editeur-riche,
+input[type=text],
+input[type=date],
+input[type=password],
+input[type=number],
+input[type=email],
+input[type=file],
+select,
+textarea,
+.tom-select-control { /* Cible aussi les champs autocomplete */
+    /* On définit une bordure de 2px, mais invisible, pour réserver l'espace */
+    border: 3px solid transparent; 
+    
+    /* On garde uniquement la ligne du bas visible par défaut */
+    /* border-bottom: 2px solid #d8d8d8;  */
+
+    border-radius: 10px; /* Un léger arrondi pour adoucir */
+    background-color: transparent !important;
+    box-shadow: none !important;
+    
+    /* On ajoute une transition pour un effet de couleur fluide */
+    transition: border-color 0.2s ease-in-out; 
+}
+
+/* --- Style au survol de la souris --- */
+.form-control:hover,
+.form-select:hover,
+.editeur-riche:hover,
+input[type=text]:hover,
+input[type=date]:hover,
+input[type=password]:hover,
+input[type=number]:hover,
+input[type=email]:hover,
+input[type=file]:hover,
+select:hover,
+textarea:hover,
+.tom-select-control:hover {
+    /* La bordure, initialement transparente, devient gris foncé */
+    border-color: #6c757d;
+}
+
+/* --- Style au focus (quand on clique dedans) --- */
+.form-control:focus,
+.form-select:focus,
+.editeur-riche:focus,
+.tom-select-control.focus { /* La classe .focus est pour les champs autocomplete */
+    /* La bordure devient bleue pour indiquer la sélection active */
+    border-color: #0d6efd !important;
+    box-shadow: none !important;
+}
+
+/*
+===================================================================
+ SECTION: STYLE POUR LES MESSAGES D'AIDE DES FORMULAIRES
+===================================================================
+*/
+
+.form-text {
+    color: #0d6efd !important; /* Bleu cobalt (couleur primaire de Bootstrap) */
 }
