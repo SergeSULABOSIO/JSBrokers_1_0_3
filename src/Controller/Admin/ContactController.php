@@ -150,16 +150,28 @@ class ContactController extends AbstractController
      * Fournit le formulaire HTML pour un contact (nouveau ou existant).
      */
     #[Route('/api/get-form/{id?}', name: 'admin.api.contact.get_form', methods: ['GET'])]
-    public function getFormApi(?Contact $contact): Response
+    public function getFormApi(?Contact $contact, Constante $constante): Response
     {
         if (!$contact) {
             $contact = new Contact();
         }
 
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var Entreprise $entreprise */
+        $entreprise = $invite->getEntreprise();
+
         $form = $this->createForm(ContactType::class, $contact);
 
-        return $this->render('admin/contact/_form.html.twig', [
+
+        // On rend un template qui contient uniquement le formulaire
+        return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
+            'entityFormCanvas' => $constante->getEntityFormCanvas($contact, $entreprise->getId())
         ]);
     }
 

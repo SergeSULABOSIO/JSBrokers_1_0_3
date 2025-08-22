@@ -6349,6 +6349,46 @@ class Constante
                 ],
             ];
         }
+        if ($object instanceof Contact) {
+            // L'ID est nécessaire pour construire les endpoints, assurons-nous qu'il est accessible.
+            // En mode création, l'ID sera null, nous gérerons ce cas côté client.
+            $notificationId = $object->getId() ?? 0;
+
+            return [
+                "parametres" => [
+                    "titre_creation" => "Nouveau contact",
+                    "titre_modification" => "Modification du contact #%id%",
+                    "endpoint_submit_url" => "/admin/contact/api/submit",
+                    "endpoint_form_url" => "/admin/contact/api/get-form",
+
+                    "form_layout" => [
+                        // Ligne 1 : 2 colonnes
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["nom"]],
+                            ]
+                        ],
+                        // Ligne 2 : 1 colonne
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["email"]],
+                                ["champs" => ["telephone"]]
+                            ]
+                        ],
+                        // Ligne 3 : 2 colonnes
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["fonction"]],
+                                ["champs" => ["type"]]
+                            ]
+                        ],
+                    ],
+                ],
+            ];
+        }
         return [];
     }
 
