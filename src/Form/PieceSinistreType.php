@@ -2,18 +2,15 @@
 
 namespace App\Form;
 
-use App\Entity\Invite;
+
 use App\Entity\PieceSinistre;
 use App\Entity\ModelePieceSinistre;
-use App\Entity\NotificationSinistre;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class PieceSinistreType extends AbstractType
 {
@@ -39,18 +36,18 @@ class PieceSinistreType extends AbstractType
                 'required' => true,
                 'widget' => 'single_text',
             ])
-            ->add('type', EntityType::class, [
-                'label' => "Nature de la pièce",
-                'required' => false,
-                'class' => ModelePieceSinistre::class,
-                'choice_label' => 'nom',
-            ])
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
+            // ->add('type', EntityType::class, [
+            //     'label' => "Nature de la pièce",
+            //     'required' => false,
+            //     'class' => ModelePieceSinistre::class,
+            //     'choice_label' => 'nom',
+            // ])
+            // ->add('enregistrer', SubmitType::class, [
+            //     'label' => "Enregistrer",
+            //     'attr' => [
+            //         'class' => "btn btn-secondary",
+            //     ],
+            // ])
         ;
     }
 
@@ -59,6 +56,12 @@ class PieceSinistreType extends AbstractType
         $resolver->setDefaults([
             'data_class' => PieceSinistre::class,
             'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

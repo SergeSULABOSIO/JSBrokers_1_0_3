@@ -29,7 +29,7 @@ class TacheType extends AbstractType
         private TranslatorInterface $translatorInterface,
         private Security $security
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -43,50 +43,50 @@ class TacheType extends AbstractType
                 'label' => "Echéance",
                 'widget' => 'single_text',
             ])
-            ->add('closed', ChoiceType::class, [
-                'label' => "La tâche est-elle accomplie?",
-                'expanded' => false,
-                'required' => true,
-                'choices'  => [
-                    "Oui" => true,
-                    "Pas encore." => false,
-                ],
-            ])
-            ->add('executor', EntityType::class, [
-                'label' => "Executeur",
-                'required' => false,
-                'class' => Invite::class,
-                'choice_label' => 'nom',
-            ])
-            ->add('feedbacks', CollectionType::class, [
-                'label' => "tache_form_label_feedbacks",
-                'entry_type' => FeedbackType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "feedback",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 20,
-                    ]),
-                ],
-            ])
+            // ->add('closed', ChoiceType::class, [
+            //     'label' => "La tâche est-elle accomplie?",
+            //     'expanded' => false,
+            //     'required' => true,
+            //     'choices'  => [
+            //         "Oui" => true,
+            //         "Pas encore." => false,
+            //     ],
+            // ])
+            // ->add('executor', EntityType::class, [
+            //     'label' => "Executeur",
+            //     'required' => false,
+            //     'class' => Invite::class,
+            //     'choice_label' => 'nom',
+            // ])
+            // ->add('feedbacks', CollectionType::class, [
+            //     'label' => "tache_form_label_feedbacks",
+            //     'entry_type' => FeedbackType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => true,
+            //     'allow_delete' => true,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            //     'attr' => [
+            //         'data-controller' => 'form-collection-entites',
+            //         'data-form-collection-entites-data-value' => json_encode([
+            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
+            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+            //             'icone' => "feedback",
+            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+            //             'tailleMax' => 20,
+            //         ]),
+            //     ],
+            // ])
             //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
+            // ->add('enregistrer', SubmitType::class, [
+            //     'label' => "Enregistrer",
+            //     'attr' => [
+            //         'class' => "btn btn-secondary",
+            //     ],
+            // ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
+            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
@@ -95,6 +95,12 @@ class TacheType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Tache::class,
             'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

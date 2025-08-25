@@ -1,0 +1,14 @@
+{#
+Ce template est un conteneur générique. Il attend deux variables :
+- items: La collection d'objets à afficher (ex: les contacts, les pièces).
+- item_template: Le chemin vers le template qui sait comment afficher UN SEUL item.
+#}
+
+{% if items is not empty and items|length > 0 %}
+    {% for item in items %}
+        {# On inclut le sous-template spécifique pour chaque élément de la boucle #}
+        {% include item_template with {'item': item} %}
+    {% endfor %}
+{% else %}
+    <div class="text-center p-4 text-muted"><em>Aucun élément dans cette collection.</em></div>
+{% endif %}

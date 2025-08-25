@@ -24,18 +24,21 @@ use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
+use App\Entity\PieceSinistre;
 use App\Entity\CompteBancaire;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\AutoriteFiscale;
 use App\Entity\ConditionPartage;
 use App\Services\ServiceMonnaies;
+use Doctrine\ORM\Query\Expr\Func;
 use PhpParser\Node\Expr\FuncCall;
 use App\Entity\RevenuPourCourtier;
 use App\Repository\NoteRepository;
 use App\Repository\TaxeRepository;
 use App\Entity\ChargementPourPrime;
 use App\Entity\NotificationSinistre;
+use App\Repository\InviteRepository;
 use PhpParser\Node\Expr\Cast\Array_;
 use App\Repository\ArticleRepository;
 use Proxies\__CG__\App\Entity\Revenu;
@@ -50,6 +53,7 @@ use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\ReportSet\InsurerReportSet;
 use App\Entity\ReportSet\PartnerReportSet;
 use App\Entity\ReportSet\RenewalReportSet;
+use App\Entity\ReportSet\CashflowReportSet;
 use Doctrine\Common\Collections\Collection;
 use phpDocumentor\Reflection\Types\Integer;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -58,9 +62,6 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
-use App\Entity\ReportSet\CashflowReportSet;
-use App\Repository\InviteRepository;
-use Doctrine\ORM\Query\Expr\Func;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -6330,19 +6331,34 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                // Dans la section "champs" de form_layout
-                                "champs" => [
-                                    [
-                                        "field_code" => "contacts",
-                                        "widget" => "collection-manager",
-                                        "options" => [
-                                            "listUrl" => "/admin/notificationsinistre/api/" . $notificationId . "/contacts",
-                                            "itemFormUrl" => "/admin/contact/api/get-form",
-                                            "itemSubmitUrl" => "/admin/contact/api/submit",
-                                            "itemDeleteUrl" => "/admin/contact/api/delete",
-                                        ]
-                                    ]
-                                ]
+                                // "champs" => [
+                                //     [
+                                //         "field_code" => "contacts",
+                                //         "widget" => "collection-manager",
+                                //         "options" => [
+                                //             "listUrl" => "/admin/notificationsinistre/api/" . $notificationId . "/contacts",
+                                //             "itemFormUrl" => "/admin/contact/api/get-form",
+                                //             "itemSubmitUrl" => "/admin/contact/api/submit",
+                                //             "itemDeleteUrl" => "/admin/contact/api/delete",
+                                //         ]
+                                //     ]
+                                // ],
+                                ["champs" => [$this->getCollectionWidgetConfig('contacts', $notificationId)]],
+                                ["champs" => [$this->getCollectionWidgetConfig('pieces', $notificationId)]],
+                            ]
+                        ],
+                        // Ligne 9 : Collection des contacts
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', $notificationId)]],
+                            ]
+                        ],
+                        // Ligne 10 : Collection des contacts
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', $notificationId)]],
                             ]
                         ],
                     ],
@@ -6389,7 +6405,107 @@ class Constante
                 ],
             ];
         }
+        // --- AJOUT DES DEFINITIONS DE CANVAS POUR LES NOUVELLES ENTITÉS ---
+        if ($object instanceof PieceSinistre) {
+            return [
+                "parametres" => [
+                    "titre_creation" => "Nouvelle pièce",
+                    "titre_modification" => "Modification de la pièce #%id%",
+                    "endpoint_submit_url" => "/admin/piecesinistre/api/submit",
+                    "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
+                    "form_layout" => [
+                        [
+                            "colonnes" => [
+                                ["champs" => ["description"]]
+                            ]
+                        ],
+                        [
+                            "colonnes" => [
+                                ["champs" => ["fourniPar"]],
+                                ["champs" => ["receivedAt"]]
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+        }
+        if ($object instanceof OffreIndemnisationSinistre) {
+            return [
+                "parametres" => [
+                    "titre_creation" => "Nouvelle offre d'indemnisation",
+                    "titre_modification" => "Modification de l'offre #%id%",
+                    "endpoint_submit_url" => "/admin/offreindemnisation/api/submit",
+                    "endpoint_form_url" => "/admin/offreindemnisation/api/get-form",
+                    "form_layout" => [
+                        [
+                            "colonnes" => [
+                                ["champs" => ["nom"]]
+                            ]
+                        ],
+                        [
+                            "colonnes" => [
+                                ["champs" => ["beneficiaire"]]
+                            ]
+                        ],
+                        [
+                            "colonnes" => [
+                                ["champs" => ["franchiseAppliquee"]],
+                                ["champs" => ["montantPayable"]]
+                            ]
+                        ],
+                        [
+                            "colonnes" => [
+                                ["champs" => ["referenceBancaire"]]
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+        }
+        if ($object instanceof Tache) {
+            return [
+                "parametres" => [
+                    "titre_creation" => "Nouvelle tâche",
+                    "titre_modification" => "Modification de la tâche #%id%",
+                    "endpoint_submit_url" => "/admin/tache/api/submit",
+                    "endpoint_form_url" => "/admin/tache/api/get-form",
+                    "form_layout" => [
+                        [
+                            "colonnes" => [
+                                ["champs" => ["description"]]
+                            ]
+                        ],
+                        [
+                            "colonnes" => [
+                                ["champs" => ["toBeEndedAt"]],
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+        }
+
         return [];
+    }
+
+    /**
+     * NOUVELLE FONCTION HELPER pour éviter la répétition de code
+     */
+    private function getCollectionWidgetConfig(string $fieldName, int $parentId): array
+    {
+        $entityName = str_replace(['s', 'Sinistre'], '', $fieldName); // Simplification pour déduire le nom
+        if ($fieldName === 'offreIndemnisationSinistres') $entityName = 'offreindemnisation'; // Cas particulier
+
+        return [
+            "field_code" => $fieldName,
+            "widget" => "collection-manager",
+            "options" => [
+                "listUrl"       => "/admin/notificationsinistre/api/" . $parentId . "/" . $fieldName,
+                "itemFormUrl"   => "/admin/" . strtolower($entityName) . "/api/get-form",
+                "itemSubmitUrl" => "/admin/" . strtolower($entityName) . "/api/submit",
+                "itemDeleteUrl" => "/admin/" . strtolower($entityName) . "/api/delete",
+            ]
+        ];
     }
 
     public function getEntityCanvas($object): array

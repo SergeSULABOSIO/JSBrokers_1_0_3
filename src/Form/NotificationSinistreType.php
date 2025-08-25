@@ -135,6 +135,37 @@ class NotificationSinistreType extends AbstractType
                 // car on le gère entièrement en AJAX.
                 'mapped' => false,
             ])
+            // --- AJOUT DES NOUVELLES COLLECTIONS ---
+            ->add('pieces', CollectionType::class, [
+                'label' => "Pièces du dossier",
+                'help' => "Liste des documents et pièces justificatives.",
+                'entry_type' => PieceSinistreType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
+            ->add('offreIndemnisationSinistres', CollectionType::class, [
+                'label' => "Offres d'indemnisation",
+                'help' => "Propositions d'indemnisation pour ce sinistre.",
+                'entry_type' => OffreIndemnisationSinistreType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
+            ->add('taches', CollectionType::class, [
+                'label' => "Tâches à effectuer",
+                'help' => "Actions et suivis nécessaires pour ce dossier.",
+                'entry_type' => TacheType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
 
         ;
     }
@@ -143,10 +174,7 @@ class NotificationSinistreType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => NotificationSinistre::class,
-            // AJOUT 1: Désactive la protection CSRF pour ce formulaire API
             'csrf_protection' => false,
-
-            // AJOUT 2: Autorise les champs non définis dans le form (comme 'id') à être envoyés
             'allow_extra_fields' => true,
         ]);
     }

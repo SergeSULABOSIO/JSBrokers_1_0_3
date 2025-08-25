@@ -21,7 +21,7 @@ class OffreIndemnisationSinistreType extends AbstractType
         private ServiceMonnaies $serviceMonnaies,
         private TranslatorInterface $translatorInterface
     ) {}
-    
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -65,74 +65,74 @@ class OffreIndemnisationSinistreType extends AbstractType
                     'placeholder' => "Référence bancaire",
                 ],
             ])
-            ->add('documents', CollectionType::class, [
-                'label' => "Documents",
-                'entry_type' => DocumentType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "document",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 20,
-                    ]),
-                ],
-            ])
-            ->add('paiements', CollectionType::class, [
-                'label' => "Paiements",
-                'entry_type' => PaiementType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "paiement",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 20,
-                    ]),
-                ],
-            ])
-            ->add('taches', CollectionType::class, [
-                'label' => "Liste des taches",
-                'help' => "Tâches ou actions à exécuter par les utilisateurs dans le cadre de cette notification.",
-                'entry_type' => TacheType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "tache",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 20,
-                    ]),
-                ],
-            ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
+            // ->add('documents', CollectionType::class, [
+            //     'label' => "Documents",
+            //     'entry_type' => DocumentType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => true,
+            //     'allow_delete' => true,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            //     'attr' => [
+            //         'data-controller' => 'form-collection-entites',
+            //         'data-form-collection-entites-data-value' => json_encode([
+            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
+            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+            //             'icone' => "document",
+            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+            //             'tailleMax' => 20,
+            //         ]),
+            //     ],
+            // ])
+            // ->add('paiements', CollectionType::class, [
+            //     'label' => "Paiements",
+            //     'entry_type' => PaiementType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => true,
+            //     'allow_delete' => true,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            //     'attr' => [
+            //         'data-controller' => 'form-collection-entites',
+            //         'data-form-collection-entites-data-value' => json_encode([
+            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
+            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+            //             'icone' => "paiement",
+            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+            //             'tailleMax' => 20,
+            //         ]),
+            //     ],
+            // ])
+            // ->add('taches', CollectionType::class, [
+            //     'label' => "Liste des taches",
+            //     'help' => "Tâches ou actions à exécuter par les utilisateurs dans le cadre de cette notification.",
+            //     'entry_type' => TacheType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => true,
+            //     'allow_delete' => true,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            //     'attr' => [
+            //         'data-controller' => 'form-collection-entites',
+            //         'data-form-collection-entites-data-value' => json_encode([
+            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
+            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+            //             'icone' => "tache",
+            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+            //             'tailleMax' => 20,
+            //         ]),
+            //     ],
+            // ])
+            // //Le bouton d'enregistrement / soumission
+            // ->add('enregistrer', SubmitType::class, [
+            //     'label' => "Enregistrer",
+            //     'attr' => [
+            //         'class' => "btn btn-secondary",
+            //     ],
+            // ])
         ;
     }
 
@@ -141,6 +141,12 @@ class OffreIndemnisationSinistreType extends AbstractType
         $resolver->setDefaults([
             'data_class' => OffreIndemnisationSinistre::class,
             'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

@@ -4,30 +4,28 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invite;
 use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
 use App\Constantes\Constante;
+use App\Entity\PieceSinistre;
+use App\Form\PieceSinistreType;
 use App\Constantes\MenuActivator;
-use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use App\Entity\OffreIndemnisationSinistre;
-use App\Form\OffreIndemnisationSinistreType;
+use App\Repository\PieceSinistreRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use App\Repository\OffreIndemnisationSinistreRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 
-#[Route("/admin/offreindemnisation", name: 'admin.offreindemnisation.')]
+#[Route("/admin/piecesinistre", name: 'admin.piecesinistre.')]
 #[IsGranted('ROLE_USER')]
-class OffreIndemnisationController extends AbstractController
+class PieceSinistreController extends AbstractController
 {
     public MenuActivator $activator;
 
@@ -37,9 +35,8 @@ class OffreIndemnisationController extends AbstractController
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private OffreIndemnisationSinistreRepository $offreIndemnisationSinistreRepository,
+        private PieceSinistreRepository $pieceSinistreRepository,
         private Constante $constante,
-        private ServiceMonnaies $serviceMonnaies,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
     }
@@ -50,17 +47,13 @@ class OffreIndemnisationController extends AbstractController
     {
         $page = $request->query->getInt("page", 1);
 
-        /** @var Utilisateur $utilisateur */
-        $utilisateur = $this->getUser();
-
-        return $this->render('admin/offreindemnisation/index.html.twig', [
-            'pageName' => $this->translator->trans("offreindemnisation_page_name_new"),
-            'utilisateur' => $utilisateur,
+        return $this->render('admin/modelepiecesinistre/index.html.twig', [
+            'pageName' => $this->translator->trans("modelepiecesinistre_page_name_new"),
+            'utilisateur' => $this->getUser(),
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'offreindemnisations' => $this->offreIndemnisationSinistreRepository->paginateForEntreprise($idEntreprise, $page),
+            'piecesinistres' => $this->pieceSinistreRepository->paginate($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
             'activator' => $this->activator,
         ]);
     }
@@ -74,28 +67,27 @@ class OffreIndemnisationController extends AbstractController
 
     //     /** @var Utilisateur $user */
     //     $user = $this->getUser();
-        
-    //     /** @var Invite $invite */
-    //     $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-    //     /** @var OffreIndemnisationSinistre $offre */
-    //     $offre = new OffreIndemnisationSinistre();
+    //     /** @var ModelePieceSinistre $modele */
+    //     $modele = new ModelePieceSinistre();
+    //     //Paramètres par défaut
+    //     $modele->setEntreprise($entreprise);
 
-    //     $form = $this->createForm(OffreIndemnisationSinistre::class, $offre);
+    //     $form = $this->createForm(ModelePieceSinistreType::class, $modele);
     //     $form->handleRequest($request);
 
     //     if ($form->isSubmitted() && $form->isValid()) {
-    //         $this->manager->persist($offre);
+    //         $this->manager->persist($modele);
     //         $this->manager->flush();
-    //         $this->addFlash("success", $this->translator->trans("offreindemnisation_creation_ok", [
-    //             ":offreindemnisation" => $offre->getNom(),
+    //         $this->addFlash("success", $this->translator->trans("modelepiecesinistre_creation_ok", [
+    //             ":modelepiecesinistre" => $modele->getNom(),
     //         ]));
-    //         return $this->redirectToRoute("admin.offreindemnisation.index", [
+    //         return $this->redirectToRoute("admin.modelepiecesinistre.index", [
     //             'idEntreprise' => $idEntreprise,
     //         ]);
     //     }
-    //     return $this->render('admin/offreindemnisation/create.html.twig', [
-    //         'pageName' => $this->translator->trans("offreindemnisation_page_name_new"),
+    //     return $this->render('admin/modelepiecesinistre/create.html.twig', [
+    //         'pageName' => $this->translator->trans("modelepiecesinistre_page_name_new"),
     //         'utilisateur' => $user,
     //         'entreprise' => $entreprise,
     //         'activator' => $this->activator,
@@ -104,8 +96,8 @@ class OffreIndemnisationController extends AbstractController
     // }
 
 
-    // #[Route('/edit/{idEntreprise}/{idOffreindemnisation}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    // public function edit($idEntreprise, $idOffreindemnisation, Request $request)
+    // #[Route('/edit/{idEntreprise}/{idPiecesinistre}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    // public function edit($idEntreprise, $idPiecesinistre, Request $request)
     // {
     //     /** @var Entreprise $entreprise */
     //     $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -113,49 +105,43 @@ class OffreIndemnisationController extends AbstractController
     //     /** @var Utilisateur $user */
     //     $user = $this->getUser();
 
-    //     /** @var OffreIndemnisationSinistre $offre */
-    //     $offre = $this->offreIndemnisationSinistreRepository->find($idOffreindemnisation);
+    //     /** @var PieceSinistre $modele */
+    //     $modele = $this->pieceSinistreRepository->find($idPiecesinistre);
 
-    //     $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
+    //     $form = $this->createForm(PieceSinistreType::class, $modele);
     //     $form->handleRequest($request);
 
     //     if ($form->isSubmitted() && $form->isValid()) {
-    //         $this->manager->persist($offre); //On peut ignorer cette instruction car la fonction flush suffit.
+    //         $this->manager->persist($modele); //On peut ignorer cette instruction car la fonction flush suffit.
     //         $this->manager->flush();
-    //         $this->addFlash("success", $this->translator->trans("offreindemnisation_edition_ok", [
-    //             ":offreindemnisation" => $offre->getNom(),
-    //         ]));
-    //         return $this->redirectToRoute("admin.offreindemnisation.index", [
+    //         return $this->redirectToRoute("admin.piecesinistre.index", [
     //             'idEntreprise' => $idEntreprise,
     //         ]);
     //     }
-    //     return $this->render('admin/offreindemnisation/edit.html.twig', [
-    //         'pageName' => $this->translator->trans("offreindemnisation_page_name_update", [
-    //             ":offreindemnisation" => $offre->getNom(),
-    //         ]),
+    //     return $this->render('admin/piecesinistre/edit.html.twig', [
     //         'utilisateur' => $user,
-    //         'offreindemnisation' => $offre,
+    //         'piecesinistre' => $modele,
     //         'entreprise' => $entreprise,
     //         'activator' => $this->activator,
     //         'form' => $form,
     //     ]);
     // }
 
-    // #[Route('/remove/{idEntreprise}/{idOffreindemnisation}', name: 'remove', requirements: ['idOffreindemnisation' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    // public function remove($idEntreprise, $idOffreindemnisation, Request $request)
+    // #[Route('/remove/{idEntreprise}/{idPiecesinistre}', name: 'remove', requirements: ['idPiecesinistre' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
+    // public function remove($idEntreprise, $idPiecesinistre, Request $request)
     // {
-    //     /** @var OffreIndemnisationSinistre $offre */
-    //     $offre = $this->offreIndemnisationSinistreRepository->find($idOffreindemnisation);
+    //     /** @var ModelePieceSinistre $modele */
+    //     $modele = $this->pieceSinistreRepository->find($modele);
 
-    //     $message = $this->translator->trans("offreindemnisation_deletion_ok", [
-    //         ":offreindemnisation" => $offre->getNom(),
-    //     ]);
-        
-    //     $this->manager->remove($offre);
+    //     $message = $this->translator->trans("piecesinistre_deletion_ok", [
+    //         ":piecesinistre" => $modele->getNom(),
+    //     ]);;
+
+    //     $this->manager->remove($modele);
     //     $this->manager->flush();
 
     //     $this->addFlash("success", $message);
-    //     return $this->redirectToRoute("admin.offreindemnisation.index", [
+    //     return $this->redirectToRoute("admin.piecesinistre.index", [
     //         'idEntreprise' => $idEntreprise,
     //     ]);
     // }
@@ -163,11 +149,12 @@ class OffreIndemnisationController extends AbstractController
 
 
 
+    
     /**
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?OffreIndemnisationSinistre $offre, Constante $constante): Response
+    public function getFormApi(?PieceSinistre $piece, Constante $constante): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -178,15 +165,15 @@ class OffreIndemnisationController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
-        if (!$offre) {
-            $offre = new OffreIndemnisationSinistre();
+        if (!$piece) {
+            $piece = new PieceSinistre();
+            $piece->setInvite($invite);
         }
-
-        $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
+        $form = $this->createForm(PieceSinistreType::class, $piece);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($offre, $entreprise->getId()) // ID entreprise à adapter
+            'entityFormCanvas' => $constante->getEntityFormCanvas($piece, $entreprise->getId()) // ID entreprise à adapter
         ]);
     }
 
@@ -199,20 +186,20 @@ class OffreIndemnisationController extends AbstractController
         $message = "";
         try {
             $data = json_decode($request->getContent(), true);
-            $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
+            $piece = isset($data['id']) ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
 
             if (isset($data['notificationSinistre'])) {
                 $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-                if ($notification) $offre->setNotificationSinistre($notification);
+                if ($notification) $piece->setNotificationSinistre($notification);
             }
 
-            $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
+            $form = $this->createForm(PieceSinistreType::class, $piece);
             $form->submit($data, false);
 
             if ($form->isSubmitted() && $form->isValid()) {
-                $em->persist($offre);
+                $em->persist($piece);
                 $em->flush();
-                return $this->json(['message' => 'Offre enregistrée avec succès!']);
+                return $this->json(['message' => 'Pièce enregistrée avec succès!']);
             }
         } catch (\Throwable $th) {
             //throw $th;
@@ -230,12 +217,12 @@ class OffreIndemnisationController extends AbstractController
      * Supprime une pièce.
      */
     #[Route('/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(OffreIndemnisationSinistre $offreIndemnisationSinistre, EntityManagerInterface $em): Response
+    public function deleteApi(PieceSinistre $piece, EntityManagerInterface $em): Response
     {
         try {
-            $em->remove($offreIndemnisationSinistre);
+            $em->remove($piece);
             $em->flush();
-            return $this->json(['message' => 'Offre supprimée avec succès.']);
+            return $this->json(['message' => 'Pièce supprimée avec succès.']);
         } catch (\Exception $e) {
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
