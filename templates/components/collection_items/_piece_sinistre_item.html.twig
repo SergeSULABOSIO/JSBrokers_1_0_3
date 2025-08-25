@@ -1,0 +1,26 @@
+{# Ce template ne sait afficher qu'un seul objet PieceSinistre, passé via la variable 'item' #}
+<div 
+    class="collection-item"
+    data-action="
+        mouseenter->collection-manager#showItemActions 
+        mouseleave->collection-manager#hideItemActions 
+        click->collection-manager#selectItem
+    "
+    data-id="{{ item.id }}"
+>
+    <div class="item-icon">
+        <twig:ux:icon name="bi:file-earmark-text-fill" style="width: 35px;" />
+    </div>
+    <div class="item-text">
+        <div class="text-main">{{ item.description }}</div>
+        <div class="text-secondary"><em>Reçu le : {{ item.receivedAt|date('d/m/Y') }} - Fourni par : {{ item.fourniPar }}</em></div>
+    </div>
+    <div class="item-actions">
+        <button type="button" class="btn btn-sm btn-edit" data-action="click->collection-manager#editItem" title="Modifier">
+            <twig:ux:icon name="tabler:edit" style="width: 20px;" />
+        </button>
+        <button type="button" class="btn btn-sm btn-delete" data-action="click->collection-manager#deleteItem" title="Supprimer">
+            <twig:ux:icon name="fluent:delete-20-filled" style="width: 20px;" />
+        </button>
+    </div>
+</div>
