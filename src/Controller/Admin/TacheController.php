@@ -182,34 +182,36 @@ class TacheController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-        $message = "";
-        try {
-            $data = json_decode($request->getContent(), true);
-            $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
+        
+        $data = json_decode($request->getContent(), true);
+        $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
 
-            if (isset($data['notificationSinistre'])) {
-                $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-                if ($notification) $tache->setNotificationSinistre($notification);
-            }
+        if (isset($data['notificationSinistre'])) {
+            $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
+            if ($notification) $tache->setNotificationSinistre($notification);
+        }
 
-            $form = $this->createForm(TacheType::class, $tache);
-            $form->submit($data, false);
+        $form = $this->createForm(TacheType::class, $tache);
+        $form->submit($data, false);
 
-            if ($form->isSubmitted() && $form->isValid()) {
-                $em->persist($tache);
-                $em->flush();
-                return $this->json(['message' => 'Pièce enregistrée avec succès!']);
-            }
-        } catch (\Throwable $th) {
-            //throw $th;
-            $message = $th->getMessage();
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($tache);
+            $em->flush();
+            return $this->json(['message' => 'Pièce enregistrée avec succès!']);
+        }
+
+
+        $errors = [];
+        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
 
         return $this->json([
             'success' => false,
-            'message' => 'Des erreurs de validation sont survenues. ' . $message,
-            // 'errors' => $errors
-        ], 422); // 422 = Unprocessable Entity (erreur de validation)
+            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
+        ], 422); // 422 = Unprocessable Entity
     }
 
     /**

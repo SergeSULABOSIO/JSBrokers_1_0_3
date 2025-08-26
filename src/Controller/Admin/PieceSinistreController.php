@@ -59,97 +59,6 @@ class PieceSinistreController extends AbstractController
     }
 
 
-    // #[Route('/create/{idEntreprise}', name: 'create')]
-    // public function create($idEntreprise, Request $request)
-    // {
-    //     /** @var Entreprise $entreprise */
-    //     $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-    //     /** @var Utilisateur $user */
-    //     $user = $this->getUser();
-
-    //     /** @var ModelePieceSinistre $modele */
-    //     $modele = new ModelePieceSinistre();
-    //     //Paramètres par défaut
-    //     $modele->setEntreprise($entreprise);
-
-    //     $form = $this->createForm(ModelePieceSinistreType::class, $modele);
-    //     $form->handleRequest($request);
-
-    //     if ($form->isSubmitted() && $form->isValid()) {
-    //         $this->manager->persist($modele);
-    //         $this->manager->flush();
-    //         $this->addFlash("success", $this->translator->trans("modelepiecesinistre_creation_ok", [
-    //             ":modelepiecesinistre" => $modele->getNom(),
-    //         ]));
-    //         return $this->redirectToRoute("admin.modelepiecesinistre.index", [
-    //             'idEntreprise' => $idEntreprise,
-    //         ]);
-    //     }
-    //     return $this->render('admin/modelepiecesinistre/create.html.twig', [
-    //         'pageName' => $this->translator->trans("modelepiecesinistre_page_name_new"),
-    //         'utilisateur' => $user,
-    //         'entreprise' => $entreprise,
-    //         'activator' => $this->activator,
-    //         'form' => $form,
-    //     ]);
-    // }
-
-
-    // #[Route('/edit/{idEntreprise}/{idPiecesinistre}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    // public function edit($idEntreprise, $idPiecesinistre, Request $request)
-    // {
-    //     /** @var Entreprise $entreprise */
-    //     $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-    //     /** @var Utilisateur $user */
-    //     $user = $this->getUser();
-
-    //     /** @var PieceSinistre $modele */
-    //     $modele = $this->pieceSinistreRepository->find($idPiecesinistre);
-
-    //     $form = $this->createForm(PieceSinistreType::class, $modele);
-    //     $form->handleRequest($request);
-
-    //     if ($form->isSubmitted() && $form->isValid()) {
-    //         $this->manager->persist($modele); //On peut ignorer cette instruction car la fonction flush suffit.
-    //         $this->manager->flush();
-    //         return $this->redirectToRoute("admin.piecesinistre.index", [
-    //             'idEntreprise' => $idEntreprise,
-    //         ]);
-    //     }
-    //     return $this->render('admin/piecesinistre/edit.html.twig', [
-    //         'utilisateur' => $user,
-    //         'piecesinistre' => $modele,
-    //         'entreprise' => $entreprise,
-    //         'activator' => $this->activator,
-    //         'form' => $form,
-    //     ]);
-    // }
-
-    // #[Route('/remove/{idEntreprise}/{idPiecesinistre}', name: 'remove', requirements: ['idPiecesinistre' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    // public function remove($idEntreprise, $idPiecesinistre, Request $request)
-    // {
-    //     /** @var ModelePieceSinistre $modele */
-    //     $modele = $this->pieceSinistreRepository->find($modele);
-
-    //     $message = $this->translator->trans("piecesinistre_deletion_ok", [
-    //         ":piecesinistre" => $modele->getNom(),
-    //     ]);;
-
-    //     $this->manager->remove($modele);
-    //     $this->manager->flush();
-
-    //     $this->addFlash("success", $message);
-    //     return $this->redirectToRoute("admin.piecesinistre.index", [
-    //         'idEntreprise' => $idEntreprise,
-    //     ]);
-    // }
-
-
-
-
-    
     /**
      * Fournit le formulaire HTML pour une pièce.
      */
@@ -192,41 +101,39 @@ class PieceSinistreController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
+        $data = json_decode($request->getContent(), true);
+        /** @var PieceSinistre $piece */
+        $piece = isset($data['id']) ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
 
-        $message = "";
-        try {
-            $data = json_decode($request->getContent(), true);
-            /**
-             * @var PieceSinistre $piece
-             */
-            $piece = isset($data['id']) ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
+        if (isset($data['notificationSinistre'])) {
+            $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
+            if ($notification) $piece->setNotificationSinistre($notification);
+        }
+        $piece->setInvite($invite);
 
-            if (isset($data['notificationSinistre'])) {
-                $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-                if ($notification) $piece->setNotificationSinistre($notification);
-            }
-            $piece->setInvite($invite);
+        // dd("Ici", $piece->getNotificationSinistre());
 
-            // dd("Ici", $piece->getNotificationSinistre());
+        $form = $this->createForm(PieceSinistreType::class, $piece);
+        $form->submit($data, false);
 
-            $form = $this->createForm(PieceSinistreType::class, $piece);
-            $form->submit($data, false);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($piece);
+            $em->flush();
+            return $this->json(['message' => 'Pièce enregistrée avec succès!']);
+        }
 
-            if ($form->isSubmitted() && $form->isValid()) {
-                $em->persist($piece);
-                $em->flush();
-                return $this->json(['message' => 'Pièce enregistrée avec succès!']);
-            }
-        } catch (\Throwable $th) {
-            //throw $th;
-            $message = $th->getMessage();
+        // --- CORRECTION : GESTION DES ERREURS DE VALIDATION ---
+        $errors = [];
+        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
 
         return $this->json([
             'success' => false,
-            'message' => 'Des erreurs de validation sont survenues. ' . $message,
-            // 'errors' => $errors
-        ], 422); // 422 = Unprocessable Entity (erreur de validation)
+            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
+        ], 422); // 422 = Unprocessable Entity
     }
 
     /**

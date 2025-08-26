@@ -25,7 +25,7 @@ class PieceSinistreType extends AbstractType
                 ],
             ])
             ->add('fourniPar', TextType::class, [
-                'label' => "Pièce foeurnie par",
+                'label' => "Pièce fournie par",
                 'required' => true,
                 'attr' => [
                     'placeholder' => "Source",

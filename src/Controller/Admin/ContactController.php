@@ -80,7 +80,7 @@ class ContactController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($contact);
             $this->manager->flush();
-            
+
             return new Response("Ok");
         }
         return $this->render('admin/contact/create.html.twig', [
@@ -112,7 +112,7 @@ class ContactController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->manager->persist($contact); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
-            
+
             return new Response("Ok");
         }
         return $this->render('admin/contact/edit.html.twig', [
@@ -136,7 +136,7 @@ class ContactController extends AbstractController
         $message = $this->translator->trans("contact_deletion_ok", [
             ":contact" => $contact->getNom(),
         ]);;
-        
+
         $this->manager->remove($contact);
         $this->manager->flush();
 
@@ -210,12 +210,17 @@ class ContactController extends AbstractController
             ]);
         }
 
-        // Gestion des erreurs de validation
         $errors = [];
+        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
-        return $this->json(['message' => 'Veuillez corriger les erreurs', 'errors' => $errors], Response::HTTP_BAD_REQUEST);
+
+        return $this->json([
+            'success' => false,
+            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
+        ], 422); // 422 = Unprocessable Entity
     }
 
     /**

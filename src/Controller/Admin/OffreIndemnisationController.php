@@ -74,7 +74,7 @@ class OffreIndemnisationController extends AbstractController
 
     //     /** @var Utilisateur $user */
     //     $user = $this->getUser();
-        
+
     //     /** @var Invite $invite */
     //     $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
@@ -150,7 +150,7 @@ class OffreIndemnisationController extends AbstractController
     //     $message = $this->translator->trans("offreindemnisation_deletion_ok", [
     //         ":offreindemnisation" => $offre->getNom(),
     //     ]);
-        
+
     //     $this->manager->remove($offre);
     //     $this->manager->flush();
 
@@ -196,34 +196,35 @@ class OffreIndemnisationController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-        $message = "";
-        try {
-            $data = json_decode($request->getContent(), true);
-            $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
 
-            if (isset($data['notificationSinistre'])) {
-                $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-                if ($notification) $offre->setNotificationSinistre($notification);
-            }
+        $data = json_decode($request->getContent(), true);
+        $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
 
-            $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
-            $form->submit($data, false);
+        if (isset($data['notificationSinistre'])) {
+            $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
+            if ($notification) $offre->setNotificationSinistre($notification);
+        }
 
-            if ($form->isSubmitted() && $form->isValid()) {
-                $em->persist($offre);
-                $em->flush();
-                return $this->json(['message' => 'Offre enregistrée avec succès!']);
-            }
-        } catch (\Throwable $th) {
-            //throw $th;
-            $message = $th->getMessage();
+        $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
+        $form->submit($data, false);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($offre);
+            $em->flush();
+            return $this->json(['message' => 'Offre enregistrée avec succès!']);
+        }
+
+        $errors = [];
+        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
 
         return $this->json([
             'success' => false,
-            'message' => 'Des erreurs de validation sont survenues. ' . $message,
-            // 'errors' => $errors
-        ], 422); // 422 = Unprocessable Entity (erreur de validation)
+            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
+        ], 422); // 422 = Unprocessable Entity
     }
 
     /**

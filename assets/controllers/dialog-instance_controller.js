@@ -76,7 +76,7 @@ export default class extends Controller {
         this.modal = new Modal(this.modalNode);
         this.modal.show();
 
-        this.modalNode.addEventListener('hidden.bs.modal', () => {this.modalNode.remove();});
+        this.modalNode.addEventListener('hidden.bs.modal', () => { this.modalNode.remove(); });
         this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
 
         await this.loadFormBody();
@@ -131,11 +131,12 @@ export default class extends Controller {
 
         // On cherche le conteneur de feedback manuellement
         const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
-        if(feedbackContainer){
+        this.clearErrors(); // On nettoie les anciennes erreurs
+        if (feedbackContainer) {
             feedbackContainer.innerHTML = '';
         }
 
-        
+
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
         if (this.entity && this.entity.id) data.id = this.entity.id;
@@ -154,10 +155,49 @@ export default class extends Controller {
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
             this.close();
         } catch (error) {
-            feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
+            // MODIFICATION : On gère le nouvel objet d'erreur
+            if (feedbackContainer) {
+                feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
+            }
+            // Si le serveur a renvoyé des erreurs de champ détaillées, on les affiche
+            if (error.errors) {
+                this.displayErrors(error.errors);
+            }
             this.toggleLoading(false); // On réactive le bouton en cas d'erreur
         }
     }
+
+    /**
+     * NOUVEAU : Affiche les erreurs de validation à côté de chaque champ.
+     */
+    displayErrors(errors) {
+        const form = this.elementContenu.querySelector('form');
+        for (const [fieldName, messages] of Object.entries(errors)) {
+            const input = form.querySelector(`[name="${fieldName}"]`);
+            if (input) {
+                // Ajoute la classe Bootstrap pour le style d'erreur
+                input.classList.add('is-invalid');
+
+                // Crée et insère le message d'erreur juste après le champ
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback d-block'; // d-block pour le forcer à être visible
+                errorDiv.textContent = messages.join(', ');
+                input.parentNode.insertBefore(errorDiv, input.nextSibling);
+            }
+        }
+    }
+
+
+    /**
+     * NOUVEAU : Nettoie les messages d'erreur précédents.
+     */
+    clearErrors() {
+        this.elementContenu.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        this.elementContenu.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        if(feedbackContainer) feedbackContainer.innerHTML = '';
+    }
+
 
     /**
      * Ferme la modale.
