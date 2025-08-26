@@ -6507,9 +6507,8 @@ class Constante
                 "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
                 "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
-                // --- AJOUT DES TITRES DYNAMIQUES ---
-                "itemTitleCreate" => "Ajouter : " . $formtitle,
-                "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
+                "itemTitleCreate" => "Ajout: " . $formtitle,
+                "itemTitleEdit"   => "Modification: " . $formtitle . " #%id%",
             ]
         ];
     }
