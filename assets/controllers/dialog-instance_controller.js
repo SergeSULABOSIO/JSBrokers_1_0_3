@@ -131,7 +131,9 @@ export default class extends Controller {
 
         // On cherche le conteneur de feedback manuellement
         const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
-        feedbackContainer.innerHTML = '';
+        if(feedbackContainer){
+            feedbackContainer.innerHTML = '';
+        }
 
         
         const formData = new FormData(event.target);
@@ -152,7 +154,7 @@ export default class extends Controller {
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
             this.close();
         } catch (error) {
-            this.feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
+            feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
             this.toggleLoading(false); // On réactive le bouton en cas d'erreur
         }
     }

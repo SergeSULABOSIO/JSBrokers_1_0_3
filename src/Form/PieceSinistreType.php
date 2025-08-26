@@ -36,12 +36,12 @@ class PieceSinistreType extends AbstractType
                 'required' => true,
                 'widget' => 'single_text',
             ])
-            // ->add('type', EntityType::class, [
-            //     'label' => "Nature de la pièce",
-            //     'required' => false,
-            //     'class' => ModelePieceSinistre::class,
-            //     'choice_label' => 'nom',
-            // ])
+            ->add('type', EntityType::class, [
+                'label' => "Nature de la pièce",
+                'required' => false,
+                'class' => ModelePieceSinistre::class,
+                'choice_label' => 'nom',
+            ])
             // ->add('enregistrer', SubmitType::class, [
             //     'label' => "Enregistrer",
             //     'attr' => [

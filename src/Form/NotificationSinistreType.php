@@ -125,7 +125,7 @@ class NotificationSinistreType extends AbstractType
             ])
             ->add('contacts', CollectionType::class, [
                 'label' => "Liste des contacts", // Sera surchargé par le widget mais bon à garder
-                'help' => "Personnes clées, à contacter pour tout ce qui concerne cette réclamation.",
+                'help' => "Personnes clés à contacter.",
                 'entry_type' => ContactType::class,
                 'by_reference' => false,
                 'allow_add' => true,

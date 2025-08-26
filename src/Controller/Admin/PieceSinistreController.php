@@ -183,15 +183,31 @@ class PieceSinistreController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var Entreprise $entreprise */
+        $entreprise = $invite->getEntreprise();
+
+
         $message = "";
         try {
             $data = json_decode($request->getContent(), true);
+            /**
+             * @var PieceSinistre $piece
+             */
             $piece = isset($data['id']) ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
 
             if (isset($data['notificationSinistre'])) {
                 $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
                 if ($notification) $piece->setNotificationSinistre($notification);
             }
+            $piece->setInvite($invite);
+
+            // dd("Ici", $piece->getNotificationSinistre());
 
             $form = $this->createForm(PieceSinistreType::class, $piece);
             $form->submit($data, false);

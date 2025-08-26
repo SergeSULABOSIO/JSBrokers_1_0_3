@@ -10,6 +10,8 @@ export default class extends Controller {
         itemFormUrl: String,
         itemSubmitUrl: String,
         itemDeleteUrl: String,
+        itemTitleCreate: String,
+        itemTitleEdit: String,
     };
 
     connect() {
@@ -51,10 +53,10 @@ export default class extends Controller {
         try {
             const response = await fetch(this.listUrlValue);
 
-            
+
             if (!response.ok) throw new Error('Network response was not ok.');
             const html = await response.text();
-            
+
             console.log(this.nomControlleur + " - loadItemList", this.listUrlValue, html);
 
             this.listContainerTarget.innerHTML = html;
@@ -214,7 +216,7 @@ export default class extends Controller {
             console.error('Delete error:', error);
             // --- AJOUT : Annonce l'échec de la suppression avec le message d'erreur ---
             // this.dispatch('delete:error', { detail: { message: error.message } });
-            buildCustomEventForElement(document, 'delete:error', true, true, {message: error.message});
+            buildCustomEventForElement(document, 'delete:error', true, true, { message: error.message });
         }
     }
 
@@ -225,14 +227,15 @@ export default class extends Controller {
     openFormDialog(entity = null) {
         const entityFormCanvas = {
             parametres: {
-                titre_creation: "Ajouter un nouveau contact",
-                titre_modification: "Modification du contact #%id%",
+                titre_creation: this.itemTitleCreateValue,
+                titre_modification: this.itemTitleEditValue,
                 endpoint_form_url: this.itemFormUrlValue,
                 endpoint_submit_url: this.itemSubmitUrlValue,
             }
         };
 
-        const match = this.listUrlValue.match(/\/api\/(\d+)\/contacts/);
+        // const match = this.listUrlValue.match(/\/api\/(\d+)\/contacts/);
+        const match = this.listUrlValue.match(/\/api\/(\d+)\//);
         const parentId = match ? match[1] : null;
 
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {

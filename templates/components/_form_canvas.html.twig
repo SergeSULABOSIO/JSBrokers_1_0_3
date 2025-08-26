@@ -2,6 +2,7 @@
 {% form_theme form 'themes/_collection_widget.html.twig' %}
 
 {{ form_start(form) }}
+{# ... le reste de votre fichier ... #}
 {% if entityFormCanvas.parametres.form_layout is defined and entityFormCanvas.parametres.form_layout is not empty %}
     {% for row in entityFormCanvas.parametres.form_layout %}
         {% set row_style = (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' %}
@@ -10,33 +11,22 @@
             {% set col_class = 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
             {% for col in row.colonnes %}
                 <div class="{{ col_class }}">
-
-                    {# --- CORRECTION DÉFINITIVE --- #}
-                    {# On récupère la liste des champs de manière sécurisée. #}
-                    {# Si col.champs existe, on l'utilise. Sinon, on suppose que 'col' est directement la liste. #}
                     {% set champs_list = col.champs is defined ? col.champs : col %}
-
                     {% for field in champs_list %}
                         {% if field is mapping and field.widget is defined and field.widget == 'collection-manager' %}
-                            {# Cas 1 : C'est notre composant collection #}
                             {% set field_code = field.field_code %}
                             {% if form[field_code] is defined %}
-                                {# MODIFICATION ICI #}
                                 {{ form_row(form[field_code], {
                                     'manager_options': field.options
                                 }) }}
-                                {# FIN DE LA MODIFICATION #}
                             {% endif %}
                         {% else %}
-                            {# Cas 2 : C'est un champ standard (chaîne de caractères) #}
                             {% set field_code = field %}
                             {% if form[field_code] is defined %}
                                 {{ form_row(form[field_code]) }}
                             {% endif %}
                         {% endif %}
                     {% endfor %}
-                    {# --- FIN DE LA CORRECTION --- #}
-
                 </div>
             {% endfor %}
         </div>
@@ -44,4 +34,4 @@
 {% else %}
     {{ form_widget(form) }}
 {% endif %}
-{{ form_end(form) }}
+{{ form_end(form, {'render_rest': false}) }}

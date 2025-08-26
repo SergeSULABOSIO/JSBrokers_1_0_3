@@ -5109,7 +5109,9 @@ class Constante
 
             $strgDocs = "";
             foreach ($notification_sinistre->getPieces() as $pieceSinistre) {
-                $strgDocs .= $pieceSinistre->getType()->getNom() . ", ";
+                if($pieceSinistre->getType()){
+                    $strgDocs .= $pieceSinistre->getType()->getNom() . ", ";
+                }
             }
             $tabDocuments['Fournis'] = $notification_sinistre->getPieces();
             // $tabDocuments['Docs_fournis'] = $notification_sinistre->getPieces();
@@ -6328,27 +6330,27 @@ class Constante
                             ]
                         ],
                         // Ligne 8 : Collection des contacts
-                        // [
-                        //     "couleur_fond" => "white",
-                        //     "colonnes" => [
-                        //         ["champs" => [$this->getCollectionWidgetConfig('contacts', $notificationId)]],
-                        //         ["champs" => [$this->getCollectionWidgetConfig('piecesinistre', $notificationId)]]
-                        //     ]
-                        // ],
-                        // Ligne 9 : Collection des contacts
-                        // [
-                        //     "couleur_fond" => "white",
-                        //     "colonnes" => [
-                        //         ["champs" => [$this->getCollectionWidgetConfig('offreindemnisation', $notificationId)]]
-                        //     ]
-                        // ],
-                        // Ligne 10 : Collection des contacts
-                        // [
-                        //     "couleur_fond" => "white",
-                        //     "colonnes" => [
-                        //         ["champs" => [$this->getCollectionWidgetConfig('tache', $notificationId)]]
-                        //     ]
-                        // ]
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact")]],
+                                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre")]]
+                            ]
+                        ],
+                        // Ligne 9 : Collection des offres d'indemnisation
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisation', $notificationId, "Offre d'indemnisation")]]
+                            ]
+                        ],
+                        // Ligne 10 : Collection des taches
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche")]]
+                            ]
+                        ]
                     ],
                 ],
             ];
@@ -6403,14 +6405,17 @@ class Constante
                     "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
                     "form_layout" => [
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["description"]]
                             ]
                         ],
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["fourniPar"]],
-                                ["champs" => ["receivedAt"]]
+                                ["champs" => ["receivedAt"]],
+                                ["champs" => ["type"]]
                             ]
                         ],
                     ]
@@ -6426,22 +6431,26 @@ class Constante
                     "endpoint_form_url" => "/admin/offreindemnisation/api/get-form",
                     "form_layout" => [
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["nom"]]
                             ]
                         ],
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["beneficiaire"]]
                             ]
                         ],
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["franchiseAppliquee"]],
                                 ["champs" => ["montantPayable"]]
                             ]
                         ],
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["referenceBancaire"]]
                             ]
@@ -6459,11 +6468,13 @@ class Constante
                     "endpoint_form_url" => "/admin/tache/api/get-form",
                     "form_layout" => [
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["description"]]
                             ]
                         ],
                         [
+                            "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["toBeEndedAt"]],
                             ]
@@ -6476,25 +6487,33 @@ class Constante
         return [];
     }
 
-    /**
-     * NOUVELLE FONCTION HELPER pour éviter la répétition de code
-     */
-    private function getCollectionWidgetConfig(string $fieldName, int $parentId): array
-    {
-        $entityName = str_replace(['s', 'Sinistre'], '', $fieldName); // Simplification pour déduire le nom
-        // if ($fieldName === 'offreIndemnisationSinistres') $entityName = 'offreindemnisation'; // Cas particulier
 
+    /**
+     * MODIFIÉ : Accepte maintenant le nom de la route de l'entité en paramètre.
+     *
+     * @param string $fieldName Le nom de l'attribut dans l'entité parente (ex: 'contacts', 'pieces').
+     * @param string $entityRouteName Le nom utilisé dans la route pour cette entité (ex: 'contact', 'piecesinistre').
+     * @param integer $parentId L'ID de l'entité parente.
+     * @return array
+     */
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle): array
+    {
+        // L'ancienne logique de mappage est supprimée. On utilise directement le paramètre.
         return [
             "field_code" => $fieldName,
             "widget" => "collection-manager",
             "options" => [
                 "listUrl"       => "/admin/notificationsinistre/api/" . $parentId . "/" . $fieldName,
-                "itemFormUrl"   => "/admin/" . strtolower($entityName) . "/api/get-form",
-                "itemSubmitUrl" => "/admin/" . strtolower($entityName) . "/api/submit",
-                "itemDeleteUrl" => "/admin/" . strtolower($entityName) . "/api/delete",
+                "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
+                "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
+                "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
+                // --- AJOUT DES TITRES DYNAMIQUES ---
+                "itemTitleCreate" => "Ajouter : " . $formtitle,
+                "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
             ]
         ];
     }
+
 
     public function getEntityCanvas($object): array
     {

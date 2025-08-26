@@ -535,7 +535,7 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/piecesinistre', name: 'api.get_piecesinistre', methods: ['GET'])]
+    #[Route('/api/{id}/pieces', name: 'api.get_pieces', methods: ['GET'])]
     public function getPiecesListApi(NotificationSinistre $notification): Response
     {
         return $this->render('components/_collection_list.html.twig', [
@@ -545,7 +545,7 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/tache', name: 'api.get_tache', methods: ['GET'])]
+    #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
     public function getTachesListApi(NotificationSinistre $notification): Response
     {
         return $this->render('components/_collection_list.html.twig', [
@@ -555,7 +555,7 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/offreindemnisation', name: 'api.get_offreindemnisation', methods: ['GET'])]
+    #[Route('/api/{id}/offreIndemnisationSinistres', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
     public function getOffresIndemnisationListApi(NotificationSinistre $notification): Response
     {
         return $this->render('components/_collection_list.html.twig', [

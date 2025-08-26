@@ -149,7 +149,7 @@ class ContactController extends AbstractController
     /**
      * Fournit le formulaire HTML pour un contact (nouveau ou existant).
      */
-    #[Route('/api/get-form/{id?}', name: 'admin.api.contact.get_form', methods: ['GET'])]
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Contact $contact, Constante $constante): Response
     {
         if (!$contact) {
@@ -178,7 +178,7 @@ class ContactController extends AbstractController
     /**
      * Traite la soumission du formulaire de contact (création ou modification).
      */
-    #[Route('/api/submit', name: 'admin.api.contact.submit', methods: ['POST'])]
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
         $data = json_decode($request->getContent(), true);
@@ -221,7 +221,7 @@ class ContactController extends AbstractController
     /**
      * Supprime un contact.
      */
-    #[Route('/api/delete/{id}', name: 'admin.api.contact.delete', methods: ['DELETE'])]
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Contact $contact, EntityManagerInterface $em): Response
     {
         try {

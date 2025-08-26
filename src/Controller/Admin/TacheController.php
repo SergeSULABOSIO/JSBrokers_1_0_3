@@ -150,7 +150,7 @@ class TacheController extends AbstractController
     /**
      * Fournit le formulaire HTML pour une pièce.
      */
-    #[Route('/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Tache $tache, Constante $constante): Response
     {
         /** @var Utilisateur $user */
@@ -179,7 +179,7 @@ class TacheController extends AbstractController
     /**
      * Traite la soumission du formulaire.
      */
-    #[Route('/submit', name: 'api.submit', methods: ['POST'])]
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
         $message = "";
@@ -215,7 +215,7 @@ class TacheController extends AbstractController
     /**
      * Supprime une pièce.
      */
-    #[Route('/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Tache $tache, EntityManagerInterface $em): Response
     {
         try {
