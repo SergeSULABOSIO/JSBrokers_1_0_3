@@ -36,6 +36,8 @@ export default class extends Controller {
         this.entity = detail.entity;
         this.context = detail.context || {};
 
+        console.log(this.nomControlleur + " - start:", detail);
+
         // 1. On construit immédiatement la structure de la modale avec un spinner dans le corps.
         const isEditMode = this.entity && this.entity.id;
         const title = isEditMode
@@ -110,6 +112,7 @@ export default class extends Controller {
             if (this.entity && this.entity.id) {
                 url += `/${this.entity.id}`;
             }
+            console.log(this.nomControlleur + " - loadFormBody:", url);
             const response = await fetch(url);
             if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
 

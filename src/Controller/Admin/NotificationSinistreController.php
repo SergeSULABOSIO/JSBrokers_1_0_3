@@ -485,52 +485,6 @@ class NotificationSinistreController extends AbstractController
 
 
 
-    // #[Route('/sales-demo', name: 'app_sales_demo')]
-    // public function salesDemo(): Response
-    // {
-    //     // 1. Définir les attributs numériques et leurs libellés ici
-    //     $numericAttributes = [
-    //         "amount-invoiced" => "Montant Facturé",
-    //         'amount-paid' => "Montant Payé",
-    //         "balance" => "Solde Restant",
-    //     ];
-
-    //     // Génération de 10 ventes de démonstration
-    //     $sales = [];
-    //     $clients = ['TechCorp', 'Innovate SARL', 'Digital Solutions', 'Global Systems'];
-    //     $items = ['Laptop Pro X', 'Écran 4K Ultra', 'Souris Gamer RGB', 'Clavier Mécanique'];
-
-    //     for ($i = 1; in_array($i, range(1, 10)); $i++) {
-    //         $invoiced = rand(500, 2000) * 100; // en centimes
-    //         $paid = rand(0, $invoiced);
-    //         $balance = $invoiced - $paid;
-
-    //         // 2. Créer le nouvel attribut `numericValues` pour chaque vente
-    //         $numericValues = [
-    //             'amount-invoiced' => $invoiced,
-    //             'amount-paid' => $paid,
-    //             'balance' => $balance,
-    //         ];
-
-    //         $sales[] = [
-    //             'id' => 'sale-' . $i,
-    //             'clientName' => $clients[array_rand($clients)],
-    //             'saleDate' => (new \DateTime())->modify('-' . rand(1, 30) . ' days'),
-    //             'itemName' => $items[array_rand($items)],
-    //             'amountInvoiced' => $invoiced,
-    //             'amountPaid' => $paid,
-    //             'balance' => $invoiced - $paid,
-    //             'numericValues' => $numericValues, // Ajout du tableau associatif
-    //         ];
-    //     }
-
-    //     return $this->render('pages/sales_demo.html.twig', [
-    //         'sales' => $sales,
-    //         'numericAttributes' => $numericAttributes,
-    //     ]);
-    // }
-
-
     #[Route('/api/dynamic-query/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
     public function query($idEntreprise, Request $request, Constante $constante)
     {
@@ -572,46 +526,41 @@ class NotificationSinistreController extends AbstractController
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
     #[Route('/api/{id}/contacts', name: 'api.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(int $id): Response
+    public function getContactsListApi(NotificationSinistre $notification): Response
     {
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var NotificationSinistre $notification */
-        $notification = null;
-
-        // Si l'ID est 0, nous sommes en mode création. On crée une entité vide
-        // pour que le template puisse l'utiliser sans erreur.
-        if ($id === 0) {
-            $notification = new NotificationSinistre();
-            $notification->setCreatedAt(new DateTimeImmutable("now"));
-            $notification->setUpdatedAt(new DateTimeImmutable("now"));
-            $notification->setNotifiedAt(new DateTimeImmutable("now"));
-            $notification->setOccuredAt(new DateTimeImmutable("now"));
-            $notification->setInvite($invite);
-        } else {
-            // Si l'ID est différent de 0, on cherche l'entité en base de données.
-            $notification = $this->notificationSinistreRepository->find($id);
-
-            // Si aucun objet n'est trouvé avec cet ID, on retourne aussi un objet vide
-            // pour éviter une erreur côté client.
-            if (!$notification) {
-                $notification = new NotificationSinistre();
-                $notification->setCreatedAt(new DateTimeImmutable("now"));
-                $notification->setUpdatedAt(new DateTimeImmutable("now"));
-                $notification->setNotifiedAt(new DateTimeImmutable("now"));
-                $notification->setOccuredAt(new DateTimeImmutable("now"));
-                $notification->setInvite($invite);
-            }
-        }
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $notification->getContacts(),
+            'item_template' => 'components/collection_items/_contact_item.html.twig'
+        ]);
+    }
 
 
-        return $this->render('admin/notificationsinistre/_contacts_list.html.twig', [
-            'notification' => $notification,
+    #[Route('/api/{id}/piecesinistre', name: 'api.get_piecesinistre', methods: ['GET'])]
+    public function getPiecesListApi(NotificationSinistre $notification): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $notification->getPieces(),
+            'item_template' => 'components/collection_items/_piece_sinistre_item.html.twig'
+        ]);
+    }
+
+
+    #[Route('/api/{id}/tache', name: 'api.get_tache', methods: ['GET'])]
+    public function getTachesListApi(NotificationSinistre $notification): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $notification->getTaches(),
+            'item_template' => 'components/collection_items/_tache_item.html.twig'
+        ]);
+    }
+
+
+    #[Route('/api/{id}/offreindemnisation', name: 'api.get_offreindemnisation', methods: ['GET'])]
+    public function getOffresIndemnisationListApi(NotificationSinistre $notification): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $notification->getOffreIndemnisationSinistres(),
+            'item_template' => 'components/collection_items/_offre_indemnisation_sinistre_item.html.twig'
         ]);
     }
 }

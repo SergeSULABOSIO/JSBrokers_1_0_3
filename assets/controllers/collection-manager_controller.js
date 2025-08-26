@@ -50,8 +50,13 @@ export default class extends Controller {
 
         try {
             const response = await fetch(this.listUrlValue);
+
+            
             if (!response.ok) throw new Error('Network response was not ok.');
             const html = await response.text();
+            
+            console.log(this.nomControlleur + " - loadItemList", this.listUrlValue, html);
+
             this.listContainerTarget.innerHTML = html;
             const itemCount = this.listContainerTarget.querySelectorAll('.collection-item').length;
             this.updateBadge(itemCount);

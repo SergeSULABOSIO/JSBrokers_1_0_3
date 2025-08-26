@@ -6328,39 +6328,27 @@ class Constante
                             ]
                         ],
                         // Ligne 8 : Collection des contacts
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                // "champs" => [
-                                //     [
-                                //         "field_code" => "contacts",
-                                //         "widget" => "collection-manager",
-                                //         "options" => [
-                                //             "listUrl" => "/admin/notificationsinistre/api/" . $notificationId . "/contacts",
-                                //             "itemFormUrl" => "/admin/contact/api/get-form",
-                                //             "itemSubmitUrl" => "/admin/contact/api/submit",
-                                //             "itemDeleteUrl" => "/admin/contact/api/delete",
-                                //         ]
-                                //     ]
-                                // ],
-                                ["champs" => [$this->getCollectionWidgetConfig('contacts', $notificationId)]],
-                                ["champs" => [$this->getCollectionWidgetConfig('pieces', $notificationId)]],
-                            ]
-                        ],
+                        // [
+                        //     "couleur_fond" => "white",
+                        //     "colonnes" => [
+                        //         ["champs" => [$this->getCollectionWidgetConfig('contacts', $notificationId)]],
+                        //         ["champs" => [$this->getCollectionWidgetConfig('piecesinistre', $notificationId)]]
+                        //     ]
+                        // ],
                         // Ligne 9 : Collection des contacts
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', $notificationId)]],
-                            ]
-                        ],
+                        // [
+                        //     "couleur_fond" => "white",
+                        //     "colonnes" => [
+                        //         ["champs" => [$this->getCollectionWidgetConfig('offreindemnisation', $notificationId)]]
+                        //     ]
+                        // ],
                         // Ligne 10 : Collection des contacts
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('taches', $notificationId)]],
-                            ]
-                        ],
+                        // [
+                        //     "couleur_fond" => "white",
+                        //     "colonnes" => [
+                        //         ["champs" => [$this->getCollectionWidgetConfig('tache', $notificationId)]]
+                        //     ]
+                        // ]
                     ],
                 ],
             ];
@@ -6494,7 +6482,7 @@ class Constante
     private function getCollectionWidgetConfig(string $fieldName, int $parentId): array
     {
         $entityName = str_replace(['s', 'Sinistre'], '', $fieldName); // Simplification pour déduire le nom
-        if ($fieldName === 'offreIndemnisationSinistres') $entityName = 'offreindemnisation'; // Cas particulier
+        // if ($fieldName === 'offreIndemnisationSinistres') $entityName = 'offreindemnisation'; // Cas particulier
 
         return [
             "field_code" => $fieldName,
