@@ -130,10 +130,10 @@ export default class extends Controller {
         this.toggleLoading(true);
 
         // On cherche le conteneur de feedback manuellement
-        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
         this.clearErrors(); // On nettoie les anciennes erreurs
-        if (feedbackContainer) {
-            feedbackContainer.innerHTML = '';
+        if (this.feedbackContainer) {
+            this.feedbackContainer.innerHTML = '';
         }
 
 
@@ -156,8 +156,8 @@ export default class extends Controller {
             this.close();
         } catch (error) {
             // MODIFICATION : On gère le nouvel objet d'erreur
-            if (feedbackContainer) {
-                feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
+            if (this.feedbackContainer) {
+                this.feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
             }
             // Si le serveur a renvoyé des erreurs de champ détaillées, on les affiche
             if (error.errors) {
@@ -173,6 +173,16 @@ export default class extends Controller {
     displayErrors(errors) {
         const form = this.elementContenu.querySelector('form');
         for (const [fieldName, messages] of Object.entries(errors)) {
+            // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
+            if (fieldName === '') {
+                if (this.feedbackContainer) {
+                    const globalErrors = messages.join('<br>');
+                    // On ajoute l'erreur globale au conteneur de feedback général
+                    this.feedbackContainer.innerHTML += `<div class="mt-2">${globalErrors}</div>`;
+                }
+                continue; // On passe au champ suivant
+            }
+
             const input = form.querySelector(`[name="${fieldName}"]`);
             if (input) {
                 // Ajoute la classe Bootstrap pour le style d'erreur
@@ -194,8 +204,8 @@ export default class extends Controller {
     clearErrors() {
         this.elementContenu.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         this.elementContenu.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
-        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
-        if(feedbackContainer) feedbackContainer.innerHTML = '';
+        this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        if (this.feedbackContainer) this.feedbackContainer.innerHTML = '';
     }
 
 
