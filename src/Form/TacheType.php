@@ -94,8 +94,8 @@ class TacheType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Tache::class,
-            'parent_object' => null, // l'objet parent
             'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
     }
 

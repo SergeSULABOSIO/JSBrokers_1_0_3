@@ -60,10 +60,7 @@ class ContactType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Contact::class,
-            // AJOUT 1: Désactive la protection CSRF pour ce formulaire API
             'csrf_protection' => false,
-
-            // AJOUT 2: Autorise les champs non définis dans le form (comme 'id') à être envoyés
             'allow_extra_fields' => true,
         ]);
     }
