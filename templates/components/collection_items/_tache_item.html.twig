@@ -13,7 +13,15 @@
     </div>
     <div class="item-text">
         <div class="text-main">{{ item.description }}</div>
-        <div class="text-secondary"><em>Expire le : {{ item.toBeEndedAt|date('d/m/Y') }} - A exécuter par : {{ item.executor.nom }}</em></div>
+        <div class="text-secondary">
+            <em>
+                {% if item.closed == true %}
+                    Clôturée par {{ item.executor.nom }}
+                {% else %}
+                    Expire le : {{ item.toBeEndedAt|date('d/m/Y') }} - A exécuter par : {{ item.executor.nom }}
+                {% endif %}
+            </em>
+        </div>
     </div>
     <div class="item-actions">
         <button type="button" class="btn btn-sm btn-edit" data-action="click->collection-manager#editItem" title="Modifier">

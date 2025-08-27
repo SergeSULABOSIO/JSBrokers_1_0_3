@@ -63,15 +63,6 @@ class TacheType extends AbstractType
                 'entry_options' => ['label' => false],
                 'mapped' => false,
             ])
-            //Le bouton d'enregistrement / soumission
-            // ->add('enregistrer', SubmitType::class, [
-            //     'label' => "Enregistrer",
-            //     'attr' => [
-            //         'class' => "btn btn-secondary",
-            //     ],
-            // ])
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
