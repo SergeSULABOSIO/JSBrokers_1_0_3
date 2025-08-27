@@ -27,19 +27,12 @@ class FeedbackType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
 
-        $hasNextAction = false;
-        if (isset($options["data"])) {
-            if ($options["data"] != null) {
-                /** @var Feedback $feedback */
-                $feedback = $options["data"];
-                $hasNextAction = $feedback->hasNextAction();
-            }
-        }
         $builder
             ->add('description', TextareaType::class, [
                 'label' => "Description",
                 'attr' => [
-                    'placeholder' => "Description",
+                    'rows' => 4, // Hauteur du champ de texte
+                    'placeholder' => 'Saisissez votre commentaire ici...',
                 ],
             ])
             ->add('type', ChoiceType::class, [
@@ -57,7 +50,6 @@ class FeedbackType extends AbstractType
                 'label' => "Y a-t-il une prochaine action?",
                 'help' => "Action consécutive au compte-rendu courant et qui devra être exécutée par la suite.",
                 'expanded' => false,
-                'data' => $hasNextAction,
                 'required' => true,
                 'choices'  => [
                     "Non" => false,
@@ -77,15 +69,6 @@ class FeedbackType extends AbstractType
                 'required' => false,
                 'widget' => 'single_text',
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
@@ -93,7 +76,13 @@ class FeedbackType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Feedback::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
