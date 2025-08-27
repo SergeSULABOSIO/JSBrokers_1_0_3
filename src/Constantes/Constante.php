@@ -18,6 +18,7 @@ use App\Entity\Contact;
 use App\Entity\Tranche;
 use App\Entity\Assureur;
 use App\Entity\Cotation;
+use App\Entity\Feedback;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
@@ -5109,7 +5110,7 @@ class Constante
 
             $strgDocs = "";
             foreach ($notification_sinistre->getPieces() as $pieceSinistre) {
-                if($pieceSinistre->getType()){
+                if ($pieceSinistre->getType()) {
                     $strgDocs .= $pieceSinistre->getType()->getNom() . ", ";
                 }
             }
@@ -5517,7 +5518,7 @@ class Constante
     public function Utilisateur_getUtilisateurByInvite(?Invite $invite): ?Utilisateur
     {
         $users = $this->utilisateurRepository->findBy([
-            'email' => $invite->getEmail(),
+            'email' => $invite  != null ? $invite->getEmail() : "",
         ]);
         return count($users) != 0 ? $users[0] : null;
     }
@@ -6333,22 +6334,22 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact")]],
-                                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationsinistre")]],
+                                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationsinistre")]]
                             ]
                         ],
                         // Ligne 9 : Collection des offres d'indemnisation
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisation', $notificationId, "Offre d'indemnisation")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisation', $notificationId, "Offre d'indemnisation", "notificationsinistre")]]
                             ]
                         ],
                         // Ligne 10 : Collection des taches
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationsinistre")]]
                             ]
                         ]
                     ],
@@ -6460,6 +6461,7 @@ class Constante
             ];
         }
         if ($object instanceof Tache) {
+            $tacheId = $object->getId() ?? 0; // On récupère l'ID de la tâche parente
             return [
                 "parametres" => [
                     "titre_creation" => "Nouvelle tâche",
@@ -6481,6 +6483,42 @@ class Constante
                                 ["champs" => ["closed"]],
                             ]
                         ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache')]]
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+        }
+        // --- AJOUT D'UN NOUVEAU BLOC POUR LE FORMULAIRE FEEDBACK LUI-MÊME ---
+        if ($object instanceof Feedback) {
+            return [
+                "parametres" => [
+                    // Pas besoin d'URLs ici, car le formulaire est simple
+                    "form_layout" => [
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["description"]]
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["hasNextAction"]],
+                                ["champs" => ["nextActionAt"]],
+                                ["champs" => ["type"]],
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["nextAction"]]
+                            ]
+                        ],
                     ]
                 ]
             ];
@@ -6498,19 +6536,29 @@ class Constante
      * @param integer $parentId L'ID de l'entité parente.
      * @return array
      */
-    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle): array
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName): array
     {
         // L'ancienne logique de mappage est supprimée. On utilise directement le paramètre.
         return [
             "field_code" => $fieldName,
             "widget" => "collection-manager",
             "options" => [
-                "listUrl"       => "/admin/notificationsinistre/api/" . $parentId . "/" . $fieldName,
+                // MODIFIÉ : On utilise le nom du parent pour construire l'URL de la liste
+                "listUrl"       => "/admin/" . $parentFieldName . "/api/" . $parentId . "/" . $fieldName,
                 "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
                 "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
-                "itemTitleCreate" => "Ajout: " . $formtitle,
-                "itemTitleEdit"   => "Modification: " . $formtitle . " #%id%",
+                "itemTitleCreate" => "Ajouter : " . $formtitle,
+                "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
+                // AJOUT : On passe le nom du champ parent au JS
+                "parentFieldName" => $parentFieldName
+
+                // "listUrl"       => "/admin/notificationsinistre/api/" . $parentId . "/" . $fieldName,
+                // "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
+                // "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
+                // "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
+                // "itemTitleCreate" => "Ajout: " . $formtitle,
+                // "itemTitleEdit"   => "Modification: " . $formtitle . " #%id%",
             ]
         ];
     }

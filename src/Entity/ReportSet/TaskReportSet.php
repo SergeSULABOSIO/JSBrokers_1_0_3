@@ -12,12 +12,12 @@ class TaskReportSet
     public const TYPE_TOTAL = 2;
 
     public int $type = self::TYPE_ELEMENT;
-    public string $currency_code = "$";
-    public string $task_description = "";
-    public string $client = "";
-    public string $endorsement = "";
-    public string $lead = "";
-    public array $contacts = [];
+    public ?string $currency_code = "$";
+    public ?string $task_description = "";
+    public ?string $client = "";
+    public ?string $endorsement = "";
+    public ?string $lead = "";
+    public ?array $contacts = [];
     public ?Utilisateur $owner = null;
     public ?Utilisateur $excutor = null;
     public ?DateTimeImmutable $effect_date = null;

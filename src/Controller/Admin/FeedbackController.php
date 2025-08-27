@@ -32,8 +32,6 @@ use Symfony\Component\HttpFoundation\Response;
 #[IsGranted('ROLE_USER')]
 class FeedbackController extends AbstractController
 {
-    public MenuActivator $activator;
-
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -42,9 +40,7 @@ class FeedbackController extends AbstractController
         private InviteRepository $inviteRepository,
         private FeedbackRepository $feedbackRepository,
         private Constante $constante,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
-    }
+    ) {}
 
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -59,93 +55,80 @@ class FeedbackController extends AbstractController
             'feedbacks' => $this->feedbackRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
-            'activator' => $this->activator,
+            // 'activator' => $this->activator,
         ]);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    /**
+     * Fournit le formulaire HTML pour un Feedback.
+     */
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Feedback $feedback, Constante $constante): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-        /** @var Feedback $feedback */
-        $feedback = new Feedback();
-        //Paramètres par défaut
-
-        $form = $this->createForm(FeedbackType::class, $feedback);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($feedback);
-            $this->manager->flush();
-            return new Response("Ok");
-        }
-        return $this->render('admin/feedback/create.html.twig', [
-            'pageName' => $this->translator->trans("feedback_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
-    }
-
-
-    #[Route('/edit/{idEntreprise}/{idFeedback}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idFeedback, Request $request)
-    {
         /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $invite->getEntreprise();
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Feedback $feedback */
-        $feedback = $this->feedbackRepository->find($idFeedback);
-
-        $form = $this->createForm(FeedbackType::class, $feedback);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($feedback); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            return new Response("Ok");
+        if (!$feedback) {
+            $feedback = new Feedback();
         }
-        return $this->render('admin/feedback/edit.html.twig', [
-            'pageName' => $this->translator->trans("feedback_page_name_update", [
-                ":feedback" => $feedback->getDescription(),
-            ]),
-            'utilisateur' => $user,
-            'feedback' => $feedback,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
+        $form = $this->createForm(FeedbackType::class, $feedback);
+
+        return $this->render('components/_form_canvas.html.twig', [
+            'form' => $form->createView(),
+            'entityFormCanvas' => $constante->getEntityFormCanvas($feedback, $entreprise->getId())
         ]);
     }
 
-    #[Route('/remove/{idEntreprise}/{idFeedback}', name: 'remove', requirements: ['idFeedback' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idFeedback, Request $request)
+    /**
+     * Traite la soumission du formulaire de Feedback.
+     */
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-        /** @var Feedback $feedback */
-        $feedback = $this->feedbackRepository->find($idFeedback);
+        $data = json_decode($request->getContent(), true);
+        $feedback = isset($data['id']) ? $em->getRepository(Feedback::class)->find($data['id']) : new Feedback();
 
-        $message = $this->translator->trans("feedback_deletion_ok", [
-            ":feedback" => $feedback->getDescription(),
-        ]);;
-        
-        $this->manager->remove($feedback);
-        $this->manager->flush();
+        // On lie le feedback à sa tâche parente
+        if (isset($data['tache'])) {
+            $tache = $em->getReference(Tache::class, $data['tache']);
+            if ($tache) $feedback->setTache($tache);
+        }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.feedback.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+        $form = $this->createForm(FeedbackType::class, $feedback);
+        $form->submit($data, false);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($feedback);
+            $em->flush();
+            return $this->json(['message' => 'Feedback enregistré avec succès!']);
+        }
+
+        // Gestion des erreurs de validation...
+        $errors = [];
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
+        }
+        return $this->json(['message' => 'Veuillez corriger les erreurs.', 'errors' => $errors], 422);
+    }
+
+    /**
+     * Supprime un Feedback.
+     */
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Feedback $feedback, EntityManagerInterface $em): Response
+    {
+        try {
+            $em->remove($feedback);
+            $em->flush();
+            return $this->json(['message' => 'Feedback supprimé avec succès.']);
+        } catch (\Exception $e) {
+            return $this->json(['message' => 'Erreur lors de la suppression.'], 500);
+        }
     }
 }

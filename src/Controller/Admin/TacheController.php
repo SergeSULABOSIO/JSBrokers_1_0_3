@@ -139,4 +139,14 @@ class TacheController extends AbstractController
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    // AJOUTEZ CETTE NOUVELLE ACTION
+    #[Route('/api/{id}/feedbacks', name: 'api.get_feedbacks', methods: ['GET'])]
+    public function getFeedbacksListApi(Tache $tache): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $tache->getFeedbacks(),
+            'item_template' => 'components/collection_items/_feedback_item.html.twig'
+        ]);
+    }
 }

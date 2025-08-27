@@ -12,6 +12,7 @@ export default class extends Controller {
         itemDeleteUrl: String,
         itemTitleCreate: String,
         itemTitleEdit: String,
+        parentFieldName: String
     };
 
     connect() {
@@ -238,13 +239,17 @@ export default class extends Controller {
         const match = this.listUrlValue.match(/\/api\/(\d+)\//);
         const parentId = match ? match[1] : null;
 
+        const context = { 
+            originatorId: this.componentId 
+        };
+        // On construit dynamiquement la clé de l'ID parent
+        // ex: context['tache'] = 5
+        context[this.parentFieldNameValue] = parentId;
+
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: entity,
             entityFormCanvas: entityFormCanvas,
-            context: {
-                notificationSinistreId: parentId,
-                originatorId: this.componentId
-            }
+            context: context
         });
     }
 }

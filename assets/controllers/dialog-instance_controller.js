@@ -139,6 +139,9 @@ export default class extends Controller {
 
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
+        // On fusionne les données du formulaire avec le contexte (qui contient l'ID parent)
+        Object.assign(data, this.context);
+        
         if (this.entity && this.entity.id) data.id = this.entity.id;
         if (this.context.notificationSinistreId) data.notificationSinistre = this.context.notificationSinistreId;
         try {

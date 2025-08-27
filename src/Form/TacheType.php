@@ -55,7 +55,7 @@ class TacheType extends AbstractType
                 'choice_label' => 'nom',
             ])
             ->add('feedbacks', CollectionType::class, [
-                'label' => "tache_form_label_feedbacks",
+                'label' => "Compte-rendu",
                 'entry_type' => FeedbackType::class,
                 'by_reference' => false,
                 'allow_add' => true,
