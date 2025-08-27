@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PisteRepository::class)]
-class Piste
+class Piste implements OwnerAwareInterface
 {
     //Type d'Avenant
     public const AVENANT_SOUSCRIPTION = 0;

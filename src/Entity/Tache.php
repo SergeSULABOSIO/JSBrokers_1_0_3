@@ -2,14 +2,18 @@
 
 namespace App\Entity;
 
-use App\Repository\TacheRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\TacheRepository;
+use App\Entity\Traits\TimestampableTrait;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: TacheRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Tache
 {
+    use TimestampableTrait;
+    
     //Execution status
     public const EXECUTION_STATUS_STILL_VALID      = 0;
     public const EXECUTION_STATUS_EXPIRED          = 1;
@@ -38,12 +42,6 @@ class Tache
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
     private ?Piste $piste = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
-    
-    #[ORM\Column]
-    private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
     private ?Cotation $cotation = null;
@@ -82,30 +80,6 @@ class Tache
     public function setDescription(string $description): static
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
 
         return $this;
     }

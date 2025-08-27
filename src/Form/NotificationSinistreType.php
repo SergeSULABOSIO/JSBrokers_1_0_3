@@ -166,7 +166,6 @@ class NotificationSinistreType extends AbstractType
                 'entry_options' => ['label' => false],
                 'mapped' => false,
             ])
-
         ;
     }
 

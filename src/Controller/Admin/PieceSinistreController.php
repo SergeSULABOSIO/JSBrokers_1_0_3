@@ -109,7 +109,6 @@ class PieceSinistreController extends AbstractController
             $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
             if ($notification) $piece->setNotificationSinistre($notification);
         }
-        $piece->setInvite($invite);
 
         // dd("Ici", $piece->getNotificationSinistre());
 

@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: InviteRepository::class)]
-class Invite
+class Invite implements OwnerAwareInterface
 {
     public const ACCESS_LECTURE = 0;
     public const ACCESS_ECRITURE = 1;

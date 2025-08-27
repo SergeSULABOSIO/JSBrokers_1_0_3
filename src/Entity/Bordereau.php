@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: BordereauRepository::class)]
-class Bordereau
+class Bordereau implements OwnerAwareInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

@@ -6477,6 +6477,8 @@ class Constante
                             "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["toBeEndedAt"]],
+                                ["champs" => ["executor"]],
+                                ["champs" => ["closed"]],
                             ]
                         ],
                     ]

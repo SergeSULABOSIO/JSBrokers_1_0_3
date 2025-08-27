@@ -76,11 +76,9 @@ class TacheController extends AbstractController
         $entreprise = $invite->getEntreprise();
 
         if (!$tache) {
-            $piece = new Tache();
-            $piece->setCreatedAt(new DateTimeImmutable("now"));
-            $piece->setUpdatedAt(new DateTimeImmutable("now"));
-            $piece->setToBeEndedAt(new DateTimeImmutable("now"));
+            $tache = new Tache();
         }
+        
         $form = $this->createForm(TacheType::class, $tache);
 
         return $this->render('components/_form_canvas.html.twig', [

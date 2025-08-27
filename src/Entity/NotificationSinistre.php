@@ -10,7 +10,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NotificationSinistreRepository::class)]
-class NotificationSinistre
+class NotificationSinistre implements OwnerAwareInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
