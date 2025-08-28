@@ -137,7 +137,7 @@ class NotificationSinistreType extends AbstractType
             ])
             // --- AJOUT DES NOUVELLES COLLECTIONS ---
             ->add('pieces', CollectionType::class, [
-                'label' => "Pièces du dossier",
+                'label' => "Pièces",
                 'help' => "Pièces justificatives.",
                 'entry_type' => PieceSinistreType::class,
                 'by_reference' => false,
