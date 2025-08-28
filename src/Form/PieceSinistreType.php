@@ -11,6 +11,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class PieceSinistreType extends AbstractType
 {
@@ -41,6 +42,17 @@ class PieceSinistreType extends AbstractType
                 'required' => false,
                 'class' => ModelePieceSinistre::class,
                 'choice_label' => 'nom',
+            ])
+            // --- AJOUT DE LA COLLECTION DE DOCUMENTS ---
+            ->add('documents', CollectionType::class, [
+                'label' => "Documents joints",
+                'help' => "Fichiers PDF, images, etc.",
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false, // On continue avec notre logique API par élément
             ])
         ;
     }

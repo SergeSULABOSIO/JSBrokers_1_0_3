@@ -21,6 +21,7 @@ use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use App\Entity\OffreIndemnisationSinistre;
+use Vich\UploaderBundle\Form\Type\VichFileType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -50,6 +51,14 @@ class DocumentType extends AbstractType
                 'required' => false,
                 'choice_label' => 'nom',
             ])
+            // Ce champ gère l'upload, le renommage et le stockage du fichier.
+            // Il nécessite une configuration dans votre entité Document.
+            ->add('documentFile', VichFileType::class, [
+                'label' => 'Fichier',
+                'required' => true,
+                'allow_delete' => false,
+                'download_uri' => false,
+            ])
             // //Le bouton d'enregistrement / soumission
             // ->add('enregistrer', SubmitType::class, [
             //     'label' => "Enregistrer",
@@ -66,7 +75,13 @@ class DocumentType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Document::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

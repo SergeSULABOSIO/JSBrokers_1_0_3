@@ -2,17 +2,19 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
-use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\Document;
+use App\Entity\Entreprise;
 use App\Form\DocumentType;
-use App\Repository\DocumentRepository;
+use App\Constantes\Constante;
+use App\Entity\PieceSinistre;
+use App\Constantes\MenuActivator;
 use App\Repository\InviteRepository;
+use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -24,8 +26,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class DocumentController extends AbstractController
 {
-    public MenuActivator $activator;
-
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -35,7 +35,6 @@ class DocumentController extends AbstractController
         private DocumentRepository $documentRepository,
         private Constante $constante,
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_ADMINISTRATION);
     }
 
 
@@ -51,101 +50,60 @@ class DocumentController extends AbstractController
             'documents' => $this->documentRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
-            'activator' => $this->activator,
         ]);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Document $document, Constante $constante): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        /** @var Document $document */
-        $document = new Document();
-        //Paramètres par défaut
-        // $document->setEntreprise($entreprise);
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-        $form = $this->createForm(DocumentType::class, $document);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($document);
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("document_creation_ok", [
-                ":document" => $document->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.document.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/document/create.html.twig', [
-            'pageName' => $this->translator->trans("document_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
-    }
-
-
-    #[Route('/edit/{idEntreprise}/{idDocument}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idDocument, Request $request)
-    {
         /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $entreprise = $invite->getEntreprise();
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Document $document */
-        $document = $this->documentRepository->find($idDocument);
-
+        if (!$document) { $document = new Document(); }
         $form = $this->createForm(DocumentType::class, $document);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($document); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("document_edition_ok", [
-                ":document" => $document->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.document.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/document/edit.html.twig', [
-            'pageName' => $this->translator->trans("document_page_name_update", [
-                ":document" => $document->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'document' => $document,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
+        return $this->render('components/_form_canvas.html.twig', [
+            'form' => $form->createView(),
+            'entityFormCanvas' => $constante->getEntityFormCanvas($document, $entreprise->getId())
         ]);
     }
 
-    #[Route('/remove/{idEntreprise}/{idDocument}', name: 'remove', requirements: ['idDocument' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idDocument, Request $request)
-    {
-        /** @var Document $document */
-        $document = $this->documentRepository->find($idDocument);
-        
-        $message = $this->translator->trans("document_deletion_ok", [
-            ":document" => $document->getNom(),
-        ]);
-        
-        $this->manager->remove($document);
-        $this->manager->flush();
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.document.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    {
+        $data = json_decode($request->getContent(), true);
+        $document = isset($data['id']) ? $em->getRepository(Document::class)->find($data['id']) : new Document();
+
+        $form = $this->createForm(DocumentType::class, $document);
+        $form->submit($data, false);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            if (isset($data['pieceSinistre'])) {
+                $parent = $em->getReference(PieceSinistre::class, $data['pieceSinistre']);
+                if ($parent) $document->setPieceSinistre($parent);
+            }
+            $em->persist($document);
+            $em->flush();
+            return $this->json(['message' => 'Document enregistré.']);
+        }
+
+        $errors = [];
+        foreach ($form->getErrors(true) as $error) { $errors[$error->getOrigin()->getName()][] = $error->getMessage(); }
+        return $this->json(['message' => 'Erreurs de validation', 'errors' => $errors], 422);
+    }
+
+
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Document $document, EntityManagerInterface $em): Response
+    {
+        $em->remove($document);
+        $em->flush();
+        return $this->json(['message' => 'Document supprimé.']);
     }
 }
