@@ -6334,22 +6334,22 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationsinistre")]],
-                                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationsinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre")]],
+                                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre")]]
                             ]
                         ],
                         // Ligne 9 : Collection des offres d'indemnisation
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisation', $notificationId, "Offre d'indemnisation", "notificationsinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisation', $notificationId, "Offre d'indemnisation", "notificationSinistre")]]
                             ]
                         ],
                         // Ligne 10 : Collection des taches
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationsinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre")]]
                             ]
                         ]
                     ],
@@ -6543,17 +6543,13 @@ class Constante
             "field_code" => $fieldName,
             "widget" => "collection-manager",
             "options" => [
-                // MODIFIÉ : On utilise le nom du parent pour construire l'URL de la liste
-                "listUrl"       => "/admin/" . $parentFieldName . "/api/" . $parentId . "/" . $fieldName,
+                "listUrl"       => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
                 "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
                 "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
                 "itemTitleCreate" => "Ajouter : " . $formtitle,
                 "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
-                
-                // On s'assure que le nom du champ parent est bien en camelCase.
-                // Par exemple, 'notificationsinistre' devient 'notificationSinistre'.
-                "parentFieldName" => lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $parentFieldName))))
+                "parentFieldName" => $parentFieldName
             ]
         ];
     }

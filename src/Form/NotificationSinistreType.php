@@ -138,7 +138,7 @@ class NotificationSinistreType extends AbstractType
             // --- AJOUT DES NOUVELLES COLLECTIONS ---
             ->add('pieces', CollectionType::class, [
                 'label' => "Pièces du dossier",
-                'help' => "Liste des documents et pièces justificatives.",
+                'help' => "Pièces justificatives.",
                 'entry_type' => PieceSinistreType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -148,7 +148,7 @@ class NotificationSinistreType extends AbstractType
             ])
             ->add('offreIndemnisationSinistres', CollectionType::class, [
                 'label' => "Offres d'indemnisation",
-                'help' => "Propositions d'indemnisation pour ce sinistre.",
+                'help' => "Propositions d'indemnisation.",
                 'entry_type' => OffreIndemnisationSinistreType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -158,7 +158,7 @@ class NotificationSinistreType extends AbstractType
             ])
             ->add('taches', CollectionType::class, [
                 'label' => "Tâches à effectuer",
-                'help' => "Actions et suivis nécessaires pour ce dossier.",
+                'help' => "Actions et compte-rendus.",
                 'entry_type' => TacheType::class,
                 'by_reference' => false,
                 'allow_add' => true,

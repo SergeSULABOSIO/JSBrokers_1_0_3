@@ -42,12 +42,6 @@ class PieceSinistreType extends AbstractType
                 'class' => ModelePieceSinistre::class,
                 'choice_label' => 'nom',
             ])
-            // ->add('enregistrer', SubmitType::class, [
-            //     'label' => "Enregistrer",
-            //     'attr' => [
-            //         'class' => "btn btn-secondary",
-            //     ],
-            // ])
         ;
     }
 
