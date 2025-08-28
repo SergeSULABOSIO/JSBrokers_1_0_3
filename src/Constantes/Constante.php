@@ -6550,8 +6550,10 @@ class Constante
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
                 "itemTitleCreate" => "Ajouter : " . $formtitle,
                 "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
-                // AJOUT : On passe le nom du champ parent au JS
-                "parentFieldName" => $parentFieldName
+                
+                // On s'assure que le nom du champ parent est bien en camelCase.
+                // Par exemple, 'notificationsinistre' devient 'notificationSinistre'.
+                "parentFieldName" => lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $parentFieldName))))
             ]
         ];
     }

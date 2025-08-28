@@ -12,7 +12,7 @@ export default class extends Controller {
         itemDeleteUrl: String,
         itemTitleCreate: String,
         itemTitleEdit: String,
-        parentFieldName: String
+        parentFieldName: String,
     };
 
     connect() {
@@ -244,7 +244,12 @@ export default class extends Controller {
         };
         // On construit dynamiquement la clé de l'ID parent
         // ex: context['tache'] = 5
-        context[this.parentFieldNameValue] = parentId;
+        // context[this.parentFieldNameValue] = parentId;
+        if (this.parentFieldNameValue) {
+            context[this.parentFieldNameValue] = parentId;
+        }
+
+        console.log(this.nomControlleur + " - openFormDialog",  entity, entityFormCanvas, context);
 
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: entity,

@@ -56,7 +56,7 @@ class ContactController extends AbstractController
             'activator' => $this->activator,
         ]);
     }
-    
+
 
     /**
      * Fournit le formulaire HTML pour un contact (nouveau ou existant).
@@ -105,14 +105,18 @@ class ContactController extends AbstractController
         $form->submit($data, false); // Le 'false' permet de ne pas vider les champs non soumis
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // --- AJOUT : ASSOCIER LA NOTIFICATION PARENTE ---
+            // --- LOGIQUE DYNAMIQUE D'ASSOCIATION PARENT ---
+            // Un contact peut être lié à une NotificationSinistre.
             if (isset($data['notificationSinistre'])) {
-                $notification = $em->getRepository(NotificationSinistre::class)->find($data['notificationSinistre']);
-                if ($notification) {
-                    $contact->setNotificationSinistre($notification);
-                }
+                $parent = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
+                if ($parent) $contact->setNotificationSinistre($parent);
             }
-            // --- FIN DE L'AJOUT ---
+            // Demain, si un contact peut aussi être lié à un Client :
+            // elseif (isset($data['client'])) {
+            //     $parent = $em->getReference(Client::class, $data['client']);
+            //     if ($parent) $contact->setClient($parent);
+            // }
+            // --- FIN DE LA LOGIQUE DYNAMIQUE ---
 
             $em->persist($contact);
             $em->flush();
