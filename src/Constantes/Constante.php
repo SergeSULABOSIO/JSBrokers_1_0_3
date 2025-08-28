@@ -6552,13 +6552,6 @@ class Constante
                 "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
                 // AJOUT : On passe le nom du champ parent au JS
                 "parentFieldName" => $parentFieldName
-
-                // "listUrl"       => "/admin/notificationsinistre/api/" . $parentId . "/" . $fieldName,
-                // "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
-                // "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
-                // "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
-                // "itemTitleCreate" => "Ajout: " . $formtitle,
-                // "itemTitleEdit"   => "Modification: " . $formtitle . " #%id%",
             ]
         ];
     }
