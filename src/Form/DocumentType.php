@@ -50,15 +50,15 @@ class DocumentType extends AbstractType
                 'required' => false,
                 'choice_label' => 'nom',
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
+            // //Le bouton d'enregistrement / soumission
+            // ->add('enregistrer', SubmitType::class, [
+            //     'label' => "Enregistrer",
+            //     'attr' => [
+            //         'class' => "btn btn-secondary",
+            //     ],
+            // ])
             // ->addE.ventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
+            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
