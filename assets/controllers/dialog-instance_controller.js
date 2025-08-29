@@ -143,15 +143,12 @@ export default class extends Controller {
         event.preventDefault();
         this.toggleLoading(true);
 
-        // On cherche le conteneur de feedback manuellement
         this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
         this.clearErrors(); // On nettoie les anciennes erreurs
         if (this.feedbackContainer) {
             this.feedbackContainer.innerHTML = '';
         }
 
-
-        // --- MODIFICATION DE LA PRÉPARATION DES DONNÉES ---
         // 1. On récupère les données du formulaire directement dans un objet FormData.
         const formData = new FormData(event.target);
 
@@ -159,24 +156,31 @@ export default class extends Controller {
         if (this.entity && this.entity.id) {
             formData.append('id', this.entity.id);
         }
-        if (this.context.notificationSinistreId) {
-            formData.append('notificationSinistre', this.context.notificationSinistreId);
+        // On fusionne tout le contexte. C'est plus simple et plus dynamique.
+        if (this.context) {
+            for (const [key, value] of Object.entries(this.context)) {
+                formData.append(key, value);
+            }
         }
-        // Faites de même pour les autres parents potentiels (ex: pieceSinistre, tache...)
-        if (this.context.pieceSinistre) {
-            formData.append('pieceSinistre', this.context.pieceSinistre);
-        }
-        if (this.context.tache) {
-            formData.append('tache', this.context.tache);
-        }
-        // --- FIN DE LA MODIFICATION ---
 
-        const data = Object.fromEntries(formData.entries());
-        // On fusionne les données du formulaire avec le contexte (qui contient l'ID parent)
-        Object.assign(data, this.context);
+        // if (this.context.notificationSinistreId) {
+        //     formData.append('notificationSinistre', this.context.notificationSinistreId);
+        // }
+        // // Faites de même pour les autres parents potentiels (ex: pieceSinistre, tache...)
+        // if (this.context.pieceSinistre) {
+        //     formData.append('pieceSinistre', this.context.pieceSinistre);
+        // }
+        // if (this.context.tache) {
+        //     formData.append('tache', this.context.tache);
+        // }
+        // // --- FIN DE LA MODIFICATION ---
 
-        if (this.entity && this.entity.id) data.id = this.entity.id;
-        if (this.context.notificationSinistreId) data.notificationSinistre = this.context.notificationSinistreId;
+        // const data = Object.fromEntries(formData.entries());
+        // // On fusionne les données du formulaire avec le contexte (qui contient l'ID parent)
+        // Object.assign(data, this.context);
+
+        // if (this.entity && this.entity.id) data.id = this.entity.id;
+        // if (this.context.notificationSinistreId) data.notificationSinistre = this.context.notificationSinistreId;
         try {
             const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
                 method: 'POST',
@@ -186,19 +190,19 @@ export default class extends Controller {
             });
             const result = await response.json();
             if (!response.ok) throw result;
+
             document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', {detail: { originatorId: this.context.originatorId }}));
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
             this.close();
+
         } catch (error) {
-            // MODIFICATION : On gère le nouvel objet d'erreur
             if (this.feedbackContainer) {
                 this.feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
             }
-            // Si le serveur a renvoyé des erreurs de champ détaillées, on les affiche
             if (error.errors) {
                 this.displayErrors(error.errors);
             }
-            this.toggleLoading(false); // On réactive le bouton en cas d'erreur
+            this.toggleLoading(false);
         }
     }
 

@@ -23,9 +23,7 @@ class Document
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
-    /**
-     * @Vich\UploadableField(mapping="piece_sinistre_documents", fileNameProperty="nomFichierStocke")
-     */
+    #[Vich\UploadableField(mapping: 'piece_sinistre_documents', fileNameProperty: 'nomFichierStocke')]
     private ?File $fichier = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -99,7 +97,7 @@ class Document
     {
         return $this->nomFichierStocke;
     }
-    
+
     public function getId(): ?int
     {
         return $this->id;
