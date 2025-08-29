@@ -273,7 +273,7 @@ export default class extends Controller {
      */
     toggleProgressBar(isLoading) {
         // On cherche le conteneur de la barre manuellement
-        const progressBarContainer = this.element.querySelector('.progress-bar-container');
+        const progressBarContainer = this.elementContenu.querySelector('.progress-bar-container');
         if (progressBarContainer) {
             progressBarContainer.classList.toggle('is-loading', isLoading);
         }

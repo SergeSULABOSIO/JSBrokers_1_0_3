@@ -587,7 +587,7 @@ textarea:hover,
 
 /* Quand la classe 'is-loading' est ajoutée, la barre apparaît */
 .progress-bar-container.is-loading {
-    height: 5px; /* Hauteur de la barre */
+    height: 30px; /* Hauteur de la barre */
 }
 
 .progress-bar-animated {
