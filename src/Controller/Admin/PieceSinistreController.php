@@ -149,4 +149,13 @@ class PieceSinistreController extends AbstractController
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
+    public function getDocumentsListApi(PieceSinistre $piece): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $piece->getDocuments(),
+            'item_template' => 'components/collection_items/_document_item.html.twig'
+        ]);
+    }
 }

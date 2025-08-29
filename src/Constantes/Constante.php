@@ -18,6 +18,7 @@ use App\Entity\Contact;
 use App\Entity\Tranche;
 use App\Entity\Assureur;
 use App\Entity\Cotation;
+use App\Entity\Document;
 use App\Entity\Feedback;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
@@ -6398,6 +6399,7 @@ class Constante
         }
         // --- AJOUT DES DEFINITIONS DE CANVAS POUR LES NOUVELLES ENTITÉS ---
         if ($object instanceof PieceSinistre) {
+            $pieceId = $object->getId() ?? 0;
             return [
                 "parametres" => [
                     "titre_creation" => "Nouvelle pièce",
@@ -6417,6 +6419,33 @@ class Constante
                                 ["champs" => ["fourniPar"]],
                                 ["champs" => ["receivedAt"]],
                                 ["champs" => ["type"]]
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre')]]
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+        }
+        if ($object instanceof Document) {
+            return [
+                "parametres" => [
+                    "form_layout" => [
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["nom"]],
+                                ["champs" => ["classeur"]]
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["documentFile"]]
                             ]
                         ],
                     ]

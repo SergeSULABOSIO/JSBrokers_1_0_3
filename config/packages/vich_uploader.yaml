@@ -1,12 +1,20 @@
 vich_uploader:
-    db_driver: orm
+  db_driver: orm
 
-    mappings:
-        entreprises:
-           uri_prefix: /images/entreprises
-           upload_destination: '%kernel.project_dir%/public/images/entreprises'
-           namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
-           
-           inject_on_load: false
-           delete_on_update: true
-           delete_on_remove: true
+  mappings:
+    # Le nom de notre mapping, que nous utiliserons dans l'entité
+    piece_sinistre_documents:
+      # Le chemin web pour accéder aux fichiers (pour les téléchargements)
+      uri_prefix: /uploads/documents
+      # Le dossier sur le serveur où les fichiers seront stockés
+      upload_destination: "%kernel.project_dir%/public/uploads/documents"
+      namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
+
+    entreprises:
+      uri_prefix: /images/entreprises
+      upload_destination: "%kernel.project_dir%/public/images/entreprises"
+      namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
+
+      inject_on_load: false
+      delete_on_update: true
+      delete_on_remove: true
