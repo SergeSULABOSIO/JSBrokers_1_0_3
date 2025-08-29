@@ -162,30 +162,9 @@ export default class extends Controller {
                 formData.append(key, value);
             }
         }
-
-        // if (this.context.notificationSinistreId) {
-        //     formData.append('notificationSinistre', this.context.notificationSinistreId);
-        // }
-        // // Faites de même pour les autres parents potentiels (ex: pieceSinistre, tache...)
-        // if (this.context.pieceSinistre) {
-        //     formData.append('pieceSinistre', this.context.pieceSinistre);
-        // }
-        // if (this.context.tache) {
-        //     formData.append('tache', this.context.tache);
-        // }
-        // // --- FIN DE LA MODIFICATION ---
-
-        // const data = Object.fromEntries(formData.entries());
-        // // On fusionne les données du formulaire avec le contexte (qui contient l'ID parent)
-        // Object.assign(data, this.context);
-
-        // if (this.entity && this.entity.id) data.id = this.entity.id;
-        // if (this.context.notificationSinistreId) data.notificationSinistre = this.context.notificationSinistreId;
         try {
             const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
                 method: 'POST',
-                // headers: { 'Content-Type': 'application/json' },
-                // body: JSON.stringify(data)
                 body: formData // On envoie l'objet FormData directement.
             });
             const result = await response.json();

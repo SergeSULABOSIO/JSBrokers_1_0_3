@@ -93,10 +93,10 @@ class ContactController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-        // $data = json_decode($request->getContent(), true);
         $data = $request->request->all();
-        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
-        
+        $files = $request->files->all();
+        $submittedData = array_merge($data, $files);
+
         /** @var Contact $contact */
         $contact = isset($data['id']) && $data['id'] ? $em->getRepository(Contact::class)->find($data['id']) : new Contact();
 
@@ -105,22 +105,13 @@ class ContactController extends AbstractController
         }
 
         $form = $this->createForm(ContactType::class, $contact);
-        $form->submit($data, false); // Le 'false' permet de ne pas vider les champs non soumis
+        $form->submit($submittedData, false); // Le 'false' permet de ne pas vider les champs non soumis
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // --- LOGIQUE DYNAMIQUE D'ASSOCIATION PARENT ---
-            // Un contact peut être lié à une NotificationSinistre.
             if (isset($data['notificationSinistre'])) {
                 $parent = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
                 if ($parent) $contact->setNotificationSinistre($parent);
             }
-            // Demain, si un contact peut aussi être lié à un Client :
-            // elseif (isset($data['client'])) {
-            //     $parent = $em->getReference(Client::class, $data['client']);
-            //     if ($parent) $contact->setClient($parent);
-            // }
-            // --- FIN DE LA LOGIQUE DYNAMIQUE ---
-
             $em->persist($contact);
             $em->flush();
             return $this->json([
