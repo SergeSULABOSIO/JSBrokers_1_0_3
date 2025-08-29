@@ -99,11 +99,9 @@ class OffreIndemnisationController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-
-        // $data = json_decode($request->getContent(), true);
         $data = $request->request->all();
-        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
-
+        $files = $request->files->all();
+        $submittedData = array_merge($data, $files);
 
         $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
 
@@ -113,7 +111,7 @@ class OffreIndemnisationController extends AbstractController
         }
 
         $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
-        $form->submit($data, false);
+        $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($offre);

@@ -93,10 +93,9 @@ class TacheController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-
-        // $data = json_decode($request->getContent(), true);
         $data = $request->request->all();
-        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
+        $files = $request->files->all();
+        $submittedData = array_merge($data, $files);
 
         $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
 
@@ -106,7 +105,7 @@ class TacheController extends AbstractController
         }
 
         $form = $this->createForm(TacheType::class, $tache);
-        $form->submit($data, false);
+        $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($tache);

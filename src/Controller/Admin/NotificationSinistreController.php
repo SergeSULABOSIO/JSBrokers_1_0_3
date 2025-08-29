@@ -181,10 +181,9 @@ class NotificationSinistreController extends AbstractController
         /** @var NotificationSinistre $notification */
         $notification = new NotificationSinistre();
 
-        // $data = json_decode($request->getContent(), true);
         $data = $request->request->all();
-        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
-
+        $files = $request->files->all();
+        $submittedData = array_merge($data, $files);
 
         $notificationId = $data['id'] ?? null;
 
@@ -209,7 +208,7 @@ class NotificationSinistreController extends AbstractController
         // Utiliser les formulaires Symfony pour la validation est une bonne pratique
         $form = $this->createForm(NotificationSinistreType::class, $notification);
         // Le 'false' permet de ne soumettre que les champs présents dans $data
-        $form->submit($data, false); //puisque les données sont fournies ici sous forme de JSON. On ne peut pas utiliser handleRequest
+        $form->submit($submittedData, false); //puisque les données sont fournies ici sous forme de JSON. On ne peut pas utiliser handleRequest
 
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($notification);

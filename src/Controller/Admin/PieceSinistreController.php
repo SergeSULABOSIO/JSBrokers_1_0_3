@@ -101,10 +101,9 @@ class PieceSinistreController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
-        // $data = json_decode($request->getContent(), true);
         $data = $request->request->all();
-        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
-
+        $files = $request->files->all();
+        $submittedData = array_merge($data, $files);
 
         /** @var PieceSinistre $piece */
         $piece = isset($data['id']) ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
@@ -117,7 +116,7 @@ class PieceSinistreController extends AbstractController
         // dd("Ici", $piece->getNotificationSinistre());
 
         $form = $this->createForm(PieceSinistreType::class, $piece);
-        $form->submit($data, false);
+        $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($piece);
