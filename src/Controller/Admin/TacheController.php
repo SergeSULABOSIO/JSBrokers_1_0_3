@@ -78,7 +78,7 @@ class TacheController extends AbstractController
         if (!$tache) {
             $tache = new Tache();
         }
-        
+
         $form = $this->createForm(TacheType::class, $tache);
 
         return $this->render('components/_form_canvas.html.twig', [
@@ -93,8 +93,11 @@ class TacheController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-        
-        $data = json_decode($request->getContent(), true);
+
+        // $data = json_decode($request->getContent(), true);
+        $data = $request->request->all();
+        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
+
         $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
 
         if (isset($data['notificationSinistre'])) {

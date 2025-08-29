@@ -100,7 +100,11 @@ class OffreIndemnisationController extends AbstractController
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
 
-        $data = json_decode($request->getContent(), true);
+        // $data = json_decode($request->getContent(), true);
+        $data = $request->request->all();
+        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
+
+
         $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
 
         if (isset($data['notificationSinistre'])) {

@@ -93,7 +93,10 @@ class ContactController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
-        $data = json_decode($request->getContent(), true);
+        // $data = json_decode($request->getContent(), true);
+        $data = $request->request->all();
+        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
+        
         /** @var Contact $contact */
         $contact = isset($data['id']) && $data['id'] ? $em->getRepository(Contact::class)->find($data['id']) : new Contact();
 

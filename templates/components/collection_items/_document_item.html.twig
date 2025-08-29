@@ -20,6 +20,10 @@
         </div>
     </div>
     <div class="item-actions">
+        {# BOUTON TÉLÉCHARGER : un simple lien vers notre nouvelle route #}
+        <a href="{{ path('admin.document.api.download', {'id': item.id}) }}" class="btn btn-sm btn-edit" title="Télécharger">
+            <twig:ux:icon name="bi:download" style="width: 20px;" />
+        </a>
         <button type="button" class="btn btn-sm btn-edit" data-action="click->collection-manager#editItem" title="Modifier">
             <twig:ux:icon name="tabler:edit" style="width: 20px;" />
         </button>

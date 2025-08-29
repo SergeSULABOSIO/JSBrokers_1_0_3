@@ -181,7 +181,11 @@ class NotificationSinistreController extends AbstractController
         /** @var NotificationSinistre $notification */
         $notification = new NotificationSinistre();
 
-        $data = json_decode($request->getContent(), true);
+        // $data = json_decode($request->getContent(), true);
+        $data = $request->request->all();
+        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
+
+
         $notificationId = $data['id'] ?? null;
 
         if ($notificationId) {
@@ -231,7 +235,7 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    
+
     #[Route('/getlistelementdetails/{idEntreprise}/{idNotificationsinistre}', name: 'getlistelementdetails')]
     public function getlistelementdetails($idEntreprise, $idNotificationsinistre, Request $request, Constante $constante)
     {

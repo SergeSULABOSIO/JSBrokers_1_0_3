@@ -83,25 +83,39 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVELLE FONCTION : Corrige le z-index si plusieurs modales sont ouvertes.
+     * NOUVELLE VERSION : Cherche le z-index le plus élevé et se place au-dessus.
      */
     adjustZIndex() {
-        const modals = Array.from(document.querySelectorAll('.modal.show'));
-        const backdrops = Array.from(document.querySelectorAll('.modal-backdrop.show'));
+        // Trouve tous les backdrops visibles
+        const backdrops = document.querySelectorAll('.modal-backdrop.show');
 
-        if (modals.length > 1) {
-            let zIndexBase = 1050; // z-index de base de Bootstrap
-
-            modals.forEach((modal, index) => {
-                const backdrop = backdrops[index];
-                zIndexBase += 10; // On augmente de 10 pour chaque nouvelle modale
-                modal.style.zIndex = zIndexBase + 5;
-                if (backdrop) {
-                    backdrop.style.zIndex = zIndexBase;
+        // S'il y a plus d'un backdrop, cela signifie que nous superposons les modales
+        if (backdrops.length > 1) {
+            // Trouve le z-index le plus élevé parmi TOUTES les modales actuellement visibles
+            const modals = document.querySelectorAll('.modal.show');
+            let maxZIndex = 0;
+            modals.forEach(modal => {
+                // On s'assure de ne pas nous comparer à nous-même si notre z-index est déjà très élevé
+                if (modal !== this.elementContenu.closest('.modal')) {
+                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
+                    if (zIndex > maxZIndex) {
+                        maxZIndex = zIndex;
+                    }
                 }
             });
+
+            // On récupère notre modale et son backdrop (c'est toujours le dernier ajouté)
+            const myModal = this.elementContenu.closest('.modal');
+            const myBackdrop = backdrops[backdrops.length - 1];
+
+            // On définit le z-index de notre modale pour être au-dessus du maximum trouvé,
+            // et celui de son backdrop juste en dessous.
+            myModal.style.zIndex = maxZIndex + 2;
+            myBackdrop.style.zIndex = maxZIndex + 1;
         }
     }
+
+
 
     /**
      * Charge le contenu du formulaire et le place dans le .modal-body.
@@ -137,24 +151,42 @@ export default class extends Controller {
         }
 
 
+        // --- MODIFICATION DE LA PRÉPARATION DES DONNÉES ---
+        // 1. On récupère les données du formulaire directement dans un objet FormData.
         const formData = new FormData(event.target);
+
+        // 2. On AJOUTE nos données de contexte (ID, parent, etc.) à cet objet.
+        if (this.entity && this.entity.id) {
+            formData.append('id', this.entity.id);
+        }
+        if (this.context.notificationSinistreId) {
+            formData.append('notificationSinistre', this.context.notificationSinistreId);
+        }
+        // Faites de même pour les autres parents potentiels (ex: pieceSinistre, tache...)
+        if (this.context.pieceSinistre) {
+            formData.append('pieceSinistre', this.context.pieceSinistre);
+        }
+        if (this.context.tache) {
+            formData.append('tache', this.context.tache);
+        }
+        // --- FIN DE LA MODIFICATION ---
+
         const data = Object.fromEntries(formData.entries());
         // On fusionne les données du formulaire avec le contexte (qui contient l'ID parent)
         Object.assign(data, this.context);
-        
+
         if (this.entity && this.entity.id) data.id = this.entity.id;
         if (this.context.notificationSinistreId) data.notificationSinistre = this.context.notificationSinistreId;
         try {
             const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                // headers: { 'Content-Type': 'application/json' },
+                // body: JSON.stringify(data)
+                body: formData // On envoie l'objet FormData directement.
             });
             const result = await response.json();
             if (!response.ok) throw result;
-            document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', {
-                detail: { originatorId: this.context.originatorId }
-            }));
+            document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', {detail: { originatorId: this.context.originatorId }}));
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
             this.close();
         } catch (error) {

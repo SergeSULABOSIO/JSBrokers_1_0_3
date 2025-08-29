@@ -101,7 +101,11 @@ class PieceSinistreController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
-        $data = json_decode($request->getContent(), true);
+        // $data = json_decode($request->getContent(), true);
+        $data = $request->request->all();
+        // Les fichiers uploadés sont dans $request->files, le composant Form de Symfony les trouvera tout seul.
+
+
         /** @var PieceSinistre $piece */
         $piece = isset($data['id']) ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
 
