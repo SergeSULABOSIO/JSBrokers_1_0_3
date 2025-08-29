@@ -6,7 +6,8 @@ import { Modal } from 'bootstrap';
  * Il est créé dynamiquement par 'dialog-manager' et se détruit à la fermeture.
  */
 export default class extends Controller {
-    // static targets = ["submitButton", "feedback"];
+    // 1. SUPPRIMEZ complètement la déclaration des 'targets', on va les chercher dynamiquement avec querySelector
+    // static targets = ["submitButton", "feedback", "progressBarContainer"];
 
     connect() {
         this.nomControlleur = "Dialog-Instance";
@@ -49,6 +50,9 @@ export default class extends Controller {
                 <div class="modal-header">
                     <h5 class="modal-title">${title}</h5>
                     <button type="button" class="btn-close btn-close-white" data-action="click->dialog-instance#close"></button>
+                </div>
+                <div class="progress-bar-container" data-dialog-instance-target="progressBarContainer">
+                    <div class="progress-bar-animated" role="progressbar"></div>
                 </div>
                 <div class="modal-body">
                     <div class="text-center p-5">
@@ -142,6 +146,7 @@ export default class extends Controller {
     async submitForm(event) {
         event.preventDefault();
         this.toggleLoading(true);
+        this.toggleProgressBar(true);
 
         this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
         this.clearErrors(); // On nettoie les anciennes erreurs
@@ -170,7 +175,7 @@ export default class extends Controller {
             const result = await response.json();
             if (!response.ok) throw result;
 
-            document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', {detail: { originatorId: this.context.originatorId }}));
+            document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', { detail: { originatorId: this.context.originatorId } }));
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
             this.close();
 
@@ -182,6 +187,9 @@ export default class extends Controller {
                 this.displayErrors(error.errors);
             }
             this.toggleLoading(false);
+        } finally {
+            // S'assure que la barre disparaît dans tous les cas
+            this.toggleProgressBar(false);
         }
     }
 
@@ -231,6 +239,7 @@ export default class extends Controller {
      * Ferme la modale.
      */
     close() {
+        this.toggleProgressBar(false); // <-- CACHER LA BARRE avant de fermer
         this.modal.hide();
     }
 
@@ -256,6 +265,17 @@ export default class extends Controller {
             spinner.style.display = 'none';
             icon.style.display = 'inline-block';
             text.textContent = 'Enregistrer';
+        }
+    }
+
+    /**
+     * NOUVEAU : Affiche ou cache la barre de progression.
+     */
+    toggleProgressBar(isLoading) {
+        // On cherche le conteneur de la barre manuellement
+        const progressBarContainer = this.element.querySelector('.progress-bar-container');
+        if (progressBarContainer) {
+            progressBarContainer.classList.toggle('is-loading', isLoading);
         }
     }
 }

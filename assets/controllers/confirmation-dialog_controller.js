@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
 
 export default class extends Controller {
-    static targets = ["title", "body", "confirmButton", "feedback"];
+    static targets = ["title", "body", "confirmButton", "feedback", "progressBarContainer"];
 
     connect() {
         this.nomControlleur = "Confirmation-dialog";
@@ -42,6 +42,7 @@ export default class extends Controller {
      */
     confirm() {
         this.toggleLoading(true); // Active le spinner
+        this.toggleProgressBar(true);
         this.feedbackTarget.innerHTML = ''; // Nettoie les anciens messages d'erreur
 
         // Si une action de confirmation a été définie...
@@ -62,6 +63,7 @@ export default class extends Controller {
     // NOUVEAU : Gère l'événement d'erreur
     handleError(event) {
         this.toggleLoading(false); // Stoppe le spinner
+        this.toggleProgressBar(false);
         this.feedbackTarget.innerHTML = event.detail.message || "Une erreur est survenue.";
     }
 
@@ -90,6 +92,7 @@ export default class extends Controller {
      */
     close() {
         this.toggleLoading(false); // S'assure que le bouton est réinitialisé en cas de fermeture manuelle
+        this.toggleProgressBar(false);
         this.feedbackTarget.innerHTML = '';
         this.modal.hide();
         this.onConfirmDetail = null;
@@ -125,6 +128,15 @@ export default class extends Controller {
             // et celui de son backdrop juste en dessous.
             myModal.style.zIndex = maxZIndex + 2;
             myBackdrop.style.zIndex = maxZIndex + 1;
+        }
+    }
+
+    /**
+     * NOUVEAU : Affiche ou cache la barre de progression.
+     */
+    toggleProgressBar(isLoading) {
+        if (this.hasProgressBarContainerTarget) {
+            this.progressBarContainerTarget.classList.toggle('is-loading', isLoading);
         }
     }
 }

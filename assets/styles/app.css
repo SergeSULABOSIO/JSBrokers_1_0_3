@@ -572,3 +572,45 @@ textarea:hover,
 .form-text {
     color: #0d6efd !important; /* Bleu cobalt (couleur primaire de Bootstrap) */
 }
+
+/*
+===================================================================
+ SECTION: BARRE DE PROGRESSION POUR LES DIALOGUES
+===================================================================
+*/
+
+.progress-bar-container {
+    height: 0; /* Caché par défaut */
+    transition: height 0.3s ease;
+    background-color: #f8f9fa; /* Même couleur que le corps pour une transition douce */
+}
+
+/* Quand la classe 'is-loading' est ajoutée, la barre apparaît */
+.progress-bar-container.is-loading {
+    height: 5px; /* Hauteur de la barre */
+}
+
+.progress-bar-animated {
+    width: 100%;
+    height: 100%;
+    background-color: #0d6efd; /* Votre bleu cobalt */
+    
+    /* Animation de balayage */
+    background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.15) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.15) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 1rem 1rem;
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+}
