@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Vich\UploaderBundle\Handler\DownloadHandler;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -105,5 +106,16 @@ class DocumentController extends AbstractController
         $em->remove($document);
         $em->flush();
         return $this->json(['message' => 'Document supprimé.']);
+    }
+
+    /**
+     * NOUVELLE ACTION : Gère le téléchargement d'un fichier.
+     */
+    #[Route('/api/{id}/download', name: 'api.download', methods: ['GET'])]
+    public function downloadApi(Document $document, DownloadHandler $downloadHandler): Response
+    {
+        // Le DownloadHandler de VichUploader s'occupe de tout :
+        // il génère une réponse HTTP avec le bon fichier et les bons en-têtes.
+        return $downloadHandler->downloadObject($document, $fileField = 'fichier');
     }
 }

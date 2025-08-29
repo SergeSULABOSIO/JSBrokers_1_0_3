@@ -6445,7 +6445,7 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => ["documentFile"]]
+                                ["champs" => ["fichier"]]
                             ]
                         ],
                     ]

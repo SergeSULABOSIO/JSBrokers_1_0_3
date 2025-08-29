@@ -53,8 +53,8 @@ class DocumentType extends AbstractType
             ])
             // Ce champ gère l'upload, le renommage et le stockage du fichier.
             // Il nécessite une configuration dans votre entité Document.
-            ->add('documentFile', VichFileType::class, [
-                'label' => 'Fichier',
+            ->add('fichier', VichFileType::class, [
+                'label' => 'Fichier à uploader',
                 'required' => true,
                 'allow_delete' => false,
                 'download_uri' => false,

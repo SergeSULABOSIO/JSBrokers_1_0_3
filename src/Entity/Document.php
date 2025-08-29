@@ -5,9 +5,12 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\DocumentRepository;
 use App\Entity\Traits\TimestampableTrait;
+use Symfony\Component\HttpFoundation\File\File;
+use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 #[ORM\Entity(repositoryClass: DocumentRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[Vich\Uploadable]
 class Document
 {
     use TimestampableTrait;
@@ -19,6 +22,14 @@ class Document
 
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
+
+    /**
+     * @Vich\UploadableField(mapping="piece_sinistre_documents", fileNameProperty="nomFichierStocke")
+     */
+    private ?File $fichier = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $nomFichierStocke = null;
 
     // #[ORM\Column]
     // private ?\DateTimeImmutable $createdAt = null;
@@ -65,6 +76,30 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'preuves')]
     private ?Paiement $paiement = null;
 
+    public function setFichier(?File $fichier = null): void
+    {
+        $this->fichier = $fichier;
+        if (null !== $fichier) {
+            // Il faut mettre à jour updatedAt pour que le bundle sache qu'il y a eu un changement
+            $this->updatedAt = new \DateTimeImmutable();
+        }
+    }
+
+    public function getFichier(): ?File
+    {
+        return $this->fichier;
+    }
+
+    public function setNomFichierStocke(?string $nomFichierStocke): void
+    {
+        $this->nomFichierStocke = $nomFichierStocke;
+    }
+
+    public function getNomFichierStocke(): ?string
+    {
+        return $this->nomFichierStocke;
+    }
+    
     public function getId(): ?int
     {
         return $this->id;

@@ -9,11 +9,15 @@
     data-id="{{ item.id }}"
 >
     <div class="item-icon">
-        <twig:ux:icon name="codex:file" style="width: 35px;" />
+        <twig:ux:icon name="famicons:document" style="width: 35px;" />
     </div>
     <div class="item-text">
-        <div class="text-main">{{ item.description }}</div>
-        <div class="text-secondary"><em>Reçu le : {{ item.receivedAt|date('d/m/Y') }} - Fourni par : {{ item.fourniPar }}</em></div>
+        <div class="text-main">{{ item.nom }}</div>
+        <div class="text-secondary">
+            <em>
+                Fichier: {{ item.nomFichierStocke }} - Ajouté le: {{ item.createdAt|date('d/m/Y') }}
+            </em>
+        </div>
     </div>
     <div class="item-actions">
         <button type="button" class="btn btn-sm btn-edit" data-action="click->collection-manager#editItem" title="Modifier">
