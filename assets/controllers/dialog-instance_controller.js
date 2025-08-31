@@ -51,8 +51,8 @@ export default class extends Controller {
                     <h5 class="modal-title">${title}</h5>
                     <button type="button" class="btn-close btn-close-white" data-action="click->dialog-instance#close"></button>
                 </div>
-                <div class="progress-bar-container" data-dialog-instance-target="progressBarContainer">
-                    <div class="progress-bar-animated" role="progressbar"></div>
+                <div class="dialog-progress-container" data-dialog-instance-target="progressBarContainer">
+                    <div class="dialog-progress-bar" role="progressbar"></div>
                 </div>
                 <div class="modal-body">
                     <div class="text-center p-5">
@@ -273,7 +273,7 @@ export default class extends Controller {
      */
     toggleProgressBar(isLoading) {
         // On cherche le conteneur de la barre manuellement
-        const progressBarContainer = this.elementContenu.querySelector('.progress-bar-container');
+        const progressBarContainer = this.elementContenu.querySelector('.dialog-progress-container');
         if (progressBarContainer) {
             progressBarContainer.classList.toggle('is-loading', isLoading);
         }
