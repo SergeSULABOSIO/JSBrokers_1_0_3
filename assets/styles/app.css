@@ -240,7 +240,6 @@ a:active {
 /*
 ===================================================================
  SECTION: COMPOSANT ACCORDÉON (Gestionnaire de Collection)
- (Ce code est conservé tel quel)
 ===================================================================
 */
 .collection-manager-accordion {
@@ -286,10 +285,10 @@ a:active {
     background-color: #0d6efd !important;
 }
 .title-line-2 {
-    padding-left: 30px;       /* Aligne le texte avec le label au-dessus */
+    padding-left: 30px;
     font-size: 0.8em;
-    font-style: italic;       /* AJOUT : Met le texte en italique */
-    font-weight: normal;      /* AJOUT : S'assure que le texte est de poids normal */
+    font-style: italic;
+    font-weight: normal;
     color: #212529;
     margin-top: 0; 
 }
@@ -319,7 +318,7 @@ a:active {
     margin-left: 0px;
     margin-right: 0px;
     transition: background-color 0.2s ease;
-    background-color: #ffffff; /* Fond blanc */
+    background-color: #ffffff;
 }
 .collection-item:last-child {
     border-bottom: none;
@@ -328,8 +327,7 @@ a:active {
     background-color: #f5f5f5;
 }
 .collection-item.selected {
-    /* background-color: #e7f1ff; */
-    background-color: #e9ecef; /* Gris un peu plus soutenu */
+    background-color: #e9ecef;
 }
 .item-icon {
     margin-right: 12px;
@@ -358,154 +356,31 @@ a:active {
     transition: opacity 0.2s ease;
 }
 .item-actions .btn {
-    color: #343a40;
-}
-
-/*
-===================================================================
- SECTION: STYLE CORRIGÉ POUR LES BOÎTES DE DIALOGUE DYNAMIQUES
- (Ceci remplace votre ancien bloc #form-dialog-modal)
-===================================================================
-*/
-
-/* 1. MISE EN PAGE FLEXBOX POUR LE DÉFILEMENT (VERSION CORRIGÉE) */
-
-/* Le conteneur du dialogue définit la hauteur maximale et le contexte flex */
-.app-dialog .modal-dialog {
-    display: flex;
-    max-height: 90vh;
-}
-
-/* * Le contenu ET le formulaire doivent s'étirer pour remplir l'espace.
- * C'EST LA CORRECTION CLÉ.
- */
-.app-dialog .modal-content,
-.app-dialog .modal-content form {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1; /* Force l'élément à prendre toute la hauteur disponible */
-    overflow: hidden; /* Empêche ce conteneur de défiler */
-}
-
-.app-dialog .modal-content {
-    border-radius: 15px;
-    border: none;
-}
-
-/* 2. STYLE DES COULEURS ET DES SECTIONS */
-.app-dialog .modal-header {
-    background-color: #676767;
-    color: #f0f0f0;
-    border-bottom: none;
-    padding: 1.2rem 1.5rem;
-    flex-shrink: 0;
-}
-.app-dialog .modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-}
-
-.app-dialog .modal-footer {
-    background-color: #ffffff;
-    border-top: 1px solid #dee2e6;
-    padding: 1rem 1.5rem;
-    flex-shrink: 0;
-}
-
-/* 3. ACTIVATION DU DÉFILEMENT SUR LE CORPS */
-.app-dialog .modal-body {
-    background-color: #f0f0f0;
-    padding: 1.5rem;
-    flex-grow: 1;
-    overflow-y: auto; 
-}
-
-/* 4. STYLE DE LA BARRE DE DÉFILEMENT */
-.app-dialog .modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-.app-dialog .modal-body::-webkit-scrollbar-track {
-    background: #e9ecef;
-}
-.app-dialog .modal-body::-webkit-scrollbar-thumb {
-    background: #adb5bd;
-    border-radius: 4px;
-}
-.app-dialog .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #495057;
-}
-
-
-/*
-===================================================================
- SECTION: STYLE DES BOUTONS D'ACTION (Modifier / Supprimer)
-===================================================================
-*/
-
-/* Style de base pour les boutons (transparent, transition douce) */
-.item-actions .btn {
     background-color: transparent;
-    border-radius: 50%; /* Rend les boutons ronds */
+    border-radius: 50%;
     padding: 5px;
     transition: background-color 0.2s ease-in-out;
 }
-
-/* Couleur par défaut pour l'icône de modification */
 .item-actions .btn-edit {
-    color: #6c757d; /* Gris foncé */
+    color: #6c757d;
 }
-
-/* Couleur par défaut pour l'icône de suppression */
 .item-actions .btn-delete {
-    color: #dc3545; /* Rouge */
+    color: #dc3545;
 }
-
-/* Effet au survol pour TOUS les boutons */
 .item-actions .btn:hover {
-    background-color: #e9ecef; /* Ajoute un fond gris clair au survol */
+    background-color: #e9ecef;
 }
-
 .title-right-block .btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    
-    /* AJOUT : Met le texte du bouton en gras */
     font-weight: bold;
-
-    /* AJOUT : Arrondit fortement les bords du bouton */
     border-radius: 20px;
 }
 
 /*
 ===================================================================
- SECTION: FORCER LA SUPERPOSITION DU DIALOGUE DE CONFIRMATION
-===================================================================
-*/
-
-#confirmation-dialog-modal {
-    /* * Bootstrap assigne un z-index d'environ 1055 aux modales.
-     * En donnant une valeur supérieure à notre dialogue de confirmation, 
-     * on s'assure qu'il sera toujours au-dessus de n'importe quelle autre.
-     */
-    z-index: 1070;
-}
-
-/* On cible le deuxième backdrop visible (celui de la confirmation)
-   pour le placer juste en dessous de la boîte de confirmation,
-   mais au-dessus de la première boîte de dialogue. */
-.modal-backdrop.show ~ .modal-backdrop.show {
-    z-index: 1069;
-}
-
-.input-group span {
-    border: none;
-    background-color: transparent;
-}
-
-/*
-===================================================================
- SECTION: STYLE GLOBAL POUR LES CHAMPS DE FORMULAIRE (STYLE "FLAT" UNIFIÉ)
+ SECTION: STYLE GLOBAL POUR LES CHAMPS DE FORMULAIRE ("FLAT" AVEC SURVOL)
 ===================================================================
 */
 
@@ -521,18 +396,11 @@ input[type=email],
 input[type=file],
 select,
 textarea,
-.tom-select-control { /* Cible aussi les champs autocomplete */
-    /* On définit une bordure de 2px, mais invisible, pour réserver l'espace */
+.tom-select-control {
     border: 3px solid transparent; 
-    
-    /* On garde uniquement la ligne du bas visible par défaut */
-    /* border-bottom: 2px solid #d8d8d8;  */
-
-    border-radius: 10px; /* Un léger arrondi pour adoucir */
+    border-radius: 10px;
     background-color: transparent !important;
     box-shadow: none !important;
-    
-    /* On ajoute une transition pour un effet de couleur fluide */
     transition: border-color 0.2s ease-in-out; 
 }
 
@@ -549,7 +417,6 @@ input[type=file]:hover,
 select:hover,
 textarea:hover,
 .tom-select-control:hover {
-    /* La bordure, initialement transparente, devient gris foncé */
     border-color: #6c757d;
 }
 
@@ -557,10 +424,13 @@ textarea:hover,
 .form-control:focus,
 .form-select:focus,
 .editeur-riche:focus,
-.tom-select-control.focus { /* La classe .focus est pour les champs autocomplete */
-    /* La bordure devient bleue pour indiquer la sélection active */
+.tom-select-control.focus {
     border-color: #0d6efd !important;
     box-shadow: none !important;
+}
+.input-group span {
+    border: none;
+    background-color: transparent;
 }
 
 /*
@@ -570,47 +440,118 @@ textarea:hover,
 */
 
 .form-text {
-    color: #0d6efd !important; /* Bleu cobalt (couleur primaire de Bootstrap) */
+    color: #0d6efd !important;
 }
 
 /*
 ===================================================================
- SECTION: BARRE DE PROGRESSION POUR LES DIALOGUES
+ SECTION: STYLE UNIFIÉ ET FINAL POUR TOUTES LES BOÎTES DE DIALOGUE
 ===================================================================
 */
 
-.progress-bar-container {
-    height: 0; /* Caché par défaut */
+/* 1. MISE EN PAGE FLEXBOX (POUR TOUS LES DIALOGUES) */
+.app-dialog .modal-dialog,
+#confirmation-dialog-modal .modal-dialog {
+    display: flex;
+    max-height: 90vh;
+}
+
+.app-dialog .modal-content,
+.app-dialog .modal-content form,
+#confirmation-dialog-modal .modal-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.app-dialog .modal-content {
+    border-radius: 15px;
+    border: none;
+}
+
+/* 2. COULEURS DES SECTIONS */
+.app-dialog .modal-header {
+    background-color: #343a40; /* Gris foncé par défaut */
+    color: white;
+    border-bottom: none;
+    padding: 1.2rem 1.5rem;
+    flex-shrink: 0;
+}
+.app-dialog .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+#confirmation-dialog-modal .modal-header {
+    background-color: #dc3545; /* Rouge pour la confirmation */
+}
+
+.app-dialog .modal-footer,
+#confirmation-dialog-modal .modal-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+    flex-shrink: 0;
+}
+
+/* 3. BARRE DE PROGRESSION (AVEC NOMS UNIQUES) */
+.dialog-progress-container {
+    height: 0;
     transition: height 0.3s ease;
-    background-color: #f8f9fa; /* Même couleur que le corps pour une transition douce */
 }
-
-/* Quand la classe 'is-loading' est ajoutée, la barre apparaît */
-.progress-bar-container.is-loading {
-    height: 30px; /* Hauteur de la barre */
+.dialog-progress-container.is-loading {
+    height: 10px;
 }
-
-.progress-bar-animated {
+.dialog-progress-bar {
     width: 100%;
     height: 100%;
-    background-color: #0d6efd; /* Votre bleu cobalt */
-    
-    /* Animation de balayage */
-    background-image: linear-gradient(
-        45deg,
-        rgba(255, 255, 255, 0.15) 25%,
-        transparent 25%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.15) 50%,
-        rgba(255, 255, 255, 0.15) 75%,
-        transparent 75%,
-        transparent
-    );
+    background-color: #0d6efd;
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
     background-size: 1rem 1rem;
-    animation: progress-bar-stripes 1s linear infinite;
+    animation: dialog-progress-stripes 1s linear infinite;
 }
-
-@keyframes progress-bar-stripes {
+@keyframes dialog-progress-stripes {
     from { background-position: 1rem 0; }
     to { background-position: 0 0; }
+}
+
+/* 4. CORPS ET DÉFILEMENT */
+.app-dialog .modal-body {
+    background-color: #f0f0f0; /* Votre gris clair */
+    padding: 1.5rem;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+#confirmation-dialog-modal .modal-body {
+    background-color: #ffffff; /* Fond blanc pour la confirmation */
+}
+.app-dialog .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+.app-dialog .modal-body::-webkit-scrollbar-track {
+    background: #e9ecef;
+}
+.app-dialog .modal-body::-webkit-scrollbar-thumb {
+    background: #adb5bd;
+    border-radius: 4px;
+}
+.app-dialog .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #495057;
+}
+
+/* 5. ÉLÉMENTS DANS LES BOUTONS */
+.app-dialog .modal-footer .btn,
+#confirmation-dialog-modal .modal-footer .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* 6. SUPERPOSITION */
+#confirmation-dialog-modal {
+    z-index: 1070;
+}
+.modal-backdrop.show ~ .modal-backdrop.show {
+    z-index: 1069;
 }
