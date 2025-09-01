@@ -14,6 +14,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,7 +23,6 @@ use Vich\UploaderBundle\Handler\DownloadHandler;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use App\Controller\Admin\Traits\HandleChildAssociationTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 

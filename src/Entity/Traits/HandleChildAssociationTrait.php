@@ -1,6 +1,5 @@
 <?php
-
-namespace App\Controller\Admin\Traits;
+namespace App\Entity\Traits;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
