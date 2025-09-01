@@ -11,8 +11,11 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use App\Form\DocumentType;
+use App\Form\TacheType;
+use App\Form\PaiementType; // Ne pas oublier d'importer le nouveau FormType
+
 
 class OffreIndemnisationSinistreType extends AbstractType
 {
@@ -65,74 +68,36 @@ class OffreIndemnisationSinistreType extends AbstractType
                     'placeholder' => "Référence bancaire",
                 ],
             ])
-            // ->add('documents', CollectionType::class, [
-            //     'label' => "Documents",
-            //     'entry_type' => DocumentType::class,
-            //     'by_reference' => false,
-            //     'allow_add' => true,
-            //     'allow_delete' => true,
-            //     'entry_options' => [
-            //         'label' => false,
-            //     ],
-            //     'attr' => [
-            //         'data-controller' => 'form-collection-entites',
-            //         'data-form-collection-entites-data-value' => json_encode([
-            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
-            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-            //             'icone' => "document",
-            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-            //             'tailleMax' => 20,
-            //         ]),
-            //     ],
-            // ])
-            // ->add('paiements', CollectionType::class, [
-            //     'label' => "Paiements",
-            //     'entry_type' => PaiementType::class,
-            //     'by_reference' => false,
-            //     'allow_add' => true,
-            //     'allow_delete' => true,
-            //     'entry_options' => [
-            //         'label' => false,
-            //     ],
-            //     'attr' => [
-            //         'data-controller' => 'form-collection-entites',
-            //         'data-form-collection-entites-data-value' => json_encode([
-            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
-            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-            //             'icone' => "paiement",
-            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-            //             'tailleMax' => 20,
-            //         ]),
-            //     ],
-            // ])
-            // ->add('taches', CollectionType::class, [
-            //     'label' => "Liste des taches",
-            //     'help' => "Tâches ou actions à exécuter par les utilisateurs dans le cadre de cette notification.",
-            //     'entry_type' => TacheType::class,
-            //     'by_reference' => false,
-            //     'allow_add' => true,
-            //     'allow_delete' => true,
-            //     'entry_options' => [
-            //         'label' => false,
-            //     ],
-            //     'attr' => [
-            //         'data-controller' => 'form-collection-entites',
-            //         'data-form-collection-entites-data-value' => json_encode([
-            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
-            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-            //             'icone' => "tache",
-            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-            //             'tailleMax' => 20,
-            //         ]),
-            //     ],
-            // ])
-            // //Le bouton d'enregistrement / soumission
-            // ->add('enregistrer', SubmitType::class, [
-            //     'label' => "Enregistrer",
-            //     'attr' => [
-            //         'class' => "btn btn-secondary",
-            //     ],
-            // ])
+            ->add('documents', CollectionType::class, [
+                'label' => 'Documents justificatifs',
+                'help' => 'Scans, photos, PDF, etc.',
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
+            ->add('taches', CollectionType::class, [
+                'label' => 'Tâches associées',
+                'help' => 'Actions de suivi pour cette offre.',
+                'entry_type' => TacheType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
+            ->add('paiements', CollectionType::class, [
+                'label' => 'Paiements effectués',
+                'help' => 'Liste des versements liés à cette offre.',
+                'entry_type' => PaiementType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
+            ])
         ;
     }
 

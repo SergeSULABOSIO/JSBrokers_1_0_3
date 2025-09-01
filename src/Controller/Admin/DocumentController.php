@@ -12,6 +12,7 @@ use App\Repository\InviteRepository;
 use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,8 +36,7 @@ class DocumentController extends AbstractController
         private InviteRepository $inviteRepository,
         private DocumentRepository $documentRepository,
         private Constante $constante,
-    ) {
-    }
+    ) {}
 
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -66,7 +66,9 @@ class DocumentController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
-        if (!$document) { $document = new Document(); }
+        if (!$document) {
+            $document = new Document();
+        }
         $form = $this->createForm(DocumentType::class, $document);
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
@@ -85,12 +87,16 @@ class DocumentController extends AbstractController
         $document = isset($data['id']) ? $em->getRepository(Document::class)->find($data['id']) : new Document();
 
         $form = $this->createForm(DocumentType::class, $document);
-        $form->submit($submittedData , false);
+        $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
             if (isset($data['pieceSinistre'])) {
                 $parent = $em->getReference(PieceSinistre::class, $data['pieceSinistre']);
                 if ($parent) $document->setPieceSinistre($parent);
+            }
+            if (isset($data['offreIndemnisation'])) {
+                $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
+                if ($offreIndemnisation) $document->setOffreIndemnisationSinistre($offreIndemnisation);
             }
             $em->persist($document);
             $em->flush();
@@ -98,7 +104,9 @@ class DocumentController extends AbstractController
         }
 
         $errors = [];
-        foreach ($form->getErrors(true) as $error) { $errors[$error->getOrigin()->getName()][] = $error->getMessage(); }
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
+        }
         return $this->json(['message' => 'Erreurs de validation', 'errors' => $errors], 422);
     }
 

@@ -33,78 +33,7 @@ class PaiementType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $refNote = "";
-        $montPayable = 0;
-        $montPaye = 0;
-        $montSolde = 0;
-        if (isset($options['data'])) {
-            /** @var Paiement $objetPaiement */
-            $objetPaiement = $options['data'];
-            if ($objetPaiement != null) {
-                $note = $objetPaiement->getNote();
-                if ($note != null) {
-                    $refNote = $note->getReference();
-                    $montPayable = $this->constante->Note_getMontant_payable($note);
-                    $montPaye = $this->constante->Note_getMontant_paye($note);
-                    $montSolde = $this->constante->Note_getMontant_solde($note);
-
-                    $builder
-                        ->add('referenceNote', TextType::class, [
-                            'label' => "Note ou Facture",
-                            'data' => $refNote,
-                            'mapped' => false,
-                            'attr' => [
-                                'readonly' => true,
-                                'placeholder' => "Référence",
-                            ],
-                        ])
-                        ->add('montantPayable', MoneyType::class, [
-                            'label' => "Montant payable",
-                            'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            'data' => $montPayable,
-                            'required' => false,
-                            'mapped' => false,
-                            'grouping' => true,
-                            'attr' => [
-                                'readonly' => true,
-                                'placeholder' => "Montant",
-                            ],
-                        ])
-                        ->add('montantPaye', MoneyType::class, [
-                            'label' => "Montant payé",
-                            'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            'data' => $montPaye,
-                            'required' => false,
-                            'mapped' => false,
-                            'grouping' => true,
-                            'attr' => [
-                                'readonly' => true,
-                                'placeholder' => "Montant",
-                            ],
-                        ])
-                        ->add('montantSolde', MoneyType::class, [
-                            'label' => "Solde restant dû",
-                            'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            'required' => false,
-                            'data' => $montSolde,
-                            'mapped' => false,
-                            'grouping' => true,
-                            'attr' => [
-                                'placeholder' => "Montant",
-                                'readonly' => true,
-                            ],
-                        ]);
-                }
-            }
-        }
-
         $builder
-            ->add('description', TextareaType::class, [
-                'label' => "Description",
-                'attr' => [
-                    'placeholder' => "Description",
-                ],
-            ])
             ->add('montant', MoneyType::class, [
                 'label' => "Montant en cours de paiement",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -120,6 +49,12 @@ class PaiementType extends AbstractType
                     'placeholder' => "Référence",
                 ],
             ])
+            ->add('description', TextareaType::class, [
+                'label' => "Description",
+                'attr' => [
+                    'placeholder' => "Description",
+                ],
+            ])
             ->add('paidAt', DateTimeType::class, [
                 'label' => "Date de paiement",
                 'widget' => 'single_text',
@@ -130,37 +65,28 @@ class PaiementType extends AbstractType
                 'class' => CompteBancaire::class,
                 'choice_label' => 'nom',
             ])
-            ->add('preuves', CollectionType::class, [
-                'label' => "Documents ou preuve de paiement",
-                'help' => "Preuve de paiement ou tout autre document.",
-                'entry_type' => DocumentType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'required' => false,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "document",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 5,
-                    ]),
-                ],
-            ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
+            // ->add('preuves', CollectionType::class, [
+            //     'label' => "Documents ou preuve de paiement",
+            //     'help' => "Preuve de paiement ou tout autre document.",
+            //     'entry_type' => DocumentType::class,
+            //     'by_reference' => false,
+            //     'allow_add' => true,
+            //     'allow_delete' => true,
+            //     'required' => false,
+            //     'entry_options' => [
+            //         'label' => false,
+            //     ],
+            //     'attr' => [
+            //         'data-controller' => 'form-collection-entites',
+            //         'data-form-collection-entites-data-value' => json_encode([
+            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
+            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+            //             'icone' => "document",
+            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
+            //             'tailleMax' => 5,
+            //         ]),
+            //     ],
+            // ])
         ;
     }
 
@@ -168,8 +94,13 @@ class PaiementType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Paiement::class,
-            'note' => null,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
