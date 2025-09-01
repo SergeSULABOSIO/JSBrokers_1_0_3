@@ -312,8 +312,17 @@ class NotificationSinistreController extends AbstractController
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
     #[Route('/api/{id}/contacts', name: 'api.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(NotificationSinistre $notification): Response
+    public function getContactsListApi(int $id, NotificationSinistreRepository $repository): Response
     {
+        $notification = null;
+        if ($id === 0) {
+            $notification = new NotificationSinistre();
+        } else {
+            $notification = $repository->find($id);
+        }
+        if (!$notification) {
+            $notification = new NotificationSinistre();
+        }
         return $this->render('components/_collection_list.html.twig', [
             'items' => $notification->getContacts(),
             'item_template' => 'components/collection_items/_contact_item.html.twig'
@@ -322,8 +331,17 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/pieces', name: 'api.get_pieces', methods: ['GET'])]
-    public function getPiecesListApi(NotificationSinistre $notification): Response
+    public function getPiecesListApi(int $id, NotificationSinistreRepository $repository): Response
     {
+        $notification = null;
+        if ($id === 0) {
+            $notification = new NotificationSinistre();
+        } else {
+            $notification = $repository->find($id);
+        }
+        if (!$notification) {
+            $notification = new NotificationSinistre();
+        }
         return $this->render('components/_collection_list.html.twig', [
             'items' => $notification->getPieces(),
             'item_template' => 'components/collection_items/_piece_sinistre_item.html.twig'
@@ -332,8 +350,17 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(NotificationSinistre $notification): Response
+    public function getTachesListApi(int $id, NotificationSinistreRepository $repository): Response
     {
+        $notification = null;
+        if ($id === 0) {
+            $notification = new NotificationSinistre();
+        } else {
+            $notification = $repository->find($id);
+        }
+        if (!$notification) {
+            $notification = new NotificationSinistre();
+        }
         return $this->render('components/_collection_list.html.twig', [
             'items' => $notification->getTaches(),
             'item_template' => 'components/collection_items/_tache_item.html.twig'
@@ -342,8 +369,17 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/offreIndemnisationSinistres', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
-    public function getOffresIndemnisationListApi(NotificationSinistre $notification): Response
+    public function getOffresIndemnisationListApi(int $id, NotificationSinistreRepository $repository): Response
     {
+        $notification = null;
+        if ($id === 0) {
+            $notification = new NotificationSinistre();
+        } else {
+            $notification = $repository->find($id);
+        }
+        if (!$notification) {
+            $notification = new NotificationSinistre();
+        }
         return $this->render('components/_collection_list.html.twig', [
             'items' => $notification->getOffreIndemnisationSinistres(),
             'item_template' => 'components/collection_items/_offre_indemnisation_sinistre_item.html.twig'

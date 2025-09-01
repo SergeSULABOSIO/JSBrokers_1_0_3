@@ -154,8 +154,18 @@ class PieceSinistreController extends AbstractController
     }
 
     #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(PieceSinistre $piece): Response
+    public function getDocumentsListApi(int $id, PieceSinistreRepository $repository): Response
     {
+        $piece = null;
+        if ($id === 0) {
+            $piece = new PieceSinistre();
+        } else {
+            $piece = $repository->find($id);
+        }
+        if (!$piece) {
+            $piece = new PieceSinistre();
+        }
+
         return $this->render('components/_collection_list.html.twig', [
             'items' => $piece->getDocuments(),
             'item_template' => 'components/collection_items/_document_item.html.twig'
