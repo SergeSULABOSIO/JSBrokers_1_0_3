@@ -6529,7 +6529,8 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache')]]
+                                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache')]],
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache')]],
                             ]
                         ],
                     ]

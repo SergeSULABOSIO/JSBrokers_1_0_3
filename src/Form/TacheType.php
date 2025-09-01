@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Tache;
 use App\Entity\Invite;
+use App\Form\DocumentType;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -62,6 +63,16 @@ class TacheType extends AbstractType
                 'allow_delete' => true,
                 'entry_options' => ['label' => false],
                 'mapped' => false,
+            ])
+            ->add('documents', CollectionType::class, [
+                'label' => 'Documents et pièces jointes',
+                'help' => 'Fichiers relatifs à l\'exécution de cette tâche.',
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false, // On continue avec notre logique API par élément
             ])
         ;
     }

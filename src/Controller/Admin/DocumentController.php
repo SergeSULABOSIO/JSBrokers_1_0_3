@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Tache;
 use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Form\DocumentType;
@@ -21,6 +22,7 @@ use Vich\UploaderBundle\Handler\DownloadHandler;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use App\Controller\Admin\Traits\HandleChildAssociationTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 
@@ -28,6 +30,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class DocumentController extends AbstractController
 {
+    use HandleChildAssociationTrait;
+    
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -38,7 +42,7 @@ class DocumentController extends AbstractController
         private Constante $constante,
     ) {}
 
-
+    
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
@@ -77,6 +81,23 @@ class DocumentController extends AbstractController
     }
 
 
+    /**
+     * 3. IMPLÉMENTER LA "NOTICE D'INSTRUCTIONS" REQUISE PAR LE TRAIT
+     * On déclare ici tous les parents possibles pour un Document.
+     */
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            // Clé envoyée par le client => Classe de l'entité parente
+            'pieceSinistre' => PieceSinistre::class,
+            'tache' => Tache::class,
+            'offreIndemnisation' => OffreIndemnisationSinistre::class,
+            // Si demain un Document peut être lié à une 'Facture',
+            // il suffira d'ajouter 'facture' => Facture::class ici.
+        ];
+    }
+
+
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em): Response
     {
@@ -90,14 +111,17 @@ class DocumentController extends AbstractController
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if (isset($data['pieceSinistre'])) {
-                $parent = $em->getReference(PieceSinistre::class, $data['pieceSinistre']);
-                if ($parent) $document->setPieceSinistre($parent);
-            }
-            if (isset($data['offreIndemnisation'])) {
-                $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
-                if ($offreIndemnisation) $document->setOffreIndemnisationSinistre($offreIndemnisation);
-            }
+            $this->associateParent($document, $data, $em);
+
+            // if (isset($data['pieceSinistre'])) {
+            //     $parent = $em->getReference(PieceSinistre::class, $data['pieceSinistre']);
+            //     if ($parent) $document->setPieceSinistre($parent);
+            // }
+            // if (isset($data['offreIndemnisation'])) {
+            //     $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
+            //     if ($offreIndemnisation) $document->setOffreIndemnisationSinistre($offreIndemnisation);
+            // }
+
             $em->persist($document);
             $em->flush();
             return $this->json(['message' => 'Document enregistré.']);
