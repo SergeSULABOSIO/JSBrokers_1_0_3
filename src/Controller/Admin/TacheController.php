@@ -11,6 +11,7 @@ use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Repository\TacheRepository;
 use App\Entity\NotificationSinistre;
+use App\Entity\OffreIndemnisationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -97,11 +98,18 @@ class TacheController extends AbstractController
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
 
+        /** @var Tache $tache */
         $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
 
         if (isset($data['notificationSinistre'])) {
+            /** @var NotificationSinistre $notification */
             $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
             if ($notification) $tache->setNotificationSinistre($notification);
+        }
+        if (isset($data['offreIndemnisation'])) {
+            /** @var OffreIndemnisationSinistre $offreIndemnisation */
+            $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
+            if ($offreIndemnisation) $tache->setOffreIndemnisationSinistre($offreIndemnisation);
         }
 
         $form = $this->createForm(TacheType::class, $tache);
@@ -144,8 +152,18 @@ class TacheController extends AbstractController
 
     // AJOUTEZ CETTE NOUVELLE ACTION
     #[Route('/api/{id}/feedbacks', name: 'api.get_feedbacks', methods: ['GET'])]
-    public function getFeedbacksListApi(Tache $tache): Response
+    public function getFeedbacksListApi(int $id, TacheRepository $repository): Response
     {
+        $tache = null;
+        if ($id === 0) {
+            $tache = new Tache();
+        } else {
+            $tache = $repository->find($id);
+        }
+        if (!$tache) {
+            $tache = new Tache();
+        }
+
         return $this->render('components/_collection_list.html.twig', [
             'items' => $tache->getFeedbacks(),
             'item_template' => 'components/collection_items/_feedback_item.html.twig'

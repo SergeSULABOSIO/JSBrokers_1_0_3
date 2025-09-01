@@ -146,4 +146,31 @@ class OffreIndemnisationController extends AbstractController
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    #[Route('/api/{id}/paiements', name: 'api.get_paiements', methods: ['GET'])]
+    public function getPaiementsListApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $offreIndemnisationSinistre->getPaiements(),
+            'item_template' => 'components/collection_items/_paiement_item.html.twig'
+        ]);
+    }
+
+    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
+    public function getDocumentsListApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $offreIndemnisationSinistre->getDocuments(),
+            'item_template' => 'components/collection_items/_document_item.html.twig'
+        ]);
+    }
+
+    #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
+    public function getTachesListApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
+    {
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $offreIndemnisationSinistre->getTaches(),
+            'item_template' => 'components/collection_items/_tache_item.html.twig'
+        ]);
+    }
 }

@@ -6453,6 +6453,7 @@ class Constante
             ];
         }
         if ($object instanceof OffreIndemnisationSinistre) {
+            $offreId = $object->getId() ?? 0;
             return [
                 "parametres" => [
                     "titre_creation" => "Nouvelle offre d'indemnisation",
@@ -6483,6 +6484,19 @@ class Constante
                             "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => ["referenceBancaire"]]
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisation')]],
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisation")]],
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisation")]],
                             ]
                         ],
                     ]
@@ -6516,6 +6530,39 @@ class Constante
                             "couleur_fond" => "white",
                             "colonnes" => [
                                 ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache')]]
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+        }
+        if ($object instanceof Paiement) {
+            $paiementId = $object->getId() ?? 0; // On récupère l'ID de la tâche parente
+            return [
+                "parametres" => [
+                    "titre_creation" => "Nouvau Paiement",
+                    "titre_modification" => "Modification du paiement #%id%",
+                    "endpoint_submit_url" => "/admin/paiement/api/submit",
+                    "endpoint_form_url" => "/admin/paiement/api/get-form",
+                    "form_layout" => [
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["montant"]],
+                                ["champs" => ["reference"]],
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["description"]],
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => ["paidAt"]],
+                                ["champs" => ["CompteBancaire"]],
                             ]
                         ],
                     ]

@@ -10,6 +10,7 @@ use App\Entity\Entreprise;
 use App\Form\PaiementType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
+use App\Entity\OffreIndemnisationSinistre;
 use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
@@ -30,8 +31,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class PaiementController extends AbstractController
 {
-    public MenuActivator $activator;
-
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -44,7 +43,6 @@ class PaiementController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
         private Constante $constante,
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
 
 
@@ -61,7 +59,6 @@ class PaiementController extends AbstractController
             'page' => $page,
             'serviceMonnaie' => $this->serviceMonnaies,
             'constante' => $this->constante,
-            'activator' => $this->activator,
         ]);
     }
 
@@ -83,97 +80,6 @@ class PaiementController extends AbstractController
     }
 
 
-    #[Route('/create/{idEntreprise}/{idNote}', name: 'create', requirements: ['idEntreprise' => Requirement::DIGITS, 'idNote' => Requirement::DIGITS])]
-    public function create($idEntreprise, $idNote, Request $request)
-    {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Note $note */
-        $note = null;
-        if ($idNote) {
-            $note = $this->noteRepository->find($idNote);
-        }
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Paiement $paiement */
-        $paiement = new Paiement();
-        //Paramètres par défaut
-
-        if ($note) {
-            $reference = $this->constante->Note_getNameOfTypeNote($note) . " ref.: " . $note->getReference() . " - " . $this->constante->Note_getNameOfAddressedTo($note);
-            $paiement->setReference("PYM" . (new DateTimeImmutable("now"))->getTimestamp() . "-" . $note->getReference());
-            $paiement->setDescription("Paiement - " . $reference);
-            $paiement->setMontant($this->constante->Note_getMontant_solde($note));
-            $paiement->setPaidAt(new DateTimeImmutable("now"));
-
-            /** @var Document $pop */
-            $pop = new Document();
-            $pop->setNom("Preuve de paiement - " . $reference);
-            $pop->setClasseur($this->loadClasseurPreuvesDesPaiements($entreprise));
-
-            $paiement->addPreuve($pop);
-            $paiement->setNote($note);
-        }
-
-        $form = $this->createForm(PaiementType::class, $paiement, [
-            'note' => $note
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($paiement);
-            $this->manager->flush();
-            // return new Response("Ok");
-            return new Response($this->loadDataOnNote($paiement));
-        }
-        return $this->render('admin/paiement/create.html.twig', [
-            'pageName' => $this->translator->trans("paiement_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'paiement' => $paiement,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
-    }
-
-
-    #[Route('/edit/{idEntreprise}/{idPaiement}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idPaiement, Request $request)
-    {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Paiement $paiement */
-        $paiement = $this->paiementRepository->find($idPaiement);
-
-        $form = $this->createForm(PaiementType::class, $paiement);
-        $form->handleRequest($request);
-        // dd($paiement);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($paiement); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-
-            return new Response($this->loadDataOnNote($paiement));
-        }
-        return $this->render('admin/paiement/edit.html.twig', [
-            'pageName' => $this->translator->trans("paiement_page_name_update", [
-                ":paiement" => $paiement->getDescription(),
-            ]),
-            'utilisateur' => $user,
-            'paiement' => $paiement,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
-    }
-
     private function loadDataOnNote(Paiement $paiement): string
     {
         $refNote = "";
@@ -190,22 +96,98 @@ class PaiementController extends AbstractController
         return $refNote . "__1986__" . $montPayable . "__1986__" . $montPaye . "__1986__" . $montSolde;
     }
 
-    #[Route('/remove/{idEntreprise}/{idPaiement}', name: 'remove', requirements: ['idPaiement' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idPaiement, Request $request)
+    /**
+     * Fournit le formulaire HTML pour une pièce.
+     */
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Paiement $paiement, Constante $constante): Response
     {
-        /** @var Paiement $paiement */
-        $paiement = $this->paiementRepository->find($idPaiement);
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
 
-        $message = $this->translator->trans("paiement_deletion_ok", [
-            ":paiement" => $paiement->getDescription(),
-        ]);;
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
 
-        $this->manager->remove($paiement);
-        $this->manager->flush();
+        /** @var Entreprise $entreprise */
+        $entreprise = $invite->getEntreprise();
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.paiement.index", [
-            'idEntreprise' => $idEntreprise,
+        if (!$paiement) {
+            $paiement = new Paiement();
+        }
+        $form = $this->createForm(PaiementType::class, $paiement);
+
+        return $this->render('components/_form_canvas.html.twig', [
+            'form' => $form->createView(),
+            'entityFormCanvas' => $constante->getEntityFormCanvas($paiement, $entreprise->getId()) // ID entreprise à adapter
         ]);
+    }
+
+    /**
+     * Traite la soumission du formulaire.
+     */
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+
+        /** @var Entreprise $entreprise */
+        $entreprise = $invite->getEntreprise();
+
+        $data = $request->request->all();
+        $files = $request->files->all();
+        $submittedData = array_merge($data, $files);
+
+        /** @var Paiement $paiement */
+        $paiement = isset($data['id']) ? $em->getRepository(Paiement::class)->find($data['id']) : new Paiement();
+
+        if (isset($data['offreIndemnisationSinistre'])) {
+            $offreIndemnisationSInistre = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisationSinistre']);
+            if ($offreIndemnisationSInistre) $paiement->setOffreIndemnisationSinistre($offreIndemnisationSInistre);
+        }
+        if (isset($data['offreIndemnisation'])) {
+            $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
+            if ($offreIndemnisation) $paiement->setOffreIndemnisationSinistre($offreIndemnisation);
+        }
+
+        $form = $this->createForm(PaiementType::class, $paiement);
+        $form->submit($submittedData, false);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($paiement);
+            $em->flush();
+            return $this->json(['message' => 'Paiement enregistrée avec succès!']);
+        }
+
+        // --- CORRECTION : GESTION DES ERREURS DE VALIDATION ---
+        $errors = [];
+        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
+        }
+
+        return $this->json([
+            'success' => false,
+            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
+        ], 422); // 422 = Unprocessable Entity
+    }
+
+    /**
+     * Supprime une pièce.
+     */
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Paiement $paiement, EntityManagerInterface $em): Response
+    {
+        try {
+            $em->remove($paiement);
+            $em->flush();
+            return $this->json(['message' => 'Paiement supprimée avec succès.']);
+        } catch (\Exception $e) {
+            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }
