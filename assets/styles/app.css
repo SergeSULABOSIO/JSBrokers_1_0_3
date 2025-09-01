@@ -555,3 +555,34 @@ textarea:hover,
 .modal-backdrop.show ~ .modal-backdrop.show {
     z-index: 1069;
 }
+
+/*
+===================================================================
+ SECTION: STYLE POUR LE LIEN DE TÉLÉCHARGEMENT VICHUPLOADER
+===================================================================
+*/
+
+/* Conteneur pour le champ de fichier */
+.vich-file {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Style du lien de téléchargement */
+.vich-file a {
+    font-style: italic;
+    color: #0d6efd; /* Bleu cobalt */
+    font-weight: bold;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: rgba(13, 110, 253, 0.1);
+    border: 1px dashed rgba(13, 110, 253, 0.4);
+    display: inline-block;
+    max-width: fit-content;
+}
+.vich-file a:hover {
+    background-color: rgba(13, 110, 253, 0.2);
+    text-decoration: underline;
+}

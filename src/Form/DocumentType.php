@@ -28,16 +28,22 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class DocumentType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        private UrlGeneratorInterface $urlGenerator
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        /** @var Document|null $document */
+        $document = $options['data'] ?? null;
+        $hasFile = $document && $document->getNomFichierStocke();
+
         $builder
             ->add('nom', TextType::class, [
                 'label' => "nom",
@@ -51,13 +57,16 @@ class DocumentType extends AbstractType
                 'required' => false,
                 'choice_label' => 'nom',
             ])
-            // Ce champ gère l'upload, le renommage et le stockage du fichier.
-            // Il nécessite une configuration dans votre entité Document.
             ->add('fichier', VichFileType::class, [
                 'label' => 'Fichier à uploader',
-                'required' => true,
+                // MODIFICATION 1 : Le champ n'est plus obligatoire si un fichier existe déjà.
+                'required' => !$hasFile,
                 'allow_delete' => false,
-                'download_uri' => false,
+                // MODIFICATION 2 : On configure l'affichage du fichier existant.
+                // Affiche le nom du fichier stocké comme libellé du lien.
+                'download_label' => $hasFile ? $document->getNomFichierStocke() : false,
+                // Génère l'URL pour que l'utilisateur puisse cliquer et télécharger le fichier.
+                'download_uri' => $hasFile ? $this->urlGenerator->generate('admin.document.api.download', ['id' => $document->getId()]) : false,
             ])
         ;
     }

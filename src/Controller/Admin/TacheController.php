@@ -169,4 +169,24 @@ class TacheController extends AbstractController
             'item_template' => 'components/collection_items/_feedback_item.html.twig'
         ]);
     }
+
+    // AJOUTEZ CETTE NOUVELLE ACTION
+    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
+    public function getDocumentsListApi(int $id, TacheRepository $repository): Response
+    {
+        $tache = null;
+        if ($id === 0) {
+            $tache = new Tache();
+        } else {
+            $tache = $repository->find($id);
+        }
+        if (!$tache) {
+            $tache = new Tache();
+        }
+
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $tache->getDocuments(),
+            'item_template' => 'components/collection_items/_document_item.html.twig'
+        ]);
+    }
 }
