@@ -148,8 +148,18 @@ class OffreIndemnisationController extends AbstractController
     }
 
     #[Route('/api/{id}/paiements', name: 'api.get_paiements', methods: ['GET'])]
-    public function getPaiementsListApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
+    public function getPaiementsListApi(int $id, OffreIndemnisationSinistreRepository $repository): Response
     {
+        $offreIndemnisationSinistre = null;
+        if ($id === 0) {
+            $offreIndemnisationSinistre = new OffreIndemnisationSinistre();
+        } else {
+            $offreIndemnisationSinistre = $repository->find($id);
+        }
+        if (!$offreIndemnisationSinistre) {
+            $offreIndemnisationSinistre = new OffreIndemnisationSinistre();
+        }
+
         return $this->render('components/_collection_list.html.twig', [
             'items' => $offreIndemnisationSinistre->getPaiements(),
             'item_template' => 'components/collection_items/_paiement_item.html.twig'
@@ -157,8 +167,17 @@ class OffreIndemnisationController extends AbstractController
     }
 
     #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
+    public function getDocumentsListApi(int $id, OffreIndemnisationSinistreRepository $repository): Response
     {
+        $offreIndemnisationSinistre = null;
+        if ($id === 0) {
+            $offreIndemnisationSinistre = new OffreIndemnisationSinistre();
+        } else {
+            $offreIndemnisationSinistre = $repository->find($id);
+        }
+        if (!$offreIndemnisationSinistre) {
+            $offreIndemnisationSinistre = new OffreIndemnisationSinistre();
+        }
         return $this->render('components/_collection_list.html.twig', [
             'items' => $offreIndemnisationSinistre->getDocuments(),
             'item_template' => 'components/collection_items/_document_item.html.twig'
@@ -166,8 +185,17 @@ class OffreIndemnisationController extends AbstractController
     }
 
     #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
+    public function getTachesListApi(int $id, OffreIndemnisationSinistreRepository $repository): Response
     {
+        $offreIndemnisationSinistre = null;
+        if ($id === 0) {
+            $offreIndemnisationSinistre = new OffreIndemnisationSinistre();
+        } else {
+            $offreIndemnisationSinistre = $repository->find($id);
+        }
+        if (!$offreIndemnisationSinistre) {
+            $offreIndemnisationSinistre = new OffreIndemnisationSinistre();
+        }
         return $this->render('components/_collection_list.html.twig', [
             'items' => $offreIndemnisationSinistre->getTaches(),
             'item_template' => 'components/collection_items/_tache_item.html.twig'
