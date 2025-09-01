@@ -13,6 +13,7 @@ export default class extends Controller {
         itemTitleCreate: String,
         itemTitleEdit: String,
         parentFieldName: String,
+        defaultValueConfig: String, // AJOUT : pour recevoir la configuration
     };
 
     connect() {
@@ -226,30 +227,68 @@ export default class extends Controller {
      * Ouvre la boîte de dialogue principale en lui envoyant les bonnes informations.
      */
     openFormDialog(entity = null) {
+        let finalItemFormUrl = this.itemFormUrlValue;
+        // --- AJOUT : Logique pour la valeur par défaut ---
+        // On vérifie si une configuration a été passée
+        if (this.hasDefaultValueConfigValue && this.defaultValueConfigValue) {
+            console.log(this.nomControlleur + "--- Début du débogage de la valeur par défaut ---");
+            try {
+                const config = JSON.parse(this.defaultValueConfigValue);
+                console.log(this.nomControlleur + "1. Configuration reçue :", config);
+
+                const parentForm = this.element.closest('form');
+                console.log(this.nomControlleur + "2. Formulaire parent trouvé :", parentForm);
+                if (parentForm) {
+                    const sourceSelector = `[name="${config.source}"], [name$="[${config.source}]"]`;
+                    console.log(this.nomControlleur + "3. Sélecteur utilisé pour trouver le champ source :", sourceSelector);
+
+                    const sourceField = parentForm.querySelector(sourceSelector);
+                    console.log(this.nomControlleur + "4. Champ source trouvé :", sourceField);
+                    if (sourceField && sourceField.value) {
+                        // 1. On prend la valeur brute (ex: "2 500,00")
+                        let defaultValue = sourceField.value;
+                        
+                        // 2. On supprime les espaces et on remplace la virgule par un point.
+                        defaultValue = defaultValue.replace(/\s/g, '').replace(',', '.');
+
+                        // const defaultValue = sourceField.value;
+                        console.log(this.nomControlleur + "5. Valeur trouvée :", defaultValue);
+
+                        const url = new URL(finalItemFormUrl, window.location.origin);
+                        url.searchParams.set(`default_${config.target}`, defaultValue);
+                        finalItemFormUrl = url.pathname + url.search;
+                        console.log(this.nomControlleur + "6. URL finale construite :", finalItemFormUrl);
+                    }else{
+                        console.warn("5. Le champ source n'a pas été trouvé ou sa valeur est vide.");
+                    }
+                }
+            } catch (e) {
+                console.error("Erreur de parsing de la configuration de la valeur par défaut :", e);
+            }
+            console.log(this.nomControlleur + "--- Fin du débogage ---");
+        }
+        // --- FIN DE L'AJOUT ---
+
         const entityFormCanvas = {
             parametres: {
                 titre_creation: this.itemTitleCreateValue,
                 titre_modification: this.itemTitleEditValue,
-                endpoint_form_url: this.itemFormUrlValue,
+                // endpoint_form_url: this.itemFormUrlValue,
+                endpoint_form_url: finalItemFormUrl, // On utilise la nouvelle URL
                 endpoint_submit_url: this.itemSubmitUrlValue,
             }
         };
-
-        // const match = this.listUrlValue.match(/\/api\/(\d+)\/contacts/);
         const match = this.listUrlValue.match(/\/api\/(\d+)\//);
         const parentId = match ? match[1] : null;
 
-        const context = { 
-            originatorId: this.componentId 
+        const context = {
+            originatorId: this.componentId
         };
-        // On construit dynamiquement la clé de l'ID parent
-        // ex: context['tache'] = 5
-        // context[this.parentFieldNameValue] = parentId;
         if (this.parentFieldNameValue) {
             context[this.parentFieldNameValue] = parentId;
         }
 
-        console.log(this.nomControlleur + " - openFormDialog",  entity, entityFormCanvas, context);
+        console.log(this.nomControlleur + " - openFormDialog", entity, entityFormCanvas, context);
 
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: entity,

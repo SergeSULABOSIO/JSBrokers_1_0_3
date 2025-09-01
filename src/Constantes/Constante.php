@@ -6496,7 +6496,12 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisation")]],
+                                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisation", [
+                                    // AJOUT : On spécifie le champ source et le champ cible
+                                    // On veut que par défaut, le champs Montant du paiement ait comme valeur le contenu de la variable montantPayable du parent
+                                    'source' => 'montantPayable',
+                                    'target' => 'montant'
+                                ])]],
                             ]
                         ],
                     ]
@@ -6613,10 +6618,10 @@ class Constante
      * @param integer $parentId L'ID de l'entité parente.
      * @return array
      */
-    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName): array
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null): array
     {
         // L'ancienne logique de mappage est supprimée. On utilise directement le paramètre.
-        return [
+        $config = [
             "field_code" => $fieldName,
             "widget" => "collection-manager",
             "options" => [
@@ -6629,6 +6634,13 @@ class Constante
                 "parentFieldName" => $parentFieldName
             ]
         ];
+
+        // Si une configuration de valeur par défaut est fournie, on l'ajoute aux options
+        if ($defaultValueConfig) {
+            $config['options']['defaultValueConfig'] = json_encode($defaultValueConfig);
+        }
+
+        return $config;
     }
 
 

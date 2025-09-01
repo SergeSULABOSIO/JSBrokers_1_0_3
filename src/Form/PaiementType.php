@@ -44,7 +44,8 @@ class PaiementType extends AbstractType
                 ],
             ])
             ->add('reference', TextType::class, [
-                'label' => "Référence",
+                'label' => "Référence du paiement",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Référence",
                 ],

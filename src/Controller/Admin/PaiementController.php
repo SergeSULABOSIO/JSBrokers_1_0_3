@@ -11,6 +11,7 @@ use App\Form\PaiementType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
@@ -31,6 +32,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class PaiementController extends AbstractController
 {
+    use HandleChildAssociationTrait;
+
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -42,8 +45,7 @@ class PaiementController extends AbstractController
         private ClasseurRepository $classeurRepository,
         private ServiceMonnaies $serviceMonnaies,
         private Constante $constante,
-    ) {
-    }
+    ) {}
 
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -100,7 +102,7 @@ class PaiementController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Paiement $paiement, Constante $constante): Response
+    public function getFormApi(?Paiement $paiement, Constante $constante, Request $request): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -113,13 +115,30 @@ class PaiementController extends AbstractController
 
         if (!$paiement) {
             $paiement = new Paiement();
+            $defaultMontant = $request->query->get('default_montant');
+            if ($defaultMontant !== null && $defaultMontant !== '') {
+                $paiement->setMontant((float)$defaultMontant);
+            }
+            $paiement->setPaidAt(new DateTimeImmutable("now"));
+            $paiement->setDescription("Descript. à générer automatiquement ici.");
         }
+        // --- AJOUTEZ CETTE LIGNE DE DÉBOGAGE ---
+        dd($paiement);
         $form = $this->createForm(PaiementType::class, $paiement);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($paiement, $entreprise->getId()) // ID entreprise à adapter
         ]);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            // Un paiement peut être lié à une OffreIndemnisationSinistre
+            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
+            // Ajoutez d'autres parents ici si nécessaire
+        ];
     }
 
     /**
@@ -144,36 +163,24 @@ class PaiementController extends AbstractController
         /** @var Paiement $paiement */
         $paiement = isset($data['id']) ? $em->getRepository(Paiement::class)->find($data['id']) : new Paiement();
 
-        if (isset($data['offreIndemnisationSinistre'])) {
-            $offreIndemnisationSInistre = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisationSinistre']);
-            if ($offreIndemnisationSInistre) $paiement->setOffreIndemnisationSinistre($offreIndemnisationSInistre);
-        }
-        if (isset($data['offreIndemnisation'])) {
-            $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
-            if ($offreIndemnisation) $paiement->setOffreIndemnisationSinistre($offreIndemnisation);
-        }
-
         $form = $this->createForm(PaiementType::class, $paiement);
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Notre "boîte à outils" s'occupe de lier le paiement à son parent
+            $this->associateParent($paiement, $data, $em);
+
             $em->persist($paiement);
             $em->flush();
-            return $this->json(['message' => 'Paiement enregistrée avec succès!']);
+            return $this->json(['message' => 'Paiement enregistré avec succès!']);
         }
 
-        // --- CORRECTION : GESTION DES ERREURS DE VALIDATION ---
+        // Gestion des erreurs de validation...
         $errors = [];
-        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
-
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->json(['message' => 'Veuillez corriger les erreurs.', 'errors' => $errors], 422);
     }
 
     /**
