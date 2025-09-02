@@ -25,9 +25,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 
-#[Route("/admin/offreindemnisation", name: 'admin.offreindemnisation.')]
+#[Route("/admin/offreindemnisationsinistre", name: 'admin.offreindemnisationsinistre.')]
 #[IsGranted('ROLE_USER')]
-class OffreIndemnisationController extends AbstractController
+class OffreIndemnisationSinistreController extends AbstractController
 {
     public MenuActivator $activator;
 
