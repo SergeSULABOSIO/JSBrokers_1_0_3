@@ -126,12 +126,25 @@ export default class extends Controller {
      */
     async loadFormBody() {
         try {
-            let url = this.canvas.parametres.endpoint_form_url;
+            // 1. On commence avec l'URL de base
+            let urlString = this.canvas.parametres.endpoint_form_url;
+
+            // 2. Si c'est une édition, on ajoute l'ID à l'URL
             if (this.entity && this.entity.id) {
-                url += `/${this.entity.id}`;
+                urlString += `/${this.entity.id}`;
             }
-            console.log(this.nomControlleur + " - loadFormBody:", url);
-            const response = await fetch(url);
+
+            // 3. On crée un objet URL pour gérer facilement les paramètres
+            const url = new URL(urlString, window.location.origin);
+
+            // 4. Si une valeur par défaut a été passée dans le contexte, on l'ajoute
+            if (this.context.defaultValue) {
+                url.searchParams.set(`default_${this.context.defaultValue.target}`, this.context.defaultValue.value);
+            }
+
+            // 5. On lance la requête avec l'URL finale correctement construite
+            const response = await fetch(url.pathname + url.search);
+
             if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
 
             this.elementContenu.querySelector('.modal-body').innerHTML = await response.text();

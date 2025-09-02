@@ -102,7 +102,7 @@ class PaiementController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Paiement $paiement, Constante $constante, Request $request): Response
+    public function getFormApi(?int $id, PaiementRepository $repository, Constante $constante, Request $request): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -112,6 +112,12 @@ class PaiementController extends AbstractController
 
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
+
+        /** @var Paiement $paiement */
+        $paiement = null;
+        if ($id) {
+            $paiement = $repository->find($id);
+        }
 
         if (!$paiement) {
             $paiement = new Paiement();
@@ -123,7 +129,7 @@ class PaiementController extends AbstractController
             $paiement->setDescription("Descript. à générer automatiquement ici.");
         }
         // --- AJOUTEZ CETTE LIGNE DE DÉBOGAGE ---
-        dd($paiement);
+        // dd($paiement);
         $form = $this->createForm(PaiementType::class, $paiement);
 
         return $this->render('components/_form_canvas.html.twig', [
@@ -196,5 +202,19 @@ class PaiementController extends AbstractController
         } catch (\Exception $e) {
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    #[Route('/api/{id}/preuves', name: 'api.get_preuves', methods: ['GET'])]
+    public function getPreuvesListApi(int $id, PaiementRepository $repository): Response
+    {
+        $paiement = ($id === 0) ? new Paiement() : $repository->find($id);
+        if (!$paiement) {
+            $paiement = new Paiement();
+        }
+
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $paiement->getPreuves(),
+            'item_template' => 'components/collection_items/_document_item.html.twig'
+        ]);
     }
 }

@@ -12,7 +12,7 @@
         <twig:ux:icon name="streamline:payment-10-solid" style="width: 35px;" />
     </div>
     <div class="item-text">
-        <div class="text-main">{{ item.description }}</div>
+        <div class="text-main">{{ item.reference }} - {{ item.description }}</div>
         <div class="text-secondary">
             <em>
                 Montant: {{ item.montant|format_currency("USD", locale: "fr") }}, effectué le : {{ item.paidAt|date('d/m/Y') }} - Au compte : {{ item.CompteBancaire }}

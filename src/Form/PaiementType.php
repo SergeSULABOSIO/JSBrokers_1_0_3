@@ -66,28 +66,16 @@ class PaiementType extends AbstractType
                 'class' => CompteBancaire::class,
                 'choice_label' => 'nom',
             ])
-            // ->add('preuves', CollectionType::class, [
-            //     'label' => "Documents ou preuve de paiement",
-            //     'help' => "Preuve de paiement ou tout autre document.",
-            //     'entry_type' => DocumentType::class,
-            //     'by_reference' => false,
-            //     'allow_add' => true,
-            //     'allow_delete' => true,
-            //     'required' => false,
-            //     'entry_options' => [
-            //         'label' => false,
-            //     ],
-            //     'attr' => [
-            //         'data-controller' => 'form-collection-entites',
-            //         'data-form-collection-entites-data-value' => json_encode([
-            //             'addLabel' => $this->translatorInterface->trans("commom_add"),
-            //             'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-            //             'icone' => "document",
-            //             'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-            //             'tailleMax' => 5,
-            //         ]),
-            //     ],
-            // ])
+            ->add('preuves', CollectionType::class, [
+                'label' => 'Preuves de paiement',
+                'help' => 'Documents justificatifs (avis de débit, etc.).',
+                'entry_type' => DocumentType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false, // On continue avec notre logique API par élément
+            ])
         ;
     }
 

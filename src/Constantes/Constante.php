@@ -6343,7 +6343,7 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisation', $notificationId, "Offre d'indemnisation", "notificationSinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre")]]
                             ]
                         ],
                         // Ligne 10 : Collection des taches
@@ -6489,14 +6489,14 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisation')]],
-                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisation")]],
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre')]],
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre")]],
                             ]
                         ],
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisation", [
+                                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", [
                                     // AJOUT : On spécifie le champ source et le champ cible
                                     // On veut que par défaut, le champs Montant du paiement ait comme valeur le contenu de la variable montantPayable du parent
                                     'source' => 'montantPayable',
@@ -6569,6 +6569,12 @@ class Constante
                             "colonnes" => [
                                 ["champs" => ["paidAt"]],
                                 ["champs" => ["CompteBancaire"]],
+                            ]
+                        ],
+                        [
+                            "couleur_fond" => "white",
+                            "colonnes" => [
+                                ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement')]]
                             ]
                         ],
                     ]
