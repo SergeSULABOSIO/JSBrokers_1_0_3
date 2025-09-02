@@ -18,14 +18,12 @@ export default class extends Controller {
 
     connect() {
         this.nomControlleur = "Collection - Manager";
-        // Pour être absolument sûr, ajoutons un log ici
         this.componentId = crypto.randomUUID();
         this.loadItemList();
+
         this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
         document.addEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
 
-        // --- AJOUT : ÉCOUTER L'ÉVÉNEMENT DE SUPPRESSION CONFIRMÉE ---
-        // On crée un nom d'événement unique pour chaque instance du composant
         this.deleteEventName = `collection:${this.componentId}:perform-delete`;
         this.boundPerformDelete = this.performDelete.bind(this);
         document.addEventListener(this.deleteEventName, this.boundPerformDelete);
@@ -227,7 +225,6 @@ export default class extends Controller {
      * Ouvre la boîte de dialogue principale en lui envoyant les bonnes informations.
      */
     openFormDialog(entity = null) {
-         // 1. On prépare les informations de base pour le dialogue
         const entityFormCanvas = {
             parametres: {
                 titre_creation: this.itemTitleCreateValue,

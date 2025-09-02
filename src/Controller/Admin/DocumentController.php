@@ -14,6 +14,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Paiement;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -92,6 +93,7 @@ class DocumentController extends AbstractController
             'pieceSinistre' => PieceSinistre::class,
             'tache' => Tache::class,
             'offreIndemnisation' => OffreIndemnisationSinistre::class,
+            'paiement' => Paiement::class,
             // Si demain un Document peut être lié à une 'Facture',
             // il suffira d'ajouter 'facture' => Facture::class ici.
         ];
