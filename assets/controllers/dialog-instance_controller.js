@@ -239,7 +239,7 @@ export default class extends Controller {
         const now = new Date();
         const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        const timestamp = `Date: ${date} à ${time} ::`;
+        const timestamp = `Dernière mise à jour le ${date} à ${time} ::`;
 
         // On détermine la classe CSS à utiliser en fonction du type
         let feedbackClass = '';
