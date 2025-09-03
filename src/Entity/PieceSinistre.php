@@ -2,10 +2,11 @@
 
 namespace App\Entity;
 
-use App\Repository\PieceSinistreRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\PieceSinistreRepository;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: PieceSinistreRepository::class)]
 class PieceSinistre implements OwnerAwareInterface
@@ -13,21 +14,26 @@ class PieceSinistre implements OwnerAwareInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'pieceSinistres')]
     private ?ModelePieceSinistre $type = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $receivedAt = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $fourniPar = null;
 
     #[ORM\ManyToOne(inversedBy: 'pieceSinistres')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     #[ORM\ManyToOne(inversedBy: 'pieces')]
@@ -37,6 +43,7 @@ class PieceSinistre implements OwnerAwareInterface
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'pieceSinistre')]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     public function __construct()
