@@ -23,7 +23,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use App\Repository\OffreIndemnisationSinistreRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/offreindemnisationsinistre", name: 'admin.offreindemnisationsinistre.')]
 #[IsGranted('ROLE_USER')]
@@ -97,7 +97,7 @@ class OffreIndemnisationSinistreController extends AbstractController
      * Traite la soumission du formulaire.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
         $data = $request->request->all();
         $files = $request->files->all();
@@ -116,7 +116,13 @@ class OffreIndemnisationSinistreController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($offre);
             $em->flush();
-            return $this->json(['message' => 'Offre enregistrée avec succès!']);
+
+            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
+            $jsonEntity = $serializer->serialize($offre, 'json', ['groups' => 'list:read']);
+            return $this->json([
+                'message' => 'Enregistrée avec succès!',
+                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
+            ]);
         }
 
         $errors = [];
