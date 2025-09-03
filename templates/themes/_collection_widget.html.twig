@@ -2,8 +2,14 @@
 {% block collection_widget %}
     {# On récupère les options passées par form_row() #}
     {% set manager_options = manager_options|default({}) %}
+
+    {# On récupère l'état 'disabled' depuis les options #}
+    {% set isDisabled = manager_options.disabled|default(false) %}
     
-    <div {{ stimulus_controller('collection-manager', manager_options) }} class="collection-manager-accordion">
+    <div 
+        {{ stimulus_controller('collection-manager', manager_options) }} 
+        class="collection-manager-accordion {{ isDisabled ? 'is-disabled' : '' }}"
+    >
 
         {# TITRE DE L'ACCORDÉON #}
         <div class="accordion-title"

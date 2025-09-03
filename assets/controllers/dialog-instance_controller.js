@@ -37,13 +37,22 @@ export default class extends Controller {
         this.entity = detail.entity;
         this.context = detail.context || {};
 
-        console.log(this.nomControlleur + " - start:", detail);
+        // On stocke si nous sommes en mode création
+        this.isCreateMode = !(this.entity && this.entity.id);
 
+        console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
+
+        await this.buildAndShowShell();
+        await this.loadFormBody();
+    }
+
+
+    async buildAndShowShell(){
         // 1. On construit immédiatement la structure de la modale avec un spinner dans le corps.
-        const isEditMode = this.entity && this.entity.id;
-        const title = isEditMode
-            ? this.canvas.parametres.titre_modification.replace('%id%', this.entity.id)
-            : this.canvas.parametres.titre_creation;
+        // const isEditMode = this.entity && this.entity.id;
+        const title = this.isCreateMode
+            ? this.canvas.parametres.titre_creation
+            : this.canvas.parametres.titre_modification.replace('%id%', this.entity.id);
 
         this.elementContenu.innerHTML = `
             <form data-action="submit->dialog-instance#submitForm">
@@ -65,7 +74,7 @@ export default class extends Controller {
                     <div class="feedback-container w-100 text-danger mb-2" data-dialog-instance-target="feedback"></div>
                     <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">
                         <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
-                        <span>Annuler</span>
+                        <span>Fermer</span>
                     </button>
                     <button type="submit" class="btn btn-primary" data-dialog-instance-target="submitButton">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
@@ -82,8 +91,6 @@ export default class extends Controller {
 
         this.modalNode.addEventListener('hidden.bs.modal', () => { this.modalNode.remove(); });
         this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
-
-        await this.loadFormBody();
     }
 
     /**
@@ -143,7 +150,11 @@ export default class extends Controller {
             }
 
             // 5. On lance la requête avec l'URL finale correctement construite
-            const response = await fetch(url.pathname + url.search);
+            const finalUrl = url.pathname + url.search;
+            console.log(this.nomControlleur + " - URL de chargement du formulaire:", finalUrl); // Pour débogage
+            
+            const response = await fetch(finalUrl);
+            // const response = await fetch(url.pathname + url.search);
 
             if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
 
@@ -160,7 +171,7 @@ export default class extends Controller {
         event.preventDefault();
         this.toggleLoading(true);
         this.toggleProgressBar(true);
-
+        
         this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
         this.clearErrors(); // On nettoie les anciennes erreurs
         if (this.feedbackContainer) {
@@ -188,9 +199,18 @@ export default class extends Controller {
             const result = await response.json();
             if (!response.ok) throw result;
 
+            // --- NOUVELLE LOGIQUE APRÈS SUCCÈS ---
             document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', { detail: { originatorId: this.context.originatorId } }));
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
-            this.close();
+            // this.close();
+
+            // Si on était en mode création, on passe en mode édition
+            if (this.isCreateMode && result.entity) {
+                this.entity = result.entity; // On stocke la nouvelle entité avec son ID
+                this.isCreateMode = false;
+                await this.reloadForm(); // On recharge le formulaire
+            }
+            // Si on était déjà en mode édition, on ne fait rien de plus.
 
         } catch (error) {
             if (this.feedbackContainer) {
@@ -199,10 +219,28 @@ export default class extends Controller {
             if (error.errors) {
                 this.displayErrors(error.errors);
             }
-            this.toggleLoading(false);
         } finally {
             // S'assure que la barre disparaît dans tous les cas
+            this.toggleLoading(false);
             this.toggleProgressBar(false);
+        }
+    }
+
+    /**
+     * NOUVEAU : Recharge le formulaire pour refléter le nouvel état (création -> édition).
+     */
+    async reloadForm() {
+        this.updateTitle(); // Met à jour le titre
+        await this.loadFormBody(); // Recharge le corps du formulaire (avec les collections activées)
+    }
+
+    /**
+     * NOUVEAU : Met à jour le titre de la boîte de dialogue.
+     */
+    updateTitle() {
+        const titleElement = this.elementContenu.querySelector('.modal-title');
+        if (titleElement) {
+            titleElement.textContent = this.canvas.parametres.titre_modification.replace('%id%', this.entity.id);
         }
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\TacheRepository;
 use App\Entity\Traits\TimestampableTrait;
@@ -23,42 +24,53 @@ class Tache
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
+    #[Groups(['list:read'])]
     private ?Invite $executor = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $toBeEndedAt = null;
 
     /**
      * @var Collection<int, Feedback>
      */
     #[ORM\OneToMany(targetEntity: Feedback::class, mappedBy: 'tache', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $feedbacks;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
+    // #[Groups(['list:read'])]
     private ?Piste $piste = null;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
+    // #[Groups(['list:read'])]
     private ?Cotation $cotation = null;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'tache', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $closed = null;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
+    // #[Groups(['list:read'])]
     private ?NotificationSinistre $notificationSinistre = null;
 
     #[ORM\ManyToOne(inversedBy: 'taches')]
+    // #[Groups(['list:read'])]
     private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
 
     public function __construct()

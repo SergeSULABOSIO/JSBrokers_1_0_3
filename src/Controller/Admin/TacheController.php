@@ -4,7 +4,6 @@ namespace App\Controller\Admin;
 
 use App\Entity\Tache;
 use App\Entity\Invite;
-use DateTimeImmutable;
 use App\Form\TacheType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
@@ -23,6 +22,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Serializer\SerializerInterface;
 
 
 #[Route("/admin/tache", name: 'admin.tache.')]
@@ -92,7 +92,7 @@ class TacheController extends AbstractController
      * Traite la soumission du formulaire.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
         $data = $request->request->all();
         $files = $request->files->all();
@@ -118,7 +118,16 @@ class TacheController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($tache);
             $em->flush();
-            return $this->json(['message' => 'Pièce enregistrée avec succès!']);
+
+            // --- MODIFICATION ---
+            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
+            $jsonEntity = $serializer->serialize($tache, 'json', ['groups' => 'list:read']);
+
+            return $this->json([
+                'message' => 'Pièce enregistrée avec succès!',
+                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
+            ]);
+            // --- FIN DE LA MODIFICATION ---
         }
 
 

@@ -6264,6 +6264,7 @@ class Constante
 
     public function getEntityFormCanvas($object, $idEntreprise): array
     {
+        $isParentNew = ($object->getId() === null);
         if ($object instanceof NotificationSinistre) {
             // L'ID est nécessaire pour construire les endpoints, assurons-nous qu'il est accessible.
             // En mode création, l'ID sera null, nous gérerons ce cas côté client.
@@ -6335,22 +6336,22 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre")]],
-                                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre", null, $isParentNew)]],
+                                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre", null, $isParentNew)]]
                             ]
                         ],
                         // Ligne 9 : Collection des offres d'indemnisation
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre", null, $isParentNew)]]
                             ]
                         ],
                         // Ligne 10 : Collection des taches
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre")]]
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre", null, $isParentNew)]]
                             ]
                         ]
                     ],
@@ -6424,7 +6425,7 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre')]]
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre', null, $isParentNew)]]
                             ]
                         ],
                     ]
@@ -6489,8 +6490,8 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre')]],
-                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre")]],
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
+                                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
                             ]
                         ],
                         [
@@ -6501,7 +6502,7 @@ class Constante
                                     // On veut que par défaut, le champs Montant du paiement ait comme valeur le contenu de la variable montantPayable du parent
                                     'source' => 'montantPayable',
                                     'target' => 'montant'
-                                ])]],
+                                ], $isParentNew)]],
                             ]
                         ],
                     ]
@@ -6534,8 +6535,8 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache')]],
-                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache')]],
+                                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache', null, $isParentNew)]],
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache', null, $isParentNew)]],
                             ]
                         ],
                     ]
@@ -6574,7 +6575,7 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement')]]
+                                ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement', null, $isParentNew)]]
                             ]
                         ],
                     ]
@@ -6624,7 +6625,7 @@ class Constante
      * @param integer $parentId L'ID de l'entité parente.
      * @return array
      */
-    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null): array
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false): array
     {
         // L'ancienne logique de mappage est supprimée. On utilise directement le paramètre.
         $config = [
@@ -6637,7 +6638,9 @@ class Constante
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
                 "itemTitleCreate" => "Ajouter : " . $formtitle,
                 "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
-                "parentFieldName" => $parentFieldName
+                "parentFieldName" => $parentFieldName,
+                // NOUVELLE OPTION : On transmet l'état au frontend
+                "disabled" => $isParentNew
             ]
         ];
 
@@ -6732,6 +6735,13 @@ class Constante
                         "intitule" => "Offres d'indemnisation",
                         "type" => "Collection",
                         "targetEntity" => "OffreIndemnisationSinistre", // Le nom de la classe des entités dans la collection
+                        "displayField" => "nom" // Le champ à afficher pour chaque offre
+                    ],
+                    [
+                        "code" => "contacts", // La propriété dans NotificationSinistre
+                        "intitule" => "Contacts",
+                        "type" => "Collection",
+                        "targetEntity" => "Contact", // Le nom de la classe des entités dans la collection
                         "displayField" => "nom" // Le champ à afficher pour chaque offre
                     ],
                     [
