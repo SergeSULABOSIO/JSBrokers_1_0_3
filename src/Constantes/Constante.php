@@ -6584,6 +6584,7 @@ class Constante
         }
         // --- AJOUT D'UN NOUVEAU BLOC POUR LE FORMULAIRE FEEDBACK LUI-MÊME ---
         if ($object instanceof Feedback) {
+            $feedbackId = $object->getId() ?? 0;
             return [
                 "parametres" => [
                     // Pas besoin d'URLs ici, car le formulaire est simple
@@ -6605,7 +6606,8 @@ class Constante
                         [
                             "couleur_fond" => "white",
                             "colonnes" => [
-                                ["champs" => ["nextAction"]]
+                                ["champs" => ["nextAction"]],
+                                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
                             ]
                         ],
                     ]

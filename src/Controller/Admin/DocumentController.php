@@ -4,6 +4,8 @@ namespace App\Controller\Admin;
 
 use App\Entity\Tache;
 use App\Entity\Document;
+use App\Entity\Feedback;
+use App\Entity\Paiement;
 use App\Entity\Entreprise;
 use App\Form\DocumentType;
 use App\Constantes\Constante;
@@ -14,18 +16,17 @@ use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Paiement;
-use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Vich\UploaderBundle\Handler\DownloadHandler;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/document", name: 'admin.document.')]
 #[IsGranted('ROLE_USER')]
@@ -94,6 +95,7 @@ class DocumentController extends AbstractController
             'tache' => Tache::class,
             'offreIndemnisation' => OffreIndemnisationSinistre::class,
             'paiement' => Paiement::class,
+            'feedback' => Feedback::class,
             // Si demain un Document peut être lié à une 'Facture',
             // il suffira d'ajouter 'facture' => Facture::class ici.
         ];

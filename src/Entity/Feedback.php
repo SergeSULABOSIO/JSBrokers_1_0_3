@@ -36,12 +36,6 @@ class Feedback implements OwnerAwareInterface
     #[ORM\ManyToOne(inversedBy: 'feedbacks')]
     private ?Tache $tache = null;
 
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $createdAt = null;
-
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $updatedAt = null;
-
     /**
      * @var Collection<int, Document>
      */
@@ -133,30 +127,6 @@ class Feedback implements OwnerAwareInterface
 
         return $this;
     }
-
-    // public function getCreatedAt(): ?\DateTimeImmutable
-    // {
-    //     return $this->createdAt;
-    // }
-
-    // public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    // {
-    //     $this->createdAt = $createdAt;
-
-    //     return $this;
-    // }
-
-    // public function getUpdatedAt(): ?\DateTimeImmutable
-    // {
-    //     return $this->updatedAt;
-    // }
-
-    // public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    // {
-    //     $this->updatedAt = $updatedAt;
-
-    //     return $this;
-    // }
 
     /**
      * @return Collection<int, Document>
