@@ -171,9 +171,9 @@ export default class extends Controller {
         event.preventDefault();
         this.toggleLoading(true);
         this.toggleProgressBar(true);
+        // this.clearErrors(); // On nettoie les anciennes erreurs
         
         this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
-        this.clearErrors(); // On nettoie les anciennes erreurs
         if (this.feedbackContainer) {
             this.feedbackContainer.innerHTML = '';
         }
@@ -200,9 +200,10 @@ export default class extends Controller {
             if (!response.ok) throw result;
 
             // --- NOUVELLE LOGIQUE APRÈS SUCCÈS ---
+            this.showFeedback('success', result.message); // On affiche le message de succès
+
             document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', { detail: { originatorId: this.context.originatorId } }));
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
-            // this.close();
 
             // Si on était en mode création, on passe en mode édition
             if (this.isCreateMode && result.entity) {
@@ -215,6 +216,7 @@ export default class extends Controller {
         } catch (error) {
             if (this.feedbackContainer) {
                 this.feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
+                this.showFeedback('success', error.message);
             }
             if (error.errors) {
                 this.displayErrors(error.errors);
@@ -225,6 +227,43 @@ export default class extends Controller {
             this.toggleProgressBar(false);
         }
     }
+
+    /**
+     * NOUVEAU : Affiche un message stylisé dans le conteneur de feedback.
+     */
+    showFeedback(type, message) {
+        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        if (!feedbackContainer) return;
+
+        // On formate la date et l'heure actuelles [cite: 7, 8]
+        const now = new Date();
+        const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const timestamp = `Date: ${date} à ${time} ::`;
+
+        // On détermine la classe CSS à utiliser en fonction du type
+        let feedbackClass = '';
+        switch (type) {
+            case 'success':
+                feedbackClass = 'feedback-success'; // [cite: 5]
+                break;
+            case 'error':
+                feedbackClass = 'feedback-error'; // [cite: 4]
+                break;
+            case 'warning':
+                feedbackClass = 'feedback-warning'; // [cite: 6]
+                break;
+        }
+
+        // On crée le message HTML et on l'ajoute au conteneur
+        feedbackContainer.innerHTML = `
+            <div class="feedback-message ${feedbackClass}">
+                <span class="timestamp">${timestamp}</span>
+                <span>${message}</span>
+            </div>
+        `;
+    }
+
 
     /**
      * NOUVEAU : Recharge le formulaire pour refléter le nouvel état (création -> édition).

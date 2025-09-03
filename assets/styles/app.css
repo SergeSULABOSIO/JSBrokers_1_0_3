@@ -604,3 +604,47 @@ textarea:hover,
 .collection-manager-accordion.is-disabled .accordion-title {
     cursor: not-allowed;
 }
+
+/*
+===================================================================
+ SECTION: STYLE POUR LES MESSAGES DE FEEDBACK DANS LES DIALOGUES
+===================================================================
+*/
+
+.feedback-container .feedback-message {
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 5px; /* Espace si plusieurs messages s'affichent */
+    font-size: 0.9em;
+    display: block; /* S'assure que le message prend toute la largeur */
+}
+
+/* Style pour les messages de succès (vert) */
+.feedback-message.feedback-success {
+    background-color: #d1e7dd;
+    border-left: 5px solid #0f5132;
+    color: #0f5132;
+    font-weight: normal; /* Texte normal, pas gras [cite: 5] */
+}
+
+/* Style pour les messages d'erreur (rouge) */
+.feedback-message.feedback-error {
+    background-color: #f8d7da;
+    border-left: 5px solid #842029;
+    color: #842029;
+    font-weight: bold; /* Texte en gras [cite: 4] */
+}
+
+/* Style pour les messages d'avertissement (jaune) */
+.feedback-message.feedback-warning {
+    background-color: #fff3cd;
+    border-left: 5px solid #664d03;
+    color: #664d03;
+    font-weight: bold; /* Texte en gras [cite: 6] */
+}
+
+/* Style pour la partie "timestamp" du message */
+.feedback-message .timestamp {
+    font-weight: bold;
+    margin-right: 8px;
+}
