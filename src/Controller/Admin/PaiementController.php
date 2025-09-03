@@ -27,6 +27,8 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Serializer\SerializerInterface;
+
 
 #[Route("/admin/paiement", name: 'admin.paiement.')]
 #[IsGranted('ROLE_USER')]
@@ -151,7 +153,7 @@ class PaiementController extends AbstractController
      * Traite la soumission du formulaire.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -178,7 +180,12 @@ class PaiementController extends AbstractController
 
             $em->persist($paiement);
             $em->flush();
-            return $this->json(['message' => 'Paiement enregistré avec succès!']);
+            
+            $jsonEntity = $serializer->serialize($paiement, 'json', ['groups' => 'list:read']);
+            return $this->json([
+                'message' => 'Enregistrée avec succès!',
+                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
+            ]);
         }
 
         // Gestion des erreurs de validation...

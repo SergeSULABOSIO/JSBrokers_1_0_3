@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\DocumentRepository;
 use App\Entity\Traits\TimestampableTrait;
 use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 #[ORM\Entity(repositoryClass: DocumentRepository::class)]
@@ -18,15 +19,18 @@ class Document
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[Vich\UploadableField(mapping: 'piece_sinistre_documents', fileNameProperty: 'nomFichierStocke')]
     private ?File $fichier = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $nomFichierStocke = null;
 
     // #[ORM\Column]

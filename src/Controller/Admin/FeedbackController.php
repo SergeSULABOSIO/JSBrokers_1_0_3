@@ -27,6 +27,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/feedback", name: 'admin.feedback.')]
 #[IsGranted('ROLE_USER')]
@@ -89,7 +90,7 @@ class FeedbackController extends AbstractController
      * Traite la soumission du formulaire de Feedback.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
         $data = $request->request->all();
         $files = $request->files->all();
@@ -109,7 +110,12 @@ class FeedbackController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($feedback);
             $em->flush();
-            return $this->json(['message' => 'Feedback enregistré avec succès!']);
+
+            $jsonEntity = $serializer->serialize($feedback, 'json', ['groups' => 'list:read']);
+            return $this->json([
+                'message' => 'Enregistrée avec succès!',
+                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
+            ]);
         }
 
         // Gestion des erreurs de validation...
