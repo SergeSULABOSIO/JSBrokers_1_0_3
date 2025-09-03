@@ -14,6 +14,7 @@ export default class extends Controller {
         itemTitleEdit: String,
         parentFieldName: String,
         defaultValueConfig: String, // AJOUT : pour recevoir la configuration
+        disabled: Boolean,
     };
 
     connect() {
@@ -82,6 +83,7 @@ export default class extends Controller {
     // --- Gestion de l'UI de l'accordéon ---
 
     toggleAccordion(event) {
+        if (this.disabledValue) return; // Sécurité : ne fait rien si désactivé
         // On bascule simplement la présence d'une classe CSS sur le panneau de contenu.
         this.contentPanelTarget.classList.toggle('is-open');
 
@@ -160,6 +162,7 @@ export default class extends Controller {
      * Ouvre la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
+        if (this.disabledValue) return; // Sécurité : ne fait rien si désactivé
         event.stopPropagation();
         this.openFormDialog();
     }
@@ -245,28 +248,47 @@ export default class extends Controller {
             context[this.parentFieldNameValue] = parentId;
         }
 
-        // On ajoute la configuration de la valeur par défaut au contexte
+        // --- Logique améliorée pour la valeur par défaut ---
         if (this.hasDefaultValueConfigValue && this.defaultValueConfigValue) {
+            console.log(this.nomControlleur + "--- Début du débogage de la valeur par défaut ---");
             try {
                 const config = JSON.parse(this.defaultValueConfigValue);
+                console.log(this.nomControlleur + " - 1. Configuration reçue :", config);
+
                 const parentForm = this.element.closest('form');
+                console.log(this.nomControlleur + " - 2. Formulaire parent trouvé :", parentForm);
+
                 if (parentForm) {
-                    const sourceSelector = `[name$="[${config.source}]"]`;
+                    const sourceSelector = `[name="${config.source}"], [name$="[${config.source}]"]`;
+                    console.log(this.nomControlleur + " - 3. Sélecteur utilisé :", sourceSelector);
+
                     const sourceField = parentForm.querySelector(sourceSelector);
+                    console.log(this.nomControlleur + " - 4. Champ source trouvé :", sourceField);
+
                     if (sourceField && sourceField.value) {
-                        let defaultValue = sourceField.value.replace(/\s/g, '').replace(',', '.');
+                        let defaultValue = sourceField.value;
+                        console.log(this.nomControlleur + " - 5. Valeur brute trouvée :", defaultValue);
+
+                        defaultValue = defaultValue.replace(/\s/g, '').replace(',', '.');
+                        console.log(this.nomControlleur + " - 6. Valeur nettoyée :", defaultValue);
+
                         // On ajoute les informations au contexte
                         context.defaultValue = {
                             target: config.target,
                             value: defaultValue
                         };
+                        console.log(this.nomControlleur + " - 7. Contexte enrichi :", context);
+                    } else {
+                        console.warn(this.nomControlleur + " - 5. Le champ source n'a pas été trouvé ou sa valeur est vide.");
                     }
                 }
-            } catch (e) { console.error("Erreur de config valeur par défaut:", e); }
+            } catch (e) {
+                console.error("Erreur de config valeur par défaut:", e);
+            }
+            console.log(this.nomControlleur + "--- Fin du débogage ---");
         }
-
-        console.log(this.nomControlleur + " - openFormDialog", entity, entityFormCanvas, context);
-
+        // --- FIN DE LA LOGIQUE AMÉLIORÉE ---
+        // console.log(this.nomControlleur + " - openFormDialog", entity, entityFormCanvas, context);
         buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
             entity: entity,
             entityFormCanvas: entityFormCanvas,

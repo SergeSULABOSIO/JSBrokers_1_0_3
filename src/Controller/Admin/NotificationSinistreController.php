@@ -15,18 +15,19 @@ use App\Repository\InviteRepository;
 use App\Form\NotificationSinistreType;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\NotificationSinistreRepository;
-use App\Services\JSBDynamicSearchService;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/notificationsinistre", name: 'admin.notificationsinistre.')]
 #[IsGranted('ROLE_USER')]
@@ -72,6 +73,8 @@ class NotificationSinistreController extends AbstractController
         $utilisateur = $this->getUser();
 
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        // dd("ICI");
 
         return $this->render('components/_rubrique_list_index.html.twig', [
             'entreprise' => $entreprise,
@@ -170,7 +173,7 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): JsonResponse
+    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -213,11 +216,13 @@ class NotificationSinistreController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($notification);
             $em->flush();
+            
+            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
+            $jsonEntity = $serializer->serialize($notification, 'json', ['groups' => 'list:read']);
             return $this->json([
-                'success' => true,
-                'message' => 'Enregistrement réussi !',
-                'entity' => $notification // On peut renvoyer l'entité mise à jour
-            ], 200, [], ['groups' => 'list:read']);
+                'message' => 'Enregistrée avec succès!',
+                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
+            ]);
         }
 
         $errors = [];

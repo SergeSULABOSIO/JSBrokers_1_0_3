@@ -1,6 +1,10 @@
 {# Colonne 1 : Statique (Case à cocher et ID) #}
 <td class="p-3 m-2" style="width:80px">
     <div class="form-group">
+        {% set serialization_context = {
+            'groups': 'list:read',
+            'enable_max_depth': true
+        } %}
         <input
             type="checkbox"
             id="check_{{ entity.id }}"
@@ -12,7 +16,8 @@
             data-idobjet-value="{{ entity.id }}" 
             {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
             data-entity-type="{{entite_nom}}" 
-            data-entity='{{ entity|serialize('json', {groups: 'list:read'})|e('html_attr') }}' 
+            {# data-entity='{{ entity|serialize('json', {groups: 'list:read'})|e('html_attr') }}'  #}
+            data-entity='{{ entity|serialize('json', serialization_context)|e('html_attr') }}' 
             data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}' 
         >
         <label for="check_{{ entity.id }}" class="text-secondary">

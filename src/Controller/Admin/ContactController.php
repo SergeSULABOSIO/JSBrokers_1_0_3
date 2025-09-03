@@ -21,6 +21,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/contact", name: 'admin.contact.')]
 #[IsGranted('ROLE_USER')]
@@ -91,7 +92,7 @@ class ContactController extends AbstractController
      * Traite la soumission du formulaire de contact (création ou modification).
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
         $data = $request->request->all();
         $files = $request->files->all();
@@ -114,10 +115,18 @@ class ContactController extends AbstractController
             }
             $em->persist($contact);
             $em->flush();
+
+            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
+            $jsonEntity = $serializer->serialize($contact, 'json', ['groups' => 'list:read']);
             return $this->json([
-                'message' => 'Contact enregistré avec succès!',
-                'contact' => ['id' => $contact->getId()] // Retourne l'ID pour référence
+                'message' => 'Enregistrée avec succès!',
+                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
             ]);
+
+            // return $this->json([
+            //     'message' => 'Contact enregistré avec succès!',
+            //     'contact' => ['id' => $contact->getId()] // Retourne l'ID pour référence
+            // ]);
         }
 
         $errors = [];
