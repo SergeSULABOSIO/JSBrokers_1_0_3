@@ -13,6 +13,7 @@ use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -78,6 +79,9 @@ class TacheController extends AbstractController
 
         if (!$tache) {
             $tache = new Tache();
+            $tache->setClosed(false);
+            $tache->setToBeEndedAt(new DateTimeImmutable("+1 days"));
+            $tache->setExecutor($invite);
         }
 
         $form = $this->createForm(TacheType::class, $tache);
