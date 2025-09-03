@@ -140,4 +140,16 @@ class FeedbackController extends AbstractController
             return $this->json(['message' => 'Erreur lors de la suppression.'], 500);
         }
     }
+
+    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
+    public function getDocumentsListApi(int $id, FeedbackRepository $repository): Response
+    {
+        $feedback = ($id === 0) ? new Feedback() : $repository->find($id);
+        if (!$feedback) { $feedback = new Feedback(); }
+
+        return $this->render('components/_collection_list.html.twig', [
+            'items' => $feedback->getDocuments(),
+            'item_template' => 'components/collection_items/_document_item.html.twig'
+        ]);
+    }
 }
