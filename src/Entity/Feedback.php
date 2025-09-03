@@ -7,6 +7,7 @@ use App\Repository\FeedbackRepository;
 use App\Entity\Traits\TimestampableTrait;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: FeedbackRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -17,15 +18,19 @@ class Feedback implements OwnerAwareInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $nextActionAt = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $nextAction = null;
 
     #[ORM\ManyToOne(inversedBy: 'feedbacks')]
@@ -41,6 +46,7 @@ class Feedback implements OwnerAwareInterface
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'feedback')]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\Column]

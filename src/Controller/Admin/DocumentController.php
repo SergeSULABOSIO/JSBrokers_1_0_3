@@ -25,7 +25,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/document", name: 'admin.document.')]
 #[IsGranted('ROLE_USER')]
@@ -101,7 +101,7 @@ class DocumentController extends AbstractController
 
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em): Response
+    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
         $data = $request->request->all();
         $files = $request->files->all();
@@ -114,19 +114,14 @@ class DocumentController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->associateParent($document, $data, $em);
-
-            // if (isset($data['pieceSinistre'])) {
-            //     $parent = $em->getReference(PieceSinistre::class, $data['pieceSinistre']);
-            //     if ($parent) $document->setPieceSinistre($parent);
-            // }
-            // if (isset($data['offreIndemnisation'])) {
-            //     $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
-            //     if ($offreIndemnisation) $document->setOffreIndemnisationSinistre($offreIndemnisation);
-            // }
-
             $em->persist($document);
             $em->flush();
-            return $this->json(['message' => 'Document enregistré.']);
+
+            $jsonEntity = $serializer->serialize($document, 'json', ['groups' => 'list:read']);
+            return $this->json([
+                'message' => 'Enregistrée avec succès!',
+                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
+            ]);
         }
 
         $errors = [];

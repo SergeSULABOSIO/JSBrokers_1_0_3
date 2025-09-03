@@ -126,12 +126,10 @@ class TacheController extends AbstractController
             // --- MODIFICATION ---
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
             $jsonEntity = $serializer->serialize($tache, 'json', ['groups' => 'list:read']);
-
             return $this->json([
-                'message' => 'Pièce enregistrée avec succès!',
+                'message' => 'Enregistrée avec succès!',
                 'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
             ]);
-            // --- FIN DE LA MODIFICATION ---
         }
 
 
