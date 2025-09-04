@@ -648,3 +648,126 @@ textarea:hover,
     font-weight: bold;
     margin-right: 8px;
 }
+
+/*
+===================================================================
+ SECTION: MISE EN PAGE À DEUX COLONNES POUR LES DIALOGUES
+===================================================================
+*/
+
+.modal-body-split {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+/* --- Colonne de gauche (Attributs Calculés) --- */
+.calculated-attributes-column {
+    width: 0; /* Largeur de 0 par défaut (cachée) */
+    padding-left: 0;
+    padding-right: 0;
+    flex-shrink: 0;
+    background-color: #212529;
+    color: #e9ecef;
+    overflow: hidden; /* Cache le contenu pendant la transition */
+    transition: width 0.4s ease, padding 0.4s ease; /* L'animation ! */
+    white-space: nowrap; /* Empêche le texte de passer à la ligne pendant l'animation */
+}
+
+/* On affiche la colonne quand le dialogue est en mode édition */
+.app-dialog.is-edit-mode .calculated-attributes-column {
+    display: block;
+}
+
+/* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
+.app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
+    width: 400px; /* On définit sa largeur finale */
+    padding: 1.5rem; /* On restaure le padding */
+    overflow-y: auto; /* On réactive le défilement */
+}
+
+.calculated-attributes-column .column-title {
+    font-weight: bold;
+    color: white;
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #495057;
+}
+
+.calculated-attributes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.calculated-attributes-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.calculated-attributes-list li:hover {
+    background-color: #343a40;
+}
+
+.calculated-attributes-list .attr-label {
+    opacity: 0.8;
+}
+.calculated-attributes-list .attr-value {
+    font-weight: bold;
+    text-align: right;
+}
+
+/* --- Colonne de droite (Formulaire) --- */
+.form-column {
+    flex-grow: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+/*
+===================================================================
+ SECTION: STYLE POUR LES TABLEAUX CLÉ-VALEUR DANS LES ATTRIBUTS
+===================================================================
+*/
+
+/* Conteneur principal du tableau */
+.attr-table {
+    width: 100%;
+    border-collapse: collapse; /* Fusionne les bordures pour un look plus net */
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+/* Style de chaque ligne du tableau */
+.attr-table tr {
+    border-bottom: 1px solid #495057; /* Ligne de séparation gris foncé */
+}
+
+/* On enlève la bordure de la dernière ligne */
+.attr-table tr:last-child {
+    border-bottom: none;
+}
+
+/* Style des cellules (clé et valeur) */
+.attr-table td {
+    padding: 8px 5px;
+    vertical-align: top;
+}
+
+/* Style de la cellule de gauche (la clé, ex: "Attendus") */
+.attr-table .attr-table-key {
+    text-align: left;
+    color: #adb5bd; /* Gris plus clair pour la clé */
+}
+
+/* Style de la cellule de droite (la valeur, ex: "5 pc(s)") */
+.attr-table .attr-table-value {
+    text-align: right;
+    font-weight: bold;
+    color: #ffffff; /* Blanc pour la valeur */
+}

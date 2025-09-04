@@ -125,11 +125,22 @@ class NotificationSinistreController extends AbstractController
 
         $form = $this->createForm(NotificationSinistreType::class, $notification);
 
+        // --- AJOUT DE LA LOGIQUE MANQUANTE ---
+        // On ne calcule les attributs que si l'entité existe déjà (mode édition)
+        // $entityCanvas = [];
+        if ($notification->getId()) {
+            $entityCanvas = $constante->getEntityCanvas($notification);
+            // On passe l'entité dans un tableau car la fonction attend une collection
+            $this->loadCalculatedValue($entityCanvas, [$notification], $constante);
+        }
+        // --- FIN DE L'AJOUT ---
+
         // On rend un template qui contient uniquement le formulaire
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId()),
             'entityCanvas' => $constante->getEntityCanvas($notification)
+            // 'entityCanvas' => $entityCanvas
         ]);
     }
 
