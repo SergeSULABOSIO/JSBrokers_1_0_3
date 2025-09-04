@@ -6,18 +6,14 @@ import { Modal } from 'bootstrap';
  * Il est créé dynamiquement par 'dialog-manager' et se détruit à la fermeture.
  */
 export default class extends Controller {
-    // 1. SUPPRIMEZ complètement la déclaration des 'targets', on va les chercher dynamiquement avec querySelector
-    // static targets = ["submitButton", "feedback", "progressBarContainer"];
 
     connect() {
         this.nomControlleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
         this.elementContenu = this.element;
         this.boundAdjustZIndex = this.adjustZIndex.bind(this);
-
         if (detail) {
             this.start(detail);
-            // console.log(this.nomControlleur + " - connect", this.elementContenu, this.targets);
         } else {
             console.error("L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !");
         }
@@ -36,12 +32,8 @@ export default class extends Controller {
         this.canvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.context = detail.context || {};
-
-        // On stocke si nous sommes en mode création
         this.isCreateMode = !(this.entity && this.entity.id);
-
         console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
-
         await this.buildAndShowShell();
         await this.loadFormBody();
     }
