@@ -122,20 +122,11 @@ class NotificationSinistreController extends AbstractController
             $notification->setNotifiedAt(new DateTimeImmutable("now"));
             $notification->setInvite($invite);
         }
-
         $form = $this->createForm(NotificationSinistreType::class, $notification);
-
-        // --- AJOUT DE LA LOGIQUE MANQUANTE ---
-        // On ne calcule les attributs que si l'entité existe déjà (mode édition)
-        // $entityCanvas = [];
         if ($notification->getId()) {
             $entityCanvas = $constante->getEntityCanvas($notification);
-            // On passe l'entité dans un tableau car la fonction attend une collection
             $this->loadCalculatedValue($entityCanvas, [$notification], $constante);
         }
-        // --- FIN DE L'AJOUT ---
-
-        // On rend un template qui contient uniquement le formulaire
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId()),
@@ -148,37 +139,27 @@ class NotificationSinistreController extends AbstractController
 
     public function loadCalculatedValue($entityCanvas, $data, Constante $constante)
     {
-        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
-        // On parcourt chaque entité pour y ajouter les valeurs calculées.
         foreach ($data as $entity) {
-            // On parcourt la définition du canvas pour trouver les calculs à faire.
             foreach ($entityCanvas['liste'] as $field) {
                 if ($field['type'] === 'Calcul') {
                     $functionName = $field['fonction'];
                     $args = [];
-
                     if (!empty($field['params'])) {
-                        // Cas 1 : Des paramètres spécifiques sont listés
                         $paramNames = $field['params'];
                         $args = array_map(function ($paramName) use ($entity) {
                             $getter = 'get' . ucfirst($paramName);
                             return method_exists($entity, $getter) ? $entity->$getter() : null;
                         }, $paramNames);
                     } else {
-                        // Cas 2 : On passe l'entité entière
                         $args[] = $entity;
                     }
-
-                    // On appelle la fonction du service 'constante'
                     if (method_exists($constante, $functionName)) {
                         $calculatedValue = $constante->$functionName(...$args);
-                        // On ajoute la propriété virtuelle à l'objet entité
                         $entity->{$field['code']} = $calculatedValue;
                     }
                 }
             }
         }
-        // --- FIN DE L'AJOUT ---
     }
 
 
