@@ -119,18 +119,17 @@ class NotificationSinistreController extends AbstractController
             }
         } else {
             $notification = new NotificationSinistre();
-            $notification->setCreatedAt(new DateTimeImmutable("now"));
             $notification->setNotifiedAt(new DateTimeImmutable("now"));
             $notification->setInvite($invite);
         }
-        $notification->setUpdatedAt(new DateTimeImmutable("now"));
 
         $form = $this->createForm(NotificationSinistreType::class, $notification);
 
         // On rend un template qui contient uniquement le formulaire
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId())
+            'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId()),
+            'entityCanvas' => $constante->getEntityCanvas($notification)
         ]);
     }
 
