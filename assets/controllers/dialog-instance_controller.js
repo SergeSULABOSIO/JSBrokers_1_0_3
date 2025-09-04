@@ -35,13 +35,11 @@ export default class extends Controller {
         this.isCreateMode = !(this.entity && this.entity.id);
         console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
         await this.buildAndShowShell();
-        await this.loadFormBody();
+        await this.loadFormAndAttributes();
     }
 
 
-    async buildAndShowShell(){
-        // 1. On construit immédiatement la structure de la modale avec un spinner dans le corps.
-        // const isEditMode = this.entity && this.entity.id;
+    async buildAndShowShell() {
         const title = this.isCreateMode
             ? this.canvas.parametres.titre_creation
             : this.canvas.parametres.titre_modification.replace('%id%', this.entity.id);
@@ -55,10 +53,17 @@ export default class extends Controller {
                 <div class="dialog-progress-container" data-dialog-instance-target="progressBarContainer">
                     <div class="dialog-progress-bar" role="progressbar"></div>
                 </div>
-                <div class="modal-body">
-                    <div class="text-center p-5">
-                        <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">Chargement...</span>
+                <div class="modal-body-split">
+                    <div class="calculated-attributes-column">
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-light spinner-border-sm"></div>
+                        </div>
+                    </div>
+                    <div class="form-column">
+                        <div class="text-center p-5">
+                            <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -80,7 +85,10 @@ export default class extends Controller {
         this.modalNode = this.elementContenu.closest('.modal');
         this.modal = new Modal(this.modalNode);
         this.modal.show();
-
+        // On ajoute la classe pour le mode édition si nécessaire
+        if (!this.isCreateMode) {
+            this.modalNode.classList.add('is-edit-mode');
+        }
         this.modalNode.addEventListener('hidden.bs.modal', () => { this.modalNode.remove(); });
         this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
@@ -123,7 +131,7 @@ export default class extends Controller {
     /**
      * Charge le contenu du formulaire et le place dans le .modal-body.
      */
-    async loadFormBody() {
+    async loadFormAndAttributes() {//loadFormBody() {
         try {
             // 1. On commence avec l'URL de base
             let urlString = this.canvas.parametres.endpoint_form_url;
@@ -144,15 +152,49 @@ export default class extends Controller {
             // 5. On lance la requête avec l'URL finale correctement construite
             const finalUrl = url.pathname + url.search;
             console.log(this.nomControlleur + " - URL de chargement du formulaire:", finalUrl); // Pour débogage
-            
-            const response = await fetch(finalUrl);
-            // const response = await fetch(url.pathname + url.search);
 
+            const response = await fetch(finalUrl);
             if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
 
-            this.elementContenu.querySelector('.modal-body').innerHTML = await response.text();
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            const attributesContent = doc.querySelector('.calculated-attributes-column-content');
+            const formContent = doc.querySelector('.form-column-content');
+
+            const attributesContainer = this.elementContenu.querySelector('.calculated-attributes-column');
+            const formContainer = this.elementContenu.querySelector('.form-column');
+            const mainDialogElement = this.elementContenu.closest('.app-dialog');
+
+            if (formContent && formContainer) {
+                formContainer.innerHTML = '';
+                formContainer.appendChild(formContent);
+            }
+            if (attributesContent && attributesContainer) {
+                const hasCalculatedAttrs = attributesContent.querySelector('.calculated-attributes-list li');
+                if (hasCalculatedAttrs) {
+                    attributesContainer.innerHTML = '';
+                    attributesContainer.appendChild(attributesContent);
+                    mainDialogElement.classList.add('has-attributes-column');
+                } else {
+                    mainDialogElement.classList.remove('has-attributes-column');
+                }
+            }
+            // On s'assure que la classe de mode édition est bien présente si nécessaire
+            if (!this.isCreateMode) {
+                mainDialogElement.classList.add('is-edit-mode');
+            }
+
+
+            // if (attributesContent && attributesContainer) {
+            //     attributesContainer.innerHTML = '';
+            //     attributesContainer.appendChild(attributesContent);
+            // }
+            // this.elementContenu.querySelector('.modal-body').innerHTML = await response.text();
         } catch (error) {
-            this.elementContenu.querySelector('.modal-body').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            // this.elementContenu.querySelector('.modal-body').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
         }
     }
 
@@ -164,7 +206,7 @@ export default class extends Controller {
         this.toggleLoading(true);
         this.toggleProgressBar(true);
         // this.clearErrors(); // On nettoie les anciennes erreurs
-        
+
         this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
         if (this.feedbackContainer) {
             this.feedbackContainer.innerHTML = '';
@@ -191,17 +233,15 @@ export default class extends Controller {
             const result = await response.json();
             if (!response.ok) throw result;
 
-            // --- NOUVELLE LOGIQUE APRÈS SUCCÈS ---
             this.showFeedback('success', result.message); // On affiche le message de succès
-
             document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', { detail: { originatorId: this.context.originatorId } }));
             document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
 
-            // Si on était en mode création, on passe en mode édition
             if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
-                await this.reloadForm(); // On recharge le formulaire
+                // await this.reloadForm(); // On recharge le formulaire
+                await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
             }
             // Si on était déjà en mode édition, on ne fait rien de plus.
 
@@ -218,6 +258,15 @@ export default class extends Controller {
             this.toggleLoading(false);
             this.toggleProgressBar(false);
         }
+    }
+
+    /**
+     * NOUVEAU : Recharge la vue complète (titre + colonnes)
+     */
+    async reloadView() {
+        this.updateTitle();
+        this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
+        await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
     }
 
     /**

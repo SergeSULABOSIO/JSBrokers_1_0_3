@@ -6774,7 +6774,7 @@ class Constante
                     ],
                     [
                         "code" => "compensationVersee",
-                        "intitule" => "Compensation versée",
+                        "intitule" => "Comp. versée",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
@@ -6792,7 +6792,7 @@ class Constante
                     ],
                     [
                         "code" => "compensationFranchise",
-                        "intitule" => "Franchise appliquée à la compensation",
+                        "intitule" => "Franchise appliquée",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
@@ -6801,7 +6801,7 @@ class Constante
                     ],
                     [
                         "code" => "statusDocumentsAttendus",
-                        "intitule" => "Status sur pièces attendues",
+                        "intitule" => "Status - pièces",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => "",
                         "format" => "ArrayAssoc",
@@ -6812,14 +6812,14 @@ class Constante
                         "code" => "dureeReglement",
                         "intitule" => "Vitesse de règlement",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => "En nombre des jours: ",
+                        "unite" => "Jours",
                         "format" => "Texte",
                         "fonction" => "Notification_Sinistre_getDureeReglement", // Cette fonction prendra l'objet Client entier
                         // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
                     ],
                     [
                         "code" => "dateDernierReglement",
-                        "intitule" => "Date du dernier règlement",
+                        "intitule" => "Dernier règlement",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => "",
                         "format" => "Date",
