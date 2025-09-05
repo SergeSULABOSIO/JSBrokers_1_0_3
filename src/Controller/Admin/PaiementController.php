@@ -104,7 +104,7 @@ class PaiementController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?int $id, PaiementRepository $repository, Constante $constante, Request $request): Response
+    public function getFormApi(?Paiement $paiement, Constante $constante, Request $request): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -115,12 +115,6 @@ class PaiementController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
-        /** @var Paiement $paiement */
-        $paiement = null;
-        if ($id) {
-            $paiement = $repository->find($id);
-        }
-
         if (!$paiement) {
             $paiement = new Paiement();
             $defaultMontant = $request->query->get('default_montant');
@@ -130,13 +124,18 @@ class PaiementController extends AbstractController
             $paiement->setPaidAt(new DateTimeImmutable("now"));
             $paiement->setDescription("Descript. à générer automatiquement ici.");
         }
-        // --- AJOUTEZ CETTE LIGNE DE DÉBOGAGE ---
-        // dd($paiement);
+
         $form = $this->createForm(PaiementType::class, $paiement);
+
+        if ($paiement->getId()) {
+            $entityCanvas = $constante->getEntityCanvas($paiement);
+            $constante->loadCalculatedValue($entityCanvas, [$paiement]);
+        }
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($paiement, $entreprise->getId()) // ID entreprise à adapter
+            'entityFormCanvas' => $constante->getEntityFormCanvas($paiement, $entreprise->getId()), // ID entreprise à adapter
+            'entityCanvas' => $constante->getEntityCanvas($paiement)
         ]);
     }
 

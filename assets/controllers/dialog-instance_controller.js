@@ -44,42 +44,45 @@ export default class extends Controller {
             ? this.canvas.parametres.titre_creation
             : this.canvas.parametres.titre_modification.replace('%id%', this.entity.id);
 
+        // --- MODIFICATION : On retire la balise <form> d'ici ---
+        // On met l'action de soumission sur l'élément racine du contrôleur
+        this.elementContenu.setAttribute('data-action', 'submit->dialog-instance#submitForm');
+
+
         this.elementContenu.innerHTML = `
-            <form data-action="submit->dialog-instance#submitForm">
-                <div class="modal-header">
-                    <h5 class="modal-title">${title}</h5>
-                    <button type="button" class="btn-close btn-close-white" data-action="click->dialog-instance#close"></button>
-                </div>
-                <div class="dialog-progress-container" data-dialog-instance-target="progressBarContainer">
-                    <div class="dialog-progress-bar" role="progressbar"></div>
-                </div>
-                <div class="modal-body-split">
-                    <div class="calculated-attributes-column">
-                        <div class="text-center p-5">
-                            <div class="spinner-border text-light spinner-border-sm"></div>
-                        </div>
-                    </div>
-                    <div class="form-column">
-                        <div class="text-center p-5">
-                            <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
-                                <span class="visually-hidden">Chargement...</span>
-                            </div>
-                        </div>
+            <div class="modal-header">
+                <h5 class="modal-title">${title}</h5>
+                <button type="button" class="btn-close btn-close-white" data-action="click->dialog-instance#close"></button>
+            </div>
+            <div class="dialog-progress-container" data-dialog-instance-target="progressBarContainer">
+                <div class="dialog-progress-bar" role="progressbar"></div>
+            </div>
+            <div class="modal-body-split">
+                <div class="calculated-attributes-column">
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-light spinner-border-sm"></div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <div class="feedback-container w-100 text-danger mb-2" data-dialog-instance-target="feedback"></div>
-                    <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
-                        <span>Fermer</span>
-                    </button>
-                    <button type="submit" class="btn btn-primary" data-dialog-instance-target="submitButton">
-                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                        <span class="button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg></span>
-                        <span class="button-text">Enregistrer</span>
-                    </button>
+                <div class="form-column">
+                    <div class="text-center p-5">
+                        <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
                 </div>
-            </form>
+            </div>
+            <div class="modal-footer">
+                <div class="feedback-container w-100 text-danger mb-2" data-dialog-instance-target="feedback"></div>
+                <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
+                    <span>Fermer</span>
+                </button>
+                <button type="button" class="btn btn-primary" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                    <span class="button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg></span>
+                    <span class="button-text">Enregistrer</span>
+                </button>
+            </div>
         `;
 
         this.modalNode = this.elementContenu.closest('.modal');
@@ -185,16 +188,8 @@ export default class extends Controller {
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');
             }
-
-
-            // if (attributesContent && attributesContainer) {
-            //     attributesContainer.innerHTML = '';
-            //     attributesContainer.appendChild(attributesContent);
-            // }
-            // this.elementContenu.querySelector('.modal-body').innerHTML = await response.text();
         } catch (error) {
             this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
-            // this.elementContenu.querySelector('.modal-body').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
         }
     }
 
@@ -379,9 +374,11 @@ export default class extends Controller {
      */
     toggleLoading(isLoading) {
         // On cherche le bouton manuellement juste quand on en a besoin
-        const button = this.elementContenu.querySelector('button[type="submit"]');
-        if (!button) return;
+        // const button = this.elementContenu.querySelector('button[type="submit"]');
+        const button = this.elementContenu.querySelector('[data-action*="#triggerSubmit"]');
 
+        if (!button) return;
+        button.disabled = isLoading;
         const spinner = button.querySelector('.spinner-border');
         const icon = button.querySelector('.button-icon');
         const text = button.querySelector('.button-text');
@@ -397,6 +394,11 @@ export default class extends Controller {
             icon.style.display = 'inline-block';
             text.textContent = 'Enregistrer';
         }
+        // --- AJOUT : Gère les autres boutons (Fermer, X) ---
+        const closeButtons = this.elementContenu.querySelectorAll('[data-action*="#close"]');
+        closeButtons.forEach(btn => {
+            btn.disabled = isLoading;
+        });
     }
 
     /**
@@ -407,6 +409,16 @@ export default class extends Controller {
         const progressBarContainer = this.elementContenu.querySelector('.dialog-progress-container');
         if (progressBarContainer) {
             progressBarContainer.classList.toggle('is-loading', isLoading);
+        }
+    }
+
+    /**
+     * NOUVEAU : Déclenche manuellement la soumission du formulaire interne.
+     */
+    triggerSubmit() {
+        const form = this.elementContenu.querySelector('form');
+        if (form) {
+            form.requestSubmit();
         }
     }
 }
