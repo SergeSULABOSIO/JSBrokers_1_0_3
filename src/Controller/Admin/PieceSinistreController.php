@@ -81,10 +81,8 @@ class PieceSinistreController extends AbstractController
 
         $form = $this->createForm(PieceSinistreType::class, $piece);
 
-        if ($piece->getId()) {
-            $entityCanvas = $constante->getEntityCanvas($piece);
-            $constante->loadCalculatedValue($entityCanvas, [$piece]);
-        }
+        $entityCanvas = $constante->getEntityCanvas($piece);
+        $constante->loadCalculatedValue($entityCanvas, [$piece]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),

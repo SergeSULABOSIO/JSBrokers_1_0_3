@@ -78,10 +78,8 @@ class DocumentController extends AbstractController
 
         $form = $this->createForm(DocumentType::class, $document);
 
-        if ($document->getId()) {
-            $entityCanvas = $constante->getEntityCanvas($document);
-            $constante->loadCalculatedValue($entityCanvas, [$document]);
-        }
+        $entityCanvas = $constante->getEntityCanvas($document);
+        $constante->loadCalculatedValue($entityCanvas, [$document]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
