@@ -92,10 +92,8 @@ class ContactController extends AbstractController
 
         $form = $this->createForm(ContactType::class, $contact);
 
-        if ($contact->getId()) {
-            $entityCanvas = $constante->getEntityCanvas($contact);
-            $constante->loadCalculatedValue($entityCanvas, [$contact]);
-        }
+        $entityCanvas = $constante->getEntityCanvas($contact);
+        $constante->loadCalculatedValue($entityCanvas, [$contact]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),

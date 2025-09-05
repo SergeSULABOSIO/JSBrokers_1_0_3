@@ -86,10 +86,8 @@ class TacheController extends AbstractController
 
         $form = $this->createForm(TacheType::class, $tache);
 
-        if ($tache->getId()) {
-            $entityCanvas = $constante->getEntityCanvas($tache);
-            $constante->loadCalculatedValue($entityCanvas, [$tache]);
-        }
+        $entityCanvas = $constante->getEntityCanvas($tache);
+        $constante->loadCalculatedValue($entityCanvas, [$tache]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),

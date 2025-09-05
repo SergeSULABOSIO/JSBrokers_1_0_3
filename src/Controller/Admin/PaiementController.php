@@ -127,10 +127,8 @@ class PaiementController extends AbstractController
 
         $form = $this->createForm(PaiementType::class, $paiement);
 
-        if ($paiement->getId()) {
-            $entityCanvas = $constante->getEntityCanvas($paiement);
-            $constante->loadCalculatedValue($entityCanvas, [$paiement]);
-        }
+        $entityCanvas = $constante->getEntityCanvas($paiement);
+        $constante->loadCalculatedValue($entityCanvas, [$paiement]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
