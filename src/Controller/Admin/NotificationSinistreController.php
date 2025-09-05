@@ -67,7 +67,8 @@ class NotificationSinistreController extends AbstractController
         $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
 
         // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
-        $this->loadCalculatedValue($entityCanvas, $data, $constante);
+        $constante->loadCalculatedValue($entityCanvas, $data);
+        // $this->loadCalculatedValue($entityCanvas, $data, $constante);
 
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
@@ -98,8 +99,9 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi($id, Constante $constante): Response
+    public function getFormApi(?NotificationSinistre $notification, Constante $constante): Response
     {
+
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
@@ -109,58 +111,53 @@ class NotificationSinistreController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
-        /** @var NotificationSinistre $notification */
-        $notification = null;
-
-        if ($id) {
-            $notification = $this->notificationSinistreRepository->find($id);
-            if (!$notification) {
-                return new Response('Entité non trouvée', 404);
-            }
-        } else {
+        if (!$notification) {
             $notification = new NotificationSinistre();
             $notification->setNotifiedAt(new DateTimeImmutable("now"));
             $notification->setInvite($invite);
         }
+
         $form = $this->createForm(NotificationSinistreType::class, $notification);
+
         if ($notification->getId()) {
             $entityCanvas = $constante->getEntityCanvas($notification);
-            $this->loadCalculatedValue($entityCanvas, [$notification], $constante);
+            // $this->loadCalculatedValue($entityCanvas, [$notification], $constante);
+            $constante->loadCalculatedValue($entityCanvas, [$notification]);
         }
+
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId()),
             'entityCanvas' => $constante->getEntityCanvas($notification)
-            // 'entityCanvas' => $entityCanvas
         ]);
     }
 
 
 
-    public function loadCalculatedValue($entityCanvas, $data, Constante $constante)
-    {
-        foreach ($data as $entity) {
-            foreach ($entityCanvas['liste'] as $field) {
-                if ($field['type'] === 'Calcul') {
-                    $functionName = $field['fonction'];
-                    $args = [];
-                    if (!empty($field['params'])) {
-                        $paramNames = $field['params'];
-                        $args = array_map(function ($paramName) use ($entity) {
-                            $getter = 'get' . ucfirst($paramName);
-                            return method_exists($entity, $getter) ? $entity->$getter() : null;
-                        }, $paramNames);
-                    } else {
-                        $args[] = $entity;
-                    }
-                    if (method_exists($constante, $functionName)) {
-                        $calculatedValue = $constante->$functionName(...$args);
-                        $entity->{$field['code']} = $calculatedValue;
-                    }
-                }
-            }
-        }
-    }
+    // public function loadCalculatedValue($entityCanvas, $data, Constante $constante)
+    // {
+    //     foreach ($data as $entity) {
+    //         foreach ($entityCanvas['liste'] as $field) {
+    //             if ($field['type'] === 'Calcul') {
+    //                 $functionName = $field['fonction'];
+    //                 $args = [];
+    //                 if (!empty($field['params'])) {
+    //                     $paramNames = $field['params'];
+    //                     $args = array_map(function ($paramName) use ($entity) {
+    //                         $getter = 'get' . ucfirst($paramName);
+    //                         return method_exists($entity, $getter) ? $entity->$getter() : null;
+    //                     }, $paramNames);
+    //                 } else {
+    //                     $args[] = $entity;
+    //                 }
+    //                 if (method_exists($constante, $functionName)) {
+    //                     $calculatedValue = $constante->$functionName(...$args);
+    //                     $entity->{$field['code']} = $calculatedValue;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
@@ -207,7 +204,7 @@ class NotificationSinistreController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($notification);
             $em->flush();
-            
+
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
             $jsonEntity = $serializer->serialize($notification, 'json', ['groups' => 'list:read']);
             return $this->json([
@@ -251,7 +248,8 @@ class NotificationSinistreController extends AbstractController
         $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
 
         // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
-        $this->loadCalculatedValue($entityCanvas, $data, $constante);
+        $constante->loadCalculatedValue($entityCanvas, $data);
+        // $this->loadCalculatedValue($entityCanvas, $data, $constante);
 
         //On se dirie vers la page le formulaire d'édition
         return $this->render('admin/notificationsinistre/elementview.html.twig', [
@@ -282,7 +280,8 @@ class NotificationSinistreController extends AbstractController
         $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
 
         // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
-        $this->loadCalculatedValue($entityCanvas, $reponseData["data"], $constante);
+        $constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
+        // $this->loadCalculatedValue($entityCanvas, $reponseData["data"], $constante);
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
         return $this->render('components/_list_donnees.html.twig', [

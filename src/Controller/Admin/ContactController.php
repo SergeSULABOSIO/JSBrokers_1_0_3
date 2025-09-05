@@ -9,6 +9,7 @@ use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Entity\NotificationSinistre;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Repository\InviteRepository;
 use App\Repository\ContactRepository;
 use App\Repository\EntrepriseRepository;
@@ -27,7 +28,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[IsGranted('ROLE_USER')]
 class ContactController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -38,7 +39,19 @@ class ContactController extends AbstractController
         private ContactRepository $contactRepository,
         private Constante $constante,
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
+    }
+
+    /**
+     * On déclare ici tous les parents possibles pour un Contact.
+     */
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            // La clé 'notificationSinistre' correspond à celle envoyée par le JS
+            'notificationSinistre' => NotificationSinistre::class,
+            // Si un jour un contact peut être lié à un Client :
+            // 'client' => \App\Entity\Client::class,
+        ];
     }
 
 
@@ -54,7 +67,6 @@ class ContactController extends AbstractController
             'contacts' => $this->contactRepository->paginateForEntreprise($idEntreprise, $page),
             'page' => $page,
             'constante' => $this->constante,
-            'activator' => $this->activator,
         ]);
     }
 
@@ -65,10 +77,6 @@ class ContactController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Contact $contact, Constante $constante): Response
     {
-        if (!$contact) {
-            $contact = new Contact();
-        }
-
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
@@ -78,13 +86,22 @@ class ContactController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $invite->getEntreprise();
 
+        if (!$contact) {
+            $contact = new Contact();
+        }
+
         $form = $this->createForm(ContactType::class, $contact);
 
+        if ($contact->getId()) {
+            $entityCanvas = $constante->getEntityCanvas($contact);
+            $constante->loadCalculatedValue($entityCanvas, [$contact]);
+        }
 
         // On rend un template qui contient uniquement le formulaire
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($contact, $entreprise->getId())
+            'entityFormCanvas' => $constante->getEntityFormCanvas($contact, $entreprise->getId()),
+            'entityCanvas' => $constante->getEntityCanvas($contact)
         ]);
     }
 
@@ -109,10 +126,9 @@ class ContactController extends AbstractController
         $form->submit($submittedData, false); // Le 'false' permet de ne pas vider les champs non soumis
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if (isset($data['notificationSinistre'])) {
-                $parent = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-                if ($parent) $contact->setNotificationSinistre($parent);
-            }
+            // Notre Trait s'occupe de lier le contact à son parent
+            $this->associateParent($contact, $data, $em);
+            
             $em->persist($contact);
             $em->flush();
 
@@ -122,11 +138,6 @@ class ContactController extends AbstractController
                 'message' => 'Enregistrée avec succès!',
                 'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
             ]);
-
-            // return $this->json([
-            //     'message' => 'Contact enregistré avec succès!',
-            //     'contact' => ['id' => $contact->getId()] // Retourne l'ID pour référence
-            // ]);
         }
 
         $errors = [];
