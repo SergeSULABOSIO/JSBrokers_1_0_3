@@ -87,10 +87,8 @@ class OffreIndemnisationSinistreController extends AbstractController
 
         $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
 
-        if ($offre->getId()) {
-            $entityCanvas = $constante->getEntityCanvas($offre);
-            $constante->loadCalculatedValue($entityCanvas, [$offre]);
-        }
+        $entityCanvas = $constante->getEntityCanvas($offre);
+        $constante->loadCalculatedValue($entityCanvas, [$offre]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
