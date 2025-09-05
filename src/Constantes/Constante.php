@@ -7010,4 +7010,29 @@ class Constante
 
         return [];
     }
+
+    public function loadCalculatedValue($entityCanvas, $data)
+    {
+        foreach ($data as $entity) {
+            foreach ($entityCanvas['liste'] as $field) {
+                if ($field['type'] === 'Calcul') {
+                    $functionName = $field['fonction'];
+                    $args = [];
+                    if (!empty($field['params'])) {
+                        $paramNames = $field['params'];
+                        $args = array_map(function ($paramName) use ($entity) {
+                            $getter = 'get' . ucfirst($paramName);
+                            return method_exists($entity, $getter) ? $entity->$getter() : null;
+                        }, $paramNames);
+                    } else {
+                        $args[] = $entity;
+                    }
+                    if (method_exists($this, $functionName)) {
+                        $calculatedValue = $this->$functionName(...$args);
+                        $entity->{$field['code']} = $calculatedValue;
+                    }
+                }
+            }
+        }
+    }
 }
