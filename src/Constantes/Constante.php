@@ -6986,6 +6986,24 @@ class Constante
                         "type" => "Texte",
                         "unite" => "",
                     ],
+                    [
+                        "code" => "compensationVersee",
+                        "intitule" => "Comp. versée",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "format" => "Nombre",
+                        "fonction" => "Offre_Indemnisation_getCompensationVersee", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
+                    [
+                        "code" => "compensationAVersee",
+                        "intitule" => "Solde à verser",
+                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "format" => "Nombre",
+                        "fonction" => "Offre_Indemnisation_getSoldeAVerser", // Cette fonction prendra l'objet Client entier
+                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                    ],
                 ],
             ];
         }

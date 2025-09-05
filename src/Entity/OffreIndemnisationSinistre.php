@@ -16,7 +16,7 @@ class OffreIndemnisationSinistre
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?int $id = null;
-    
+
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $nom = null;
@@ -60,6 +60,14 @@ class OffreIndemnisationSinistre
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'offreIndemnisationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['list:read'])]
     private Collection $taches;
+
+
+    //Attributs calculés
+    #[Groups(['list:read'])]
+    public ?int $compensationVersee;
+
+    #[Groups(['list:read'])]
+    public ?int $compensationAVersee;
 
     public function __construct()
     {
