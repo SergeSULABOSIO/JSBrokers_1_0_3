@@ -121,7 +121,6 @@ class NotificationSinistreController extends AbstractController
 
         if ($notification->getId()) {
             $entityCanvas = $constante->getEntityCanvas($notification);
-            // $this->loadCalculatedValue($entityCanvas, [$notification], $constante);
             $constante->loadCalculatedValue($entityCanvas, [$notification]);
         }
 

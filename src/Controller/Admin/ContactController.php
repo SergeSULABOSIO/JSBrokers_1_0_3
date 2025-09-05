@@ -97,7 +97,6 @@ class ContactController extends AbstractController
             $constante->loadCalculatedValue($entityCanvas, [$contact]);
         }
 
-        // On rend un template qui contient uniquement le formulaire
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($contact, $entreprise->getId()),
@@ -128,7 +127,7 @@ class ContactController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             // Notre Trait s'occupe de lier le contact à son parent
             $this->associateParent($contact, $data, $em);
-            
+
             $em->persist($contact);
             $em->flush();
 

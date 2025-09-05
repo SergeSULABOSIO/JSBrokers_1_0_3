@@ -78,11 +78,18 @@ class FeedbackController extends AbstractController
         if (!$feedback) {
             $feedback = new Feedback();
         }
+
         $form = $this->createForm(FeedbackType::class, $feedback);
+
+        if ($feedback->getId()) {
+            $entityCanvas = $constante->getEntityCanvas($feedback);
+            $constante->loadCalculatedValue($entityCanvas, [$feedback]);
+        }
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($feedback, $entreprise->getId())
+            'entityFormCanvas' => $constante->getEntityFormCanvas($feedback, $entreprise->getId()),
+            'entityCanvas' => $constante->getEntityCanvas($feedback)
         ]);
     }
 
