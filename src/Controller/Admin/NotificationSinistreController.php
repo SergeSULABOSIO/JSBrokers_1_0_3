@@ -119,10 +119,8 @@ class NotificationSinistreController extends AbstractController
 
         $form = $this->createForm(NotificationSinistreType::class, $notification);
 
-        if ($notification->getId()) {
-            $entityCanvas = $constante->getEntityCanvas($notification);
-            $constante->loadCalculatedValue($entityCanvas, [$notification]);
-        }
+        $entityCanvas = $constante->getEntityCanvas($notification);
+        $constante->loadCalculatedValue($entityCanvas, [$notification]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
