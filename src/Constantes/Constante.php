@@ -6764,13 +6764,22 @@ class Constante
                     // ],
                     //EXEMPLE SANS PARAMS = Càd que la fonction du calculateur a besoin de l'entité elle-même en paramètre pour faire son tavail
                     [
+                        "code" => "delaiDeclaration",
+                        "intitule" => "Délai Déclaration",
+                        "type" => "Calcul",
+                        "unite" => "",
+                        "format" => "Texte",
+                        "fonction" => "Notification_Sinistre_getDelaiDeclaration",
+                        "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
+                    ],
+                    [
                         "code" => "compensation",
                         "intitule" => "Compensation",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getCompensation", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Notification_Sinistre_getCompensation",
+                        "description" => "📊 Montant total de l'indemnisation convenue pour ce sinistre." // MODIFICATION: Ajout
                     ],
                     [
                         "code" => "compensationVersee",
@@ -6778,8 +6787,8 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getCompensationVersee", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Notification_Sinistre_getCompensationVersee",
+                        "description" => "📊 Montant cumulé des paiements déjà effectués pour cette indemnisation." // MODIFICATION: Ajout
                     ],
                     [
                         "code" => "compensationSoldeAverser",
@@ -6787,8 +6796,8 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getSoldeAVerser", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Notification_Sinistre_getSoldeAVerser",
+                        "description" => "📊 Montant restant à payer pour solder complètement ce dossier sinistre." // MODIFICATION: Ajout
                     ],
                     [
                         "code" => "compensationFranchise",
@@ -6796,8 +6805,8 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getFranchise", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Notification_Sinistre_getFranchise",
+                        "description" => "📊 Montant de la franchise qui a été appliquée conformément aux termes de la police." // MODIFICATION: Ajout
                     ],
                     [
                         "code" => "statusDocumentsAttendus",
@@ -6805,8 +6814,17 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => "",
                         "format" => "ArrayAssoc",
-                        "fonction" => "Notification_Sinistre_getStatusDocumentsAttendusNumbers", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Notification_Sinistre_getStatusDocumentsAttendusNumbers",
+                        "description" => "⏳ Suivi des pièces justificatives attendues, fournies et manquantes pour le dossier." // MODIFICATION: Ajout
+                    ],
+                    [
+                        "code" => "indiceCompletude",
+                        "intitule" => "Complétude Pièces",
+                        "type" => "Calcul",
+                        "unite" => "%",
+                        "format" => "Texte",
+                        "fonction" => "Notification_Sinistre_getIndiceCompletude",
+                        "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
                     ],
                     [
                         "code" => "dureeReglement",
@@ -6814,8 +6832,8 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => "Jours",
                         "format" => "Texte",
-                        "fonction" => "Notification_Sinistre_getDureeReglement", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Notification_Sinistre_getDureeReglement",
+                        "description" => "⏱️ Durée totale en jours entre la notification du sinistre et le dernier paiement de règlement." // MODIFICATION: Ajout
                     ],
                     [
                         "code" => "dateDernierReglement",
@@ -6823,9 +6841,21 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => "",
                         "format" => "Date",
-                        "fonction" => "Notification_Sinistre_getDateDernierRgelement", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Notification_Sinistre_getDateDernierRgelement",
+                        "description" => "⏱️ Date à laquelle le tout dernier paiement a été effectué pour ce sinistre." // MODIFICATION: Ajout
                     ],
+                    // MODIFICATION: Ajout des nouveaux attributs calculés
+                    
+                    [
+                        "code" => "ageDossier",
+                        "intitule" => "Âge du Dossier",
+                        "type" => "Calcul",
+                        "unite" => "",
+                        "format" => "Texte",
+                        "fonction" => "Notification_Sinistre_getAgeDossier",
+                        "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
+                    ],
+                    
                 ],
             ];
         } else if ($object instanceof Client) {
@@ -6992,8 +7022,8 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
-                        "fonction" => "Offre_Indemnisation_getCompensationVersee", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Offre_Indemnisation_getCompensationVersee",
+                        "description" => "📊 Montant cumulé des paiements déjà effectués pour cette offre." // MODIFICATION: Ajout
                     ],
                     [
                         "code" => "compensationAVersee",
@@ -7001,9 +7031,19 @@ class Constante
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                         "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                         "format" => "Nombre",
-                        "fonction" => "Offre_Indemnisation_getSoldeAVerser", // Cette fonction prendra l'objet Client entier
-                        // La clé "params" est volontairement absente puisque c'est l'entité elle-même qui est le seul paramètre de la fonction qui calcule
+                        "fonction" => "Offre_Indemnisation_getSoldeAVerser",
+                        "description" => "Montant restant à payer pour solder cette offre." // MODIFICATION: Ajout
                     ],
+                    // MODIFICATION: Ajout du nouveau
+                    [
+                        "code" => "pourcentagePaye",
+                        "intitule" => "Pourcentage Payé",
+                        "type" => "Calcul",
+                        "unite" => "%",
+                        "format" => "Texte",
+                        "fonction" => "Offre_Indemnisation_getPourcentagePaye",
+                        "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
+                    ]
                 ],
             ];
         }
@@ -7054,5 +7094,57 @@ class Constante
                 }
             }
         }
+    }
+
+    /**
+     * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
+     */
+    public function Notification_Sinistre_getDelaiDeclaration(NotificationSinistre $sinistre): string
+    {
+        if (!$sinistre->getOccuredAt() || !$sinistre->getNotifiedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($sinistre->getOccuredAt(), $sinistre->getNotifiedAt());
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule l'âge du dossier sinistre depuis sa création.
+     */
+    public function Notification_Sinistre_getAgeDossier(NotificationSinistre $sinistre): string
+    {
+        if (!$sinistre->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($sinistre->getCreatedAt(), new DateTimeImmutable());
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule le pourcentage de pièces fournies par rapport aux pièces attendues.
+     */
+    public function Notification_Sinistre_getIndiceCompletude(NotificationSinistre $sinistre): string
+    {
+        $attendus = count($this->getEnterprise()->getModelePieceSinistres());
+        if ($attendus === 0) {
+            return '100 %'; // S'il n'y a aucune pièce modèle, le dossier est complet.
+        }
+        $fournis = count($sinistre->getPieces());
+        $pourcentage = ($fournis / $attendus) * 100;
+        return round($pourcentage) . ' %';
+    }
+
+     /**
+     * Calcule le pourcentage payé d'une offre d'indemnisation.
+     */
+    public function Offre_Indemnisation_getPourcentagePaye(OffreIndemnisationSinistre $offre): string
+    {
+        $montantPayable = $offre->getMontantPayable();
+        if ($montantPayable == 0 || $montantPayable === null) {
+            return '100 %'; // Si rien n'est à payer, c'est considéré comme payé.
+        }
+        $totalVerse = $this->Offre_Indemnisation_getCompensationVersee($offre);
+        $pourcentage = ($totalVerse / $montantPayable) * 100;
+        return round($pourcentage) . ' %';
     }
 }

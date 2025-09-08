@@ -132,6 +132,16 @@ class NotificationSinistre implements OwnerAwareInterface
     #[Groups(['list:read'])]
     public ?float $compensation;
 
+
+    #[Groups(['list:read'])]
+    public ?string $delaiDeclaration;
+
+    #[Groups(['list:read'])]
+    public ?string $ageDossier;
+
+    #[Groups(['list:read'])]
+    public ?string $indiceCompletude;
+
     public function __construct()
     {
         $this->pieces = new ArrayCollection();

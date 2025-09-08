@@ -8,10 +8,13 @@
 {% if entityCanvas is defined and entityCanvas.liste is defined and entityCanvas.liste is not empty %}
     <div class="calculated-attributes-column-content">
         <h5 class="column-title">Attributs calculés</h5>
-        <ul class="calculated-attributes-list">
+        <ul class="calculated-attributes-list" data-controller="tooltip-manager">
             {% for attr in entityCanvas.liste %}
                 {% if attr.type == 'Calcul' %}
-                    <li>
+                    <li
+                        data-action="mouseenter->tooltip-manager#show mouseleave->tooltip-manager#hide"
+                        data-tooltip-content="{{ attr.description|default('Aucune description disponible.') }}"
+                    >
                         <span class="attr-label">{{ attr.intitule }} :</span>
                         <span class="attr-value">
                             {% set value = attribute(form.vars.data, attr.code) %}
@@ -27,11 +30,6 @@
                                         {% endfor %}
                                     </tbody>
                                 </table>
-                                {# <ul class="list-unstyled mb-0 small text-end">
-                                    {% for key, val in value %}
-                                        <li>{{ key }}: <strong>{{ val }}</strong></li>
-                                    {% endfor %}
-                                </ul> #}
                             {% elseif attr.format is defined and attr.format == 'Date' and value is not null and value.timestamp is defined %}
                                 {{ value|date('d/m/Y') }}
                             {% else %}
