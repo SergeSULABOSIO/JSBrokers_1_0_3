@@ -7039,7 +7039,7 @@ class Constante
                         "code" => "pourcentagePaye",
                         "intitule" => "Pourcentage Payé",
                         "type" => "Calcul",
-                        "unite" => "%",
+                        "unite" => "",
                         "format" => "Texte",
                         "fonction" => "Offre_Indemnisation_getPourcentagePaye",
                         "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
