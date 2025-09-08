@@ -129,34 +129,7 @@ class NotificationSinistreController extends AbstractController
         ]);
     }
 
-
-
-    // public function loadCalculatedValue($entityCanvas, $data, Constante $constante)
-    // {
-    //     foreach ($data as $entity) {
-    //         foreach ($entityCanvas['liste'] as $field) {
-    //             if ($field['type'] === 'Calcul') {
-    //                 $functionName = $field['fonction'];
-    //                 $args = [];
-    //                 if (!empty($field['params'])) {
-    //                     $paramNames = $field['params'];
-    //                     $args = array_map(function ($paramName) use ($entity) {
-    //                         $getter = 'get' . ucfirst($paramName);
-    //                         return method_exists($entity, $getter) ? $entity->$getter() : null;
-    //                     }, $paramNames);
-    //                 } else {
-    //                     $args[] = $entity;
-    //                 }
-    //                 if (method_exists($constante, $functionName)) {
-    //                     $calculatedValue = $constante->$functionName(...$args);
-    //                     $entity->{$field['code']} = $calculatedValue;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-
+    
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
     {

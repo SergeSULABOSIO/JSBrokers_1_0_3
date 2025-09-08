@@ -69,6 +69,9 @@ class OffreIndemnisationSinistre
     #[Groups(['list:read'])]
     public ?int $compensationAVersee;
 
+    #[Groups(['list:read'])]
+    public ?string $indiceComplpourcentagePayeetude;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();

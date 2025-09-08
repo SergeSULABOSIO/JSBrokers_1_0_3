@@ -771,3 +771,28 @@ textarea:hover,
     font-weight: bold;
     color: #ffffff; /* Blanc pour la valeur */
 }
+
+/* Fichier : assets/styles/app.css (ou un fichier importé) */
+
+/* Styles pour l'infobulle (tooltip) */
+.canvas-tooltip {
+    position: absolute;
+    background-color: #0d6efd; /* Couleur à adapter */
+    color: white;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-width: 250px;
+    z-index: 1090; /* Au-dessus de tout */
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-tooltip.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
