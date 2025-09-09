@@ -94,7 +94,8 @@
                     {% for rubrique_name, rubrique_data in group_data.rubriques %}
                         <div class="rubrique-item"
                             data-action="click->espace-de-travail#loadComponent"
-                            data-espace-de-travail-component-name-param="{{ rubrique_data.composant_twig }}"
+                            data-espace-de-travail-component-name-param="{{ rubrique_data.composant_twig }}" 
+                            data-espace-de-travail-group-name-param="{{ group_name }}" 
                             data-espace-de-travail-description-param="" {# Les rubriques n'ont pas de description à afficher #}
                         >
                             <twig:ux:icon name="{{ rubrique_data.icone }}" class="rubrique-icon" />

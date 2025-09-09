@@ -72,9 +72,13 @@ html {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 15px;
+  padding: 15px 15px 15px 12px; /* Padding gauche ajusté pour la nouvelle bordure */
   cursor: pointer;
   text-align: center;
+
+  /* --- AJOUT 1/3 : Style par défaut pour la bordure --- */
+  border-left: 8px solid transparent; /* Bordure transparente par défaut */
+  transition: border-color 0.2s ease-in-out; /* Transition douce pour la couleur de la bordure */
 }
 
 .nav-icon {
@@ -91,15 +95,27 @@ html {
 
 .nav-item:hover .nav-icon,
 .nav-item:hover .nav-text {
-  color: #fafafa; /* [cite_start] [cite: 194] */
-  font-weight: bold; /* [cite_start][cite: 196] */
+  color: #fafafa;
+  font-weight: bold;
+}
+
+/* --- AJOUT 2/3 : Style pour la bordure au survol --- */
+.nav-item:hover {
+  border-left-color: #D1D5DB; /* Gris clair */
 }
 
 .nav-item.active .nav-icon,
 .nav-item.active .nav-text {
-  color: white; /* [cite_start] [cite: 195] */
-  font-weight: bold; /* [cite_start] [cite: 196] */
+  color: white;
+  font-weight: bold;
 }
+
+/* --- AJOUT 3/3 : Style pour la bordure et le soulignement à la sélection --- */
+.nav-item.active {
+  border-left-color: white; /* Bordure blanche */
+  /* text-decoration: underline; Texte souligné */
+}
+
 
 /* Colonne 2 : Info & Rubriques */
 .menu-col-2 {
