@@ -8,7 +8,6 @@ export default class extends Controller {
         "workspace",
         "rubriquesTemplate",
         "dashboardItem",
-        // Nouveaux targets pour le panneau à onglets
         "visualizationColumn",
         "tabContainer",
         "tabContentContainer",
@@ -23,19 +22,85 @@ export default class extends Controller {
 
     connect() {
         this.nomControleur = "Espace de travail";
-        // Logique à exécuter lorsque le contrôleur est attaché au DOM
-        // 2. Vérifiez si la cible existe et simulez un clic dessus
-        // Ceci va automatiquement déclencher votre méthode loadComponent
+        this.restoreLastState(); // NOUVELLE MÉTHODE POUR LA RESTAURATION
+
+
+        // const lastActiveComponent = sessionStorage.getItem('lastActiveComponent');
+        // if (lastActiveComponent) {
+        //     const lastActiveElement = this.element.querySelector(`[data-espace-de-travail-component-name-param='${lastActiveComponent}']`);
+        //     if (lastActiveElement) {
+        //         lastActiveElement.click();
+        //     } else {
+        //         this.loadDefaultComponent();
+        //     }
+        // } else {
+        //     this.loadDefaultComponent();
+        // }
+
+
+        this.boundOpenTab = this.openTab.bind(this);
+        document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
+        this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
+    }
+
+    /**
+     * NOUVEAU : Restaure le dernier état de la page.
+     */
+    restoreLastState() {
+        const savedStateJSON = sessionStorage.getItem('lastActiveState');
+        if (!savedStateJSON) {
+            this.loadDefaultComponent();
+            return;
+        }
+
+        const savedState = JSON.parse(savedStateJSON);
+
+        // Cas 1 : C'est une rubrique (elle a un groupe parent)
+        if (savedState.group) {
+            const groupElement = this.element.querySelector(`[data-espace-de-travail-group-name-param='${savedState.group}']`);
+            if (groupElement) {
+                // On clique d'abord sur le groupe pour afficher les rubriques
+                groupElement.click();
+
+                // Ensuite, on cherche et clique sur la rubrique elle-même (qui est maintenant visible)
+                // requestAnimationFrame s'assure que le DOM a eu le temps de se mettre à jour
+                requestAnimationFrame(() => {
+                    const rubriqueElement = this.contentZoneTarget.querySelector(`[data-espace-de-travail-component-name-param='${savedState.component}']`);
+                    if (rubriqueElement) {
+                        rubriqueElement.click();
+                    } else {
+                        this.loadDefaultComponent(); // Sécurité si la rubrique n'est pas trouvée
+                    }
+                });
+            } else {
+                this.loadDefaultComponent(); // Sécurité si le groupe n'est pas trouvé
+            }
+        }
+        // Cas 2 : C'est un élément principal (Tableau de bord, Paramètres)
+        else if (savedState.component) {
+            const elementToClick = this.element.querySelector(`[data-espace-de-travail-component-name-param='${savedState.component}']`);
+            if (elementToClick) {
+                elementToClick.click();
+            } else {
+                this.loadDefaultComponent();
+            }
+        }
+        // Cas par défaut
+        else {
+            this.loadDefaultComponent();
+        }
+    }
+
+
+
+    /**
+     * NOUVEAU: Méthode pour charger le tableau de bord par défaut
+     * afin d'éviter la répétition du code.
+     */
+    loadDefaultComponent() {
         if (this.hasDashboardItemTarget) {
             this.dashboardItemTarget.click();
         }
-
-        this.boundOpenTab = this.openTab.bind(this);
-        // [MODIFICATION 4] Ajouter l'écouteur d'événement pour l'ouverture des entités [cite: 7, 23, 745]
-        document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
-
-        // Initialiser un contrôleur pour l'accordéon
-        this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
     disconnect() {
@@ -225,13 +290,6 @@ export default class extends Controller {
             case 'Relation':
                 const relatedEntity = entity[attribute.code];
                 if (relatedEntity && relatedEntity.id) {
-                    // const link = document.createElement('a');
-                    // link.href = "#";
-                    // link.textContent = relatedEntity[attribute.displayField];
-                    // link.dataset.action = "click->espace-de-travail#openRelatedEntity";
-                    // link.dataset.entityId = relatedEntity.id;
-                    // link.dataset.entityType = attribute.targetEntity;
-                    // content.appendChild(link);
                     const link = document.createElement('a');
                     link.href = "#";
 
@@ -248,27 +306,6 @@ export default class extends Controller {
                 break;
 
             case 'Collection':
-                // const collection = entity[attribute.code]; // Récupère le tableau d'objets
-                // if (collection && collection.length > 0) {
-                //     const ul = document.createElement('ol');
-                //     ul.className = 'accordion-collection-list'; // Pour un style propre
-
-                //     collection.forEach(item => {
-                //         const li = document.createElement('li');
-                //         const link = document.createElement('a');
-                //         link.href = "#";
-                //         link.textContent = item[attribute.displayField]; // Affiche le champ de l'item
-                //         link.dataset.action = "click->espace-de-travail#openRelatedEntity";
-                //         link.dataset.entityId = item.id;
-                //         link.dataset.entityType = attribute.targetEntity;
-
-                //         li.appendChild(link);
-                //         ul.appendChild(li);
-                //     });
-                //     content.appendChild(ul);
-                // } else {
-                //     content.innerHTML = 'Aucun élément.';
-                // }
                 const collection = entity[attribute.code];
                 if (collection && collection.length > 0) {
                     const ol = document.createElement('ol');
@@ -405,26 +442,6 @@ export default class extends Controller {
      */
     closeTab(event) {
         event.stopPropagation(); // Empêche l'événement de "bubbler" vers activateTab
-
-        // const tabToClose = event.currentTarget.closest('.tab-item');
-        // const contentToClose = this.tabContentContainerTarget.querySelector(`#${tabToClose.dataset.tabContentId}`);
-
-        // // Supprimer l'onglet et son contenu du DOM
-        // if (tabToClose) tabToClose.remove();
-        // if (contentToClose) contentToClose.remove();
-
-        // // S'il ne reste plus d'onglets, cacher la colonne de visualisation [cite: 26, 31]
-        // if (this.tabContainerTarget.children.length === 0) {
-        //     this.element.classList.remove('visualization-visible');
-        //     this.visualizationColumnTarget.style.display = 'none';
-        // } else {
-        //     // Activer le premier onglet restant s'il y en a un
-        //     const firstTab = this.tabContainerTarget.querySelector('.tab-item');
-        //     if (firstTab) {
-        //         this.activateTab({ currentTarget: firstTab });
-        //     }
-        // }
-
         let tabToClose;
         let contentToClose;
 
@@ -586,24 +603,21 @@ export default class extends Controller {
     }
 
     /**
-     * [cite_start]Charge un composant Twig dans l'espace de travail. [cite: 233]
+     * Charge un composant Twig dans l'espace de travail.
      * @param {MouseEvent} event
      */
     async loadComponent(event) {
         event.preventDefault();
 
-        // 1. Sauvegarder l'élément cliqué immédiatement dans une variable.
         const clickedElement = event.currentTarget;
         const componentName = clickedElement.dataset.espaceDeTravailComponentNameParam;
         const description = clickedElement.dataset.espaceDeTravailDescriptionParam;
 
         if (!componentName) return;
-        // On utilise la même classe CSS ici aussi
         if (description) {
             this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
         }
 
-        // 1. Dispatcher l'événement de début de chargement et afficher la barre de progression [cite: 243, 246, 235]
         this.dispatchRequestEvent(clickedElement.dataset);
         this.progressBarTarget.style.display = 'block';
 
@@ -616,11 +630,17 @@ export default class extends Controller {
                 throw new Error(`Erreur du serveur: ${response.statusText}`);
             }
             const html = await response.text();
-            // 2. Charger le contenu dans l'espace de travail [cite: 228]
             this.workspaceTarget.innerHTML = html;
-            // 2. Utiliser la variable sauvegardée au lieu de event.currentTarget.
+
+            if (componentName) {
+                const stateToSave = {
+                    component: componentName,
+                    group: clickedElement.dataset.espaceDeTravailGroupNameParam || null
+                };
+                sessionStorage.setItem('lastActiveState', JSON.stringify(stateToSave));
+            }
+
             this.updateActiveState(clickedElement);
-            // 3. Dispatcher l'événement de fin de chargement et cacher la barre de progression [cite: 247, 248, 236]
             this.dispatchOpenedEvent();
 
         } catch (error) {
