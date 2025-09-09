@@ -193,23 +193,16 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     openTab(event) {
-        // Get both the entity and its canvas from the event detail
         const { entity, entityType, entityCanvas } = event.detail;
-        // --- Validation améliorée ---
-        // 1. Valider l'entité
         if (!entity || typeof entity !== 'object' || typeof entity.id === 'undefined' || entity.id === null) {
             console.error("Validation échouée : l'objet 'entity' est invalide ou ne contient pas d'ID.", event.detail);
             return;
         }
-
-        // --- MODIFICATION 1 : Valider la nouvelle structure de entityCanvas ---
         if (!entityCanvas || typeof entityCanvas.parametres !== 'object' || !Array.isArray(entityCanvas.liste)) {
             console.error("Validation échouée : 'entityCanvas' n'a pas la bonne structure ({paramètres:{...}, liste:[...]}).", event.detail);
             return;
         }
-
         const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
-
         if (existingTab) {
             this.activateTab({ currentTarget: existingTab });
         } else {
@@ -233,15 +226,12 @@ export default class extends Controller {
         tabElement.dataset.entityId = entity.id;
         tabElement.dataset.entityType = entityType;
         tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
-
         // --- NOUVELLE LOGIQUE D'ICÔNE PAR CLONAGE ---
         const params = entityCanvas.parametres;
         tabElement.title = params.description;
-
         // --- Création du contenu de l'onglet (accordéon) ---
         const contentElement = this.tabContentTemplateTarget.content.cloneNode(true).firstElementChild;
         const accordionContainer = contentElement.querySelector('.accordion');
-
         // --- MODIFICATION 3 : Utiliser entityCanvas.liste pour l'accordéon ---
         const accordionList = entityCanvas.liste; // 
         if (accordionList.length > 0) {
@@ -252,7 +242,6 @@ export default class extends Controller {
         } else {
             accordionContainer.innerHTML = `<div class="p-4 text-muted">Aucun champ à afficher pour cet objet.</div>`;
         }
-
         // Lier le contenu à l'onglet via un ID unique
         const tabId = `tab-content-${entityType}-${entity.id}`;
         contentElement.id = tabId;
@@ -276,7 +265,6 @@ export default class extends Controller {
      * @returns {HTMLElement} L'élément DOM de l'item d'accordéon.
      */
     createAccordionItem(attribute, entity) {
-        // AJOUTEZ CETTE LIGNE POUR LE DÉBOGAGE
         console.log(this.nomControleur + " - Données de l'attribut:", attribute);
 
         const item = document.createElement('div');
@@ -664,8 +652,6 @@ export default class extends Controller {
      * @param {HTMLElement} currentElement L'élément qui vient d'être cliqué.
      */
     updateActiveState(currentElement) {
-        // console.log(this.nomControleur + " - updateActiveState:", currentElement);
-        // Gérer les éléments de la colonne 1
         if (currentElement.closest('.menu-col-1')) {
             if (this.activeNavItem) {
                 this.activeNavItem.classList.remove('active');
@@ -701,9 +687,6 @@ export default class extends Controller {
         });
     }
 
-    /**
-     * [cite_start]Dispatch un CustomEvent pour annoncer la fin du chargement. [cite: 247]
-     */
     dispatchOpenedEvent() {
         const event = new CustomEvent(EVEN_NAVIGATION_RUBRIQUE_OPENNED, { bubbles: true });
         document.dispatchEvent(event);
