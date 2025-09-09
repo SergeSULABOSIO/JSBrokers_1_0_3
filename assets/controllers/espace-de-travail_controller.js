@@ -276,6 +276,9 @@ export default class extends Controller {
      * @returns {HTMLElement} L'élément DOM de l'item d'accordéon.
      */
     createAccordionItem(attribute, entity) {
+        // AJOUTEZ CETTE LIGNE POUR LE DÉBOGAGE
+        console.log(this.nomControleur + " - Données de l'attribut:", attribute);
+
         const item = document.createElement('div');
         item.className = 'accordion-item';
         const title = document.createElement('div');
@@ -285,6 +288,8 @@ export default class extends Controller {
 
         const content = document.createElement('div');
         content.className = 'accordion-content open';
+
+        let contentValueElement; // NOUVEAU : Element qui va contenir la valeur et sur lequel on attachera le tooltip
 
         switch (attribute.type) {
             case 'Relation':
@@ -300,6 +305,7 @@ export default class extends Controller {
                     link.dataset.entityId = relatedEntity.id;
                     link.dataset.entityType = attribute.targetEntity;
                     content.appendChild(link);
+                    contentValueElement = link; // NOUVEAU : Attacher le tooltip au lien
                 } else {
                     content.innerHTML = 'N/A';
                 }
@@ -335,15 +341,12 @@ export default class extends Controller {
                 break;
 
             case 'Calcul':
-                // Pour un calcul, la valeur est déjà dans 'entity'. On la formate simplement.
                 const calculatedValue = entity[attribute.code];
                 const formatAs = attribute.format || 'Texte'; // Lit le format désiré
-                // --- NOUVELLE LOGIQUE POUR LE FORMAT ArrayAssoc ---
                 if (formatAs === 'ArrayAssoc' && typeof calculatedValue === 'object' && calculatedValue !== null) {
                     const list = document.createElement('ul');
                     list.className = 'accordion-key-value-list';
 
-                    // On boucle sur les paires clé-valeur de l'objet
                     for (const [key, value] of Object.entries(calculatedValue)) {
                         const item = document.createElement('li');
 
@@ -356,17 +359,27 @@ export default class extends Controller {
                         list.appendChild(item);
                     }
                     content.appendChild(list);
-
+                    contentValueElement = list; // NOUVEAU : Attacher le tooltip à la liste complète
                 } else {
-                    // Comportement par défaut pour les autres formats ('Nombre', 'Date', 'Texte')
                     content.innerHTML = this.formatValue(calculatedValue, formatAs, attribute.unite);
+                    contentValueElement = content; // NOUVEAU : Attacher le tooltip au conteneur de valeur
                 }
                 break;
 
             default: // Gère 'Nombre', 'Date', 'Texte'
                 const rawValue = entity[attribute.code];
                 content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite);
+                contentValueElement = content; // NOUVEAU : Attacher le tooltip au conteneur de valeur
                 break;
+        }
+
+        // NOUVEAU : Ajout conditionnel des attributs pour le TooltipManager
+        if (attribute.description && contentValueElement) {
+            // contentValueElement peut être l'élément 'content' lui-même, un 'a', ou un 'ul'
+            contentValueElement.dataset.controller = "tooltip-manager";
+            contentValueElement.dataset.tooltipContent = attribute.description;
+            // Optionnel: vous pouvez ajouter une classe pour indiquer que l'élément a un tooltip
+            contentValueElement.classList.add('has-tooltip');
         }
 
         item.appendChild(title);
@@ -497,22 +510,18 @@ export default class extends Controller {
      * Formate une valeur en fonction de son type.
      */
     formatValue(value, type, unit = '') {
-        // Gère les cas où la valeur est inexistante
         if (value === null || typeof value === 'undefined') {
             return 'N/A';
         }
 
         let formattedValue;
 
-        // 1. D'abord, on formate la valeur principale en fonction de son type
         switch (type) {
-            // --- AJOUT DU NOUVEAU TYPE ---
             case 'Entier':
                 formattedValue = new Intl.NumberFormat('fr-FR', {
                     maximumFractionDigits: 0 // La clé est ici : pas de décimales
                 }).format(value);
                 break;
-            // --- FIN DE L'AJOUT ---
 
             case 'Nombre':
                 formattedValue = new Intl.NumberFormat('fr-FR', {
@@ -532,7 +541,6 @@ export default class extends Controller {
                 break;
         }
 
-        // 2. Ensuite, on ajoute l'unité comme préfixe si elle est définie
         if (unit) {
             return `${unit} ${formattedValue}`;
         }

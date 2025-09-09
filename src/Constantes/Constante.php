@@ -6821,7 +6821,7 @@ class Constante
                         "code" => "indiceCompletude",
                         "intitule" => "Complétude Pièces",
                         "type" => "Calcul",
-                        "unite" => "%",
+                        "unite" => "",
                         "format" => "Texte",
                         "fonction" => "Notification_Sinistre_getIndiceCompletude",
                         "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
@@ -6830,7 +6830,7 @@ class Constante
                         "code" => "dureeReglement",
                         "intitule" => "Vitesse de règlement",
                         "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => "Jours",
+                        "unite" => "",
                         "format" => "Texte",
                         "fonction" => "Notification_Sinistre_getDureeReglement",
                         "description" => "⏱️ Durée totale en jours entre la notification du sinistre et le dernier paiement de règlement." // MODIFICATION: Ajout
