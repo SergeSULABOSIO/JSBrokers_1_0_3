@@ -49,22 +49,16 @@ export default class extends Controller {
      * Gère la sélection depuis la liste principale pour créer les onglets.
      */
     handleSelection(event) {
-        // const { entities, canvas } = event.detail;
+        const { entities, canvas, entityType } = event.detail;
         if (this.activeTabId !== 'principal') return;
 
         this._saveTabState('principal', entities);
         this._removeCollectionTabs();
 
         // --- CORRECTION : On récupère entityType directement depuis les détails de l'événement ---
-        const { entities, canvas, entityType } = event.detail;
-
         if (entities && entities.length === 1) {
             const collections = this._findCollectionsInCanvas(canvas);
-            // --- CORRECTION : On passe entityType à la fonction de création ---
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
-            // collections.forEach(collectionInfo => {
-            //     this._createTab(collectionInfo, entities[0]);
-            // });
         }
     }
 
