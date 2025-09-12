@@ -6661,6 +6661,7 @@ class Constante
             return [
                 "parametres" => [
                     "description" => "Notification Sinistre",
+                    'icone' => 'emojione-monotone:fire',
                 ],
                 "liste" => [
                     [
