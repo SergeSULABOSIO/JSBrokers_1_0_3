@@ -828,14 +828,14 @@ textarea:hover,
     cursor: pointer;
     background-color: transparent;
     border: none;
-    border-bottom: 5px solid transparent;
+    border-bottom: 6px solid transparent;
     color: #6c757d;
     font-weight: 500;
     transition: all 0.2s ease-in-out;
 }
 
 .list-tab:hover {
-    border-bottom-color: #e9ecef;
+    border-bottom-color: #c6c6c8;
     color: #000;
 }
 
