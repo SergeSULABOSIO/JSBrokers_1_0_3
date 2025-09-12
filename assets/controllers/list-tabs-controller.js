@@ -1,5 +1,6 @@
 // assets/controllers/list-tabs-controller.js
 import { Controller } from '@hotwired/stimulus';
+import { EVEN_CHECKBOX_PUBLISH_SELECTION } from './base_controller.js';
 
 // Événement pour notifier les barres d'outils du changement de contexte
 const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
@@ -21,7 +22,7 @@ export default class extends Controller {
 
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
-        document.addEventListener('checkbox:selection-published', this.boundHandleSelection);
+        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify); // <-- NOUVEL ÉCOUTEUR
 
         // Contexte initial pour les barres d'outils
@@ -29,7 +30,7 @@ export default class extends Controller {
     }
 
     disconnect() {
-        document.removeEventListener('checkbox:selection-published', this.boundHandleSelection);
+        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.removeEventListener('list-status:notify', this.boundHandleStatusNotify); // <-- Nettoyage
     }
 
