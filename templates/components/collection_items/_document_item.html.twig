@@ -4,7 +4,8 @@
     data-action="
         mouseenter->collection-manager#showItemActions 
         mouseleave->collection-manager#hideItemActions 
-        click->collection-manager#selectItem
+        click->collection-manager#selectItem 
+        contextmenu->collection-manager#handleContextMenu {# <-- AJOUTEZ CETTE LIGNE #}
     "
     data-id="{{ item.id }}"
 >

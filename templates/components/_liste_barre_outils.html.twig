@@ -1,99 +1,44 @@
+{# templates/components/_liste_barre_outils.html.twig #}
 <div 
-  id = "barre-outils" 
-  data-controller="barre-outils" 
-  class="btn-toolbar shadow-bottom p-2" 
-  role="toolbar" 
-  aria-label="Toolbar with button groups"
+  class="context-toolbar" 
+  role="toolbar"
+  data-controller="barre-outils"
 >
-  <div class="btn-group me-2 border-end" role="group" aria-label="Second group">
-    <button 
-      data-barre-outils-target="btquitter" 
-      data-action="barre-outils#action_quitte" 
-      type="button" 
-      class="btn btn-outline-danger btn-sm border-0" 
-      style="display:block" 
-      data-bs-toggle="tooltip" data-bs-title="Quitter cet espace de travail"
-    >
-      {{ include('segments/icones/actions/exit.html.twig', {size:'22px'}) }}
+    {# Bouton QUITTER - Reste statique, pas besoin de target #}
+    <button data-action="barre-outils#action_quitte" class="btn btn-sm btn-icon-danger" title="Quitter">
+        <twig:UX:Icon name="lucide:x-circle" />
     </button>
-    <button 
-      data-barre-outils-target="btparametres" 
-      data-action="barre-outils#action_parametrer" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0" 
-      style="display:block" 
-      data-bs-toggle="tooltip" data-bs-title="Paramètres"
-    >
-      {{ include('segments/icones/actions/settings.html.twig', {size:'22px'}) }}
+    
+    <div class="toolbar-separator"></div>
+
+    {# Boutons d'action sur la liste #}
+    <button data-action="barre-outils#action_ajouter" data-barre-outils-target="btajouter" class="btn btn-sm" title="Ajouter">
+        <twig:UX:Icon name="lucide:plus-circle" />
     </button>
-  </div>
-  <div class="btn-group me-2 border-end" role="group" aria-label="First group">
-    {# Ajout #}
-    <button 
-      data-barre-outils-target="btajouter" 
-      data-action="barre-outils#action_ajouter" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
-      style="display:none" 
-      data-bs-toggle="tooltip" data-bs-title="Ajouter"
-    >
-      {{ include('segments/icones/actions/add.html.twig', {size:'22px'}) }}
-      Nouveau
+    <button data-action="barre-outils#action_modifier" data-barre-outils-target="btmodifier" class="btn btn-sm" title="Modifier" style="display:none;">
+        <twig:UX:Icon name="lucide:edit" />
     </button>
-    {# Tout Cocher #}
-    <button 
-      data-barre-outils-target="bttoutcocher" 
-      data-action="barre-outils#action_tout_cocher" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
-      style="display:none" 
-      data-bs-toggle="tooltip" data-bs-title="Tout Cocher"
-    >
-      {{ include('segments/icones/actions/check.html.twig', {size:'22px'}) }}
+    <button data-action="barre-outils#action_supprimer" data-barre-outils-target="btsupprimer" class="btn btn-sm btn-icon-danger" title="Supprimer" style="display:none;">
+        <twig:UX:Icon name="lucide:trash-2" />
     </button>
-    {# Ouvrir #}
-    <button 
-      data-barre-outils-target="btouvrir" 
-      data-action="barre-outils#action_ouvrir" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
-      style="display:none" 
-      data-bs-toggle="tooltip" data-bs-title="Ouvrir"
-    >
-      {{ include('segments/icones/actions/open.html.twig', {size:'22px'}) }}
+    
+    <div class="toolbar-separator"></div>
+
+    {# Boutons de sélection et de vue #}
+    <button data-action="barre-outils#action_tout_cocher" data-barre-outils-target="bttoutcocher" class="btn btn-sm" title="Sélectionner tout">
+        <twig:UX:Icon name="lucide:check-square" />
     </button>
-    {# Actualiser #}
-    <button 
-      data-barre-outils-target="btrecharger" 
-      data-action="barre-outils#action_recharger" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0 fw-bold" 
-      style="display:none" 
-      data-bs-toggle="tooltip" data-bs-title="Recharger"
-    >
-      {{ include('segments/icones/actions/reload.html.twig', {size:'22px'}) }}
+    <button data-action="barre-outils#action_ouvrir" data-barre-outils-target="btouvrir" class="btn btn-sm" title="Ouvrir la vue détaillée" style="display:none;">
+        <twig:UX:Icon name="lucide:external-link" />
     </button>
-    {# Edition #}
-    <button 
-      data-barre-outils-target="btmodifier" 
-      data-action="barre-outils#action_modifier" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0" 
-      style="display:none" 
-      data-bs-toggle="tooltip" data-bs-title="Modifier"
-    >
-      {{ include('segments/icones/actions/edit.html.twig', {size:'22px'}) }}
+    <button data-action="barre-outils#action_recharger" data-barre-outils-target="btrecharger" class="btn btn-sm" title="Actualiser">
+        <twig:UX:Icon name="lucide:refresh-cw" />
     </button>
-    {# Suppression #}
-    <button 
-      data-barre-outils-target="btsupprimer" 
-      data-action="barre-outils#action_supprimer" 
-      type="button" 
-      class="btn btn-outline-secondary btn-sm border-0" 
-      style="display:none" 
-      data-bs-toggle="tooltip" data-bs-title="Supprimer"
-    >
-      {{ include('segments/icones/actions/delete.html.twig', {size:'22px'}) }}
+    
+    <div class="toolbar-separator"></div>
+
+    {# Bouton PARAMÈTRES - Reste statique #}
+    <button data-action="barre-outils#action_parametrer" data-barre-outils-target="btparametres" class="btn btn-sm" title="Paramètres">
+        <twig:UX:Icon name="lucide:settings" />
     </button>
-  </div>
 </div>

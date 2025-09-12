@@ -796,3 +796,109 @@ textarea:hover,
     opacity: 1;
     transform: translateX(0);
 }
+
+/* ================================================================== */
+/* SECTION : NOUVELLE INTERFACE À ONGLETS                             */
+/* ================================================================== */
+
+/* Structure de la page et header fixe */
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.rubrique-title {
+    font-weight: bold;
+    color: #000;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+/* Barre d'onglets */
+.list-tabs-container {
+    display: flex;
+    border-bottom: 1px solid #dee2e6;
+    margin-top: 5px;
+}
+
+.list-tab {
+    padding: 8px 16px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    border-bottom: 5px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.list-tab:hover {
+    border-bottom-color: #e9ecef;
+    color: #000;
+}
+
+.list-tab.active {
+    font-weight: bold;
+    color: #212529;
+    border-bottom-color: #000;
+}
+
+/* ================================================================== */
+/* SECTION : NOUVEAU STYLE DE LA BARRE D'OUTILS                       */
+/* ================================================================== */
+
+.context-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #F0F0F0;
+    border-radius: 25px;
+    padding: 4px 8px;
+    width: fit-content;
+}
+
+.context-toolbar .btn {
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background-color: transparent;
+    color: #495057;
+}
+
+.context-toolbar .btn:hover { background-color: rgba(0,0,0,0.05); }
+.context-toolbar .btn:disabled { color: #adb5bd; }
+.context-toolbar .btn.btn-icon-danger { color: #dc3545; }
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background-color: #ced4da;
+    margin: 0 8px;
+}
+
+/* ================================================================== */
+/* SECTION : ADAPTATION DU MENU CONTEXTUEL (MODE SOMBRE)              */
+/* ================================================================== */
+/* On surcharge les styles existants de votre fichier interactive-menu.css */
+.context-menu {
+    background-color: #212529 !important; /* Fond sombre */
+    color: #f8f9fa !important; /* Texte clair */
+    border: 1px solid #495057 !important; /* Bordure grise foncée */
+}
+
+.context-menu ul li {
+    color: #f8f9fa !important;
+}
+
+.context-menu ul li:hover {
+    background-color: #495057 !important; /* Fond de survol plus clair */
+}
+
+.context-menu ul li.separator {
+    border-top: 1px solid #495057 !important;
+}
