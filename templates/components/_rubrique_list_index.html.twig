@@ -1,114 +1,124 @@
+{# templates/components/_rubrique_list_index.html.twig #}
 <div 
-    data-controller = "rubrique" 
-    data-rubrique-nom-value={{rubrique_nom}}
     class="d-flex flex-column h-100"
+    data-controller="list-tabs"
+    data-list-tabs-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}'
 >
-    <div 
-        id = "liste" 
-        class="flex-grow-1 d-flex flex-column" 
-        data-controller="dialogue liste-principale" 
-        data-liste-principale-identreprise-value={{entreprise.id}} 
-        data-liste-principale-idutilisateur-value={{utilisateur.id}} 
-        data-liste-principale-nbelements-value={{data|length}} 
-        data-liste-principale-rubrique-value={{rubrique_nom}} 
-        data-liste-principale-entite-value={{entite_nom}} 
-        data-liste-principale-controleurphp-value={{racine_url_controleur_php_nom}} 
-        data-liste-principale-controleurstimulus-value={{controleur_stimulus_nom}} 
-        data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
-    >
-        {# Ce conteneur va aussi utiliser flexbox et cacher tout débordement #}
-        <div class="shadow-sm sensible bg-white d-flex flex-column flex-grow-1" style="overflow: hidden;">
-            {# Les barres d'outils ne grandissent pas #}
-            <div class="flex-shrink-0">
-                {# Barre d'outils #} 
-                {{ include("components/_liste_barre_outils.html.twig") }}
-                {# Barre de Recherche #}
-                {{ component('_search_bar') }}
-                {# Barre des totaux #}
-                {{ include('components/_totals_bar.html.twig') }}
+    {# ================================================================== #}
+    {# SECTION 1 : PANNEAU SUPÉRIEUR FIXE (HEADER & OUTILS)             #}
+    {# ================================================================== #}
+    <div class="sticky-header bg-white shadow-sm">
+        {# --- Ligne 1 : Titre et Onglets --- #}
+        <div class="d-flex align-items-center p-2 border-bottom">
+            {# Colonne 1: Icône de la rubrique #}
+            <div class="me-3">
+                <twig:UX:Icon 
+                    name="{{ entityCanvas.parametres.icone | default('lucide:file-text') }}" 
+                    style="width: 40px; height: 40px; color: #343a40;"
+                    data-list-tabs-target="rubriqueIcon"
+                />
             </div>
 
-            {# NOUVEAU : Un wrapper pour le tableau qui gère le défilement #}
-            <div class="table-scroll-wrapper flex-grow-1">
-                {# Tableau #}
-                <table class="table table-hover table-sm caption-top p-3 table-enhanced">
-                    <caption>
-                        <span data-liste-principale-target = "display">
-                            {% if data|length == 0 %}
-                                {{ "list_filter_result_empty" | trans}}
-                            {% else %}
-                                {{ "list_filter_result_elements" | trans({
-                                    ':number': data|length
-                                })}}
-                            {% endif %}
-                        </span>
-                        <div class="d-flex gap-1">
-                            {{ knp_pagination_render(data) }}
-                        </div>
-                    </caption>
-                    {% if data|length != 0 %}
-                        {# MODIFICATION : On ajoute une classe pour rendre l'en-tête collant #}
-                        <thead class="table-light sticky-header">
-                            <tr class="text-center">
-                                {# ============================================================ #}
-                                {# DÉBUT MODIFICATION : EN-TÊTES DE COLONNES DYNAMIQUES        #}
-                                {# ============================================================ #}
+            {# Colonne 2: Titre et Barre d'onglets #}
+            <div class="flex-grow-1">
+                <div class="rubrique-title" data-list-tabs-target="rubriqueName">{{ rubrique_nom }}</div>
+                <div class="list-tabs-container" data-list-tabs-target="tabsContainer">
+                    <button class="list-tab active" data-tab-id="principal" data-action="click->list-tabs#switchTab">
+                        Principal
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                                {# Colonne 1 : Statique pour la case à cocher et l'ID #}
-                                <th scope="col" style="width: 80px;">
-                                    <div class="form-check m-2 justify-content-start">
-                                        <input 
-                                            class="form-check-input" 
-                                            value="" 
-                                            type="checkbox" 
-                                            id="myCheckbox" 
-                                            data-action="change->liste-principale#handleItemToutCocher" 
-                                            data-liste-principale-target="selectAllCheckbox"
-                                        >
-                                        <label 
-                                            for="myCheckbox"
-                                            class="text-secondary" 
-                                        >
-                                            Id.  
-                                        </label>
-                                    </div>
-                                </th>
-                                
-                                {# Colonne 2 : Titre de la colonne principale depuis ListeCanvas #}
-                                {% if listeCanvas.colonne_principale is defined %}
-                                    <th scope="col">
-                                        <div class='d-flex justify-content-start text-secondary m-2'>
-                                            {{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}
+        {# --- Ligne 2 : Barre d'Outils Contextuelle --- #}
+        <div class="p-2">
+             {{ include("components/_liste_barre_outils.html.twig") }}
+        </div>
+        {# --- Ligne 3 : Barre de Recherche Contextuelle --- #}
+        <div class="p-2 pt-0">
+             {{ component('_search_bar') }}
+        </div>
+        {# --- Ligne 4 : Barre des Totaux Contextuelle --- #}
+        <div class="p-2 pt-0">
+            {{ include('components/_totals_bar.html.twig') }}
+        </div>
+        {# --- Ligne 5 : Barre de Résultats/État --- #}
+        <div class="p-2 small text-muted border-top" data-liste-principale-target="display">
+            Prêt.
+        </div>
+    </div>
+
+    {# ================================================================== #}
+    {# SECTION 2 : ZONE DE CONTENU DYNAMIQUE (LISTES)                   #}
+    {# ================================================================== #}
+    <div class="flex-grow-1" style="overflow-y: auto;" data-list-tabs-target="tabContentContainer">
+        {# Contenu de l'onglet Principal #}
+        <div data-content-id="principal" data-entity-name="{{ entite_nom }}" data-can-add="true">
+            <div 
+                id="main-list-controller"
+                data-controller="dialogue liste-principale" 
+                data-liste-principale-nbelements-value="{{data|length}}" 
+                data-liste-principale-entite-value="{{entite_nom}}" 
+                data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}'
+            >
+                <div class="table-scroll-wrapper flex-grow-1">
+                    <table class="table table-hover table-sm table-enhanced">
+                        {% if data|length != 0 %}
+                            <thead class="table-light sticky-header">
+                                <tr class="text-center">
+                                     <th scope="col" style="width: 80px;">
+                                        <div class="form-check m-2 justify-content-start">
+                                            <input 
+                                                class="form-check-input" 
+                                                value="" 
+                                                type="checkbox" 
+                                                id="myCheckbox" 
+                                                data-action="change->liste-principale#handleItemToutCocher" 
+                                                data-liste-principale-target="selectAllCheckbox"
+                                            >
+                                            <label 
+                                                for="myCheckbox"
+                                                class="text-secondary" 
+                                            >
+                                                Id.
+                                            </label>
                                         </div>
                                     </th>
-                                {% endif %}
-
-                                {# Colonnes suivantes : Titres des colonnes numériques depuis ListeCanvas #}
-                                {% if listeCanvas.colonnes_numeriques is defined %}
-                                    {% for colonne in listeCanvas.colonnes_numeriques %}
-                                        <th scope="col" style="width:150px"> {# Largeur fixe pour l'alignement #}
+                                    {% if listeCanvas.colonne_principale is defined %}
+                                        <th scope="col">
+                                            <div class='d-flex justify-content-start text-secondary m-2'>
+                                                {{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}
+                                            </div>
+                                        </th>
+                                    {% endif %}
+                                    {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
+                                        <th scope="col" style="width:150px">
                                             <div class='d-flex justify-content-end text-secondary m-2'>
                                                 {{ colonne.titre_colonne | default('Valeur') }}
                                             </div>
                                         </th>
                                     {% endfor %}
-                                {% endif %}
-
-                                {# ============================================================ #}
-                                {# FIN MODIFICATION : EN-TÊTES DE COLONNES DYNAMIQUES           #}
-                                {# ============================================================ #}
-                            </tr>
-                        </thead>
-
-                        {# CONTENU DU TABLEAU #}
-                        <tbody class="table-group-divider context-target" data-liste-principale-target = "donnees">
-                            {{ include('components/_list_donnees.html.twig') }}
-                        </tbody>
-                    {% endif %}
-                </table>
+                                </tr>
+                            </thead>
+                            <tbody class="table-group-divider context-target" data-liste-principale-target = "donnees">
+                                {{ include('components/_list_donnees.html.twig') }}
+                            </tbody>
+                        {% else %}
+                             <tbody>
+                                <tr>
+                                    <td colspan="100%" class="text-center p-4">
+                                        Aucune donnée à afficher.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        {% endif %}
+                    </table>
+                </div>
             </div>
         </div>
-        {{ include('components/_menu_contextuel.html.twig') }}
-        {{ include('components/_dialogue.html.twig') }}
+        {# Le contenu des autres onglets sera ajouté ici par JS #}
     </div>
+
+    {{ include('components/_menu_contextuel.html.twig') }}
+    <div data-controller="dialog-manager"></div>
 </div>
