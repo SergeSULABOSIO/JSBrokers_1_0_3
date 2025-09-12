@@ -6740,11 +6740,25 @@ class Constante
                         "displayField" => "nom" // Le champ à afficher pour chaque offre
                     ],
                     [
+                        "code" => "pieces", // La propriété dans NotificationSinistre
+                        "intitule" => "Pièces",
+                        "type" => "Collection",
+                        "targetEntity" => "PieceSinistre", // Le nom de la classe des entités dans la collection
+                        "displayField" => "description" // Le champ à afficher pour chaque offre
+                    ],
+                    [
                         "code" => "contacts", // La propriété dans NotificationSinistre
                         "intitule" => "Contacts",
                         "type" => "Collection",
                         "targetEntity" => "Contact", // Le nom de la classe des entités dans la collection
                         "displayField" => "nom" // Le champ à afficher pour chaque offre
+                    ],
+                    [
+                        "code" => "taches", // La propriété dans NotificationSinistre
+                        "intitule" => "Tâches",
+                        "type" => "Collection",
+                        "targetEntity" => "Tache", // Le nom de la classe des entités dans la collection
+                        "displayField" => "description" // Le champ à afficher pour chaque offre
                     ],
                     [
                         "code" => "invite",

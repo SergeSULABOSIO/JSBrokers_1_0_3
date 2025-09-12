@@ -813,14 +813,14 @@ textarea:hover,
     font-weight: bold;
     color: #000;
     font-size: 1.1rem;
-    margin-bottom: 4px;
+    margin-bottom: 7px;
 }
 
 /* Barre d'onglets */
 .list-tabs-container {
     display: flex;
     /* border-bottom: 1px solid #dee2e6; */
-    margin-top: 5px;
+    margin-top: 3px;
 }
 
 .list-tab {
