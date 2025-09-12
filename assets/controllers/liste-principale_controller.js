@@ -3,7 +3,7 @@ import { EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_
 
 export default class extends Controller {
     static targets = [
-        'display',          //Champ d'affichage d'informations
+        // 'display',          //Champ d'affichage d'informations
         'donnees',          //Liste conténant des élements
         'selectAllCheckbox',
         'rowCheckbox',
@@ -592,12 +592,17 @@ export default class extends Controller {
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     }
 
+    
     /**
-     * 
-     * @param {string} newMessage 
+     * NOUVELLE VERSION : Notifie le contrôleur parent pour afficher un message.
      */
-    updateMessage(newMessage) {
-        this.displayTarget.innerHTML = "Résultat: " + this.nbelementsValue + " élement(s) | " + newMessage;
+    updateMessage(titre, message) {
+        const fullMessage = `<strong>[${titre}]</strong> ${message}`;
+        // On envoie un événement que le `list-tabs-controller` va intercepter.
+        document.dispatchEvent(new CustomEvent('list-status:notify', {
+            bubbles: true,
+            detail: { message: fullMessage }
+        }));
     }
 
 

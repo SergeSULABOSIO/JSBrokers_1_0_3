@@ -7,7 +7,8 @@ const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 export default class extends Controller {
     static targets = [
         "rubriqueIcon", "rubriqueName",
-        "tabsContainer", "tabContentContainer"
+        "tabsContainer", "tabContentContainer",
+        "display"
     ];
 
     static values = {
@@ -19,33 +20,44 @@ export default class extends Controller {
         this.activeTabId = 'principal';
 
         this.boundHandleSelection = this.handleSelection.bind(this);
+        this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
         document.addEventListener('checkbox:selection-published', this.boundHandleSelection);
-        
+        document.addEventListener('list-status:notify', this.boundHandleStatusNotify); // <-- NOUVEL ÉCOUTEUR
+
         // Contexte initial pour les barres d'outils
         this.dispatchContextChangeEvent();
     }
 
     disconnect() {
         document.removeEventListener('checkbox:selection-published', this.boundHandleSelection);
+        document.removeEventListener('list-status:notify', this.boundHandleStatusNotify); // <-- Nettoyage
     }
+
+    /**
+     * NOUVEAU : Met à jour la barre de résultats quand un événement est reçu.
+     */
+    handleStatusNotify(event) {
+        if (this.hasDisplayTarget) {
+            this.displayTarget.innerHTML = event.detail.message || 'Prêt.';
+        }
+    }
+
+
 
     /**
      * Gère la sélection depuis la liste principale pour créer les onglets.
      */
     handleSelection(event) {
         const { entities, canvas } = event.detail;
-
         if (this.activeTabId !== 'principal') return;
 
         this._saveTabState('principal', entities);
         this._removeCollectionTabs();
 
         if (entities.length === 1) {
-            const selectedEntity = entities[0];
             const collections = this._findCollectionsInCanvas(canvas);
-
             collections.forEach(collectionInfo => {
-                this._createTab(collectionInfo, selectedEntity);
+                this._createTab(collectionInfo, entities[0]);
             });
         }
     }
@@ -87,18 +99,18 @@ export default class extends Controller {
     dispatchContextChangeEvent() {
         const activeContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         if (!activeContent) return;
-        
+
         const listControllerElement = activeContent.querySelector('[data-controller]');
-        
+
         const detail = {
-            listControllerId: listControllerElement ? listControllerElement.id : null, 
+            listControllerId: listControllerElement ? listControllerElement.id : null,
             entityName: activeContent.dataset.entityName || this.entityCanvasValue.parametres.description,
-            canAdd: activeContent.dataset.canAdd === 'true' 
+            canAdd: activeContent.dataset.canAdd === 'true'
         };
 
         this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, { bubbles: true, detail }));
     }
-    
+
     // --- Méthodes privées ---
 
     _saveTabState(tabId, selectedEntities) {
@@ -106,7 +118,7 @@ export default class extends Controller {
             selectedIds: selectedEntities.map(e => e.id)
         };
     }
-    
+
     _findCollectionsInCanvas(canvas) {
         if (!canvas || !canvas.liste) return [];
         return canvas.liste.filter(attr => attr.type === 'Collection');
