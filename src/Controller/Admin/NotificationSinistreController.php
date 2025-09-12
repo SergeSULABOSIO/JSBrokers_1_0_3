@@ -129,7 +129,7 @@ class NotificationSinistreController extends AbstractController
         ]);
     }
 
-    
+
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
     {
@@ -288,7 +288,8 @@ class NotificationSinistreController extends AbstractController
         if (!$notification) {
             $notification = new NotificationSinistre();
         }
-        return $this->render('components/_collection_list.html.twig', [
+        // return $this->render('components/_collection_list.html.twig', [
+        return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getContacts(),
             'item_template' => 'components/collection_items/_contact_item.html.twig'
         ]);
@@ -307,7 +308,8 @@ class NotificationSinistreController extends AbstractController
         if (!$notification) {
             $notification = new NotificationSinistre();
         }
-        return $this->render('components/_collection_list.html.twig', [
+        // return $this->render('components/_collection_list.html.twig', [
+        return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getPieces(),
             'item_template' => 'components/collection_items/_piece_sinistre_item.html.twig'
         ]);
@@ -326,7 +328,8 @@ class NotificationSinistreController extends AbstractController
         if (!$notification) {
             $notification = new NotificationSinistre();
         }
-        return $this->render('components/_collection_list.html.twig', [
+        // return $this->render('components/_collection_list.html.twig', [
+        return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getTaches(),
             'item_template' => 'components/collection_items/_tache_item.html.twig'
         ]);
@@ -345,7 +348,8 @@ class NotificationSinistreController extends AbstractController
         if (!$notification) {
             $notification = new NotificationSinistre();
         }
-        return $this->render('components/_collection_list.html.twig', [
+        // return $this->render('components/_collection_list.html.twig', [
+        return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getOffreIndemnisationSinistres(),
             'item_template' => 'components/collection_items/_offre_indemnisation_sinistre_item.html.twig'
         ]);

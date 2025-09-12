@@ -1,5 +1,10 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
+import { 
+    buildCustomEventForElement, 
+    EVEN_BOITE_DIALOGUE_INIT_REQUEST, 
+    EVEN_CHECKBOX_PUBLISH_SELECTION, // Important : pour communiquer avec le menu
+    EVEN_MENU_CONTEXTUEL_INIT_REQUEST // Important : pour ouvrir le menu
+} from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["countBadge", "addButtonContainer", "contentPanel", "listContainer"];
@@ -19,6 +24,7 @@ export default class extends Controller {
 
     connect() {
         this.nomControlleur = "Collection - Manager";
+        this.selectedItem = null; // Gère la sélection d'un seul item
         this.componentId = crypto.randomUUID();
         this.loadItemList();
 
@@ -29,6 +35,64 @@ export default class extends Controller {
         this.boundPerformDelete = this.performDelete.bind(this);
         document.addEventListener(this.deleteEventName, this.boundPerformDelete);
     }
+
+    /**
+     * NOUVEAU : Gère le clic droit sur un item de la collection.
+     */
+    handleContextMenu(event) {
+        event.preventDefault(); // Empêche le menu natif du navigateur
+        event.stopPropagation();
+
+        // 1. Sélectionne l'élément cliqué pour que le menu sache sur quoi agir
+        this.selectItem(event, true); // Le `true` force la sélection
+
+        // 2. Demande l'ouverture du menu contextuel, comme le fait la liste principale
+        buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, true, true, {
+            menuX: event.clientX,
+            menuY: event.clientY,
+        });
+    }
+
+    selectItem(event, forceSelection = false) {
+        if (event.target.closest('button, a')) return;
+
+        const currentItem = event.currentTarget;
+        
+        if (this.selectedItem && this.selectedItem !== currentItem) {
+            this.selectedItem.classList.remove('selected');
+        }
+
+        if (forceSelection) {
+            currentItem.classList.add('selected');
+        } else {
+            currentItem.classList.toggle('selected');
+        }
+        
+        this.selectedItem = currentItem.classList.contains('selected') ? currentItem : null;
+        
+        // Publie la sélection pour que la barre d'outils ET le menu contextuel se mettent à jour
+        this.publishSelection();
+    }
+
+    /**
+     * NOUVEAU : Publie une sélection dans un format standardisé.
+     */
+    publishSelection() {
+        const entities = [];
+        if (this.selectedItem) {
+            // On simule un objet 'entity' avec juste un ID.
+            entities.push({ id: this.selectedItem.dataset.id });
+        }
+
+        // On utilise le MÊME nom d'événement que la liste principale
+        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
+            entities: entities,
+            selection: entities.map(e => e.id),
+            canvas: {}, // Le canvas n'est pas nécessaire pour les actions du menu sur les collections
+            entityType: this.element.closest('[data-entity-name]').dataset.entityName
+        });
+    }
+
 
     disconnect() {
         document.removeEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
@@ -172,8 +236,7 @@ export default class extends Controller {
      */
     editItem(event) {
         event.stopPropagation();
-        const itemId = event.currentTarget.closest('.collection-item').dataset.id;
-        this.openFormDialog({ id: itemId });
+        this.openFormDialog({ id: event.currentTarget.closest('.collection-item').dataset.id });
     }
 
     /**

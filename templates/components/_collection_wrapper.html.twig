@@ -1,0 +1,22 @@
+{# templates/components/_collection_wrapper.html.twig #}
+{# 
+Ce template agit comme un conteneur. Son rôle est d'initialiser 
+le contrôleur Stimulus `collection-manager` et de donner un ID unique à la liste.
+Ensuite, il inclut votre template `_collection_list.html.twig` qui affiche les items.
+Variables attendues :
+- items: La collection d'objets.
+- item_template: Le chemin vers le template de l'item (ex: _contact_item.html.twig).
+#}
+
+<div
+    id="collection-list-{{ random() }}" {# ID unique pour être ciblé par les barres d'outils #}
+    class="collection-container p-2"
+    {# On attache ici le contrôleur que vous avez fourni #}
+    data-controller="collection-manager"
+>
+    {# On inclut votre template original, qui va maintenant fonctionner car le contrôleur existe #}
+    {{ include('components/_collection_list.html.twig', {
+        'items': items,
+        'item_template': item_template
+    }) }}
+</div>
