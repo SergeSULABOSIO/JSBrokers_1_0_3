@@ -49,17 +49,22 @@ export default class extends Controller {
      * Gère la sélection depuis la liste principale pour créer les onglets.
      */
     handleSelection(event) {
-        const { entities, canvas } = event.detail;
+        // const { entities, canvas } = event.detail;
         if (this.activeTabId !== 'principal') return;
 
         this._saveTabState('principal', entities);
         this._removeCollectionTabs();
 
-        if (entities.length === 1) {
+        // --- CORRECTION : On récupère entityType directement depuis les détails de l'événement ---
+        const { entities, canvas, entityType } = event.detail;
+
+        if (entities && entities.length === 1) {
             const collections = this._findCollectionsInCanvas(canvas);
-            collections.forEach(collectionInfo => {
-                this._createTab(collectionInfo, entities[0]);
-            });
+            // --- CORRECTION : On passe entityType à la fonction de création ---
+            collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
+            // collections.forEach(collectionInfo => {
+            //     this._createTab(collectionInfo, entities[0]);
+            // });
         }
     }
 
@@ -133,35 +138,67 @@ export default class extends Controller {
         });
     }
 
-    _createTab(collectionInfo, parentEntity) {
+    _createTab(collectionInfo, parentEntity, parentEntityType) {
         const tabId = `${collectionInfo.code}-for-${parentEntity.id}`;
         const tab = document.createElement('button');
         tab.className = 'list-tab';
-        tab.dataset.tabId = tabId;
-        tab.dataset.tabType = 'collection';
-        tab.dataset.action = 'click->list-tabs#switchTab';
-        tab.dataset.collectionUrl = `/admin/${parentEntity.entityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}`;
-        tab.dataset.entityName = collectionInfo.targetEntity;
+
+        // --- CORRECTION : On utilise parentEntityType au lieu de parentEntity.entityType ---
+        const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}`;
+
+        Object.assign(tab.dataset, {
+            tabId: tabId,
+            tabType: 'collection',
+            action: 'click->list-tabs#switchTab',
+            collectionUrl: collectionUrl,
+            entityName: collectionInfo.targetEntity
+        });
         tab.textContent = collectionInfo.intitule;
         this.tabsContainerTarget.appendChild(tab);
+
+        // tab.dataset.tabId = tabId;
+        // tab.dataset.tabType = 'collection';
+        // tab.dataset.action = 'click->list-tabs#switchTab';
+        // tab.dataset.collectionUrl = `/admin/${parentEntity.entityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}`;
+        // tab.dataset.entityName = collectionInfo.targetEntity;
+        // tab.textContent = collectionInfo.intitule;
+        // this.tabsContainerTarget.appendChild(tab);
     }
 
     async _loadTabContent(tabElement) {
         const content = document.createElement('div');
-        content.dataset.contentId = tabElement.dataset.tabId;
-        content.dataset.entityName = tabElement.dataset.entityName;
-        content.dataset.canAdd = 'true';
+        Object.assign(content.dataset, {
+            contentId: tabElement.dataset.tabId,
+            entityName: tabElement.dataset.entityName,
+            canAdd: 'true'
+        });
         content.style.display = 'block';
         content.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" role="status"></div></div>';
-
+        
         try {
             const response = await fetch(tabElement.dataset.collectionUrl);
-            if (!response.ok) throw new Error('Failed to load collection data.');
+            if (!response.ok) throw new Error('Échec du chargement des données.');
             content.innerHTML = await response.text();
         } catch (error) {
             console.error(error);
             content.innerHTML = `<div class="alert alert-danger m-3">${error.message}</div>`;
         }
         return content;
+
+        // content.dataset.contentId = tabElement.dataset.tabId;
+        // content.dataset.entityName = tabElement.dataset.entityName;
+        // content.dataset.canAdd = 'true';
+        // content.style.display = 'block';
+        // content.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" role="status"></div></div>';
+
+        // try {
+        //     const response = await fetch(tabElement.dataset.collectionUrl);
+        //     if (!response.ok) throw new Error('Failed to load collection data.');
+        //     content.innerHTML = await response.text();
+        // } catch (error) {
+        //     console.error(error);
+        //     content.innerHTML = `<div class="alert alert-danger m-3">${error.message}</div>`;
+        // }
+        // return content;
     }
 }
