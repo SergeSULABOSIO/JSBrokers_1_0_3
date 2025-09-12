@@ -1,6 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 import { buildCustomEventForElement, EVEN_BARRE_OUTILS_INIT_REQUEST, EVEN_BARRE_OUTILS_INITIALIZED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
 
+const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed'; // L'événement envoyé par list-tabs-controller
+
 export default class extends Controller {
     static targets = [
         'btquitter',
@@ -19,18 +21,25 @@ export default class extends Controller {
         this.selectedEntitiesType = null;
         this.selectedEntitiesCanvas = null;
         console.log(this.nomControleur + " - Connecté");
+
+        // --- DÉBUT DE LA MODIFICATION ---
+        this.activeListContext = {}; // Pour stocker les infos de l'onglet actif
+        this.boundHandleContextChange = this.handleContextChange.bind(this);
+        document.addEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContextChange);
+        // --- FIN DE LA MODIFICATION ---
+
         this.init();
     }
 
     init() {
         this.tabSelectedCheckBoxs = [];
         this.listePrincipale = document.getElementById("liste");
-        
+
         this.boundhandleInitRequest = this.handleInitRequest.bind(this);
         this.boundhandleInitialized = this.handleInitialized.bind(this);
         this.boundhandlePublisheSelection = this.handlePublisheSelection.bind(this);
-        
-        
+
+
         this.initialiserBarreDoutils();
         this.initToolTips();
         this.ecouteurs();
@@ -48,13 +57,34 @@ export default class extends Controller {
         document.removeEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.boundhandleInitRequest);
         document.removeEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.boundhandleInitialized);
         document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
+        // --- DÉBUT DE LA MODIFICATION ---
+        document.removeEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContextChange);
+        // --- FIN DE LA MODIFICATION ---
     }
 
-    handleInitRequest(event){
+    // --- NOUVELLE FONCTION À AJOUTER ---
+    /**
+     * Se déclenche quand l'onglet actif change.
+     * @param {CustomEvent} event
+     */
+    handleContextChange(event) {
+        this.activeListContext = event.detail;
+        // On réinitialise la sélection et les boutons car on change de liste
+        this.tabSelectedCheckBoxs = [];
+        this.tabSelectedEntities = [];
+        this.organizeButtons([]); // Appelle votre fonction existante avec une sélection vide
+        
+        // On cache/affiche le bouton "Ajouter" en fonction du contexte
+        this.btajouterTarget.style.display = this.activeListContext.canAdd ? 'block' : 'none';
+    }
+    // --- FIN DE LA NOUVELLE FONCTION ---
+
+
+    handleInitRequest(event) {
         console.log(this.nomControleur + " - HandleInitRequest");
     }
 
-    handleInitialized(event){
+    handleInitialized(event) {
         console.log(this.nomControleur + " - HandleInitialized");
     }
 
@@ -71,17 +101,17 @@ export default class extends Controller {
         this.selectedEntitiesType = entityType;
         this.selectedEntitiesCanvas = canvas;
         event.stopPropagation();
-        
+
         //On réorganise les boutons en fonction de la selection actuelle
         this.organizeButtons(selection);
 
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre:"Etat",
-            message: "{" + selection  + "}. Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
+            titre: "Etat",
+            message: "{" + selection + "}. Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
         });
     }
 
-    organizeButtons(selection){
+    organizeButtons(selection) {
         if (selection.length >= 1) {
             if (selection.length == 1) {
                 this.btmodifierTarget.style.display = "block";
