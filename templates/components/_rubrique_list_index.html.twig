@@ -8,9 +8,7 @@
     {# SECTION 1 : PANNEAU SUPÉRIEUR FIXE (HEADER & OUTILS)             #}
     {# ================================================================== #}
     <div class="sticky-header bg-white shadow-sm">
-        {# --- Ligne 1 : Titre et Onglets --- #}
         <div class="d-flex align-items-center p-2 border-bottom">
-            {# Colonne 1: Icône de la rubrique #}
             <div class="me-3">
                 <twig:UX:Icon 
                     name="{{ entityCanvas.parametres.icone | default('lucide:file-text') }}" 
@@ -18,41 +16,26 @@
                     data-list-tabs-target="rubriqueIcon"
                 />
             </div>
-
-            {# Colonne 2: Titre et Barre d'onglets #}
             <div class="flex-grow-1">
                 <div class="rubrique-title" data-list-tabs-target="rubriqueName">{{ rubrique_nom }}</div>
                 <div class="list-tabs-container" data-list-tabs-target="tabsContainer">
-                    <button class="list-tab active" data-tab-id="principal" data-action="click->list-tabs#switchTab">
-                        Principal
-                    </button>
+                    <button class="list-tab active" data-tab-id="principal" data-action="click->list-tabs#switchTab">Principal</button>
                 </div>
             </div>
         </div>
-
-        {# --- Ligne 2 : Barre d'Outils Contextuelle --- #}
-        <div class="p-2">
-             {{ include("components/_liste_barre_outils.html.twig") }}
-        </div>
-        {# --- Ligne 3 : Barre de Recherche Contextuelle --- #}
-        <div class="p-2 pt-0">
-             {{ component('_search_bar') }}
-        </div>
-        {# --- Ligne 4 : Barre des Totaux Contextuelle --- #}
-        <div class="p-2 pt-0">
-            {{ include('components/_totals_bar.html.twig') }}
-        </div>
-        {# --- Ligne 5 : Barre de Résultats/État --- #}
-        <div class="p-2 small text-muted border-top" data-liste-principale-target="display">
-            Prêt.
-        </div>
+        <div class="p-2">{{ include("components/_liste_barre_outils.html.twig") }}</div>
+        <div class="p-2 pt-0">{{ component('_search_bar') }}</div>
+        <div class="p-2 pt-0">{{ include('components/_totals_bar.html.twig') }}</div>
+        
+        {# --- CORRECTION ICI --- #}
+        {# La cible "display" est maintenant gérée par le contrôleur parent "list-tabs" #}
+        <div class="p-2 small text-muted border-top" data-list-tabs-target="display">Prêt.</div>
     </div>
 
     {# ================================================================== #}
     {# SECTION 2 : ZONE DE CONTENU DYNAMIQUE (LISTES)                   #}
     {# ================================================================== #}
     <div class="flex-grow-1" style="overflow-y: auto;" data-list-tabs-target="tabContentContainer">
-        {# Contenu de l'onglet Principal #}
         <div data-content-id="principal" data-entity-name="{{ entite_nom }}" data-can-add="true">
             <div 
                 id="main-list-controller"
@@ -68,57 +51,29 @@
                                 <tr class="text-center">
                                      <th scope="col" style="width: 80px;">
                                         <div class="form-check m-2 justify-content-start">
-                                            <input 
-                                                class="form-check-input" 
-                                                value="" 
-                                                type="checkbox" 
-                                                id="myCheckbox" 
-                                                data-action="change->liste-principale#handleItemToutCocher" 
-                                                data-liste-principale-target="selectAllCheckbox"
-                                            >
-                                            <label 
-                                                for="myCheckbox"
-                                                class="text-secondary" 
-                                            >
-                                                Id.
-                                            </label>
+                                            <input class="form-check-input" type="checkbox" data-action="change->liste-principale#handleItemToutCocher" data-liste-principale-target="selectAllCheckbox">
+                                            <label class="text-secondary">Id.</label>
                                         </div>
                                     </th>
                                     {% if listeCanvas.colonne_principale is defined %}
-                                        <th scope="col">
-                                            <div class='d-flex justify-content-start text-secondary m-2'>
-                                                {{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}
-                                            </div>
-                                        </th>
+                                        <th scope="col"><div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div></th>
                                     {% endif %}
                                     {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
-                                        <th scope="col" style="width:150px">
-                                            <div class='d-flex justify-content-end text-secondary m-2'>
-                                                {{ colonne.titre_colonne | default('Valeur') }}
-                                            </div>
-                                        </th>
+                                        <th scope="col" style="width:150px"><div class='d-flex justify-content-end text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div></th>
                                     {% endfor %}
                                 </tr>
                             </thead>
-                            <tbody class="table-group-divider context-target" data-liste-principale-target = "donnees">
+                            <tbody class="table-group-divider context-target" data-liste-principale-target="donnees">
                                 {{ include('components/_list_donnees.html.twig') }}
                             </tbody>
                         {% else %}
-                             <tbody>
-                                <tr>
-                                    <td colspan="100%" class="text-center p-4">
-                                        Aucune donnée à afficher.
-                                    </td>
-                                </tr>
-                            </tbody>
+                             <tbody><tr><td colspan="100%" class="text-center p-4">Aucune donnée à afficher.</td></tr></tbody>
                         {% endif %}
                     </table>
                 </div>
             </div>
         </div>
-        {# Le contenu des autres onglets sera ajouté ici par JS #}
     </div>
-
     {{ include('components/_menu_contextuel.html.twig') }}
     <div data-controller="dialog-manager"></div>
 </div>

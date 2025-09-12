@@ -4,14 +4,11 @@
   role="toolbar"
   data-controller="barre-outils"
 >
-    {# Bouton QUITTER - Reste statique, pas besoin de target #}
-    <button data-action="barre-outils#action_quitte" class="btn btn-sm btn-icon-danger" title="Quitter">
+    {# --- CORRECTION : Ajout des data-barre-outils-target --- #}
+    <button data-action="barre-outils#action_quitte" data-barre-outils-target="btquitter" class="btn btn-sm btn-icon-danger" title="Quitter">
         <twig:UX:Icon name="lucide:x-circle" />
     </button>
-    
     <div class="toolbar-separator"></div>
-
-    {# Boutons d'action sur la liste #}
     <button data-action="barre-outils#action_ajouter" data-barre-outils-target="btajouter" class="btn btn-sm" title="Ajouter">
         <twig:UX:Icon name="lucide:plus-circle" />
     </button>
@@ -21,10 +18,7 @@
     <button data-action="barre-outils#action_supprimer" data-barre-outils-target="btsupprimer" class="btn btn-sm btn-icon-danger" title="Supprimer" style="display:none;">
         <twig:UX:Icon name="lucide:trash-2" />
     </button>
-    
     <div class="toolbar-separator"></div>
-
-    {# Boutons de sélection et de vue #}
     <button data-action="barre-outils#action_tout_cocher" data-barre-outils-target="bttoutcocher" class="btn btn-sm" title="Sélectionner tout">
         <twig:UX:Icon name="lucide:check-square" />
     </button>
@@ -34,10 +28,7 @@
     <button data-action="barre-outils#action_recharger" data-barre-outils-target="btrecharger" class="btn btn-sm" title="Actualiser">
         <twig:UX:Icon name="lucide:refresh-cw" />
     </button>
-    
     <div class="toolbar-separator"></div>
-
-    {# Bouton PARAMÈTRES - Reste statique #}
     <button data-action="barre-outils#action_parametrer" data-barre-outils-target="btparametres" class="btn btn-sm" title="Paramètres">
         <twig:UX:Icon name="lucide:settings" />
     </button>
