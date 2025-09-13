@@ -1,22 +1,24 @@
-{# templates/components/_collection_wrapper.html.twig #}
-{# 
-Ce template agit comme un conteneur. Son rôle est d'initialiser 
-le contrôleur Stimulus `collection-manager` et de donner un ID unique à la liste.
-Ensuite, il inclut votre template `_collection_list.html.twig` qui affiche les items.
-Variables attendues :
-- items: La collection d'objets.
-- item_template: Le chemin vers le template de l'item (ex: _contact_item.html.twig).
-#}
-
 <div
-    id="collection-list-{{ random() }}" {# ID unique pour être ciblé par les barres d'outils #}
-    class="collection-container p-2"
-    {# On attache ici le contrôleur que vous avez fourni #}
-    data-controller="collection-manager"
+    id="collection-list-{{ random() }}" 
+    class="collection-container p-2" 
+    data-controller="collection-manager" 
+    data-collection-manager-list-url-value=""  
+    data-collection-manager-item-title-create-value="Nouvel élément" 
+    data-collection-manager-item-title-edit-value="Modifier l'élément" 
 >
-    {# On inclut votre template original, qui va maintenant fonctionner car le contrôleur existe #}
-    {{ include('components/_collection_list.html.twig', {
-        'items': items,
-        'item_template': item_template
-    }) }}
+    {# Cible pour le contenu principal #}
+    <div data-collection-manager-target="contentPanel">
+        {# Cible pour la liste des éléments elle-même #}
+        <div data-collection-manager-target="listContainer">
+            {{ include('components/_collection_list.html.twig', {
+                'items': items,
+                'item_template': item_template
+            }) }}
+        </div>
+    </div>
+    {# Cible pour le conteneur du bouton "Ajouter" #}
+    <div data-collection-manager-target="addButtonContainer"></div>
+
+    {# Cible pour le compteur d'éléments (badge) - peut être caché #}
+    <span data-collection-manager-target="countBadge" class="d-none"></span>
 </div>

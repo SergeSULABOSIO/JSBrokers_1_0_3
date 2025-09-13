@@ -2,7 +2,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { EVEN_CHECKBOX_PUBLISH_SELECTION } from './base_controller.js';
 
-// Événement pour notifier les barres d'outils du changement de contexte
 const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 
 export default class extends Controller {
@@ -17,11 +16,13 @@ export default class extends Controller {
     }
 
     connect() {
-        this.tabStates = {}; // Essentiel pour la mémorisation de l'état
         this.activeTabId = 'principal';
+        this.tabStates = {}; // Essentiel pour la mémorisation de l'état
+        // this.isRestoringState = false; // Un drapeau pour éviter les boucles d'événements
 
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
+
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify); // <-- NOUVEL ÉCOUTEUR
 
@@ -49,13 +50,15 @@ export default class extends Controller {
      * Gère la sélection depuis la liste principale pour créer les onglets.
      */
     handleSelection(event) {
-        const { entities, canvas, entityType } = event.detail;
+        // On sauvegarde l'état de l'onglet actif, quel qu'il soit.
+        this.tabStates[this.activeTabId] = event.detail;
+
+        // On ne crée les onglets que si la sélection provient de l'onglet "Principal".
         if (this.activeTabId !== 'principal') return;
 
-        this._saveTabState('principal', entities);
         this._removeCollectionTabs();
+        const { entities, canvas, entityType } = event.detail;
 
-        // --- CORRECTION : On récupère entityType directement depuis les détails de l'événement ---
         if (entities && entities.length === 1) {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
@@ -69,7 +72,6 @@ export default class extends Controller {
         event.preventDefault();
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
-
         if (newTabId === this.activeTabId) return;
 
         // Désactivation de l'ancien onglet
@@ -78,7 +80,6 @@ export default class extends Controller {
         const oldContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         if (oldContent) oldContent.style.display = 'none';
 
-        // Activation du nouvel onglet
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
         let newContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
@@ -90,7 +91,18 @@ export default class extends Controller {
             this.tabContentContainerTarget.appendChild(newContent);
         }
 
+        this._restoreTabState(this.activeTabId);
         this.dispatchContextChangeEvent();
+    }
+
+   
+    _restoreTabState(tabId) {
+        const savedState = this.tabStates[tabId];
+        const payload = savedState || { entities: [], selection: [], canvas: {}, entityType: '' };
+        document.dispatchEvent(new CustomEvent(EVEN_CHECKBOX_PUBLISH_SELECTION, {
+            bubbles: true,
+            detail: payload
+        }));
     }
 
     /**
@@ -168,7 +180,7 @@ export default class extends Controller {
         });
         content.style.display = 'block';
         content.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" role="status"></div></div>';
-        
+
         try {
             const response = await fetch(tabElement.dataset.collectionUrl);
             if (!response.ok) throw new Error('Échec du chargement des données.');

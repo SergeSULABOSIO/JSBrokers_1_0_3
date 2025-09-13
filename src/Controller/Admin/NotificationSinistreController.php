@@ -11,6 +11,7 @@ use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
+use App\Entity\OffreIndemnisationSinistre;
 use App\Repository\InviteRepository;
 use App\Form\NotificationSinistreType;
 use App\Repository\EntrepriseRepository;
@@ -277,17 +278,17 @@ class NotificationSinistreController extends AbstractController
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
     #[Route('/api/{id}/contacts', name: 'api.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(int $id, NotificationSinistreRepository $repository): Response
+    public function getContactsListApi(NotificationSinistre $notification): Response
     {
-        $notification = null;
-        if ($id === 0) {
-            $notification = new NotificationSinistre();
-        } else {
-            $notification = $repository->find($id);
-        }
-        if (!$notification) {
-            $notification = new NotificationSinistre();
-        }
+        // $notification = null;
+        // if ($id === 0) {
+        //     $notification = new NotificationSinistre();
+        // } else {
+        //     $notification = $repository->find($id);
+        // }
+        // if (!$notification) {
+        //     $notification = new NotificationSinistre();
+        // }
         // return $this->render('components/_collection_list.html.twig', [
         return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getContacts(),
@@ -297,17 +298,17 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/pieces', name: 'api.get_pieces', methods: ['GET'])]
-    public function getPiecesListApi(int $id, NotificationSinistreRepository $repository): Response
+    public function getPiecesListApi(NotificationSinistre $notification): Response
     {
-        $notification = null;
-        if ($id === 0) {
-            $notification = new NotificationSinistre();
-        } else {
-            $notification = $repository->find($id);
-        }
-        if (!$notification) {
-            $notification = new NotificationSinistre();
-        }
+        // $notification = null;
+        // if ($id === 0) {
+        //     $notification = new NotificationSinistre();
+        // } else {
+        //     $notification = $repository->find($id);
+        // }
+        // if (!$notification) {
+        //     $notification = new NotificationSinistre();
+        // }
         // return $this->render('components/_collection_list.html.twig', [
         return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getPieces(),
@@ -317,17 +318,17 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(int $id, NotificationSinistreRepository $repository): Response
+    public function getTachesListApi(NotificationSinistre $notification): Response
     {
-        $notification = null;
-        if ($id === 0) {
-            $notification = new NotificationSinistre();
-        } else {
-            $notification = $repository->find($id);
-        }
-        if (!$notification) {
-            $notification = new NotificationSinistre();
-        }
+        // $notification = null;
+        // if ($id === 0) {
+        //     $notification = new NotificationSinistre();
+        // } else {
+        //     $notification = $repository->find($id);
+        // }
+        // if (!$notification) {
+        //     $notification = new NotificationSinistre();
+        // }
         // return $this->render('components/_collection_list.html.twig', [
         return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getTaches(),
@@ -337,17 +338,17 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/offreIndemnisationSinistres', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
-    public function getOffresIndemnisationListApi(int $id, NotificationSinistreRepository $repository): Response
+    public function getOffresIndemnisationListApi(NotificationSinistre $notification): Response
     {
-        $notification = null;
-        if ($id === 0) {
-            $notification = new NotificationSinistre();
-        } else {
-            $notification = $repository->find($id);
-        }
-        if (!$notification) {
-            $notification = new NotificationSinistre();
-        }
+        // $notification = null;
+        // if ($id === 0) {
+        //     $notification = new NotificationSinistre();
+        // } else {
+        //     $notification = $repository->find($id);
+        // }
+        // if (!$notification) {
+        //     $notification = new NotificationSinistre();
+        // }
         // return $this->render('components/_collection_list.html.twig', [
         return $this->render('components/_collection_wrapper.html.twig', [
             'items' => $notification->getOffreIndemnisationSinistres(),
