@@ -6735,7 +6735,7 @@ class Constante
                     // NOUVEAU BLOC POUR LA COLLECTION
                     [
                         "code" => "offreIndemnisationSinistres", // La propriété dans NotificationSinistre
-                        "intitule" => "Offres d'indemnisation",
+                        "intitule" => "Offres",
                         "type" => "Collection",
                         "targetEntity" => "OffreIndemnisationSinistre", // Le nom de la classe des entités dans la collection
                         "displayField" => "nom" // Le champ à afficher pour chaque offre
