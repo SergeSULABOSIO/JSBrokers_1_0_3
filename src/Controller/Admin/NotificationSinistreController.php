@@ -5,18 +5,21 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Entity\Avenant;
+use App\Entity\Contact;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
-use App\Entity\OffreIndemnisationSinistre;
 use App\Repository\InviteRepository;
 use App\Form\NotificationSinistreType;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\PieceSinistre;
+use App\Entity\Tache;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -274,6 +277,22 @@ class NotificationSinistreController extends AbstractController
         ]);
     }
 
+    private function getEntreprise(): Entreprise
+    {
+        /** @var Invite $invite */
+        $invite = $this->getInvite();
+        return $invite->getEntreprise();
+    }
+
+    private function getInvite(): Invite
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        return $invite;
+    }
+
     /**
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
@@ -290,9 +309,20 @@ class NotificationSinistreController extends AbstractController
         //     $notification = new NotificationSinistre();
         // }
         // return $this->render('components/_collection_list.html.twig', [
-        return $this->render('components/_collection_wrapper.html.twig', [
-            'items' => $notification->getContacts(),
-            'item_template' => 'components/collection_items/_contact_item.html.twig'
+        // return $this->render('components/_collection_wrapper.html.twig', [
+        //     'items' => $notification->getContacts(),
+        //     'item_template' => 'components/collection_items/_contact_item.html.twig'
+        // ]);
+
+        // On récupère le canvas spécifique à l'entité Contact
+        $contactCanvas = $this->constante->getEntityCanvas(new Contact());
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $notification->getContacts(),
+            'entite_nom' => 'Contacts',
+            'entityCanvas' => $contactCanvas,
+            'listeCanvas' => $contactCanvas['liste'],
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $this->getEntreprise()->getId())
         ]);
     }
 
@@ -310,9 +340,20 @@ class NotificationSinistreController extends AbstractController
         //     $notification = new NotificationSinistre();
         // }
         // return $this->render('components/_collection_list.html.twig', [
-        return $this->render('components/_collection_wrapper.html.twig', [
-            'items' => $notification->getPieces(),
-            'item_template' => 'components/collection_items/_piece_sinistre_item.html.twig'
+        // return $this->render('components/_collection_wrapper.html.twig', [
+        //     'items' => $notification->getPieces(),
+        //     'item_template' => 'components/collection_items/_piece_sinistre_item.html.twig'
+        // ]);
+
+        // On récupère le canvas spécifique à l'entité Tache
+        $pieceCanvas = $this->constante->getEntityCanvas(new PieceSinistre());
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $notification->getPieces(),
+            'entite_nom' => 'Pièces',
+            'entityCanvas' => $pieceCanvas,
+            'listeCanvas' => $pieceCanvas['liste'],
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $this->getEntreprise()->getId())
         ]);
     }
 
@@ -330,9 +371,19 @@ class NotificationSinistreController extends AbstractController
         //     $notification = new NotificationSinistre();
         // }
         // return $this->render('components/_collection_list.html.twig', [
-        return $this->render('components/_collection_wrapper.html.twig', [
-            'items' => $notification->getTaches(),
-            'item_template' => 'components/collection_items/_tache_item.html.twig'
+        // return $this->render('components/_collection_wrapper.html.twig', [
+        //     'items' => $notification->getTaches(),
+        //     'item_template' => 'components/collection_items/_tache_item.html.twig'
+        // ]);
+        // On récupère le canvas spécifique à l'entité Tache
+        $tacheCanvas = $this->constante->getEntityCanvas(new Tache());
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $notification->getTaches(),
+            'entite_nom' => 'Taches',
+            'entityCanvas' => $tacheCanvas,
+            'listeCanvas' => $tacheCanvas['liste'],
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId())
         ]);
     }
 
@@ -350,9 +401,19 @@ class NotificationSinistreController extends AbstractController
         //     $notification = new NotificationSinistre();
         // }
         // return $this->render('components/_collection_list.html.twig', [
-        return $this->render('components/_collection_wrapper.html.twig', [
-            'items' => $notification->getOffreIndemnisationSinistres(),
-            'item_template' => 'components/collection_items/_offre_indemnisation_sinistre_item.html.twig'
+        // return $this->render('components/_collection_wrapper.html.twig', [
+        //     'items' => $notification->getOffreIndemnisationSinistres(),
+        //     'item_template' => 'components/collection_items/_offre_indemnisation_sinistre_item.html.twig'
+        // ]);
+        // On récupère le canvas spécifique à l'entité Tache
+        $offreCanvas = $this->constante->getEntityCanvas(new PieceSinistre());
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $notification->getOffreIndemnisationSinistres(),
+            'entite_nom' => 'Offres',
+            'entityCanvas' => $offreCanvas,
+            'listeCanvas' => $offreCanvas['liste'],
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $this->getEntreprise()->getId())
         ]);
     }
 }
