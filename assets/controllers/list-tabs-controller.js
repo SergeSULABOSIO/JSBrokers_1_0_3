@@ -5,15 +5,8 @@ import { EVEN_CHECKBOX_PUBLISH_SELECTION } from './base_controller.js';
 const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 
 export default class extends Controller {
-    static targets = [
-        "rubriqueIcon", "rubriqueName",
-        "tabsContainer", "tabContentContainer",
-        "display"
-    ];
-
-    static values = {
-        entityCanvas: Object
-    }
+    static targets = ["rubriqueIcon", "rubriqueName", "tabsContainer", "tabContentContainer", "display"];
+    static values = {entityCanvas: Object}
 
     connect() {
         this.activeTabId = 'principal';
@@ -50,15 +43,10 @@ export default class extends Controller {
      * Gère la sélection depuis la liste principale pour créer les onglets.
      */
     handleSelection(event) {
-        // On sauvegarde l'état de l'onglet actif, quel qu'il soit.
         this.tabStates[this.activeTabId] = event.detail;
-
-        // On ne crée les onglets que si la sélection provient de l'onglet "Principal".
         if (this.activeTabId !== 'principal') return;
-
         this._removeCollectionTabs();
         const { entities, canvas, entityType } = event.detail;
-
         if (entities && entities.length === 1) {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
@@ -73,24 +61,19 @@ export default class extends Controller {
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
         if (newTabId === this.activeTabId) return;
-
-        // Désactivation de l'ancien onglet
         const oldTab = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
         if (oldTab) oldTab.classList.remove('active');
         const oldContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         if (oldContent) oldContent.style.display = 'none';
-
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
         let newContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
-
         if (newContent) {
             newContent.style.display = 'block';
         } else {
             newContent = await this._loadTabContent(clickedTab);
             this.tabContentContainerTarget.appendChild(newContent);
         }
-
         this._restoreTabState(this.activeTabId);
         this.dispatchContextChangeEvent();
     }
@@ -161,14 +144,6 @@ export default class extends Controller {
         });
         tab.textContent = collectionInfo.intitule;
         this.tabsContainerTarget.appendChild(tab);
-
-        // tab.dataset.tabId = tabId;
-        // tab.dataset.tabType = 'collection';
-        // tab.dataset.action = 'click->list-tabs#switchTab';
-        // tab.dataset.collectionUrl = `/admin/${parentEntity.entityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}`;
-        // tab.dataset.entityName = collectionInfo.targetEntity;
-        // tab.textContent = collectionInfo.intitule;
-        // this.tabsContainerTarget.appendChild(tab);
     }
 
     async _loadTabContent(tabElement) {
@@ -190,21 +165,5 @@ export default class extends Controller {
             content.innerHTML = `<div class="alert alert-danger m-3">${error.message}</div>`;
         }
         return content;
-
-        // content.dataset.contentId = tabElement.dataset.tabId;
-        // content.dataset.entityName = tabElement.dataset.entityName;
-        // content.dataset.canAdd = 'true';
-        // content.style.display = 'block';
-        // content.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" role="status"></div></div>';
-
-        // try {
-        //     const response = await fetch(tabElement.dataset.collectionUrl);
-        //     if (!response.ok) throw new Error('Failed to load collection data.');
-        //     content.innerHTML = await response.text();
-        // } catch (error) {
-        //     console.error(error);
-        //     content.innerHTML = `<div class="alert alert-danger m-3">${error.message}</div>`;
-        // }
-        // return content;
     }
 }
