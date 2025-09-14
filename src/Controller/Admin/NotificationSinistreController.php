@@ -68,7 +68,7 @@ class NotificationSinistreController extends AbstractController
         $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page);
 
         // 2. On récupère la "recette" d'affichage depuis le canvas
-        $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
+        $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
 
         // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
         $constante->loadCalculatedValue($entityCanvas, $data);
@@ -95,7 +95,7 @@ class NotificationSinistreController extends AbstractController
             'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
-            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
+            'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $entreprise->getId()),
         ]);
@@ -123,13 +123,13 @@ class NotificationSinistreController extends AbstractController
 
         $form = $this->createForm(NotificationSinistreType::class, $notification);
 
-        $entityCanvas = $constante->getEntityCanvas($notification);
+        $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
         $constante->loadCalculatedValue($entityCanvas, [$notification]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId()),
-            'entityCanvas' => $constante->getEntityCanvas($notification)
+            'entityCanvas' => $entityCanvas
         ]);
     }
 
@@ -219,7 +219,7 @@ class NotificationSinistreController extends AbstractController
         $data[] = $notificationsinistre;
 
         // 2. On récupère la "recette" d'affichage depuis le canvas
-        $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
+        $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
 
         // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
         $constante->loadCalculatedValue($entityCanvas, $data);
@@ -232,7 +232,7 @@ class NotificationSinistreController extends AbstractController
             'utilisateur' => $user,
             'constante' => $this->constante,
             'serviceMonnaie' => $this->serviceMonnaies,
-            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
+            'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
         ]);
     }
@@ -251,7 +251,7 @@ class NotificationSinistreController extends AbstractController
         $reponseData = $this->searchService->search($requestData);
 
         // 2. On récupère la "recette" d'affichage depuis le canvas
-        $entityCanvas = $constante->getEntityCanvas(new NotificationSinistre());
+        $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
 
         // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
         $constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
@@ -272,7 +272,7 @@ class NotificationSinistreController extends AbstractController
             'limit' => $reponseData["limit"],            // La limite par page
             'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
             'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
-            'listeCanvas' => $this->constante->getListeCanvas(new NotificationSinistre()),
+            'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
         ]);
     }
@@ -315,14 +315,16 @@ class NotificationSinistreController extends AbstractController
         // ]);
 
         // On récupère le canvas spécifique à l'entité Contact
-        $contactCanvas = $this->constante->getEntityCanvas(new Contact());
+        $contactCanvas = $this->constante->getEntityCanvas(Contact::class);
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $notification->getContacts(),
             'entite_nom' => 'Contacts',
             'entityCanvas' => $contactCanvas,
-            'listeCanvas' => $contactCanvas['liste'],
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $this->getEntreprise()->getId())
+            // 'listeCanvas' => $contactCanvas['liste'],
+            'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $this->getEntreprise()->getId()),
+            'constante' => $this->constante
         ]);
     }
 
@@ -346,14 +348,16 @@ class NotificationSinistreController extends AbstractController
         // ]);
 
         // On récupère le canvas spécifique à l'entité Tache
-        $pieceCanvas = $this->constante->getEntityCanvas(new PieceSinistre());
+        $pieceCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $notification->getPieces(),
             'entite_nom' => 'Pièces',
             'entityCanvas' => $pieceCanvas,
-            'listeCanvas' => $pieceCanvas['liste'],
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $this->getEntreprise()->getId())
+            // 'listeCanvas' => $pieceCanvas['liste'],
+            'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $this->getEntreprise()->getId()),
+            'constante' => $this->constante
         ]);
     }
 
@@ -376,14 +380,16 @@ class NotificationSinistreController extends AbstractController
         //     'item_template' => 'components/collection_items/_tache_item.html.twig'
         // ]);
         // On récupère le canvas spécifique à l'entité Tache
-        $tacheCanvas = $this->constante->getEntityCanvas(new Tache());
+        $tacheCanvas = $this->constante->getEntityCanvas(Tache::class);
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $notification->getTaches(),
             'entite_nom' => 'Taches',
             'entityCanvas' => $tacheCanvas,
-            'listeCanvas' => $tacheCanvas['liste'],
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId())
+            // 'listeCanvas' => $tacheCanvas['liste'],
+            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
+            'constante' => $this->constante
         ]);
     }
 
@@ -406,14 +412,18 @@ class NotificationSinistreController extends AbstractController
         //     'item_template' => 'components/collection_items/_offre_indemnisation_sinistre_item.html.twig'
         // ]);
         // On récupère le canvas spécifique à l'entité Tache
-        $offreCanvas = $this->constante->getEntityCanvas(new PieceSinistre());
+        $offreCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
+
+        // dd($offreCanvas['liste']);
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $notification->getOffreIndemnisationSinistres(),
             'entite_nom' => 'Offres',
             'entityCanvas' => $offreCanvas,
-            'listeCanvas' => $offreCanvas['liste'],
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $this->getEntreprise()->getId())
+            // 'listeCanvas' => $offreCanvas['liste'],
+            'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $this->getEntreprise()->getId()),
+            'constante' => $this->constante
         ]);
     }
 }
