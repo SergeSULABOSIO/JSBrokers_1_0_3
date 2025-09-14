@@ -21,6 +21,7 @@ use App\Entity\Cotation;
 use App\Entity\Document;
 use App\Entity\Feedback;
 use App\Entity\Paiement;
+use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
@@ -6200,63 +6201,194 @@ class Constante
         return [];
     }
 
-    public function getListeCanvas($object): array
+    public function getListeCanvas($entityClassName): array
     {
-        if ($object instanceof NotificationSinistre) {
-            return [
-                "colonne_principale" => [
-                    "titre_colonne" => "Notifications",
-                    "texte_principal" => [
-                        "attribut_prefixe" => "",
-                        "attribut_code" => "descriptionDeFait",
-                        "attribut_type" => "text",
-                        "attribut_taille_max" => 50,
-                        "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
-                        "icone_taille" => "19px", //largeur = hauteur
-                    ],
-                    "textes_secondaires_separateurs" => " • ",
-                    "textes_secondaires" => [
-                        [
-                            "attribut_prefixe" => "Le ",
-                            "attribut_code" => "occuredAt",
-                            "attribut_type" => "date",
-                            "attribut_taille_max" => null,
-                            "icone" => "fluent-mdl2:date-time-mirrored", //source: https://ux.symfony.com/icons
-                            "icone_taille" => "16px", //largeur = hauteur
-                        ],
-                        [
-                            "attribut_prefixe" => "Pol.: ",
-                            "attribut_code" => "referencePolice",
+        switch ($entityClassName) {
+            case NotificationSinistre::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Notifications",
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "descriptionDeFait",
                             "attribut_type" => "text",
-                            "attribut_taille_max" => 15,
-                            "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
-                            "icone_taille" => "16px", //largeur = hauteur
-                        ],
-                        [
-                            "attribut_prefixe" => "Sin.: ",
-                            "attribut_code" => "referenceSinistre",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 30,
+                            "attribut_taille_max" => 50,
                             "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
-                            "icone_taille" => "16px", //largeur = hauteur
+                            "icone_taille" => "19px", //largeur = hauteur
+                        ],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            [
+                                "attribut_prefixe" => "Le ",
+                                "attribut_code" => "occuredAt",
+                                "attribut_type" => "date",
+                                "attribut_taille_max" => null,
+                                "icone" => "fluent-mdl2:date-time-mirrored", //source: https://ux.symfony.com/icons
+                                "icone_taille" => "16px", //largeur = hauteur
+                            ],
+                            [
+                                "attribut_prefixe" => "Pol.: ",
+                                "attribut_code" => "referencePolice",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => 15,
+                                "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
+                                "icone_taille" => "16px", //largeur = hauteur
+                            ],
+                            [
+                                "attribut_prefixe" => "Sin.: ",
+                                "attribut_code" => "referenceSinistre",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => 30,
+                                "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
+                                "icone_taille" => "16px", //largeur = hauteur
+                            ],
                         ],
                     ],
-                ],
-                "colonnes_numeriques" => [
-                    [
-                        "titre_colonne" => "Dommage",
-                        "attribut_unité" => "$",
-                        "attribut_code" => "dommage",
-                        "attribut_type" => "nombre",
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Dommage",
+                            "attribut_unité" => "$",
+                            "attribut_code" => "dommage",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Dm. évaluée",
+                            "attribut_unité" => "$",
+                            "attribut_code" => "evaluationChiffree",
+                            "attribut_type" => "nombre",
+                        ],
                     ],
-                    [
-                        "titre_colonne" => "Dm. évaluée",
-                        "attribut_unité" => "$",
-                        "attribut_code" => "evaluationChiffree",
-                        "attribut_type" => "nombre",
+                ];
+
+            case OffreIndemnisationSinistre::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Offres d'indemnisation",
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "nom", 
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "icon-park-outline:funds",
+                            "icone_taille" => "19px", //largeur = hauteur
+                        ],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            [
+                                "attribut_prefixe" => "Bénéficiaire: ", 
+                                "attribut_code" => "beneficiaire", 
+                                "attribut_type" => "text"
+                            ],
+                        ],
                     ],
-                ],
-            ];
+                    "colonnes_numeriques" => [
+                        ["titre_colonne" => "Montant Payable", "attribut_unité" => "$", "attribut_code" => "montantPayable"],
+                        ["titre_colonne" => "Franchise", "attribut_unité" => "$", "attribut_code" => "franchiseAppliquee"],
+                    ],
+                ];
+
+            case PieceSinistre::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Pièces Sinistres",
+                        "texte_principal" => ["attribut_code" => "description", "icone" => "codex:file"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Reçu le ", "attribut_code" => "receivedAt", "attribut_type" => "date"],
+                            ["attribut_prefixe" => "Fourni par: ", "attribut_code" => "fourniPar", "attribut_type" => "text"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Contact::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Contacts",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-box"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "fonction", "attribut_type" => "text"],
+                            ["attribut_code" => "email", "attribut_type" => "text"],
+                            ["attribut_code" => "telephone", "attribut_type" => "text"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Client::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Clients",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-group"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "email", "attribut_type" => "text"],
+                            ["attribut_code" => "telephone", "attribut_type" => "text"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Assureur::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Assureurs",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:shield-check"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "email", "attribut_type" => "text"],
+                            ["attribut_code" => "telephone", "attribut_type" => "text"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Tache::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Tâches",
+                        "texte_principal" => ["attribut_code" => "description", "icone" => "mdi:checkbox-marked-circle-outline", "attribut_taille_max" => 70],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Échéance: ", "attribut_code" => "toBeEndedAt", "attribut_type" => "date"],
+                            ["attribut_prefixe" => "Pour: ", "attribut_code" => "executor", "attribut_type" => "text"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Paiement::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Paiements",
+                        "texte_principal" => ["attribut_code" => "reference", "icone" => "mdi:cash-multiple"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "description", "attribut_type" => "text"],
+                            ["attribut_prefixe" => "Payé le: ", "attribut_code" => "paidAt", "attribut_type" => "date"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        ["titre_colonne" => "Montant", "attribut_unité" => "$", "attribut_code" => "montant"],
+                    ],
+                ];
+
+            case Document::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Documents",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:file-document"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Fichier: ", "attribut_code" => "nomFichierStocke", "attribut_type" => "text"],
+                            ["attribut_prefixe" => "Créé le: ", "attribut_code" => "createdAt", "attribut_type" => "date"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+                // ... Ajoutez d'autres `case` ici pour chaque entité que vous souhaitez afficher en liste
         }
         return [];
     }
@@ -6655,415 +6787,994 @@ class Constante
     }
 
 
-    public function getEntityCanvas($object): array
+
+    // ================================================================== //
+    // == FONCTION PUBLIQUE PRINCIPALE (AIGUILLEUR)                    == //
+    // ================================================================== //
+    public function getEntityCanvas(string $entityClassName): array
     {
-        if ($object instanceof NotificationSinistre) {
-            return [
-                "parametres" => [
-                    "description" => "Notification Sinistre",
-                    'icone' => 'emojione-monotone:fire',
-                ],
-                "liste" => [
-                    [
-                        "code" => "id",
-                        "intitule" => "Identifiant",
-                        "type" => "Entier",
-                        "unite" => "",
+        // Cet "aiguilleur" garde le code principal propre et lisible.
+        switch ($entityClassName) {
+            // --- Groupe SINISTRE ---
+            case NotificationSinistre::class:
+            case OffreIndemnisationSinistre::class:
+            case PieceSinistre::class:
+                return $this->getSinistreEntityCanvas($entityClassName);
+
+                // --- Groupe PRODUCTION ---
+            case Assureur::class:
+            case Avenant::class:
+            case Client::class:
+            case Contact::class:
+            case Cotation::class:
+            case Groupe::class:
+            case Partenaire::class:
+            case Risque::class:
+                return $this->getProductionEntityCanvas($entityClassName);
+
+                // --- Groupe MARKETING ---
+            case Piste::class:
+            case Tache::class:
+            case Feedback::class:
+                return $this->getMarketingEntityCanvas($entityClassName);
+
+                // --- Groupe FINANCE ---
+            case Bordereau::class:
+            case Chargement::class:
+            case CompteBancaire::class:
+            case Note::class:
+            case Paiement::class:
+            case Taxe::class:
+            case Tranche::class:
+            case TypeRevenu::class:
+                return $this->getFinanceEntityCanvas($entityClassName);
+
+                // --- Groupe ADMINISTRATION ---
+            case Document::class:
+            case Entreprise::class:
+            case Invite::class:
+            case Utilisateur::class:
+                return $this->getAdministrationEntityCanvas($entityClassName);
+
+            default:
+                return [];
+        }
+    }
+
+    // ================================================================== //
+    // == FONCTIONS PRIVÉES PAR GROUPE LOGIQUE                         == //
+    // ================================================================== //
+
+    /**
+     * Gère les canevas pour les entités du groupe SINISTRE.
+     */
+    private function getSinistreEntityCanvas(string $entityClassName): array
+    {
+        switch ($entityClassName) {
+            case NotificationSinistre::class:
+                return [
+                    "parametres" => [
+                        "description" => "Notification Sinistre",
+                        'icone' => 'emojione-monotone:fire',
                     ],
-                    [
-                        "code" => "referencePolice",
-                        "intitule" => "Réf. de la police",
-                        "type" => "Texte",
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
+                        ["code" => "referenceSinistre", "intitule" => "Réf. Sinistre", "type" => "Texte"],
+                        ["code" => "assure", "intitule" => "Assuré", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                        ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
+                        ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
+                        ["code" => "occuredAt", "intitule" => "Date de survenance", "type" => "Date"],
+                        ["code" => "notifiedAt", "intitule" => "Date de notification", "type" => "Date"],
+                        ["code" => "dommage", "intitule" => "Dommage estimé", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "evaluationChiffree", "intitule" => "Dommage évalué", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "offreIndemnisationSinistres", "intitule" => "Offres", "type" => "Collection", "targetEntity" => OffreIndemnisationSinistre::class, "displayField" => "nom"],
+                        ["code" => "pieces", "intitule" => "Pièces", "type" => "Collection", "targetEntity" => PieceSinistre::class, "displayField" => "description"],
+                        ["code" => "contacts", "intitule" => "Contacts", "type" => "Collection", "targetEntity" => Contact::class, "displayField" => "nom"],
+                        ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
+                        [
+                            "code" => "delaiDeclaration",
+                            "intitule" => "Délai Déclaration",
+                            "type" => "Calcul",
+                            "unite" => "",
+                            "format" => "Texte",
+                            "fonction" => "Notification_Sinistre_getDelaiDeclaration",
+                            "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
+                        ],
+                        [
+                            "code" => "compensation",
+                            "intitule" => "Compensation",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Notification_Sinistre_getCompensation",
+                            "description" => "📊 Montant total de l'indemnisation convenue pour ce sinistre." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "compensationVersee",
+                            "intitule" => "Comp. versée",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Notification_Sinistre_getCompensationVersee",
+                            "description" => "📊 Montant cumulé des paiements déjà effectués pour cette indemnisation." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "compensationSoldeAverser",
+                            "intitule" => "Solde à verser",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Notification_Sinistre_getSoldeAVerser",
+                            "description" => "📊 Montant restant à payer pour solder complètement ce dossier sinistre." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "compensationFranchise",
+                            "intitule" => "Franchise appliquée",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Notification_Sinistre_getFranchise",
+                            "description" => "📊 Montant de la franchise qui a été appliquée conformément aux termes de la police." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "statusDocumentsAttendus",
+                            "intitule" => "Status - pièces",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => "",
+                            "format" => "ArrayAssoc",
+                            "fonction" => "Notification_Sinistre_getStatusDocumentsAttendusNumbers",
+                            "description" => "⏳ Suivi des pièces justificatives attendues, fournies et manquantes pour le dossier." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "indiceCompletude",
+                            "intitule" => "Complétude Pièces",
+                            "type" => "Calcul",
+                            "unite" => "",
+                            "format" => "Texte",
+                            "fonction" => "Notification_Sinistre_getIndiceCompletude",
+                            "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
+                        ],
+                        [
+                            "code" => "dureeReglement",
+                            "intitule" => "Vitesse de règlement",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => "",
+                            "format" => "Texte",
+                            "fonction" => "Notification_Sinistre_getDureeReglement",
+                            "description" => "⏱️ Durée totale en jours entre la notification du sinistre et le dernier paiement de règlement." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "dateDernierReglement",
+                            "intitule" => "Dernier règlement",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => "",
+                            "format" => "Date",
+                            "fonction" => "Notification_Sinistre_getDateDernierRgelement",
+                            "description" => "⏱️ Date à laquelle le tout dernier paiement a été effectué pour ce sinistre." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "ageDossier",
+                            "intitule" => "Âge du Dossier",
+                            "type" => "Calcul",
+                            "unite" => "",
+                            "format" => "Texte",
+                            "fonction" => "Notification_Sinistre_getAgeDossier",
+                            "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
+                        ],
                     ],
-                    [
-                        "code" => "referenceSinistre",
-                        "intitule" => "Réf. du sinistre",
-                        "type" => "Texte",
-                    ],
-                    // NOUVEAU BLOC POUR LA RELATION
-                    [
-                        "code" => "assure", // La propriété dans NotificationSinistre
-                        "intitule" => "Assuré (Client)",
-                        "type" => "Relation",
-                        "targetEntity" => "Client", // Le nom de la classe de l'entité liée
-                        "displayField" => "nom" // Le champ à afficher pour le nom du client
-                    ],
-                    [
-                        "code" => "assureur", // La propriété dans NotificationSinistre
-                        "intitule" => "Assureur",
-                        "type" => "Relation",
-                        "targetEntity" => "Assureur", // Le nom de la classe de l'entité liée
-                        "displayField" => "nom" // Le champ à afficher pour le nom du client
-                    ],
-                    [
-                        "code" => "descriptionDeFait",
-                        "intitule" => "Description des faits",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "occuredAt",
-                        "intitule" => "Date de l'occurrence",
-                        "type" => "Date",
-                    ],
-                    [
-                        "code" => "notifiedAt",
-                        "intitule" => "Date de notification",
-                        "type" => "Date",
-                    ],
-                    [
-                        "code" => "lieu",
-                        "intitule" => "Lieu de l'incident",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "dommage",
-                        "intitule" => "Dommage subbi",
-                        "type" => "Nombre",
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    ],
-                    [
-                        "code" => "evaluationChiffree",
-                        "intitule" => "Dommage évalué",
-                        "type" => "Nombre",
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    ],
-                    [
-                        "code" => "descriptionVictimes",
-                        "intitule" => "Victimes",
-                        "type" => "Texte",
-                    ],
-                    // NOUVEAU BLOC POUR LA COLLECTION
-                    [
-                        "code" => "offreIndemnisationSinistres", // La propriété dans NotificationSinistre
-                        "intitule" => "Offres",
-                        "type" => "Collection",
-                        "targetEntity" => "OffreIndemnisationSinistre", // Le nom de la classe des entités dans la collection
-                        "displayField" => "nom" // Le champ à afficher pour chaque offre
-                    ],
-                    [
-                        "code" => "pieces", // La propriété dans NotificationSinistre
-                        "intitule" => "Pièces",
-                        "type" => "Collection",
-                        "targetEntity" => "PieceSinistre", // Le nom de la classe des entités dans la collection
-                        "displayField" => "description" // Le champ à afficher pour chaque offre
-                    ],
-                    [
-                        "code" => "contacts", // La propriété dans NotificationSinistre
-                        "intitule" => "Contacts",
-                        "type" => "Collection",
-                        "targetEntity" => "Contact", // Le nom de la classe des entités dans la collection
-                        "displayField" => "nom" // Le champ à afficher pour chaque offre
-                    ],
-                    [
-                        "code" => "taches", // La propriété dans NotificationSinistre
-                        "intitule" => "Tâches",
-                        "type" => "Collection",
-                        "targetEntity" => "Tache", // Le nom de la classe des entités dans la collection
-                        "displayField" => "description" // Le champ à afficher pour chaque offre
-                    ],
-                    [
-                        "code" => "invite",
-                        "intitule" => "Invité",
-                        "type" => "Relation",
-                        "targetEntity" => "Invite", // Le nom de la classe de l'entité liée
-                        "displayField" => "email" // Le champ à afficher pour le nom du client
-                    ],
-                    // //EXEMPLE AVEC LES PARAMS
-                    // [
-                    //     "code" => "solde",
-                    //     "intitule" => "Solde Dû",
-                    //     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                    //     "unite" => "$",
-                    //     "fonction" => "calculerSoldeClient", // La méthode à appeler sur $constante
-                    //     "params" => ["montantTotalFacture", "montantTotalPaye"]
-                    // ],
-                    //EXEMPLE SANS PARAMS = Càd que la fonction du calculateur a besoin de l'entité elle-même en paramètre pour faire son tavail
-                    [
-                        "code" => "delaiDeclaration",
-                        "intitule" => "Délai Déclaration",
-                        "type" => "Calcul",
-                        "unite" => "",
-                        "format" => "Texte",
-                        "fonction" => "Notification_Sinistre_getDelaiDeclaration",
-                        "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
-                    ],
-                    [
-                        "code" => "compensation",
-                        "intitule" => "Compensation",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getCompensation",
-                        "description" => "📊 Montant total de l'indemnisation convenue pour ce sinistre." // MODIFICATION: Ajout
-                    ],
-                    [
-                        "code" => "compensationVersee",
-                        "intitule" => "Comp. versée",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getCompensationVersee",
-                        "description" => "📊 Montant cumulé des paiements déjà effectués pour cette indemnisation." // MODIFICATION: Ajout
-                    ],
-                    [
-                        "code" => "compensationSoldeAverser",
-                        "intitule" => "Solde à verser",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getSoldeAVerser",
-                        "description" => "📊 Montant restant à payer pour solder complètement ce dossier sinistre." // MODIFICATION: Ajout
-                    ],
-                    [
-                        "code" => "compensationFranchise",
-                        "intitule" => "Franchise appliquée",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        "format" => "Nombre",
-                        "fonction" => "Notification_Sinistre_getFranchise",
-                        "description" => "📊 Montant de la franchise qui a été appliquée conformément aux termes de la police." // MODIFICATION: Ajout
-                    ],
-                    [
-                        "code" => "statusDocumentsAttendus",
-                        "intitule" => "Status - pièces",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => "",
-                        "format" => "ArrayAssoc",
-                        "fonction" => "Notification_Sinistre_getStatusDocumentsAttendusNumbers",
-                        "description" => "⏳ Suivi des pièces justificatives attendues, fournies et manquantes pour le dossier." // MODIFICATION: Ajout
-                    ],
-                    [
-                        "code" => "indiceCompletude",
-                        "intitule" => "Complétude Pièces",
-                        "type" => "Calcul",
-                        "unite" => "",
-                        "format" => "Texte",
-                        "fonction" => "Notification_Sinistre_getIndiceCompletude",
-                        "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
-                    ],
-                    [
-                        "code" => "dureeReglement",
-                        "intitule" => "Vitesse de règlement",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => "",
-                        "format" => "Texte",
-                        "fonction" => "Notification_Sinistre_getDureeReglement",
-                        "description" => "⏱️ Durée totale en jours entre la notification du sinistre et le dernier paiement de règlement." // MODIFICATION: Ajout
-                    ],
-                    [
-                        "code" => "dateDernierReglement",
-                        "intitule" => "Dernier règlement",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => "",
-                        "format" => "Date",
-                        "fonction" => "Notification_Sinistre_getDateDernierRgelement",
-                        "description" => "⏱️ Date à laquelle le tout dernier paiement a été effectué pour ce sinistre." // MODIFICATION: Ajout
-                    ],
-                    // MODIFICATION: Ajout des nouveaux attributs calculés
-                    
-                    [
-                        "code" => "ageDossier",
-                        "intitule" => "Âge du Dossier",
-                        "type" => "Calcul",
-                        "unite" => "",
-                        "format" => "Texte",
-                        "fonction" => "Notification_Sinistre_getAgeDossier",
-                        "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
-                    ],
-                    
-                ],
-            ];
-        } else if ($object instanceof Client) {
-            return [
-                "parametres" => [
-                    "description" => "Client",
-                ],
-                "liste" => [
-                    [
-                        "code" => "id",
-                        "intitule" => "Identifiant",
-                        "type" => "Entier",
-                        "unite" => "",
-                    ],
-                    [
-                        "code" => "nom",
-                        "intitule" => "Nom du client",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "adresse",
-                        "intitule" => "Adresse physique",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "telephone",
-                        "intitule" => "N° de téléphone",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "email",
-                        "intitule" => "Adresse mail",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "numimpot",
-                        "intitule" => "N° Impôt",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "rccm",
-                        "intitule" => "N° du registre de commerce",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "idnat",
-                        "intitule" => "N° d'ident. nationale",
-                        "type" => "Texte",
-                    ],
-                ],
-            ];
-        } else if ($object instanceof Assureur) {
-            return [
-                "parametres" => [
-                    "description" => "Assureur",
-                ],
-                "liste" => [
-                    [
-                        "code" => "id",
-                        "intitule" => "Identifiant",
-                        "type" => "Entier",
-                        "unite" => "",
-                    ],
-                    [
-                        "code" => "nom",
-                        "intitule" => "Nom de l'assureur",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "adressePhysique",
-                        "intitule" => "Adresse physique",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "url",
-                        "intitule" => "URL du site Internet",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "email",
-                        "intitule" => "Adresse mail",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "numimpot",
-                        "intitule" => "N° Impôt",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "rccm",
-                        "intitule" => "N° du registre de commerce",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "idnat",
-                        "intitule" => "N° d'ident. nationale",
-                        "type" => "Texte",
-                    ],
-                ],
-            ];
-        } else if ($object instanceof Invite) {
-            return [
-                "parametres" => [
-                    "description" => "Invité",
-                ],
-                "liste" => [
-                    [
-                        "code" => "id",
-                        "intitule" => "Identifiant",
-                        "type" => "Entier",
-                        "unite" => "",
-                    ],
-                    [
-                        "code" => "email",
-                        "intitule" => "Email",
-                        "type" => "Texte",
-                    ],
-                ],
-            ];
-        } else if ($object instanceof OffreIndemnisationSinistre) {
-            return [
-                "parametres" => [
-                    "description" => "Offre d'indemnisation",
-                ],
-                "liste" => [
-                    [
-                        "code" => "id",
-                        "intitule" => "Identifiant",
-                        "type" => "Entier",
-                        "unite" => "",
-                    ],
-                    [
-                        "code" => "nom",
-                        "intitule" => "Intitulé ou Nom",
-                        "type" => "Texte",
-                    ],
-                    [
-                        "code" => "franchiseAppliquee",
-                        "intitule" => "Franchise appliquée",
-                        "type" => "Nombre",
-                        "unite" => "$",
-                    ],
-                    [
-                        "code" => "montantPayable",
-                        "intitule" => "Montant Payable",
-                        "type" => "Nombre",
-                        "unite" => "$",
-                    ],
-                    [
-                        "code" => "beneficiaire",
-                        "intitule" => "Bénéficiaire",
-                        "type" => "Texte",
-                        "unite" => "",
-                    ],
-                    [
-                        "code" => "referenceBancaire",
-                        "intitule" => "Réf. Bancaire",
-                        "type" => "Texte",
-                        "unite" => "",
-                    ],
-                    [
-                        "code" => "compensationVersee",
-                        "intitule" => "Comp. versée",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        "format" => "Nombre",
-                        "fonction" => "Offre_Indemnisation_getCompensationVersee",
-                        "description" => "📊 Montant cumulé des paiements déjà effectués pour cette offre." // MODIFICATION: Ajout
-                    ],
-                    [
-                        "code" => "compensationAVersee",
-                        "intitule" => "Solde à verser",
-                        "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                        "format" => "Nombre",
-                        "fonction" => "Offre_Indemnisation_getSoldeAVerser",
-                        "description" => "Montant restant à payer pour solder cette offre." // MODIFICATION: Ajout
-                    ],
-                    // MODIFICATION: Ajout du nouveau
-                    [
-                        "code" => "pourcentagePaye",
-                        "intitule" => "Pourcentage Payé",
-                        "type" => "Calcul",
-                        "unite" => "",
-                        "format" => "Texte",
-                        "fonction" => "Offre_Indemnisation_getPourcentagePaye",
-                        "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
+                ];
+
+            case OffreIndemnisationSinistre::class:
+                return [
+                    "parametres" => ["description" => "Offre d'Indemnisation", "icone" => "icon-park-outline:funds"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Description", "type" => "Texte"],
+                        ["code" => "beneficiaire", "intitule" => "Bénéficiaire", "type" => "Texte"],
+                        ["code" => "montantPayable", "intitule" => "Montant Payable", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "franchiseAppliquee", "intitule" => "Franchise", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "notificationSinistre", "intitule" => "Notification Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
+                        ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                        ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
+                        [
+                            "code" => "compensationVersee",
+                            "intitule" => "Comp. versée",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Offre_Indemnisation_getCompensationVersee",
+                            "description" => "📊 Montant cumulé des paiements déjà effectués pour cette offre." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "compensationAVersee",
+                            "intitule" => "Solde à verser",
+                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Offre_Indemnisation_getSoldeAVerser",
+                            "description" => "Montant restant à payer pour solder cette offre." // MODIFICATION: Ajout
+                        ],
+                        [
+                            "code" => "pourcentagePaye",
+                            "intitule" => "Pourcentage Payé",
+                            "type" => "Calcul",
+                            "unite" => "",
+                            "format" => "Texte",
+                            "fonction" => "Offre_Indemnisation_getPourcentagePaye",
+                            "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
+                        ]
                     ]
-                ],
-            ];
+                ];
+
+            case PieceSinistre::class:
+                return [
+                    "parametres" => ["description" => "Pièce Sinistre", "icone" => "codex:file"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "description", "intitule" => "Description", "type" => "Texte"],
+                        ["code" => "fourniPar", "intitule" => "Fourni par", "type" => "Texte"],
+                        ["code" => "receivedAt", "intitule" => "Date de réception", "type" => "Date"],
+                        ["code" => "notificationSinistre", "intitule" => "Notification Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                    ]
+                ];
         }
         return [];
     }
+
+    /**
+     * Gère les canevas pour les entités du groupe PRODUCTION.
+     */
+    private function getProductionEntityCanvas(string $entityClassName): array
+    {
+        switch ($entityClassName) {
+            case Assureur::class:
+                return [
+                    "parametres" => ["description" => "Assureur", "icone" => "mdi:shield-check"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "email"],
+                            ["attribut_code" => "telephone", "attribut_prefixe" => " | Tel: "]
+                        ]],
+                        ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class],
+                        ["code" => "bordereaus", "intitule" => "Bordereaux", "type" => "Collection", "targetEntity" => Bordereau::class],
+                    ]
+                ];
+
+            case Avenant::class:
+                return [
+                    "parametres" => ["description" => "Avenant", "icone" => "mdi:file-document-edit"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "numero", "intitule" => "Numéro", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "cotation", "attribut_prefixe" => "Cotation: "]
+                        ]],
+                        ["code" => "startingAt", "intitule" => "Début", "type" => "Date"],
+                        ["code" => "endingAt", "intitule" => "Fin", "type" => "Date"],
+                        ["code" => "primeTTC", "intitule" => "Prime TTC", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                    ]
+                ];
+
+            case Client::class:
+                return [
+                    "parametres" => ["description" => "Client", "icone" => "mdi:account-group"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "email"],
+                            ["attribut_code" => "telephone", "attribut_prefixe" => " | Tel: "]
+                        ]],
+                        ["code" => "contacts", "intitule" => "Contacts", "type" => "Collection", "targetEntity" => Contact::class],
+                        ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class],
+                        ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                        ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class],
+                    ]
+                ];
+
+            case Contact::class:
+                return [
+                    "parametres" => ["description" => "Contact", "icone" => "mdi:account-box"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "fonction"],
+                            ["attribut_code" => "email", "attribut_prefixe" => " | "]
+                        ]],
+                        ["code" => "telephone", "intitule" => "Téléphone", "type" => "Texte"],
+                        ["code" => "client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                    ]
+                ];
+
+            case Cotation::class:
+                return [
+                    "parametres" => ["description" => "Cotation", "icone" => "mdi:file-chart"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "assureur", "attribut_prefixe" => "Assureur: "]
+                        ]],
+                        ["code" => "piste", "intitule" => "Piste", "type" => "Relation", "targetEntity" => Piste::class, "displayField" => "nom"],
+                        ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
+                        ["code" => "avenants", "intitule" => "Avenants", "type" => "Collection", "targetEntity" => Avenant::class],
+                        ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                    ]
+                ];
+
+            case Groupe::class:
+                return [
+                    "parametres" => ["description" => "Groupe de clients", "icone" => "mdi:account-multiple"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom du groupe", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "description"]
+                        ]],
+                        ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class],
+                    ]
+                ];
+
+            case Partenaire::class:
+                return [
+                    "parametres" => ["description" => "Partenaire", "icone" => "mdi:handshake"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "email"]
+                        ]],
+                        ["code" => "part", "intitule" => "Part (%)", "type" => "Nombre", "unite" => "%"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                        ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class],
+                    ]
+                ];
+
+            case Risque::class:
+                return [
+                    "parametres" => ["description" => "Risque", "icone" => "mdi:hazard-lights"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nomComplet", "intitule" => "Nom complet", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "code", "attribut_prefixe" => "Code: "]
+                        ]],
+                        ["code" => "imposable", "intitule" => "Imposable", "type" => "Booleen"],
+                        ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class],
+                        ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class],
+                    ]
+                ];
+        }
+        return [];
+    }
+
+    /**
+     * Gère les canevas pour les entités du groupe MARKETING.
+     */
+    private function getMarketingEntityCanvas(string $entityClassName): array
+    {
+        switch ($entityClassName) {
+            case Piste::class:
+                return [
+                    "parametres" => ["description" => "Piste Commerciale", "icone" => "mdi:road-variant"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "client"]
+                        ]],
+                        ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
+                        ["code" => "primePotentielle", "intitule" => "Prime potentielle", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                    ]
+                ];
+
+            case Tache::class:
+                return [
+                    "parametres" => ["description" => "Tâche", "icone" => "mdi:checkbox-marked-circle-outline"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "description", "intitule" => "Description", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "executor", "attribut_prefixe" => "Pour: "]
+                        ]],
+                        ["code" => "toBeEndedAt", "intitule" => "Échéance", "type" => "Date"],
+                        ["code" => "closed", "intitule" => "Clôturée", "type" => "Booleen"],
+                        ["code" => "feedbacks", "intitule" => "Feedbacks", "type" => "Collection", "targetEntity" => Feedback::class],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                    ]
+                ];
+
+            case Feedback::class:
+                return [
+                    "parametres" => ["description" => "Feedback", "icone" => "mdi:message-reply-text"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "description", "intitule" => "Description", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "tache", "attribut_prefixe" => "Tâche: "]
+                        ]],
+                        ["code" => "createdAt", "intitule" => "Date", "type" => "Date"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                    ]
+                ];
+        }
+        return [];
+    }
+
+    /**
+     * Gère les canevas pour les entités du groupe FINANCE.
+     */
+    private function getFinanceEntityCanvas(string $entityClassName): array
+    {
+        switch ($entityClassName) {
+            case Bordereau::class:
+                return [
+                    "parametres" => ["description" => "Bordereau", "icone" => "mdi:file-table-box-multiple"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "assureur"]
+                        ]],
+                        ["code" => "montantTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "receivedAt", "intitule" => "Reçu le", "type" => "Date"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                    ]
+                ];
+            case Chargement::class:
+                return [
+                    "parametres" => ["description" => "Type de chargement", "icone" => "mdi:cog-transfer"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "description"]
+                        ]],
+                    ]
+                ];
+            case CompteBancaire::class:
+                return [
+                    "parametres" => ["description" => "Compte Bancaire", "icone" => "mdi:bank"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "intitule", "intitule" => "Intitulé", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "numero", "attribut_prefixe" => "N° "],
+                            ["attribut_code" => "banque", "attribut_prefixe" => " | Banque: "]
+                        ]],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                        ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class],
+                    ]
+                ];
+            case Note::class:
+                return [
+                    "parametres" => ["description" => "Note (Débit/Crédit)", "icone" => "mdi:note-text"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "reference"]
+                        ]],
+                        ["code" => "validated", "intitule" => "Validée", "type" => "Booleen"],
+                        ["code" => "createdAt", "intitule" => "Créée le", "type" => "Date"],
+                        ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class],
+                    ]
+                ];
+            case Paiement::class:
+                return [
+                    "parametres" => ["description" => "Paiement", "icone" => "mdi:cash-multiple"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "reference", "intitule" => "Référence", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "description"]
+                        ]],
+                        ["code" => "offreIndemnisationSinistre", "intitule" => "Offre", "type" => "Relation", "targetEntity" => OffreIndemnisationSinistre::class, "displayField" => "nom"],
+                        ["code" => "montant", "intitule" => "Montant", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "paidAt", "intitule" => "Payé le", "type" => "Date"],
+                        ["code" => "preuves", "intitule" => "Preuves (Documents)", "type" => "Collection", "targetEntity" => Document::class],
+                    ]
+                ];
+            case Taxe::class:
+                return [
+                    "parametres" => ["description" => "Taxe", "icone" => "mdi:percent-box"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "code", "intitule" => "Code", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "description"]
+                        ]],
+                        ["code" => "tauxIARD", "intitule" => "Taux IARD", "type" => "Nombre", "unite" => "%"],
+                        ["code" => "tauxVIE", "intitule" => "Taux VIE", "type" => "Nombre", "unite" => "%"],
+                    ]
+                ];
+            case Tranche::class:
+                return [
+                    "parametres" => ["description" => "Tranche", "icone" => "mdi:chart-pie"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "cotation", "attribut_prefixe" => "Cotation: "]
+                        ]],
+                        ["code" => "montantFlat", "intitule" => "Montant", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
+                        ["code" => "payableAt", "intitule" => "Payable le", "type" => "Date"],
+                    ]
+                ];
+            case TypeRevenu::class:
+                return [
+                    "parametres" => ["description" => "Type de Revenu", "icone" => "mdi:cash-register"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true],
+                        ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
+                        ["code" => "montantflat", "intitule" => "Montant", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "shared", "intitule" => "Partagé", "type" => "Booleen"],
+                    ]
+                ];
+        }
+        return [];
+    }
+
+    /**
+     * Gère les canevas pour les entités du groupe ADMINISTRATION.
+     */
+    private function getAdministrationEntityCanvas(string $entityClassName): array
+    {
+        switch ($entityClassName) {
+            case Document::class:
+                return [
+                    "parametres" => ["description" => "Document", "icone" => "mdi:file-document"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "nomFichierStocke", "attribut_prefixe" => "Fichier: "]
+                        ]],
+                        ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
+                    ]
+                ];
+            case Entreprise::class:
+                return [
+                    "parametres" => ["description" => "Entreprise", "icone" => "mdi:office-building"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "licence", "attribut_prefixe" => "Licence: "]
+                        ]],
+                        ["code" => "telephone", "intitule" => "Téléphone", "type" => "Texte"],
+                        ["code" => "email", "intitule" => "Email", "type" => "Texte"],
+                        ["code" => "utilisateurs", "intitule" => "Utilisateurs", "type" => "Collection", "targetEntity" => Utilisateur::class],
+                        ["code" => "invites", "intitule" => "Invités", "type" => "Collection", "targetEntity" => Invite::class],
+                    ]
+                ];
+            case Invite::class:
+                return [
+                    "parametres" => ["description" => "Invitation", "icone" => "mdi:email-plus"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "email", "intitule" => "Email", "type" => "Texte", "col_principale" => true],
+                        ["code" => "createdAt", "intitule" => "Invité le", "type" => "Date"],
+                        ["code" => "isVerified", "intitule" => "Acceptée", "type" => "Booleen"],
+                    ]
+                ];
+            case Utilisateur::class:
+                return [
+                    "parametres" => ["description" => "Utilisateur", "icone" => "mdi:account-key"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true],
+                        ["code" => "email", "intitule" => "Email", "type" => "Texte"],
+                        ["code" => "isVerified", "intitule" => "Vérifié", "type" => "Booleen"],
+                    ]
+                ];
+        }
+        return [];
+    }
+
+
+    // public function getEntityCanvas($object): array
+    // {
+    //     if ($object instanceof NotificationSinistre) {
+    //         return [
+    //             "parametres" => [
+    //                 "description" => "Notification Sinistre",
+    //                 'icone' => 'emojione-monotone:fire',
+    //             ],
+    //             "liste" => [
+    //                 [
+    //                     "code" => "id",
+    //                     "intitule" => "Identifiant",
+    //                     "type" => "Entier",
+    //                     "unite" => "",
+    //                 ],
+    //                 [
+    //                     "code" => "referencePolice",
+    //                     "intitule" => "Réf. de la police",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "referenceSinistre",
+    //                     "intitule" => "Réf. du sinistre",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 // NOUVEAU BLOC POUR LA RELATION
+    //                 [
+    //                     "code" => "assure", // La propriété dans NotificationSinistre
+    //                     "intitule" => "Assuré (Client)",
+    //                     "type" => "Relation",
+    //                     "targetEntity" => "Client", // Le nom de la classe de l'entité liée
+    //                     "displayField" => "nom" // Le champ à afficher pour le nom du client
+    //                 ],
+    //                 [
+    //                     "code" => "assureur", // La propriété dans NotificationSinistre
+    //                     "intitule" => "Assureur",
+    //                     "type" => "Relation",
+    //                     "targetEntity" => "Assureur", // Le nom de la classe de l'entité liée
+    //                     "displayField" => "nom" // Le champ à afficher pour le nom du client
+    //                 ],
+    //                 [
+    //                     "code" => "descriptionDeFait",
+    //                     "intitule" => "Description des faits",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "occuredAt",
+    //                     "intitule" => "Date de l'occurrence",
+    //                     "type" => "Date",
+    //                 ],
+    //                 [
+    //                     "code" => "notifiedAt",
+    //                     "intitule" => "Date de notification",
+    //                     "type" => "Date",
+    //                 ],
+    //                 [
+    //                     "code" => "lieu",
+    //                     "intitule" => "Lieu de l'incident",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "dommage",
+    //                     "intitule" => "Dommage subbi",
+    //                     "type" => "Nombre",
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                 ],
+    //                 [
+    //                     "code" => "evaluationChiffree",
+    //                     "intitule" => "Dommage évalué",
+    //                     "type" => "Nombre",
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                 ],
+    //                 [
+    //                     "code" => "descriptionVictimes",
+    //                     "intitule" => "Victimes",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 // NOUVEAU BLOC POUR LA COLLECTION
+    //                 [
+    //                     "code" => "offreIndemnisationSinistres", // La propriété dans NotificationSinistre
+    //                     "intitule" => "Offres",
+    //                     "type" => "Collection",
+    //                     "targetEntity" => "OffreIndemnisationSinistre", // Le nom de la classe des entités dans la collection
+    //                     "displayField" => "nom" // Le champ à afficher pour chaque offre
+    //                 ],
+    //                 [
+    //                     "code" => "pieces", // La propriété dans NotificationSinistre
+    //                     "intitule" => "Pièces",
+    //                     "type" => "Collection",
+    //                     "targetEntity" => "PieceSinistre", // Le nom de la classe des entités dans la collection
+    //                     "displayField" => "description" // Le champ à afficher pour chaque offre
+    //                 ],
+    //                 [
+    //                     "code" => "contacts", // La propriété dans NotificationSinistre
+    //                     "intitule" => "Contacts",
+    //                     "type" => "Collection",
+    //                     "targetEntity" => "Contact", // Le nom de la classe des entités dans la collection
+    //                     "displayField" => "nom" // Le champ à afficher pour chaque offre
+    //                 ],
+    //                 [
+    //                     "code" => "taches", // La propriété dans NotificationSinistre
+    //                     "intitule" => "Tâches",
+    //                     "type" => "Collection",
+    //                     "targetEntity" => "Tache", // Le nom de la classe des entités dans la collection
+    //                     "displayField" => "description" // Le champ à afficher pour chaque offre
+    //                 ],
+    //                 [
+    //                     "code" => "invite",
+    //                     "intitule" => "Invité",
+    //                     "type" => "Relation",
+    //                     "targetEntity" => "Invite", // Le nom de la classe de l'entité liée
+    //                     "displayField" => "email" // Le champ à afficher pour le nom du client
+    //                 ],
+    //                 // //EXEMPLE AVEC LES PARAMS
+    //                 // [
+    //                 //     "code" => "solde",
+    //                 //     "intitule" => "Solde Dû",
+    //                 //     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                 //     "unite" => "$",
+    //                 //     "fonction" => "calculerSoldeClient", // La méthode à appeler sur $constante
+    //                 //     "params" => ["montantTotalFacture", "montantTotalPaye"]
+    //                 // ],
+    //                 //EXEMPLE SANS PARAMS = Càd que la fonction du calculateur a besoin de l'entité elle-même en paramètre pour faire son tavail
+    //                 [
+    //                     "code" => "delaiDeclaration",
+    //                     "intitule" => "Délai Déclaration",
+    //                     "type" => "Calcul",
+    //                     "unite" => "",
+    //                     "format" => "Texte",
+    //                     "fonction" => "Notification_Sinistre_getDelaiDeclaration",
+    //                     "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
+    //                 ],
+    //                 [
+    //                     "code" => "compensation",
+    //                     "intitule" => "Compensation",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                     "format" => "Nombre",
+    //                     "fonction" => "Notification_Sinistre_getCompensation",
+    //                     "description" => "📊 Montant total de l'indemnisation convenue pour ce sinistre." // MODIFICATION: Ajout
+    //                 ],
+    //                 [
+    //                     "code" => "compensationVersee",
+    //                     "intitule" => "Comp. versée",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                     "format" => "Nombre",
+    //                     "fonction" => "Notification_Sinistre_getCompensationVersee",
+    //                     "description" => "📊 Montant cumulé des paiements déjà effectués pour cette indemnisation." // MODIFICATION: Ajout
+    //                 ],
+    //                 [
+    //                     "code" => "compensationSoldeAverser",
+    //                     "intitule" => "Solde à verser",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                     "format" => "Nombre",
+    //                     "fonction" => "Notification_Sinistre_getSoldeAVerser",
+    //                     "description" => "📊 Montant restant à payer pour solder complètement ce dossier sinistre." // MODIFICATION: Ajout
+    //                 ],
+    //                 [
+    //                     "code" => "compensationFranchise",
+    //                     "intitule" => "Franchise appliquée",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                     "format" => "Nombre",
+    //                     "fonction" => "Notification_Sinistre_getFranchise",
+    //                     "description" => "📊 Montant de la franchise qui a été appliquée conformément aux termes de la police." // MODIFICATION: Ajout
+    //                 ],
+    //                 [
+    //                     "code" => "statusDocumentsAttendus",
+    //                     "intitule" => "Status - pièces",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => "",
+    //                     "format" => "ArrayAssoc",
+    //                     "fonction" => "Notification_Sinistre_getStatusDocumentsAttendusNumbers",
+    //                     "description" => "⏳ Suivi des pièces justificatives attendues, fournies et manquantes pour le dossier." // MODIFICATION: Ajout
+    //                 ],
+    //                 [
+    //                     "code" => "indiceCompletude",
+    //                     "intitule" => "Complétude Pièces",
+    //                     "type" => "Calcul",
+    //                     "unite" => "",
+    //                     "format" => "Texte",
+    //                     "fonction" => "Notification_Sinistre_getIndiceCompletude",
+    //                     "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
+    //                 ],
+    //                 [
+    //                     "code" => "dureeReglement",
+    //                     "intitule" => "Vitesse de règlement",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => "",
+    //                     "format" => "Texte",
+    //                     "fonction" => "Notification_Sinistre_getDureeReglement",
+    //                     "description" => "⏱️ Durée totale en jours entre la notification du sinistre et le dernier paiement de règlement." // MODIFICATION: Ajout
+    //                 ],
+    //                 [
+    //                     "code" => "dateDernierReglement",
+    //                     "intitule" => "Dernier règlement",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => "",
+    //                     "format" => "Date",
+    //                     "fonction" => "Notification_Sinistre_getDateDernierRgelement",
+    //                     "description" => "⏱️ Date à laquelle le tout dernier paiement a été effectué pour ce sinistre." // MODIFICATION: Ajout
+    //                 ],
+    //                 // MODIFICATION: Ajout des nouveaux attributs calculés
+
+    //                 [
+    //                     "code" => "ageDossier",
+    //                     "intitule" => "Âge du Dossier",
+    //                     "type" => "Calcul",
+    //                     "unite" => "",
+    //                     "format" => "Texte",
+    //                     "fonction" => "Notification_Sinistre_getAgeDossier",
+    //                     "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
+    //                 ],
+
+    //             ],
+    //         ];
+    //     } else if ($object instanceof Client) {
+    //         return [
+    //             "parametres" => [
+    //                 "description" => "Client",
+    //             ],
+    //             "liste" => [
+    //                 [
+    //                     "code" => "id",
+    //                     "intitule" => "Identifiant",
+    //                     "type" => "Entier",
+    //                     "unite" => "",
+    //                 ],
+    //                 [
+    //                     "code" => "nom",
+    //                     "intitule" => "Nom du client",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "adresse",
+    //                     "intitule" => "Adresse physique",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "telephone",
+    //                     "intitule" => "N° de téléphone",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "email",
+    //                     "intitule" => "Adresse mail",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "numimpot",
+    //                     "intitule" => "N° Impôt",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "rccm",
+    //                     "intitule" => "N° du registre de commerce",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "idnat",
+    //                     "intitule" => "N° d'ident. nationale",
+    //                     "type" => "Texte",
+    //                 ],
+    //             ],
+    //         ];
+    //     } else if ($object instanceof Assureur) {
+    //         return [
+    //             "parametres" => [
+    //                 "description" => "Assureur",
+    //             ],
+    //             "liste" => [
+    //                 [
+    //                     "code" => "id",
+    //                     "intitule" => "Identifiant",
+    //                     "type" => "Entier",
+    //                     "unite" => "",
+    //                 ],
+    //                 [
+    //                     "code" => "nom",
+    //                     "intitule" => "Nom de l'assureur",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "adressePhysique",
+    //                     "intitule" => "Adresse physique",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "url",
+    //                     "intitule" => "URL du site Internet",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "email",
+    //                     "intitule" => "Adresse mail",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "numimpot",
+    //                     "intitule" => "N° Impôt",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "rccm",
+    //                     "intitule" => "N° du registre de commerce",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "idnat",
+    //                     "intitule" => "N° d'ident. nationale",
+    //                     "type" => "Texte",
+    //                 ],
+    //             ],
+    //         ];
+    //     } else if ($object instanceof Invite) {
+    //         return [
+    //             "parametres" => [
+    //                 "description" => "Invité",
+    //             ],
+    //             "liste" => [
+    //                 [
+    //                     "code" => "id",
+    //                     "intitule" => "Identifiant",
+    //                     "type" => "Entier",
+    //                     "unite" => "",
+    //                 ],
+    //                 [
+    //                     "code" => "email",
+    //                     "intitule" => "Email",
+    //                     "type" => "Texte",
+    //                 ],
+    //             ],
+    //         ];
+    //     } else if ($object instanceof OffreIndemnisationSinistre) {
+    //         return [
+    //             "parametres" => [
+    //                 "description" => "Offre d'indemnisation",
+    //             ],
+    //             "liste" => [
+    //                 [
+    //                     "code" => "id",
+    //                     "intitule" => "Identifiant",
+    //                     "type" => "Entier",
+    //                     "unite" => "",
+    //                 ],
+    //                 [
+    //                     "code" => "nom",
+    //                     "intitule" => "Intitulé ou Nom",
+    //                     "type" => "Texte",
+    //                 ],
+    //                 [
+    //                     "code" => "franchiseAppliquee",
+    //                     "intitule" => "Franchise appliquée",
+    //                     "type" => "Nombre",
+    //                     "unite" => "$",
+    //                 ],
+    //                 [
+    //                     "code" => "montantPayable",
+    //                     "intitule" => "Montant Payable",
+    //                     "type" => "Nombre",
+    //                     "unite" => "$",
+    //                 ],
+    //                 [
+    //                     "code" => "beneficiaire",
+    //                     "intitule" => "Bénéficiaire",
+    //                     "type" => "Texte",
+    //                     "unite" => "",
+    //                 ],
+    //                 [
+    //                     "code" => "referenceBancaire",
+    //                     "intitule" => "Réf. Bancaire",
+    //                     "type" => "Texte",
+    //                     "unite" => "",
+    //                 ],
+    //                 [
+    //                     "code" => "compensationVersee",
+    //                     "intitule" => "Comp. versée",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                     "format" => "Nombre",
+    //                     "fonction" => "Offre_Indemnisation_getCompensationVersee",
+    //                     "description" => "📊 Montant cumulé des paiements déjà effectués pour cette offre." // MODIFICATION: Ajout
+    //                 ],
+    //                 [
+    //                     "code" => "compensationAVersee",
+    //                     "intitule" => "Solde à verser",
+    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+    //                     "format" => "Nombre",
+    //                     "fonction" => "Offre_Indemnisation_getSoldeAVerser",
+    //                     "description" => "Montant restant à payer pour solder cette offre." // MODIFICATION: Ajout
+    //                 ],
+    //                 // MODIFICATION: Ajout du nouveau
+    //                 [
+    //                     "code" => "pourcentagePaye",
+    //                     "intitule" => "Pourcentage Payé",
+    //                     "type" => "Calcul",
+    //                     "unite" => "",
+    //                     "format" => "Texte",
+    //                     "fonction" => "Offre_Indemnisation_getPourcentagePaye",
+    //                     "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
+    //                 ]
+    //             ],
+    //         ];
+    //     }
+    //     return [];
+    // }
 
     public function getNumericValues($object): array
     {
@@ -7149,7 +7860,7 @@ class Constante
         return round($pourcentage) . ' %';
     }
 
-     /**
+    /**
      * Calcule le pourcentage payé d'une offre d'indemnisation.
      */
     public function Offre_Indemnisation_getPourcentagePaye(OffreIndemnisationSinistre $offre): string

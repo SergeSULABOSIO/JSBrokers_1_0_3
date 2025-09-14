@@ -160,6 +160,10 @@ class PieceSinistre implements OwnerAwareInterface
 
     public function __toString(): string
     {
-        return $this->description;
+        // return $this->description;
+        // On utilise l'opérateur "null coalescing" (??) pour renvoyer
+        // la description si elle existe, ou une chaîne vide ('') si elle est null.
+        // Cela garantit que la fonction renvoie TOUJOURS une chaîne de caractères.
+        return $this->description ?? '';
     }
 }

@@ -1,11 +1,10 @@
-<div 
+{# <div 
     data-controller="donnees"
-    {# J'envoie l'objet status vers le controleur stimulus: comme c'est un objet, il faut le décorer avec |json_encode #}
     data-donnees-status-value='{{ status|json_encode }}' 
     data-donnees-page-value={{ page }}
     data-donnees-limit-value={{ limit }}
     data-donnees-totalitems-value={{ totalItems }}
-></div>
+></div> #}
 {% if data|length == 0 %}
     <tr>
         <td class="p-3 m-2" style="width:80px"></td>
