@@ -6185,19 +6185,28 @@ class Constante
         return $tabFinaleOrdonne;
     }
 
-    public function getNumericAttributes($object): array
+    public function getNumericAttributes($objectClassName): array
     {
-        if ($object instanceof NotificationSinistre) {
-            return [
-                "dommage-avant-evaluation" => "la somme des dommages avant évaluation",
-                'dommage-apres-evaluation' => "la somme des dommages après évaluation",
-                'franchise' => "la somme des franchises",
-                "compensation-totale" => "la somme des compensations totales",
-                "compensation-versee" => "la somme des compensations versées",
-                "compensation-due" => "la somme des compensations dues",
-            ];
+        switch ($objectClassName) {
+            case NotificationSinistre::class:
+                return [
+                    "dommage-avant-evaluation" => "la somme des dommages avant évaluation",
+                    'dommage-apres-evaluation' => "la somme des dommages après évaluation",
+                    'franchise' => "la somme des franchises",
+                    "compensation-totale" => "la somme des compensations totales",
+                    "compensation-versee" => "la somme des compensations versées",
+                    "compensation-due" => "la somme des compensations dues",
+                ];
+            case OffreIndemnisationSinistre::class:
+                return [
+                    // "dommage-avant-evaluation" => "la somme des dommages avant évaluation",
+                    // 'dommage-apres-evaluation' => "la somme des dommages après évaluation",
+                    // 'franchise' => "la somme des franchises",
+                    // "compensation-totale" => "la somme des compensations totales",
+                    // "compensation-versee" => "la somme des compensations versées",
+                    // "compensation-due" => "la somme des compensations dues",
+                ];
         }
-
         return [];
     }
 
@@ -6230,7 +6239,7 @@ class Constante
                                 "attribut_prefixe" => "Pol.: ",
                                 "attribut_code" => "referencePolice",
                                 "attribut_type" => "text",
-                                "attribut_taille_max" => 15,
+                                "attribut_taille_max" => 30,
                                 "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
                                 "icone_taille" => "16px", //largeur = hauteur
                             ],
@@ -6266,7 +6275,7 @@ class Constante
                         "titre_colonne" => "Offres d'indemnisation",
                         "texte_principal" => [
                             "attribut_prefixe" => "",
-                            "attribut_code" => "nom", 
+                            "attribut_code" => "nom",
                             "attribut_type" => "text",
                             "attribut_taille_max" => 50,
                             "icone" => "icon-park-outline:funds",
@@ -6275,18 +6284,18 @@ class Constante
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
                             [
-                                "attribut_prefixe" => "Bénéf.: ", 
-                                "attribut_code" => "beneficiaire", 
+                                "attribut_prefixe" => "Bén.: ",
+                                "attribut_code" => "beneficiaire",
                                 "attribut_type" => "text",
-                                "attribut_taille_max" => 15,
+                                "attribut_taille_max" => 20,
                                 "icone" => "raphael:user", //source: https://ux.symfony.com/icons
                                 "icone_taille" => "16px", //largeur = hauteur
                             ],
                             [
-                                "attribut_prefixe" => "Compte B.: ", 
-                                "attribut_code" => "referenceBancaire", 
+                                "attribut_prefixe" => "Cte: ",
+                                "attribut_code" => "referenceBancaire",
                                 "attribut_type" => "text",
-                                "attribut_taille_max" => 15,
+                                "attribut_taille_max" => 20,
                                 "icone" => "clarity:piggy-bank-solid", //source: https://ux.symfony.com/icons
                                 "icone_taille" => "16px", //largeur = hauteur
                             ],
@@ -6294,26 +6303,14 @@ class Constante
                     ],
                     "colonnes_numeriques" => [
                         [
-                            "titre_colonne" => "Montant Payable", 
-                            "attribut_unité" => "$", 
-                            "attribut_code" => "montantPayable",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Franchise", 
-                            "attribut_unité" => "$", 
-                            "attribut_code" => "franchiseAppliquee",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Mnt. versé", 
-                            "attribut_unité" => "$", 
+                            "titre_colonne" => "Payé",
+                            "attribut_unité" => "$",
                             "attribut_code" => "compensationVersee",
                             "attribut_type" => "nombre",
                         ],
                         [
-                            "titre_colonne" => "Reste à verser", 
-                            "attribut_unité" => "$", 
+                            "titre_colonne" => "Solde",
+                            "attribut_unité" => "$",
                             "attribut_code" => "compensationAVersee",
                             "attribut_type" => "nombre",
                         ],
