@@ -1,20 +1,21 @@
 {# templates/components/_generic_list_component.html.twig #}
-{# 
-Ce composant est une version réutilisable de votre liste principale.
-Il attend plusieurs variables pour se configurer :
-- data: La liste des entités à afficher.
-- entite_nom: Le nom de l'entité (ex: "Contact").
-- entityCanvas: Le canvas de l'entité, qui contient la configuration des colonnes.
-- listeCanvas: La partie 'liste' du canvas, pour un accès plus facile.
-- entityFormCanvas: Le canvas pour le formulaire d'édition.
-#}
-
+    {# 
+        Ce composant est une version réutilisable de votre liste principale.
+        Il attend plusieurs variables pour se configurer :
+        - data: La liste des entités à afficher.
+        - entite_nom: Le nom de l'entité (ex: "Contact").
+        - entityCanvas: Le canvas de l'entité, qui contient la configuration des colonnes.
+        - listeCanvas: La partie 'liste' du canvas, pour un accès plus facile.
+        - entityFormCanvas: Le canvas pour le formulaire d'édition.
+    #}
 <div 
     id="list-controller-{{ random() }}" {# ID unique pour chaque instance de liste #}
     data-controller="dialogue liste-principale"
     data-liste-principale-nbelements-value="{{ data|length }}" 
     data-liste-principale-entite-value="{{ entite_nom }}" 
     data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}'
+    {# MODIFICATION : Rendre le canvas de l'entité accessible au JS #}
+    data-liste-principale-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}'
 >
     <div class="table-scroll-wrapper flex-grow-1">
         <table class="table table-hover table-sm table-enhanced">
