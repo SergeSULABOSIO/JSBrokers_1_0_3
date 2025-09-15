@@ -6199,7 +6199,7 @@ class Constante
                 ];
             case OffreIndemnisationSinistre::class:
                 return [
-                    // "dommage-avant-evaluation" => "la somme des dommages avant évaluation",
+                    "valeur-numerique" => "la valeur numérique à sommer - IL FAUT PERSONNELISER SVP!!!!",
                     // 'dommage-apres-evaluation' => "la somme des dommages après évaluation",
                     // 'franchise' => "la somme des franchises",
                     // "compensation-totale" => "la somme des compensations totales",
