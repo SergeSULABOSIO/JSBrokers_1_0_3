@@ -1,6 +1,6 @@
 // assets/controllers/totals-bar_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_PRINCIPALE_REFRESHED } from './base_controller.js';
+import { EVEN_CHECKBOX_PUBLISH_SELECTION } from './base_controller.js';
 
 const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 
@@ -10,6 +10,7 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "TOTALS-BAR";
         console.log(`${this.nomControleur} - Connecté.`);
+
         this.activeListElement = null; // Pour stocker l'élément conteneur de la liste active
 
         // On lie les méthodes à 'this' pour s'assurer qu'elles s'exécutent dans le bon contexte.
@@ -33,13 +34,8 @@ export default class extends Controller {
     handleContextChange(event) {
         const { listElement, numericAttributes } = event.detail;
         console.log(`${this.nomControleur} - Contexte changé. Nouvelle liste active :`, listElement, numericAttributes);
-
-        // Stocke la référence à la nouvelle liste active
         this.activeListElement = listElement;
-
-        // Met à jour le menu déroulant avec les attributs de la nouvelle liste
         this.updateAttributeSelector(numericAttributes || {});
-
         // On lance un recalcul complet (global + sélection) pour le nouveau contexte.
         this.recalculate({ fullRecalculate: true });
     }
@@ -49,7 +45,6 @@ export default class extends Controller {
      */
     updateAttributeSelector(attributes) {
         this.attributeSelectorTarget.innerHTML = '';
-
         const hasAttributes = Object.keys(attributes).length > 0;
         this.element.style.display = hasAttributes ? 'flex' : 'none'; // Cache toute la barre si pas d'attributs
 
@@ -77,19 +72,15 @@ export default class extends Controller {
 
         console.log(`${this.nomControleur} - Recalcul sur l'attribut : ${attribute}`);
 
-        // --- CORRECTION CRUCIALE : CALCUL DU TOTAL DE LA SÉLECTION ---
-        // La recherche des lignes cochées est maintenant SCOPÉE à la liste active.
         const checkedRows = this.getCheckedRowsScoped(dataAttribute);
         const selectionTotal = this.sumValues(checkedRows, dataAttribute);
         this.selectionTotalTarget.textContent = this.formatCurrency(selectionTotal);
 
         // Le total global est plus coûteux à calculer, on ne le fait que si nécessaire.
         if (options.fullRecalculate) {
-            // La recherche de TOUTES les lignes est également SCOPÉE à la liste active.
             const allRows = this.activeListElement.querySelectorAll(`tr[${dataAttribute}]`);
             const globalTotal = this.sumValues(allRows, dataAttribute);
             this.globalTotalTarget.textContent = this.formatCurrency(globalTotal);
-            console.log(`${this.nomControleur} - Total Global mis à jour :`, globalTotal);
         }
         console.log(`${this.nomControleur} - Total Sélection mis à jour :`, selectionTotal);
     }
@@ -99,8 +90,6 @@ export default class extends Controller {
      */
     getCheckedRowsScoped(dataAttribute) {
         if (!this.activeListElement) return [];
-        
-        // La magie est ici : on commence la recherche depuis `this.activeListElement`.
         return Array.from(this.activeListElement.querySelectorAll('input[type="checkbox"]:checked'))
             .map(checkbox => checkbox.closest(`tr[${dataAttribute}]`))
             .filter(row => row !== null);
@@ -108,24 +97,12 @@ export default class extends Controller {
 
     sumValues(elements, dataAttribute) {
         return Array.from(elements).reduce((sum, el) => {
-            const value = parseInt(el.getAttribute(dataAttribute), 10) || 0;
-            return sum + value;
+            return sum + (parseInt(el.getAttribute(dataAttribute), 10) || 0);
         }, 0);
     }
 
-    // getCheckedRows(dataAttribute) {
-    //     if (!this.activeListElement) return [];
-    //     return Array.from(this.activeListElement.querySelectorAll('input[type="checkbox"]:checked'))
-    //         .map(checkbox => checkbox.closest(`tr[${dataAttribute}]`))
-    //         .filter(row => row !== null);
-    // }
-
     formatCurrency(valueInCents) {
-        const amount = valueInCents / 100;
-        return new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'USD',
-        }).format(amount);
+        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(valueInCents / 100);
     }
 
     camelToKebab(str) {
