@@ -6,26 +6,22 @@ const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 
 export default class extends Controller {
     static targets = ["rubriqueIcon", "rubriqueName", "tabsContainer", "tabContentContainer", "display"];
-    static values = {entityCanvas: Object}
+    static values = { entityCanvas: Object }
 
     connect() {
+        this.nomControleur = "LIST-TABS";
         this.activeTabId = 'principal';
         this.tabStates = {}; // Essentiel pour la mémorisation de l'état
-        // this.isRestoringState = false; // Un drapeau pour éviter les boucles d'événements
-
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
-
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
-        document.addEventListener('list-status:notify', this.boundHandleStatusNotify); // <-- NOUVEL ÉCOUTEUR
-
-        // Contexte initial pour les barres d'outils
+        document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
         this.dispatchContextChangeEvent();
     }
 
     disconnect() {
         document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
-        document.removeEventListener('list-status:notify', this.boundHandleStatusNotify); // <-- Nettoyage
+        document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
     }
 
     /**
@@ -61,24 +57,36 @@ export default class extends Controller {
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
         if (newTabId === this.activeTabId) return;
+
         const oldTab = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
         if (oldTab) oldTab.classList.remove('active');
         const oldContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         if (oldContent) oldContent.style.display = 'none';
+
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
+
         let newContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         if (newContent) {
             newContent.style.display = 'block';
+            this.dispatchContextChangeEvent(); // Si le contenu existe déjà, on peut dispatcher l'événement immédiatement.
         } else {
             newContent = await this._loadTabContent(clickedTab);
             this.tabContentContainerTarget.appendChild(newContent);
+
+            // --- LA CORRECTION DÉFINITIVE ---
+            // On attend que le navigateur ait "dessiné" le nouveau contenu
+            // avant d'envoyer l'événement. Cela garantit que tous les éléments (tr, td...)
+            // sont bien présents dans le DOM et accessibles.
+            requestAnimationFrame(() => {
+                this.dispatchContextChangeEvent();
+            });
         }
         this._restoreTabState(this.activeTabId);
-        this.dispatchContextChangeEvent();
+        // this.dispatchContextChangeEvent();
     }
 
-   
+
     _restoreTabState(tabId) {
         const savedState = this.tabStates[tabId];
         const payload = savedState || { entities: [], selection: [], canvas: {}, entityType: '' };
@@ -92,17 +100,42 @@ export default class extends Controller {
      * Informe les autres contrôleurs (barres d'outils) du contexte actuel.
      */
     dispatchContextChangeEvent() {
+        console.log(this.nomControleur + " - Tentative d'envoi de l'événement context-changed.");
         const activeContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         if (!activeContent) return;
 
-        const listControllerElement = activeContent.querySelector('[data-controller]');
+        const listControllerElement = activeContent.querySelector('[data-controller~="liste-principale"]');
+        if (!listControllerElement) {
+            this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, { bubbles: true, detail: { listElement: null, numericAttributes: {} } }));
+            return;
+        }
+        let numericAttributes = {};
+        let canvas = {};
+        const canvasData = listControllerElement.dataset.listePrincipaleEntityCanvasValue;
 
+        if (canvasData) {
+            canvas = JSON.parse(canvasData);
+        } else if (this.activeTabId === 'principal') {
+            canvas = this.entityCanvasValue;
+        }
+
+        if (canvas && canvas.liste) {
+            const numericCols = canvas.liste.filter(attr =>
+                attr.type === 'Nombre' || (attr.type === 'Calcul' && attr.format === 'Nombre')
+            );
+            numericAttributes = numericCols.reduce((acc, col) => {
+                acc[col.code] = col.intitule;
+                return acc;
+            }, {});
+        }
         const detail = {
-            listControllerId: listControllerElement ? listControllerElement.id : null,
-            entityName: activeContent.dataset.entityName || this.entityCanvasValue.parametres.description,
-            canAdd: activeContent.dataset.canAdd === 'true'
+            listControllerId: listControllerElement.id,
+            entityName: activeContent.dataset.entityName || (canvas.parametres ? canvas.parametres.description : 'Inconnu'),
+            canAdd: activeContent.dataset.canAdd === 'true',
+            numericAttributes: numericAttributes,
+            listElement: listControllerElement,
         };
-
+        console.log(this.nomControleur + " - Envoi de l'événement avec le détail :", detail);
         this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, { bubbles: true, detail }));
     }
 
@@ -131,10 +164,8 @@ export default class extends Controller {
         const tabId = `${collectionInfo.code}-for-${parentEntity.id}`;
         const tab = document.createElement('button');
         tab.className = 'list-tab';
-
-        // --- CORRECTION : On utilise parentEntityType au lieu de parentEntity.entityType ---
         const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}`;
-
+        
         Object.assign(tab.dataset, {
             tabId: tabId,
             tabType: 'collection',
@@ -155,7 +186,7 @@ export default class extends Controller {
         });
         content.style.display = 'block';
         content.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" role="status"></div></div>';
-
+        
         try {
             const response = await fetch(tabElement.dataset.collectionUrl);
             if (!response.ok) throw new Error('Échec du chargement des données.');

@@ -372,7 +372,7 @@ class NotificationSinistreController extends AbstractController
         $data = $notification->getOffreIndemnisationSinistres();
         $offreCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
         $this->constante->loadCalculatedValue($offreCanvas, $data);
-
+        
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
             'entite_nom' => 'Offres',

@@ -10,10 +10,10 @@
     #}
 <div 
     id="list-controller-{{ random() }}" {# ID unique pour chaque instance de liste #}
-    data-controller="dialogue liste-principale"
+    data-controller="dialogue liste-principale" 
     data-liste-principale-nbelements-value="{{ data|length }}" 
     data-liste-principale-entite-value="{{ entite_nom }}" 
-    data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}'
+    data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
     {# MODIFICATION : Rendre le canvas de l'entité accessible au JS #}
     data-liste-principale-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}'
 >
