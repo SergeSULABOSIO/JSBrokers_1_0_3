@@ -6234,14 +6234,14 @@ class Constante
                                 "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
                                 "icone_taille" => "16px", //largeur = hauteur
                             ],
-                            [
-                                "attribut_prefixe" => "Sin.: ",
-                                "attribut_code" => "referenceSinistre",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 30,
-                                "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
-                                "icone_taille" => "16px", //largeur = hauteur
-                            ],
+                            // [
+                            //     "attribut_prefixe" => "Sin.: ",
+                            //     "attribut_code" => "referenceSinistre",
+                            //     "attribut_type" => "text",
+                            //     "attribut_taille_max" => 30,
+                            //     "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
+                            //     "icone_taille" => "16px", //largeur = hauteur
+                            // ],
                         ],
                     ],
                     "colonnes_numeriques" => [
@@ -6275,15 +6275,48 @@ class Constante
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
                             [
-                                "attribut_prefixe" => "Bénéficiaire: ", 
+                                "attribut_prefixe" => "Bénéf.: ", 
                                 "attribut_code" => "beneficiaire", 
-                                "attribut_type" => "text"
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => 15,
+                                "icone" => "raphael:user", //source: https://ux.symfony.com/icons
+                                "icone_taille" => "16px", //largeur = hauteur
+                            ],
+                            [
+                                "attribut_prefixe" => "Compte B.: ", 
+                                "attribut_code" => "referenceBancaire", 
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => 15,
+                                "icone" => "clarity:piggy-bank-solid", //source: https://ux.symfony.com/icons
+                                "icone_taille" => "16px", //largeur = hauteur
                             ],
                         ],
                     ],
                     "colonnes_numeriques" => [
-                        ["titre_colonne" => "Montant Payable", "attribut_unité" => "$", "attribut_code" => "montantPayable"],
-                        ["titre_colonne" => "Franchise", "attribut_unité" => "$", "attribut_code" => "franchiseAppliquee"],
+                        [
+                            "titre_colonne" => "Montant Payable", 
+                            "attribut_unité" => "$", 
+                            "attribut_code" => "montantPayable",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Franchise", 
+                            "attribut_unité" => "$", 
+                            "attribut_code" => "franchiseAppliquee",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Mnt. versé", 
+                            "attribut_unité" => "$", 
+                            "attribut_code" => "compensationVersee",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Reste à verser", 
+                            "attribut_unité" => "$", 
+                            "attribut_code" => "compensationAVersee",
+                            "attribut_type" => "nombre",
+                        ],
                     ],
                 ];
 
