@@ -84,30 +84,6 @@ class OffreIndemnisationSinistre
         return $this->id;
     }
 
-    // public function getCreatedAt(): ?\DateTimeImmutable
-    // {
-    //     return $this->createdAt;
-    // }
-
-    // public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    // {
-    //     $this->createdAt = $createdAt;
-
-    //     return $this;
-    // }
-
-    // public function getNotification(): ?NotificationSinistre
-    // {
-    //     return $this->notification;
-    // }
-
-    // public function setNotification(?NotificationSinistre $notification): static
-    // {
-    //     $this->notification = $notification;
-
-    //     return $this;
-    // }
-
     public function getFranchiseAppliquee(): ?float
     {
         return $this->franchiseAppliquee;
@@ -132,17 +108,6 @@ class OffreIndemnisationSinistre
         return $this;
     }
 
-    // public function getUpdatedAt(): ?\DateTimeImmutable
-    // {
-    //     return $this->updatedAt;
-    // }
-
-    // public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    // {
-    //     $this->updatedAt = $updatedAt;
-
-    //     return $this;
-    // }
 
     /**
      * @return Collection<int, Document>
