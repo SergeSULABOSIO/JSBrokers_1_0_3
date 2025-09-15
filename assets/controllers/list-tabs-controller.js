@@ -16,7 +16,16 @@ export default class extends Controller {
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
-        this.dispatchContextChangeEvent();
+
+        // this.dispatchContextChangeEvent();
+
+        // --- LA CORRECTION DÉFINITIVE ---
+        // Au lieu d'envoyer l'événement immédiatement, on attend le prochain "rafraîchissement"
+        // de l'affichage du navigateur. Cela garantit que tous les autres contrôleurs Stimulus
+        // (y compris totals-bar) ont eu le temps de se connecter et d'activer leurs écouteurs.
+        requestAnimationFrame(() => {
+            this.dispatchContextChangeEvent();
+        });
     }
 
     disconnect() {
@@ -74,10 +83,6 @@ export default class extends Controller {
             newContent = await this._loadTabContent(clickedTab);
             this.tabContentContainerTarget.appendChild(newContent);
 
-            // --- LA CORRECTION DÉFINITIVE ---
-            // On attend que le navigateur ait "dessiné" le nouveau contenu
-            // avant d'envoyer l'événement. Cela garantit que tous les éléments (tr, td...)
-            // sont bien présents dans le DOM et accessibles.
             requestAnimationFrame(() => {
                 this.dispatchContextChangeEvent();
             });
@@ -186,7 +191,7 @@ export default class extends Controller {
         });
         content.style.display = 'block';
         content.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" role="status"></div></div>';
-        
+
         try {
             const response = await fetch(tabElement.dataset.collectionUrl);
             if (!response.ok) throw new Error('Échec du chargement des données.');
