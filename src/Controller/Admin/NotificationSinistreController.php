@@ -57,47 +57,19 @@ class NotificationSinistreController extends AbstractController
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request, Constante $constante)
     {
-        $page = $request->query->getInt("page", 1);
-        $status = [
-            "error" => "Données",
-            "code" => 200,
-            "message" => "Initialisation réussi."
-        ];
-
-        // 1. On récupère les données brutes de la base de données
-        $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $page);
-
-        // 2. On récupère la "recette" d'affichage depuis le canvas
+        $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $request->query->getInt("page", 1));
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
-
-        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
         $constante->loadCalculatedValue($entityCanvas, $data);
-        // $this->loadCalculatedValue($entityCanvas, $data, $constante);
-
-        /** @var Utilisateur $utilisateur */
-        $utilisateur = $this->getUser();
-
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        // dd("ICI");
 
         return $this->render('components/_rubrique_list_index.html.twig', [
-            'entreprise' => $entreprise,
-            'utilisateur' => $utilisateur,
-            'status' => $status, // Contient l'erreur ou les infos de pagination
             'rubrique_nom' => "Notification Sinistre",
             'entite_nom' => "NotificationSinistre",
-            'racine_url_controleur_php_nom' => "notificationsinistre",
-            'controleur_stimulus_nom' => "notificationsinistre-formulaire",
             'data' => $data, // $data contient maintenant les entités avec les champs calculés
-            'page' => $page,
-            'limit' => 100,            // La limite par page
-            'totalItems' => count($data),  // Le nombre total d'éléments (pour la pagination)
             'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
+            'numericAttributes' => $this->constante->getNumericAttributes(NotificationSinistre::class),
             'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $entreprise->getId()),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $idEntreprise),
         ]);
     }
 
@@ -397,30 +369,15 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/{id}/offreIndemnisationSinistres', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
     public function getOffresIndemnisationListApi(NotificationSinistre $notification): Response
     {
-        // $notification = null;
-        // if ($id === 0) {
-        //     $notification = new NotificationSinistre();
-        // } else {
-        //     $notification = $repository->find($id);
-        // }
-        // if (!$notification) {
-        //     $notification = new NotificationSinistre();
-        // }
-        // return $this->render('components/_collection_list.html.twig', [
-        // return $this->render('components/_collection_wrapper.html.twig', [
-        //     'items' => $notification->getOffreIndemnisationSinistres(),
-        //     'item_template' => 'components/collection_items/_offre_indemnisation_sinistre_item.html.twig'
-        // ]);
-        // On récupère le canvas spécifique à l'entité Tache
+        $data = $notification->getOffreIndemnisationSinistres();
         $offreCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
-
-        // dd($offreCanvas['liste']);
+        $this->constante->loadCalculatedValue($offreCanvas, $data);
 
         return $this->render('components/_generic_list_component.html.twig', [
-            'data' => $notification->getOffreIndemnisationSinistres(),
+            'data' => $data,
             'entite_nom' => 'Offres',
+            'numericAttributes' => $this->constante->getNumericAttributes(OffreIndemnisationSinistre::class),
             'entityCanvas' => $offreCanvas,
-            // 'listeCanvas' => $offreCanvas['liste'],
             'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $this->getEntreprise()->getId()),
             'constante' => $this->constante
