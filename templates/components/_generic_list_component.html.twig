@@ -14,8 +14,9 @@
     data-liste-principale-nbelements-value="{{ data|length }}" 
     data-liste-principale-entite-value="{{ entite_nom }}" 
     data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
-    {# MODIFICATION : Rendre le canvas de l'entité accessible au JS #}
-    data-liste-principale-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}'
+    data-liste-principale-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}' 
+    {# --- MODIFICATION : On stocke les valeurs numériques pré-calculées --- #}
+    data-liste-principale-numeric-values-value='{{ numericValues|default({})|json_encode|e('html_attr') }}'
 >
     <div class="table-scroll-wrapper flex-grow-1">
         <table class="table table-hover table-sm table-enhanced">

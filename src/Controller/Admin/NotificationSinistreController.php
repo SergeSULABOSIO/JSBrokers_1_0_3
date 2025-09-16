@@ -4,12 +4,10 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invite;
 use DateTimeImmutable;
-use App\Entity\Avenant;
 use App\Entity\Contact;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
@@ -30,15 +28,12 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/notificationsinistre", name: 'admin.notificationsinistre.')]
 #[IsGranted('ROLE_USER')]
 class NotificationSinistreController extends AbstractController
 {
-    public MenuActivator $activator;
-
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -49,27 +44,26 @@ class NotificationSinistreController extends AbstractController
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
-    }
+    ) {}
 
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request, Constante $constante)
     {
-        $data = $this->notificationSinistreRepository->paginateForEntreprise($idEntreprise, $request->query->getInt("page", 1));
+        $data = $this->notificationSinistreRepository->findAll();
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
+
+        //On charge les valeurs calculées
         $constante->loadCalculatedValue($entityCanvas, $data);
 
         return $this->render('components/_rubrique_list_index.html.twig', [
-            'rubrique_nom' => "Notification Sinistre",
+            'data' => $data,
             'entite_nom' => "NotificationSinistre",
-            'data' => $data, // $data contient maintenant les entités avec les champs calculés
             'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributes(NotificationSinistre::class),
             'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $idEntreprise),
+            'numericValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
         ]);
     }
 
@@ -243,9 +237,10 @@ class NotificationSinistreController extends AbstractController
             'page' => $reponseData["page"], // La page actuelle, utile si la pagination est gérée côté client dans le template
             'limit' => $reponseData["limit"],            // La limite par page
             'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
-            'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
+            // 'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
             'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
         ]);
     }
 
@@ -271,32 +266,19 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/{id}/contacts', name: 'api.get_contacts', methods: ['GET'])]
     public function getContactsListApi(NotificationSinistre $notification): Response
     {
-        // $notification = null;
-        // if ($id === 0) {
-        //     $notification = new NotificationSinistre();
-        // } else {
-        //     $notification = $repository->find($id);
-        // }
-        // if (!$notification) {
-        //     $notification = new NotificationSinistre();
-        // }
-        // return $this->render('components/_collection_list.html.twig', [
-        // return $this->render('components/_collection_wrapper.html.twig', [
-        //     'items' => $notification->getContacts(),
-        //     'item_template' => 'components/collection_items/_contact_item.html.twig'
-        // ]);
-
         // On récupère le canvas spécifique à l'entité Contact
+        $data = $notification->getContacts();
         $contactCanvas = $this->constante->getEntityCanvas(Contact::class);
+        $this->constante->loadCalculatedValue($contactCanvas, $data);
 
         return $this->render('components/_generic_list_component.html.twig', [
-            'data' => $notification->getContacts(),
+            'data' => $data,
             'entite_nom' => 'Contacts',
             'entityCanvas' => $contactCanvas,
-            // 'listeCanvas' => $contactCanvas['liste'],
             'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $this->getEntreprise()->getId()),
-            'constante' => $this->constante
+            'constante' => $this->constante,
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
         ]);
     }
 
@@ -304,32 +286,18 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/{id}/pieces', name: 'api.get_pieces', methods: ['GET'])]
     public function getPiecesListApi(NotificationSinistre $notification): Response
     {
-        // $notification = null;
-        // if ($id === 0) {
-        //     $notification = new NotificationSinistre();
-        // } else {
-        //     $notification = $repository->find($id);
-        // }
-        // if (!$notification) {
-        //     $notification = new NotificationSinistre();
-        // }
-        // return $this->render('components/_collection_list.html.twig', [
-        // return $this->render('components/_collection_wrapper.html.twig', [
-        //     'items' => $notification->getPieces(),
-        //     'item_template' => 'components/collection_items/_piece_sinistre_item.html.twig'
-        // ]);
-
-        // On récupère le canvas spécifique à l'entité Tache
+        $data = $notification->getPieces();
         $pieceCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
+        $this->constante->loadCalculatedValue($pieceCanvas, $data);
 
         return $this->render('components/_generic_list_component.html.twig', [
-            'data' => $notification->getPieces(),
+            'data' => $data,
             'entite_nom' => 'Pièces',
             'entityCanvas' => $pieceCanvas,
-            // 'listeCanvas' => $pieceCanvas['liste'],
             'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $this->getEntreprise()->getId()),
-            'constante' => $this->constante
+            'constante' => $this->constante,
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
         ]);
     }
 
@@ -337,31 +305,18 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
     public function getTachesListApi(NotificationSinistre $notification): Response
     {
-        // $notification = null;
-        // if ($id === 0) {
-        //     $notification = new NotificationSinistre();
-        // } else {
-        //     $notification = $repository->find($id);
-        // }
-        // if (!$notification) {
-        //     $notification = new NotificationSinistre();
-        // }
-        // return $this->render('components/_collection_list.html.twig', [
-        // return $this->render('components/_collection_wrapper.html.twig', [
-        //     'items' => $notification->getTaches(),
-        //     'item_template' => 'components/collection_items/_tache_item.html.twig'
-        // ]);
-        // On récupère le canvas spécifique à l'entité Tache
+        $data = $notification->getTaches();
         $tacheCanvas = $this->constante->getEntityCanvas(Tache::class);
+        $this->constante->loadCalculatedValue($tacheCanvas, $data);
 
         return $this->render('components/_generic_list_component.html.twig', [
-            'data' => $notification->getTaches(),
+            'data' => $data,
             'entite_nom' => 'Taches',
             'entityCanvas' => $tacheCanvas,
-            // 'listeCanvas' => $tacheCanvas['liste'],
             'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
-            'constante' => $this->constante
+            'constante' => $this->constante,
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
         ]);
     }
 
@@ -372,15 +327,15 @@ class NotificationSinistreController extends AbstractController
         $data = $notification->getOffreIndemnisationSinistres();
         $offreCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
         $this->constante->loadCalculatedValue($offreCanvas, $data);
-        
+
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
             'entite_nom' => 'Offres',
-            'numericAttributes' => $this->constante->getNumericAttributes(OffreIndemnisationSinistre::class),
             'entityCanvas' => $offreCanvas,
             'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $this->getEntreprise()->getId()),
-            'constante' => $this->constante
+            'constante' => $this->constante,
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
         ]);
     }
 }
