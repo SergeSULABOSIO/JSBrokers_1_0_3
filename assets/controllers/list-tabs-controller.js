@@ -17,15 +17,8 @@ export default class extends Controller {
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
 
-        // this.dispatchContextChangeEvent();
-
-        // --- LA CORRECTION DÉFINITIVE ---
-        // Au lieu d'envoyer l'événement immédiatement, on attend le prochain "rafraîchissement"
-        // de l'affichage du navigateur. Cela garantit que tous les autres contrôleurs Stimulus
-        // (y compris totals-bar) ont eu le temps de se connecter et d'activer leurs écouteurs.
-        requestAnimationFrame(() => {
-            this.dispatchContextChangeEvent();
-        });
+        // On attend que tous les contrôleurs soient initialisés avant d'envoyer le premier contexte.
+        requestAnimationFrame(() => {this.dispatchContextChangeEvent();});
     }
 
     disconnect() {
@@ -102,7 +95,9 @@ export default class extends Controller {
     }
 
     /**
-     * Informe les autres contrôleurs (barres d'outils) du contexte actuel.
+     * --- MODIFICATION MAJEURE ---
+     * Cette méthode est réécrite. Elle ne scanne plus le 'canvas'.
+     * Elle lit les données numériques pré-calculées depuis l'attribut data- que nous avons ajouté.
      */
     dispatchContextChangeEvent() {
         console.log(this.nomControleur + " - Tentative d'envoi de l'événement context-changed.");
@@ -110,38 +105,29 @@ export default class extends Controller {
         if (!activeContent) return;
 
         const listControllerElement = activeContent.querySelector('[data-controller~="liste-principale"]');
-        if (!listControllerElement) {
-            this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, { bubbles: true, detail: { listElement: null, numericAttributes: {} } }));
-            return;
-        }
-        let numericAttributes = {};
-        let canvas = {};
-        const canvasData = listControllerElement.dataset.listePrincipaleEntityCanvasValue;
+        if (!listControllerElement) return;
 
-        if (canvasData) {
-            canvas = JSON.parse(canvasData);
-        } else if (this.activeTabId === 'principal') {
-            canvas = this.entityCanvasValue;
+        // On lit les données JSON directement depuis l'attribut 'data-'.
+        const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericValuesValue || '{}');
+        const firstItemId = Object.keys(numericData)[0];
+        const numericAttributes = {};
+
+        // On déduit les options du dropdown à partir de la structure du premier élément.
+        if (firstItemId && numericData[firstItemId]) {
+            for (const key in numericData[firstItemId]) {
+                numericAttributes[key] = numericData[firstItemId][key].description;
+            }
         }
 
-        if (canvas && canvas.liste) {
-            const numericCols = canvas.liste.filter(attr =>
-                attr.type === 'Nombre' || (attr.type === 'Calcul' && attr.format === 'Nombre')
-            );
-            numericAttributes = numericCols.reduce((acc, col) => {
-                acc[col.code] = col.intitule;
-                return acc;
-            }, {});
-        }
-        const detail = {
-            listControllerId: listControllerElement.id,
-            entityName: activeContent.dataset.entityName || (canvas.parametres ? canvas.parametres.description : 'Inconnu'),
-            canAdd: activeContent.dataset.canAdd === 'true',
-            numericAttributes: numericAttributes,
-            listElement: listControllerElement,
-        };
-        console.log(this.nomControleur + " - Envoi de l'événement avec le détail :", detail);
-        this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, { bubbles: true, detail }));
+        // On envoie un événement avec les données prêtes à l'emploi.
+        this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
+            bubbles: true,
+            detail: {
+                numericAttributes, // Pour construire le dropdown
+                numericData        // L'objet complet avec toutes les valeurs pour les calculs
+            }
+        }));
+        console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributes, numericData);
     }
 
     // --- Méthodes privées ---

@@ -2,6 +2,8 @@
 import { Controller } from '@hotwired/stimulus';
 import { EVEN_CHECKBOX_PUBLISH_SELECTION } from './base_controller.js';
 
+// --- AJOUT ---
+// Le contrôleur écoute maintenant l'événement personnalisé de list-tabs.
 const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 
 export default class extends Controller {
@@ -11,101 +13,109 @@ export default class extends Controller {
         this.nomControleur = "TOTALS-BAR";
         console.log(`${this.nomControleur} - Connecté.`);
 
-        this.activeListElement = null; // Pour stocker l'élément conteneur de la liste active
+        // --- MODIFICATION ---
+        // On initialise les variables qui contiendront les données en mémoire.
+        this.numericData = {}; // contiendra { id1: { attr1: {..}, attr2: {..} }, id2: ... }
+        this.selectedIds = new Set(); // contiendra les IDs des lignes cochées, ex: {12, 25}
 
-        // On lie les méthodes à 'this' pour s'assurer qu'elles s'exécutent dans le bon contexte.
-        this.boundHandleContextChange = this.handleContextChange.bind(this);
-        this.boundRecalculateOnSelectionChange = this.recalculate.bind(this, { fullRecalculate: false });
+        // On lie les nouvelles méthodes.
+        this.boundHandleContext = this.handleContextChange.bind(this);
+        this.boundHandleSelection = this.handleSelectionChange.bind(this);
 
-        // Mise en place des écouteurs d'événements.
-        document.addEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContextChange);
-        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundRecalculateOnSelectionChange);
+        // On change les écouteurs d'événements.
+        document.addEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContext);
+        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
     }
 
     disconnect() {
-        // Nettoyage des écouteurs
-        document.removeEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContextChange);
-        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundRecalculate);
+        // Nettoyage des nouveaux écouteurs.
+        document.removeEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContext);
+        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
     }
 
     /**
-     * NOUVEAU : Gère le changement de contexte de la liste. C'est le cœur de la nouvelle logique.
+     * --- NOUVEAU ---
+     * Méthode 1: Reçoit le contexte et TOUTES les données pré-calculées.
      */
     handleContextChange(event) {
-        const { listElement, numericAttributes } = event.detail;
-        console.log(`${this.nomControleur} - Contexte changé. Nouvelle liste active :`, listElement, numericAttributes);
-        this.activeListElement = listElement;
-        this.updateAttributeSelector(numericAttributes || {});
-        // On lance un recalcul complet (global + sélection) pour le nouveau contexte.
-        this.recalculate({ fullRecalculate: true });
+        const { numericAttributes, numericData } = event.detail;
+        this.numericData = numericData || {}; // On stocke les données
+        this.updateAttributeSelector(numericAttributes || {}); // On met à jour le dropdown
+        this.recalculate(); // On recalcule tout
     }
 
     /**
-     * Met à jour dynamiquement les options du menu déroulant <select>.
+     * --- NOUVEAU ---
+     * Méthode 2: Reçoit la liste des éléments sélectionnés et mémorise juste leurs IDs.
+     */
+    handleSelectionChange(event) {
+        const selectedEntities = event.detail.selection || [];
+        // On utilise un Set pour des recherches rapides (plus performant qu'un Array).
+        this.selectedIds = new Set(selectedEntities.map(e => e.id));
+        this.recalculate();
+    }
+
+
+    /**
+     * --- NOUVEAU ---
+     * Met à jour les options du <select> en se basant sur les attributs fournis.
      */
     updateAttributeSelector(attributes) {
         this.attributeSelectorTarget.innerHTML = '';
         const hasAttributes = Object.keys(attributes).length > 0;
-        this.element.style.display = hasAttributes ? 'flex' : 'none'; // Cache toute la barre si pas d'attributs
-
+        this.element.style.display = hasAttributes ? 'flex' : 'none'; // Affiche ou cache la barre
+        
         for (const [key, label] of Object.entries(attributes)) {
-            const option = new Option(label, key);
-            this.attributeSelectorTarget.appendChild(option);
+            this.attributeSelectorTarget.appendChild(new Option(label, key));
         }
     }
 
+
     /**
-     * La fonction de calcul principale, maintenant plus intelligente.
-     * Elle accepte une option pour savoir si elle doit recalculer le total global,
-     * ce qui optimise les performances lors d'un simple changement de sélection.
+     * --- MODIFICATION MAJEURE ---
+     * Méthode 3: Recalcule les totaux SANS SCANNER LE DOM.
+     * Cette méthode est maintenant ultra-rapide.
      */
-    recalculate(options = { fullRecalculate: true }) {
-        // Si aucune liste n'est active ou si le sélecteur n'a pas de valeur, on réinitialise et on arrête.
-        if (!this.activeListElement || !this.attributeSelectorTarget.value) {
-            this.globalTotalTarget.innerHTML = this.formatCurrency(0);
-            this.selectionTotalTarget.innerHTML = this.formatCurrency(0);
+    recalculate() {
+        const attribute = this.attributeSelectorTarget.value;
+        if (!attribute) { // Si pas d'attribut sélectionné (liste vide)
+            this.displayTotals(0, 0);
             return;
         }
 
-        const attribute = this.attributeSelectorTarget.value; // 'amountInvoiced', 'amountPaid', etc.
-        const dataAttribute = `data-${this.camelToKebab(attribute)}-value`; // 'data-amount-invoiced-value'
+        let globalTotal = 0;
+        let selectionTotal = 0;
 
-        console.log(`${this.nomControleur} - Recalcul sur l'attribut : ${attribute}`);
+        // On itère sur les données en mémoire, pas sur les <tr> du DOM.
+        for (const id in this.numericData) {
+            const itemData = this.numericData[id];
+            if (itemData && itemData[attribute]) {
+                const value = itemData[attribute].value; // La valeur en centimes
+                globalTotal += value;
 
-        const checkedRows = this.getCheckedRowsScoped(dataAttribute);
-        const selectionTotal = this.sumValues(checkedRows, dataAttribute);
-        this.selectionTotalTarget.textContent = this.formatCurrency(selectionTotal);
-
-        // Le total global est plus coûteux à calculer, on ne le fait que si nécessaire.
-        if (options.fullRecalculate) {
-            const allRows = this.activeListElement.querySelectorAll(`tr[${dataAttribute}]`);
-            const globalTotal = this.sumValues(allRows, dataAttribute);
-            this.globalTotalTarget.textContent = this.formatCurrency(globalTotal);
+                // Si l'ID est dans notre Set de sélection, on l'ajoute au total de la sélection.
+                if (this.selectedIds.has(parseInt(id, 10))) {
+                    selectionTotal += value;
+                }
+            }
         }
-        console.log(`${this.nomControleur} - Total Sélection mis à jour :`, selectionTotal);
+        this.displayTotals(globalTotal, selectionTotal);
+        console.log(`${this.nomControleur} - Total Sélection mis à jour :`, globalTotal, selectionTotal);
     }
+
 
     /**
-     * NOUVELLE MÉTHODE SCOPÉE : Ne cherche les cases cochées qu'à l'intérieur de la liste active.
+     * --- NOUVEAU ---
+     * Méthode dédiée à l'affichage pour garder le code propre.
      */
-    getCheckedRowsScoped(dataAttribute) {
-        if (!this.activeListElement) return [];
-        return Array.from(this.activeListElement.querySelectorAll('input[type="checkbox"]:checked'))
-            .map(checkbox => checkbox.closest(`tr[${dataAttribute}]`))
-            .filter(row => row !== null);
+    displayTotals(globalTotal, selectionTotal) {
+        this.globalTotalTarget.textContent = this.formatCurrency(globalTotal);
+        this.selectionTotalTarget.textContent = this.formatCurrency(selectionTotal);
     }
 
-    sumValues(elements, dataAttribute) {
-        return Array.from(elements).reduce((sum, el) => {
-            return sum + (parseInt(el.getAttribute(dataAttribute), 10) || 0);
-        }, 0);
-    }
-
+    // --- CONSERVATION ---
+    // Les méthodes utilitaires restent identiques.
     formatCurrency(valueInCents) {
         return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(valueInCents / 100);
-    }
-
-    camelToKebab(str) {
-        return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
     }
 }
