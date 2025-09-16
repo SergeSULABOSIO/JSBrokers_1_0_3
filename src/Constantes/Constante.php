@@ -65,6 +65,7 @@ use App\Entity\ReportSet\Top20ClientReportSet;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
+use App\Repository\NotificationSinistreRepository;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -6185,30 +6186,7 @@ class Constante
         return $tabFinaleOrdonne;
     }
 
-    public function getNumericAttributes($objectClassName): array
-    {
-        switch ($objectClassName) {
-            case NotificationSinistre::class:
-                return [
-                    "dommage-avant-evaluation" => "la somme des dommages avant évaluation",
-                    'dommage-apres-evaluation' => "la somme des dommages après évaluation",
-                    'franchise' => "la somme des franchises",
-                    "compensation-totale" => "la somme des compensations totales",
-                    "compensation-versee" => "la somme des compensations versées",
-                    "compensation-due" => "la somme des compensations dues",
-                ];
-            case OffreIndemnisationSinistre::class:
-                return [
-                    "valeur-numerique" => "la valeur numérique à sommer - IL FAUT PERSONNELISER SVP!!!!",
-                    // 'dommage-apres-evaluation' => "la somme des dommages après évaluation",
-                    // 'franchise' => "la somme des franchises",
-                    // "compensation-totale" => "la somme des compensations totales",
-                    // "compensation-versee" => "la somme des compensations versées",
-                    // "compensation-due" => "la somme des compensations dues",
-                ];
-        }
-        return [];
-    }
+
 
     public function getListeCanvas($entityClassName): array
     {
@@ -7396,433 +7374,109 @@ class Constante
     }
 
 
-    // public function getEntityCanvas($object): array
+    // public function getNumericAttributesAndValues($object): array
     // {
     //     if ($object instanceof NotificationSinistre) {
     //         return [
-    //             "parametres" => [
-    //                 "description" => "Notification Sinistre",
-    //                 'icone' => 'emojione-monotone:fire',
+    //             "dommage-avant-evaluation" => [
+    //                 "description" => "la somme des dommages avant évaluation",
+    //                 "value" => $object->getDommage() * 100,
     //             ],
-    //             "liste" => [
-    //                 [
-    //                     "code" => "id",
-    //                     "intitule" => "Identifiant",
-    //                     "type" => "Entier",
-    //                     "unite" => "",
-    //                 ],
-    //                 [
-    //                     "code" => "referencePolice",
-    //                     "intitule" => "Réf. de la police",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "referenceSinistre",
-    //                     "intitule" => "Réf. du sinistre",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 // NOUVEAU BLOC POUR LA RELATION
-    //                 [
-    //                     "code" => "assure", // La propriété dans NotificationSinistre
-    //                     "intitule" => "Assuré (Client)",
-    //                     "type" => "Relation",
-    //                     "targetEntity" => "Client", // Le nom de la classe de l'entité liée
-    //                     "displayField" => "nom" // Le champ à afficher pour le nom du client
-    //                 ],
-    //                 [
-    //                     "code" => "assureur", // La propriété dans NotificationSinistre
-    //                     "intitule" => "Assureur",
-    //                     "type" => "Relation",
-    //                     "targetEntity" => "Assureur", // Le nom de la classe de l'entité liée
-    //                     "displayField" => "nom" // Le champ à afficher pour le nom du client
-    //                 ],
-    //                 [
-    //                     "code" => "descriptionDeFait",
-    //                     "intitule" => "Description des faits",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "occuredAt",
-    //                     "intitule" => "Date de l'occurrence",
-    //                     "type" => "Date",
-    //                 ],
-    //                 [
-    //                     "code" => "notifiedAt",
-    //                     "intitule" => "Date de notification",
-    //                     "type" => "Date",
-    //                 ],
-    //                 [
-    //                     "code" => "lieu",
-    //                     "intitule" => "Lieu de l'incident",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "dommage",
-    //                     "intitule" => "Dommage subbi",
-    //                     "type" => "Nombre",
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                 ],
-    //                 [
-    //                     "code" => "evaluationChiffree",
-    //                     "intitule" => "Dommage évalué",
-    //                     "type" => "Nombre",
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                 ],
-    //                 [
-    //                     "code" => "descriptionVictimes",
-    //                     "intitule" => "Victimes",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 // NOUVEAU BLOC POUR LA COLLECTION
-    //                 [
-    //                     "code" => "offreIndemnisationSinistres", // La propriété dans NotificationSinistre
-    //                     "intitule" => "Offres",
-    //                     "type" => "Collection",
-    //                     "targetEntity" => "OffreIndemnisationSinistre", // Le nom de la classe des entités dans la collection
-    //                     "displayField" => "nom" // Le champ à afficher pour chaque offre
-    //                 ],
-    //                 [
-    //                     "code" => "pieces", // La propriété dans NotificationSinistre
-    //                     "intitule" => "Pièces",
-    //                     "type" => "Collection",
-    //                     "targetEntity" => "PieceSinistre", // Le nom de la classe des entités dans la collection
-    //                     "displayField" => "description" // Le champ à afficher pour chaque offre
-    //                 ],
-    //                 [
-    //                     "code" => "contacts", // La propriété dans NotificationSinistre
-    //                     "intitule" => "Contacts",
-    //                     "type" => "Collection",
-    //                     "targetEntity" => "Contact", // Le nom de la classe des entités dans la collection
-    //                     "displayField" => "nom" // Le champ à afficher pour chaque offre
-    //                 ],
-    //                 [
-    //                     "code" => "taches", // La propriété dans NotificationSinistre
-    //                     "intitule" => "Tâches",
-    //                     "type" => "Collection",
-    //                     "targetEntity" => "Tache", // Le nom de la classe des entités dans la collection
-    //                     "displayField" => "description" // Le champ à afficher pour chaque offre
-    //                 ],
-    //                 [
-    //                     "code" => "invite",
-    //                     "intitule" => "Invité",
-    //                     "type" => "Relation",
-    //                     "targetEntity" => "Invite", // Le nom de la classe de l'entité liée
-    //                     "displayField" => "email" // Le champ à afficher pour le nom du client
-    //                 ],
-    //                 // //EXEMPLE AVEC LES PARAMS
-    //                 // [
-    //                 //     "code" => "solde",
-    //                 //     "intitule" => "Solde Dû",
-    //                 //     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                 //     "unite" => "$",
-    //                 //     "fonction" => "calculerSoldeClient", // La méthode à appeler sur $constante
-    //                 //     "params" => ["montantTotalFacture", "montantTotalPaye"]
-    //                 // ],
-    //                 //EXEMPLE SANS PARAMS = Càd que la fonction du calculateur a besoin de l'entité elle-même en paramètre pour faire son tavail
-    //                 [
-    //                     "code" => "delaiDeclaration",
-    //                     "intitule" => "Délai Déclaration",
-    //                     "type" => "Calcul",
-    //                     "unite" => "",
-    //                     "format" => "Texte",
-    //                     "fonction" => "Notification_Sinistre_getDelaiDeclaration",
-    //                     "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
-    //                 ],
-    //                 [
-    //                     "code" => "compensation",
-    //                     "intitule" => "Compensation",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                     "format" => "Nombre",
-    //                     "fonction" => "Notification_Sinistre_getCompensation",
-    //                     "description" => "📊 Montant total de l'indemnisation convenue pour ce sinistre." // MODIFICATION: Ajout
-    //                 ],
-    //                 [
-    //                     "code" => "compensationVersee",
-    //                     "intitule" => "Comp. versée",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                     "format" => "Nombre",
-    //                     "fonction" => "Notification_Sinistre_getCompensationVersee",
-    //                     "description" => "📊 Montant cumulé des paiements déjà effectués pour cette indemnisation." // MODIFICATION: Ajout
-    //                 ],
-    //                 [
-    //                     "code" => "compensationSoldeAverser",
-    //                     "intitule" => "Solde à verser",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                     "format" => "Nombre",
-    //                     "fonction" => "Notification_Sinistre_getSoldeAVerser",
-    //                     "description" => "📊 Montant restant à payer pour solder complètement ce dossier sinistre." // MODIFICATION: Ajout
-    //                 ],
-    //                 [
-    //                     "code" => "compensationFranchise",
-    //                     "intitule" => "Franchise appliquée",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                     "format" => "Nombre",
-    //                     "fonction" => "Notification_Sinistre_getFranchise",
-    //                     "description" => "📊 Montant de la franchise qui a été appliquée conformément aux termes de la police." // MODIFICATION: Ajout
-    //                 ],
-    //                 [
-    //                     "code" => "statusDocumentsAttendus",
-    //                     "intitule" => "Status - pièces",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => "",
-    //                     "format" => "ArrayAssoc",
-    //                     "fonction" => "Notification_Sinistre_getStatusDocumentsAttendusNumbers",
-    //                     "description" => "⏳ Suivi des pièces justificatives attendues, fournies et manquantes pour le dossier." // MODIFICATION: Ajout
-    //                 ],
-    //                 [
-    //                     "code" => "indiceCompletude",
-    //                     "intitule" => "Complétude Pièces",
-    //                     "type" => "Calcul",
-    //                     "unite" => "",
-    //                     "format" => "Texte",
-    //                     "fonction" => "Notification_Sinistre_getIndiceCompletude",
-    //                     "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
-    //                 ],
-    //                 [
-    //                     "code" => "dureeReglement",
-    //                     "intitule" => "Vitesse de règlement",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => "",
-    //                     "format" => "Texte",
-    //                     "fonction" => "Notification_Sinistre_getDureeReglement",
-    //                     "description" => "⏱️ Durée totale en jours entre la notification du sinistre et le dernier paiement de règlement." // MODIFICATION: Ajout
-    //                 ],
-    //                 [
-    //                     "code" => "dateDernierReglement",
-    //                     "intitule" => "Dernier règlement",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => "",
-    //                     "format" => "Date",
-    //                     "fonction" => "Notification_Sinistre_getDateDernierRgelement",
-    //                     "description" => "⏱️ Date à laquelle le tout dernier paiement a été effectué pour ce sinistre." // MODIFICATION: Ajout
-    //                 ],
-    //                 // MODIFICATION: Ajout des nouveaux attributs calculés
-
-    //                 [
-    //                     "code" => "ageDossier",
-    //                     "intitule" => "Âge du Dossier",
-    //                     "type" => "Calcul",
-    //                     "unite" => "",
-    //                     "format" => "Texte",
-    //                     "fonction" => "Notification_Sinistre_getAgeDossier",
-    //                     "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
-    //                 ],
-
+    //             'dommage-apres-evaluation' => [
+    //                 "description" => "la somme des dommages après évaluation",
+    //                 "value" => $object->getEvaluationChiffree() * 100,
     //             ],
-    //         ];
-    //     } else if ($object instanceof Client) {
-    //         return [
-    //             "parametres" => [
-    //                 "description" => "Client",
+    //             'franchise' => [
+    //                 "description" => "la somme des franchises",
+    //                 "value" => $this->Notification_Sinistre_getFranchise($object) * 100,
     //             ],
-    //             "liste" => [
-    //                 [
-    //                     "code" => "id",
-    //                     "intitule" => "Identifiant",
-    //                     "type" => "Entier",
-    //                     "unite" => "",
-    //                 ],
-    //                 [
-    //                     "code" => "nom",
-    //                     "intitule" => "Nom du client",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "adresse",
-    //                     "intitule" => "Adresse physique",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "telephone",
-    //                     "intitule" => "N° de téléphone",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "email",
-    //                     "intitule" => "Adresse mail",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "numimpot",
-    //                     "intitule" => "N° Impôt",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "rccm",
-    //                     "intitule" => "N° du registre de commerce",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "idnat",
-    //                     "intitule" => "N° d'ident. nationale",
-    //                     "type" => "Texte",
-    //                 ],
+    //             "compensation-totale" => [
+    //                 "description" => "la somme des compensations totales",
+    //                 "value" => $this->Notification_Sinistre_getCompensation($object) * 100,
     //             ],
-    //         ];
-    //     } else if ($object instanceof Assureur) {
-    //         return [
-    //             "parametres" => [
-    //                 "description" => "Assureur",
+    //             "compensation-versee" => [
+    //                 "description" => "la somme des compensations versées",
+    //                 "value" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
     //             ],
-    //             "liste" => [
-    //                 [
-    //                     "code" => "id",
-    //                     "intitule" => "Identifiant",
-    //                     "type" => "Entier",
-    //                     "unite" => "",
-    //                 ],
-    //                 [
-    //                     "code" => "nom",
-    //                     "intitule" => "Nom de l'assureur",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "adressePhysique",
-    //                     "intitule" => "Adresse physique",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "url",
-    //                     "intitule" => "URL du site Internet",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "email",
-    //                     "intitule" => "Adresse mail",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "numimpot",
-    //                     "intitule" => "N° Impôt",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "rccm",
-    //                     "intitule" => "N° du registre de commerce",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "idnat",
-    //                     "intitule" => "N° d'ident. nationale",
-    //                     "type" => "Texte",
-    //                 ],
-    //             ],
-    //         ];
-    //     } else if ($object instanceof Invite) {
-    //         return [
-    //             "parametres" => [
-    //                 "description" => "Invité",
-    //             ],
-    //             "liste" => [
-    //                 [
-    //                     "code" => "id",
-    //                     "intitule" => "Identifiant",
-    //                     "type" => "Entier",
-    //                     "unite" => "",
-    //                 ],
-    //                 [
-    //                     "code" => "email",
-    //                     "intitule" => "Email",
-    //                     "type" => "Texte",
-    //                 ],
-    //             ],
-    //         ];
-    //     } else if ($object instanceof OffreIndemnisationSinistre) {
-    //         return [
-    //             "parametres" => [
-    //                 "description" => "Offre d'indemnisation",
-    //             ],
-    //             "liste" => [
-    //                 [
-    //                     "code" => "id",
-    //                     "intitule" => "Identifiant",
-    //                     "type" => "Entier",
-    //                     "unite" => "",
-    //                 ],
-    //                 [
-    //                     "code" => "nom",
-    //                     "intitule" => "Intitulé ou Nom",
-    //                     "type" => "Texte",
-    //                 ],
-    //                 [
-    //                     "code" => "franchiseAppliquee",
-    //                     "intitule" => "Franchise appliquée",
-    //                     "type" => "Nombre",
-    //                     "unite" => "$",
-    //                 ],
-    //                 [
-    //                     "code" => "montantPayable",
-    //                     "intitule" => "Montant Payable",
-    //                     "type" => "Nombre",
-    //                     "unite" => "$",
-    //                 ],
-    //                 [
-    //                     "code" => "beneficiaire",
-    //                     "intitule" => "Bénéficiaire",
-    //                     "type" => "Texte",
-    //                     "unite" => "",
-    //                 ],
-    //                 [
-    //                     "code" => "referenceBancaire",
-    //                     "intitule" => "Réf. Bancaire",
-    //                     "type" => "Texte",
-    //                     "unite" => "",
-    //                 ],
-    //                 [
-    //                     "code" => "compensationVersee",
-    //                     "intitule" => "Comp. versée",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                     "format" => "Nombre",
-    //                     "fonction" => "Offre_Indemnisation_getCompensationVersee",
-    //                     "description" => "📊 Montant cumulé des paiements déjà effectués pour cette offre." // MODIFICATION: Ajout
-    //                 ],
-    //                 [
-    //                     "code" => "compensationAVersee",
-    //                     "intitule" => "Solde à verser",
-    //                     "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-    //                     "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-    //                     "format" => "Nombre",
-    //                     "fonction" => "Offre_Indemnisation_getSoldeAVerser",
-    //                     "description" => "Montant restant à payer pour solder cette offre." // MODIFICATION: Ajout
-    //                 ],
-    //                 // MODIFICATION: Ajout du nouveau
-    //                 [
-    //                     "code" => "pourcentagePaye",
-    //                     "intitule" => "Pourcentage Payé",
-    //                     "type" => "Calcul",
-    //                     "unite" => "",
-    //                     "format" => "Texte",
-    //                     "fonction" => "Offre_Indemnisation_getPourcentagePaye",
-    //                     "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
-    //                 ]
+    //             "compensation-due" => [
+    //                 "description" => "la somme des compensations dues",
+    //                 "value" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
     //             ],
     //         ];
     //     }
+        
     //     return [];
     // }
 
-    public function getNumericValues($object): array
+
+    public function getNumericAttributesAndValues($object): array
     {
         if ($object instanceof NotificationSinistre) {
-            /**
-             * @var NotificationSinistre $object
-             */
             return [
-                "dommage-avant-evaluation" => $object->getDommage() * 100,
-                'dommage-apres-evaluation' => $object->getEvaluationChiffree() * 100,
-                'franchise' => $this->Notification_Sinistre_getFranchise($object) * 100,
-                "compensation-totale" => $this->Notification_Sinistre_getCompensation($object) * 100,
-                "compensation-versee" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
-                "compensation-due" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
+                "dommageAvantEvaluation" => [
+                    "description" => "Dommages (av. éval.)",
+                    "value" => ($object->getDommage() ?? 0) * 100,
+                ],
+                'dommageApresEvaluation' => [
+                    "description" => "Dommages (ap. éval.)",
+                    "value" => ($object->getEvaluationChiffree() ?? 0) * 100,
+                ],
+                'franchise' => [
+                    "description" => "Franchise",
+                    "value" => ($this->Notification_Sinistre_getFranchise($object) ?? 0) * 100,
+                ],
+                "compensationTotale" => [
+                    "description" => "Compensation totale",
+                    "value" => ($this->Notification_Sinistre_getCompensation($object) ?? 0) * 100,
+                ],
+                "compensationVersee" => [
+                    "description" => "Compensation versée",
+                    "value" => ($this->Notification_Sinistre_getCompensationVersee($object) ?? 0) * 100,
+                ],
+                "compensationDue" => [
+                    "description" => "Compensation due",
+                    "value" => ($this->Notification_Sinistre_getSoldeAVerser($object) ?? 0) * 100,
+                ],
             ];
         }
 
+        // --- MISSION 1 : COMPLÉTER LA FONCTION ---
+
+        if ($object instanceof OffreIndemnisationSinistre) {
+            return [
+                "montantPayable" => [
+                    "description" => "Montant Payable",
+                    "value" => ($object->getMontantPayable() ?? 0) * 100,
+                ],
+                "franchiseAppliquee" => [
+                    "description" => "Franchise",
+                    "value" => ($object->getFranchiseAppliquee() ?? 0) * 100,
+                ],
+                "compensationVersee" => [
+                    "description" => "Comp. versée",
+                    "value" => ($this->Offre_Indemnisation_getCompensationVersee($object) ?? 0) * 100,
+                ],
+                "compensationAVersee" => [
+                    "description" => "Solde à verser",
+                    "value" => ($this->Offre_Indemnisation_getSoldeAVerser($object) ?? 0) * 100,
+                ],
+            ];
+        }
+
+        if ($object instanceof Contact || $object instanceof PieceSinistre || $object instanceof Tache) {
+            // Ces entités n'ont pas de valeurs numériques à totaliser.
+            return [];
+        }
+        
         return [];
+    }
+
+    public function getNumericAttributesAndValuesForTotalsBar($data): array{
+        $numericValues = [];
+        foreach ($data as $entity) {
+            $numericValues[$entity->getId()] = $this->getNumericAttributesAndValues($entity);
+        }
+        return $numericValues;
     }
 
     public function loadCalculatedValue($entityCanvas, $data)
