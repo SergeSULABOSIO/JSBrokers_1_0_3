@@ -7440,8 +7440,7 @@ class Constante
             ];
         }
 
-        // --- MISSION 1 : COMPLÉTER LA FONCTION ---
-
+        // --- AJOUT : Logique pour OffreIndemnisationSinistre ---
         if ($object instanceof OffreIndemnisationSinistre) {
             return [
                 "montantPayable" => [
@@ -7463,6 +7462,7 @@ class Constante
             ];
         }
 
+        // --- AJOUT : Logique pour les entités sans données numériques ---
         if ($object instanceof Contact || $object instanceof PieceSinistre || $object instanceof Tache) {
             // Ces entités n'ont pas de valeurs numériques à totaliser.
             return [];
