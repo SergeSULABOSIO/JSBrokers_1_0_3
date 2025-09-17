@@ -7,13 +7,6 @@
     data-liste-element-is-shown-value="false"
     data-liste-element-idobjet-value="{{ entity.id }}"
     class="element-a-encadrer parent-a-options context-target align-middle"
-    
-    {# Boucle pour les attributs numériques (inchangée) #}
-    {% for key, value in constante.getNumericValues(entity) %}
-        data-{{ key }}-value="{{ value }}"
-    {% endfor %}
-
-    {# Actions existantes #}
     data-action="click->liste-principale#toggleRowSelection"
 >
     {{ include('components/_list_element_view.html.twig') }}
