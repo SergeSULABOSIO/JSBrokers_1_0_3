@@ -3,7 +3,7 @@
      data-controller="totals-bar"
      class="d-flex align-items-center justify-content-between mb-0 mt-2"
  >
-     {# Sous-ensemble 1: Choix de l'attribut (inchangé) #}
+     {# Sous-ensemble 1: Choix de l'attribut #}
      <div class="d-flex align-items-center">
          <label for="attribute-select" class="form-label me-2 mb-0 small" style="color: gray;">Totaliser :</label>
          <select
@@ -13,12 +13,20 @@
              data-action="totals-bar#recalculate"
              data-totals-bar-target="attributeSelector"
          >
-            {# Boucle pour générer les options dynamiquement #}
-            {% for key, label in numericAttributes %}
-                <option value="{{ key }}" {{ loop.first ? 'selected' : '' }}>
-                    {{ label }}
-                </option>
-            {% endfor %}
+            {# --- MODIFICATION MAJEURE --- #}
+            {# On rend le template "intelligent" pour qu'il puisse lire la structure complexe. #}
+            {# 1. On vérifie d'abord que le tableau n'est pas vide. #}
+            {% if numericAttributes is not empty %}
+                {# 2. On prend le premier élément du tableau comme modèle pour les options. #}
+                {% set firstItemAttributes = numericAttributes|first %}
+                
+                {# 3. On boucle sur les attributs de ce premier élément pour créer les options. #}
+                {% for key, details in firstItemAttributes %}
+                    <option value="{{ key }}">
+                        {{ details.description }}
+                    </option>
+                {% endfor %}
+            {% endif %}
          </select>
      </div>
  
