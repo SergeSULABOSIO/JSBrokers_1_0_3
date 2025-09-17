@@ -17,7 +17,7 @@
                 />
             </div>
             <div class="flex-grow-1">
-                <div class="rubrique-title" data-list-tabs-target="rubriqueName">{{ rubrique_nom }}</div>
+                <div class="rubrique-title" data-list-tabs-target="rubriqueName">{{ entityCanvas.parametres.description | default('Rubrique') }}</div>
                 <div class="list-tabs-container" data-list-tabs-target="tabsContainer">
                     <button class="list-tab active" data-tab-id="principal" data-action="click->list-tabs#switchTab">Principal</button>
                 </div>
