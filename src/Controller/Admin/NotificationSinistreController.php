@@ -63,7 +63,7 @@ class NotificationSinistreController extends AbstractController
             'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $idEntreprise),
-            'numericValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
         ]);
     }
 
