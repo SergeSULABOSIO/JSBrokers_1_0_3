@@ -18,7 +18,7 @@ export default class extends Controller {
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
 
         // On attend que tous les contrôleurs soient initialisés avant d'envoyer le premier contexte.
-        requestAnimationFrame(() => {this.dispatchContextChangeEvent();});
+        requestAnimationFrame(() => { this.dispatchContextChangeEvent(); });
     }
 
     disconnect() {
@@ -107,24 +107,24 @@ export default class extends Controller {
         const listControllerElement = activeContent.querySelector('[data-controller~="liste-principale"]');
         if (!listControllerElement) return;
 
-        // On lit les données JSON directement depuis l'attribut 'data-'.
-        const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericValuesValue || '{}');
+        // --- MODIFICATION ---
+        // On lit l'attribut avec le nom correct et cohérent : 'numericAttributes'.
+        const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericAttributesValue || '{}');
         const firstItemId = Object.keys(numericData)[0];
-        const numericAttributes = {};
+        const numericAttributesOptions = {};
 
-        // On déduit les options du dropdown à partir de la structure du premier élément.
         if (firstItemId && numericData[firstItemId]) {
             for (const key in numericData[firstItemId]) {
-                numericAttributes[key] = numericData[firstItemId][key].description;
+                numericAttributesOptions[key] = numericData[firstItemId][key].description;
             }
         }
 
-        // On envoie un événement avec les données prêtes à l'emploi.
         this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
             bubbles: true,
             detail: {
-                numericAttributes, // Pour construire le dropdown
-                numericData        // L'objet complet avec toutes les valeurs pour les calculs
+                // On renomme ici pour plus de clarté dans l'événement, mais la source est correcte.
+                numericAttributes: numericAttributesOptions,
+                numericData: numericData
             }
         }));
         console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributes, numericData);
@@ -156,7 +156,7 @@ export default class extends Controller {
         const tab = document.createElement('button');
         tab.className = 'list-tab';
         const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}`;
-        
+
         Object.assign(tab.dataset, {
             tabId: tabId,
             tabType: 'collection',
