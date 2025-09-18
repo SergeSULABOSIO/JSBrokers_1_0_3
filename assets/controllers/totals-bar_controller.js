@@ -44,20 +44,22 @@ export default class extends Controller {
 
     /**
      * --- MODIFICATION MAJEURE ---
-     * Reçoit l'événement de sélection et met à jour la liste des IDs sélectionnés.
-     * Des logs ont été ajoutés pour le débogage.
+     * On corrige la méthode pour qu'elle traite correctement le tableau d'IDs.
      */
     handleSelectionChange(event) {
         console.log(`${this.nomControleur} - Événement de sélection reçu.`, event.detail);
 
-        const selectedEntities = event.detail.selection || [];
+        const selectionPayload = event.detail.selection;
 
-        if (selectedEntities && Array.isArray(selectedEntities)) {
-            this.selectedIds = new Set(selectedEntities.map(e => e.id));
+        if (selectionPayload && Array.isArray(selectionPayload)) {
+            // AU LIEU DE : new Set(selectionPayload.map(e => e.id))
+            // ON FAIT : new Set(selectionPayload) car le tableau contient déjà les IDs.
+            // On ajoute parseInt pour s'assurer de comparer des nombres.
+            this.selectedIds = new Set(selectionPayload.map(id => parseInt(id, 10)));
             console.log(`${this.nomControleur} - IDs de sélection mis à jour :`, this.selectedIds);
         } else {
             console.warn(`${this.nomControleur} - Le payload de sélection est manquant ou incorrect.`);
-            this.selectedIds.clear(); // On s'assure que la sélection est vide si les données sont mauvaises.
+            this.selectedIds.clear();
         }
 
         // this.selectedIds = new Set(selectedEntities.map(e => e.id));
@@ -86,6 +88,8 @@ export default class extends Controller {
             return;
         }
 
+        console.log(`${this.nomControleur} - Lancement du recalcul avec la sélection actuelle :`, this.selectedIds);
+
         let globalTotal = 0;
         let selectionTotal = 0;
 
@@ -94,13 +98,13 @@ export default class extends Controller {
             if (itemData && itemData[attribute]) {
                 const value = itemData[attribute].value; // La valeur en centimes
                 globalTotal += value;
+
                 if (this.selectedIds.has(parseInt(id, 10))) {
                     selectionTotal += value;
                 }
             }
         }
         this.displayTotals(globalTotal, selectionTotal);
-        console.log(`${this.nomControleur} - Total Sélection mis à jour :`, globalTotal, selectionTotal);
     }
 
 
