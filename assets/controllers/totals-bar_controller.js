@@ -10,31 +10,57 @@ export default class extends Controller {
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
 
     connect() {
-        console.log(`${this.nomControleur} - Connecté.`);
         this.nomControleur = "TOTALS-BAR";
+        console.log(`${this.nomControleur} - Connecté et à l'écoute.`);
+
+        this.numericData = {};
         this.selectedIds = new Set(); // contiendra les IDs des lignes cochées, ex: {12, 25}
+
         this.boundHandleContext = this.handleContextChange.bind(this);
         this.boundHandleSelection = this.handleSelectionChange.bind(this);
+
         document.addEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContext);
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
     }
 
     disconnect() {
-        // Nettoyage des nouveaux écouteurs.
         document.removeEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContext);
         document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
     }
 
     handleContextChange(event) {
+        console.log(`${this.nomControleur} - Contexte changé (nouvel onglet).`);
         const { numericAttributes, numericData } = event.detail;
+
         this.numericData = numericData || {}; // On stocke les données
-        this.updateAttributeSelector(numericAttributes || {}); // On met à jour le dropdown
-        this.recalculate(); // On recalcule tout
+
+        // --- AJOUT : Réinitialiser la sélection lors d'un changement d'onglet ---
+        // C'est une bonne pratique pour éviter de conserver une sélection d'un onglet précédent.
+        this.selectedIds.clear();
+
+        this.updateAttributeSelector(numericAttributes || {});
+        this.recalculate();
     }
 
+    /**
+     * --- MODIFICATION MAJEURE ---
+     * Reçoit l'événement de sélection et met à jour la liste des IDs sélectionnés.
+     * Des logs ont été ajoutés pour le débogage.
+     */
     handleSelectionChange(event) {
+        console.log(`${this.nomControleur} - Événement de sélection reçu.`, event.detail);
+
         const selectedEntities = event.detail.selection || [];
-        this.selectedIds = new Set(selectedEntities.map(e => e.id));
+
+        if (selectedEntities && Array.isArray(selectedEntities)) {
+            this.selectedIds = new Set(selectedEntities.map(e => e.id));
+            console.log(`${this.nomControleur} - IDs de sélection mis à jour :`, this.selectedIds);
+        } else {
+            console.warn(`${this.nomControleur} - Le payload de sélection est manquant ou incorrect.`);
+            this.selectedIds.clear(); // On s'assure que la sélection est vide si les données sont mauvaises.
+        }
+
+        // this.selectedIds = new Set(selectedEntities.map(e => e.id));
         this.recalculate();
     }
 
@@ -43,12 +69,16 @@ export default class extends Controller {
         this.attributeSelectorTarget.innerHTML = '';
         const hasAttributes = Object.keys(attributes).length > 0;
         this.element.style.display = hasAttributes ? 'flex' : 'none'; // Affiche ou cache la barre
+
         for (const [key, label] of Object.entries(attributes)) {
             this.attributeSelectorTarget.appendChild(new Option(label, key));
         }
     }
 
-
+    /**
+     * La méthode de calcul principale. Elle est maintenant appelée à chaque fois
+     * et se base sur les états `this.numericData` et `this.selectedIds`.
+     */
     recalculate() {
         const attribute = this.attributeSelectorTarget.value;
         if (!attribute) { // Si pas d'attribut sélectionné (liste vide)
