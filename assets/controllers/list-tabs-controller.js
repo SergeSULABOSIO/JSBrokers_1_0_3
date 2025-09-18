@@ -127,7 +127,7 @@ export default class extends Controller {
                 numericData: numericData
             }
         }));
-        console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributes, numericData);
+        console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributesOptions, numericData);
     }
 
     // --- Méthodes privées ---
