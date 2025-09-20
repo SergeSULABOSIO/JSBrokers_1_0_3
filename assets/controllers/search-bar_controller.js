@@ -24,11 +24,13 @@ export default class extends Controller {
         this.toast = new Toast(this.advancedSearchToastTarget);
         
         this.boundhandleCriteriaDefined = this.handleCriteriaDefined.bind(this);
+        this.boundhandlePublisheSelection = this.handlePublisheSelection.bind(this);
         
         // Nouvelle méthode : Lier la fonction de mise à jour de la position pour pouvoir l'ajouter/supprimer
         this.boundUpdateToastPosition = this.updateToastPosition.bind(this);
 
         // --- AJOUT 1/3 : Lier la nouvelle méthode de gestion ---
+        // document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
         // Nouvelle méthode : Nettoyer les écouteurs si le toast est fermé (par ex: par le bouton close)
@@ -49,6 +51,7 @@ export default class extends Controller {
         // Nouvelle méthode : S'assurer que les écouteurs sont supprimés si le contrôleur est déconnecté
         window.removeEventListener('scroll', this.boundUpdateToastPosition);
         window.removeEventListener('resize', this.boundUpdateToastPosition);
+        // document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
         // --- AJOUT 3/3 : Supprimer l'écouteur pour éviter les fuites de mémoire ---
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
     }
@@ -144,6 +147,12 @@ export default class extends Controller {
         this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
         this.activeFilters = {};
         this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
+        this.dispatchSearchEvent();
+    }
+
+    handlePublisheSelection(event) {
+        console.log(this.nomControleur + " - handlePublishSelection", event.detail);
+        // const { selection } = event.detail; // Récupère les données de l'événement
         this.dispatchSearchEvent();
     }
 

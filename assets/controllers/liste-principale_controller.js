@@ -1,9 +1,40 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_ACTION_AJOUTER, EVEN_ACTION_COCHER, EVEN_ACTION_COCHER_TOUT, EVEN_ACTION_ENREGISTRER, EVEN_ACTION_DIALOGUE_FERMER, EVEN_ACTION_MODIFIER, EVEN_ACTION_PARAMETRER, EVEN_ACTION_QUITTER, EVEN_ACTION_RECHARGER, EVEN_ACTION_SELECTIONNER, EVEN_ACTION_SUPPRIMER, EVEN_QUESTION_NO, EVEN_QUESTION_OK, EVEN_ACTION_DIALOGUE_OUVRIR, EVEN_QUESTION_SUPPRIMER, buildCustomEventForElement, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_SUPPRESSION, EVEN_CODE_RESULTAT_OK, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_BOITE_DIALOGUE_INIT_REQUEST, EVEN_LISTE_PRINCIPALE_ADDED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESHED, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_BOITE_DIALOGUE_SUBMITTED, EVEN_SERVER_RESPONSED, EVEN_BOITE_DIALOGUE_CLOSE, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CHECKBOX_ELEMENT_CHECKED, EVEN_CHECKBOX_ELEMENT_UNCHECKED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_EXPANDED, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_DELETED, EVEN_BOITE_DIALOGUE_SUBMIT_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_SHOW_TOAST, EVEN_DATA_BASE_SELECTION_REQUEST, EVEN_DATA_BASE_SELECTION_EXECUTED, EVEN_DATA_BASE_DONNEES_LOADED, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_ELEMENT_OPENNED } from './base_controller.js';
+import { 
+    EVEN_ACTION_DIALOGUE_FERMER, 
+    EVEN_ACTION_DIALOGUE_OUVRIR, 
+    buildCustomEventForElement, 
+    EVEN_CODE_ACTION_MODIFICATION, 
+    EVEN_CODE_ACTION_AJOUT, 
+    EVEN_CODE_RESULTAT_OK, 
+    EVEN_LISTE_PRINCIPALE_ADD_REQUEST, 
+    EVEN_BOITE_DIALOGUE_INIT_REQUEST, 
+    EVEN_LISTE_PRINCIPALE_ADDED, 
+    EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, 
+    EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, 
+    EVEN_LISTE_PRINCIPALE_ALL_CHECKED, 
+    EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, 
+    EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, 
+    EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, 
+    EVEN_LISTE_PRINCIPALE_CLOSED, 
+    EVEN_LISTE_PRINCIPALE_NOTIFY, 
+    EVEN_SERVER_RESPONSED, 
+    EVEN_BOITE_DIALOGUE_CLOSE, 
+    EVEN_CHECKBOX_PUBLISH_SELECTION, 
+    EVEN_LISTE_ELEMENT_EXPANDED, 
+    EVEN_LISTE_ELEMENT_MODIFY_REQUEST, 
+    EVEN_LISTE_ELEMENT_DELETE_REQUEST, 
+    EVEN_LISTE_ELEMENT_DELETED, 
+    EVEN_MENU_CONTEXTUEL_HIDE, 
+    EVEN_SHOW_TOAST, 
+    EVEN_DATA_BASE_SELECTION_REQUEST, 
+    EVEN_DATA_BASE_SELECTION_EXECUTED, 
+    EVEN_DATA_BASE_DONNEES_LOADED, 
+    EVEN_LISTE_ELEMENT_OPEN_REQUEST, 
+    EVEN_LISTE_ELEMENT_OPENNED 
+} from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
-        // 'display',          //Champ d'affichage d'informations
         'donnees',          //Liste conténant des élements
         'selectAllCheckbox',
         'rowCheckbox',
@@ -26,8 +57,12 @@ export default class extends Controller {
         this.nomControleur = "LISTE-PRINCIPALE";
         console.log(this.nomControleur + " - Connecté");
         this.init();
+        
+        // --- AJOUT : Le "récepteur" pour restaurer l'état de la sélection ---
+        // On met le contrôleur à l'écoute de l'événement de sélection global.
+        this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
+        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleGlobalSelectionUpdate);
     }
-
 
 
     init() {
@@ -47,8 +82,6 @@ export default class extends Controller {
     setEcouteurs() {
         this.boundHandleAddRequest = this.handleAddRequest.bind(this);
         this.boundHandleAdded = this.handleAdded.bind(this);
-        // this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
-        // this.boundHandleRefreshed = this.handleRefreshed.bind(this);
         this.boundHandleAllCheckRequest = this.handleAllCheckRequest.bind(this);
         this.boundHandleAllChecked = this.handleAllChecked.bind(this);
         this.boundHandleSettingRequest = this.handleSettingRequest.bind(this);
@@ -69,8 +102,6 @@ export default class extends Controller {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
         document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
@@ -94,8 +125,6 @@ export default class extends Controller {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleRefreshRequest);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESHED, this.boundHandleRefreshed);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
         document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
@@ -113,7 +142,52 @@ export default class extends Controller {
         document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
         document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
 
+        // --- AJOUT : Nettoyage de notre nouvel écouteur ---
+        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleGlobalSelectionUpdate);
     }
+
+    /**
+     * --- NOUVELLE MÉTHODE ---
+     * C'est le "récepteur". Il écoute les événements de sélection globaux
+     * et met à jour l'état visuel de cette liste si elle est concernée.
+     */
+    handleGlobalSelectionUpdate(event) {
+        // Garde-fou 1 : On ne réagit que si la liste est visible à l'écran.
+        // offsetParent est null si l'élément ou un de ses parents a 'display: none'.
+        if (this.element.offsetParent === null) {
+            return; // On ne fait rien si on est une liste cachée.
+        }
+
+        // Garde-fou 2 : On vérifie que le payload de l'événement est bien celui qui nous intéresse pour une restauration
+        // et non celui émis par notre propre contrôleur (qui contient plus de données).
+        // Si 'entities' n'est pas présent ou vide, c'est probablement un événement de restauration.
+        if (event.detail.entities && event.detail.entities.length > 0) {
+            // C'est un événement de sélection normal, on le laisse être géré par les autres contrôleurs (comme list-tabs).
+            // Notre propre état est déjà à jour via handleCheckboxChange.
+            return;
+        }
+
+        const restoredSelectionIds = new Set((event.detail.selection || []).map(id => String(id)));
+
+        // On met à jour la sélection interne du contrôleur.
+        this.tabSelectedCheckBoxs = Array.from(restoredSelectionIds);
+
+        // On parcourt toutes les cases à cocher de CETTE liste et on met à jour leur état visuel.
+        this.rowCheckboxTargets.forEach(checkbox => {
+            const checkboxId = checkbox.dataset.idobjetValue;
+            const shouldBeChecked = restoredSelectionIds.has(checkboxId);
+            checkbox.checked = shouldBeChecked;
+
+            const row = checkbox.closest('tr');
+            if (row) {
+                row.classList.toggle('row-selected', shouldBeChecked);
+            }
+        });
+
+        // On met à jour l'état de la case "Tout cocher" pour refléter le nouvel état.
+        this.updateSelectAllCheckboxState();
+    }
+    
 
 
     handleOpenRequest(event) {

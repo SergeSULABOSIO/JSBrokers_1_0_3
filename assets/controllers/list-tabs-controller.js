@@ -12,13 +12,12 @@ export default class extends Controller {
         this.nomControleur = "LIST-TABS";
         this.activeTabId = 'principal';
         this.tabStates = {}; // Essentiel pour la mémorisation de l'état
+        this.collectionTabsParentId = null; // NOUVEAU : Mémorise l'ID de l'entité parente des onglets de collection
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
-
-        // On attend que tous les contrôleurs soient initialisés avant d'envoyer le premier contexte.
-        requestAnimationFrame(() => { this.dispatchContextChangeEvent(); });
+        this.dispatchContextChangeEvent();
     }
 
     disconnect() {
@@ -41,13 +40,30 @@ export default class extends Controller {
      * Gère la sélection depuis la liste principale pour créer les onglets.
      */
     handleSelection(event) {
-        this.tabStates[this.activeTabId] = event.detail;
-        if (this.activeTabId !== 'principal') return;
-        this._removeCollectionTabs();
+        // --- MODIFICATION : On mémorise la sélection pour l'onglet actif ---
+        if(this.activeTabId){
+            this.tabStates[this.activeTabId] = event.detail;
+        }
+
         const { entities, canvas, entityType } = event.detail;
-        if (entities && entities.length === 1) {
+        const isSingleSelection = entities && entities.length === 1;
+        const newParentId = isSingleSelection ? entities[0].id : null;
+
+        // Si on n'est pas sur l'onglet principal, ou si l'ID qui génère les onglets n'a pas changé, on ne fait rien.
+        // C'est la correction clé : on ne supprime/recrée que si c'est nécessaire.
+        if (this.activeTabId !== 'principal') return;
+        if (newParentId === this.collectionTabsParentId) return;
+
+        // La sélection a changé, on met à jour les onglets.
+        this.collectionTabsParentId = newParentId;
+        this._removeCollectionTabs();
+
+        if (isSingleSelection) {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
+        } else {
+            // Si la sélection est multiple ou vide, on s'assure que l'ID parent est bien nul.
+            this.collectionTabsParentId = null;
         }
     }
 
@@ -62,26 +78,32 @@ export default class extends Controller {
 
         const oldTab = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
         if (oldTab) oldTab.classList.remove('active');
-        const oldContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
-        if (oldContent) oldContent.style.display = 'none';
 
+        // On masque TOUS les panneaux de contenu
+        this.tabContentContainerTarget.childNodes.forEach(node => {
+            if (node.nodeType === 1) { // S'assurer que c'est un élément
+                node.style.display = 'none';
+            }
+        });
+
+        // On active le nouvel onglet
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
 
+        // On cherche si le contenu de ce nouvel onglet existe déjà
         let newContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
+
         if (newContent) {
+            // S'il existe, on l'affiche simplement. La sélection est préservée !
             newContent.style.display = 'block';
-            this.dispatchContextChangeEvent(); // Si le contenu existe déjà, on peut dispatcher l'événement immédiatement.
         } else {
+            // S'il n'existe pas, on le charge depuis le serveur.
             newContent = await this._loadTabContent(clickedTab);
             this.tabContentContainerTarget.appendChild(newContent);
-
-            requestAnimationFrame(() => {
-                this.dispatchContextChangeEvent();
-            });
         }
+
+        // On restaure l'état de la sélection pour cet onglet.
         this._restoreTabState(this.activeTabId);
-        // this.dispatchContextChangeEvent();
     }
 
 
