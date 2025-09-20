@@ -6298,27 +6298,78 @@ class Constante
             case PieceSinistre::class:
                 return [
                     "colonne_principale" => [
-                        "titre_colonne" => "Pièces Sinistres",
-                        "texte_principal" => ["attribut_code" => "description", "icone" => "codex:file"],
+                        "titre_colonne" => "Pièces",
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "description",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "codex:file",
+                            "icone_taille" => "19px", //largeur = hauteur
+                        ],
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
-                            ["attribut_prefixe" => "Reçu le ", "attribut_code" => "receivedAt", "attribut_type" => "date"],
-                            ["attribut_prefixe" => "Fourni par: ", "attribut_code" => "fourniPar", "attribut_type" => "text"],
+                            [
+                                "attribut_prefixe" => "Reçu le ",
+                                "attribut_code" => "receivedAt",
+                                "attribut_type" => "date",
+                                "attribut_taille_max" => null,
+                                "icone" => "fluent-mdl2:date-time-mirrored", //source: https://ux.symfony.com/icons
+                                "icone_taille" => "16px", //largeur = hauteur
+                            ],
+                            [
+                                "attribut_prefixe" => "Fourni par: ",
+                                "attribut_code" => "fourniPar",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => 30,
+                                "icone" => "raphael:user", //source: https://ux.symfony.com/icons
+                                "icone_taille" => "16px", //largeur = hauteur
+                            ],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => [
+                        
+                    ],
                 ];
 
             case Contact::class:
                 return [
                     "colonne_principale" => [
                         "titre_colonne" => "Contacts",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-box"],
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "nom",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "mdi:account-box",
+                            "icone_taille" => "19px",
+                        ],
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
-                            ["attribut_code" => "fonction", "attribut_type" => "text"],
-                            ["attribut_code" => "email", "attribut_type" => "text"],
-                            ["attribut_code" => "telephone", "attribut_type" => "text"],
+                            [
+                                "attribut_prefixe" => "",
+                                "attribut_code" => "fonction",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "mdi:briefcase-account",
+                                "icone_taille" => "16px",
+                            ],
+                            [
+                                "attribut_prefixe" => "Email: ",
+                                "attribut_code" => "email",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "mdi:email-outline",
+                                "icone_taille" => "16px",
+                            ],
+                            [
+                                "attribut_prefixe" => "Tél.: ",
+                                "attribut_code" => "telephone",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "mdi:phone",
+                                "icone_taille" => "16px",
+                            ],
                         ],
                     ],
                     "colonnes_numeriques" => [],
@@ -6328,11 +6379,32 @@ class Constante
                 return [
                     "colonne_principale" => [
                         "titre_colonne" => "Clients",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-group"],
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "nom",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "mdi:account-group",
+                            "icone_taille" => "19px",
+                        ],
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
-                            ["attribut_code" => "email", "attribut_type" => "text"],
-                            ["attribut_code" => "telephone", "attribut_type" => "text"],
+                            [
+                                "attribut_prefixe" => "",
+                                "attribut_code" => "email",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "mdi:email-outline",
+                                "icone_taille" => "16px",
+                            ],
+                            [
+                                "attribut_prefixe" => "",
+                                "attribut_code" => "telephone",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "mdi:phone",
+                                "icone_taille" => "16px",
+                            ],
                         ],
                     ],
                     "colonnes_numeriques" => [],
@@ -6342,11 +6414,32 @@ class Constante
                 return [
                     "colonne_principale" => [
                         "titre_colonne" => "Assureurs",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:shield-check"],
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "nom",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "mdi:shield-check",
+                            "icone_taille" => "19px",
+                        ],
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
-                            ["attribut_code" => "email", "attribut_type" => "text"],
-                            ["attribut_code" => "telephone", "attribut_type" => "text"],
+                            [
+                                "attribut_prefixe" => "Email: ",
+                                "attribut_code" => "email",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "mdi:email-outline",
+                                "icone_taille" => "16px",
+                            ],
+                            [
+                                "attribut_prefixe" => "Tél.: ",
+                                "attribut_code" => "telephone",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "mdi:phone",
+                                "icone_taille" => "16px",
+                            ],
                         ],
                     ],
                     "colonnes_numeriques" => [],
@@ -6356,11 +6449,32 @@ class Constante
                 return [
                     "colonne_principale" => [
                         "titre_colonne" => "Tâches",
-                        "texte_principal" => ["attribut_code" => "description", "icone" => "mdi:checkbox-marked-circle-outline", "attribut_taille_max" => 70],
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "description",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 70,
+                            "icone" => "mdi:checkbox-marked-circle-outline",
+                            "icone_taille" => "19px",
+                        ],
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
-                            ["attribut_prefixe" => "Échéance: ", "attribut_code" => "toBeEndedAt", "attribut_type" => "date"],
-                            ["attribut_prefixe" => "Pour: ", "attribut_code" => "executor", "attribut_type" => "text"],
+                            [
+                                "attribut_prefixe" => "Échéance: ",
+                                "attribut_code" => "toBeEndedAt",
+                                "attribut_type" => "date",
+                                "attribut_taille_max" => null,
+                                "icone" => "fluent-mdl2:date-time-mirrored",
+                                "icone_taille" => "16px",
+                            ],
+                            [
+                                "attribut_prefixe" => "Pour: ",
+                                "attribut_code" => "executor",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => null,
+                                "icone" => "raphael:user",
+                                "icone_taille" => "16px",
+                            ],
                         ],
                     ],
                     "colonnes_numeriques" => [],
@@ -6370,15 +6484,41 @@ class Constante
                 return [
                     "colonne_principale" => [
                         "titre_colonne" => "Paiements",
-                        "texte_principal" => ["attribut_code" => "reference", "icone" => "mdi:cash-multiple"],
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "reference",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "mdi:cash-multiple",
+                            "icone_taille" => "19px",
+                        ],
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
-                            ["attribut_code" => "description", "attribut_type" => "text"],
-                            ["attribut_prefixe" => "Payé le: ", "attribut_code" => "paidAt", "attribut_type" => "date"],
+                            [
+                                "attribut_prefixe" => "",
+                                "attribut_code" => "description",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => 40,
+                                "icone" => "mdi:information-outline",
+                                "icone_taille" => "16px",
+                            ],
+                            [
+                                "attribut_prefixe" => "Payé le: ",
+                                "attribut_code" => "paidAt",
+                                "attribut_type" => "date",
+                                "attribut_taille_max" => null,
+                                "icone" => "fluent-mdl2:date-time-mirrored",
+                                "icone_taille" => "16px",
+                            ],
                         ],
                     ],
                     "colonnes_numeriques" => [
-                        ["titre_colonne" => "Montant", "attribut_unité" => "$", "attribut_code" => "montant"],
+                        [
+                            "titre_colonne" => "Montant",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "montant",
+                            "attribut_type" => "nombre",
+                        ],
                     ],
                 ];
 
@@ -6386,11 +6526,24 @@ class Constante
                 return [
                     "colonne_principale" => [
                         "titre_colonne" => "Documents",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:file-document"],
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "nom",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "mdi:file-document",
+                            "icone_taille" => "19px",
+                        ],
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [
-                            ["attribut_prefixe" => "Fichier: ", "attribut_code" => "nomFichierStocke", "attribut_type" => "text"],
-                            ["attribut_prefixe" => "Créé le: ", "attribut_code" => "createdAt", "attribut_type" => "date"],
+                            [
+                                "attribut_prefixe" => "Créé le: ",
+                                "attribut_code" => "createdAt",
+                                "attribut_type" => "date",
+                                "attribut_taille_max" => null,
+                                "icone" => "fluent-mdl2:date-time-mirrored",
+                                "icone_taille" => "16px",
+                            ],
                         ],
                     ],
                     "colonnes_numeriques" => [],
@@ -7404,7 +7557,7 @@ class Constante
     //             ],
     //         ];
     //     }
-        
+
     //     return [];
     // }
 
@@ -7467,11 +7620,12 @@ class Constante
             // Ces entités n'ont pas de valeurs numériques à totaliser.
             return [];
         }
-        
+
         return [];
     }
 
-    public function getNumericAttributesAndValuesForTotalsBar($data): array{
+    public function getNumericAttributesAndValuesForTotalsBar($data): array
+    {
         $numericValues = [];
         foreach ($data as $entity) {
             $numericValues[$entity->getId()] = $this->getNumericAttributesAndValues($entity);
