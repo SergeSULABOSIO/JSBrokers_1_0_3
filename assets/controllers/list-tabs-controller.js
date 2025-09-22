@@ -154,20 +154,29 @@ export default class extends Controller {
         // On lit l'attribut avec le nom correct et cohérent : 'numericAttributes'.
         const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericAttributesValue || '{}');
         const firstItemId = Object.keys(numericData)[0];
-        const numericAttributesOptions = {};
 
-        if (firstItemId && numericData[firstItemId]) {
-            for (const key in numericData[firstItemId]) {
-                numericAttributesOptions[key] = numericData[firstItemId][key].description;
+        // --- CORRECTION : Gérer le cas où il n'y a pas d'attributs numériques ---
+        let numericAttributesOptions = null;
+        let finalNumericData = null;
+
+        // On ne construit les options que si on a des données valides.
+        if (firstItemId && numericData[firstItemId] && Object.keys(numericData[firstItemId]).length > 0) {
+            numericAttributesOptions = {};
+            finalNumericData = numericData;
+            for (const key in finalNumericData[firstItemId]) {
+                numericAttributesOptions[key] = finalNumericData[firstItemId][key].description;
             }
+        } else {
+            // S'il n'y a pas d'attributs numériques, on s'assure d'envoyer null.
+            // La barre des totaux saura ainsi qu'elle doit se masquer.
         }
-
+        
         this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
             bubbles: true,
             detail: {
                 // On renomme ici pour plus de clarté dans l'événement, mais la source est correcte.
                 numericAttributes: numericAttributesOptions,
-                numericData: numericData
+                numericData: finalNumericData
             }
         }));
         console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributesOptions, numericData);

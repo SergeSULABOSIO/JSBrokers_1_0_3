@@ -34,14 +34,23 @@ export default class extends Controller {
 
     handleContextChange(event) {
         console.log(`${this.nomControleur} - Contexte changé (nouvel onglet).`);
-        const { numericAttributes, numericData } = event.detail;
+        const { numericAttributes, numericData } = event.detail; // numericAttributes peut être null
 
-        this.numericData = numericData || {}; // On stocke les données
+        // --- CORRECTION : Logique de masquage centralisée ---
+        // Si numericAttributes est null ou vide, on masque la barre et on arrête tout.
+        if (!numericAttributes || Object.keys(numericAttributes).length === 0) {
+            this.element.style.display = 'none';
+            this.numericData = {};
+            this.selectedIds.clear();
+            this.updateAttributeSelector({}); // Vide le sélecteur
+            this.displayTotals(0, 0); // Réinitialise les affichages
+            return; // Important : on sort de la fonction
+        }
 
-        // --- AJOUT : Réinitialiser la sélection lors d'un changement d'onglet ---
-        // C'est une bonne pratique pour éviter de conserver une sélection d'un onglet précédent.
+        // Si on arrive ici, c'est qu'il y a des données à afficher.
+        this.element.style.display = 'flex'; // On s'assure que la barre est visible
+        this.numericData = numericData || {};
         this.selectedIds.clear();
-
         this.updateAttributeSelector(numericAttributes || {});
         this.recalculate();
     }
@@ -73,8 +82,7 @@ export default class extends Controller {
 
     updateAttributeSelector(attributes) {
         this.attributeSelectorTarget.innerHTML = '';
-        const hasAttributes = Object.keys(attributes).length > 0;
-        this.element.style.display = hasAttributes ? 'flex' : 'none'; // Affiche ou cache la barre
+        // La logique d'affichage est maintenant dans handleContextChange
 
         for (const [key, label] of Object.entries(attributes)) {
             this.attributeSelectorTarget.appendChild(new Option(label, key));
