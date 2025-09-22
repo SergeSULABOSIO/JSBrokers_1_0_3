@@ -158,13 +158,11 @@ export default class extends Controller {
             return; // On ne fait rien si on est une liste cachée.
         }
 
-        // Garde-fou 2 : On vérifie que le payload de l'événement est bien celui qui nous intéresse pour une restauration
-        // et non celui émis par notre propre contrôleur (qui contient plus de données).
-        // Si 'entities' n'est pas présent ou vide, c'est probablement un événement de restauration.
-        if (event.detail.entities && event.detail.entities.length > 0) {
-            // C'est un événement de sélection normal, on le laisse être géré par les autres contrôleurs (comme list-tabs).
-            // Notre propre état est déjà à jour via handleCheckboxChange.
-            return;
+        // --- CORRECTION : Simplification du garde-fou ---
+        // On ne doit pas traiter l'événement si c'est cette instance même qui l'a émis.
+        // On vérifie la présence de `canvas` qui n'est présent que dans les événements émis par ce contrôleur.
+        if (event.detail.canvas) {
+            return; // C'est notre propre événement, on l'ignore.
         }
 
         const restoredSelectionIds = new Set((event.detail.selection || []).map(id => String(id)));
@@ -295,10 +293,11 @@ export default class extends Controller {
             }
         }
         // console.log(this.nomControleur + " -- ICI", this.tabSelectedEntities, this.tabSelectedCheckBoxs);
+        
+        // --- CORRECTION : Mettre à jour la case "Tout cocher" AVANT de publier ---
         this.updateSelectAllCheckboxState();
         this.publierSelection();
     }
-
 
     updateSelectAllCheckboxState() {
         const allChecked = this.rowCheckboxTargets.every(checkbox => checkbox.checked);
