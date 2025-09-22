@@ -1,6 +1,6 @@
 // assets/controllers/list-tabs-controller.js
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_CHECKBOX_PUBLISH_SELECTION } from './base_controller.js';
+import { EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_DATA_BASE_DONNEES_LOADED } from './base_controller.js';
 
 const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 
@@ -15,14 +15,22 @@ export default class extends Controller {
         this.collectionTabsParentId = null; // NOUVEAU : Mémorise l'ID de l'entité parente des onglets de collection
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
+        // --- CORRECTION : Écouter l'événement qui signale la fin du chargement d'une liste ---
+        this.boundDispatchContextChangeEvent = this.dispatchContextChangeEvent.bind(this);
+
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
+        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundDispatchContextChangeEvent);
+        document.addEventListener('totals-bar:request-context', this.boundDispatchContextChangeEvent); // --- CORRECTION : Répondre à la demande de la barre des totaux
+
         this.dispatchContextChangeEvent();
     }
 
     disconnect() {
         document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
+        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundDispatchContextChangeEvent);
+        document.removeEventListener('totals-bar:request-context', this.boundDispatchContextChangeEvent); // --- CORRECTION : Nettoyer l'écouteur
     }
 
     /**
@@ -104,6 +112,10 @@ export default class extends Controller {
 
         // On restaure l'état de la sélection pour cet onglet.
         this._restoreTabState(this.activeTabId);
+
+        // --- CORRECTION : Notifier la barre des totaux du changement de contexte ---
+        // On attend un court instant que le DOM soit à jour avant de notifier.
+        setTimeout(() => this.dispatchContextChangeEvent(), 50);
     }
 
 
@@ -125,9 +137,18 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Tentative d'envoi de l'événement context-changed.");
         const activeContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         if (!activeContent) return;
-
-        const listControllerElement = activeContent.querySelector('[data-controller~="liste-principale"]');
-        if (!listControllerElement) return;
+        
+        // --- CORRECTION : Gérer le cas où il n'y a pas de contenu actif ---
+        // S'il n'y a pas de contenu ou de contrôleur de liste, on envoie un événement vide
+        // pour forcer la barre des totaux à se masquer.
+        const listControllerElement = activeContent ? activeContent.querySelector('[data-controller~="liste-principale"]') : null;
+        if (!listControllerElement) {
+            this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
+                bubbles: true,
+                detail: { numericAttributes: {}, numericData: {} }
+            }));
+            return;
+        }
 
         // --- MODIFICATION ---
         // On lit l'attribut avec le nom correct et cohérent : 'numericAttributes'.

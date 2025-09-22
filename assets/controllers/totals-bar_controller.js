@@ -21,6 +21,10 @@ export default class extends Controller {
 
         document.addEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContext);
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
+
+        // --- CORRECTION : Demander activement le contexte au démarrage ---
+        // On attend un court instant que les autres contrôleurs soient prêts, puis on demande le contexte.
+        setTimeout(() => document.dispatchEvent(new CustomEvent('totals-bar:request-context')), 50);
     }
 
     disconnect() {
@@ -49,12 +53,12 @@ export default class extends Controller {
     handleSelectionChange(event) {
         console.log(`${this.nomControleur} - Événement de sélection reçu.`, event.detail);
 
-        const selectionPayload = event.detail.selection;
+        const selectionPayload = event.detail.selection; // Ceci est un tableau d'IDs
 
         if (selectionPayload && Array.isArray(selectionPayload)) {
             // AU LIEU DE : new Set(selectionPayload.map(e => e.id))
             // ON FAIT : new Set(selectionPayload) car le tableau contient déjà les IDs.
-            // On ajoute parseInt pour s'assurer de comparer des nombres.
+            // On s'assure de comparer des nombres.
             this.selectedIds = new Set(selectionPayload.map(id => parseInt(id, 10)));
             console.log(`${this.nomControleur} - IDs de sélection mis à jour :`, this.selectedIds);
         } else {
