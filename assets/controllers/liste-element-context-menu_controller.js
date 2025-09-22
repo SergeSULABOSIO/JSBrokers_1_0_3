@@ -99,14 +99,15 @@ export default class extends Controller {
 
 
     organizeButtons(event) {
-        let { idObjet, menuX, menuY, selection } = event.detail;
+        // --- CORRECTION : La méthode doit accepter un simple tableau de sélection ---
+        const selection = event.detail.selection || [];
 
         this.btOuvrirTarget.style.display = "none";
         this.btModifierTarget.style.display = "none";
         this.btSupprimerTarget.style.display = "none";
 
         console.log(this.nomControleur + " - Organisation des boutons - selection:", selection);
-
+        
         if (selection.length != 0) {
             if (selection.length == 1) {
                 this.btModifierTarget.style.display = "block";
@@ -141,12 +142,22 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handlePublisheSelection(event) {
+        // --- CORRECTION : Ignorer les événements de restauration incomplets ---
+        // On ne traite que l'événement final qui contient les entités complètes.
+        // L'événement de restauration initial de list-tabs-controller n'a pas 'entities'.
+        if (!event.detail.entities || event.detail.entities.length === 0 && event.detail.selection.length > 0) {
+            return;
+        }
+
         const { selection, entities, canvas, entityType } = event.detail; // Récupère les données de l'événement
         this.tabSelectedCheckBoxs = selection;
         this.tabSelectedEntities = entities;
         this.selectedEntitiesType = entityType;
         this.selectedEntitiesCanvas = canvas;
-        event.stopPropagation();
+
+        // --- CORRECTION : Mettre à jour les boutons du menu lors de la publication ---
+        // On simule un événement 'detail' pour la méthode organizeButtons
+        this.organizeButtons({ detail: { selection: selection } });
     }
 
 

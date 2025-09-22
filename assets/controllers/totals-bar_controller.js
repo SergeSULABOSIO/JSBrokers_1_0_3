@@ -36,10 +36,9 @@ export default class extends Controller {
         console.log(`${this.nomControleur} - Contexte changé (nouvel onglet).`);
         const { numericAttributes, numericData } = event.detail; // numericAttributes peut être null
 
-        // --- CORRECTION : Logique de masquage centralisée ---
-        // Si numericAttributes est null ou vide, on masque la barre et on arrête tout.
+        // --- CORRECTION : Logique de masquage/affichage centralisée ---
         if (!numericAttributes || Object.keys(numericAttributes).length === 0) {
-            this.element.style.display = 'none';
+            this.element.style.display = 'none'; // On masque la barre
             this.numericData = {};
             this.selectedIds.clear();
             this.updateAttributeSelector({}); // Vide le sélecteur
@@ -82,7 +81,7 @@ export default class extends Controller {
 
     updateAttributeSelector(attributes) {
         this.attributeSelectorTarget.innerHTML = '';
-        // La logique d'affichage est maintenant dans handleContextChange
+        // La logique d'affichage/masquage est maintenant gérée dans handleContextChange
 
         for (const [key, label] of Object.entries(attributes)) {
             this.attributeSelectorTarget.appendChild(new Option(label, key));
