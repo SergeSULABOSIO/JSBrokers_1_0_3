@@ -902,3 +902,34 @@ textarea:hover,
 .context-menu ul li.separator {
     border-top: 1px solid #495057 !important;
 }
+
+/* assets/styles/app.css */
+
+/* ... autres styles ... */
+
+/* --- NOUVEAU : Style pour le conteneur du spinner --- */
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem 2rem; /* Un peu d'espace pour que ça respire */
+    min-height: 200px; /* Hauteur minimale pour être visible même si la liste est vide */
+    width: 100%;
+}
+
+/* --- NOUVEAU : Le spinner lui-même --- */
+.custom-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(0, 123, 255, 0.2); /* Couleur de fond de la bordure (bleu clair transparent) */
+    border-top-color: #0d6efd; /* Couleur de la partie qui tourne (bleu primaire de Bootstrap) */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* --- NOUVEAU : L'animation de rotation --- */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

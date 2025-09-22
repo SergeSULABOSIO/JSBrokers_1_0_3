@@ -198,14 +198,19 @@ export default class extends Controller {
             canAdd: 'true'
         });
         content.style.display = 'block';
-        content.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" role="status"></div></div>';
+
+        // --- MODIFICATION : Utiliser le nouveau spinner stylisé ---
+        content.innerHTML = '<div class="spinner-container"><div class="custom-spinner"></div></div>';
+        // -------------------------------------------------------
 
         try {
+            // MODIFICATION CLÉ : On attend (await) la réponse du fetch
             const response = await fetch(tabElement.dataset.collectionUrl);
             if (!response.ok) throw new Error('Échec du chargement des données.');
+            // Le contenu du spinner est remplacé SEULEMENT APRES la fin du chargement
             content.innerHTML = await response.text();
         } catch (error) {
-            console.error(error);
+            console.error("Erreur de chargement du contenu de l'onglet:", error);
             content.innerHTML = `<div class="alert alert-danger m-3">${error.message}</div>`;
         }
         return content;

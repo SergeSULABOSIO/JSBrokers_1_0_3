@@ -737,12 +737,16 @@ export default class extends Controller {
             return;
         }
 
+        // --- MODIFICATION : Afficher le spinner avant la requête ---
+        this.donneesTarget.innerHTML = `<div class="spinner-container"><div class="custom-spinner"></div></div>`;
+        // ---------------------------------------------------------
+
         try {
             buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
                 text: 'Chargement, veuillez patiener...', type: 'info'
             });
 
-            const response = await fetch(this.urlAPIDynamicQuery, {
+            const response = await fetch(this.urlAPIDynamicQuery, { // La requête est déjà attendue, c'est bien.
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -751,14 +755,17 @@ export default class extends Controller {
                 body: JSON.stringify({ entityName, criteria, page, limit }),
             });
 
-            const responseData = await response.text();
-            // console.log(this.nomControleur + " - REPONSE DU SERVEUR BRUTE:", responseData);
-            // Succès : propage les résultats
-            this.dispatchResponse(responseData, null);
+            const responseData = await response.text(); // On attend la réponse texte.
+            
+            // MODIFICATION CLÉ : On propage le résultat APRÈS avoir reçu la réponse.
+            this.dispatchResponse(responseData, null); // Succès : propage les résultats
         } catch (error) {
             // Gère les erreurs réseau ou de parsing JSON
             console.error(this.nomControleur + ' - Fetch error:', error);
             this.dispatchResponse(null, error.message);
+            // --- MODIFICATION : Afficher une erreur à la place du spinner ---
+            this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
+            // ---------------------------------------------------------------
 
             buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
                 text: error.message, type: 'error'
