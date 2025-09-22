@@ -133,11 +133,10 @@ export default class extends Controller {
      * Cette méthode est réécrite. Elle ne scanne plus le 'canvas'.
      * Elle lit les données numériques pré-calculées depuis l'attribut data- que nous avons ajouté.
      */
-    dispatchContextChangeEvent() {
+    dispatchContextChangeEvent() { // [1]
         console.log(this.nomControleur + " - Tentative d'envoi de l'événement context-changed.");
         const activeContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
-        if (!activeContent) return;
-        
+
         // --- CORRECTION : Gérer le cas où il n'y a pas de contenu actif ---
         // S'il n'y a pas de contenu ou de contrôleur de liste, on envoie un événement vide
         // pour forcer la barre des totaux à se masquer.
@@ -145,7 +144,7 @@ export default class extends Controller {
         if (!listControllerElement) {
             this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
                 bubbles: true,
-                detail: { numericAttributes: {}, numericData: {} }
+                detail: { numericAttributes: null, numericData: null } // [2]
             }));
             return;
         }
@@ -153,24 +152,19 @@ export default class extends Controller {
         // --- MODIFICATION ---
         // On lit l'attribut avec le nom correct et cohérent : 'numericAttributes'.
         const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericAttributesValue || '{}');
-        const firstItemId = Object.keys(numericData)[0];
-
-        // --- CORRECTION : Gérer le cas où il n'y a pas d'attributs numériques ---
+        const firstItemId = Object.keys(numericData)[0]; // [3]
         let numericAttributesOptions = null;
         let finalNumericData = null;
 
-        // On ne construit les options que si on a des données valides.
+        // --- CORRECTION : On ne construit les options que si on a des données valides ---
         if (firstItemId && numericData[firstItemId] && Object.keys(numericData[firstItemId]).length > 0) {
             numericAttributesOptions = {};
             finalNumericData = numericData;
             for (const key in finalNumericData[firstItemId]) {
                 numericAttributesOptions[key] = finalNumericData[firstItemId][key].description;
             }
-        } else {
-            // S'il n'y a pas d'attributs numériques, on s'assure d'envoyer null.
-            // La barre des totaux saura ainsi qu'elle doit se masquer.
         }
-        
+
         this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
             bubbles: true,
             detail: {
@@ -179,7 +173,7 @@ export default class extends Controller {
                 numericData: finalNumericData
             }
         }));
-        console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributesOptions, numericData);
+        console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributesOptions, finalNumericData);
     }
 
     // --- Méthodes privées ---

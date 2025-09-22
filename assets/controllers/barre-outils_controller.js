@@ -95,15 +95,22 @@ export default class extends Controller {
      */
     handlePublisheSelection(event) {
         // console.log(this.nomControleur + " - handlePublishSelection", event.detail);
+
+        // --- CORRECTION : Ignorer les événements de restauration incomplets ---
+        // On ne traite que l'événement final qui contient les entités complètes.
+        // L'événement de restauration initial de list-tabs-controller n'a pas 'entities'.
+        if (!event.detail.entities || event.detail.entities.length === 0 && event.detail.selection.length > 0) {
+            return;
+        }
+
         const { selection, entities, canvas, entityType } = event.detail; // Récupère les données de l'événement
         this.tabSelectedCheckBoxs = selection;
         this.tabSelectedEntities = entities;
         this.selectedEntitiesType = entityType;
         this.selectedEntitiesCanvas = canvas;
-        event.stopPropagation();
 
         //On réorganise les boutons en fonction de la selection actuelle
-        this.organizeButtons(selection);
+        this.organizeButtons(selection || []);
 
         buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
             titre: "Etat",
@@ -112,6 +119,10 @@ export default class extends Controller {
     }
 
     organizeButtons(selection) {
+        // --- CORRECTION : S'assurer que selection est toujours un tableau ---
+        if (!Array.isArray(selection)) {
+            selection = [];
+        }
         if (selection.length >= 1) {
             if (selection.length == 1) {
                 this.btmodifierTarget.style.display = "block";
