@@ -255,13 +255,41 @@ export default class extends Controller {
      * Ouvre la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
-        if (this.disabledValue) return; // Sécurité : ne fait rien si désactivé
-        // --- CORRECTION CRUCIALE ---
-        // On stoppe la propagation de l'événement pour empêcher qu'il ne "bulle"
-        // jusqu'à d'autres contrôleurs (comme `liste-principale`) qui pourraient
-        // réagir de manière incorrecte.
-        event.stopPropagation(); 
-        this.openFormDialog();
+        // --- CORRECTION MAJEURE ---
+        // Au lieu d'appeler une méthode interne, on construit et on propage
+        // l'événement d'ouverture de dialogue directement ici.
+        // Cela garantit que le contexte est correct et évite toute confusion
+        // avec les listeners du contrôleur `liste-principale`.
+
+        if (this.disabledValue) return;
+        event.stopPropagation(); // On garde ceci par sécurité.
+
+        // 1. On prépare le `entityFormCanvas` comme le ferait `openFormDialog`.
+        const entityFormCanvas = {
+            parametres: {
+                titre_creation: this.itemTitleCreateValue,
+                titre_modification: this.itemTitleEditValue,
+                endpoint_form_url: this.itemFormUrlValue,
+                endpoint_submit_url: this.itemSubmitUrlValue,
+            }
+        };
+
+        // 2. On extrait l'ID du parent, c'est l'étape cruciale.
+        const match = this.listUrlValue.match(/\/api\/(\d+)\//);
+        const parentId = match ? match[1] : null;
+
+        // 3. On construit le contexte avec l'ID du parent.
+        const context = { originatorId: this.componentId };
+        if (this.parentFieldNameValue && parentId) {
+            context[this.parentFieldNameValue] = parentId;
+        }
+
+        // 4. On propage l'événement global que `dialog-manager` écoute.
+        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+            entity: {}, // Mode création
+            entityFormCanvas: entityFormCanvas,
+            context: context
+        });
     }
 
     /**
