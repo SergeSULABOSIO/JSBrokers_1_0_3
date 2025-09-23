@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invite;
 use App\Entity\Entreprise;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
@@ -29,6 +30,8 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[IsGranted('ROLE_USER')]
 class OffreIndemnisationSinistreController extends AbstractController
 {
+    use HandleChildAssociationTrait;
+
     public MenuActivator $activator;
 
     public function __construct(
@@ -42,6 +45,13 @@ class OffreIndemnisationSinistreController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            'notificationSinistre' => NotificationSinistre::class,
+        ];
     }
 
 
@@ -87,13 +97,13 @@ class OffreIndemnisationSinistreController extends AbstractController
 
         $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
 
-        $entityCanvas = $constante->getEntityCanvas($offre);
+        $entityCanvas = $constante->getEntityCanvas(OffreIndemnisationSinistre::class);
         $constante->loadCalculatedValue($entityCanvas, [$offre]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($offre, $entreprise->getId()), // ID entreprise à adapter
-            'entityCanvas' => $constante->getEntityCanvas($offre)
+            'entityCanvas' => $constante->getEntityCanvas(OffreIndemnisationSinistre::class)
         ]);
     }
 
@@ -107,17 +117,13 @@ class OffreIndemnisationSinistreController extends AbstractController
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
 
-        $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
-
-        if (isset($data['notificationSinistre'])) {
-            $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-            if ($notification) $offre->setNotificationSinistre($notification);
-        }
+        $offre = isset($data['id']) && $data['id'] ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
 
         $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->associateParent($offre, $data, $em);
             $em->persist($offre);
             $em->flush();
 
