@@ -256,7 +256,11 @@ export default class extends Controller {
      */
     addItem(event) {
         if (this.disabledValue) return; // Sécurité : ne fait rien si désactivé
-        event.stopPropagation();
+        // --- CORRECTION CRUCIALE ---
+        // On stoppe la propagation de l'événement pour empêcher qu'il ne "bulle"
+        // jusqu'à d'autres contrôleurs (comme `liste-principale`) qui pourraient
+        // réagir de manière incorrecte.
+        event.stopPropagation(); 
         this.openFormDialog();
     }
 
