@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Entity\PieceSinistre;
@@ -27,6 +28,8 @@ use Symfony\Component\Serializer\SerializerInterface;
 #[IsGranted('ROLE_USER')]
 class PieceSinistreController extends AbstractController
 {
+    use HandleChildAssociationTrait;
+
     public MenuActivator $activator;
 
     public function __construct(
@@ -39,6 +42,13 @@ class PieceSinistreController extends AbstractController
         private Constante $constante,
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            'notificationSinistre' => NotificationSinistre::class,
+        ];
     }
 
 
@@ -111,19 +121,13 @@ class PieceSinistreController extends AbstractController
         $submittedData = array_merge($data, $files);
 
         /** @var PieceSinistre $piece */
-        $piece = isset($data['id']) ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
-
-        if (isset($data['notificationSinistre'])) {
-            $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-            if ($notification) $piece->setNotificationSinistre($notification);
-        }
-
-        // dd("Ici", $piece->getNotificationSinistre());
+        $piece = isset($data['id']) && $data['id'] ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
 
         $form = $this->createForm(PieceSinistreType::class, $piece);
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->associateParent($piece, $data, $em);
             $em->persist($piece);
             $em->flush();
 

@@ -111,12 +111,19 @@ export default class extends Controller {
     async loadItemList() {
         if (!this.listUrlValue || this.listUrlValue.endsWith('/0')) {
             // Affiche un état vide générique car l'entité parente n'existe pas encore.
+            // On utilise le composant _empty_state pour un message clair.
             // Pas de bouton "Ajouter" car il n'y a pas de contexte pour l'ajout.
-            this.listContainerTarget.innerHTML = `
-                <div class="empty-state-container">
-                    <div class="text-center p-4 text-muted"><em>La liste apparaîtra ici une fois l'élément principal sauvegardé.</em></div>
-                </div>
-            `;
+            const response = await fetch('/render-component/empty_state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: "Liste non disponible",
+                    description: "La liste des éléments apparaîtra ici une fois l'élément principal sauvegardé.",
+                    icon_name: 'lucide:list-x'
+                    // On ne passe pas de button_text/button_action car l'ajout est impossible
+                })
+            });
+            this.listContainerTarget.innerHTML = await response.text();
             this.updateBadge(0);
             return;
         }
@@ -133,6 +140,22 @@ export default class extends Controller {
             this.listContainerTarget.innerHTML = html;
             const itemCount = this.listContainerTarget.querySelectorAll('.collection-item').length;
             this.updateBadge(itemCount);
+
+            // Si la liste est vide après chargement, on affiche le composant _empty_state avec le bouton d'ajout
+            if (itemCount === 0) {
+                const response = await fetch('/render-component/empty_state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: "Cette collection est vide",
+                        description: "Commencez par ajouter un nouvel élément à cette collection.",
+                        button_text: `Ajouter un ${this.itemTitleCreateValue.toLowerCase()}`,
+                        button_action: "click->collection-manager#addItem", // Action spécifique à ce contrôleur
+                        icon_name: 'lucide:inbox'
+                    })
+                });
+                this.listContainerTarget.innerHTML = await response.text();
+            }
         } catch (error) {
             console.error('Failed to load item list:', error);
             this.listContainerTarget.innerHTML = '<div class="alert alert-danger">Erreur de chargement de la liste.</div>';

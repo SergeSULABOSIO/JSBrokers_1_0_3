@@ -42,7 +42,7 @@
             {% else %}
                 <div data-liste-principale-target="donnees">
                     {{ include('components/_empty_state.html.twig', {
-                        title: "Votre liste de " ~ entite_nom|lower ~ "s est vide",
+                        title: "Votre liste " ~ entite_nom|lower ~ " est vide",
                         description: "Commencez par ajouter un " ~ entite_nom|lower ~ " pour organiser vos données.",
                         button_text: "Ajouter un " ~ entite_nom|lower,
                         button_action: "click->liste-principale#handleAddRequest",

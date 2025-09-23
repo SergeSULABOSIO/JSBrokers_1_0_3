@@ -24,7 +24,9 @@
 
         {% if button_text is defined and button_text and button_action is defined and button_action %}
             <button type="button" class="btn btn-primary empty-state-button" data-action="{{ button_action }}">
-                <twig:UX:Icon name="bi:plus-circle-fill" class="me-2" />
+                {% if button_text %}
+                    <twig:UX:Icon name="bi:plus-circle-fill" class="me-2" />
+                {% endif %}
                 {{ button_text }}
             </button>
         {% endif %}

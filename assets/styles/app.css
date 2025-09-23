@@ -370,12 +370,14 @@ a:active {
 .item-actions .btn:hover {
     background-color: #e9ecef;
 }
+
 .title-right-block .btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     font-weight: bold;
-    border-radius: 20px;
+    border-radius: 8px; /* Forme rectangulaire avec coins arrondis */
+    padding: 0.5rem 1rem; /* Padding pour un aspect rectangulaire */
 }
 
 /*
@@ -951,9 +953,14 @@ textarea:hover,
 }
 
 .empty-state-icon {
-  font-size: 3rem; /* Taille de l'icône */
+  /* font-size: 3rem; Taille de l'icône */
   color: #6c757d; /* --dark-gray-color ou équivalent */
   margin-bottom: 1rem;
+  width: 100px;
+  height: 100px;
+  display: block; /* Assure que l'icône est un bloc pour le centrage */
+  margin-left: auto; /* Centre l'icône horizontalement */
+  margin-right: auto; /* Centre l'icône horizontalement */
 }
 
 .empty-state-title {
@@ -970,3 +977,23 @@ textarea:hover,
 }
 
 /* Le bouton utilise déjà les styles .btn-primary de Bootstrap, qui correspondent à votre --primary-cobalt-blue */
+.empty-state-button {
+  display: inline-flex; /* Permet d'aligner l'icône et le texte */
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem; /* Padding pour un aspect rectangulaire */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Ombre discrète */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Animation douce */
+  border-radius: 8px !important; /* Forme rectangulaire avec coins arrondis */
+}
+
+.empty-state-button:hover {
+  transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Ombre plus prononcée */
+}
+
+/* Cible l'icône SVG à l'intérieur du bouton */
+.empty-state-button svg {
+  width: 26px !important;
+  height: 26px !important;
+}
