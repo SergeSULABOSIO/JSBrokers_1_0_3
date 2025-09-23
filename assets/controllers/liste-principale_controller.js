@@ -184,12 +184,11 @@ export default class extends Controller {
 
         // On met à jour l'état de la case "Tout cocher" pour refléter le nouvel état.
         this.updateSelectAllCheckboxState();
-        
-        // --- CORRECTION : Ne pas republier une sélection lors d'une restauration ---
-        // L'événement de restauration a déjà été publié par list-tabs-controller. Le republier ici
-        // avec un état potentiellement incomplet (avant la restauration complète des entités)
-        // cause la désynchronisation de la barre d'outils.
-        // this.publierSelection(); // On commente ou supprime cette ligne.
+
+        // --- CORRECTION : Ne pas republier une sélection lors d'une restauration ---.
+        // L'événement original a déjà été publié par list-tabs-controller. Le republier ici
+        // avec un état interne pas encore complètement restauré cause la désynchronisation de la barre d'outils.
+        // La ligne `this.publierSelection()` a été commentée/supprimée.
     }
     
 

@@ -110,7 +110,13 @@ export default class extends Controller {
      */
     async loadItemList() {
         if (!this.listUrlValue || this.listUrlValue.endsWith('/0')) {
-            this.listContainerTarget.innerHTML = '<div class="text-center p-4 text-muted"><em>La liste des contacts apparaîtra ici après la création de la notification.</em></div>';
+            // Affiche un état vide générique car l'entité parente n'existe pas encore.
+            // Pas de bouton "Ajouter" car il n'y a pas de contexte pour l'ajout.
+            this.listContainerTarget.innerHTML = `
+                <div class="empty-state-container">
+                    <div class="text-center p-4 text-muted"><em>La liste apparaîtra ici une fois l'élément principal sauvegardé.</em></div>
+                </div>
+            `;
             this.updateBadge(0);
             return;
         }
