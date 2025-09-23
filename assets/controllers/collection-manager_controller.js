@@ -111,19 +111,12 @@ export default class extends Controller {
     async loadItemList() {
         if (!this.listUrlValue || this.listUrlValue.endsWith('/0')) {
             // Affiche un état vide générique car l'entité parente n'existe pas encore.
-            // On utilise le composant _empty_state pour un message clair.
-            // Pas de bouton "Ajouter" car il n'y a pas de contexte pour l'ajout.
-            const response = await fetch('/render-component/empty_state', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: "Liste non disponible",
-                    description: "La liste des éléments apparaîtra ici une fois l'élément principal sauvegardé.",
-                    icon_name: 'lucide:list-x'
-                    // On ne passe pas de button_text/button_action car l'ajout est impossible
-                })
-            });
-            this.listContainerTarget.innerHTML = await response.text();
+            // --- CORRECTION : Simplification pour éviter l'appel à une route inexistante ---
+            this.listContainerTarget.innerHTML = `
+                <div class="empty-state-container">
+                    <div class="text-center p-4 text-muted"><em>La liste apparaîtra ici une fois l'élément principal sauvegardé.</em></div>
+                </div>
+            `;
             this.updateBadge(0);
             return;
         }
@@ -143,18 +136,15 @@ export default class extends Controller {
 
             // Si la liste est vide après chargement, on affiche le composant _empty_state avec le bouton d'ajout
             if (itemCount === 0) {
-                const response = await fetch('/render-component/empty_state', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        title: "Cette collection est vide",
-                        description: "Commencez par ajouter un nouvel élément à cette collection.",
-                        button_text: `Ajouter un ${this.itemTitleCreateValue.toLowerCase()}`,
-                        button_action: "click->collection-manager#addItem", // Action spécifique à ce contrôleur
-                        icon_name: 'lucide:inbox'
-                    })
-                });
-                this.listContainerTarget.innerHTML = await response.text();
+                // --- CORRECTION : Simplification pour éviter l'appel à une route inexistante ---
+                this.listContainerTarget.innerHTML = `
+                    <div class="empty-state-container">
+                        <div class="empty-state-content">
+                            <h3 class="empty-state-title">Cette collection est vide</h3>
+                            <p class="empty-state-description">Commencez par ajouter un nouvel élément.</p>
+                            <button type="button" class="btn btn-primary empty-state-button" data-action="click->collection-manager#addItem">Ajouter un ${this.itemTitleCreateValue.toLowerCase()}</button>
+                        </div>
+                    </div>`;
             }
         } catch (error) {
             console.error('Failed to load item list:', error);
@@ -255,41 +245,16 @@ export default class extends Controller {
      * Ouvre la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
-        // --- CORRECTION MAJEURE ---
-        // Au lieu d'appeler une méthode interne, on construit et on propage
-        // l'événement d'ouverture de dialogue directement ici.
-        // Cela garantit que le contexte est correct et évite toute confusion
-        // avec les listeners du contrôleur `liste-principale`.
+        // --- DEFINITIVE FIX ---
+        // Stop the event's propagation immediately. This is the most critical step.
+        // It prevents the click from "bubbling up" to parent controllers
+        // like 'liste-principale', which was causing the second, incorrect dialog to open.
+        event.stopPropagation();
 
-        if (this.disabledValue) return;
-        event.stopPropagation(); // On garde ceci par sécurité.
-
-        // 1. On prépare le `entityFormCanvas` comme le ferait `openFormDialog`.
-        const entityFormCanvas = {
-            parametres: {
-                titre_creation: this.itemTitleCreateValue,
-                titre_modification: this.itemTitleEditValue,
-                endpoint_form_url: this.itemFormUrlValue,
-                endpoint_submit_url: this.itemSubmitUrlValue,
-            }
-        };
-
-        // 2. On extrait l'ID du parent, c'est l'étape cruciale.
-        const match = this.listUrlValue.match(/\/api\/(\d+)\//);
-        const parentId = match ? match[1] : null;
-
-        // 3. On construit le contexte avec l'ID du parent.
-        const context = { originatorId: this.componentId };
-        if (this.parentFieldNameValue && parentId) {
-            context[this.parentFieldNameValue] = parentId;
+        if (this.disabledValue) {
+            return;
         }
-
-        // 4. On propage l'événement global que `dialog-manager` écoute.
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-            entity: {}, // Mode création
-            entityFormCanvas: entityFormCanvas,
-            context: context
-        });
+        this.openFormDialog();
     }
 
     /**
