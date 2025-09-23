@@ -1,0 +1,32 @@
+{# templates/components/_empty_state.html.twig #}
+{#
+    Ce composant affiche un message "état vide" avec un appel à l'action.
+
+    @param string title          Le titre principal (ex: "Votre liste est vide.")
+    @param string description    Un texte descriptif (ex: "Commencez par ajouter un nouvel élément.")
+    @param string button_text    Le texte du bouton (ex: "Ajouter un élément")
+    @param string button_action  L'action Stimulus à déclencher au clic (ex: "collection-manager#addItem" ou "liste-principale#handleAddRequest")
+    @param string icon_name      (Optionnel) Le nom de l'icône UX à afficher.
+#}
+<div class="empty-state-container">
+    <div class="empty-state-content">
+        {% if icon_name is defined and icon_name %}
+            <div class="empty-state-icon">
+                <twig:UX:Icon name="{{ icon_name }}" />
+            </div>
+        {% endif %}
+
+        <h3 class="empty-state-title">{{ title|default('Cette liste est vide.') }}</h3>
+
+        {% if description is defined and description %}
+            <p class="empty-state-description">{{ description }}</p>
+        {% endif %}
+
+        {% if button_text is defined and button_text and button_action is defined and button_action %}
+            <button type="button" class="btn btn-primary empty-state-button" data-action="{{ button_action }}">
+                <twig:UX:Icon name="bi:plus-circle-fill" class="me-2" />
+                {{ button_text }}
+            </button>
+        {% endif %}
+    </div>
+</div>

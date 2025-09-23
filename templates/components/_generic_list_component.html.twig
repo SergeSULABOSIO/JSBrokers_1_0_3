@@ -1,14 +1,3 @@
-{# templates/components/_generic_list_component.html.twig #}
-{# 
-        Ce composant est une version réutilisable de votre liste principale.
-        Il attend plusieurs variables pour se configurer :
-        - data: La liste des entités à afficher.
-        - entite_nom: Le nom de l'entité (ex: "Contact").
-        - entityCanvas: Le canvas de l'entité, qui contient la configuration des colonnes.
-        - listeCanvas: La partie 'liste' du canvas, pour un accès plus facile.
-        - entityFormCanvas: Le canvas pour le formulaire d'édition.
-        - numericValues: (NOUVEAU) Le tableau des valeurs pré-calculées pour la barre des totaux.
-#}
 	<div 
         id="list-controller-{{ random() }}" {# ID unique pour chaque instance de liste #} 
         data-controller="dialogue liste-principale" 
@@ -16,50 +5,51 @@
         data-liste-principale-entite-value="{{ entite_nom }}" 
         data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
         {# --- AJOUT --- #}
-        {# On stocke les valeurs numériques pré-calculées directement dans le DOM. #}
-        {# Le JavaScript lira cet attribut au lieu de scanner la table. #}
         data-liste-principale-numeric-attributes-value='{{ numericAttributes|default({})|json_encode|e('html_attr') }}' 
     > 
         <div class="table-scroll-wrapper flex-grow-1">
-		<table class="table table-hover table-sm table-enhanced">
-			{% if data|length != 0 %}
-				<thead class="table-light sticky-header">
-					<tr class="text-center">
-						<th scope="col" style="width: 80px;">
-							<div class="form-check m-2 justify-content-start">
-								<input class="form-check-input" type="checkbox" data-action="change->liste-principale#handleItemToutCocher" data-liste-principale-target="selectAllCheckbox">
-								<label class="text-secondary">Id.</label>
-							</div>
-						</th>
-						{% if listeCanvas.colonne_principale is defined %}
-							<th scope="col">
-								<div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
-							</th>
-						{% endif %}
-						{% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
-							<th scope="col" style="width:150px">
-								<div class='d-flex justify-content-end text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
-							</th>
-						{% endfor %}
-					</tr>
-				</thead>
-				<tbody
-					class="table-group-divider context-target" data-liste-principale-target="donnees">
-					{# On réutilise votre template de données existant ! #}
-					{{ include('components/_list_donnees.html.twig', {
+            {% if data is not empty %}
+                <table class="table table-hover table-sm table-enhanced">
+                    <thead class="table-light sticky-header">
+                        <tr class="text-center">
+                            <th scope="col" style="width: 80px;">
+                                <div class="form-check m-2 justify-content-start">
+                                    <input class="form-check-input" type="checkbox" data-action="change->liste-principale#handleItemToutCocher" data-liste-principale-target="selectAllCheckbox">
+                                    <label class="text-secondary">Id.</label>
+                                </div>
+                            </th>
+                            {% if listeCanvas.colonne_principale is defined %}
+                                <th scope="col">
+                                    <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
+                                </th>
+                            {% endif %}
+                            {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
+                                <th scope="col" style="width:150px">
+                                    <div class='d-flex justify-content-end text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="table-group-divider context-target" data-liste-principale-target="donnees">
+                        {{ include('components/_list_donnees.html.twig', {
                         'data': data,
                         'entityCanvas': entityCanvas,
                         'listeCanvas': listeCanvas,
                         'entite_nom': entite_nom
                     }) }}
-				</tbody>
-			{% else %}
-				<tbody>
-					<tr>
-						<td colspan="100%" class="text-center p-4">Aucun élément dans cette collection.</td>
-					</tr>
-				</tbody>
-			{% endif %}
-		</table>
-	</div>
+                    </tbody>
+                </table>
+            {% else %}
+                <div data-liste-principale-target="donnees">
+                    {{ include('components/_empty_state.html.twig', {
+                        title: "Votre liste de " ~ entite_nom|lower ~ "s est vide",
+                        description: "Commencez par ajouter un " ~ entite_nom|lower ~ " pour organiser vos données.",
+                        button_text: "Ajouter un " ~ entite_nom|lower,
+                        button_action: "click->liste-principale#handleAddRequest",
+                        icon_name: entityCanvas.parametres.icone | default('lucide:inbox')
+                    }) }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
 </div>

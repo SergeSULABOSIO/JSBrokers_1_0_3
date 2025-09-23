@@ -22,11 +22,9 @@ export default class extends Controller {
         this.selectedEntitiesCanvas = null;
         console.log(this.nomControleur + " - Connecté");
 
-        // --- DÉBUT DE LA MODIFICATION ---
-        this.activeListContext = {}; // Pour stocker les infos de l'onglet actif
-        this.boundHandleContextChange = this.handleContextChange.bind(this);
-        document.addEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContextChange);
-        // --- FIN DE LA MODIFICATION ---
+        // --- CORRECTION : La barre d'outils ne doit plus écouter EVT_CONTEXT_CHANGED ---
+        // Cet événement est destiné à la barre des totaux et causait une réinitialisation
+        // non désirée de la barre d'outils lors du changement d'onglet.
 
         this.init();
     }
@@ -57,9 +55,6 @@ export default class extends Controller {
         document.removeEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.boundhandleInitRequest);
         document.removeEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.boundhandleInitialized);
         document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
-        // --- DÉBUT DE LA MODIFICATION ---
-        document.removeEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContextChange);
-        // --- FIN DE LA MODIFICATION ---
     }
 
     // --- NOUVELLE FONCTION À AJOUTER ---
@@ -67,17 +62,6 @@ export default class extends Controller {
      * Se déclenche quand l'onglet actif change.
      * @param {CustomEvent} event
      */
-    handleContextChange(event) {
-        this.activeListContext = event.detail;
-        // On réinitialise la sélection et les boutons car on change de liste
-        this.tabSelectedCheckBoxs = [];
-        this.tabSelectedEntities = [];
-        this.organizeButtons([]); // Appelle votre fonction existante avec une sélection vide
-        
-        // On cache/affiche le bouton "Ajouter" en fonction du contexte
-        this.btajouterTarget.style.display = this.activeListContext.canAdd ? 'block' : 'none';
-    }
-    // --- FIN DE LA NOUVELLE FONCTION ---
 
 
     handleInitRequest(event) {

@@ -933,3 +933,40 @@ textarea:hover,
         transform: rotate(360deg);
     }
 }
+
+/* --- Styles pour le composant Empty State --- */
+.empty-state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  height: 100%;
+  min-height: 250px; /* Hauteur minimale pour un bon rendu visuel */
+  animation: fadeIn 0.3s ease-in-out; /* Animation d'apparition douce */
+}
+
+.empty-state-content {
+  max-width: 450px;
+}
+
+.empty-state-icon {
+  font-size: 3rem; /* Taille de l'icône */
+  color: #6c757d; /* --dark-gray-color ou équivalent */
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.4em; /* Police légèrement plus grande */
+  color: #343a40; /* --dark-gray-color ou équivalent */
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-description {
+  font-size: 1.1em;
+  color: #6c757d; /* --dark-gray-color ou équivalent */
+  margin-bottom: 1.5rem;
+}
+
+/* Le bouton utilise déjà les styles .btn-primary de Bootstrap, qui correspondent à votre --primary-cobalt-blue */
