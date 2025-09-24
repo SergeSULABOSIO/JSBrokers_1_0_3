@@ -611,40 +611,68 @@ export default class extends Controller {
         const clickedElement = event.currentTarget;
         const componentName = clickedElement.dataset.espaceDeTravailComponentNameParam;
         const description = clickedElement.dataset.espaceDeTravailDescriptionParam;
- 
+
         if (!componentName) return;
- 
+
         if (description) {
             this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
         }
- 
+
         this.dispatchRequestEvent(clickedElement.dataset);
         this.progressBarTarget.style.display = 'block';
- 
+
         // --- CORRECTION : On ne fait plus l'appel fetch ici. On se contente de notifier le Cerveau. ---
         // On demande au Cerveau de charger le composant.
-        this.dispatch('cerveau:event', {
-            detail: {
-                type: 'ui:sinistre.index', // L'événement demandé pour le chargement de rubrique
-                source: 'espace-de-travail',
-                payload: { componentName: componentName },
-                timestamp: Date.now()
-            }
+        // this.dispatch('cerveau:event', {
+        //     detail: {
+        //         type: 'ui:sinistre.index',
+        //         source: 'espace-de-travail',
+        //         payload: { componentName: componentName },
+        //         timestamp: Date.now()
+        //     },
+        //     bubbles: true // CORRECTION CRUCIALE : Permet à l'événement de remonter jusqu'au <body>
+        // });
+
+        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+            type: 'ui:sinistre.index',
+            source: 'espace-de-travail',
+            payload: { componentName: componentName },
+            timestamp: Date.now()
         });
- 
+
+        console.log(this.nomControleur + " - cerveau:event envoyé.");
+
         // La sauvegarde de l'état est faite immédiatement après le clic.
         // Le chargement effectif du contenu sera géré par handleComponentLoaded.
         if (componentName) {
-                const stateToSave = {
-                    component: componentName,
-                    group: clickedElement.dataset.espaceDeTravailGroupNameParam || null
-                };
-                sessionStorage.setItem('lastActiveState', JSON.stringify(stateToSave));
-            }
- 
+            const stateToSave = {
+                component: componentName,
+                group: clickedElement.dataset.espaceDeTravailGroupNameParam || null
+            };
+            sessionStorage.setItem('lastActiveState', JSON.stringify(stateToSave));
+        }
+
         this.updateActiveState(clickedElement);
     }
- 
+
+    /**
+     * NOUVEAU : Gère la réception du HTML du composant chargé par le Cerveau.
+     * @param {CustomEvent} event 
+     */
+    handleComponentLoaded(event) {
+        const { html, error } = event.detail;
+
+        if (error) {
+            console.error("Erreur lors du chargement du composant via le Cerveau:", error);
+            this.workspaceTarget.innerHTML = `<div class="p-8 text-red-500">Impossible de charger le contenu : ${error}</div>`;
+        } else {
+            this.workspaceTarget.innerHTML = html;
+            this.dispatchOpenedEvent();
+        }
+
+        this.progressBarTarget.style.display = 'none';
+    }
+
     /**
      * Met à jour l'état visuel (gras, couleur) de l'élément de menu sélectionné.
      * @param {HTMLElement} currentElement L'élément qui vient d'être cliqué.
