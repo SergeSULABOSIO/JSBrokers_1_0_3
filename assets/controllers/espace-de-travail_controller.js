@@ -24,20 +24,6 @@ export default class extends Controller {
         this.nomControleur = "Espace de travail";
         this.restoreLastState(); // NOUVELLE MÉTHODE POUR LA RESTAURATION
 
-
-        // const lastActiveComponent = sessionStorage.getItem('lastActiveComponent');
-        // if (lastActiveComponent) {
-        //     const lastActiveElement = this.element.querySelector(`[data-espace-de-travail-component-name-param='${lastActiveComponent}']`);
-        //     if (lastActiveElement) {
-        //         lastActiveElement.click();
-        //     } else {
-        //         this.loadDefaultComponent();
-        //     }
-        // } else {
-        //     this.loadDefaultComponent();
-        // }
-
-
         this.boundOpenTab = this.openTab.bind(this);
         document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
 
