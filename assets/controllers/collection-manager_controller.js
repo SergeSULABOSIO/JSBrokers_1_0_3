@@ -245,6 +245,7 @@ export default class extends Controller {
      * Ouvre la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
+        // console.log("BABA - addItem ** JE SUIS ICI!!!!!", event);
         // --- DEFINITIVE FIX ---
         // Stop the event's propagation immediately. This is the most critical step.
         // It prevents the click from "bubbling up" to parent controllers
