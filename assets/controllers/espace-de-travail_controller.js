@@ -623,7 +623,7 @@ export default class extends Controller {
 
         buildCustomEventForElement(document, 'cerveau:event', true, true,
             {
-                type: 'ui:rubrique.index',
+                type: 'ui:component.load',
                 source: 'espace-de-travail',
                 payload: { componentName: componentName },
                 timestamp: Date.now()
