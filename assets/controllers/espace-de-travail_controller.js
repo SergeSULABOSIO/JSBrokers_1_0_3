@@ -621,12 +621,14 @@ export default class extends Controller {
         this.dispatchRequestEvent(clickedElement.dataset);
         this.progressBarTarget.style.display = 'block';
 
-        buildCustomEventForElement(document, 'cerveau:event', true, true, {
-            type: 'ui:rubrique.index',
-            source: 'espace-de-travail',
-            payload: { componentName: componentName },
-            timestamp: Date.now()
-        });
+        buildCustomEventForElement(document, 'cerveau:event', true, true,
+            {
+                type: 'ui:rubrique.index',
+                source: 'espace-de-travail',
+                payload: { componentName: componentName },
+                timestamp: Date.now()
+            }
+        );
         console.log(this.nomControleur + " - cerveau:event envoyé.");
 
         // La sauvegarde de l'état est faite immédiatement après le clic.
