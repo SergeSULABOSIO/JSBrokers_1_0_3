@@ -40,6 +40,10 @@ export default class extends Controller {
 
         this.boundOpenTab = this.openTab.bind(this);
         document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
+
+        // NOUVEAU : Écoute la réponse du Cerveau pour afficher le composant chargé.
+        this.boundHandleComponentLoaded = this.handleComponentLoaded.bind(this);
+        document.addEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
@@ -105,6 +109,7 @@ export default class extends Controller {
 
     disconnect() {
         document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
+        document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
     }
 
 
@@ -603,50 +608,43 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     async loadComponent(event) {
-        event.preventDefault();
-
         const clickedElement = event.currentTarget;
         const componentName = clickedElement.dataset.espaceDeTravailComponentNameParam;
         const description = clickedElement.dataset.espaceDeTravailDescriptionParam;
-
+ 
         if (!componentName) return;
+ 
         if (description) {
             this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
         }
-
+ 
         this.dispatchRequestEvent(clickedElement.dataset);
         this.progressBarTarget.style.display = 'block';
-
-        try {
-            // exe: https://127.0.0.1:8000/espacedetravail/api/load-component?component=_taxes_component.html.twig
-            var url = "/espacedetravail/api/load-component?component=" + componentName;
-            console.log(this.nomControleur + " - loadComponent:", url);
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Erreur du serveur: ${response.statusText}`);
+ 
+        // --- CORRECTION : On ne fait plus l'appel fetch ici. On se contente de notifier le Cerveau. ---
+        // On demande au Cerveau de charger le composant.
+        this.dispatch('cerveau:event', {
+            detail: {
+                type: 'ui:sinistre.index', // L'événement demandé pour le chargement de rubrique
+                source: 'espace-de-travail',
+                payload: { componentName: componentName },
+                timestamp: Date.now()
             }
-            const html = await response.text();
-            this.workspaceTarget.innerHTML = html;
-
-            if (componentName) {
+        });
+ 
+        // La sauvegarde de l'état est faite immédiatement après le clic.
+        // Le chargement effectif du contenu sera géré par handleComponentLoaded.
+        if (componentName) {
                 const stateToSave = {
                     component: componentName,
                     group: clickedElement.dataset.espaceDeTravailGroupNameParam || null
                 };
                 sessionStorage.setItem('lastActiveState', JSON.stringify(stateToSave));
             }
-
-            this.updateActiveState(clickedElement);
-            this.dispatchOpenedEvent();
-
-        } catch (error) {
-            console.error("Erreur lors du chargement du composant:", error);
-            this.workspaceTarget.innerHTML = `<div class="p-8 text-red-500">Impossible de charger le contenu.</div>`;
-        } finally {
-            this.progressBarTarget.style.display = 'none';
-        }
+ 
+        this.updateActiveState(clickedElement);
     }
-
+ 
     /**
      * Met à jour l'état visuel (gras, couleur) de l'élément de menu sélectionné.
      * @param {HTMLElement} currentElement L'élément qui vient d'être cliqué.

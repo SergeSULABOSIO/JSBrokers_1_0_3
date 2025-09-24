@@ -33,6 +33,11 @@ export default class extends Controller {
     
     switch (type) {
       // --- Gestion des Sinistres ---
+      case 'ui:sinistre.index': // Utilisé pour charger une rubrique dans l'espace de travail
+        console.log(`-> ACTION: Charger le composant '${payload.componentName}' pour l'espace de travail.`);
+        this.loadWorkspaceComponent(payload.componentName);
+        break;
+
       case 'api:sinistre.created':
         console.log("-> ACTION: Demander le rafraîchissement de la liste des sinistres.");
         console.log("-> ACTION: Afficher une notification de succès 'Sinistre créé'.");
@@ -117,4 +122,32 @@ export default class extends Controller {
   // broadcast(eventName, detail) { 
   //   document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
   // }
+  /**
+   * Charge le contenu HTML d'un composant pour l'espace de travail et diffuse le résultat.
+   * @param {string} componentName Le nom du fichier de template du composant.
+   */
+  async loadWorkspaceComponent(componentName) {
+    const url = `/espacedetravail/api/load-component?component=${componentName}`;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Erreur serveur (${response.status}): ${response.statusText}`);
+      }
+      const html = await response.text();
+      
+      // On diffuse le HTML aux contrôleurs qui écoutent (ex: espace-de-travail)
+      this.broadcast('workspace:component.loaded', { html: html, error: null });
+
+    } catch (error) {
+      console.error(`[Cerveau] Échec du chargement du composant '${componentName}':`, error);
+      this.broadcast('workspace:component.loaded', { html: null, error: error.message });
+    }
+  }
+
+  /**
+   * Diffuse un événement à l'échelle de l'application.
+   */
+  broadcast(eventName, detail) { 
+    document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
+  }
 }
