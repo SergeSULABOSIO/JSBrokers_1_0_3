@@ -39,7 +39,7 @@ export default class extends Controller {
 
         switch (type) {
             // --- Gestion des Sinistres ---
-            case 'ui:sinistre.index': // Utilisé pour charger une rubrique dans l'espace de travail
+            case 'ui:rubrique.index': // Utilisé pour charger une rubrique dans l'espace de travail
                 console.log(this.nomControleur + "🧠 [Cerveau]-> ACTION: Charger le composant '${payload.componentName}' pour l'espace de travail.");
                 this.loadWorkspaceComponent(payload.componentName);
                 break;
