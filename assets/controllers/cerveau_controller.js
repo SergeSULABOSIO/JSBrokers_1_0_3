@@ -38,8 +38,8 @@ export default class extends Controller {
         console.log(`| Horodatage:`, new Date(timestamp).toLocaleString('fr-FR'));
 
         switch (type) {
-            // --- Gestion des Sinistres ---
-            case 'ui:rubrique.index': // Utilisé pour charger une rubrique dans l'espace de travail
+            // --- Chargement du composant dans l'espace de travail ---
+            case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
                 console.log(this.nomControleur + "🧠 [Cerveau]-> ACTION: Charger le composant '${payload.componentName}' pour l'espace de travail.");
                 this.loadWorkspaceComponent(payload.componentName);
                 break;
