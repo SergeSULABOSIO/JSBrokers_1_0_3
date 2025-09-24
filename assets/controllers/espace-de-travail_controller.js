@@ -621,25 +621,12 @@ export default class extends Controller {
         this.dispatchRequestEvent(clickedElement.dataset);
         this.progressBarTarget.style.display = 'block';
 
-        // --- CORRECTION : On ne fait plus l'appel fetch ici. On se contente de notifier le Cerveau. ---
-        // On demande au Cerveau de charger le composant.
-        // this.dispatch('cerveau:event', {
-        //     detail: {
-        //         type: 'ui:sinistre.index',
-        //         source: 'espace-de-travail',
-        //         payload: { componentName: componentName },
-        //         timestamp: Date.now()
-        //     },
-        //     bubbles: true // CORRECTION CRUCIALE : Permet à l'événement de remonter jusqu'au <body>
-        // });
-
         buildCustomEventForElement(document, 'cerveau:event', true, true, {
-            type: 'ui:sinistre.index',
+            type: 'ui:rubrique.index',
             source: 'espace-de-travail',
             payload: { componentName: componentName },
             timestamp: Date.now()
         });
-
         console.log(this.nomControleur + " - cerveau:event envoyé.");
 
         // La sauvegarde de l'état est faite immédiatement après le clic.
