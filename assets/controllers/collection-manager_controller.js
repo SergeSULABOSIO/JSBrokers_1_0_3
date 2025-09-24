@@ -250,6 +250,10 @@ export default class extends Controller {
         // Stop the event's propagation immediately. This is the most critical step.
         // It prevents the click from "bubbling up" to parent controllers
         // like 'liste-principale', which was causing the second, incorrect dialog to open.
+        // --- CORRECTION DÉFINITIVE ---
+        // On stoppe la propagation de l'événement immédiatement. C'est l'étape la plus critique.
+        // Cela empêche le clic de "remonter" jusqu'aux contrôleurs parents
+        // comme 'liste-principale', ce qui provoquait l'ouverture de la seconde boîte de dialogue incorrecte.
         event.stopPropagation();
 
         if (this.disabledValue) {
