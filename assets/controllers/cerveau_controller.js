@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
 
 /**
  * Le Cerveau de l'application JS Brokers.
@@ -46,8 +47,8 @@ export default class extends Controller {
 
             // --- NOUVEAU : Gestion centralisée du changement de contexte d'onglet ---
             case 'ui:tab.context-changed':
-                console.log("-> ACTION: Le contexte d'un onglet a changé. Diffusion aux outils dépendants.");
-                this.broadcast('ui:outils-dependants:ajuster', payload); // On propage simplement le payload
+                console.log("-> ACTION: Le contexte de sélection a changé. Diffusion aux composants dépendants.");
+                this.broadcast('ui:selection.changed', payload); // On propage simplement le payload
                 break;
 
             // --- Gestion des onglets et de la sélection ---
@@ -55,6 +56,42 @@ export default class extends Controller {
                 console.log("-> ACTION: L'état d'un onglet a changé. Diffusion aux outils dépendants.");
                 this.broadcast('ui:outils-dependants:ajuster', payload); // On propage simplement le payload
                 break;
+
+            // --- NOUVEAU : Relais des actions de la barre d'outils ---
+            case 'ui:toolbar.add-request':
+                console.log("-> ACTION: Relayer la demande d'ajout.");
+                this.broadcast(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, payload);
+                break;
+            case 'ui:toolbar.modify-request':
+                console.log("-> ACTION: Relayer la demande de modification.");
+                this.broadcast(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, payload);
+                break;
+            case 'ui:toolbar.delete-request':
+                console.log("-> ACTION: Relayer la demande de suppression.");
+                this.broadcast(EVEN_LISTE_ELEMENT_DELETE_REQUEST, payload);
+                break;
+            case 'ui:toolbar.open-request':
+                console.log("-> ACTION: Relayer la demande d'ouverture.");
+                this.broadcast(EVEN_LISTE_ELEMENT_OPEN_REQUEST, payload);
+                break;
+            case 'ui:toolbar.refresh-request':
+                console.log("-> ACTION: Relayer la demande de rafraîchissement.");
+                this.broadcast(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, payload);
+                break;
+            case 'ui:toolbar.select-all-request':
+                console.log("-> ACTION: Relayer la demande de sélection/désélection de tout.");
+                this.broadcast(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, payload);
+                break;
+            case 'ui:toolbar.settings-request':
+                console.log("-> ACTION: Relayer la demande d'accès aux paramètres.");
+                this.broadcast(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, payload);
+                break;
+            case 'ui:toolbar.close-request':
+                console.log("-> ACTION: Relayer la demande de fermeture.");
+                this.broadcast(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, payload);
+                break;
+            // --- FIN du relais des actions de la barre d'outils ---
+
 
             case 'api:sinistre.created':
                 console.log("-> ACTION: Demander le rafraîchissement de la liste des sinistres.");
@@ -130,7 +167,7 @@ export default class extends Controller {
 
             // --- NOUVEAU : Relais du changement de sélection d'un élément de liste ---
             case 'ui:list-item.selection-changed':
-                console.log("-> ACTION: Relayer le changement de sélection d'un élément.");
+                console.log("-> ACTION: Relayer le changement de sélection d'un élément.", payload);
                 this.broadcast('app:list-item.selection-changed:relay', payload);
                 break;
 

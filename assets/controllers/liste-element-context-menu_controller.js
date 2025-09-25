@@ -38,30 +38,30 @@ export default class extends Controller {
         this.boundHandlePublisheSelection = this.handlePublisheSelection.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
 
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
-        document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
-        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandlePublisheSelection);
+        // document.addEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
+        // document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
+        // document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
+        // document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
+        // document.addEventListener('ui:selection.changed', this.boundHandlePublisheSelection);
         //Pour le menu contextuel
-        document.addEventListener("click", this.boundHideContextMenu);
-        document.addEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
-        window.addEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
-        this.menu.addEventListener("click", (e) => e.stopPropagation());
+        // document.addEventListener("click", this.boundHideContextMenu);
+        // document.addEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
+        // window.addEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
+        // this.menu.addEventListener("click", (e) => e.stopPropagation());
     }
 
     disconnect() {
         // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
-        document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
-        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandlePublisheSelection);
+        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
+        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
+        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
+        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
+        // document.removeEventListener('ui:selection.changed', this.boundHandlePublisheSelection);
         //Pour le menu contextuel
-        document.removeEventListener("click", this.boundHideContextMenu);
-        document.removeEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
-        window.removeEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
-        this.menu.removeEventListener("click", (e) => e.stopPropagation());
+        // document.removeEventListener("click", this.boundHideContextMenu);
+        // document.removeEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
+        // window.removeEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
+        // this.menu.removeEventListener("click", (e) => e.stopPropagation());
     }
 
     hideContextMenu() {
@@ -94,7 +94,7 @@ export default class extends Controller {
 
         //On affiche le menu contextuel
         this.boundShowContextMenu(event);
-        buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, {});
+        // buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, {});
     }
 
 
@@ -120,10 +120,10 @@ export default class extends Controller {
 
     handleContextMenuInitialized(event) {
         console.log(this.nomControleur + " - HandleContextMenuInitialized");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Prêt",
-            message: "Le ménu contextuel est initialisé. Position: " + this.idObjet,
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+        //     titre: "Prêt",
+        //     message: "Le ménu contextuel est initialisé. Position: " + this.idObjet,
+        // });
     }
 
     handleContextMenuShow(event) {
@@ -177,7 +177,7 @@ export default class extends Controller {
      */
     boundShowContextMenu(event) {
         this.menu.style.display = 'block'; // Affiche le menu
-        buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, event);
+        // buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, event);
     }
 
     // --- Méthodes spécifiques aux actions du menu ---
@@ -185,20 +185,20 @@ export default class extends Controller {
     context_action_ajouter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
-            titre: "Ajout",
-            action: EVEN_CODE_ACTION_AJOUT,
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
+        //     titre: "Ajout",
+        //     action: EVEN_CODE_ACTION_AJOUT,
+        // });
     }
 
     context_action_modifier(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
-        //     titre: "Modification",
-        //     action: EVEN_CODE_ACTION_MODIFICATION,
-        // });
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {});
+        // // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
+        // //     titre: "Modification",
+        // //     action: EVEN_CODE_ACTION_MODIFICATION,
+        // // });
+        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {});
     }
 
     getUnifiedElementSelectionnes() {
@@ -215,40 +215,40 @@ export default class extends Controller {
         event.preventDefault();
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, event);
+        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, event);
     }
 
     context_action_tout_cocher(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
     }
 
     context_action_actualiser(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
     }
 
     context_action_supprimer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
-            titre: "Suppression",
-            action: EVEN_CODE_ACTION_SUPPRESSION,
-            selection: this.getUnifiedElementSelectionnes(),
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
+        //     titre: "Suppression",
+        //     action: EVEN_CODE_ACTION_SUPPRESSION,
+        //     selection: this.getUnifiedElementSelectionnes(),
+        // });
     }
 
     context_action_parametrer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event.detail);
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event.detail);
     }
 
     context_action_quitter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event.detail);
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event.detail);
     }
 }

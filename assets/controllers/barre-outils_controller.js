@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_BARRE_OUTILS_INIT_REQUEST, EVEN_BARRE_OUTILS_INITIALIZED, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -25,57 +25,36 @@ export default class extends Controller {
 
     init() {
         this.tabSelectedCheckBoxs = [];
-        this.listePrincipale = document.getElementById("liste");
-
-        this.boundhandleInitRequest = this.handleInitRequest.bind(this);
-        this.boundhandleInitialized = this.handleInitialized.bind(this);
-        this.boundhandlePublisheSelection = this.handlePublisheSelection.bind(this);
-
+        this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
 
         this.initialiserBarreDoutils();
         this.initToolTips();
         this.ecouteurs();
     }
 
+    /**
+     * La barre d'outils écoute uniquement le cerveau pour ajuster son état.
+     */
     ecouteurs() {
         console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
-        document.addEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.boundhandleInitRequest);
-        document.addEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.boundhandleInitialized);
-        document.addEventListener('ui:outils-dependants:ajuster', this.boundhandlePublisheSelection);
+        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandleContextUpdate);
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        document.removeEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.boundhandleInitRequest);
-        document.removeEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.boundhandleInitialized);
-        document.removeEventListener('ui:outils-dependants:ajuster', this.boundhandlePublisheSelection);
+        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandleContextUpdate);
     }
 
-    // --- NOUVELLE FONCTION À AJOUTER ---
     /**
-     * Se déclenche quand l'onglet actif change.
+     * Gère la mise à jour du contexte reçue du cerveau (sélection, onglet actif, etc.).
      * @param {CustomEvent} event
      */
-
-
-    handleInitRequest(event) {
-        console.log(this.nomControleur + " - HandleInitRequest");
-    }
-
-    handleInitialized(event) {
-        console.log(this.nomControleur + " - HandleInitialized");
-    }
-
-
-    /**
-     * @description Gère l'événement de modification.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handlePublisheSelection(event) {
-        console.log(this.nomControleur + " - handlePublishSelection (via Cerveau)", event.detail);
+    handleContextUpdate(event) {
+        console.log(this.nomControleur + " - Mise à jour du contexte reçue du Cerveau", event.detail);
 
         const { selection, entities, canvas, entityType } = event.detail; // Récupère les données de l'événement
-        this.tabSelectedCheckBoxs = selection;
+        // S'assurer que la sélection est toujours un tableau
+        this.tabSelectedCheckBoxs = selection || [];
         this.tabSelectedEntities = entities;
         this.selectedEntitiesType = entityType;
         this.selectedEntitiesCanvas = canvas;
@@ -83,10 +62,6 @@ export default class extends Controller {
         //On réorganise les boutons en fonction de la selection actuelle
         this.organizeButtons(selection || []);
 
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Etat",
-            message: "{" + selection + "}. Taille de la sélection: " + this.tabSelectedCheckBoxs.length + ".",
-        });
     }
 
     organizeButtons(selection) {
@@ -126,54 +101,52 @@ export default class extends Controller {
     /**
      * LES ACTIONS
      */
-    action_quitte(event) {
-        // console.log(this.nomControleur + " - Action_Quitter");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event);
+    action_quitter() {
+        this.notifyCerveau('ui:toolbar.close-request');
     }
 
-    action_parametrer(event) {
-        // console.log(this.nomControleur + " - Action_Parametrer");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event);
+    action_parametrer() {
+        this.notifyCerveau('ui:toolbar.settings-request');
     }
 
-    action_tout_cocher(event) {
-        // console.log(this.nomControleur + " - Action_tout_cocher");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
+    action_tout_cocher() {
+        this.notifyCerveau('ui:toolbar.select-all-request');
     }
 
-    action_ouvrir(event) {
-        // console.log(this.nomControleur + " - Action Ouvrir", event);
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, event);
+    action_ouvrir() {
+        this.notifyCerveau('ui:toolbar.open-request');
     }
 
-    action_recharger(event) {
-        // console.log(this.nomControleur + " - Action_Recharger");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
+    action_recharger() {
+        this.notifyCerveau('ui:toolbar.refresh-request');
     }
 
     action_ajouter() {
-        // console.log(this.nomControleur + " - Action_Ajouter");
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
-            titre: "Ajout",
-            action: EVEN_CODE_ACTION_AJOUT,
-        });
+        this.notifyCerveau('ui:toolbar.add-request');
     }
 
     action_modifier() {
-        console.log(this.nomControleur + " - Action_Modifier");
-        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
-        //     titre: "Modification",
-        //     action: EVEN_CODE_ACTION_MODIFICATION,
-        // });
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {});
+        this.notifyCerveau('ui:toolbar.modify-request');
     }
 
     action_supprimer() {
-        console.log(this.nomControleur + " - Action_Supprimer");
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
-            titre: "Suppression",
-            action: EVEN_CODE_ACTION_SUPPRESSION,
-            selection: this.tabSelectedCheckBoxs,
+        this.notifyCerveau('ui:toolbar.delete-request', {
+            selection: this.tabSelectedCheckBoxs
+        });
+    }
+
+    /**
+     * Méthode centralisée pour envoyer un événement au cerveau.
+     * @param {string} type Le type d'événement pour le cerveau (ex: 'ui:toolbar.add-request').
+     * @param {object} payload Données additionnelles à envoyer.
+     */
+    notifyCerveau(type, payload = {}) {
+        console.log(`${this.nomControleur} - Notification du cerveau: ${type}`, payload);
+        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+            type: type,
+            source: this.nomControleur,
+            payload: payload,
+            timestamp: Date.now()
         });
     }
 }

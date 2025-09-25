@@ -60,11 +60,11 @@ export default class extends Controller {
         
         // --- AJOUT : Le "récepteur" pour restaurer l'état de la sélection ---
         // On met le contrôleur à l'écoute de l'événement de mise à jour global venant du cerveau.
-        this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
-        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandleGlobalSelectionUpdate);
-        // NOUVEAU : Écouter le changement de sélection d'un item individuel
-        this.boundHandleItemSelectionChange = this.handleItemSelectionChange.bind(this);
-        document.addEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
+        // this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
+        // document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        // // NOUVEAU : Écouter le changement de sélection d'un item individuel
+        // this.boundHandleItemSelectionChange = this.handleItemSelectionChange.bind(this);
+        // document.addEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
     }
 
 
@@ -103,52 +103,52 @@ export default class extends Controller {
         this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
 
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
-        document.addEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
-        document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
-        document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
-        document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
-        document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
-        document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
-        document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
-        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
+        // document.addEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
+        // document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
+        // document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
+        // document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
+        // document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
+        // document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
+        // document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
+        // document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
+        // document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
 
     }
 
     disconnect() {
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
-        document.removeEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
-        document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
-        document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
-        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
+        // document.removeEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
+        // document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
+        // document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
+        // document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
+        // document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
+        // document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
+        // document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
+        // document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
+        // document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
 
         // --- CORRECTION : Nettoyage du bon écouteur ---
-        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandleGlobalSelectionUpdate);
+        // document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         // NOUVEAU : Nettoyage de l'écouteur de sélection d'item
-        document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
+        // document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
     }
 
     /**
@@ -157,7 +157,7 @@ export default class extends Controller {
      * et met à jour l'état visuel de cette liste si elle est concernée.
      */
     handleGlobalSelectionUpdate(event) {
-        console.log(this.nomControleur + " - Réception de l'événement 'ui:outils-dependants:ajuster'", event.detail);
+        console.log(this.nomControleur + " - Réception de l'événement 'ui:selection.changed'", event.detail);
         // Garde-fou 1 : On ne réagit que si la liste est visible à l'écran.
         // offsetParent est null si l'élément ou un de ses parents a 'display: none'.
         if (this.element.offsetParent === null) {
@@ -202,13 +202,13 @@ export default class extends Controller {
 
         console.log(this.nomControleur + " - Demande d'ouverture pour les éléments séléctionnés", this.tabSelectedEntities, this.selectedEntitiesType, this.selectedEntitiesCanvas);
 
-        this.tabSelectedEntities.forEach(selectedEntity => {
-            buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, {
-                entity: selectedEntity,
-                entityType: this.selectedEntitiesType,
-                entityCanvas: this.selectedEntitiesCanvas
-            });
-        });
+        // this.tabSelectedEntities.forEach(selectedEntity => {
+        //     buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, {
+        //         entity: selectedEntity,
+        //         entityType: this.selectedEntitiesType,
+        //         entityCanvas: this.selectedEntitiesCanvas
+        //     });
+        // });
     }
 
 
@@ -219,15 +219,15 @@ export default class extends Controller {
      * @param {string|null} error - Le message d'erreur, le cas échéant.
      */
     dispatchResponse(results, error) {
-        const event = new CustomEvent(EVEN_DATA_BASE_SELECTION_EXECUTED, {
-            bubbles: true, // Permet à l'événement de "buller" dans le DOM
-            detail: {
-                results: results,
-                error: error,
-                isSuccess: !error,
-            }
-        });
-        document.dispatchEvent(event);
+        // const event = new CustomEvent(EVEN_DATA_BASE_SELECTION_EXECUTED, {
+        //     bubbles: true, // Permet à l'événement de "buller" dans le DOM
+        //     detail: {
+        //         results: results,
+        //         error: error,
+        //         isSuccess: !error,
+        //     }
+        // });
+        // document.dispatchEvent(event);
     }
 
 
@@ -319,8 +319,8 @@ export default class extends Controller {
     }
 
     boundHideContextMenu(event) {
-        console.log(this.nomControleur + " - boundHideContextMenu");
-        buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_HIDE, true, true, event);
+        // console.log(this.nomControleur + " - boundHideContextMenu");
+        // buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_HIDE, true, true, event);
     }
 
     handleDeleteRequest(event) {
@@ -345,47 +345,47 @@ export default class extends Controller {
 
     handleDeleted(event) {
         console.log(this.nomControleur + " - HandleDeleted", event.detail);
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Prêt", message: "Suppression effectuée avec succès."
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+        //     titre: "Prêt", message: "Suppression effectuée avec succès."
+        // });
 
         // Déclencher l'événement global pour afficher la notification
-        buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Suppression réussie !', type: 'success' });
+        // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Suppression réussie !', type: 'success' });
     }
 
 
     handleExpanded(event) {
         console.log(this.nomControleur + " - handleExpanded", event.detail);
         event.stopPropagation();
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Sélection",
-            message: "Détails affichés pour les élements " + event.detail.selection,
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+        //     titre: "Sélection",
+        //     message: "Détails affichés pour les élements " + event.detail.selection,
+        // });
     }
 
 
     handleModifyRequest(event) {
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-            entity: this.tabSelectedEntities[0],
-            entityFormCanvas: this.entityFormCanvasValue
-        });
+        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+        //     entity: this.tabSelectedEntities[0],
+        //     entityFormCanvas: this.entityFormCanvasValue
+        // });
     }
 
     handleAddRequest(event) {
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-            entity: {},
-            entityFormCanvas: this.entityFormCanvasValue
-        });
+        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+        //     entity: {},
+        //     entityFormCanvas: this.entityFormCanvasValue
+        // });
     }
 
     handleAdded(event) {
         console.log(this.nomControleur + " - HandleAdded", event.detail);
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-            titre: "Prêt", message: "Element ajouté avec succès."
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
+        //     titre: "Prêt", message: "Element ajouté avec succès."
+        // });
 
         // Déclencher l'événement global pour afficher la notification
-        buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Element ajouté avec succès !', type: 'success' });
+        // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Element ajouté avec succès !', type: 'success' });
     }
 
     handleAllCheckRequest(event) {
@@ -426,9 +426,9 @@ export default class extends Controller {
             console.log(this.nomControleur + " - ICI Suppression des objets réussi:", this.tabSelectedEntities);
         }
 
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, true, true, {
-            selection: this.tabSelectedCheckBoxs,
-        });
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, true, true, {
+        //     selection: this.tabSelectedCheckBoxs,
+        // });
     }
 
     /**
@@ -453,9 +453,9 @@ export default class extends Controller {
 
     handleAllChecked(event) {
         console.log(this.nomControleur + " - HandleAllChecked", event);
-        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
-            selection: this.tabSelectedCheckBoxs,
-        });
+        // buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
+        //     selection: this.tabSelectedCheckBoxs,
+        // });
     }
 
     handleItemToutCocher(event) {
@@ -503,10 +503,10 @@ export default class extends Controller {
         const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - ENREGISTREMENT REUSSI - On recharge la liste");
         if (code == EVEN_CODE_RESULTAT_OK) { //Ok(0), Erreur(1)
-            buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
+            // buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
             this.outils_recharger(event);
         } else {
-            this.updateMessage(code + ": " + message);
+            // this.updateMessage(code + ": " + message);
         }
         event.stopPropagation();
     }
@@ -519,12 +519,12 @@ export default class extends Controller {
         const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
         console.log(this.nomControleur + " - handleServerResponded", event.detail);
 
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_CLOSE, true, true, event.detail);
+        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_CLOSE, true, true, event.detail);
         //ACTION AJOUT = 0
         if (code == EVEN_CODE_RESULTAT_OK) {
             // On actualise la liste en y ajoutant l'élément créé
-            buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
-            buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADDED, true, true, event.detail);
+            // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
+            // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADDED, true, true, event.detail);
         }
     }
 
@@ -548,12 +548,12 @@ export default class extends Controller {
      * @param {String} textMessage 
      */
     action_afficherMessage(titre, textMessage) {
-        buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true,
-            {
-                titre: titre,
-                message: textMessage,
-            }
-        );
+        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true,
+        //     {
+        //         titre: titre,
+        //         message: textMessage,
+        //     }
+        // );
     }
 
 
@@ -595,21 +595,21 @@ export default class extends Controller {
      */
     handleItemAjouter(event) {
         const { titre } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - Titre: " + titre);
+        // console.log(this.nomControleur + " - Titre: " + titre);
         event.stopPropagation();
         // console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
-            {
-                titre: "Ajout - " + this.rubriqueValue,
-                idObjet: -1,
-                action: EVEN_CODE_ACTION_AJOUT, //Ajout
-                entreprise: this.identrepriseValue,
-                utilisateur: this.utilisateurValue,
-                rubrique: this.rubriqueValue,
-                controleurphp: this.controleurphpValue,
-                controleursitimulus: this.controleursitimulusValue,
-            }
-        );
+        // buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
+        //     {
+        //         titre: "Ajout - " + this.rubriqueValue,
+        //         idObjet: -1,
+        //         action: EVEN_CODE_ACTION_AJOUT, //Ajout
+        //         entreprise: this.identrepriseValue,
+        //         utilisateur: this.utilisateurValue,
+        //         rubrique: this.rubriqueValue,
+        //         controleurphp: this.controleurphpValue,
+        //         controleursitimulus: this.controleursitimulusValue,
+        //     }
+        // );
     }
 
 
@@ -619,21 +619,21 @@ export default class extends Controller {
      */
     handleItemModifier(event) {
         const { titre } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - Titre: " + titre + ", Selected checkbox: " + this.tabSelectedCheckBoxs);
+        // console.log(this.nomControleur + " - Titre: " + titre + ", Selected checkbox: " + this.tabSelectedCheckBoxs);
         event.stopPropagation();
         // console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
-            {
-                titre: "Edition - " + this.rubriqueValue,
-                idObjet: this.tabSelectedCheckBoxs[0].split("check_")[1],
-                action: EVEN_CODE_ACTION_MODIFICATION, // Modification
-                entreprise: this.identrepriseValue,
-                utilisateur: this.utilisateurValue,
-                rubrique: this.rubriqueValue,
-                controleurphp: this.controleurphpValue,
-                controleursitimulus: this.controleursitimulusValue,
-            }
-        );
+        // buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
+        //     {
+        //         titre: "Edition - " + this.rubriqueValue,
+        //         idObjet: this.tabSelectedCheckBoxs[0].split("check_")[1],
+        //         action: EVEN_CODE_ACTION_MODIFICATION, // Modification
+        //         entreprise: this.identrepriseValue,
+        //         utilisateur: this.utilisateurValue,
+        //         rubrique: this.rubriqueValue,
+        //         controleurphp: this.controleurphpValue,
+        //         controleursitimulus: this.controleursitimulusValue,
+        //     }
+        // );
     }
 
 
@@ -652,14 +652,14 @@ export default class extends Controller {
 
 
     publierSelection() {
-        console.log(this.nomControleur + " - Publication de la sélection locale vers les autres composants.");
-        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
-            selection: this.tabSelectedCheckBoxs,
-            entities: this.tabSelectedEntities,
-            canvas: this.selectedEntitiesCanvas,
-            entityType: this.selectedEntitiesType,
-            source: this.nomControleur // On s'identifie comme la source de l'événement
-        });
+        // console.log(this.nomControleur + " - Publication de la sélection locale vers les autres composants.");
+        // buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
+        //     selection: this.tabSelectedCheckBoxs,
+        //     entities: this.tabSelectedEntities,
+        //     canvas: this.selectedEntitiesCanvas,
+        //     entityType: this.selectedEntitiesType,
+        //     source: this.nomControleur // On s'identifie comme la source de l'événement
+        // });
     }
 
 
@@ -675,11 +675,11 @@ export default class extends Controller {
      */
     updateMessage(titre, message) {
         const fullMessage = `<strong>[${titre}]</strong> ${message}`;
-        // On envoie un événement que le `list-tabs-controller` va intercepter.
-        document.dispatchEvent(new CustomEvent('list-status:notify', {
-            bubbles: true,
-            detail: { message: fullMessage }
-        }));
+        // // On envoie un événement que le `list-tabs-controller` va intercepter.
+        // document.dispatchEvent(new CustomEvent('list-status:notify', {
+        //     bubbles: true,
+        //     detail: { message: fullMessage }
+        // }));
     }
 
 
@@ -745,9 +745,9 @@ export default class extends Controller {
         // ---------------------------------------------------------
 
         try {
-            buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
-                text: 'Chargement, veuillez patiener...', type: 'info'
-            });
+            // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
+            //     text: 'Chargement, veuillez patiener...', type: 'info'
+            // });
 
             const response = await fetch(this.urlAPIDynamicQuery, { // La requête est déjà attendue, c'est bien.
                 method: 'POST',
@@ -770,9 +770,9 @@ export default class extends Controller {
             this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
             // ---------------------------------------------------------------
 
-            buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
-                text: error.message, type: 'error'
-            });
+            // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
+            //     text: error.message, type: 'error'
+            // });
         }
     }
 
