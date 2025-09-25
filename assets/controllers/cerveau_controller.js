@@ -10,7 +10,7 @@ import { EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, E
 export default class extends Controller {
     connect() {
         this.nomControleur = "Cerveau";
-        console.log(this.nomControleur + "🧠 Cerveau connecté. Prêt à orchestrer.");
+        console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
         document.addEventListener('cerveau:event', this.handleEvent.bind(this));
     }
 
