@@ -1,94 +1,84 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_ACTION_COCHER, EVEN_ACTION_MENU_CONTEXTUEL, EVEN_ACTION_MODIFIER, EVEN_ACTION_SUPPRIMER, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_CHECK_REQUEST, EVEN_LISTE_ELEMENT_CHECKED, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_MENU_CONTEXTUEL_INIT_REQUEST } from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
         'texteprincipal',
         'textesecondaire',
-        'details',
+        'details', // Cible pour les détails de la ligne (doublon à nettoyer)
+        'checkbox'  // NOUVEAU : Cible pour la case à cocher
     ];
 
     static values = {
         idobjet: Number,
         isShown: Boolean,
-        objet: Object // Nous ajoutons cette valeur pour récupérer l'objet complet
+        objet: Object
     };
 
     connect() {
         this.nomControleur = "LISTE-ELEMENT";
-        // console.log(this.nomControleur + " - Connecté");
         this.detailsVisible = false;
-        this.listePrincipale = document.getElementById("liste");
+        // La cible pour le menu contextuel est l'élément du contrôleur lui-même (le <tr>)
         this.contextMenuTarget = document.getElementById("liste_row_" + this.idobjetValue);
-        // this.menu = document.getElementById("simpleContextMenu");
         this.setEcouteurs();
     }
 
     setEcouteurs() {
-        this.boundHandleCheckRequest = this.handleCheckRequest.bind(this);
-        this.boundHandleChecked = this.handleChecked.bind(this);
         this.boundHandleContextMenu = this.handleContextMenu.bind(this);
-
-        // console.log(this.nomControleur + " - Définition des écouteurs.");
-        document.addEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
-        document.addEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
-        //Pour le menu contextuel
+        this.boundHandleCheckboxChange = this.handleCheckboxChange.bind(this);
+        // Écoute le clic droit UNIQUEMENT sur sa propre ligne
         this.contextMenuTarget.addEventListener('contextmenu', this.boundHandleContextMenu);
+        // NOUVEAU : Écoute le changement d'état de sa propre case à cocher
+        this.checkboxTarget.addEventListener('change', this.boundHandleCheckboxChange);
     }
 
     disconnect() {
-        // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECK_REQUEST, this.boundHandleCheckRequest);
-        document.removeEventListener(EVEN_LISTE_ELEMENT_CHECKED, this.boundHandleChecked);
+        // Nettoyage de l'écouteur
         this.contextMenuTarget.removeEventListener('contextmenu', this.boundHandleContextMenu);
+        this.checkboxTarget.removeEventListener('change', this.boundHandleCheckboxChange);
     }
 
-
+    /**
+     * Gère le clic droit sur la ligne.
+     * Empêche le menu par défaut et demande l'ouverture de notre menu personnalisé.
+     */
     handleContextMenu(event) {
         event.preventDefault();
         event.stopPropagation();
-        console.log(this.nomControleur + " - HandleContextMenu");
-        buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, true, true, {
-            // idObjet: this.idobjetValue,
-            menuX: event.clientX,
-            menuY: event.clientY,
+        console.log(this.nomControleur + " - Clic droit détecté. Demande d'ouverture du menu contextuel.");
+
+        // MODIFICATION : On envoie l'événement au cerveau
+        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+            type: 'ui:context-menu.request',
+            source: this.nomControleur,
+            payload: {
+                menuX: event.clientX, // Coordonnée X pour positionner le menu
+                menuY: event.clientY, // Coordonnée Y pour positionner le menu
+            },
+            timestamp: Date.now()
         });
     }
 
-    handleCheckRequest(event) {
-        console.log(this.nomControleur + " - HandleCheckRequest");
-    }
+    /**
+     * NOUVEAU : Gère le changement d'état de la case à cocher et notifie le cerveau.
+     */
+    handleCheckboxChange(event) {
+        const checkbox = event.currentTarget;
+        console.log(`${this.nomControleur} - Case à cocher changée pour l'ID ${this.idobjetValue}. Nouvel état : ${checkbox.checked}`);
 
-    handleChecked(event) {
-        console.log(this.nomControleur + " - HandleChecked");
-    }
-
-
-    action_cocher(event) {
-        console.log(this.nomControleur + " - Action_cocher ", "check_" + this.idobjetValue);
-        let checkBx = document.getElementById("check_" + this.idobjetValue);
-        checkBx.checked = !checkBx.checked;
-        buildCustomEventForElement(document, EVEN_CHECKBOX_ELEMENT_CHECK_REQUEST, true, true, { 
-            selectedCheckbox: this.idobjetValue,
-            isChecked: checkBx.checked,
-         });
-    }
-
-    action_supprimer() {
-        console.log(this.nomControleur + " - Action_supprimer ", this.idobjetValue);
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
-            titre: "Suppression",
-            action: EVEN_CODE_ACTION_SUPPRESSION,
-            selection: [this.idobjetValue],
-        });
-    }
-
-    action_modifier() {
-        console.log(this.nomControleur + " - Action_modifier ", this.idobjetValue);
-        buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
-            titre: "Modification",
-            action: EVEN_CODE_ACTION_MODIFICATION,
-            selectedId: this.idobjetValue,
+        // On envoie un événement au cerveau avec toutes les informations nécessaires
+        // pour que les autres contrôleurs puissent reconstituer l'état de la sélection.
+        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+            type: 'ui:list-item.selection-changed',
+            source: this.nomControleur,
+            payload: {
+                id: this.idobjetValue,
+                isChecked: checkbox.checked,
+                entity: JSON.parse(checkbox.dataset.entity || '{}'),
+                entityType: checkbox.dataset.entityType,
+                canvas: JSON.parse(checkbox.dataset.canvas || '{}'),
+            },
+            timestamp: Date.now()
         });
     }
 }

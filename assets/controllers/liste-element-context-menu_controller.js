@@ -42,7 +42,7 @@ export default class extends Controller {
         document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
         document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
         document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
-        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandlePublisheSelection);
+        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandlePublisheSelection);
         //Pour le menu contextuel
         document.addEventListener("click", this.boundHideContextMenu);
         document.addEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
@@ -56,7 +56,7 @@ export default class extends Controller {
         document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
         document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
         document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
-        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandlePublisheSelection);
+        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandlePublisheSelection);
         //Pour le menu contextuel
         document.removeEventListener("click", this.boundHideContextMenu);
         document.removeEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
