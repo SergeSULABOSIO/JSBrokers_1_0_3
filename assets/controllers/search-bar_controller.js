@@ -34,26 +34,26 @@ export default class extends Controller {
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
         // Nouvelle méthode : Nettoyer les écouteurs si le toast est fermé (par ex: par le bouton close)
-        this.advancedSearchToastTarget.addEventListener('hide.bs.toast', () => {
-            window.removeEventListener('scroll', this.boundUpdateToastPosition);
-            window.removeEventListener('resize', this.boundUpdateToastPosition);
-        });
+        // this.advancedSearchToastTarget.addEventListener('hide.bs.toast', () => {
+        //     window.removeEventListener('scroll', this.boundUpdateToastPosition);
+        //     window.removeEventListener('resize', this.boundUpdateToastPosition);
+        // });
 
-        document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
+        // document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
         // --- AJOUT 2/3 : Ajouter l'écouteur d'événement ---
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
+        // document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
         
-        this.handleRequestCriteres();
+        // this.handleRequestCriteres();
     }
 
     disconnect() {
-        document.removeEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
+        // document.removeEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
         // Nouvelle méthode : S'assurer que les écouteurs sont supprimés si le contrôleur est déconnecté
-        window.removeEventListener('scroll', this.boundUpdateToastPosition);
-        window.removeEventListener('resize', this.boundUpdateToastPosition);
+        // window.removeEventListener('scroll', this.boundUpdateToastPosition);
+        // window.removeEventListener('resize', this.boundUpdateToastPosition);
         // document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
         // --- AJOUT 3/3 : Supprimer l'écouteur pour éviter les fuites de mémoire ---
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
+        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
     }
 
     // --- Actions de l'utilisateur (logique mise à jour) ---
@@ -63,15 +63,15 @@ export default class extends Controller {
         this.updateToastPosition();
         this.toast.show();
         // Nouvelle méthode : Écouter le scroll et le redimensionnement pour garder le toast aligné
-        window.addEventListener('scroll', this.boundUpdateToastPosition, { passive: true });
-        window.addEventListener('resize', this.boundUpdateToastPosition);
+        // window.addEventListener('scroll', this.boundUpdateToastPosition, { passive: true });
+        // window.addEventListener('resize', this.boundUpdateToastPosition);
     }
 
     cancelAdvancedSearch() {
         this.toast.hide();
         // Nouvelle méthode : Arrêter d'écouter les événements pour ne pas impacter les performances
-        window.removeEventListener('scroll', this.boundUpdateToastPosition);
-        window.removeEventListener('resize', this.boundUpdateToastPosition);
+        // window.removeEventListener('scroll', this.boundUpdateToastPosition);
+        // window.removeEventListener('resize', this.boundUpdateToastPosition);
         this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
     }
 
@@ -139,7 +139,7 @@ export default class extends Controller {
         }
 
         this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
-        this.dispatchSearchEvent();
+        // this.dispatchSearchEvent();
     }
 
     reset() {
@@ -147,13 +147,13 @@ export default class extends Controller {
         this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
         this.activeFilters = {};
         this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
-        this.dispatchSearchEvent();
+        // this.dispatchSearchEvent();
     }
 
     handlePublisheSelection(event) {
         console.log(this.nomControleur + " - handlePublishSelection", event.detail);
         // const { selection } = event.detail; // Récupère les données de l'événement
-        this.dispatchSearchEvent();
+        // this.dispatchSearchEvent();
     }
 
     // --- Nouvelle méthode pour la position ---
@@ -177,7 +177,7 @@ export default class extends Controller {
     // --- Méthodes existantes (inchangées) ---
 
     handleRequestCriteres() {
-        this.dispatch(EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST);
+        // this.dispatch(EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST);
     }
 
     handleCriteriaDefined(event) {
@@ -278,7 +278,7 @@ export default class extends Controller {
         } else {
             delete this.activeFilters[key];
         }
-        this.dispatchSearchEvent();
+        // this.dispatchSearchEvent();
     }
 
     removeFilter(event) {
@@ -290,7 +290,7 @@ export default class extends Controller {
             const inputToClear = this.advancedFormContainerTarget.querySelector(`[data-criterion-name="${keyToRemove}"]`);
             if (inputToClear) inputToClear.value = '';
         }
-        this.dispatchSearchEvent();
+        // this.dispatchSearchEvent();
     }
 
     /**
@@ -302,11 +302,11 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
         
         // On réutilise simplement la fonction existante pour lancer la recherche
-        this.dispatchSearchEvent();
+        // this.dispatchSearchEvent();
     }
 
     dispatchSearchEvent() {
-        this.dispatch(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, { criteria: this.activeFilters });
+        // this.dispatch(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, { criteria: this.activeFilters });
         this.updateSummary();
     }
 
@@ -367,6 +367,6 @@ export default class extends Controller {
     }
 
     dispatch(name, detail = {}) {
-        buildCustomEventForElement(document, name, true, true, detail);
+        // buildCustomEventForElement(document, name, true, true, detail);
     }
 }

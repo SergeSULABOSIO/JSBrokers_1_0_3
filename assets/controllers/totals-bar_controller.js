@@ -12,15 +12,15 @@ export default class extends Controller {
         this.selectedIds = new Set(); // contiendra les IDs des lignes cochées, ex: {12, 25}
 
         this.boundHandleStateUpdate = this.handleStateUpdate.bind(this);
-        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandleStateUpdate);
+        // document.addEventListener('ui:selection.changed', this.boundHandleStateUpdate);
 
         // --- CORRECTION : Demander activement le contexte au démarrage ---
         // On attend un court instant que les autres contrôleurs soient prêts, puis on demande le contexte.
-        setTimeout(() => document.dispatchEvent(new CustomEvent('totals-bar:request-context')), 100);
+        // setTimeout(() => document.dispatchEvent(new CustomEvent('totals-bar:request-context')), 100);
     }
 
     disconnect() {
-        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandleStateUpdate);
+        // document.removeEventListener('ui:selection.changed', this.boundHandleStateUpdate);
     }
 
     handleStateUpdate(event) {

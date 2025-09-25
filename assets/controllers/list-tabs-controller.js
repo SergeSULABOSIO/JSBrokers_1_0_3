@@ -15,19 +15,19 @@ export default class extends Controller {
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
         this.boundNotifyCerveau = this.notifyCerveau.bind(this);
 
-        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
-        document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
-        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
-        document.addEventListener('totals-bar:request-context', this.boundNotifyCerveau);
+        // document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
+        // document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
+        // document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
+        // document.addEventListener('totals-bar:request-context', this.boundNotifyCerveau);
 
-        this.notifyCerveau();
+        // this.notifyCerveau();
     }
 
     disconnect() {
-        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
-        document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
-        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
-        document.removeEventListener('totals-bar:request-context', this.boundNotifyCerveau);
+        // document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
+        // document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
+        // document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
+        // document.removeEventListener('totals-bar:request-context', this.boundNotifyCerveau);
     }
 
     /**
@@ -112,7 +112,7 @@ export default class extends Controller {
 
         // --- CORRECTION : Notifier la barre des totaux du changement de contexte ---
         // On attend un court instant que le DOM soit à jour avant de notifier.
-        setTimeout(() => this.notifyCerveau(), 50);
+        // setTimeout(() => this.notifyCerveau(), 50);
     }
 
 
@@ -120,7 +120,7 @@ export default class extends Controller {
         const savedState = this.tabStates[tabId];
         const payload = savedState || { entities: [], selection: [], canvas: {}, entityType: '' };
         // --- MODIFICATION : On notifie le cerveau directement au lieu de redéclencher un événement de sélection ---
-        this.notifyCerveau(payload);
+        // this.notifyCerveau(payload);
     }
 
     /**
@@ -158,8 +158,8 @@ export default class extends Controller {
         }
 
         // Envoi de l'événement au cerveau
-        buildCustomEventForElement(document, 'cerveau:event', true, true, { type: 'ui:tab.context-changed', source: this.nomControleur, payload: payload, timestamp: Date.now() });
-        console.log(this.nomControleur + " - Événement 'ui:tab.context-changed' envoyé au cerveau avec le payload:", payload);
+        // buildCustomEventForElement(document, 'cerveau:event', true, true, { type: 'ui:tab.context-changed', source: this.nomControleur, payload: payload, timestamp: Date.now() });
+        // console.log(this.nomControleur + " - Événement 'ui:tab.context-changed' envoyé au cerveau avec le payload:", payload);
     }
 
     // --- Méthodes privées ---
