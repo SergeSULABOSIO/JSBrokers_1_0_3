@@ -63,9 +63,9 @@ export default class extends Controller {
      * NOUVEAU : Gère le changement d'état de la case à cocher et notifie le cerveau.
      */
     handleCheckboxChange(event) {
-        const checkbox = event.currentTarget;
-        console.log(`${this.nomControleur} - Case à cocher changée pour l'ID ${this.idobjetValue}. Nouvel état : ${checkbox.checked}`);
-
+        const checkbox = this.checkboxTarget;
+        console.log(`${this.nomControleur} - Case à cocher changée pour l'ID ${this.idobjetValue}. Nouvel état : ${checkbox.checked}. Notification du cerveau.`);
+        
         // On envoie un événement au cerveau avec toutes les informations nécessaires
         // pour que les autres contrôleurs puissent reconstituer l'état de la sélection.
         buildCustomEventForElement(document, 'cerveau:event', true, true, {
@@ -80,5 +80,29 @@ export default class extends Controller {
             },
             timestamp: Date.now()
         });
+    }
+
+    /**
+     * NOUVEAU : Gère le clic sur l'ensemble de la ligne pour (dé)sélectionner.
+     * @param {MouseEvent} event 
+     */
+    toggleSelection(event) {
+        // Cible de la case à cocher
+        const checkbox = this.checkboxTarget;
+
+        // Ne pas interférer si le clic était directement sur un lien, un bouton, ou la case elle-même.
+        // L'événement 'change' sur la checkbox sera géré par `handleCheckboxChange`.
+        const isInteractiveElement = event.target.closest('a, button, input, label');
+        if (isInteractiveElement) {
+            // Appliquer l'effet visuel même si on clique sur la checkbox
+            if (event.target.type === 'checkbox') {
+                this.element.classList.toggle('row-selected', event.target.checked);
+            }
+            return;
+        }
+
+        // Inverser l'état de la checkbox et déclencher manuellement l'événement "change"
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     }
 }

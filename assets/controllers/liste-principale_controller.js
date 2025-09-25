@@ -787,26 +787,26 @@ export default class extends Controller {
 
     toggleRowSelection(event) {
         // Trouve la checkbox à l'intérieur de la ligne cliquée (tr)
-        const row = event.currentTarget;
-        const checkbox = row.querySelector('input[type="checkbox"]');
+        // const row = event.currentTarget;
+        // const checkbox = row.querySelector('input[type="checkbox"]');
 
-        if (!checkbox) return;
+        // if (!checkbox) return;
 
-        // Ne pas interférer si le clic était directement sur un lien, un bouton, ou la checkbox elle-même
-        const isInteractiveElement = event.target.closest('a, button, input, label');
-        if (isInteractiveElement && isInteractiveElement !== row) {
-            // Mettre à jour l'état visuel même si on clique sur la checkbox
-            if (event.target.type === 'checkbox') {
-                row.classList.toggle('row-selected', event.target.checked);
-            }
-            return;
-        }
+        // // Ne pas interférer si le clic était directement sur un lien, un bouton, ou la checkbox elle-même
+        // const isInteractiveElement = event.target.closest('a, button, input, label');
+        // if (isInteractiveElement && isInteractiveElement !== row) {
+        //     // Mettre à jour l'état visuel même si on clique sur la checkbox
+        //     if (event.target.type === 'checkbox') {
+        //         row.classList.toggle('row-selected', event.target.checked);
+        //     }
+        //     return;
+        // }
 
-        // Inverser l'état de la checkbox et de la classe
-        checkbox.checked = !checkbox.checked;
-        row.classList.toggle('row-selected', checkbox.checked);
+        // // Inverser l'état de la checkbox et de la classe
+        // checkbox.checked = !checkbox.checked;
+        // row.classList.toggle('row-selected', checkbox.checked);
 
-        // Déclencher manuellement un événement "change" pour que vos autres logiques (ex: tout cocher) fonctionnent
-        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        // // Déclencher manuellement un événement "change" pour que vos autres logiques (ex: tout cocher) fonctionnent
+        // checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     }
 }
