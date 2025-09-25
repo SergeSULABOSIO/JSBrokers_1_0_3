@@ -1,7 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_BARRE_OUTILS_INIT_REQUEST, EVEN_BARRE_OUTILS_INITIALIZED, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
-
-const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed'; // L'événement envoyé par list-tabs-controller
+import { buildCustomEventForElement, EVEN_BARRE_OUTILS_INIT_REQUEST, EVEN_BARRE_OUTILS_INITIALIZED, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -21,10 +19,6 @@ export default class extends Controller {
         this.selectedEntitiesType = null;
         this.selectedEntitiesCanvas = null;
         console.log(this.nomControleur + " - Connecté");
-
-        // --- CORRECTION : La barre d'outils ne doit plus écouter EVT_CONTEXT_CHANGED ---
-        // Cet événement est destiné à la barre des totaux et causait une réinitialisation
-        // non désirée de la barre d'outils lors du changement d'onglet.
 
         this.init();
     }
@@ -47,14 +41,14 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
         document.addEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.boundhandleInitRequest);
         document.addEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.boundhandleInitialized);
-        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
+        document.addEventListener('ui:outils-dependants:ajuster', this.boundhandlePublisheSelection);
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
         document.removeEventListener(EVEN_BARRE_OUTILS_INIT_REQUEST, this.boundhandleInitRequest);
         document.removeEventListener(EVEN_BARRE_OUTILS_INITIALIZED, this.boundhandleInitialized);
-        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
+        document.removeEventListener('ui:outils-dependants:ajuster', this.boundhandlePublisheSelection);
     }
 
     // --- NOUVELLE FONCTION À AJOUTER ---
@@ -78,14 +72,7 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handlePublisheSelection(event) {
-        // console.log(this.nomControleur + " - handlePublishSelection", event.detail);
-
-        // --- CORRECTION : Ignorer les événements de restauration incomplets ---
-        // On ne traite que l'événement final qui contient les entités complètes.
-        // L'événement de restauration initial de list-tabs-controller n'a pas 'entities'.
-        if (!event.detail.entities || event.detail.entities.length === 0 && event.detail.selection.length > 0) {
-            return;
-        }
+        console.log(this.nomControleur + " - handlePublishSelection (via Cerveau)", event.detail);
 
         const { selection, entities, canvas, entityType } = event.detail; // Récupère les données de l'événement
         this.tabSelectedCheckBoxs = selection;

@@ -1,10 +1,5 @@
 // assets/controllers/totals-bar_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_CHECKBOX_PUBLISH_SELECTION } from './base_controller.js';
-
-// --- AJOUT ---
-// Le contrôleur écoute maintenant l'événement personnalisé de list-tabs.
-const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
 
 export default class extends Controller {
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
@@ -16,25 +11,20 @@ export default class extends Controller {
         this.numericData = {};
         this.selectedIds = new Set(); // contiendra les IDs des lignes cochées, ex: {12, 25}
 
-        this.boundHandleContext = this.handleContextChange.bind(this);
-        this.boundHandleSelection = this.handleSelectionChange.bind(this);
-
-        document.addEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContext);
-        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
+        this.boundHandleStateUpdate = this.handleStateUpdate.bind(this);
+        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandleStateUpdate);
 
         // --- CORRECTION : Demander activement le contexte au démarrage ---
         // On attend un court instant que les autres contrôleurs soient prêts, puis on demande le contexte.
-        setTimeout(() => document.dispatchEvent(new CustomEvent('totals-bar:request-context')), 50);
+        setTimeout(() => document.dispatchEvent(new CustomEvent('totals-bar:request-context')), 100);
     }
 
     disconnect() {
-        document.removeEventListener(EVT_CONTEXT_CHANGED, this.boundHandleContext);
-        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
+        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandleStateUpdate);
     }
 
-    handleContextChange(event) {
-        console.log(`${this.nomControleur} - Contexte changé (nouvel onglet).`);
-        const { numericAttributes, numericData } = event.detail; // numericAttributes peut être null
+    handleStateUpdate(event) {
+        const { selection, numericAttributes, numericData } = event.detail;
 
         // --- CORRECTION : Logique de masquage/affichage centralisée ---
         if (!numericAttributes || Object.keys(numericAttributes).length === 0) {
@@ -49,32 +39,8 @@ export default class extends Controller {
         // Si on arrive ici, c'est qu'il y a des données à afficher.
         this.element.style.display = 'flex'; // On s'assure que la barre est visible
         this.numericData = numericData || {};
-        this.selectedIds.clear();
+        this.selectedIds = new Set((selection || []).map(id => parseInt(id, 10)));
         this.updateAttributeSelector(numericAttributes || {});
-        this.recalculate();
-    }
-
-    /**
-     * --- MODIFICATION MAJEURE ---
-     * On corrige la méthode pour qu'elle traite correctement le tableau d'IDs.
-     */
-    handleSelectionChange(event) {
-        console.log(`${this.nomControleur} - Événement de sélection reçu.`, event.detail);
-
-        const selectionPayload = event.detail.selection; // Ceci est un tableau d'IDs
-
-        if (selectionPayload && Array.isArray(selectionPayload)) {
-            // AU LIEU DE : new Set(selectionPayload.map(e => e.id))
-            // ON FAIT : new Set(selectionPayload) car le tableau contient déjà les IDs.
-            // On s'assure de comparer des nombres.
-            this.selectedIds = new Set(selectionPayload.map(id => parseInt(id, 10)));
-            console.log(`${this.nomControleur} - IDs de sélection mis à jour :`, this.selectedIds);
-        } else {
-            console.warn(`${this.nomControleur} - Le payload de sélection est manquant ou incorrect.`);
-            this.selectedIds.clear();
-        }
-
-        // this.selectedIds = new Set(selectedEntities.map(e => e.id));
         this.recalculate();
     }
 

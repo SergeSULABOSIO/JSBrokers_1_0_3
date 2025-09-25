@@ -59,9 +59,12 @@ export default class extends Controller {
         this.init();
         
         // --- AJOUT : Le "récepteur" pour restaurer l'état de la sélection ---
-        // On met le contrôleur à l'écoute de l'événement de sélection global.
+        // On met le contrôleur à l'écoute de l'événement de mise à jour global venant du cerveau.
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
-        document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleGlobalSelectionUpdate);
+        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandleGlobalSelectionUpdate);
+        // NOUVEAU : Écouter le changement de sélection d'un item individuel
+        this.boundHandleItemSelectionChange = this.handleItemSelectionChange.bind(this);
+        document.addEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
     }
 
 
@@ -142,8 +145,10 @@ export default class extends Controller {
         document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
         document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
 
-        // --- AJOUT : Nettoyage de notre nouvel écouteur ---
-        document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleGlobalSelectionUpdate);
+        // --- CORRECTION : Nettoyage du bon écouteur ---
+        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandleGlobalSelectionUpdate);
+        // NOUVEAU : Nettoyage de l'écouteur de sélection d'item
+        document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
     }
 
     /**
@@ -152,43 +157,40 @@ export default class extends Controller {
      * et met à jour l'état visuel de cette liste si elle est concernée.
      */
     handleGlobalSelectionUpdate(event) {
+        console.log(this.nomControleur + " - Réception de l'événement 'ui:outils-dependants:ajuster'", event.detail);
         // Garde-fou 1 : On ne réagit que si la liste est visible à l'écran.
         // offsetParent est null si l'élément ou un de ses parents a 'display: none'.
         if (this.element.offsetParent === null) {
+            console.log(this.nomControleur + " - La liste est cachée, mise à jour ignorée.");
             return; // On ne fait rien si on est une liste cachée.
         }
 
-        // --- CORRECTION : Simplification du garde-fou ---
-        // On ne doit pas traiter l'événement si c'est cette instance même qui l'a émis.
-        // On vérifie la présence de `canvas` qui n'est présent que dans les événements émis par ce contrôleur.
-        if (event.detail.canvas) {
-            return; // C'est notre propre événement, on l'ignore.
+        // Garde-fou 2 : On ne doit pas traiter l'événement si c'est cette instance même qui l'a émis.
+        // On vérifie si l'événement a été marqué par notre propre contrôleur.
+        if (event.detail.source === this.nomControleur) {
+            console.log(this.nomControleur + " - Événement ignoré car il provient de cette même instance.");
+            return; 
         }
 
-        const restoredSelectionIds = new Set((event.detail.selection || []).map(id => String(id)));
+        const restoredSelectionIds = new Set((event.detail.selection || []).map(id => String(id))); // On s'assure que les IDs sont des chaînes pour la comparaison
 
         // On met à jour la sélection interne du contrôleur.
         this.tabSelectedCheckBoxs = Array.from(restoredSelectionIds);
 
         // On parcourt toutes les cases à cocher de CETTE liste et on met à jour leur état visuel.
         this.rowCheckboxTargets.forEach(checkbox => {
-            const checkboxId = checkbox.dataset.idobjetValue;
+            const checkboxId = String(checkbox.dataset.idobjetValue); // On s'assure que l'ID est une chaîne
             const shouldBeChecked = restoredSelectionIds.has(checkboxId);
             checkbox.checked = shouldBeChecked;
 
             const row = checkbox.closest('tr');
             if (row) {
-                row.classList.toggle('row-selected', shouldBeChecked);
+                row.classList.toggle('row-selected', shouldBeChecked); // Applique la classe si coché, la retire sinon
             }
         });
 
         // On met à jour l'état de la case "Tout cocher" pour refléter le nouvel état.
         this.updateSelectAllCheckboxState();
-
-        // --- CORRECTION : Ne pas republier une sélection lors d'une restauration ---.
-        // L'événement original a déjà été publié par list-tabs-controller. Le republier ici
-        // avec un état interne pas encore complètement restauré cause la désynchronisation de la barre d'outils.
-        // La ligne `this.publierSelection()` a été commentée/supprimée.
     }
     
 
@@ -229,15 +231,11 @@ export default class extends Controller {
     }
 
 
-    handleCheckboxChange(event) {
-        const checkbox = event.currentTarget;
-        const idObjet = checkbox.dataset.idobjetValue;
-        const isChecked = checkbox.checked;
+    handleItemSelectionChange(event) {
+        const { id, isChecked, entity, canvas, entityType } = event.detail;
+        const idObjet = String(id); // S'assurer que c'est une chaîne
 
-        //Utiles pour le panneau à onglets
-        const entityType = checkbox.dataset.entityType;
-        const entity = checkbox.dataset.entity;
-        const canvas = checkbox.dataset.canvas;
+        console.log(`${this.nomControleur} - Traitement du changement de sélection pour l'ID ${idObjet}. Nouvel état : ${isChecked}`);
 
         var entityJSON = null;
         var canvasJSON = null;
@@ -249,8 +247,8 @@ export default class extends Controller {
 
         try {
             // 1. On parse les données JSON
-            entityJSON = JSON.parse(entity);
-            canvasJSON = JSON.parse(canvas);
+            entityJSON = entity; // Déjà un objet
+            canvasJSON = canvas; // Déjà un objet
 
             // 2. (Optionnel mais recommandé) On vérifie que l'ID existe avant d'envoyer
             if (typeof entityJSON.id === 'undefined' || entityJSON.id === null) {
@@ -258,7 +256,7 @@ export default class extends Controller {
                 return;
             }
             // console.log(this.nomControleur + " - Objet:", idObjet, canvasJSON, entityJSON, entityType);
-        } catch (e) {
+        } catch (e) { // Cette partie est maintenant moins probable mais reste une sécurité
             console.error("Erreur de parsing JSON dans 'liste-principale_controller'. Vérifiez les données dans le template Twig.", { error: e, entityData: entity });
             return;
         }
@@ -654,13 +652,13 @@ export default class extends Controller {
 
 
     publierSelection() {
-        console.log(this.nomControleur + " - Action_publier séléction - lancée.");
+        console.log(this.nomControleur + " - Publication de la sélection locale vers les autres composants.");
         buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
             selection: this.tabSelectedCheckBoxs,
             entities: this.tabSelectedEntities,
             canvas: this.selectedEntitiesCanvas,
             entityType: this.selectedEntitiesType,
-            isRestored: false // Marqueur pour indiquer que ce n'est pas un événement de restauration initial
+            source: this.nomControleur // On s'identifie comme la source de l'événement
         });
     }
 

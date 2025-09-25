@@ -44,6 +44,18 @@ export default class extends Controller {
                 this.loadWorkspaceComponent(payload.componentName);
                 break;
 
+            // --- NOUVEAU : Gestion centralisée du changement de contexte d'onglet ---
+            case 'ui:tab.context-changed':
+                console.log("-> ACTION: Le contexte d'un onglet a changé. Diffusion aux outils dépendants.");
+                this.broadcast('ui:outils-dependants:ajuster', payload); // On propage simplement le payload
+                break;
+
+            // --- Gestion des onglets et de la sélection ---
+            case 'ui:tab.switched':
+                console.log("-> ACTION: L'état d'un onglet a changé. Diffusion aux outils dépendants.");
+                this.broadcast('ui:outils-dependants:ajuster', payload); // On propage simplement le payload
+                break;
+
             case 'api:sinistre.created':
                 console.log("-> ACTION: Demander le rafraîchissement de la liste des sinistres.");
                 console.log("-> ACTION: Afficher une notification de succès 'Sinistre créé'.");
@@ -114,6 +126,12 @@ export default class extends Controller {
                 console.error("| Détails:", payload.error);
                 console.log("-> ACTION: Afficher une notification d'erreur standard à l'utilisateur.");
                 // Code futur: this.broadcast('notification:show', { type: 'error', message: 'Une erreur serveur est survenue. Veuillez réessayer.' });
+                break;
+
+            // --- NOUVEAU : Relais du changement de sélection d'un élément de liste ---
+            case 'ui:list-item.selection-changed':
+                console.log("-> ACTION: Relayer le changement de sélection d'un élément.");
+                this.broadcast('app:list-item.selection-changed:relay', payload);
                 break;
 
             default:

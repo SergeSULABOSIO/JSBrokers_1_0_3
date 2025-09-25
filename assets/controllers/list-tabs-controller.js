@@ -1,8 +1,6 @@
 // assets/controllers/list-tabs-controller.js
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_DATA_BASE_DONNEES_LOADED } from './base_controller.js';
-
-const EVT_CONTEXT_CHANGED = 'list-tabs:context-changed';
+import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_DATA_BASE_DONNEES_LOADED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["rubriqueIcon", "rubriqueName", "tabsContainer", "tabContentContainer", "display"];
@@ -15,22 +13,21 @@ export default class extends Controller {
         this.collectionTabsParentId = null; // NOUVEAU : Mémorise l'ID de l'entité parente des onglets de collection
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
-        // --- CORRECTION : Écouter l'événement qui signale la fin du chargement d'une liste ---
-        this.boundDispatchContextChangeEvent = this.dispatchContextChangeEvent.bind(this);
+        this.boundNotifyCerveau = this.notifyCerveau.bind(this);
 
         document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
-        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundDispatchContextChangeEvent);
-        document.addEventListener('totals-bar:request-context', this.boundDispatchContextChangeEvent); // --- CORRECTION : Répondre à la demande de la barre des totaux
+        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
+        document.addEventListener('totals-bar:request-context', this.boundNotifyCerveau);
 
-        this.dispatchContextChangeEvent();
+        this.notifyCerveau();
     }
 
     disconnect() {
         document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
         document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
-        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundDispatchContextChangeEvent);
-        document.removeEventListener('totals-bar:request-context', this.boundDispatchContextChangeEvent); // --- CORRECTION : Nettoyer l'écouteur
+        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
+        document.removeEventListener('totals-bar:request-context', this.boundNotifyCerveau);
     }
 
     /**
@@ -115,65 +112,54 @@ export default class extends Controller {
 
         // --- CORRECTION : Notifier la barre des totaux du changement de contexte ---
         // On attend un court instant que le DOM soit à jour avant de notifier.
-        setTimeout(() => this.dispatchContextChangeEvent(), 50);
+        setTimeout(() => this.notifyCerveau(), 50);
     }
 
 
     _restoreTabState(tabId) {
         const savedState = this.tabStates[tabId];
         const payload = savedState || { entities: [], selection: [], canvas: {}, entityType: '' };
-        document.dispatchEvent(new CustomEvent(EVEN_CHECKBOX_PUBLISH_SELECTION, {
-            bubbles: true,
-            detail: payload
-        }));
+        // --- MODIFICATION : On notifie le cerveau directement au lieu de redéclencher un événement de sélection ---
+        this.notifyCerveau(payload);
     }
 
     /**
-     * --- MODIFICATION MAJEURE ---
-     * Cette méthode est réécrite. Elle ne scanne plus le 'canvas'.
-     * Elle lit les données numériques pré-calculées depuis l'attribut data- que nous avons ajouté.
+     * Notifie le cerveau du contexte actuel de l'onglet actif.
+     * @param {object|null} selectionState - L'état de sélection à utiliser. Si null, il sera déduit.
      */
-    dispatchContextChangeEvent() { // [1]
-        console.log(this.nomControleur + " - Tentative d'envoi de l'événement context-changed.");
+    notifyCerveau(selectionState = null) {
+        console.log(this.nomControleur + " - Notification du cerveau sur le changement de contexte.");
         const activeContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
-
-        // --- CORRECTION : Gérer le cas où il n'y a pas de contenu actif ---
-        // S'il n'y a pas de contenu ou de contrôleur de liste, on envoie un événement vide
-        // pour forcer la barre des totaux à se masquer.
         const listControllerElement = activeContent ? activeContent.querySelector('[data-controller~="liste-principale"]') : null;
+
+        // L'état de sélection actuel (si non fourni)
+        const currentSelection = selectionState || this.tabStates[this.activeTabId] || { entities: [], selection: [], canvas: {}, entityType: '' };
+
+        let payload = {
+            ...currentSelection,
+            numericAttributes: null,
+            numericData: null
+        };
+
         if (!listControllerElement) {
-            this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
-                bubbles: true,
-                detail: { numericAttributes: null, numericData: null } // [2]
-            }));
-            return;
-        }
+            // Pas de liste, on envoie un payload vide pour que les outils se réinitialisent
+        } else {
+            const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericAttributesValue || '{}');
+            const firstItemId = Object.keys(numericData)[0];
 
-        // --- MODIFICATION ---
-        // On lit l'attribut avec le nom correct et cohérent : 'numericAttributes'.
-        const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericAttributesValue || '{}');
-        const firstItemId = Object.keys(numericData)[0]; // [3]
-        let numericAttributesOptions = null;
-        let finalNumericData = null;
-
-        // --- CORRECTION : On ne construit les options que si on a des données valides ---
-        if (firstItemId && numericData[firstItemId] && Object.keys(numericData[firstItemId]).length > 0) {
-            numericAttributesOptions = {};
-            finalNumericData = numericData;
-            for (const key in finalNumericData[firstItemId]) {
-                numericAttributesOptions[key] = finalNumericData[firstItemId][key].description;
+            if (firstItemId && numericData[firstItemId] && Object.keys(numericData[firstItemId]).length > 0) {
+                const numericAttributesOptions = {};
+                for (const key in numericData[firstItemId]) {
+                    numericAttributesOptions[key] = numericData[firstItemId][key].description;
+                }
+                payload.numericAttributes = numericAttributesOptions;
+                payload.numericData = numericData;
             }
         }
 
-        this.element.dispatchEvent(new CustomEvent(EVT_CONTEXT_CHANGED, {
-            bubbles: true,
-            detail: {
-                // On renomme ici pour plus de clarté dans l'événement, mais la source est correcte.
-                numericAttributes: numericAttributesOptions,
-                numericData: finalNumericData
-            }
-        }));
-        console.log(this.nomControleur + " - Envoi de l'événement avec les détails:", numericAttributesOptions, finalNumericData);
+        // Envoi de l'événement au cerveau
+        buildCustomEventForElement(document, 'cerveau:event', true, true, { type: 'ui:tab.context-changed', source: this.nomControleur, payload: payload, timestamp: Date.now() });
+        console.log(this.nomControleur + " - Événement 'ui:tab.context-changed' envoyé au cerveau avec le payload:", payload);
     }
 
     // --- Méthodes privées ---

@@ -11,8 +11,8 @@
             name="check_[]"
             value="selectionnee"
             class="form-check-input"
-            data-action="change->liste-principale#handleCheckboxChange"
-            data-liste-principale-target="rowCheckbox"
+            data-liste-principale-target="rowCheckbox" {# Gardé pour la fonction "tout cocher" #}
+            data-liste-element-target="checkbox" {# NOUVEAU : Cible pour le contrôleur de ligne #}
             data-idobjet-value="{{ entity.id }}" 
             {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
             data-entity-type="{{entite_nom}}" 
