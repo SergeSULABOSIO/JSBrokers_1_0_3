@@ -13,6 +13,9 @@ export default class extends Controller {
         'btouvrir',
     ];
 
+    // NOUVEAU : Déclaration des paramètres pour la méthode notify()
+    static params = ["eventName", "payload"];
+
     connect() {
         this.nomControleur = "BARRE-OUTILS";
         this.tabSelectedEntities = [];
@@ -37,12 +40,12 @@ export default class extends Controller {
      */
     ecouteurs() {
         console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
-        document.addEventListener('ui:outils-dependants:ajuster', this.boundHandleContextUpdate);
+        document.addEventListener('ui:selection.changed', this.boundHandleContextUpdate);
     }
 
     disconnect() {
         console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        document.removeEventListener('ui:outils-dependants:ajuster', this.boundHandleContextUpdate);
+        document.removeEventListener('ui:selection.changed', this.boundHandleContextUpdate);
     }
 
     /**
@@ -52,12 +55,13 @@ export default class extends Controller {
     handleContextUpdate(event) {
         console.log(this.nomControleur + " - Mise à jour du contexte reçue du Cerveau", event.detail);
 
-        const { selection, entities, canvas, entityType } = event.detail; // Récupère les données de l'événement
+        const { selection, entities, canvas, entityType, entityFormCanvas } = event.detail; // Récupère les données de l'événement
         // S'assurer que la sélection est toujours un tableau
         this.tabSelectedCheckBoxs = selection || [];
         this.tabSelectedEntities = entities;
         this.selectedEntitiesType = entityType;
         this.selectedEntitiesCanvas = canvas;
+        this.formCanvas = entityFormCanvas; // CORRECTION : Stocker le canvas du formulaire
 
         //On réorganise les boutons en fonction de la selection actuelle
         this.organizeButtons(selection || []);
@@ -99,40 +103,32 @@ export default class extends Controller {
     }
 
     /**
-     * LES ACTIONS
+     * OPTIMISATION : Méthode unique pour gérer le clic sur tous les boutons.
+     * Le nom de l'événement à notifier au cerveau est passé via un data-param.
+     * Exemple dans le template :
+     * data-action="click->barre-outils#notify"
+     * data-barre-outils-event-name-param="ui:toolbar.add-request"
      */
-    action_quitter() {
-        this.notifyCerveau('ui:toolbar.close-request');
-    }
+    notify(event) {
+        const button = event.currentTarget;
+        const eventName = button.dataset.barreOutilsEventNameParam;
 
-    action_parametrer() {
-        this.notifyCerveau('ui:toolbar.settings-request');
-    }
+        if (!eventName) {
+            console.error("Le bouton n'a pas de 'data-barre-outils-event-name-param' défini.", button);
+            return;
+        }
 
-    action_tout_cocher() {
-        this.notifyCerveau('ui:toolbar.select-all-request');
-    }
+        let payload = {};
+        // Cas spécial pour la suppression qui nécessite la sélection
+        if (eventName === 'ui:toolbar.delete-request') {
+            payload = { selection: this.tabSelectedCheckBoxs };
+        }
+        // Cas spécial pour l'ajout qui nécessite le canvas du formulaire
+        else if (eventName === 'ui:toolbar.add-request') {
+            payload = { entityFormCanvas: this.formCanvas };
+        }
 
-    action_ouvrir() {
-        this.notifyCerveau('ui:toolbar.open-request');
-    }
-
-    action_recharger() {
-        this.notifyCerveau('ui:toolbar.refresh-request');
-    }
-
-    action_ajouter() {
-        this.notifyCerveau('ui:toolbar.add-request');
-    }
-
-    action_modifier() {
-        this.notifyCerveau('ui:toolbar.modify-request');
-    }
-
-    action_supprimer() {
-        this.notifyCerveau('ui:toolbar.delete-request', {
-            selection: this.tabSelectedCheckBoxs
-        });
+        this.notifyCerveau(eventName, payload);
     }
 
     /**
