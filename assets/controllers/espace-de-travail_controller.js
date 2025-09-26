@@ -30,6 +30,10 @@ export default class extends Controller {
         // NOUVEAU : Écoute la réponse du Cerveau pour afficher le composant chargé.
         this.boundHandleComponentLoaded = this.handleComponentLoaded.bind(this);
         document.addEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
+
+        // NOUVEAU : Écoute l'ordre du cerveau pour revenir au tableau de bord.
+        this.boundLoadDefault = this.loadDefaultComponent.bind(this);
+        document.addEventListener('app:workspace.load-default', this.boundLoadDefault);
         this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
@@ -96,6 +100,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
+        document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
     }
 
 

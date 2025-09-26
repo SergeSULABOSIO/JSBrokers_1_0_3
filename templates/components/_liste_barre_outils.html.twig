@@ -5,31 +5,74 @@
   data-controller="barre-outils"
 >
     {# --- CORRECTION : Ajout des data-barre-outils-target --- #}
-    <button data-action="barre-outils#action_quitte" data-barre-outils-target="btquitter" class="btn btn-sm btn-icon-danger" title="Quitter">
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.close-request"
+        data-barre-outils-target="btquitter" 
+        class="btn btn-sm btn-icon-danger" 
+        title="Quitter">
         <twig:UX:Icon name="lucide:x-circle" />
     </button>
     <div class="toolbar-separator"></div>
-    <button data-action="barre-outils#action_ajouter" data-barre-outils-target="btajouter" class="btn btn-sm" title="Ajouter">
-        <twig:UX:Icon name="lucide:plus-circle" />
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.add-request"
+        data-barre-outils-target="btajouter" 
+        class="btn btn-sm" 
+        title="Ajouter">
+        <twig:UX:Icon name="gridicons:add" />
     </button>
-    <button data-action="barre-outils#action_modifier" data-barre-outils-target="btmodifier" class="btn btn-sm" title="Modifier" style="display:none;">
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.modify-request"
+        data-barre-outils-target="btmodifier" 
+        class="btn btn-sm" 
+        title="Modifier" 
+        style="display:none;">
         <twig:UX:Icon name="lucide:edit" />
     </button>
-    <button data-action="barre-outils#action_supprimer" data-barre-outils-target="btsupprimer" class="btn btn-sm btn-icon-danger" title="Supprimer" style="display:none;">
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.delete-request"
+        data-barre-outils-target="btsupprimer" 
+        class="btn btn-sm btn-icon-danger" 
+        title="Supprimer" 
+        style="display:none;">
         <twig:UX:Icon name="lucide:trash-2" />
     </button>
     <div class="toolbar-separator"></div>
-    <button data-action="barre-outils#action_tout_cocher" data-barre-outils-target="bttoutcocher" class="btn btn-sm" title="Sélectionner tout">
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.select-all-request"
+        data-barre-outils-target="bttoutcocher" 
+        class="btn btn-sm" 
+        title="Sélectionner tout">
         <twig:UX:Icon name="lucide:check-square" />
     </button>
-    <button data-action="barre-outils#action_ouvrir" data-barre-outils-target="btouvrir" class="btn btn-sm" title="Ouvrir la vue détaillée" style="display:none;">
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.open-request"
+        data-barre-outils-target="btouvrir" 
+        class="btn btn-sm" 
+        title="Ouvrir la vue détaillée" 
+        style="display:none;">
         <twig:UX:Icon name="lucide:external-link" />
     </button>
-    <button data-action="barre-outils#action_recharger" data-barre-outils-target="btrecharger" class="btn btn-sm" title="Actualiser">
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.refresh-request"
+        data-barre-outils-target="btrecharger" 
+        class="btn btn-sm" 
+        title="Actualiser">
         <twig:UX:Icon name="lucide:refresh-cw" />
     </button>
     <div class="toolbar-separator"></div>
-    <button data-action="barre-outils#action_parametrer" data-barre-outils-target="btparametres" class="btn btn-sm" title="Paramètres">
+    <button 
+        data-action="click->barre-outils#notify" 
+        data-barre-outils-event-name-param="ui:toolbar.settings-request"
+        data-barre-outils-target="btparametres" 
+        class="btn btn-sm" 
+        title="Paramètres">
         <twig:UX:Icon name="lucide:settings" />
     </button>
 </div>

@@ -64,7 +64,7 @@ export default class extends Controller {
      */
     handleCheckboxChange(event) {
         const checkbox = this.checkboxTarget;
-        console.log(`${this.nomControleur} - Case à cocher changée pour l'ID ${this.idobjetValue}. Nouvel état : ${checkbox.checked}. Notification du cerveau.`);
+        // console.log(`${this.nomControleur} - Case à cocher ID ${this.idobjetValue}. Nouvel état : ${checkbox.checked}. Notification du cerveau.`);
         
         // On envoie un événement au cerveau avec toutes les informations nécessaires
         // pour que les autres contrôleurs puissent reconstituer l'état de la sélection.

@@ -60,11 +60,11 @@ export default class extends Controller {
         
         // --- AJOUT : Le "récepteur" pour restaurer l'état de la sélection ---
         // On met le contrôleur à l'écoute de l'événement de mise à jour global venant du cerveau.
-        // this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
-        // document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        // // NOUVEAU : Écouter le changement de sélection d'un item individuel
-        // this.boundHandleItemSelectionChange = this.handleItemSelectionChange.bind(this);
-        // document.addEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
+        this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
+        document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        // NOUVEAU : Écouter le changement de sélection d'un item individuel
+        this.boundHandleItemSelectionChange = this.handleItemSelectionChange.bind(this);
+        document.addEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
     }
 
 
@@ -146,9 +146,9 @@ export default class extends Controller {
         // document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
 
         // --- CORRECTION : Nettoyage du bon écouteur ---
-        // document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         // NOUVEAU : Nettoyage de l'écouteur de sélection d'item
-        // document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
+        document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
     }
 
     /**
@@ -652,14 +652,20 @@ export default class extends Controller {
 
 
     publierSelection() {
-        // console.log(this.nomControleur + " - Publication de la sélection locale vers les autres composants.");
-        // buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
-        //     selection: this.tabSelectedCheckBoxs,
-        //     entities: this.tabSelectedEntities,
-        //     canvas: this.selectedEntitiesCanvas,
-        //     entityType: this.selectedEntitiesType,
-        //     source: this.nomControleur // On s'identifie comme la source de l'événement
-        // });
+        console.log(this.nomControleur + " - Publication de la sélection locale vers le Cerveau.");
+        // NOUVEAU : On notifie le cerveau de l'état de sélection complet.
+        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+            type: 'ui:selection.updated',
+            source: this.nomControleur,
+            payload: {
+                selection: this.tabSelectedCheckBoxs,
+                entities: this.tabSelectedEntities,
+                canvas: this.selectedEntitiesCanvas,
+                entityType: this.selectedEntitiesType,
+                entityFormCanvas: this.entityFormCanvasValue, // AJOUT : Toujours inclure le canvas du formulaire
+            },
+            timestamp: Date.now()
+        }); 
     }
 
 
