@@ -81,6 +81,30 @@ export default class extends Controller {
                 });
                 break;
 
+            // --- NOUVEAU : Gestion des événements du cycle de vie des dialogues ---
+            case 'ui:dialog.opened':
+                console.log("-> ACTION: Une boîte de dialogue a été ouverte.", payload);
+                // Aucune diffusion nécessaire pour le moment, mais le hook est là.
+                break;
+
+            case 'app:entity.saved':
+                console.log("-> ACTION: Une entité a été sauvegardée. Demande de rafraîchissement des listes et affichage d'une notification.");
+                // Diffusion pour rafraîchir les listes (principale et collections)
+                this.broadcast('app:list.refresh-request', {
+                    originatorId: payload.originatorId // Permet au bon collection-manager de se rafraîchir
+                });
+                // Diffusion pour afficher un toast de succès
+                this.broadcast('app:notification.show', { text: 'Enregistrement réussi !', type: 'success' });
+                break;
+
+            case 'app:form.validation-error':
+                console.warn("-> ACTION: Une erreur de validation de formulaire a été reçue.", payload);
+                this.broadcast('app:notification.show', { text: payload.message || 'Erreur de validation.', type: 'error' });
+                break;
+
+            case 'ui:dialog.closed':
+                console.log("-> ACTION: Une boîte de dialogue a été fermée.", payload);
+                break;
 
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);

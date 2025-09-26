@@ -1,12 +1,29 @@
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
+import { buildCustomEventForElement } from './base_controller';
 
 /**
- * Ce contrôleur gère le cycle de vie d'UNE SEULE instance de dialogue.
- * Il est créé dynamiquement par 'dialog-manager' et se détruit à la fermeture.
+ * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
+ * @description Ce contrôleur gère le cycle de vie et les interactions d'UNE SEULE instance de dialogue.
+ * Il est conçu pour être créé dynamiquement par 'dialog-manager'. Il s'occupe de construire la modale,
+ * de charger son contenu (formulaire, attributs) via AJAX, de gérer la soumission du formulaire,
+ * et de communiquer les résultats au 'cerveau' de l'application. Il se détruit automatiquement
+ * lorsque la modale est fermée.
+ */
+
+/**
+ * @class DialogInstanceController
+ * @extends Controller
+ * @description Gère une instance unique et éphémère de boîte de dialogue.
  */
 export default class extends Controller {
 
+    /**
+     * Méthode du cycle de vie de Stimulus.
+     * S'exécute lorsque l'élément du contrôleur est ajouté au DOM.
+     * Récupère les données d'initialisation et démarre le processus d'affichage du dialogue.
+     * @throws {Error} Si les données d'initialisation (`dialogDetail`) ne sont pas trouvées.
+     */
     connect() {
         this.nomControlleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
@@ -19,6 +36,10 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * Méthode du cycle de vie de Stimulus.
+     * Nettoie les écouteurs d'événements lorsque le contrôleur est retiré du DOM.
+     */
     disconnect() {
         if (this.modalNode) {
             this.modalNode.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
@@ -26,7 +47,11 @@ export default class extends Controller {
     }
 
     /**
-     * Reçoit les détails, AFFICHE la modale avec un spinner, PUIS charge le formulaire.
+     * Point d'entrée principal. Initialise les propriétés, affiche la coquille de la modale,
+     * puis charge le contenu dynamique.
+     * @param {object} detail - L'objet de configuration passé par `dialog-manager`.
+     * @param {object} detail.entityFormCanvas - La configuration (canvas) du formulaire.
+     * @param {object} detail.entity - L'entité à éditer, ou un objet vide pour une création.
      */
     async start(detail) {
         this.canvas = detail.entityFormCanvas;
@@ -38,7 +63,11 @@ export default class extends Controller {
         await this.loadFormAndAttributes();
     }
 
-
+    /**
+     * Construit et affiche la structure de base (coquille) de la modale Bootstrap,
+     * avec des indicateurs de chargement.
+     * @private
+     */
     async buildAndShowShell() {
         const title = this.isCreateMode
             ? this.canvas.parametres.titre_creation
@@ -97,7 +126,9 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVELLE VERSION : Cherche le z-index le plus élevé et se place au-dessus.
+     * Ajuste le `z-index` de la modale pour s'assurer qu'elle apparaît
+     * au-dessus des autres modales déjà ouvertes. Essentiel pour les dialogues imbriqués.
+     * @private
      */
     adjustZIndex() {
         // Trouve tous les backdrops visibles
@@ -132,7 +163,10 @@ export default class extends Controller {
 
 
     /**
-     * Charge le contenu du formulaire et le place dans le .modal-body.
+     * Charge le contenu HTML du formulaire et des attributs calculés depuis le serveur via AJAX.
+     * Gère le cas de la création (ID 0) et de l'édition.
+     * Notifie le cerveau une fois le chargement terminé.
+     * @private
      */
     async loadFormAndAttributes() {//loadFormBody() {
         try {
@@ -183,13 +217,24 @@ export default class extends Controller {
                 } else {
                     mainDialogElement.classList.remove('has-attributes-column');
                 }
+
+                // NOUVEAU : Notifier le cerveau que le dialogue est prêt
+                this.notifyCerveau('ui:dialog.opened', {
+                    mode: this.isCreateMode ? 'creation' : 'edition',
+                    entity: this.entity
+                });
             }
             // On s'assure que la classe de mode édition est bien présente si nécessaire
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');
             }
         } catch (error) {
-            this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            const errorMessage = error.message || "Une erreur inconnue est survenue.";
+            this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
+            // NOUVEAU : Notifier le cerveau de l'échec de chargement
+            this.notifyCerveau('app:error.api', {
+                error: `Échec du chargement du formulaire: ${errorMessage}`
+            });
         }
     }
 
@@ -228,19 +273,27 @@ export default class extends Controller {
             const result = await response.json();
             if (!response.ok) throw result;
 
-            this.showFeedback('success', result.message); // On affiche le message de succès
-            document.dispatchEvent(new CustomEvent('collection-manager:refresh-list', { detail: { originatorId: this.context.originatorId } }));
-            document.dispatchEvent(new CustomEvent('main-list:refresh-request'));
+            this.showFeedback('success', result.message);
+
+            // NOUVEAU : Notifier le cerveau du succès de l'enregistrement
+            this.notifyCerveau('app:entity.saved', {
+                entity: result.entity,
+                originatorId: this.context.originatorId // Pour savoir quelle collection rafraîchir
+            });
 
             if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
-                // await this.reloadForm(); // On recharge le formulaire
                 await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
             }
-            // Si on était déjà en mode édition, on ne fait rien de plus.
 
         } catch (error) {
+            // NOUVEAU : Notifier le cerveau de l'échec de validation
+            this.notifyCerveau('app:form.validation-error', {
+                message: error.message || 'Erreur de validation',
+                errors: error.errors || {}
+            });
+
             if (this.feedbackContainer) {
                 this.feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
                 this.showFeedback('success', error.message);
@@ -256,16 +309,20 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Recharge la vue complète (titre + colonnes)
+     * Recharge la vue complète (titre, formulaire, attributs) après une création réussie
+     * pour passer en mode édition sans fermer la modale.
+     * @private
      */
     async reloadView() {
         this.updateTitle();
         this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
     }
-
+    
     /**
-     * NOUVEAU : Affiche un message stylisé dans le conteneur de feedback.
+     * Affiche un message de feedback (succès, erreur) horodaté dans le pied de page de la modale.
+     * @param {'success'|'error'|'warning'} type - Le type de message.
+     * @param {string} message - Le message à afficher.
      */
     showFeedback(type, message) {
         const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
@@ -300,17 +357,10 @@ export default class extends Controller {
         `;
     }
 
-
     /**
-     * NOUVEAU : Recharge le formulaire pour refléter le nouvel état (création -> édition).
-     */
-    async reloadForm() {
-        this.updateTitle(); // Met à jour le titre
-        await this.loadFormBody(); // Recharge le corps du formulaire (avec les collections activées)
-    }
-
-    /**
-     * NOUVEAU : Met à jour le titre de la boîte de dialogue.
+     * Met à jour le titre de la boîte de dialogue, typiquement après être passé
+     * du mode création au mode édition.
+     * @private
      */
     updateTitle() {
         const titleElement = this.elementContenu.querySelector('.modal-title');
@@ -320,7 +370,9 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Affiche les erreurs de validation à côté de chaque champ.
+     * Affiche les erreurs de validation renvoyées par le serveur
+     * à côté des champs de formulaire correspondants.
+     * @param {object} errors - Un objet où les clés sont les noms des champs et les valeurs sont les messages d'erreur.
      */
     displayErrors(errors) {
         const form = this.elementContenu.querySelector('form');
@@ -351,9 +403,9 @@ export default class extends Controller {
 
 
     /**
-     * NOUVEAU : Nettoie les messages d'erreur précédents.
-     */
-    clearErrors() {
+     * Nettoie les messages d'erreur et les styles d'invalidité du formulaire.
+     * @private
+     */    clearErrors() {
         this.elementContenu.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         this.elementContenu.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
         this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
@@ -362,15 +414,21 @@ export default class extends Controller {
 
 
     /**
-     * Ferme la modale.
+     * Ferme la modale et notifie le cerveau de cette action.
      */
     close() {
+        // NOUVEAU : Notifier le cerveau de la fermeture
+        this.notifyCerveau('ui:dialog.closed', {
+            entity: this.entity,
+            mode: this.isCreateMode ? 'creation' : 'edition'
+        });
         this.toggleProgressBar(false); // <-- CACHER LA BARRE avant de fermer
         this.modal.hide();
     }
 
     /**
-     * AJOUT : Gère l'état visuel du bouton de soumission.
+     * Gère l'état visuel du bouton de soumission et des autres boutons (chargement/normal).
+     * @param {boolean} isLoading - `true` pour afficher l'état de chargement, `false` sinon.
      */
     toggleLoading(isLoading) {
         // On cherche le bouton manuellement juste quand on en a besoin
@@ -402,7 +460,8 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Affiche ou cache la barre de progression.
+     * Affiche ou cache la barre de progression en haut de la modale.
+     * @param {boolean} isLoading - `true` pour afficher la barre, `false` pour la cacher.
      */
     toggleProgressBar(isLoading) {
         // On cherche le conteneur de la barre manuellement
@@ -413,12 +472,27 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Déclenche manuellement la soumission du formulaire interne.
+     * Déclenche manuellement la soumission du formulaire interne.
      */
     triggerSubmit() {
         const form = this.elementContenu.querySelector('form');
         if (form) {
             form.requestSubmit();
         }
+    }
+
+    /**
+     * Méthode centralisée pour envoyer un événement au cerveau.
+     * @param {string} type - Le type d'événement pour le cerveau (ex: 'ui:dialog.opened').
+     * @param {object} payload - Données additionnelles à envoyer.
+     * @private
+     */
+    notifyCerveau(type, payload = {}) {
+        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+            type: type,
+            source: this.nomControlleur,
+            payload: payload,
+            timestamp: Date.now()
+        });
     }
 }
