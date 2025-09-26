@@ -1,6 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
-import { buildCustomEventForElement } from './base_controller';
+import { buildCustomEventForElement } from './base_controller.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.

@@ -2,26 +2,45 @@ import { Controller } from '@hotwired/stimulus';
 import { EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
 
 /**
- * Le Cerveau de l'application JS Brokers.
- * Ce contrôleur est le Médiateur central. Il ne doit pas être attaché à un 
- * composant d'UI spécifique mais plutôt à un élément parent global comme <body>.
- * Il écoute les événements de l'application et orchestre les réactions.
+ * @file Ce fichier contient le contrôleur Stimulus 'cerveau'.
+ * @description Ce contrôleur implémente le patron de conception Médiateur (Mediator Pattern).
+ * Il agit comme le hub de communication central pour toute l'application, recevant des événements
+ * de divers composants et orchestrant les réponses appropriées. Il ne doit pas être attaché à un
+ * composant d'UI spécifique mais plutôt à un élément global comme `<body>`.
+ */
+
+/**
+ * @class CerveauController
+ * @extends Controller
+ * @description Le contrôleur Cerveau est le médiateur central de l'application.
  */
 export default class extends Controller {
+    /**
+     * Méthode du cycle de vie de Stimulus. S'exécute lorsque le contrôleur est connecté au DOM.
+     * Met en place l'écouteur d'événement principal `cerveau:event`.
+     */
     connect() {
         this.nomControleur = "Cerveau";
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
         document.addEventListener('cerveau:event', this.handleEvent.bind(this));
     }
 
+    /**
+     * Méthode du cycle de vie de Stimulus. Nettoie l'écouteur d'événement pour éviter les fuites de mémoire.
+     */
     disconnect() {
         document.removeEventListener('cerveau:event', this.handleEvent.bind(this));
     }
 
     /**
-     * Point d'entrée pour tous les événements de l'application.
-     * Déclenché par une action `cerveau:event->cerveau#handleEvent`.
-     * @param {CustomEvent} event
+     * Point d'entrée unique pour tous les événements destinés au Cerveau.
+     * Analyse le type d'événement et délègue l'action appropriée.
+     * @param {CustomEvent} event - L'événement personnalisé reçu.
+     * @property {object} event.detail - Le conteneur de données de l'événement.
+     * @property {string} event.detail.type - Le type d'action demandé (ex: 'ui:component.load').
+     * @property {string} event.detail.source - Le nom du contrôleur qui a émis l'événement.
+     * @property {object} event.detail.payload - Les données spécifiques à l'événement.
+     * @property {number} event.detail.timestamp - L'horodatage de l'émission de l'événement.
      */
     handleEvent(event) {
         const { type, source, payload, timestamp } = event.detail;
@@ -113,14 +132,11 @@ export default class extends Controller {
         console.groupEnd();
     }
 
-    // Méthodes utilitaires futures
-    // Par exemple, une méthode pour dispatcher des ordres vers d'autres composants
-    // broadcast(eventName, detail) { 
-    //   document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
-    // }
     /**
      * Charge le contenu HTML d'un composant pour l'espace de travail et diffuse le résultat.
      * @param {string} componentName Le nom du fichier de template du composant.
+     * @fires workspace:component.loaded
+     * @private
      */
     async loadWorkspaceComponent(componentName) {
         const url = `/espacedetravail/api/load-component?component=${componentName}`;
@@ -141,7 +157,10 @@ export default class extends Controller {
     }
 
     /**
-     * Diffuse un événement à l'échelle de l'application.
+     * Méthode utilitaire pour diffuser un événement à l'échelle de l'application.
+     * @param {string} eventName - Le nom de l'événement à diffuser.
+     * @param {object} [detail={}] - Le payload à inclure dans `event.detail`.
+     * @private
      */
     broadcast(eventName, detail) {
         document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
