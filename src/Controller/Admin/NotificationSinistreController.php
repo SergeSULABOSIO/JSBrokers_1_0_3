@@ -264,10 +264,14 @@ class NotificationSinistreController extends AbstractController
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
     #[Route('/api/{id}/contacts', name: 'api.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(NotificationSinistre $notification): Response
+    public function getContactsListApi(int $id): Response
     {
-        // On récupère le canvas spécifique à l'entité Contact
-        $data = $notification->getContacts();
+        $data = [];
+        if ($id !== 0) {
+            /** @var NotificationSinistre $notification */
+            $notification = $this->notificationSinistreRepository->find($id);
+            $data = $notification->getContacts();
+        }
         $contactCanvas = $this->constante->getEntityCanvas(Contact::class);
         $this->constante->loadCalculatedValue($contactCanvas, $data);
 
@@ -284,9 +288,14 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/pieces', name: 'api.get_pieces', methods: ['GET'])]
-    public function getPiecesListApi(NotificationSinistre $notification): Response
+    public function getPiecesListApi(int $id): Response
     {
-        $data = $notification->getPieces();
+        $data = [];
+        if ($id !== 0) {
+            /** @var NotificationSinistre $notification */
+            $notification = $this->notificationSinistreRepository->find($id);
+            $data = $notification->getPieces();
+        }
         $pieceCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
         $this->constante->loadCalculatedValue($pieceCanvas, $data);
 
@@ -303,9 +312,14 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(NotificationSinistre $notification): Response
+    public function getTachesListApi(int $id): Response
     {
-        $data = $notification->getTaches();
+        $data = [];
+        if ($id !== 0) {
+            /** @var NotificationSinistre $notification */
+            $notification = $this->notificationSinistreRepository->find($id);
+            $data = $notification->getTaches();
+        }
         $tacheCanvas = $this->constante->getEntityCanvas(Tache::class);
         $this->constante->loadCalculatedValue($tacheCanvas, $data);
 
@@ -322,9 +336,14 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/{id}/offreIndemnisationSinistres', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
-    public function getOffresIndemnisationListApi(NotificationSinistre $notification): Response
+    public function getOffresIndemnisationListApi(int $id): Response
     {
-        $data = $notification->getOffreIndemnisationSinistres();
+        $data = [];
+        if ($id !== 0) {
+            /** @var NotificationSinistre $notification */
+            $notification = $this->notificationSinistreRepository->find($id);
+            $data = $notification->getOffreIndemnisationSinistres();
+        }
         $offreCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
         $this->constante->loadCalculatedValue($offreCanvas, $data);
 

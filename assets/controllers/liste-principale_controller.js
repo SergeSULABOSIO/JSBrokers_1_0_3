@@ -78,6 +78,9 @@ export default class extends Controller {
         this.listePrincipale = document.getElementById("liste");
         this.initToolTips();
         this.updateMessage("Prêt.");
+
+        // NOUVEAU : Publier l'état initial (même vide) pour que les autres composants (barre d'outils) reçoivent le contexte.
+        this.publierSelection();
         this.setEcouteurs();
     }
 
