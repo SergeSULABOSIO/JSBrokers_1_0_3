@@ -29,7 +29,8 @@ export default class extends Controller {
         this.loadItemList();
 
         this.boundHandleRefreshRequest = this.handleRefreshRequest.bind(this);
-        document.addEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
+        // NOUVEAU : Écoute l'événement de rafraîchissement global du cerveau
+        document.addEventListener('app:list.refresh-request', this.boundHandleRefreshRequest);
 
         this.deleteEventName = `collection:${this.componentId}:perform-delete`;
         this.boundPerformDelete = this.performDelete.bind(this);
@@ -95,12 +96,16 @@ export default class extends Controller {
 
 
     disconnect() {
-        document.removeEventListener('collection-manager:refresh-list', this.boundHandleRefreshRequest);
+        document.removeEventListener('app:list.refresh-request', this.boundHandleRefreshRequest);
         document.removeEventListener(this.deleteEventName, this.boundPerformDelete);
     }
 
     handleRefreshRequest(event) {
-        if (event.detail.originatorId === this.componentId) {
+        // On vérifie si la demande de rafraîchissement concerne cette instance spécifique
+        // ou si c'est une demande générale (sans originatorId)
+        const originatorId = event.detail ? event.detail.originatorId : null;
+        if (!originatorId || originatorId === this.componentId) {
+            console.log(this.nomControlleur + " - Demande de rafraîchissement reçue. Rechargement.");
             this.loadItemList();
         }
     }

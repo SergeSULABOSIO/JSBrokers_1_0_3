@@ -105,6 +105,10 @@ export default class extends Controller {
         this.boundHandleDonneesLoaded = this.handleDonneesLoaded.bind(this);
         this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
 
+        // NOUVEAU : Écoute la demande de rafraîchissement globale venant du cerveau
+        this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
+        document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
+
         //On attache les écouteurs d'Evenements personnalisés à la liste principale
         // document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
         // document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
@@ -151,6 +155,7 @@ export default class extends Controller {
         // --- CORRECTION : Nettoyage du bon écouteur ---
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         // NOUVEAU : Nettoyage de l'écouteur de sélection d'item
+        document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
         document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
     }
 
@@ -793,6 +798,16 @@ export default class extends Controller {
         this.donneesTarget.innerHTML = results;
     }
 
+    /**
+     * NOUVEAU : Gère la demande de rafraîchissement globale.
+     */
+    handleGlobalRefresh(event) {
+        // On ne rafraîchit que la liste principale, pas les collections
+        if (this.element.closest('[data-content-id="principal"]')) {
+            console.log(this.nomControleur + " - Demande de rafraîchissement global reçue. Rechargement de la liste.");
+            this.dispatch(EVEN_DATA_BASE_SELECTION_REQUEST, { criteria: {} }); // Relance une recherche vide pour tout réafficher
+        }
+    }
 
     toggleRowSelection(event) {
         // Trouve la checkbox à l'intérieur de la ligne cliquée (tr)
