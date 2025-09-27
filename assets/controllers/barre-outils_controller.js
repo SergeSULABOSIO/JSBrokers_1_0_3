@@ -127,6 +127,11 @@ export default class extends Controller {
         else if (eventName === 'ui:toolbar.add-request') {
             payload = { entityFormCanvas: this.formCanvas };
         }
+        // NOUVEAU : Cas spécial pour l'actualisation
+        else if (eventName === 'ui:toolbar.refresh-request') {
+            // Pas de payload spécifique nécessaire, l'événement lui-même est l'action.
+            payload = {};
+        }
 
         this.notifyCerveau(eventName, payload);
     }

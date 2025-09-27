@@ -109,49 +109,9 @@ export default class extends Controller {
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
 
-        //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
-        // document.addEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
-        // document.addEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
-        // document.addEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
-        // document.addEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
-        // document.addEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
-        // document.addEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
-        // document.addEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
-        // document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        // document.addEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
-
     }
 
     disconnect() {
-        //On attache les écouteurs d'Evenements personnalisés à la liste principale
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADD_REQUEST, this.boundHandleAddRequest);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ADDED, this.boundHandleAdded);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, this.boundHandleAllCheckRequest);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_ALL_CHECKED, this.boundHandleAllChecked);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, this.boundHandleSettingRequest);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, this.boundHandleSettingUpdated);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, this.boundHandleCloseRequest);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_CLOSED, this.boundHandleClosed);
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_NOTIFY, this.boundNotify);
-        // document.removeEventListener(EVEN_SERVER_RESPONSED, this.boundHandleServerResponsed);
-        // document.removeEventListener(EVEN_LISTE_ELEMENT_EXPANDED, this.boundHandleExpanded);
-        // document.removeEventListener(EVEN_LISTE_ELEMENT_MODIFY_REQUEST, this.boundHandleModifyRequest);
-        // document.removeEventListener(EVEN_LISTE_ELEMENT_DELETE_REQUEST, this.boundHandleDeleteRequest);
-        // document.removeEventListener(EVEN_LISTE_ELEMENT_DELETED, this.boundHandleDeleted);
-        // document.removeEventListener(EVEN_DATA_BASE_SELECTION_REQUEST, this.boundHandleDBRequest);
-        // document.removeEventListener(EVEN_DATA_BASE_SELECTION_EXECUTED, this.boundHandleDBResult);
-        // document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleDonneesLoaded);
-        // document.removeEventListener(EVEN_LISTE_ELEMENT_OPEN_REQUEST, this.boundHandleOpenRequest);
-
         // --- CORRECTION : Nettoyage du bon écouteur ---
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         // NOUVEAU : Nettoyage de l'écouteur de sélection d'item
@@ -807,6 +767,15 @@ export default class extends Controller {
             console.log(this.nomControleur + " - Demande de rafraîchissement global reçue. Rechargement de la liste.");
             this.dispatch(EVEN_DATA_BASE_SELECTION_REQUEST, { criteria: {} }); // Relance une recherche vide pour tout réafficher
         }
+    }
+
+    /**
+     * NOUVEAU : Dispatche un événement customisé sur le document.
+     * @param {string} name Le nom de l'événement
+     * @param {object} detail Les données à envoyer
+     */
+    dispatch(name, detail = {}) {
+        buildCustomEventForElement(document, name, true, true, detail);
     }
 
     toggleRowSelection(event) {

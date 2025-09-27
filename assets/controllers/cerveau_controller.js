@@ -124,6 +124,12 @@ export default class extends Controller {
             case 'ui:dialog.closed':
                 console.log("-> ACTION: Une boîte de dialogue a été fermée.", payload);
                 break;
+            
+            // --- NOUVEAU : Gère la demande d'actualisation depuis la barre d'outils ---
+            case 'ui:toolbar.refresh-request':
+                console.log("-> ACTION: Demande d'actualisation de la liste principale. Diffusion de l'ordre de rafraîchissement.");
+                this.broadcast('app:list.refresh-request', {});
+                break;
 
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
