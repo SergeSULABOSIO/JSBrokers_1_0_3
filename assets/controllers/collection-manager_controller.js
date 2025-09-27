@@ -1,9 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { 
-    buildCustomEventForElement, 
-    EVEN_BOITE_DIALOGUE_INIT_REQUEST, 
-    EVEN_CHECKBOX_PUBLISH_SELECTION, // Important : pour communiquer avec le menu
-    EVEN_MENU_CONTEXTUEL_INIT_REQUEST // Important : pour ouvrir le menu
+    buildCustomEventForElement
 } from './base_controller.js';
 
 export default class extends Controller {

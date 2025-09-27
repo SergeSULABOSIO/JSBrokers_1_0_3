@@ -3,14 +3,14 @@ import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
-        'btquitter',
-        'btparametres',
-        'btrecharger',
-        'btajouter',
-        'btmodifier',
-        'btsupprimer',
-        'bttoutcocher',
-        'btouvrir',
+        'btquitter', // Optionnel
+        'btparametres', // Optionnel
+        'btrecharger', // Optionnel
+        'btajouter', // Optionnel
+        'btmodifier', // Optionnel
+        'btsupprimer', // Optionnel
+        'bttoutcocher', // Optionnel
+        'btouvrir', // Optionnel
     ];
 
     // NOUVEAU : Déclaration des paramètres pour la méthode notify()
@@ -73,33 +73,28 @@ export default class extends Controller {
         if (!Array.isArray(selection)) {
             selection = [];
         }
-        if (selection.length >= 1) {
-            if (selection.length == 1) {
-                this.btmodifierTarget.style.display = "block";
-            } else {
-                this.btmodifierTarget.style.display = "none";
-            }
-            this.btouvrirTarget.style.display = "block";
-            this.btsupprimerTarget.style.display = "block";
-        } else {
-            this.btouvrirTarget.style.display = "none";
-            this.btmodifierTarget.style.display = "none";
-            this.btsupprimerTarget.style.display = "none";
-        }
+        const hasSelection = selection.length > 0;
+        const isSingleSelection = selection.length === 1;
+
+        // On vérifie si la cible existe avant de manipuler son style
+        if (this.hasBtmodifierTarget) this.btmodifierTarget.style.display = isSingleSelection ? "block" : "none";
+        if (this.hasBtouvrirTarget) this.btouvrirTarget.style.display = hasSelection ? "block" : "none";
+        if (this.hasBtsupprimerTarget) this.btsupprimerTarget.style.display = hasSelection ? "block" : "none";
     }
 
     initToolTips() {
         //On initialise le tooltips
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
     }
 
     initialiserBarreDoutils() {
-        this.btquitterTarget.style.display = "block";
-        this.btparametresTarget.style.display = "block";
-        this.btajouterTarget.style.display = "block";
-        this.btrechargerTarget.style.display = "block";
-        this.bttoutcocherTarget.style.display = "block";
+        // On vérifie si la cible existe avant de manipuler son style
+        if (this.hasBtquitterTarget) this.btquitterTarget.style.display = "block";
+        if (this.hasBtparametresTarget) this.btparametresTarget.style.display = "block";
+        if (this.hasBtajouterTarget) this.btajouterTarget.style.display = "block";
+        if (this.hasBtrechargerTarget) this.btrechargerTarget.style.display = "block";
+        if (this.hasBttoutcocherTarget) this.bttoutcocherTarget.style.display = "block";
     }
 
     /**

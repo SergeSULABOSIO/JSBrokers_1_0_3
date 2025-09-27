@@ -1,9 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { 
-    buildCustomEventForElement, 
-    EVEN_CODE_RESULTAT_OK, 
-    EVEN_DATA_BASE_SELECTION_REQUEST, 
-} from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -58,34 +54,12 @@ export default class extends Controller {
 
 
     setEcouteurs() {
-        this.boundHandleAddRequest = this.handleAddRequest.bind(this);
-        this.boundHandleAdded = this.handleAdded.bind(this);
-        this.boundHandleAllCheckRequest = this.handleAllCheckRequest.bind(this);
-        this.boundHandleAllChecked = this.handleAllChecked.bind(this);
-        this.boundHandleSettingRequest = this.handleSettingRequest.bind(this);
-        this.boundHandleSettingUpdated = this.handleSettingUpdated.bind(this);
-        this.boundHandleCloseRequest = this.handleCloseRequest.bind(this);
-        this.boundHandleClosed = this.handleClosed.bind(this);
-        this.boundNotify = this.notify.bind(this);
-        this.boundHandleServerResponsed = this.handleServerResponsed.bind(this);
-        this.boundHandleExpanded = this.handleExpanded.bind(this);
-        this.boundHandleModifyRequest = this.handleModifyRequest.bind(this);
-        this.boundHandleDeleteRequest = this.handleDeleteRequest.bind(this);
-        this.boundHandleDeleted = this.handleDeleted.bind(this);
-        this.boundHandleDBRequest = this.handleDBRequest.bind(this);
-        this.boundHandleDBResult = this.handleDBResult.bind(this);
-        this.boundHandleDonneesLoaded = this.handleDonneesLoaded.bind(this);
-        this.boundHandleOpenRequest = this.handleOpenRequest.bind(this);
-
-        // NOUVEAU : Écoute la demande de rafraîchissement globale venant du cerveau
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
     }
 
     disconnect() {
-        // --- CORRECTION : Nettoyage du bon écouteur ---
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        // NOUVEAU : Nettoyage de l'écouteur de sélection d'item
         document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
         document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
     }

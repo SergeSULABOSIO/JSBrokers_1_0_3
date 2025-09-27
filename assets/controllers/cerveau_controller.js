@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST } from './base_controller.js';
+import { } from './base_controller.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'cerveau'.
@@ -22,14 +22,16 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "Cerveau";
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
-        document.addEventListener('cerveau:event', this.handleEvent.bind(this));
+        // --- CORRECTION : Lier la fonction une seule fois et stocker la référence ---
+        this.boundHandleEvent = this.handleEvent.bind(this);
+        document.addEventListener('cerveau:event', this.boundHandleEvent);
     }
 
     /**
      * Méthode du cycle de vie de Stimulus. Nettoie l'écouteur d'événement pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener('cerveau:event', this.handleEvent.bind(this));
+        document.removeEventListener('cerveau:event', this.boundHandleEvent);
     }
 
     /**

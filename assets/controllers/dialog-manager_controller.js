@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { EVEN_BOITE_DIALOGUE_INIT_REQUEST } from './base_controller.js';
+import {  } from './base_controller.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-manager'.

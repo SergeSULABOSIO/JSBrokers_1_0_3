@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_CODE_ACTION_AJOUT, EVEN_CODE_ACTION_MODIFICATION, EVEN_CODE_ACTION_SUPPRESSION, EVEN_LISTE_ELEMENT_DELETE_REQUEST, EVEN_LISTE_ELEMENT_EXPAND_REQUEST, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, EVEN_MENU_CONTEXTUEL_HIDE, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, EVEN_MENU_CONTEXTUEL_INITIALIZED, EVEN_MENU_CONTEXTUEL_SHOW } from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -37,31 +37,10 @@ export default class extends Controller {
         this.boundHandleContextMenuHide = this.handleContextMenuHide.bind(this);
         this.boundHandlePublisheSelection = this.handlePublisheSelection.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
-
-        // document.addEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
-        // document.addEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
-        // document.addEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
-        // document.addEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
-        // document.addEventListener('ui:selection.changed', this.boundHandlePublisheSelection);
-        //Pour le menu contextuel
-        // document.addEventListener("click", this.boundHideContextMenu);
-        // document.addEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
-        // window.addEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
-        // this.menu.addEventListener("click", (e) => e.stopPropagation());
     }
 
     disconnect() {
-        // console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
-        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_INIT_REQUEST, this.boundHandleContextMenuInitRequest);
-        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_INITIALIZED, this.boundHandleContextMenuInitialized);
-        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_SHOW, this.boundHandleContextMenuShow);
-        // document.removeEventListener(EVEN_MENU_CONTEXTUEL_HIDE, this.boundHandleContextMenuHide);
-        // document.removeEventListener('ui:selection.changed', this.boundHandlePublisheSelection);
-        //Pour le menu contextuel
-        // document.removeEventListener("click", this.boundHideContextMenu);
-        // document.removeEventListener("scroll", this.boundHideContextMenu); // Cacher si on scroll
-        // window.removeEventListener("resize", this.boundHideContextMenu); // Cacher si la fenêtre est redimensionnée
-        // this.menu.removeEventListener("click", (e) => e.stopPropagation());
+       
     }
 
     hideContextMenu() {
@@ -94,7 +73,6 @@ export default class extends Controller {
 
         //On affiche le menu contextuel
         this.boundShowContextMenu(event);
-        // buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, {});
     }
 
 
@@ -120,10 +98,6 @@ export default class extends Controller {
 
     handleContextMenuInitialized(event) {
         console.log(this.nomControleur + " - HandleContextMenuInitialized");
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-        //     titre: "Prêt",
-        //     message: "Le ménu contextuel est initialisé. Position: " + this.idObjet,
-        // });
     }
 
     handleContextMenuShow(event) {
@@ -142,9 +116,6 @@ export default class extends Controller {
      * @param {CustomEvent} event L'événement personnalisé déclenché.
      */
     handlePublisheSelection(event) {
-        // --- CORRECTION : Ignorer les événements de restauration incomplets ---
-        // On ne traite que l'événement final qui contient les entités complètes.
-        // L'événement de restauration initial de list-tabs-controller n'a pas 'entities'.
         if (!event.detail.entities || event.detail.entities.length === 0 && event.detail.selection.length > 0) {
             return;
         }
@@ -155,8 +126,6 @@ export default class extends Controller {
         this.selectedEntitiesType = entityType;
         this.selectedEntitiesCanvas = canvas;
 
-        // --- CORRECTION : Mettre à jour les boutons du menu lors de la publication ---
-        // On simule un événement 'detail' pour la méthode organizeButtons
         this.organizeButtons({ detail: { selection: selection } });
     }
 
