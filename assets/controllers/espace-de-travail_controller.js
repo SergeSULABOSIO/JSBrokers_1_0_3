@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_ELEMENT_OPENNED, EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPENNED } from './base_controller.js';
+import { buildCustomEventForElement, EVEN_DATA_BASE_DONNEES_LOADED, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_ELEMENT_OPENNED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPENNED } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -34,6 +34,14 @@ export default class extends Controller {
         // NOUVEAU : Écoute l'ordre du cerveau pour revenir au tableau de bord.
         this.boundLoadDefault = this.loadDefaultComponent.bind(this);
         document.addEventListener('app:workspace.load-default', this.boundLoadDefault);
+
+        // --- NOUVEAU : Gestion de la barre de progression pour l'actualisation de la liste ---
+        // Écoute la demande de rafraîchissement pour afficher la barre.
+        this.boundHandleListRefreshRequest = this.handleListRefreshRequest.bind(this);
+        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleListRefreshRequest);
+        // Écoute la fin du chargement des données pour cacher la barre.
+        this.boundHandleListRefreshCompleted = this.handleListRefreshCompleted.bind(this);
+        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleListRefreshCompleted);
         this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
@@ -101,6 +109,9 @@ export default class extends Controller {
         document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
+        // --- NOUVEAU : Nettoyage des écouteurs ---
+        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleListRefreshRequest);
+        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleListRefreshCompleted);
     }
 
 
@@ -650,6 +661,22 @@ export default class extends Controller {
             this.dispatchOpenedEvent();
         }
 
+        this.progressBarTarget.style.display = 'none';
+    }
+
+    /**
+     * NOUVEAU : Affiche la barre de progression lors d'une demande d'actualisation de liste.
+     */
+    handleListRefreshRequest() {
+        console.log(this.nomControleur + " - Demande d'actualisation détectée, affichage de la barre de progression.");
+        this.progressBarTarget.style.display = 'block';
+    }
+
+    /**
+     * NOUVEAU : Cache la barre de progression une fois les données de la liste chargées.
+     */
+    handleListRefreshCompleted() {
+        console.log(this.nomControleur + " - Fin du chargement des données, masquage de la barre de progression.");
         this.progressBarTarget.style.display = 'none';
     }
 
