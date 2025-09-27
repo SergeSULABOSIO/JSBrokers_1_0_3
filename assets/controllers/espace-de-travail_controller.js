@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_DATA_BASE_DONNEES_LOADED, EVEN_LISTE_ELEMENT_OPEN_REQUEST, EVEN_LISTE_ELEMENT_OPENNED, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, EVEN_NAVIGATION_RUBRIQUE_OPENNED } from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [

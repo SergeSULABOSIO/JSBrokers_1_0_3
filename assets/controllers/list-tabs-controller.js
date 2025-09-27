@@ -1,6 +1,6 @@
 // assets/controllers/list-tabs-controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_DATA_BASE_DONNEES_LOADED } from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["rubriqueIcon", "rubriqueName", "tabsContainer", "tabContentContainer", "display"];
@@ -14,20 +14,10 @@ export default class extends Controller {
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
         this.boundNotifyCerveau = this.notifyCerveau.bind(this);
-
-        // document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
-        // document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
-        // document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
-        // document.addEventListener('totals-bar:request-context', this.boundNotifyCerveau);
-
-        // this.notifyCerveau();
     }
 
     disconnect() {
-        // document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundHandleSelection);
-        // document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
-        // document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundNotifyCerveau);
-        // document.removeEventListener('totals-bar:request-context', this.boundNotifyCerveau);
+        
     }
 
     /**

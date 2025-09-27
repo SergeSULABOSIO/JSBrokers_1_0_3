@@ -3,10 +3,8 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
     connect() {
-        // this.element.textContent = 'Hello Stimulus! Edit me in assets/controllers/hello_controller.js';
     }
 }
-
 
 /**
  * @param {string} url 
@@ -23,8 +21,6 @@ export function defineIcone(url, elementHtml, texteAccompagnement) {
     }
 }
 
-
-
 /**
  * @param {HTMLElement} htmlElement 
  * @param {string} valeurDisplay 
@@ -33,8 +29,6 @@ export function defineIcone(url, elementHtml, texteAccompagnement) {
 export function setIcone(icone, htmlElement, texteAccompagnement) {
     htmlElement.innerHTML = icone + " " + texteAccompagnement;
 }
-
-
 
 /**
  * 

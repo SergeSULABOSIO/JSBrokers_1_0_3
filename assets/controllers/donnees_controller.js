@@ -1,6 +1,6 @@
 // assets/controllers/sales-list_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_CHECKBOX_PUBLISH_SELECTION, EVEN_DATA_BASE_DONNEES_LOADED, EVEN_LISTE_PRINCIPALE_NOTIFY, EVEN_SHOW_TOAST } from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
 

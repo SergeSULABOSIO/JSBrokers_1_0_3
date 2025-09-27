@@ -1,6 +1,6 @@
 // assets/controllers/sales-list_controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement, EVEN_DATA_BASE_SELECTION_REQUEST, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST, EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, EVEN_SHOW_TOAST } from './base_controller.js';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["listBody", "rowCheckbox", "selectAllCheckbox"];
