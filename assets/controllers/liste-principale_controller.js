@@ -1,36 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 import { 
-    EVEN_ACTION_DIALOGUE_FERMER, 
-    EVEN_ACTION_DIALOGUE_OUVRIR, 
     buildCustomEventForElement, 
-    EVEN_CODE_ACTION_MODIFICATION, 
-    EVEN_CODE_ACTION_AJOUT, 
     EVEN_CODE_RESULTAT_OK, 
-    EVEN_LISTE_PRINCIPALE_ADD_REQUEST, 
-    EVEN_BOITE_DIALOGUE_INIT_REQUEST, 
-    EVEN_LISTE_PRINCIPALE_ADDED, 
-    EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, 
-    EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, 
-    EVEN_LISTE_PRINCIPALE_ALL_CHECKED, 
-    EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, 
-    EVEN_LISTE_PRINCIPALE_SETTINGS_UPDATED, 
-    EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, 
-    EVEN_LISTE_PRINCIPALE_CLOSED, 
-    EVEN_LISTE_PRINCIPALE_NOTIFY, 
-    EVEN_SERVER_RESPONSED, 
-    EVEN_BOITE_DIALOGUE_CLOSE, 
-    EVEN_CHECKBOX_PUBLISH_SELECTION, 
-    EVEN_LISTE_ELEMENT_EXPANDED, 
-    EVEN_LISTE_ELEMENT_MODIFY_REQUEST, 
-    EVEN_LISTE_ELEMENT_DELETE_REQUEST, 
-    EVEN_LISTE_ELEMENT_DELETED, 
-    EVEN_MENU_CONTEXTUEL_HIDE, 
-    EVEN_SHOW_TOAST, 
     EVEN_DATA_BASE_SELECTION_REQUEST, 
-    EVEN_DATA_BASE_SELECTION_EXECUTED, 
-    EVEN_DATA_BASE_DONNEES_LOADED, 
-    EVEN_LISTE_ELEMENT_OPEN_REQUEST, 
-    EVEN_LISTE_ELEMENT_OPENNED 
 } from './base_controller.js';
 
 export default class extends Controller {
@@ -108,15 +80,14 @@ export default class extends Controller {
         // NOUVEAU : Écoute la demande de rafraîchissement globale venant du cerveau
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
-
     }
 
     disconnect() {
         // --- CORRECTION : Nettoyage du bon écouteur ---
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         // NOUVEAU : Nettoyage de l'écouteur de sélection d'item
-        document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
         document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
+        document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
     }
 
     /**
