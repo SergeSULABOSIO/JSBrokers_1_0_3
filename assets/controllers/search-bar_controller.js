@@ -24,36 +24,20 @@ export default class extends Controller {
         this.toast = new Toast(this.advancedSearchToastTarget);
         
         this.boundhandleCriteriaDefined = this.handleCriteriaDefined.bind(this);
-        this.boundhandlePublisheSelection = this.handlePublisheSelection.bind(this);
-        
-        // Nouvelle méthode : Lier la fonction de mise à jour de la position pour pouvoir l'ajouter/supprimer
         this.boundUpdateToastPosition = this.updateToastPosition.bind(this);
-
-        // --- AJOUT 1/3 : Lier la nouvelle méthode de gestion ---
-        // document.addEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
-        // Nouvelle méthode : Nettoyer les écouteurs si le toast est fermé (par ex: par le bouton close)
-        // this.advancedSearchToastTarget.addEventListener('hide.bs.toast', () => {
-        //     window.removeEventListener('scroll', this.boundUpdateToastPosition);
-        //     window.removeEventListener('resize', this.boundUpdateToastPosition);
-        // });
+        // --- MODIFICATION : Écoute les nouveaux événements ---
+        document.addEventListener('ui:search.criteria-provided', this.boundhandleCriteriaDefined);
+        document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
 
-        // document.addEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
-        // --- AJOUT 2/3 : Ajouter l'écouteur d'événement ---
-        // document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
-        
-        // this.handleRequestCriteres();
+        this.handleRequestCriteres();
     }
 
     disconnect() {
-        // document.removeEventListener(EVEN_MOTEUR_RECHERCHE_CRITERES_DEFINED, this.boundhandleCriteriaDefined);
-        // Nouvelle méthode : S'assurer que les écouteurs sont supprimés si le contrôleur est déconnecté
-        // window.removeEventListener('scroll', this.boundUpdateToastPosition);
-        // window.removeEventListener('resize', this.boundUpdateToastPosition);
-        // document.removeEventListener(EVEN_CHECKBOX_PUBLISH_SELECTION, this.boundhandlePublisheSelection);
-        // --- AJOUT 3/3 : Supprimer l'écouteur pour éviter les fuites de mémoire ---
-        // document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleExternalRefresh);
+        // --- MODIFICATION : Nettoie les nouveaux écouteurs ---
+        document.removeEventListener('ui:search.criteria-provided', this.boundhandleCriteriaDefined);
+        document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
     }
 
     // --- Actions de l'utilisateur (logique mise à jour) ---
@@ -177,11 +161,11 @@ export default class extends Controller {
     // --- Méthodes existantes (inchangées) ---
 
     handleRequestCriteres() {
-        // this.dispatch(EVEN_MOTEUR_RECHERCHE_CRITERES_REQUEST);
+        this.dispatch('app:search.provide-criteria');
     }
 
     handleCriteriaDefined(event) {
-        this.criteriaValue = event.detail;
+        this.criteriaValue = event.detail.criteria;
         const defaultCriterion = this.criteriaValue.find(c => c.isDefault === true);
         if (defaultCriterion) {
             this.defaultCriterionValue = defaultCriterion;
@@ -306,7 +290,7 @@ export default class extends Controller {
     }
 
     dispatchSearchEvent() {
-        // this.dispatch(EVEN_MOTEUR_RECHERCHE_SEARCH_REQUEST, { criteria: this.activeFilters });
+        this.dispatch('app:base-données:sélection-request', { criteria: this.activeFilters });
         this.updateSummary();
     }
 
@@ -367,6 +351,6 @@ export default class extends Controller {
     }
 
     dispatch(name, detail = {}) {
-        // buildCustomEventForElement(document, name, true, true, detail);
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 }
