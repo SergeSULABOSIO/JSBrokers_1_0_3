@@ -1,50 +1,75 @@
-// assets/controllers/list-tabs-controller.js
 import { Controller } from '@hotwired/stimulus';
 
+/**
+ * @class ViewManagerController
+ * @extends Controller
+ * @description Gère la vue principale, y compris la navigation par onglets entre la liste principale
+ * et les listes de collections associées. Il maintient l'état de sélection pour chaque onglet.
+ */
 export default class extends Controller {
-    static targets = ["rubriqueIcon", "rubriqueName", "tabsContainer", "tabContentContainer", "display"];
-    static values = { entityCanvas: Object }
+    /**
+     * @property {HTMLElement[]} tabsContainerTargets - Le conteneur pour les boutons d'onglets.
+     * @property {HTMLElement[]} tabContentContainerTargets - Le conteneur pour le contenu des onglets.
+     * @property {HTMLElement[]} displayTargets - L'élément où afficher les messages de statut.
+     */
+    static targets = ["tabsContainer", "tabContentContainer", "display"];
 
+    /**
+     * Méthode du cycle de vie de Stimulus.
+     * S'exécute lorsque le contrôleur est connecté au DOM.
+     */
     connect() {
-        this.nomControleur = "LIST-TABS";
+        this.nomControleur = "VIEW-MANAGER";
+        /**
+         * @property {string} activeTabId - L'ID de l'onglet actuellement actif.
+         * @private
+         */
         this.activeTabId = 'principal';
-        this.tabStates = {}; // Essentiel pour la mémorisation de l'état
-        this.collectionTabsParentId = null; // NOUVEAU : Mémorise l'ID de l'entité parente des onglets de collection
+        /**
+         * @property {object} tabStates - Un objet pour mémoriser l'état de sélection de chaque onglet.
+         * @private
+         */
+        this.tabStates = {};
+        /**
+         * @property {number|null} collectionTabsParentId - L'ID de l'entité parente qui génère les onglets de collection.
+         * @private
+         */
+        this.collectionTabsParentId = null;
+
         this.boundHandleSelection = this.handleSelection.bind(this);
-        this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
+        this.boundHandleStatusUpdate = this.handleStatusUpdate.bind(this);
 
-        // --- CORRECTION : Activation des écouteurs ---
+        // --- CORRECTION : Écoute les événements diffusés par le Cerveau ---
         document.addEventListener('ui:selection.changed', this.boundHandleSelection);
-        document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
-    }
-
-    disconnect() {
-        // --- CORRECTION : Nettoyage des écouteurs ---
-        document.removeEventListener('ui:selection.changed', this.boundHandleSelection);
-        document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
-    }
-
-    dispatch(name, detail = {}) {
-        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+        document.addEventListener('app:status.updated', this.boundHandleStatusUpdate);
     }
 
     /**
-     * NOUVEAU : Met à jour la barre de résultats quand un événement est reçu.
+     * Méthode du cycle de vie de Stimulus.
+     * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
-    handleStatusNotify(event) {
+    disconnect() {
+        document.removeEventListener('ui:selection.changed', this.boundHandleSelection);
+        document.removeEventListener('app:status.updated', this.boundHandleStatusUpdate);
+    }
+
+    /**
+     * Met à jour la barre de statut lorsqu'un événement est reçu du Cerveau.
+     * @param {CustomEvent} event - L'événement `app:status.updated`.
+     */
+    handleStatusUpdate(event) {
         if (this.hasDisplayTarget) {
-            this.displayTarget.innerHTML = event.detail.message || 'Prêt.';
+            this.displayTarget.innerHTML = event.detail.titre || 'Prêt.';
         }
     }
 
-
-
     /**
-     * Gère la sélection depuis la liste principale pour créer les onglets.
+     * Gère la mise à jour de la sélection pour créer/supprimer les onglets de collection.
+     * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleSelection(event) {
-        // --- MODIFICATION : On mémorise la sélection pour l'onglet actif ---
-        if(this.activeTabId){
+        // On mémorise l'état de sélection pour l'onglet actuellement actif.
+        if (this.activeTabId) {
             this.tabStates[this.activeTabId] = event.detail;
         }
 
@@ -52,26 +77,24 @@ export default class extends Controller {
         const isSingleSelection = entities && entities.length === 1;
         const newParentId = isSingleSelection ? entities[0].id : null;
 
-        // Si on n'est pas sur l'onglet principal, ou si l'ID qui génère les onglets n'a pas changé, on ne fait rien.
-        // C'est la correction clé : on ne supprime/recrée que si c'est nécessaire.
-        if (this.activeTabId !== 'principal') return;
-        if (newParentId === this.collectionTabsParentId) return;
+        // On ne met à jour les onglets que si on est sur l'onglet principal
+        // et que l'ID de l'entité parente a changé.
+        if (this.activeTabId !== 'principal' || newParentId === this.collectionTabsParentId) {
+            return;
+        }
 
-        // La sélection a changé, on met à jour les onglets.
         this.collectionTabsParentId = newParentId;
         this._removeCollectionTabs();
 
         if (isSingleSelection) {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
-        } else {
-            // Si la sélection est multiple ou vide, on s'assure que l'ID parent est bien nul.
-            this.collectionTabsParentId = null;
         }
     }
 
     /**
      * Gère le clic sur un onglet pour changer de vue.
+     * @param {MouseEvent} event
      */
     async switchTab(event) {
         event.preventDefault();
@@ -79,69 +102,49 @@ export default class extends Controller {
         const newTabId = clickedTab.dataset.tabId;
         if (newTabId === this.activeTabId) return;
 
+        // Désactivation de l'ancien onglet
         const oldTab = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
         if (oldTab) oldTab.classList.remove('active');
 
-        // On masque TOUS les panneaux de contenu
+        // Masquage de tous les panneaux de contenu
         this.tabContentContainerTarget.childNodes.forEach(node => {
-            if (node.nodeType === 1) { // S'assurer que c'est un élément
-                node.style.display = 'none';
-            }
+            if (node.nodeType === 1) node.style.display = 'none';
         });
 
-        // On active le nouvel onglet
+        // Activation du nouvel onglet
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
 
-        // On cherche si le contenu de ce nouvel onglet existe déjà
         let newContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
 
         if (newContent) {
-            // S'il existe, on l'affiche simplement. La sélection est préservée !
             newContent.style.display = 'block';
         } else {
-            // S'il n'existe pas, on le charge depuis le serveur.
             newContent = await this._loadTabContent(clickedTab);
             this.tabContentContainerTarget.appendChild(newContent);
         }
 
-        // On restaure l'état de la sélection pour cet onglet.
-        this._restoreTabState(this.activeTabId);
-
-        // --- CORRECTION : Notifier la barre des totaux du changement de contexte ---
-        // On notifie le cerveau du changement de contexte.
-        setTimeout(() => this.notifyCerveau(), 50);
-    }
-
-
-    _restoreTabState(tabId) {
-        const savedState = this.tabStates[tabId];
+        // On restaure l'état de la sélection pour cet onglet et on notifie le Cerveau.
+        const savedState = this.tabStates[this.activeTabId];
         const payload = savedState || { entities: [], selection: [], canvas: {}, entityType: '' };
-        // --- MODIFICATION : On notifie le cerveau directement au lieu de redéclencher un événement de sélection ---
         this.notifyCerveau(payload);
     }
 
     /**
-     * Notifie le cerveau du contexte actuel de l'onglet actif.
-     * @param {object|null} selectionState - L'état de sélection à utiliser. Si null, il sera déduit.
+     * Notifie le Cerveau du contexte actuel de l'onglet actif, en l'enrichissant
+     * avec les informations sur les attributs numériques de la liste affichée.
+     * @param {object} selectionState - L'état de sélection à diffuser.
+     * @fires cerveau:event
+     * @private
      */
-    notifyCerveau(selectionState = null) {
-        console.log(this.nomControleur + " - Notification du cerveau sur le changement de contexte.");
+    notifyCerveau(selectionState) {
+        console.log(`${this.nomControleur} - Notification du Cerveau sur le changement de contexte.`);
         const activeContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
         const listControllerElement = activeContent ? activeContent.querySelector('[data-controller~="liste-principale"]') : null;
 
-        // L'état de sélection actuel (si non fourni)
-        const currentSelection = selectionState || this.tabStates[this.activeTabId] || { entities: [], selection: [], canvas: {}, entityType: '' };
+        let payload = { ...selectionState, numericAttributes: null, numericData: null };
 
-        let payload = {
-            ...currentSelection,
-            numericAttributes: null,
-            numericData: null
-        };
-
-        if (!listControllerElement) {
-            // Pas de liste, on envoie un payload vide pour que les outils se réinitialisent
-        } else {
+        if (listControllerElement) {
             const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericAttributesValue || '{}');
             const firstItemId = Object.keys(numericData)[0];
 
@@ -155,24 +158,15 @@ export default class extends Controller {
             }
         }
 
-        // Envoi de l'événement au cerveau
-        // --- CORRECTION : Activation de la notification au cerveau ---
         this.dispatch('cerveau:event', {
-            type: 'ui:selection.changed', // On réutilise l'événement standard de mise à jour de sélection
+            type: 'ui:selection.changed',
             source: this.nomControleur,
             payload: payload,
             timestamp: Date.now()
         });
-        console.log(this.nomControleur + " - Événement 'ui:selection.changed' envoyé au cerveau avec le payload:", payload);
     }
 
-    // --- Méthodes privées ---
-
-    _saveTabState(tabId, selectedEntities) {
-        this.tabStates[tabId] = {
-            selectedIds: selectedEntities.map(e => e.id)
-        };
-    }
+    // --- Méthodes privées d'aide ---
 
     _findCollectionsInCanvas(canvas) {
         if (!canvas || !canvas.liste) return [];
@@ -196,7 +190,7 @@ export default class extends Controller {
         Object.assign(tab.dataset, {
             tabId: tabId,
             tabType: 'collection',
-            action: 'click->list-tabs#switchTab',
+            action: 'click->view-manager#switchTab',
             collectionUrl: collectionUrl,
             entityName: collectionInfo.targetEntity
         });
@@ -212,21 +206,26 @@ export default class extends Controller {
             canAdd: 'true'
         });
         content.style.display = 'block';
-
-        // --- MODIFICATION : Utiliser le nouveau spinner stylisé ---
         content.innerHTML = '<div class="spinner-container"><div class="custom-spinner"></div></div>';
-        // -------------------------------------------------------
 
         try {
-            // MODIFICATION CLÉ : On attend (await) la réponse du fetch
             const response = await fetch(tabElement.dataset.collectionUrl);
             if (!response.ok) throw new Error('Échec du chargement des données.');
-            // Le contenu du spinner est remplacé SEULEMENT APRES la fin du chargement
             content.innerHTML = await response.text();
         } catch (error) {
             console.error("Erreur de chargement du contenu de l'onglet:", error);
             content.innerHTML = `<div class="alert alert-danger m-3">${error.message}</div>`;
         }
         return content;
+    }
+
+    /**
+     * Dispatche un événement personnalisé sur le document.
+     * @param {string} name - Le nom de l'événement.
+     * @param {object} [detail={}] - Les données à attacher à l'événement.
+     * @private
+     */
+    dispatch(name, detail = {}) {
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 }
