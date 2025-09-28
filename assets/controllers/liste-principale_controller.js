@@ -1,5 +1,4 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -54,14 +53,39 @@ export default class extends Controller {
 
 
     setEcouteurs() {
+        // --- CORRECTION : Lier toutes les méthodes de gestion d'événements ---
+        this.boundHandleDBRequest = this.handleDBRequest.bind(this);
+        this.boundHandleDonneesLoaded = this.handleDonneesLoaded.bind(this);
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
+
+        // --- CORRECTION : Activer tous les écouteurs nécessaires ---
         document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
+        document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
+        document.addEventListener('app:base-données:données-loaded', this.boundHandleDonneesLoaded);
+
+        // --- NOUVEAU : Écouteur pour le résultat de la requête DB ---
+        // On le place ici pour qu'il soit nettoyé dans disconnect()
+        this.boundHandleDBResult = this.handleDBResult.bind(this);
+        document.addEventListener('app:base-données:sélection-executed', this.boundHandleDBResult);
     }
 
     disconnect() {
+        // --- CORRECTION : Nettoyage complet de tous les écouteurs ---
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
         document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
+        document.removeEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
+        document.removeEventListener('app:base-données:sélection-executed', this.boundHandleDBResult);
+        document.removeEventListener('app:base-données:données-loaded', this.boundHandleDonneesLoaded);
+    }
+
+    /**
+     * NOUVEAU : Dispatche un événement customisé sur le document.
+     * @param {string} name Le nom de l'événement
+     * @param {object} detail Les données à envoyer
+     */
+    dispatch(name, detail = {}) {
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 
     /**
@@ -108,39 +132,17 @@ export default class extends Controller {
     
 
 
-    handleOpenRequest(event) {
-        // const { selection } = event.detail;
-        event.preventDefault();
-        event.stopPropagation();
-
-        console.log(this.nomControleur + " - Demande d'ouverture pour les éléments séléctionnés", this.tabSelectedEntities, this.selectedEntitiesType, this.selectedEntitiesCanvas);
-
-        // this.tabSelectedEntities.forEach(selectedEntity => {
-        //     buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, {
-        //         entity: selectedEntity,
-        //         entityType: this.selectedEntitiesType,
-        //         entityCanvas: this.selectedEntitiesCanvas
-        //     });
-        // });
-    }
-
-
-
     /**
-     * Propage un événement de réponse personnalisé contenant les résultats ou une erreur.
+     * Propage un événement de réponse personnalisé contenant les résultats (HTML) ou une erreur.
      * @param {object[]|null} results - Les données de la base de données.
      * @param {string|null} error - Le message d'erreur, le cas échéant.
      */
     dispatchResponse(results, error) {
-        // const event = new CustomEvent(EVEN_DATA_BASE_SELECTION_EXECUTED, {
-        //     bubbles: true, // Permet à l'événement de "buller" dans le DOM
-        //     detail: {
-        //         results: results,
-        //         error: error,
-        //         isSuccess: !error,
-        //     }
-        // });
-        // document.dispatchEvent(event);
+        this.dispatch('app:base-données:sélection-executed', {
+            results: results,
+            error: error,
+            isSuccess: !error,
+        });
     }
 
 
@@ -149,7 +151,6 @@ export default class extends Controller {
         const idObjet = String(id); // S'assurer que c'est une chaîne
 
         console.log(`${this.nomControleur} - Traitement du changement de sélection pour l'ID ${idObjet}. Nouvel état : ${isChecked}`);
-
         var entityJSON = null;
         var canvasJSON = null;
 
@@ -158,19 +159,13 @@ export default class extends Controller {
             return;
         }
 
-        try {
-            // 1. On parse les données JSON
-            entityJSON = entity; // Déjà un objet
-            canvasJSON = canvas; // Déjà un objet
+        // 1. Les données sont déjà des objets grâce au JSON.parse dans liste-element
+        entityJSON = entity;
+        canvasJSON = canvas;
 
-            // 2. (Optionnel mais recommandé) On vérifie que l'ID existe avant d'envoyer
-            if (typeof entityJSON.id === 'undefined' || entityJSON.id === null) {
-                console.error("L'entité parsée n'a pas d'ID valide.", entityJSON);
-                return;
-            }
-            // console.log(this.nomControleur + " - Objet:", idObjet, canvasJSON, entityJSON, entityType);
-        } catch (e) { // Cette partie est maintenant moins probable mais reste une sécurité
-            console.error("Erreur de parsing JSON dans 'liste-principale_controller'. Vérifiez les données dans le template Twig.", { error: e, entityData: entity });
+        // 2. (Optionnel mais recommandé) On vérifie que l'ID existe avant d'envoyer
+        if (typeof entityJSON.id === 'undefined' || entityJSON.id === null) {
+            console.error("L'entité reçue n'a pas d'ID valide.", entityJSON);
             return;
         }
 
@@ -188,11 +183,8 @@ export default class extends Controller {
             if (index > -1) {
                 this.tabSelectedCheckBoxs.splice(index, 1);
             }
-            // console.log(this.nomControleur + " -- ICI", index, idObjet);
 
             if (entityJSON && canvasJSON) {
-                //Utile pour le panneau à onglets
-                // const indexEntity = this.tabSelectedEntities.indexOf(entityJSON);
                 // On cherche l'index de l'entité dont l'ID correspond à 'idObjet'.
                 const indexEntity = this.tabSelectedEntities.findIndex(e => e.id == idObjet);
                 if (indexEntity > -1) {
@@ -205,10 +197,8 @@ export default class extends Controller {
                         this.selectedEntitiesCanvas = null;
                     }
                 }
-                // console.log(this.nomControleur + " -- ICI", indexEntity, entityJSON);
             }
         }
-        // console.log(this.nomControleur + " -- ICI", this.tabSelectedEntities, this.tabSelectedCheckBoxs);
         
         // --- CORRECTION : Mettre à jour la case "Tout cocher" AVANT de publier ---
         this.updateSelectAllCheckboxState();
@@ -231,117 +221,42 @@ export default class extends Controller {
         }
     }
 
-    boundHideContextMenu(event) {
-        // console.log(this.nomControleur + " - boundHideContextMenu");
-        // buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_HIDE, true, true, event);
-    }
-
     handleDeleteRequest(event) {
         const { titre, action, selection } = event.detail;
         console.log(this.nomControleur + " - handleDeleteRequest", event.detail);
-        var question = "Etes-vous sûr de vouloir supprimer cet élement?";
-        if (selection.length > 1) {
-            question = "Etes-vous sûr de vouloir supprimer ces " + selection.length + " élements séléctionnés?";
-        }
-        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-        //     titre: titre,
-        //     message: question,
-        //     action: action,
-        //     idObjet: -1,
-        //     selection: selection,
-        //     controleurPhp: this.controleurphpValue,
-        //     controleurSitimulus: this.controleurphpValue,
-        //     idEntreprise: this.identrepriseValue,
-        //     rubrique: this.rubriqueValue,
-        // });
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.delete-request', { selection: this.tabSelectedCheckBoxs });
     }
-
-    handleDeleted(event) {
-        console.log(this.nomControleur + " - HandleDeleted", event.detail);
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-        //     titre: "Prêt", message: "Suppression effectuée avec succès."
-        // });
-
-        // Déclencher l'événement global pour afficher la notification
-        // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Suppression réussie !', type: 'success' });
-    }
-
-
-    handleExpanded(event) {
-        console.log(this.nomControleur + " - handleExpanded", event.detail);
-        event.stopPropagation();
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-        //     titre: "Sélection",
-        //     message: "Détails affichés pour les élements " + event.detail.selection,
-        // });
-    }
-
 
     handleModifyRequest(event) {
-        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-        //     entity: this.tabSelectedEntities[0],
-        //     entityFormCanvas: this.entityFormCanvasValue
-        // });
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.edit-request', {
+            entity: this.tabSelectedEntities[0],
+            entityFormCanvas: this.entityFormCanvasValue
+        });
     }
 
     handleAddRequest(event) {
-        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
-        //     entity: {},
-        //     entityFormCanvas: this.entityFormCanvasValue
-        // });
-    }
-
-    handleAdded(event) {
-        console.log(this.nomControleur + " - HandleAdded", event.detail);
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true, {
-        //     titre: "Prêt", message: "Element ajouté avec succès."
-        // });
-
-        // Déclencher l'événement global pour afficher la notification
-        // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, { text: 'Element ajouté avec succès !', type: 'success' });
-    }
-
-    handleAllCheckRequest(event) {
-        console.log(this.nomControleur + " - handleAllCheckRequest", event.target);
-        event.stopPropagation();
-        event.preventDefault();
-        if (typeof event.target.getAttribute === 'function') {
-            if (event.target.getAttribute("type") == "checkbox") {
-                this.isChecked = event.target.checked;
-            }
-        } else {
-            const btCkBox = document.getElementById("myCheckbox");
-            btCkBox.checked = !btCkBox.checked;
-            this.isChecked = btCkBox.checked;
-        }
-        const checkBoxes = this.donneesTarget.querySelectorAll('input[type="checkbox"]');
-        this.tabSelectedCheckBoxs = [];
-        checkBoxes.forEach(currentCheckBox => {
-            currentCheckBox.checked = this.isChecked;
-            let idObjet = null;
-            if (this.isChecked == true) {
-                idObjet = (currentCheckBox.getAttribute("id")).split("check_")[1];
-                this.tabSelectedCheckBoxs.push(idObjet);
-            } else {
-                this.tabSelectedCheckBoxs.splice(this.tabSelectedCheckBoxs.indexOf(idObjet), 1);
-            }
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.add-request', {
+            entity: {},
+            entityFormCanvas: this.entityFormCanvasValue
         });
+    }
 
-        if (this.isChecked == true) {
-            this.tabSelectedEntities = this.getAllEntities();
-            this.selectedEntitiesType = this.rowCheckboxTargets[0].dataset.entityType;
-            this.selectedEntitiesCanvas = JSON.parse(this.rowCheckboxTargets[0].dataset.canvas);
-            console.log(this.nomControleur + " - ICI Chargement des objets réussi:", this.tabSelectedEntities);
-        } else {
-            this.tabSelectedEntities = [];
-            this.selectedEntitiesType = null;
-            this.selectedEntitiesCanvas = null;
-            console.log(this.nomControleur + " - ICI Suppression des objets réussi:", this.tabSelectedEntities);
-        }
-
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECKED, true, true, {
-        //     selection: this.tabSelectedCheckBoxs,
-        // });
+    /**
+     * Méthode centralisée pour envoyer un événement au cerveau.
+     * @param {string} type Le type d'événement pour le cerveau (ex: 'ui:toolbar.add-request').
+     * @param {object} payload Données additionnelles à envoyer.
+     */
+    notifyCerveau(type, payload = {}) {
+        console.log(`${this.nomControleur} - Notification du cerveau: ${type}`, payload);
+        this.dispatch('cerveau:event', {
+            type: type,
+            source: this.nomControleur,
+            payload: payload,
+            timestamp: Date.now()
+        });
     }
 
     /**
@@ -364,210 +279,10 @@ export default class extends Controller {
         }).filter(entity => entity !== null); // On retire les éventuelles erreurs de parsing
     }
 
-    handleAllChecked(event) {
-        console.log(this.nomControleur + " - HandleAllChecked", event);
-        // buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
-        //     selection: this.tabSelectedCheckBoxs,
-        // });
-    }
-
-    handleItemToutCocher(event) {
-        this.handleAllCheckRequest(event);
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, {});
-    }
-
-    handleCloseRequest(event) {
-        console.log(this.nomControleur + " - HandleCloseRequest");
-        this.updateMessage("Fermeture: " + "Redirection à la page d'acceuil...");
-        window.location.href = "/admin/entreprise";
-    }
-
-    handleClosed(event) {
-        console.log(this.nomControleur + " - HandleClosed");
-        event.stopPropagation();
-    }
-
-    notify(event) {
-        const { titre, message } = event.detail;
-        this.updateMessage(titre + ": " + message);
-    }
-
-    // handleRefreshRequest(event) {
-    //     console.log(this.nomControleur + " - HandleRefreshRequest", event.detail);
-    //     buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESHED, true, true, event.detail);
-    // }
-
-    handleSettingRequest(event) {
-        event.stopPropagation();
-        console.log(this.nomControleur + " - HandleSettingRequest");
-        this.updateMessage("Paramètres: " + "Redirection encours...");
-        window.location.href = "/register";
-    }
-
-    handleSettingUpdated(event) {
-        console.log(this.nomControleur + " - HandleSettingUpdated");
-    }
-
-    /**
-     * @description Gère l'événement d'ajout.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleFormulaireAjoutModifReussi(event) {
-        const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - ENREGISTREMENT REUSSI - On recharge la liste");
-        if (code == EVEN_CODE_RESULTAT_OK) { //Ok(0), Erreur(1)
-            // buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_FERMER, true, true, {});
-            this.outils_recharger(event);
-        } else {
-            // this.updateMessage(code + ": " + message);
-        }
-        event.stopPropagation();
-    }
-
-    /**
-     * @description Gère l'événement d'ajout.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleServerResponsed(event) {
-        const { idObjet, code, message } = event.detail; // Récupère les données de l'événement
-        console.log(this.nomControleur + " - handleServerResponded", event.detail);
-
-        // buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_CLOSE, true, true, event.detail);
-        //ACTION AJOUT = 0
-        if (code == EVEN_CODE_RESULTAT_OK) {
-            // On actualise la liste en y ajoutant l'élément créé
-            // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
-            // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADDED, true, true, event.detail);
-        }
-    }
-
-
-    /**
-     * @description Gère l'événement d'ajout.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleDialog_no(event) {
-        const { titre, message, action, data } = event.detail; // Récupère les données de l'événement
-        event.stopPropagation();
-        // console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, titre, message, action, data, "ON NE FAIT RIEN.");
-        // console.log(this.nomControleur + " - ON NE FAIT RIEN.");
-        this.updateMessage("Boîte de dialogue fermée.");
-        // Tu peux aussi prévenir la propagation de l'événement si nécessaire
-    }
-
-    /**
-     * 
-     * @param {String} titre 
-     * @param {String} textMessage 
-     */
-    action_afficherMessage(titre, textMessage) {
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_NOTIFY, true, true,
-        //     {
-        //         titre: titre,
-        //         message: textMessage,
-        //     }
-        // );
-    }
-
-
-    /**
-     * @description Gère l'événement d'ajout.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleDisplayMessage(event) {
-        const { titre, message } = event.detail; // Récupère les données de l'événement
-        event.stopPropagation();
-        // console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, message);
-        this.updateMessage(titre + ": " + message);
-    }
-
-
-    /**
-     * @description Gère l'événement d'ajout.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleItemSelectionner(event) {
-        const { titre, idobjet, isChecked, selectedCheckbox } = event.detail; // Récupère les données de l'événement
-        // console.log(this.nomControleur + " - EVENEMENT RECU: " + titre, "ID Objet: " + idobjet, "Checked: " + isChecked, "Selected Check Box: " + selectedCheckbox);
-        let currentSelectedCheckBoxes = new Set(this.tabSelectedCheckBoxs);
-        if (isChecked == true) {
-            currentSelectedCheckBoxes.add(String(selectedCheckbox));
-        } else {
-            currentSelectedCheckBoxes.delete(String(selectedCheckbox));
-        }
-        this.tabSelectedCheckBoxs = Array.from(currentSelectedCheckBoxes);
-        this.updateMessageSelectedCheckBoxes();
-        this.publierSelection();
-        event.stopPropagation();
-    }
-
-
-    /**
-     * @description Gère l'événement d'ajout.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleItemAjouter(event) {
-        const { titre } = event.detail; // Récupère les données de l'événement
-        // console.log(this.nomControleur + " - Titre: " + titre);
-        event.stopPropagation();
-        // console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        // buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
-        //     {
-        //         titre: "Ajout - " + this.rubriqueValue,
-        //         idObjet: -1,
-        //         action: EVEN_CODE_ACTION_AJOUT, //Ajout
-        //         entreprise: this.identrepriseValue,
-        //         utilisateur: this.utilisateurValue,
-        //         rubrique: this.rubriqueValue,
-        //         controleurphp: this.controleurphpValue,
-        //         controleursitimulus: this.controleursitimulusValue,
-        //     }
-        // );
-    }
-
-
-    /**
-     * @description Gère l'événement de modification.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleItemModifier(event) {
-        const { titre } = event.detail; // Récupère les données de l'événement
-        // console.log(this.nomControleur + " - Titre: " + titre + ", Selected checkbox: " + this.tabSelectedCheckBoxs);
-        event.stopPropagation();
-        // console.log(this.nomControleur + " - On lance un evenement dialogueCanAjouter");
-        // buildCustomEventForElement(this.listePrincipale, EVEN_ACTION_DIALOGUE_OUVRIR, true, true,
-        //     {
-        //         titre: "Edition - " + this.rubriqueValue,
-        //         idObjet: this.tabSelectedCheckBoxs[0].split("check_")[1],
-        //         action: EVEN_CODE_ACTION_MODIFICATION, // Modification
-        //         entreprise: this.identrepriseValue,
-        //         utilisateur: this.utilisateurValue,
-        //         rubrique: this.rubriqueValue,
-        //         controleurphp: this.controleurphpValue,
-        //         controleursitimulus: this.controleursitimulusValue,
-        //     }
-        // );
-    }
-
-
-    /**
-     * @description Gère l'événement de la recharge ou actualisation de la liste.
-     * @param {CustomEvent} event L'événement personnalisé déclenché.
-     */
-    handleRecharger(event) {
-        console.log(this.nomControleur + " - EVENEMENT RECU: RECHARGER CETTE LISTE");
-        event.stopPropagation();
-        this.outils_recharger(event);
-    }
-
-
-
-
-
     publierSelection() {
         console.log(this.nomControleur + " - Publication de la sélection locale vers le Cerveau.");
         // NOUVEAU : On notifie le cerveau de l'état de sélection complet.
-        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+        this.dispatch('cerveau:event', {
             type: 'ui:selection.updated',
             source: this.nomControleur,
             payload: {
@@ -593,12 +308,11 @@ export default class extends Controller {
      * NOUVELLE VERSION : Notifie le contrôleur parent pour afficher un message.
      */
     updateMessage(titre, message) {
-        const fullMessage = `<strong>[${titre}]</strong> ${message}`;
-        // // On envoie un événement que le `list-tabs-controller` va intercepter.
-        // document.dispatchEvent(new CustomEvent('list-status:notify', {
-        //     bubbles: true,
-        //     detail: { message: fullMessage }
-        // }));
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:status.notify', {
+            titre: titre,
+            message: message
+        });
     }
 
 
@@ -623,24 +337,6 @@ export default class extends Controller {
         }
     }
 
-
-    /**
-     * 
-     * @param {Event} event 
-     */
-    outils_quitter(event) {
-        console.log(this.nomControleur + " - Action Barre d'outils:", event.currentTarget);
-    }
-
-
-    /**
-     * 
-     * @param {Event} event 
-     */
-    outils_parametrer(event) {
-        console.log(this.nomControleur + " - Action Barre d'outils:", event.currentTarget);
-    }
-
     /**
      * Gère l'événement de demande de recherche.
      * @param {CustomEvent} event - L'événement doit contenir { detail: { entityName: '...', criteria: {...} } }
@@ -650,8 +346,6 @@ export default class extends Controller {
         const entityName = this.entiteValue;
         const page = 1;
         const limit = 100;
-
-        // console.log(this.nomControleur + " - ICI: ", entityName, criteria);
 
         if (!entityName || !criteria) {
             console.error('Event "app:base-données:sélection-request" is missing "entityName" or "criteria" in detail.', event.detail);
@@ -664,10 +358,6 @@ export default class extends Controller {
         // ---------------------------------------------------------
 
         try {
-            // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
-            //     text: 'Chargement, veuillez patiener...', type: 'info'
-            // });
-
             const response = await fetch(this.urlAPIDynamicQuery, { // La requête est déjà attendue, c'est bien.
                 method: 'POST',
                 headers: {
@@ -687,11 +377,6 @@ export default class extends Controller {
             this.dispatchResponse(null, error.message);
             // --- MODIFICATION : Afficher une erreur à la place du spinner ---
             this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
-            // ---------------------------------------------------------------
-
-            // buildCustomEventForElement(document, EVEN_SHOW_TOAST, true, true, {
-            //     text: error.message, type: 'error'
-            // });
         }
     }
 
@@ -710,41 +395,7 @@ export default class extends Controller {
         // On ne rafraîchit que la liste principale, pas les collections
         if (this.element.closest('[data-content-id="principal"]')) {
             console.log(this.nomControleur + " - Demande de rafraîchissement global reçue. Rechargement de la liste.");
-            this.dispatch(EVEN_DATA_BASE_SELECTION_REQUEST, { criteria: {} }); // Relance une recherche vide pour tout réafficher
+            this.dispatch('app:base-données:sélection-request', { criteria: {} }); // Relance une recherche vide pour tout réafficher
         }
-    }
-
-    /**
-     * NOUVEAU : Dispatche un événement customisé sur le document.
-     * @param {string} name Le nom de l'événement
-     * @param {object} detail Les données à envoyer
-     */
-    dispatch(name, detail = {}) {
-        buildCustomEventForElement(document, name, true, true, detail);
-    }
-
-    toggleRowSelection(event) {
-        // Trouve la checkbox à l'intérieur de la ligne cliquée (tr)
-        // const row = event.currentTarget;
-        // const checkbox = row.querySelector('input[type="checkbox"]');
-
-        // if (!checkbox) return;
-
-        // // Ne pas interférer si le clic était directement sur un lien, un bouton, ou la checkbox elle-même
-        // const isInteractiveElement = event.target.closest('a, button, input, label');
-        // if (isInteractiveElement && isInteractiveElement !== row) {
-        //     // Mettre à jour l'état visuel même si on clique sur la checkbox
-        //     if (event.target.type === 'checkbox') {
-        //         row.classList.toggle('row-selected', event.target.checked);
-        //     }
-        //     return;
-        // }
-
-        // // Inverser l'état de la checkbox et de la classe
-        // checkbox.checked = !checkbox.checked;
-        // row.classList.toggle('row-selected', checkbox.checked);
-
-        // // Déclencher manuellement un événement "change" pour que vos autres logiques (ex: tout cocher) fonctionnent
-        // checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     }
 }

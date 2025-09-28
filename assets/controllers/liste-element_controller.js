@@ -1,5 +1,4 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -32,6 +31,10 @@ export default class extends Controller {
         this.checkboxTarget.addEventListener('change', this.boundHandleCheckboxChange);
     }
 
+    dispatch(name, detail = {}) {
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    }
+
     disconnect() {
         // Nettoyage de l'écouteur
         this.contextMenuTarget.removeEventListener('contextmenu', this.boundHandleContextMenu);
@@ -47,8 +50,8 @@ export default class extends Controller {
         event.stopPropagation();
         console.log(this.nomControleur + " - Clic droit détecté. Demande d'ouverture du menu contextuel.");
 
-        // MODIFICATION : On envoie l'événement au cerveau
-        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+        // On envoie l'événement au cerveau
+        this.dispatch('cerveau:event', {
             type: 'ui:context-menu.request',
             source: this.nomControleur,
             payload: {
@@ -64,11 +67,13 @@ export default class extends Controller {
      */
     handleCheckboxChange(event) {
         const checkbox = this.checkboxTarget;
-        // console.log(`${this.nomControleur} - Case à cocher ID ${this.idobjetValue}. Nouvel état : ${checkbox.checked}. Notification du cerveau.`);
+        // --- AMÉLIORATION : Mettre à jour l'aspect visuel de la ligne ici ---
+        this.element.classList.toggle('row-selected', checkbox.checked);
         
         // On envoie un événement au cerveau avec toutes les informations nécessaires
         // pour que les autres contrôleurs puissent reconstituer l'état de la sélection.
-        buildCustomEventForElement(document, 'cerveau:event', true, true, {
+        // --- MODIFICATION : Utilisation de this.dispatch et non de buildCustomEventForElement ---
+        this.dispatch('cerveau:event', {
             type: 'ui:list-item.selection-changed',
             source: this.nomControleur,
             payload: {
@@ -94,10 +99,6 @@ export default class extends Controller {
         // L'événement 'change' sur la checkbox sera géré par `handleCheckboxChange`.
         const isInteractiveElement = event.target.closest('a, button, input, label');
         if (isInteractiveElement) {
-            // Appliquer l'effet visuel même si on clique sur la checkbox
-            if (event.target.type === 'checkbox') {
-                this.element.classList.toggle('row-selected', event.target.checked);
-            }
             return;
         }
 
