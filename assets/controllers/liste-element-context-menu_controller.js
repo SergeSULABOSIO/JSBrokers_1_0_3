@@ -1,5 +1,4 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -27,25 +26,35 @@ export default class extends Controller {
 
     init() {
         this.menu = this.menuTarget; // Le menu HTML
+        // --- CORRECTION : Cacher le menu au démarrage et écouter les clics pour le fermer ---
+        this.hideContextMenu();
+        document.addEventListener('click', this.boundHideContextMenu, false);
         this.setEcouteurs();
     }
 
     setEcouteurs() {
         this.boundHandleContextMenuInitRequest = this.handleContextMenuInitRequest.bind(this);
-        this.boundHandleContextMenuInitialized = this.handleContextMenuInitialized.bind(this);
-        this.boundHandleContextMenuShow = this.handleContextMenuShow.bind(this);
-        this.boundHandleContextMenuHide = this.handleContextMenuHide.bind(this);
         this.boundHandlePublisheSelection = this.handlePublisheSelection.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
+
+        // --- CORRECTION : Activation des écouteurs ---
+        document.addEventListener('ui:context-menu.request', this.boundHandleContextMenuInitRequest);
+        document.addEventListener('ui:selection.changed', this.boundHandlePublisheSelection);
+    }
+
+    dispatch(name, detail = {}) {
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 
     disconnect() {
-       
+        // --- CORRECTION : Nettoyage des écouteurs ---
+        document.removeEventListener('click', this.boundHideContextMenu, false);
+        document.removeEventListener('ui:context-menu.request', this.boundHandleContextMenuInitRequest);
+        document.removeEventListener('ui:selection.changed', this.boundHandlePublisheSelection);
     }
 
     hideContextMenu() {
         this.menu.style.display = 'none';
-        // console.log(this.nomControleur + " - CACHER MENU CONTEXTUEL");
     }
 
     handleContextMenuInitRequest(event) {
@@ -72,7 +81,7 @@ export default class extends Controller {
         this.organizeButtons(event);
 
         //On affiche le menu contextuel
-        this.boundShowContextMenu(event);
+        this.showContextMenu(event);
     }
 
 
@@ -94,20 +103,6 @@ export default class extends Controller {
             this.btSupprimerTarget.style.display = "block";
 
         }
-    }
-
-    handleContextMenuInitialized(event) {
-        console.log(this.nomControleur + " - HandleContextMenuInitialized");
-    }
-
-    handleContextMenuShow(event) {
-        console.log(this.nomControleur + " - HandleContextMenuShow");
-        this.boundShowContextMenu(event);
-    }
-
-    handleContextMenuHide(event) {
-        console.log(this.nomControleur + " - HandleContextMenuHide");
-        this.hideContextMenu();
     }
 
 
@@ -144,9 +139,23 @@ export default class extends Controller {
     /**
      * Cache le menu contextuel.
      */
-    boundShowContextMenu(event) {
+    showContextMenu(event) {
         this.menu.style.display = 'block'; // Affiche le menu
-        // buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INITIALIZED, true, true, event);
+    }
+
+    /**
+     * Méthode centralisée pour envoyer un événement au cerveau.
+     * @param {string} type Le type d'événement pour le cerveau (ex: 'ui:toolbar.add-request').
+     * @param {object} payload Données additionnelles à envoyer.
+     */
+    notifyCerveau(type, payload = {}) {
+        console.log(`${this.nomControleur} - Notification du cerveau: ${type}`, payload);
+        this.dispatch('cerveau:event', {
+            type: type,
+            source: this.nomControleur,
+            payload: payload,
+            timestamp: Date.now()
+        });
     }
 
     // --- Méthodes spécifiques aux actions du menu ---
@@ -154,28 +163,21 @@ export default class extends Controller {
     context_action_ajouter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ADD_REQUEST, true, true, {
-        //     titre: "Ajout",
-        //     action: EVEN_CODE_ACTION_AJOUT,
-        // });
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.add-request', {});
     }
 
     context_action_modifier(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {
-        // //     titre: "Modification",
-        // //     action: EVEN_CODE_ACTION_MODIFICATION,
-        // // });
-        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_MODIFY_REQUEST, true, true, {});
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.edit-request', {});
     }
 
     getUnifiedElementSelectionnes() {
         let data = [];
         if (this.tabSelectedCheckBoxs.length != 0) {
             data = this.tabSelectedCheckBoxs;
-        } else {
-            data.push(this.idObjet);
         }
         return data;
     }
@@ -184,40 +186,40 @@ export default class extends Controller {
         event.preventDefault();
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPEN_REQUEST, true, true, event);
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.open-request', {});
     }
 
     context_action_tout_cocher(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_ALL_CHECK_REQUEST, true, true, event);
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.check-all-request', {});
     }
 
     context_action_actualiser(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, true, true, event.detail);
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.refresh-request', {});
     }
 
     context_action_supprimer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_DELETE_REQUEST, true, true, {
-        //     titre: "Suppression",
-        //     action: EVEN_CODE_ACTION_SUPPRESSION,
-        //     selection: this.getUnifiedElementSelectionnes(),
-        // });
+        // --- MODIFICATION : Communication via le cerveau ---
+        this.notifyCerveau('ui:toolbar.delete-request', { selection: this.getUnifiedElementSelectionnes() });
     }
 
     context_action_parametrer(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_SETTINGS_REQUEST, true, true, event.detail);
+        this.notifyCerveau('ui:toolbar.settings-request', {});
     }
 
     context_action_quitter(event) {
         event.stopPropagation(); // Empêche le clic de masquer immédiatement le menu
         this.hideContextMenu();
-        // buildCustomEventForElement(document, EVEN_LISTE_PRINCIPALE_CLOSE_REQUEST, true, true, event.detail);
+        this.notifyCerveau('ui:toolbar.close-request', {});
     }
 }

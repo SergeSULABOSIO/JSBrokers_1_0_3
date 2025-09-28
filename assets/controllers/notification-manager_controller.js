@@ -1,17 +1,18 @@
 // assets/controllers/notification-manager_controller.js
 import { Controller } from '@hotwired/stimulus';
 import { Toast } from 'bootstrap'; // Important: importer Toast
-import {  } from './base_controller.js';
 
 export default class extends Controller {
     connect() {
         this.nomControleur = "NOTIFICATION-MANAGER";
-        // On écoute un événement global qui peut être déclenché depuis n'importe où
-        document.addEventListener(EVEN_SHOW_TOAST, this.show.bind(this));
+        // --- CORRECTION : Lier la méthode une seule fois et écouter l'événement diffusé par le cerveau ---
+        this.boundShow = this.show.bind(this);
+        document.addEventListener('app:notification.show', this.boundShow);
     }
 
     disconnect() {
-        document.removeEventListener(EVEN_SHOW_TOAST, this.show.bind(this));
+        // --- CORRECTION : Nettoyer le bon écouteur ---
+        document.removeEventListener('app:notification.show', this.boundShow);
     }
 
     show(event) {
