@@ -1,5 +1,4 @@
 import { Controller } from '@hotwired/stimulus';
-import {  } from './base_controller.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-manager'.
@@ -49,7 +48,7 @@ export default class extends Controller {
         this.nomControlleur = "Dialogue-Manager";
         this.boundOpen = this.open.bind(this);
         // Écoute l'événement générique pour ouvrir N'IMPORTE QUEL dialogue
-        document.addEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.boundOpen);
+        document.addEventListener('app:boite-dialogue:init-request', this.boundOpen);
     }
 
     /**
@@ -57,7 +56,7 @@ export default class extends Controller {
      * Nettoie l'écouteur d'événement pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener(EVEN_BOITE_DIALOGUE_INIT_REQUEST, this.boundOpen);
+        document.removeEventListener('app:boite-dialogue:init-request', this.boundOpen);
     }
 
     /**

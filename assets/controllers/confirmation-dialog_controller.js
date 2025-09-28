@@ -11,18 +11,18 @@ export default class extends Controller {
 
         this.boundAdjustZIndex = this.adjustZIndex.bind(this); // Garde une référence
 
-        this.bountHandleSuccess = this.handleSuccess.bind(this);
+        this.boundHandleSuccess = this.handleSuccess.bind(this);
         this.boundHandleError = this.handleError.bind(this);
         document.addEventListener('confirmation:open-request', this.boundOpen);
-        document.addEventListener('delete:success', this.bountHandleSuccess);
+        document.addEventListener('delete:success', this.boundHandleSuccess);
         document.addEventListener('delete:error', this.boundHandleError);
         this.element.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     disconnect() {
         document.removeEventListener('confirmation:open-request', this.boundOpen);
-        document.addEventListener('delete:success', this.bountHandleSuccess);
-        document.addEventListener('delete:error', this.boundHandleError);
+        document.removeEventListener('delete:success', this.boundHandleSuccess);
+        document.removeEventListener('delete:error', this.boundHandleError);
         this.element.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 

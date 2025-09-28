@@ -32,6 +32,10 @@ export default class extends Controller {
         this.deleteEventName = `collection:${this.componentId}:perform-delete`;
         this.boundPerformDelete = this.performDelete.bind(this);
         document.addEventListener(this.deleteEventName, this.boundPerformDelete);
+
+        // --- AJOUT : Écouteur pour le succès du dialogue ---
+        this.boundHandleDialogSuccess = this.handleDialogSuccess.bind(this);
+        document.addEventListener('dialog:success', this.boundHandleDialogSuccess);
     }
 
     /**
@@ -41,11 +45,11 @@ export default class extends Controller {
         event.preventDefault(); // Empêche le menu natif du navigateur
         event.stopPropagation();
 
-        // 1. Sélectionne l'élément cliqué pour que le menu sache sur quoi agir
-        this.selectItem(event, true); // Le `true` force la sélection
+        // 1. Sélectionne l'élément cliqué
+        this.selectItem(event, true); // Le `true` force la sélection pour le menu contextuel
 
         // 2. Demande l'ouverture du menu contextuel, comme le fait la liste principale
-        buildCustomEventForElement(document, EVEN_MENU_CONTEXTUEL_INIT_REQUEST, true, true, {
+        buildCustomEventForElement(document, 'ui:context-menu.request', true, true, {
             menuX: event.clientX,
             menuY: event.clientY,
         });
@@ -54,20 +58,25 @@ export default class extends Controller {
     selectItem(event, forceSelection = false) {
         if (event.target.closest('button, a')) return;
 
-        const currentItem = event.currentTarget;
-        
-        if (this.selectedItem && this.selectedItem !== currentItem) {
-            this.selectedItem.classList.remove('selected');
-        }
+        const clickedItem = event.currentTarget;
+        const isCurrentlySelected = clickedItem.classList.contains('selected');
 
-        if (forceSelection) {
-            currentItem.classList.add('selected');
-        } else {
-            currentItem.classList.toggle('selected');
-        }
-        
-        this.selectedItem = currentItem.classList.contains('selected') ? currentItem : null;
-        
+        // Déselectionner tous les autres items
+        this.listContainerTarget.querySelectorAll('.collection-item.selected').forEach(item => {
+            if (item !== clickedItem) {
+                item.classList.remove('selected');
+                const actions = item.querySelector('.item-actions');
+                if (actions) actions.style.opacity = '0';
+            }
+        });
+
+        // Gérer l'item cliqué
+        clickedItem.classList.toggle('selected', !isCurrentlySelected || forceSelection);
+        this.selectedItem = clickedItem.classList.contains('selected') ? clickedItem : null;
+
+        const actions = clickedItem.querySelector('.item-actions');
+        if (actions) actions.style.opacity = this.selectedItem ? '1' : '0';
+
         // Publie la sélection pour que la barre d'outils ET le menu contextuel se mettent à jour
         this.publishSelection();
     }
@@ -83,7 +92,7 @@ export default class extends Controller {
         }
 
         // On utilise le MÊME nom d'événement que la liste principale
-        buildCustomEventForElement(document, EVEN_CHECKBOX_PUBLISH_SELECTION, true, true, {
+        buildCustomEventForElement(document, 'ui:selection.updated', true, true, {
             entities: entities,
             selection: entities.map(e => e.id),
             canvas: {}, // Le canvas n'est pas nécessaire pour les actions du menu sur les collections
@@ -95,6 +104,8 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundHandleRefreshRequest);
         document.removeEventListener(this.deleteEventName, this.boundPerformDelete);
+        // --- AJOUT : Nettoyage de l'écouteur de succès ---
+        document.removeEventListener('dialog:success', this.boundHandleDialogSuccess);
     }
 
     handleRefreshRequest(event) {
@@ -221,26 +232,6 @@ export default class extends Controller {
         }
     }
 
-    selectItem(event) {
-        // Ne pas sélectionner si on clique sur un bouton d'action
-        if (event.target.closest('button')) return;
-
-        const currentItem = event.currentTarget;
-        const isSelected = currentItem.classList.contains('selected');
-
-        // Déselectionner tous les autres items
-        this.listContainerTarget.querySelectorAll('.collection-item.selected').forEach(item => {
-            item.classList.remove('selected');
-            item.querySelector('.item-actions').style.opacity = '0';
-        });
-
-        // Si l'item n'était pas déjà sélectionné, on le sélectionne
-        if (!isSelected) {
-            currentItem.classList.add('selected');
-            currentItem.querySelector('.item-actions').style.opacity = '1';
-        }
-    }
-
     // --- Actions CRUD ---
 
     /**
@@ -308,13 +299,11 @@ export default class extends Controller {
             this.loadItemList(); // Rafraîchir la liste
 
             // --- AJOUT : Annonce le succès de la suppression ---
-            // this.dispatch('delete:success');
-            buildCustomEventForElement(document, "delete:success", true, true, {});
+            buildCustomEventForElement(document, 'delete:success', true, true, {});
         } catch (error) {
             // TODO: Afficher une notification d'erreur (toast)
             console.error('Delete error:', error);
             // --- AJOUT : Annonce l'échec de la suppression avec le message d'erreur ---
-            // this.dispatch('delete:error', { detail: { message: error.message } });
             buildCustomEventForElement(document, 'delete:error', true, true, { message: error.message });
         }
     }
@@ -385,7 +374,7 @@ export default class extends Controller {
         }
         // --- FIN DE LA LOGIQUE AMÉLIORÉE ---
         // console.log(this.nomControlleur + " - openFormDialog", entity, entityFormCanvas, context);
-        buildCustomEventForElement(document, EVEN_BOITE_DIALOGUE_INIT_REQUEST, true, true, {
+        buildCustomEventForElement(document, 'app:boite-dialogue:init-request', true, true, {
             entity: entity,
             entityFormCanvas: entityFormCanvas,
             context: context

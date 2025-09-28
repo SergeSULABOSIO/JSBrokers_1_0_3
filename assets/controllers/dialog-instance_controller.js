@@ -375,6 +375,9 @@ export default class extends Controller {
      * @param {object} errors - Un objet où les clés sont les noms des champs et les valeurs sont les messages d'erreur.
      */
     displayErrors(errors) {
+        // --- CORRECTION : S'assurer que la cible du feedback est définie ---
+        this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+
         const form = this.elementContenu.querySelector('form');
         for (const [fieldName, messages] of Object.entries(errors)) {
             // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
