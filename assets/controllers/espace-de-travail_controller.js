@@ -1,5 +1,4 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
@@ -25,7 +24,7 @@ export default class extends Controller {
         this.restoreLastState(); // NOUVELLE MÉTHODE POUR LA RESTAURATION
 
         this.boundOpenTab = this.openTab.bind(this);
-        document.addEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
+        document.addEventListener('app:liste-element:openned', this.boundOpenTab);
 
         // NOUVEAU : Écoute la réponse du Cerveau pour afficher le composant chargé.
         this.boundHandleComponentLoaded = this.handleComponentLoaded.bind(this);
@@ -38,10 +37,10 @@ export default class extends Controller {
         // --- NOUVEAU : Gestion de la barre de progression pour l'actualisation de la liste ---
         // Écoute la demande de rafraîchissement pour afficher la barre.
         this.boundHandleListRefreshRequest = this.handleListRefreshRequest.bind(this);
-        document.addEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleListRefreshRequest);
+        document.addEventListener('app:list.refresh-request', this.boundHandleListRefreshRequest);
         // Écoute la fin du chargement des données pour cacher la barre.
         this.boundHandleListRefreshCompleted = this.handleListRefreshCompleted.bind(this);
-        document.addEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleListRefreshCompleted);
+        document.addEventListener('app:base-données:données-loaded', this.boundHandleListRefreshCompleted);
         this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
@@ -106,12 +105,12 @@ export default class extends Controller {
     }
 
     disconnect() {
-        document.removeEventListener(EVEN_LISTE_ELEMENT_OPENNED, this.boundOpenTab);
+        // --- CORRECTION : Nettoyage complet des écouteurs ---
+        document.removeEventListener('app:liste-element:openned', this.boundOpenTab);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
-        // --- NOUVEAU : Nettoyage des écouteurs ---
-        document.removeEventListener(EVEN_LISTE_PRINCIPALE_REFRESH_REQUEST, this.boundHandleListRefreshRequest);
-        document.removeEventListener(EVEN_DATA_BASE_DONNEES_LOADED, this.boundHandleListRefreshCompleted);
+        document.removeEventListener('app:list.refresh-request', this.boundHandleListRefreshRequest);
+        document.removeEventListener('app:base-données:données-loaded', this.boundHandleListRefreshCompleted);
     }
 
 
@@ -261,7 +260,7 @@ export default class extends Controller {
         // Activer le nouvel onglet créé
         this.activateTab({ currentTarget: tabElement });
 
-        //buildCustomEventForElement(document, EVEN_LISTE_ELEMENT_OPENNED, true, true, { entity: entity })
+        this.dispatch('app:liste-element:openned', { entity: entity });
         console.log(this.nomControleur + " - Onglet ouvert:", entity);
     }
 
@@ -403,7 +402,7 @@ export default class extends Controller {
             const details = await response.json();
 
             // Une fois les détails reçus, on déclenche l'événement standard d'ouverture d'onglet
-            this.dispatch(EVEN_LISTE_ELEMENT_OPENNED, details);
+            this.dispatch('app:liste-element:openned', details);
 
         } catch (error) {
             console.error("Impossible de charger les détails de l'entité liée :", error);
@@ -713,7 +712,7 @@ export default class extends Controller {
      * @param {object} detail Les données à propager.
      */
     dispatchRequestEvent(detail) {
-        buildCustomEventForElement(document, EVEN_NAVIGATION_RUBRIQUE_OPEN_REQUEST, true, true, {
+        this.dispatch('app:navigation-rubrique:open-request', {
             nom: detail.espaceDeTravailGroupNameParam,
             description: detail.espaceDeTravailDescriptionParam,
             composant_twig: detail.espaceDeTravailComponentNameParam
@@ -721,7 +720,6 @@ export default class extends Controller {
     }
 
     dispatchOpenedEvent() {
-        const event = new CustomEvent(EVEN_NAVIGATION_RUBRIQUE_OPENNED, { bubbles: true });
-        document.dispatchEvent(event);
+        this.dispatch('app:navigation-rubrique:openned');
     }
 }
