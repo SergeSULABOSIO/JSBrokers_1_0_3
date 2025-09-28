@@ -92,6 +92,12 @@ export default class extends Controller {
                 this.broadcast('app:workspace.load-default');
                 break;
 
+            // --- NOUVEAU : Gère le changement de contexte d'un onglet ---
+            case 'ui:tab.context-changed':
+                console.log("-> ACTION: Le contexte d'un onglet a changé. Diffusion de l'état de sélection mis à jour.");
+                this.broadcast('ui:selection.changed', payload);
+                break;
+
             // --- NOUVEAU : Gère la demande d'ajout depuis la barre d'outils ---
             case 'ui:toolbar.add-request':
                 console.log("-> ACTION: Demande d'ajout. Ouverture de la boîte de dialogue.");
@@ -131,6 +137,12 @@ export default class extends Controller {
             case 'ui:toolbar.refresh-request':
                 console.log("-> ACTION: Demande d'actualisation de la liste principale. Diffusion de l'ordre de rafraîchissement.");
                 this.broadcast('app:list.refresh-request', {});
+                break;
+            
+            // --- NOUVEAU : Gère la notification de statut ---
+            case 'ui:status.notify':
+                console.log("-> ACTION: Un message de statut a été reçu. Diffusion pour affichage.");
+                this.broadcast('app:status.updated', payload);
                 break;
 
             default:

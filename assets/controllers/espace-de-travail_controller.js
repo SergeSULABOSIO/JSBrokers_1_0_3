@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
