@@ -1,6 +1,5 @@
 // assets/controllers/list-tabs-controller.js
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = ["rubriqueIcon", "rubriqueName", "tabsContainer", "tabContentContainer", "display"];
@@ -13,11 +12,20 @@ export default class extends Controller {
         this.collectionTabsParentId = null; // NOUVEAU : Mémorise l'ID de l'entité parente des onglets de collection
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusNotify = this.handleStatusNotify.bind(this);
-        this.boundNotifyCerveau = this.notifyCerveau.bind(this);
+
+        // --- CORRECTION : Activation des écouteurs ---
+        document.addEventListener('ui:selection.changed', this.boundHandleSelection);
+        document.addEventListener('list-status:notify', this.boundHandleStatusNotify);
     }
 
     disconnect() {
-        
+        // --- CORRECTION : Nettoyage des écouteurs ---
+        document.removeEventListener('ui:selection.changed', this.boundHandleSelection);
+        document.removeEventListener('list-status:notify', this.boundHandleStatusNotify);
+    }
+
+    dispatch(name, detail = {}) {
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 
     /**
@@ -101,8 +109,8 @@ export default class extends Controller {
         this._restoreTabState(this.activeTabId);
 
         // --- CORRECTION : Notifier la barre des totaux du changement de contexte ---
-        // On attend un court instant que le DOM soit à jour avant de notifier.
-        // setTimeout(() => this.notifyCerveau(), 50);
+        // On notifie le cerveau du changement de contexte.
+        setTimeout(() => this.notifyCerveau(), 50);
     }
 
 
@@ -110,7 +118,7 @@ export default class extends Controller {
         const savedState = this.tabStates[tabId];
         const payload = savedState || { entities: [], selection: [], canvas: {}, entityType: '' };
         // --- MODIFICATION : On notifie le cerveau directement au lieu de redéclencher un événement de sélection ---
-        // this.notifyCerveau(payload);
+        this.notifyCerveau(payload);
     }
 
     /**
@@ -148,8 +156,14 @@ export default class extends Controller {
         }
 
         // Envoi de l'événement au cerveau
-        // buildCustomEventForElement(document, 'cerveau:event', true, true, { type: 'ui:tab.context-changed', source: this.nomControleur, payload: payload, timestamp: Date.now() });
-        // console.log(this.nomControleur + " - Événement 'ui:tab.context-changed' envoyé au cerveau avec le payload:", payload);
+        // --- CORRECTION : Activation de la notification au cerveau ---
+        this.dispatch('cerveau:event', {
+            type: 'ui:selection.changed', // On réutilise l'événement standard de mise à jour de sélection
+            source: this.nomControleur,
+            payload: payload,
+            timestamp: Date.now()
+        });
+        console.log(this.nomControleur + " - Événement 'ui:selection.changed' envoyé au cerveau avec le payload:", payload);
     }
 
     // --- Méthodes privées ---
