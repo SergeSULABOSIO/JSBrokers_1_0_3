@@ -1,3 +1,19 @@
+{#
+    Ce template est le composant principal de l'interface utilisateur, représentant le menu interactif global.
+    Il est piloté par le contrôleur Stimulus `workspace-manager` (anciennement `espace-de-travail`).
+
+    Sa structure est divisée en quatre colonnes :
+    1. `menu-col-1`: La barre de navigation principale avec les icônes des grands modules (Finances, Marketing, etc.).
+    2. `menu-col-2`: Une zone de contexte qui affiche soit la description d'un module, soit la liste des "rubriques" (sous-menus) du module sélectionné.
+    3. `menu-col-3`: L'espace de travail principal (`workspace`) où les composants de liste (ex: la liste des clients) sont chargés.
+    4. `menu-col-4`: La colonne de visualisation (`visualizationColumn`) qui apparaît lorsqu'un élément d'une liste est ouvert. Elle contient un système d'onglets pour afficher les détails de plusieurs éléments.
+
+    Le contrôleur `workspace-manager` gère :
+    - La navigation et la mise en évidence des éléments actifs.
+    - Le chargement dynamique des composants dans l'espace de travail via des appels au "Cerveau".
+    - La création, l'activation et la fermeture des onglets dans la colonne de visualisation.
+    - La persistance de l'état (se souvenir de la dernière rubrique ouverte).
+#}
 {% set menu = menu_data %}
 <div 
     {{ stimulus_controller('workspace-manager') }} 

@@ -1,0 +1,53 @@
+{#
+    Ce template représente la barre de résumé (ou de totaux) affichée sous la barre d'outils d'une liste.
+    Il est piloté par le contrôleur Stimulus `list-summary` (anciennement `totals-bar`).
+
+    Fonctionnement :
+    - Ce contrôleur est "passif". Il écoute les événements `ui:selection.changed` émis par le Cerveau.
+    - À la réception d'un événement, il met à jour la liste déroulante des attributs numériques disponibles
+      et recalcule les totaux (global et sélection) pour l'attribut actuellement sélectionné.
+#}
+<div
+    data-controller="list-summary"
+    class="d-flex align-items-center justify-content-between mb-0 mt-2"
+>
+    {# Sous-ensemble 1: Choix de l'attribut #}
+    <div class="d-flex align-items-center">
+        <label for="attribute-select" class="form-label me-2 mb-0 small" style="color: gray;">Totaliser :</label>
+        <select
+            class="form-select form-select-sm text-secondary text-muted small"
+            id="attribute-select"
+            style="width: auto;"
+            data-action="list-summary#recalculate"
+            data-list-summary-target="attributeSelector"
+        >
+           {# Les options sont peuplées dynamiquement par le contrôleur Stimulus. #}
+           {# On garde une option par défaut pour l'état initial. #}
+           <option value="">-- Choisir --</option>
+        </select>
+    </div>
+
+    {# Sous-ensemble 2: Total Global #}
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small">Total Global:</span>
+        <span
+            class="small fw-bolder"
+            data-list-summary-target="globalTotal"
+            style="color: #6c757d;"
+        >
+           0,00 $
+        </span>
+    </div>
+
+    {# Sous-ensemble 3: Total de la Sélection #}
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small">Total Sélection:</span>
+        <span
+            class="small fw-bold"
+            data-list-summary-target="selectionTotal"
+            style="color: #6c757d;"
+        >
+           0,00 $
+        </span>
+    </div>
+</div>
