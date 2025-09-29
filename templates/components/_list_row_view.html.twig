@@ -1,3 +1,16 @@
+{#
+    Ce template est un partiel qui contient les cellules (`<td>`) pour une seule ligne de la liste.
+    Il est inclus par `_list_row.html.twig`. Il ne possède pas son propre contrôleur mais définit
+    des `targets` pour les contrôleurs parents `list-row` et `list-manager`.
+
+    Targets définis :
+    - `list-manager-target="rowCheckbox"`: Permet au contrôleur `list-manager` de gérer l'action "tout cocher".
+    - `list-row-target="checkbox"`: Permet au contrôleur `list-row` de lire/écrire l'état de la case à cocher de sa propre ligne.
+
+    Paramètres attendus (hérités de `_list_row.html.twig`) :
+    - `entity`, `listeCanvas`, `entityCanvas`
+#}
+
 {# Colonne 1 : Statique (Case à cocher et ID) #}
 <td class="p-3 m-2" style="width:80px">
     <div class="form-group">
@@ -11,12 +24,11 @@
             name="check_[]"
             value="selectionnee"
             class="form-check-input"
-            data-liste-principale-target="rowCheckbox" {# Gardé pour la fonction "tout cocher" #}
-            data-liste-element-target="checkbox" {# NOUVEAU : Cible pour le contrôleur de ligne #}
+            data-list-manager-target="rowCheckbox" {# Cible pour le contrôleur de liste (tout cocher) #}
+            data-list-row-target="checkbox" {# Cible pour le contrôleur de ligne #}
             data-idobjet-value="{{ entity.id }}" 
             {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
             data-entity-type="{{entite_nom}}" 
-            {# data-entity='{{ entity|serialize('json', {groups: 'list:read'})|e('html_attr') }}'  #}
             data-entity='{{ entity|serialize('json', serialization_context)|e('html_attr') }}' 
             data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}' 
         >

@@ -372,7 +372,7 @@ export default class extends Controller {
         // NOUVEAU : Ajout conditionnel des attributs pour le TooltipManager
         if (attribute.description && contentValueElement) {
             // contentValueElement peut être l'élément 'content' lui-même, un 'a', ou un 'ul'
-            contentValueElement.dataset.controller = "tooltip-manager";
+            contentValueElement.dataset.controller = "tooltip";
             contentValueElement.dataset.tooltipContent = attribute.description;
             // Optionnel: vous pouvez ajouter une classe pour indiquer que l'élément a un tooltip
             contentValueElement.classList.add('has-tooltip');

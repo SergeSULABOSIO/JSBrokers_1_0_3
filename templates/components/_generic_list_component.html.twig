@@ -1,10 +1,25 @@
-	<div 
+{#
+    Ce template est un composant générique et réutilisable pour afficher une liste d'entités sous forme de tableau.
+    Il est le conteneur principal qui orchestre l'affichage des en-têtes, des données et de l'état vide.
+
+    Contrôleur Stimulus associé :
+    - `list-manager` (anciennement `liste-principale`): Gère l'ensemble de la liste, y compris la sélection, le tri,
+      la pagination (via des événements) et les actions globales comme "tout cocher" ou "ajouter".
+
+    Paramètres attendus :
+    - `data`: La collection d'entités à afficher.
+    - `entite_nom`: Le nom de l'entité (ex: "Client", "Piste").
+    - `entityFormCanvas`: La configuration du formulaire de l'entité, utilisée pour les actions d'ajout/édition.
+    - `listeCanvas`: La configuration d'affichage de la liste (colonnes, titres).
+    - `numericAttributes` (optionnel): Attributs numériques pour les totaux.
+#}
+<div 
         id="list-controller-{{ random() }}" {# ID unique pour chaque instance de liste #} 
-        data-controller="liste-principale" 
-        data-liste-principale-nbelements-value="{{ data|length }}" 
-        data-liste-principale-entite-value="{{ entite_nom }}" 
-        data-liste-principale-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
-        data-liste-principale-numeric-attributes-value='{{ numericAttributes|default({})|json_encode|e('html_attr') }}' 
+        data-controller="list-manager" 
+        data-list-manager-nbelements-value="{{ data|length }}" 
+        data-list-manager-entite-value="{{ entite_nom }}" 
+        data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
+        data-list-manager-numeric-attributes-value='{{ numericAttributes|default({})|json_encode|e('html_attr') }}' 
     > 
         <div class="table-scroll-wrapper flex-grow-1">
             {% if data is not empty %}
@@ -13,7 +28,7 @@
                         <tr class="text-center">
                             <th scope="col" style="width: 80px;">
                                 <div class="form-check m-2 justify-content-start">
-                                    <input class="form-check-input" type="checkbox" data-action="change->liste-principale#handleItemToutCocher" data-liste-principale-target="selectAllCheckbox">
+                                    <input class="form-check-input" type="checkbox" data-action="change->list-manager#handleItemToutCocher" data-list-manager-target="selectAllCheckbox">
                                     <label class="text-secondary">Id.</label>
                                 </div>
                             </th>
@@ -29,7 +44,7 @@
                             {% endfor %}
                         </tr>
                     </thead>
-                    <tbody class="table-group-divider context-target" data-liste-principale-target="donnees">
+                    <tbody class="table-group-divider context-target" data-list-manager-target="donnees">
                         {{ include('components/_list_donnees.html.twig', {
                         'data': data,
                         'entityCanvas': entityCanvas,
@@ -39,12 +54,12 @@
                     </tbody>
                 </table>
             {% else %}
-                <div data-liste-principale-target="donnees">
+                <div data-list-manager-target="donnees">
                     {{ include('components/_empty_state.html.twig', {
                         title: "Votre liste " ~ entite_nom|lower ~ " est vide",
                         description: "Commencez par ajouter un " ~ entite_nom|lower ~ " pour organiser vos données.",
                         button_text: "Ajouter un " ~ entite_nom|lower,
-                        button_action: "click->liste-principale#handleAddRequest",
+                        button_action: "click->list-manager#handleAddRequest",
                         icon_name: entityCanvas.parametres.icone | default('lucide:inbox')
                     }) }}
                 </div>

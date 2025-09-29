@@ -1,8 +1,17 @@
-{# templates/components/_rubrique_list_index.html.twig #}
+{#
+    Ce template est le conteneur principal pour l'affichage d'une "rubrique" (une liste d'entités).
+    Il est piloté par le contrôleur Stimulus `view-manager` (anciennement `list-tabs`).
+
+    Fonctionnement :
+    - Le `view-manager` gère la navigation par onglets. L'onglet "Principal" affiche la liste principale.
+    - Lorsqu'un élément de la liste principale est sélectionné, il peut créer dynamiquement de nouveaux onglets
+      pour afficher les collections liées à cet élément (ex: les contacts d'un client).
+    - Il orchestre l'affichage des composants enfants : barre d'outils, barre de recherche, barre de résumé, et la liste elle-même.
+#}
 <div 
     class="d-flex flex-column h-100"
-    data-controller="list-tabs"
-    data-list-tabs-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}'
+    data-controller="view-manager"
+    data-view-manager-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}'
 >
     {# ================================================================== #}
     {# SECTION 1 : PANNEAU SUPÉRIEUR FIXE (HEADER & OUTILS)             #}
@@ -13,26 +22,26 @@
                 <twig:UX:Icon 
                     name="{{ entityCanvas.parametres.icone | default('lucide:file-text') }}" 
                     style="width: 40px; height: 40px; color: #343a40;"
-                    data-list-tabs-target="rubriqueIcon"
+                    data-view-manager-target="rubriqueIcon"
                 />
             </div>
             <div class="flex-grow-1">
-                <div class="rubrique-title" data-list-tabs-target="rubriqueName">{{ entityCanvas.parametres.description | default('Rubrique') }}</div>
-                <div class="list-tabs-container" data-list-tabs-target="tabsContainer">
-                    <button class="list-tab active" data-tab-id="principal" data-action="click->list-tabs#switchTab">Principal</button>
+                <div class="rubrique-title" data-view-manager-target="rubriqueName">{{ entityCanvas.parametres.description | default('Rubrique') }}</div>
+                <div class="list-tabs-container" data-view-manager-target="tabsContainer">
+                    <button class="list-tab active" data-tab-id="principal" data-action="click->view-manager#switchTab">Principal</button>
                 </div>
             </div>
         </div>
-        <div class="p-2">{{ include("components/_liste_barre_outils.html.twig") }}</div>
+        <div class="p-2">{{ include("components/_toolbar.html.twig") }}</div>
         <div class="p-2 pt-0">{{ component('_search_bar') }}</div>
-        <div class="p-2 pt-0">{{ include('components/_totals_bar.html.twig') }}</div>
-        <div class="p-2 small text-muted" data-list-tabs-target="display">Prêt.</div>
+        <div class="p-2 pt-0">{{ include('components/_list_summary.html.twig') }}</div>
+        <div class="p-2 small text-muted" data-view-manager-target="display">Prêt.</div>
     </div>
 
     {# ================================================================== #}
     {# SECTION 2 : ZONE DE CONTENU DYNAMIQUE (LISTES)                     #}
     {# ================================================================== #}
-    <div class="flex-grow-1" style="overflow-y: auto;" data-list-tabs-target="tabContentContainer">
+    <div class="flex-grow-1" style="overflow-y: auto;" data-view-manager-target="tabContentContainer">
         <div data-content-id="principal" data-entity-name="{{ entite_nom }}" data-can-add="true">
             {# On utilise notre nouveau composant générique pour la liste principale #}
             {{ include('components/_generic_list_component.html.twig', {
@@ -45,6 +54,6 @@
             }) }}
         </div>
     </div>
-    {{ include('components/_menu_contextuel.html.twig') }}
+    {{ include('components/_context_menu.html.twig') }}
     <div data-controller="dialog-manager"></div>
 </div>

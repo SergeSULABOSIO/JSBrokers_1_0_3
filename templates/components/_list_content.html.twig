@@ -1,5 +1,18 @@
+{#
+    Ce template est responsable de l'affichage du contenu d'une liste, c'est-à-dire les lignes de données.
+    Il est conçu pour être inséré dynamiquement dans le `<tbody>` d'un tableau par le contrôleur `list-manager`.
+
+    Contrôleur Stimulus associé :
+    - `api-response-notifier`: Ce contrôleur n'a pas d'interaction visible. Son seul rôle est de notifier le "Cerveau"
+      des métadonnées de la réponse API (informations de pagination, statut) dès qu'il est chargé dans le DOM.
+      Le Cerveau relaie ensuite ces informations à d'autres composants, comme le gestionnaire de pagination.
+
+    Paramètres attendus :
+    - `pagination`: Un objet contenant les items à afficher (`pagination.items`) et les détails de la pagination (`page`, `limit`, `totalItems`).
+    - `listeCanvas`: La configuration d'affichage de la liste, passée au sous-template `_list_row.html.twig`.
+    - `status`: Un objet décrivant le statut de la liste (nombre d'éléments, totaux, etc.).
+#}
 <div 
-    {# Le contrôleur qui notifie le Cerveau des métadonnées de la réponse API (pagination, etc.) #}
     data-controller="api-response-notifier"
     data-api-response-notifier-status-value="{{ status | json_encode }}"
     data-api-response-notifier-page-value="{{ pagination.page }}"
@@ -7,15 +20,11 @@
     data-api-response-notifier-totalitems-value="{{ pagination.totalItems }}"
 >
     {% if pagination.items|length == 0 %}
-        <tr>
-            <td class="p-3 m-2" style="width:80px"></td>
-            <td class="p-2">Aucune information trouvée!</td>
-            <td></td>
-        </tr>
+        {# L'état vide est maintenant géré par _generic_list_component.html.twig, mais on garde une sécurité ici. #}
+        <tr><td colspan="100%" class="text-center p-4">Aucune information trouvée pour les critères actuels.</td></tr>
     {% else %}
-        {# Boucler les donnees #}
         {% for entity in pagination.items %}
-            {{ include('components/_list_row.html.twig', { item: entity, canvas: canvas }) }}
+            {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas }) }}
         {% endfor %}
     {% endif %}
 </div>

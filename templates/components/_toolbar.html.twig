@@ -1,0 +1,78 @@
+{#
+    Ce template représente la barre d'outils contextuelle qui apparaît au-dessus d'une liste.
+    Il est piloté par le contrôleur Stimulus `toolbar` (anciennement `barre-outils`).
+
+    Fonctionnement :
+    - Ce contrôleur est "passif". Il ne contient pas de logique complexe.
+    - Chaque bouton est configuré pour notifier le "Cerveau" d'une action spécifique (ex: 'ui:toolbar.add-request')
+      en utilisant la méthode `notify` du contrôleur.
+    - Il écoute les événements `ui:selection.changed` émis par le Cerveau pour mettre à jour l'état de ses boutons
+      (ex: activer/désactiver les boutons "Modifier", "Supprimer" en fonction du nombre d'éléments sélectionnés).
+#}
+<div 
+  class="context-toolbar" 
+  role="toolbar"
+  data-controller="toolbar"
+>
+    <button 
+        data-action="click->toolbar#notify" 
+        data-toolbar-event-name-param="ui:toolbar.close-request"
+        data-toolbar-target="btquitter" 
+        class="btn btn-sm btn-icon-danger" 
+        title="Quitter">
+        <twig:UX:Icon name="lucide:x-circle" />
+    </button>
+    <div class="toolbar-separator"></div>
+    <button 
+        data-action="click->toolbar#notify" 
+        data-toolbar-event-name-param="ui:toolbar.add-request"
+        data-toolbar-target="btajouter" 
+        class="btn btn-sm" 
+        title="Ajouter">
+        <twig:UX:Icon name="gridicons:add" />
+    </button>
+    <button 
+        data-action="click->toolbar#notify" 
+        data-toolbar-event-name-param="ui:toolbar.modify-request"
+        data-toolbar-target="btmodifier" 
+        class="btn btn-sm" 
+        title="Modifier" 
+        style="display:none;">
+        <twig:UX:Icon name="lucide:edit" />
+    </button>
+    <button 
+        data-action="click->toolbar#notify" 
+        data-toolbar-event-name-param="ui:toolbar.delete-request"
+        data-toolbar-target="btsupprimer" 
+        class="btn btn-sm btn-icon-danger" 
+        title="Supprimer" 
+        style="display:none;">
+        <twig:UX:Icon name="lucide:trash-2" />
+    </button>
+    <div class="toolbar-separator"></div>
+    <button 
+        data-action="click->toolbar#notify" 
+        data-toolbar-event-name-param="ui:toolbar.select-all-request"
+        data-toolbar-target="bttoutcocher" 
+        class="btn btn-sm" 
+        title="Sélectionner tout">
+        <twig:UX:Icon name="lucide:check-square" />
+    </button>
+    <button 
+        data-action="click->toolbar#notify" 
+        data-toolbar-event-name-param="ui:toolbar.refresh-request"
+        data-toolbar-target="btrecharger" 
+        class="btn btn-sm" 
+        title="Actualiser">
+        <twig:UX:Icon name="lucide:refresh-cw" />
+    </button>
+    <div class="toolbar-separator"></div>
+    <button 
+        data-action="click->toolbar#notify" 
+        data-toolbar-event-name-param="ui:toolbar.settings-request"
+        data-toolbar-target="btparametres" 
+        class="btn btn-sm" 
+        title="Paramètres">
+        <twig:UX:Icon name="lucide:settings" />
+    </button>
+</div>

@@ -1,0 +1,24 @@
+{#
+    Ce template représente une seule ligne (`<tr>`) dans un tableau de liste.
+    Il est le conteneur pour les cellules de la ligne et est piloté par son propre contrôleur Stimulus.
+
+    Contrôleur Stimulus associé :
+    - `list-row` (anciennement `list-element`): Gère les interactions spécifiques à cette ligne,
+      comme la sélection (clic), le double-clic pour ouvrir les détails, et la gestion de l'état de la case à cocher.
+      Il communique avec le contrôleur parent `list-manager` pour synchroniser l'état de sélection global.
+
+    Paramètres attendus :
+    - `entity`: L'objet de données pour cette ligne.
+    - `listeCanvas`: La configuration d'affichage de la liste.
+    - `entityCanvas`: La configuration du formulaire de l'entité.
+#}
+<tr
+    id="liste_row_{{ entity.id }}"
+    data-controller="list-row"
+    data-list-row-idobjet-value="{{ entity.id }}"
+    class="element-a-encadrer parent-a-options context-target align-middle"
+    data-action="click->list-row#toggleSelection dblclick->list-row#openDetails"
+>
+    {# Inclusion de la vue qui contient les `<td>` #}
+    {{ include('components/_list_row_view.html.twig') }}
+</tr>
