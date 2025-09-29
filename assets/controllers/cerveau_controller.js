@@ -74,9 +74,9 @@ export default class extends Controller {
                 break;
 
             // --- NOUVEAU : Relais du changement de sélection d'un élément de liste ---
-            case 'ui:list-item.selection-changed':
+            case 'ui:list-row.selection-changed':
                 console.log("-> ACTION: Relayer le changement de sélection d'un élément vers la liste principale.");
-                this.broadcast('app:list-item.selection-changed:relay', payload);
+                this.broadcast('app:list-row.selection-changed:relay', payload);
                 break;
 
             // --- NOUVEAU : Relais de l'état de sélection complet d'une liste ---
@@ -143,6 +143,12 @@ export default class extends Controller {
             case 'ui:status.notify':
                 console.log("-> ACTION: Un message de statut a été reçu. Diffusion pour affichage.");
                 this.broadcast('app:status.updated', payload);
+                break;
+
+            // --- NOUVEAU : Gère la notification de réponse de l'API (pagination, etc.) ---
+            case 'api:response.received':
+                console.log("-> ACTION: Une réponse de l'API a été reçue. Diffusion pour mise à jour de la pagination.");
+                this.broadcast('app:pagination.updated', payload);
                 break;
 
             default:

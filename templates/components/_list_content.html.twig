@@ -1,0 +1,21 @@
+<div 
+    {# Le contrôleur qui notifie le Cerveau des métadonnées de la réponse API (pagination, etc.) #}
+    data-controller="api-response-notifier"
+    data-api-response-notifier-status-value="{{ status | json_encode }}"
+    data-api-response-notifier-page-value="{{ pagination.page }}"
+    data-api-response-notifier-limit-value="{{ pagination.limit }}"
+    data-api-response-notifier-totalitems-value="{{ pagination.totalItems }}"
+>
+    {% if pagination.items|length == 0 %}
+        <tr>
+            <td class="p-3 m-2" style="width:80px"></td>
+            <td class="p-2">Aucune information trouvée!</td>
+            <td></td>
+        </tr>
+    {% else %}
+        {# Boucler les donnees #}
+        {% for entity in pagination.items %}
+            {{ include('components/_list_row.html.twig', { item: entity, canvas: canvas }) }}
+        {% endfor %}
+    {% endif %}
+</div>
