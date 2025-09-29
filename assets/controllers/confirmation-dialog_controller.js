@@ -1,36 +1,67 @@
 import { Controller } from '@hotwired/stimulus';
 import { Modal } from 'bootstrap';
 
+/**
+ * @class ConfirmationDialogController
+ * @extends Controller
+ * @description Gère une boîte de dialogue de confirmation générique.
+ * Ce contrôleur écoute les demandes d'ouverture venant du Cerveau, affiche la modale,
+ * et notifie le Cerveau de la confirmation de l'utilisateur. Il est entièrement découplé
+ * de l'action qu'il confirme.
+ */
 export default class extends Controller {
     static targets = ["title", "body", "confirmButton", "feedback", "progressBarContainer"];
 
     connect() {
-        this.nomControlleur = "Confirmation-dialog";
+        this.nomControlleur = "ConfirmationDialog";
         this.modal = new Modal(this.element);
-        this.boundOpen = this.open.bind(this);
 
-        this.boundAdjustZIndex = this.adjustZIndex.bind(this); // Garde une référence
+        // Centralisation des écouteurs d'événements via le Cerveau
+        this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
+        document.addEventListener('cerveau:event', this.boundHandleCerveauEvent);
 
-        this.boundHandleSuccess = this.handleSuccess.bind(this);
-        this.boundHandleError = this.handleError.bind(this);
-        document.addEventListener('confirmation:open-request', this.boundOpen);
-        document.addEventListener('delete:success', this.boundHandleSuccess);
-        document.addEventListener('delete:error', this.boundHandleError);
+        // Écouteur pour la gestion du z-index
+        this.boundAdjustZIndex = this.adjustZIndex.bind(this);
         this.element.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     disconnect() {
-        document.removeEventListener('confirmation:open-request', this.boundOpen);
-        document.removeEventListener('delete:success', this.boundHandleSuccess);
-        document.removeEventListener('delete:error', this.boundHandleError);
+        document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
         this.element.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     /**
-     * Ouvre la modale et prépare l'action de confirmation.
+     * Point d'entrée pour les événements venant du Cerveau.
+     * Filtre et délègue aux méthodes appropriées.
+     * @param {CustomEvent} event
      */
-    open(event) {
-        const { title, body, onConfirm } = event.detail;
+    handleCerveauEvent(event) {
+        const { type, payload } = event.detail;
+        switch (type) {
+            case 'ui:confirmation.request':
+                this.open(payload);
+                break;
+            case 'ui:confirmation.close':
+                this.close();
+                break;
+            case 'app:error.api':
+                // Si une erreur API survient pendant que la confirmation est en attente, on arrête le chargement.
+                if (this.confirmButtonTarget.disabled) {
+                    this.handleError(payload);
+                }
+                break;
+        }
+    }
+
+    /**
+     * Ouvre la modale et prépare l'action de confirmation.
+     * @param {object} payload - Les données de l'événement.
+     * @param {string} payload.title - Le titre de la modale.
+     * @param {string} payload.body - Le corps du message de la modale.
+     * @param {object} payload.onConfirm - L'action à notifier au Cerveau en cas de confirmation.
+     */
+    open(payload) {
+        const { title, body, onConfirm } = payload;
         this.titleTarget.innerHTML = title || 'Confirmation requise';
         this.bodyTarget.innerHTML = body || 'Êtes-vous sûr ?';
         this.onConfirmDetail = onConfirm;
@@ -39,6 +70,8 @@ export default class extends Controller {
 
     /**
      * Exécuté lorsque l'utilisateur clique sur "Confirmer".
+     * Notifie le Cerveau pour qu'il exécute l'action mise en attente.
+     * @fires cerveau:event
      */
     confirm() {
         this.toggleLoading(true); // Active le spinner
@@ -46,28 +79,24 @@ export default class extends Controller {
         this.feedbackTarget.innerHTML = ''; // Nettoie les anciens messages d'erreur
 
         // Si une action de confirmation a été définie...
-        if (this.onConfirmDetail && this.onConfirmDetail.eventName) {
-            document.dispatchEvent(new CustomEvent(this.onConfirmDetail.eventName, {
-                bubbles: true,
-                detail: this.onConfirmDetail.detail || {}
-            }));
+        if (this.onConfirmDetail && this.onConfirmDetail.type) {
+            this.notifyCerveau(this.onConfirmDetail.type, this.onConfirmDetail.payload || {});
         }
-        // setTimeout(() => { this.close(); }, 50);
     }
 
-    // NOUVEAU : Gère l'événement de succès
-    handleSuccess() {
-        this.close();
-    }
-
-    // NOUVEAU : Gère l'événement d'erreur
-    handleError(event) {
+    /**
+     * Gère un événement d'erreur reçu pendant le processus de confirmation.
+     * Affiche le message d'erreur et réactive le bouton.
+     * @param {object} payload - Le payload de l'événement d'erreur.
+     * @param {string} payload.error - Le message d'erreur.
+     */
+    handleError(payload) {
         this.toggleLoading(false); // Stoppe le spinner
         this.toggleProgressBar(false);
-        this.feedbackTarget.innerHTML = event.detail.message || "Une erreur est survenue.";
+        this.feedbackTarget.innerHTML = payload.error || "Une erreur est survenue.";
     }
 
-    // NOUVEAU : Gère l'affichage du spinner
+    // Gère l'affichage du spinner et l'état du bouton de confirmation.
     toggleLoading(isLoading) {
         const button = this.confirmButtonTarget;
         const spinner = button.querySelector('.spinner-border');
@@ -99,7 +128,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVELLE VERSION : Cherche le z-index le plus élevé et se place au-dessus.
+     * Ajuste le z-index pour s'assurer que cette modale apparaît au-dessus des autres.
      */
     adjustZIndex() {
         // Trouve tous les backdrops visibles
@@ -132,11 +161,25 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Affiche ou cache la barre de progression.
+     * Affiche ou cache la barre de progression.
      */
     toggleProgressBar(isLoading) {
         if (this.hasProgressBarContainerTarget) {
             this.progressBarContainerTarget.classList.toggle('is-loading', isLoading);
         }
+    }
+
+    /**
+     * Méthode centralisée pour envoyer un événement au Cerveau.
+     * @param {string} type - Le type de l'événement.
+     * @param {object} [payload={}] - Les données associées à l'événement.
+     * @private
+     */
+    notifyCerveau(type, payload = {}) {
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: { type, source: this.nomControlleur, payload, timestamp: Date.now() }
+        });
+        this.element.dispatchEvent(event);
     }
 }

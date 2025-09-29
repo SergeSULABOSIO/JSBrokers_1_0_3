@@ -1,6 +1,10 @@
 import { Controller } from '@hotwired/stimulus';
-import { buildCustomEventForElement } from './base_controller.js';
 
+/**
+ * @class WorkspaceManagerController
+ * @extends Controller
+ * @description Gère l'espace de travail principal de l'application, y compris la navigation, le chargement dynamique des composants, la gestion des onglets et la persistance de l'état.
+ */
 export default class extends Controller {
     static targets = [
         "progressBar",
@@ -21,10 +25,10 @@ export default class extends Controller {
     activeRubriqueItem = null;
 
     connect() {
-        this.nomControleur = "Espace de travail";
-        this.restoreLastState(); // NOUVELLE MÉTHODE POUR LA RESTAURATION
+        this.nomControleur = "WorkspaceManager";
+        this.restoreLastState();
 
-        this.boundOpenTab = this.openTab.bind(this);
+        this.boundOpenTabInVisualization = this.openTabInVisualization.bind(this);
         document.addEventListener('app:liste-element:openned', this.boundOpenTab);
 
         // NOUVEAU : Écoute la réponse du Cerveau pour afficher le composant chargé.
@@ -46,7 +50,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Restaure le dernier état de la page.
+     * Restaure la dernière vue active en se basant sur les informations stockées en session.
      */
     restoreLastState() {
         const savedStateJSON = sessionStorage.getItem('lastActiveState');
@@ -59,7 +63,7 @@ export default class extends Controller {
 
         // Cas 1 : C'est une rubrique (elle a un groupe parent)
         if (savedState.group) {
-            const groupElement = this.element.querySelector(`[data-espace-de-travail-group-name-param='${savedState.group}']`);
+            const groupElement = this.element.querySelector(`[data-workspace-manager-group-name-param='${savedState.group}']`);
             if (groupElement) {
                 // On clique d'abord sur le groupe pour afficher les rubriques
                 groupElement.click();
@@ -67,7 +71,7 @@ export default class extends Controller {
                 // Ensuite, on cherche et clique sur la rubrique elle-même (qui est maintenant visible)
                 // requestAnimationFrame s'assure que le DOM a eu le temps de se mettre à jour
                 requestAnimationFrame(() => {
-                    const rubriqueElement = this.contentZoneTarget.querySelector(`[data-espace-de-travail-component-name-param='${savedState.component}']`);
+                    const rubriqueElement = this.contentZoneTarget.querySelector(`[data-workspace-manager-component-name-param='${savedState.component}']`);
                     if (rubriqueElement) {
                         rubriqueElement.click();
                     } else {
@@ -80,7 +84,7 @@ export default class extends Controller {
         }
         // Cas 2 : C'est un élément principal (Tableau de bord, Paramètres)
         else if (savedState.component) {
-            const elementToClick = this.element.querySelector(`[data-espace-de-travail-component-name-param='${savedState.component}']`);
+            const elementToClick = this.element.querySelector(`[data-workspace-manager-component-name-param='${savedState.component}']`);
             if (elementToClick) {
                 elementToClick.click();
             } else {
@@ -96,8 +100,8 @@ export default class extends Controller {
 
 
     /**
-     * NOUVEAU: Méthode pour charger le tableau de bord par défaut
-     * afin d'éviter la répétition du code.
+     * Charge le composant par défaut (généralement le tableau de bord).
+     * @private
      */
     loadDefaultComponent() {
         if (this.hasDashboardItemTarget) {
@@ -106,8 +110,7 @@ export default class extends Controller {
     }
 
     disconnect() {
-        // --- CORRECTION : Nettoyage complet des écouteurs ---
-        document.removeEventListener('app:liste-element:openned', this.boundOpenTab);
+        document.removeEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
         document.removeEventListener('app:list.refresh-request', this.boundHandleListRefreshRequest);
@@ -116,12 +119,13 @@ export default class extends Controller {
 
 
     /**
-     * Filtre les éléments de l'accordéon en fonction de la saisie.
-     * Déclenché par l'événement "input".
+     * Filtre les éléments de l'accordéon dans un onglet en fonction de la saisie de l'utilisateur.
+     * Applique un surlignage sur le terme recherché.
+     * @param {InputEvent} event
      */
     filterAccordion(event) {
         const input = event.currentTarget;
-        const searchTerm = input.value.trim(); // Pas besoin de toLowerCase() ici
+        const searchTerm = input.value.trim();
         const tabContent = input.closest('.tab-content');
         const accordion = tabContent.querySelector('.accordion');
         const noResultsMessage = tabContent.querySelector('.no-results-message');
@@ -131,35 +135,33 @@ export default class extends Controller {
         items.forEach(item => {
             const titleElement = item.querySelector('.accordion-title');
             const toggleIcon = titleElement.querySelector('.accordion-toggle');
+            const iconHtml = toggleIcon ? toggleIcon.outerHTML : '';
 
-            // On s'assure que l'icône existe avant de continuer
-            if (!toggleIcon) return;
-
-            // Étape 1 : Stocker le titre original PROPRE (sans l'icône) une seule fois.
+            // Stocke le titre original une seule fois pour la performance
             if (!titleElement.dataset.originalTitle) {
-                // On clone l'élément, on enlève l'icône, puis on prend le texte restant.
                 const tempClone = titleElement.cloneNode(true);
-                tempClone.querySelector('.accordion-toggle').remove();
+                tempClone.querySelector('.accordion-toggle')?.remove();
                 titleElement.dataset.originalTitle = tempClone.textContent.trim();
             }
 
             const originalTitleText = titleElement.dataset.originalTitle;
 
-            // La recherche se fait en ignorant la casse
+            // La recherche est insensible à la casse
             if (originalTitleText.toLowerCase().includes(searchTerm.toLowerCase())) {
                 item.style.display = '';
                 visibleCount++;
 
-                // Étape 2 : Appliquer le surlignage uniquement si un terme est recherché
+                // Applique le surlignage si un terme est recherché
                 if (searchTerm) {
-                    // Regex pour trouver le terme de recherche sans être sensible à la casse
+                    // Regex insensible à la casse pour trouver le terme
                     const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-                    // '$&' dans la chaîne de remplacement réinsère la correspondance originale (préservant la casse)
+                    // '$&' réinsère la correspondance originale (pour préserver la casse)
                     const highlightedText = originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`);
-                    titleElement.innerHTML = `${toggleIcon.outerHTML} ${highlightedText}`;
+                    // Reconstruction robuste de l'innerHTML
+                    titleElement.innerHTML = `${iconHtml} ${highlightedText}`;
                 } else {
-                    // Pas de terme de recherche, on restaure le titre original
-                    titleElement.innerHTML = `${toggleIcon.outerHTML} ${originalTitleText}`;
+                    // Restaure le titre original si la recherche est vide
+                    titleElement.innerHTML = `${iconHtml} ${originalTitleText}`;
                 }
             } else {
                 item.style.display = 'none';
@@ -171,7 +173,7 @@ export default class extends Controller {
     }
 
     /**
-     * Réinitialise le champ de recherche et le filtre.
+     * Réinitialise le champ de recherche et le filtre de l'accordéon.
      */
     resetFilter(event) {
         const input = event.currentTarget.closest('.accordion-search-bar').querySelector('.accordion-search-input');
@@ -183,7 +185,7 @@ export default class extends Controller {
     }
 
     /**
-     * Donne le focus au champ de recherche quand on clique sur la barre.
+     * Donne le focus au champ de recherche de l'accordéon quand on clique sur la barre.
      */
     focusSearch(event) {
         // Empêche le focus si on clique sur un bouton
@@ -196,10 +198,10 @@ export default class extends Controller {
 
 
     /**
-     * Gère la requête d'ouverture d'un élément de la liste principale.
+     * Gère la requête d'ouverture d'un élément dans la colonne de visualisation.
      * @param {CustomEvent} event
      */
-    openTab(event) {
+    openTabInVisualization(event) {
         const { entity, entityType, entityCanvas } = event.detail;
         if (!entity || typeof entity !== 'object' || typeof entity.id === 'undefined' || entity.id === null) {
             console.error("Validation échouée : l'objet 'entity' est invalide ou ne contient pas d'ID.", event.detail);
@@ -222,7 +224,7 @@ export default class extends Controller {
 
 
     /**
-     * Crée un nouvel onglet et son contenu.
+     * Crée un nouvel onglet et son contenu (un accordéon) dans la colonne de visualisation.
      * @param {object} entity
      * @param {string} entityType
      * @param {object} entityCanvas - La nouvelle structure avec "paramètres" et "liste"
@@ -261,12 +263,11 @@ export default class extends Controller {
         // Activer le nouvel onglet créé
         this.activateTab({ currentTarget: tabElement });
 
-        this.dispatch('app:liste-element:openned', { entity: entity });
         console.log(this.nomControleur + " - Onglet ouvert:", entity);
     }
 
     /**
-     * Crée un item (ligne) pour l'accordéon.
+     * Crée un item (une ligne) pour l'accordéon d'un onglet.
      * @param {object} attribute - La description de l'attribut depuis entityCanvas
      * @param {object} entity - L'objet de données
      * @returns {HTMLElement} L'élément DOM de l'item d'accordéon.
@@ -277,8 +278,8 @@ export default class extends Controller {
         const item = document.createElement('div');
         item.className = 'accordion-item';
         const title = document.createElement('div');
-        title.className = 'accordion-title';
-        title.dataset.action = 'click->espace-de-travail#toggleAccordion';
+        title.className = 'accordion-title'; // Ensure this class is set
+        title.dataset.action = 'click->workspace-manager#toggleAccordion';
         title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
 
         const content = document.createElement('div');
@@ -296,7 +297,7 @@ export default class extends Controller {
                     const displayText = relatedEntity[attribute.displayField];
                     link.textContent = (displayText !== undefined && displayText !== null) ? displayText : 'Information non disponible';
 
-                    link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                    link.dataset.action = "click->workspace-manager#openRelatedEntity";
                     link.dataset.entityId = relatedEntity.id;
                     link.dataset.entityType = attribute.targetEntity;
                     content.appendChild(link);
@@ -321,7 +322,7 @@ export default class extends Controller {
                             const itemDisplayText = item[attribute.displayField];
                             link.textContent = (itemDisplayText !== undefined && itemDisplayText !== null) ? itemDisplayText : 'Information non disponible';
 
-                            link.dataset.action = "click->espace-de-travail#openRelatedEntity";
+                            link.dataset.action = "click->workspace-manager#openRelatedEntity";
                             link.dataset.entityId = item.id;
                             link.dataset.entityType = attribute.targetEntity;
 
@@ -383,6 +384,10 @@ export default class extends Controller {
     }
 
 
+    /**
+     * Gère le clic sur une entité liée dans un accordéon pour l'ouvrir dans un nouvel onglet.
+     * @param {MouseEvent} event
+     */
     async openRelatedEntity(event) {
         event.preventDefault(); // Empêche le lien de remonter en haut de la page
         event.stopPropagation(); // Empêche d'autres clics de se déclencher
@@ -402,8 +407,10 @@ export default class extends Controller {
             }
             const details = await response.json();
 
-            // Une fois les détails reçus, on déclenche l'événement standard d'ouverture d'onglet
-            this.dispatch('app:liste-element:openned', details);
+            // Notifie le Cerveau pour qu'il relaie la demande d'ouverture d'onglet.
+            // Le WorkspaceManager écoutera cet événement (app:liste-element:openned)
+            // pour effectivement créer l'onglet.
+            this.notifyCerveau('ui:related-entity.open-request', details);
 
         } catch (error) {
             console.error("Impossible de charger les détails de l'entité liée :", error);
@@ -414,13 +421,8 @@ export default class extends Controller {
         }
     }
 
-    dispatch(name, detail = {}) {
-        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
-    }
-
-
     /**
-     * Active un onglet spécifique et affiche son contenu. [cite: 50]
+     * Active un onglet spécifique et affiche son contenu.
      * @param {Event} event 
      */
     activateTab(event) {
@@ -445,7 +447,7 @@ export default class extends Controller {
 
 
     /**
-     * Ferme un onglet et son contenu. [cite: 53]
+     * Ferme un onglet et son contenu.
      * @param {Event} event 
      */
     closeTab(event) {
@@ -478,7 +480,7 @@ export default class extends Controller {
 
 
     /**
-     * Bascule l'affichage d'un item d'accordéon. [cite: 60]
+     * Bascule l'affichage du contenu d'un item d'accordéon (ouvert/fermé).
      * @param {Event} event 
      */
     toggleAccordion(event) {
@@ -503,6 +505,10 @@ export default class extends Controller {
 
     /**
      * Formate une valeur en fonction de son type.
+     * @param {*} value - La valeur à formater.
+     * @param {string} type - Le type de la valeur.
+     * @param {string} [unit=''] - L'unité à ajouter (ex: '€').
+     * @returns {string} La valeur formatée.
      */
     formatValue(value, type, unit = '') {
         if (value === null || typeof value === 'undefined') {
@@ -545,15 +551,15 @@ export default class extends Controller {
 
 
     /**
-     * NOUVEAU: Affiche les rubriques pour un élément de groupe donné.
+     * Affiche les rubriques (sous-menus) pour un groupe de navigation donné.
      * @param {HTMLElement} groupElement 
      */
     displayRubriquesForGroup(groupElement) {
-        if (!groupElement || !groupElement.dataset.espaceDeTravailGroupNameParam) {
+        if (!groupElement || !groupElement.dataset.workspaceManagerGroupNameParam) {
             this.contentZoneTarget.innerHTML = '';
             return;
         }
-        const groupName = groupElement.dataset.espaceDeTravailGroupNameParam.replace(/ /g, '_');
+        const groupName = groupElement.dataset.workspaceManagerGroupNameParam.replace(/ /g, '_');
         const templateContent = this.rubriquesTemplateTarget.content.querySelector(`#rubriques-${groupName}`);
 
         if (templateContent) {
@@ -569,12 +575,12 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     showGroupDescription(event) {
-        const description = event.currentTarget.dataset.espaceDeTravailDescriptionParam;
+        const description = event.currentTarget.dataset.workspaceManagerDescriptionParam;
         this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
     }
 
     /**
-     * MISE À JOUR: Utilise la nouvelle fonction pour afficher les rubriques.
+     * Gère le clic sur un groupe de navigation pour afficher ses rubriques.
      * @param {MouseEvent} event
      */
     showGroupRubriques(event) {
@@ -584,19 +590,19 @@ export default class extends Controller {
     }
 
     /**
-     * LOGIQUE MISE À JOUR: Restaure l'état de l'élément actif au lieu d'effacer.
+     * Restaure l'état de la zone de contenu lorsque la souris quitte un élément de navigation.
      * Déclenché lorsque la souris quitte un groupe.
      * @param {MouseEvent} event 
      */
     clearDescription(event) {
         if (this.activeNavItem) {
             // Si l'élément actif est un groupe, on réaffiche ses rubriques
-            if (this.activeNavItem.dataset.espaceDeTravailGroupNameParam) {
+            if (this.activeNavItem.dataset.workspaceManagerGroupNameParam) {
                 this.displayRubriquesForGroup(this.activeNavItem);
             }
             // Si c'est un autre type d'élément (Tableau de bord, Paramètres), on réaffiche sa description
-            else if (this.activeNavItem.dataset.espaceDeTravailDescriptionParam) {
-                const description = this.activeNavItem.dataset.espaceDeTravailDescriptionParam;
+            else if (this.activeNavItem.dataset.workspaceManagerDescriptionParam) {
+                const description = this.activeNavItem.dataset.workspaceManagerDescriptionParam;
                 this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
             }
         } else {
@@ -606,48 +612,42 @@ export default class extends Controller {
     }
 
     /**
-     * Charge un composant Twig dans l'espace de travail.
+     * Gère le clic sur une rubrique pour la charger dans l'espace de travail principal.
+     * Notifie le Cerveau de la demande de chargement.
      * @param {MouseEvent} event
      */
     async loadComponent(event) {
         const clickedElement = event.currentTarget;
-        const componentName = clickedElement.dataset.espaceDeTravailComponentNameParam;
-        const description = clickedElement.dataset.espaceDeTravailDescriptionParam;
+        const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
+        const description = clickedElement.dataset.workspaceManagerDescriptionParam;
 
         if (!componentName) return;
 
         if (description) {
             this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
+        } else {
+            this.contentZoneTarget.innerHTML = ''; // Clear if no description
         }
 
-        this.dispatchRequestEvent(clickedElement.dataset);
         this.progressBarTarget.style.display = 'block';
-
-        buildCustomEventForElement(document, 'cerveau:event', true, true,
-            {
-                type: 'ui:component.load',
-                source: 'espace-de-travail',
-                payload: { componentName: componentName },
-                timestamp: Date.now()
-            }
-        );
-        console.log(this.nomControleur + " - cerveau:event envoyé.");
 
         // La sauvegarde de l'état est faite immédiatement après le clic.
         // Le chargement effectif du contenu sera géré par handleComponentLoaded.
         if (componentName) {
             const stateToSave = {
                 component: componentName,
-                group: clickedElement.dataset.espaceDeTravailGroupNameParam || null
+                group: clickedElement.dataset.workspaceManagerGroupNameParam || null
             };
             sessionStorage.setItem('lastActiveState', JSON.stringify(stateToSave));
         }
 
+        // Cet événement est spécifiquement destiné au Cerveau pour charger le composant
+        this.notifyCerveau('ui:component.load', { componentName: componentName });
         this.updateActiveState(clickedElement);
     }
 
     /**
-     * NOUVEAU : Gère la réception du HTML du composant chargé par le Cerveau.
+     * Gère la réception du HTML du composant chargé par le Cerveau.
      * @param {CustomEvent} event 
      */
     handleComponentLoaded(event) {
@@ -658,14 +658,14 @@ export default class extends Controller {
             this.workspaceTarget.innerHTML = `<div class="p-8 text-red-500">Impossible de charger le contenu : ${error}</div>`;
         } else {
             this.workspaceTarget.innerHTML = html;
-            this.dispatchOpenedEvent();
+            this.notifyCerveau('app:navigation-rubrique:openned', {}); // Notify Cerveau that a rubrique has been opened
         }
 
         this.progressBarTarget.style.display = 'none';
     }
 
     /**
-     * NOUVEAU : Affiche la barre de progression lors d'une demande d'actualisation de liste.
+     * Affiche la barre de progression lors d'une demande d'actualisation de liste.
      */
     handleListRefreshRequest() {
         console.log(this.nomControleur + " - Demande d'actualisation détectée, affichage de la barre de progression.");
@@ -673,7 +673,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Cache la barre de progression une fois les données de la liste chargées.
+     * Cache la barre de progression une fois les données de la liste chargées.
      */
     handleListRefreshCompleted() {
         console.log(this.nomControleur + " - Fin du chargement des données, masquage de la barre de progression.");
@@ -681,11 +681,11 @@ export default class extends Controller {
     }
 
     /**
-     * Met à jour l'état visuel (gras, couleur) de l'élément de menu sélectionné.
+     * Met à jour l'état visuel (classe 'active') de l'élément de menu sélectionné.
      * @param {HTMLElement} currentElement L'élément qui vient d'être cliqué.
      */
     updateActiveState(currentElement) {
-        if (currentElement.closest('.menu-col-1')) {
+        if (currentElement.closest('.menu-col-1')) { // Main navigation items
             if (this.activeNavItem) {
                 this.activeNavItem.classList.remove('active');
             }
@@ -697,8 +697,8 @@ export default class extends Controller {
                 this.activeRubriqueItem = null;
             }
         }
-        // Gérer les rubriques de la colonne 2
-        else if (currentElement.closest('.menu-col-2')) {
+        // Handle rubrique items in column 2
+        else if (currentElement.closest('.menu-col-2')) { // Rubrique items
             if (this.activeRubriqueItem) {
                 this.activeRubriqueItem.classList.remove('active');
             }
@@ -707,20 +707,18 @@ export default class extends Controller {
         }
     }
 
-
     /**
-     * [cite_start]Dispatch un CustomEvent pour annoncer une demande d'ouverture. [cite: 243]
-     * @param {object} detail Les données à propager.
+     * Méthode centralisée pour envoyer un événement au Cerveau.
+     * @param {string} type - Le type de l'événement.
+     * @param {object} [payload={}] - Les données associées à l'événement.
+     * @private
      */
-    dispatchRequestEvent(detail) {
-        this.dispatch('app:navigation-rubrique:open-request', {
-            nom: detail.espaceDeTravailGroupNameParam,
-            description: detail.espaceDeTravailDescriptionParam,
-            composant_twig: detail.espaceDeTravailComponentNameParam
+    notifyCerveau(type, payload = {}) {
+        console.log(`${this.nomControleur} - Notification du Cerveau: ${type}`, payload);
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
         });
-    }
-
-    dispatchOpenedEvent() {
-        this.dispatch('app:navigation-rubrique:openned');
+        this.element.dispatchEvent(event);
     }
 }

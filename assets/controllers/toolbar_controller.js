@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 /**
- * @class BarreOutilsController
+ * @class ToolbarController
  * @extends Controller
  * @description Gère la barre d'outils principale de l'application.
  * Ce contrôleur écoute les changements de contexte (sélection) et ajuste l'état de ses boutons.
@@ -9,14 +9,14 @@ import { Controller } from '@hotwired/stimulus';
  */
 export default class extends Controller {
     /**
-     * @property {HTMLElement[]} btquitterTargets - Le bouton pour quitter la rubrique.
-     * @property {HTMLElement[]} btparametresTargets - Le bouton pour les paramètres.
-     * @property {HTMLElement[]} btrechargerTargets - Le bouton pour recharger la liste.
-     * @property {HTMLElement[]} btajouterTargets - Le bouton pour ajouter un élément.
-     * @property {HTMLElement[]} btmodifierTargets - Le bouton pour modifier un élément.
-     * @property {HTMLElement[]} btsupprimerTargets - Le bouton pour supprimer un ou plusieurs éléments.
-     * @property {HTMLElement[]} bttoutcocherTargets - Le bouton pour tout cocher/décocher.
-     * @property {HTMLElement[]} btouvrirTargets - Le bouton pour ouvrir un ou plusieurs éléments.
+     * @property {HTMLElement} btquitterTarget - Le bouton pour quitter la rubrique.
+     * @property {HTMLElement} btparametresTarget - Le bouton pour les paramètres.
+     * @property {HTMLElement} btrechargerTarget - Le bouton pour recharger la liste.
+     * @property {HTMLElement} btajouterTarget - Le bouton pour ajouter un élément.
+     * @property {HTMLElement} btmodifierTarget - Le bouton pour modifier un élément.
+     * @property {HTMLElement} btsupprimerTarget - Le bouton pour supprimer un ou plusieurs éléments.
+     * @property {HTMLElement} bttoutcocherTarget - Le bouton pour tout cocher/décocher.
+     * @property {HTMLElement} btouvrirTarget - Le bouton pour ouvrir un ou plusieurs éléments.
      */
     static targets = [
         'btquitter',
@@ -34,24 +34,24 @@ export default class extends Controller {
      * S'exécute lorsque le contrôleur est connecté au DOM.
      */
     connect() {
-        this.nomControleur = "BARRE-OUTILS";
-        console.log(this.nomControleur + " - Connecté");
-        this.init();
+        this.nomControleur = "Toolbar";
+        console.log(`${this.nomControleur} - Connecté`);
+        this.initialize();
     }
 
     /**
      * Initialise les propriétés et les écouteurs d'événements.
      * @private
      */
-    init() {
+    initialize() {
         this.tabSelectedCheckBoxs = [];
         this.tabSelectedEntities = [];
         this.formCanvas = null;
 
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
 
-        this.initialiserBarreDoutils();
-        this.ecouteurs();
+        this.initializeToolbarState();
+        this.setupEventListeners();
     }
 
     /**
@@ -59,17 +59,17 @@ export default class extends Controller {
      * La barre d'outils écoute uniquement le Cerveau pour ajuster son état.
      * @private
      */
-    ecouteurs() {
-        console.log(this.nomControleur + " - Activation des écouteurs d'évènements");
+    setupEventListeners() {
+        console.log(`${this.nomControleur} - Activation des écouteurs d'événements`);
         document.addEventListener('ui:selection.changed', this.boundHandleContextUpdate);
     }
 
     /**
      * Méthode du cycle de vie de Stimulus.
-     * Nettoie les écouteurs pour éviter les fuites de mémoire.
+     * Nettoie les écouteurs pour éviter les fuites de mémoire lors de la déconnexion.
      */
     disconnect() {
-        console.log(this.nomControleur + " - Déconnecté - Suppression d'écouteurs.");
+        console.log(`${this.nomControleur} - Déconnecté - Suppression d'écouteurs.`);
         document.removeEventListener('ui:selection.changed', this.boundHandleContextUpdate);
     }
 
@@ -78,7 +78,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleContextUpdate(event) {
-        console.log(this.nomControleur + " - Mise à jour du contexte reçue du Cerveau", event.detail);
+        console.log(`${this.nomControleur} - Mise à jour du contexte reçue du Cerveau`, event.detail);
 
         const { selection, entities, entityFormCanvas } = event.detail;
 
@@ -107,7 +107,7 @@ export default class extends Controller {
      * Initialise l'état visible des boutons de la barre d'outils.
      * @private
      */
-    initialiserBarreDoutils() {
+    initializeToolbarState() {
         if (this.hasBtquitterTarget) this.btquitterTarget.style.display = "block";
         if (this.hasBtparametresTarget) this.btparametresTarget.style.display = "block";
         if (this.hasBtajouterTarget) this.btajouterTarget.style.display = "block";
@@ -117,16 +117,16 @@ export default class extends Controller {
 
     /**
      * Méthode générique pour notifier le Cerveau d'une action de la barre d'outils.
-     * L'événement à envoyer est défini dans l'attribut `data-barre-outils-event-name-param` du bouton.
+     * L'événement à envoyer est défini dans l'attribut `data-toolbar-event-name-param` du bouton.
      * @param {MouseEvent} event - L'événement de clic.
      * @fires cerveau:event
      */
     notify(event) {
         const button = event.currentTarget;
-        const eventName = button.dataset.barreOutilsEventNameParam;
+        const eventName = button.dataset.toolbarEventNameParam;
 
         if (!eventName) {
-            console.error("Le bouton n'a pas de 'data-barre-outils-event-name-param' défini.", button);
+            console.error("Le bouton n'a pas de 'data-toolbar-event-name-param' défini.", button);
             return;
         }
 
@@ -136,8 +136,7 @@ export default class extends Controller {
             payload = { selection: this.tabSelectedCheckBoxs };
         } else if (eventName === 'ui:toolbar.add-request') {
             payload = { entityFormCanvas: this.formCanvas };
-        } else if (eventName === 'ui:toolbar.edit-request' || eventName === 'ui:toolbar.open-request') {
-            // --- CORRECTION : Ajouter le payload pour l'édition et l'ouverture ---
+        } else if (['ui:toolbar.edit-request', 'ui:toolbar.open-request'].includes(eventName)) {
             payload = { entities: this.tabSelectedEntities };
         }
 
@@ -145,29 +144,21 @@ export default class extends Controller {
     }
 
     /**
-     * Méthode centralisée pour envoyer un événement au cerveau.
-     * @param {string} type Le type d'événement pour le cerveau (ex: 'ui:toolbar.add-request').
+     * Méthode centralisée pour envoyer un événement au Cerveau.
+     * @param {string} type Le type d'événement pour le Cerveau (ex: 'ui:toolbar.add-request').
      * @param {object} [payload={}] - Données additionnelles à envoyer.
      * @private
      */
     notifyCerveau(type, payload = {}) {
-        console.log(`${this.nomControleur} - Notification du cerveau: ${type}`, payload);
-        // --- CORRECTION : Utilisation de l'API native au lieu de la fonction importée ---
-        this.dispatch('cerveau:event', {
+        console.log(`${this.nomControleur} - Notification du Cerveau: ${type}`, payload);
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: {
             type: type,
             source: this.nomControleur,
             payload: payload,
             timestamp: Date.now()
-        });
-    }
-
-    /**
-     * Dispatche un événement personnalisé sur le document.
-     * @param {string} name - Le nom de l'événement.
-     * @param {object} [detail={}] - Les données à attacher à l'événement.
-     * @private
-     */
-    dispatch(name, detail = {}) {
-        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+        }});
+        this.element.dispatchEvent(event);
     }
 }
