@@ -1,0 +1,59 @@
+{#
+    Ce template représente la barre de recherche, qui permet une recherche simple et avancée.
+    Il est piloté par le contrôleur Stimulus `search-criteria` (anciennement `rubrique` / `search-bar`).
+
+    Fonctionnement :
+    - Recherche simple : Un champ de texte unique qui déclenche une recherche au "Enter".
+    - Recherche avancée : Un "toast" (fenêtre flottante) s'ouvre avec un formulaire plus détaillé,
+      chargé dynamiquement via AJAX.
+    - Le contrôleur écoute les événements pour peupler le formulaire avancé et notifie le "Cerveau"
+      lorsqu'une recherche est soumise, pour que la liste correspondante se mette à jour.
+#}
+<div {{ attributes }} data-controller="search-criteria">
+    <div class="search-bar-row-1 p-2 d-flex align-items-center bg-white rounded-top shadow">
+        <div class="input-group flex-grow-1">
+            <span class="input-group-text bg-transparent border-0 pe-2">
+                <twig:ux:icon name="lucide:search" class="text-secondary search-summary-icon" />
+            </span>
+            <input type="text"
+                   class="form-control border-0 search-bar-input"
+                   data-search-criteria-target="simpleSearchInput"
+                   data-action="keydown.enter->search-criteria#submitSimpleSearch"
+                   placeholder="Rechercher...">
+        </div>
+
+        <div class="ms-3 d-flex align-items-center">
+            <button class="btn btn-sm btn-light" title="Recherche avancée" data-action="click->search-criteria#openAdvancedSearch">
+                <twig:ux:icon name="lucide:sliders-horizontal" class="search-summary-icon"/>
+            </button>
+            <button class="btn btn-sm btn-light ms-1" title="Réinitialiser la recherche" data-action="click->search-criteria#reset">
+                <twig:ux:icon name="lucide:rotate-cw" class="search-summary-icon"/>
+            </button>
+        </div>
+    </div>
+
+    <div class="search-bar-row-2 d-flex align-items-center p-2 bg-light rounded-bottom small text-muted" data-search-criteria-target="summaryContainer">
+        <twig:ux:icon name="lucide:info" class="me-2 flex-shrink-0 search-summary-icon" />
+        <div data-search-criteria-target="summary" class="flex-grow-1">
+            <span>Recherche simple activée.</span>
+        </div>
+    </div>
+
+    <div class="toast position-fixed bg-white" role="alert" aria-live="assertive" aria-atomic="true" data-search-criteria-target="advancedSearchToast" style="z-index: 1100;">
+        <div class="toast-header">
+            <twig:ux:icon name="lucide:sliders-horizontal" class="me-2 search-summary-icon" />
+            <strong class="me-auto">Recherche Avancée</strong>
+            <button type="button" class="btn-close" data-action="click->search-criteria#cancelAdvancedSearch" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <form data-action="keydown.enter->search-criteria#submitAdvancedSearch">
+                <div data-search-criteria-target="advancedFormContainer" class="form-scrollable-content">
+                </div>
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="button" class="btn btn-secondary btn-sm me-2" data-action="click->search-criteria#cancelAdvancedSearch">Annuler</button>
+                    <button type="button" class="btn btn-primary btn-sm" data-action="click->search-criteria#submitAdvancedSearch">Rechercher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
