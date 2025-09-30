@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur RegistrationController.
+ * @description Ce contrôleur gère tout le cycle de vie de l'enregistrement et de la vérification d'un utilisateur.
+ * Il est responsable de :
+ * 1. `register()`: Afficher le formulaire d'inscription pour un nouvel utilisateur ou le formulaire d'édition de profil pour un utilisateur connecté (utilisé par la fonctionnalité "Mon Compte").
+ * 2. `verifyUserEmail()`: Gérer le lien de confirmation envoyé par email pour valider l'adresse de l'utilisateur.
+ * 3. `reverifyUserEmail()`: Permettre à un utilisateur connecté de demander un nouvel email de vérification.
+ * Il utilise le service `EmailVerifier` pour la logique de confirmation par email.
+ */
+
 namespace App\Controller;
 
 use App\Entity\Utilisateur;

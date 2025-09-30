@@ -1,11 +1,18 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur SecurityController.
+ * @description Ce contrôleur gère les routes publiques et le processus d'authentification.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la page d'accueil de l'application.
+ * 2. `login()`: Afficher le formulaire de connexion et gérer les erreurs d'authentification.
+ * 3. `logout()`: Gérer la déconnexion de l'utilisateur (intercepté par le pare-feu de sécurité).
+ * 4. `translateApp()`: Gérer le changement de langue pour l'utilisateur.
+ */
+
 namespace App\Controller;
 
-use App\DTO\LangueDTO;
-use App\Form\LangueType;
 use App\Entity\Utilisateur;
-use App\Constantes\Constantes;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
