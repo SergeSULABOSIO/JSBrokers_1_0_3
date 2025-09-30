@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur EspaceDeTravailComponentController.
+ * @description Ce contrôleur agit comme une "tour de contrôle" pour l'espace de travail principal.
+ * Il est responsable de :
+ * 1. Définir la structure du menu interactif (`$menuData`).
+ * 2. Maintenir une table de correspondance (`COMPONENT_MAP`) qui associe un nom de composant Twig
+ *    (ex: `_view_manager.html.twig`) à l'action du contrôleur PHP qui doit le générer
+ *    (ex: `App\Controller\Admin\ClientController::index`).
+ * 3. Fournir des points de terminaison API pour charger dynamiquement ces composants et obtenir des détails sur les entités.
+ */
+
 namespace App\Controller;
 
 use App\Constantes\Constante;
@@ -36,38 +47,48 @@ class EspaceDeTravailComponentController extends AbstractController
      */
     private const COMPONENT_MAP = [
         '_tableau_de_bord_component.html.twig' => 'App\Controller\Admin\EntrepriseDashbordController::index',
-        //FINANCES
-        '_monnaies_component.html.twig' => 'App\Controller\Admin\MonnaieController::index',
-        '_comptes_bancaires_component.html.twig' => 'App\Controller\Admin\CompteBancaireController::index',
-        '_taxes_component.html.twig' => 'App\Controller\Admin\TaxeController::index',
-        '_types_revenus_component.html.twig' => 'App\Controller\Admin\TypeRevenuController::index',
-        '_tranches_component.html.twig' => 'App\Controller\Admin\TrancheController::index',
-        '_types_chargements_component.html.twig' => 'App\Controller\Admin\ChargementController::index',
-        '_notes_component.html.twig' => 'App\Controller\Admin\NoteController::index',
-        '_paiements_component.html.twig' => 'App\Controller\Admin\PaiementController::index',
-        '_bordereaux_component.html.twig' => 'App\Controller\Admin\BordereauController::index',
-        '_revenus_component.html.twig' => 'App\Controller\Admin\RevenuCourtierController::index',
-        //MARKETING
-        '_pistes_component.html.twig' => 'App\Controller\Admin\PisteController::index',
-        '_taches_component.html.twig' => 'App\Controller\Admin\TacheController::index',
-        '_feedbacks_component.html.twig' => 'App\Controller\Admin\FeedbackController::index',
-        //PRODUCTION
-        '_groupes_component.html.twig' => 'App\Controller\Admin\GroupeController::index',
-        '_clients_component.html.twig' => 'App\Controller\Admin\ClientController::index',
-        '_assureurs_component.html.twig' => 'App\Controller\Admin\AssureurController::index',
-        '_contacts_component.html.twig' => 'App\Controller\Admin\ContactController::index',
-        '_risques_component.html.twig' => 'App\Controller\Admin\RisqueController::index',
-        '_avenants_component.html.twig' => 'App\Controller\Admin\AvenantController::index',
-        '_intermediaires_component.html.twig' => 'App\Controller\Admin\PartenaireController::index',
-        '_propositions_component.html.twig' => 'App\Controller\Admin\CotationController::index',
-        //SINISTRE
-        '_types_pieces_sinistres_component.html.twig' => 'App\Controller\Admin\ModelePieceSinistreController::index',
-        '_notifications_sinistres_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
-        '_reglements_sinistres_component.html.twig' => 'App\Controller\Admin\OffreIndemnisationController::index',
-        //ADMINISTRATION
-        '_documents_component.html.twig' => 'App\Controller\Admin\DocumentController::index',
-        '_classeurs_component.html.twig' => 'App\Controller\Admin\ClasseurController::index',
-        '_invites_component.html.twig' => 'App\Controller\Admin\InviteController::index',
+        // FINANCES
+        '_view_manager.html.twig' => [
+            'monnaies' => 'App\Controller\Admin\MonnaieController::index',
+            'comptes_bancaires' => 'App\Controller\Admin\CompteBancaireController::index',
+            'taxes' => 'App\Controller\Admin\TaxeController::index',
+            'types_revenus' => 'App\Controller\Admin\TypeRevenuController::index',
+            'tranches' => 'App\Controller\Admin\TrancheController::index',
+            'types_chargements' => 'App\Controller\Admin\ChargementController::index',
+            'notes' => 'App\Controller\Admin\NoteController::index',
+            'paiements' => 'App\Controller\Admin\PaiementController::index',
+            'bordereaux' => 'App\Controller\Admin\BordereauController::index',
+            'revenus' => 'App\Controller\Admin\RevenuCourtierController::index',
+        ],
+        // MARKETING
+        '_view_manager_marketing.html.twig' => [
+            'pistes' => 'App\Controller\Admin\PisteController::index',
+            'taches' => 'App\Controller\Admin\TacheController::index',
+            'feedbacks' => 'App\Controller\Admin\FeedbackController::index',
+        ],
+        // PRODUCTION
+        '_view_manager_production.html.twig' => [
+            'groupes' => 'App\Controller\Admin\GroupeController::index',
+            'clients' => 'App\Controller\Admin\ClientController::index',
+            'assureurs' => 'App\Controller\Admin\AssureurController::index',
+            'contacts' => 'App\Controller\Admin\ContactController::index',
+            'risques' => 'App\Controller\Admin\RisqueController::index',
+            'avenants' => 'App\Controller\Admin\AvenantController::index',
+            'intermediaires' => 'App\Controller\Admin\PartenaireController::index',
+            'propositions' => 'App\Controller\Admin\CotationController::index',
+        ],
+        // SINISTRE
+        '_view_manager_sinistre.html.twig' => [
+            'types_pieces_sinistres' => 'App\Controller\Admin\ModelePieceSinistreController::index',
+            'notifications_sinistres' => 'App\Controller\Admin\NotificationSinistreController::index',
+            'reglements_sinistres' => 'App\Controller\Admin\OffreIndemnisationController::index',
+        ],
+        // ADMINISTRATION
+        '_view_manager_administration.html.twig' => [
+            'documents' => 'App\Controller\Admin\DocumentController::index',
+            'classeurs' => 'App\Controller\Admin\ClasseurController::index',
+            'invites' => 'App\Controller\Admin\InviteController::index',
+        ],
         //PARAMETRES
         '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
         '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
@@ -95,43 +116,43 @@ class EspaceDeTravailComponentController extends AbstractController
                         'rubriques' => [
                             "Monnaies" => [
                                 "icone" => "tdesign:money-filled", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_monnaies_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Comptes bancaires" => [
                                 "icone" => "clarity:piggy-bank-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_comptes_bancaires_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Taxes" => [
                                 "icone" => "emojione-monotone:police-car-light", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_taxes_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Types Revenus" => [
                                 "icone" => "hugeicons:award-01", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_types_revenus_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Tranches" => [
                                 "icone" => "icon-park-solid:chart-proportion", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_tranches_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Types Chargements" => [
                                 "icone" => "tabler:truck-loading", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_types_chargements_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Notes" => [
                                 "icone" => "hugeicons:invoice-04", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_notes_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Paiements" => [
                                 "icone" => "streamline:payment-10-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_paiements_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Bordereaux" => [
                                 "icone" => "gg:list", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_bordereaux_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                             "Revenus" => [
                                 "icone" => "hugeicons:money-bag-02", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_revenus_component.html.twig",
+                                "composant_twig" => "_view_manager.html.twig",
                             ],
                         ],
                     ],
@@ -141,15 +162,15 @@ class EspaceDeTravailComponentController extends AbstractController
                         "rubriques" => [
                             "Pistes" => [
                                 "icone" => "fa-solid:road", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_pistes_component.html.twig",
+                                "composant_twig" => "_view_manager_marketing.html.twig",
                             ],
                             "Tâches" => [
                                 "icone" => "mingcute:task-2-fill", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_taches_component.html.twig",
+                                "composant_twig" => "_view_manager_marketing.html.twig",
                             ],
                             "Feedbacks" => [
                                 "icone" => "fluent-mdl2:feedback", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_feedbacks_component.html.twig",
+                                "composant_twig" => "_view_manager_marketing.html.twig",
                             ],
                         ],
                     ],
@@ -159,35 +180,35 @@ class EspaceDeTravailComponentController extends AbstractController
                         "rubriques" => [
                             "Groupes" => [
                                 "icone" => "clarity:group-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_groupes_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                             "Clients" => [
                                 "icone" => "fa-solid:house-user", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_clients_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                             "Assureurs" => [
                                 "icone" => "wpf:security-checked", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_assureurs_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                             "Contacts" => [
                                 "icone" => "hugeicons:contact-01", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_contacts_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                             "Risques" => [
                                 "icone" => "ep:goods", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_risques_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                             "Avenants" => [
                                 "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_avenants_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                             "Intermédiaires" => [
                                 "icone" => "carbon:partnership", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_intermediaires_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                             "Propositions" => [
                                 "icone" => "streamline:store-computer-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_propositions_component.html.twig",
+                                "composant_twig" => "_view_manager_production.html.twig",
                             ],
                         ],
                     ],
@@ -197,15 +218,15 @@ class EspaceDeTravailComponentController extends AbstractController
                         "rubriques" => [
                             "Types pièces" => [
                                 "icone" => "codex:file", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_types_pieces_sinistres_component.html.twig",
+                                "composant_twig" => "_view_manager_sinistre.html.twig",
                             ],
                             "Notifications" => [
                                 "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_notifications_sinistres_component.html.twig",
+                                "composant_twig" => "_view_manager_sinistre.html.twig",
                             ],
                             "Règlements" => [
                                 "icone" => "icon-park-outline:funds", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_reglements_sinistres_component.html.twig",
+                                "composant_twig" => "_view_manager_sinistre.html.twig",
                             ],
                         ],
                     ],
@@ -215,15 +236,15 @@ class EspaceDeTravailComponentController extends AbstractController
                         "rubriques" => [
                             "Documents" => [
                                 "icone" => "famicons:document", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_documents_component.html.twig",
+                                "composant_twig" => "_view_manager_administration.html.twig",
                             ],
                             "Classeurs" => [
                                 "icone" => "ic:baseline-folder", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_classeurs_component.html.twig",
+                                "composant_twig" => "_view_manager_administration.html.twig",
                             ],
                             "Invités" => [
                                 "icone" => "raphael:user", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_invites_component.html.twig",
+                                "composant_twig" => "_view_manager_administration.html.twig",
                             ],
                         ],
                     ],
@@ -274,16 +295,28 @@ class EspaceDeTravailComponentController extends AbstractController
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
 
-        // On récupère le nom du composant depuis la requête AJAX
-        $componentKey = $request->query->get('component');
+        $componentName = $request->query->get('component');
+        $entityName = $request->query->get('entity'); // Nouveau paramètre
+
+        if (!$componentName) {
+            return new Response('Nom de composant manquant.', Response::HTTP_BAD_REQUEST);
+        }
 
         // 1. Sécurité : Vérifier que le composant demandé est bien dans notre liste autorisée
-        if (!$componentKey || !isset(self::COMPONENT_MAP[$componentKey])) {
+        if (!isset(self::COMPONENT_MAP[$componentName])) {
             return new Response('Composant non autorisé ou non trouvé.', Response::HTTP_FORBIDDEN);
         }
 
-        // 2. Récupérer l'action du contrôleur correspondant
-        $controllerAction = self::COMPONENT_MAP[$componentKey];
+        $controllerActions = self::COMPONENT_MAP[$componentName];
+
+        // Si les actions sont dans un sous-tableau (basé sur l'entité), on le sélectionne
+        if (is_array($controllerActions) && isset($controllerActions[$entityName])) {
+            $controllerAction = $controllerActions[$entityName];
+        } elseif (is_string($controllerActions)) {
+            $controllerAction = $controllerActions;
+        } else {
+            return new Response('Action de contrôleur non trouvée pour cette entité.', Response::HTTP_FORBIDDEN);
+        }
 
         // 3. Exécuter la sous-requête vers le contrôleur dédié et retourner sa réponse
         // C'est ici que la magie opère. Symfony va appeler TableauDeBordController::index()
@@ -313,7 +346,7 @@ class EspaceDeTravailComponentController extends AbstractController
             throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
         }
 
-        $entityCanvas = $constante->getEntityCanvas($entity);
+        $entityCanvas = $constante->getEntityCanvas($entityClass);
         $responseData = [
             'entity' => $entity,
             'entityType' => $entityType,
