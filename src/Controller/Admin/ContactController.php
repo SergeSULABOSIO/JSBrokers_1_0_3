@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur ContactController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `Contact`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des contacts (page non-générique).
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire, en gérant l'association à une entité parente (ex: NotificationSinistre) grâce au `HandleChildAssociationTrait`.
+ *    - `deleteApi()`: Supprimer un contact.
+ */
+
 namespace App\Controller\Admin;
 
 use App\Entity\Contact;

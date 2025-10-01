@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur PieceSinistreController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `PieceSinistre`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des pièces de sinistre.
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire, en gérant l'association à une `NotificationSinistre` parente grâce au `HandleChildAssociationTrait`.
+ *    - `deleteApi()`: Supprimer une pièce.
+ *    - `getDocumentsListApi()`: Charger la liste des documents liés à une pièce.
+ */
+
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;

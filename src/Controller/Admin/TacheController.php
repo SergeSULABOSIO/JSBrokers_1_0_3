@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur TacheController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `Tache`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des tâches (page non-générique).
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire, en gérant l'association à des entités parentes (ex: NotificationSinistre).
+ *    - `deleteApi()`: Supprimer une tâche.
+ *    - `getFeedbacksListApi()`, `getDocumentsListApi()`: Charger les listes des collections liées à une tâche.
+ */
+
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;

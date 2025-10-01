@@ -1,5 +1,21 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur DocumentController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `Document`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des documents (page non-générique).
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire, en gérant l'association à diverses entités parentes
+ *      (PieceSinistre, Tache, etc.) grâce au `HandleChildAssociationTrait`.
+ *    - `deleteApi()`: Supprimer un document.
+ *    - `downloadApi()`: Gérer le téléchargement du fichier associé à un document, en utilisant le `DownloadHandler` de VichUploader.
+ *
+ * Ce contrôleur est un bon exemple de gestion d'une entité "enfant" qui peut être liée à de nombreux
+ * types d'entités "parentes" de manière dynamique.
+ */
+
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;
@@ -78,13 +94,13 @@ class DocumentController extends AbstractController
 
         $form = $this->createForm(DocumentType::class, $document);
 
-        $entityCanvas = $constante->getEntityCanvas($document);
+        $entityCanvas = $constante->getEntityCanvas(Document::class);
         $constante->loadCalculatedValue($entityCanvas, [$document]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($document, $entreprise->getId()),
-            'entityCanvas' => $constante->getEntityCanvas($document)
+            'entityCanvas' => $constante->getEntityCanvas(Document::class)
         ]);
     }
 

@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur OffreIndemnisationSinistreController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `OffreIndemnisationSinistre`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des offres d'indemnisation.
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire.
+ *    - `deleteApi()`: Supprimer une offre.
+ *    - `getPaiementsListApi()`, `getDocumentsListApi()`, etc. : Charger les listes des collections liées à une offre.
+ */
+
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
