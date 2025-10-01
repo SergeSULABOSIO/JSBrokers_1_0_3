@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur PaiementController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `Paiement`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des paiements (page non-générique).
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire, en gérant l'association à des entités parentes (ex: OffreIndemnisationSinistre) grâce au `HandleChildAssociationTrait`.
+ *    - `deleteApi()`: Supprimer un paiement.
+ *    - `getPreuvesListApi()`: Charger la liste des documents (preuves) liés à un paiement.
+ */
+
 namespace App\Controller\Admin;
 
 use DateTimeImmutable;
@@ -127,13 +139,13 @@ class PaiementController extends AbstractController
 
         $form = $this->createForm(PaiementType::class, $paiement);
 
-        $entityCanvas = $constante->getEntityCanvas($paiement);
+        $entityCanvas = $constante->getEntityCanvas(Paiement::class);
         $constante->loadCalculatedValue($entityCanvas, [$paiement]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($paiement, $entreprise->getId()), // ID entreprise à adapter
-            'entityCanvas' => $constante->getEntityCanvas($paiement)
+            'entityCanvas' => $constante->getEntityCanvas(Paiement::class)
         ]);
     }
 

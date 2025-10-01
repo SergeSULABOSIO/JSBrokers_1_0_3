@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur FeedbackController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `Feedback`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des feedbacks (page non-générique).
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire, en gérant l'association à une `Tache` parente.
+ *    - `deleteApi()`: Supprimer un feedback.
+ *    - `getDocumentsListApi()`: Charger la liste des documents liés à un feedback.
+ */
+
 namespace App\Controller\Admin;
 
 use App\Entity\Entreprise;
@@ -81,13 +93,13 @@ class FeedbackController extends AbstractController
 
         $form = $this->createForm(FeedbackType::class, $feedback);
 
-        $entityCanvas = $constante->getEntityCanvas($feedback);
+        $entityCanvas = $constante->getEntityCanvas(Feedback::class);
         $constante->loadCalculatedValue($entityCanvas, [$feedback]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $constante->getEntityFormCanvas($feedback, $entreprise->getId()),
-            'entityCanvas' => $constante->getEntityCanvas($feedback)
+            'entityCanvas' => $constante->getEntityCanvas(Feedback::class)
         ]);
     }
 

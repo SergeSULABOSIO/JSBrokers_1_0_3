@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * @file Ce fichier contient le contrôleur NotificationSinistreController.
+ * @description Ce contrôleur est un CRUD complet pour l'entité `NotificationSinistre`.
+ * Il est responsable de :
+ * 1. `index()`: Afficher la vue principale de la liste des notifications de sinistre, en utilisant le composant `_view_manager`.
+ * 2. Fournir des points de terminaison API pour :
+ *    - `getFormApi()`: Obtenir le formulaire de création/édition.
+ *    - `submitApi()`: Traiter la soumission du formulaire.
+ *    - `getContactsListApi()`, `getPiecesListApi()`, etc. : Charger les listes des collections liées à une notification.
+ */
+
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
@@ -56,7 +67,7 @@ class NotificationSinistreController extends AbstractController
         //On charge les valeurs calculées
         $constante->loadCalculatedValue($entityCanvas, $data);
 
-        return $this->render('components/_rubrique_list_index.html.twig', [
+        return $this->render('components/_view_manager.html.twig', [
             'data' => $data,
             'entite_nom' => "NotificationSinistre",
             'constante' => $this->constante,
@@ -224,7 +235,7 @@ class NotificationSinistreController extends AbstractController
         // $this->loadCalculatedValue($entityCanvas, $reponseData["data"], $constante);
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
-        return $this->render('components/_list_donnees.html.twig', [
+        return $this->render('components/_list_content.html.twig', [
             'entreprise' => $this->entrepriseRepository->find($idEntreprise),
             'utilisateur' => $utilisateur,
             'constante' => $this->constante,
