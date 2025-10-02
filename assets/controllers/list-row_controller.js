@@ -60,7 +60,7 @@ export default class extends Controller {
         event.stopPropagation();
         console.log(`${this.nomControleur} - Clic droit détecté. Demande d'ouverture du menu contextuel.`);
 
-        this.dispatch('cerveau:event', {
+        this.dispatch('cerveau:event', { // Dispatch to Cerveau
             type: 'ui:context-menu.request',
             source: this.nomControleur,
             payload: { menuX: event.clientX, menuY: event.clientY },
@@ -78,7 +78,7 @@ export default class extends Controller {
         this.element.classList.toggle('row-selected', checkbox.checked);
 
         this.dispatch('cerveau:event', {
-            type: 'ui:list-item.selection-changed',
+            type: 'ui:list-row.selection-changed',
             source: this.nomControleur,
             payload: {
                 id: this.idobjetValue,

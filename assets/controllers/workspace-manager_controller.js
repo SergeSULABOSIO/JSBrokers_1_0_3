@@ -68,13 +68,15 @@ export default class extends Controller {
                 // On clique d'abord sur le groupe pour afficher les rubriques
                 groupElement.click();
 
-                // Ensuite, on cherche et clique sur la rubrique elle-même (qui est maintenant visible)
-                // requestAnimationFrame s'assure que le DOM a eu le temps de se mettre à jour
                 requestAnimationFrame(() => {
-                    const rubriqueElement = this.contentZoneTarget.querySelector(`[data-workspace-manager-component-name-param='${savedState.component}']`);
+                    // CORRECTION : On cherche la rubrique en utilisant à la fois le composant ET le nom de l'entité.
+                    const selector = `[data-workspace-manager-component-name-param='${savedState.component}'][data-workspace-manager-entity-name-param='${savedState.entity}']`;
+                    const rubriqueElement = this.contentZoneTarget.querySelector(selector);
+
                     if (rubriqueElement) {
                         rubriqueElement.click();
                     } else {
+                        console.error("WorkspaceManager: Rubrique non trouvée pour la restauration.", savedState);
                         this.loadDefaultComponent(); // Sécurité si la rubrique n'est pas trouvée
                     }
                 });
@@ -622,19 +624,22 @@ export default class extends Controller {
         const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
 
         // LOG: Vérifier les valeurs lues depuis le DOM
-        console.log('[WorkspaceManager] Clic sur une rubrique. Attributs lus:', {
-            'data-workspace-manager-component-name-param': componentName,
-            'data-workspace-manager-entity-name-param': entityName
-        });
+        // console.log('[WorkspaceManager] Clic sur une rubrique. Attributs lus:', {
+        //     'data-workspace-manager-component-name-param': componentName,
+        //     'data-workspace-manager-entity-name-param': entityName
+        // });
 
+        const groupName = clickedElement.dataset.workspaceManagerGroupNameParam;
         const description = clickedElement.dataset.workspaceManagerDescriptionParam;
 
         if (!componentName) return;
 
-        if (description) {
+        // On détermine si l'élément cliqué est une rubrique (dans la colonne 2)
+        const isRubrique = clickedElement.classList.contains('rubrique-item');
+
+        // On met à jour la colonne 2 (description) SEULEMENT si ce n'est PAS une rubrique.
+        if (!isRubrique) {
             this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
-        } else {
-            this.contentZoneTarget.innerHTML = ''; // Clear if no description
         }
 
         this.progressBarTarget.style.display = 'block';
@@ -644,7 +649,8 @@ export default class extends Controller {
         if (componentName) {
             const stateToSave = {
                 component: componentName,
-                group: clickedElement.dataset.workspaceManagerGroupNameParam || null
+                group: groupName || null,
+                entity: entityName || null // CORRECTION : Ajouter l'entityName à l'état sauvegardé
             };
             sessionStorage.setItem('lastActiveState', JSON.stringify(stateToSave));
         }
@@ -725,7 +731,7 @@ export default class extends Controller {
      * @private
      */
     notifyCerveau(type, payload = {}) {
-        console.log(`${this.nomControleur} - Notification du Cerveau: ${type}`, payload);
+        // console.log(`${this.nomControleur} - Notification du Cerveau: ${type}`, payload);
         const event = new CustomEvent('cerveau:event', {
             bubbles: true,
             detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }

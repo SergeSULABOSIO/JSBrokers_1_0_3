@@ -139,16 +139,26 @@ export default class extends Controller {
                 this.broadcast('app:list.refresh-request', {});
                 break;
             
+            // --- NOUVEAU : Gère la demande d'ouverture du menu contextuel ---
+            case 'ui:context-menu.request':
+                console.log("-> ACTION: Demande d'affichage du menu contextuel. Diffusion de l'ordre.");
+                this.broadcast('app:context-menu.show', payload);
+                break;
+
+            // --- NOUVEAU : Gère la demande de suppression depuis la barre d'outils ---
+            case 'ui:toolbar.delete-request':
+                console.log("-> ACTION: Demande de suppression reçue. Ouverture du dialogue de confirmation.");
+                this.broadcast('ui:confirmation.request', {
+                    title: 'Confirmation de suppression',
+                    body: `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
+                    onConfirm: { type: 'app:api.delete-request', payload: payload }
+                });
+                break;
+
             // --- NOUVEAU : Gère la notification de statut ---
             case 'ui:status.notify':
                 console.log("-> ACTION: Un message de statut a été reçu. Diffusion pour affichage.");
                 this.broadcast('app:status.updated', payload);
-                break;
-
-            // --- NOUVEAU : Gère la notification de réponse de l'API (pagination, etc.) ---
-            case 'api:response.received':
-                console.log("-> ACTION: Une réponse de l'API a été reçue. Diffusion pour mise à jour de la pagination.");
-                this.broadcast('app:pagination.updated', payload);
                 break;
 
             default:

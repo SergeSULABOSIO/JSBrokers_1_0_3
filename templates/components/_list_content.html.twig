@@ -8,22 +8,16 @@
       Le Cerveau relaie ensuite ces informations à d'autres composants, comme le gestionnaire de pagination.
 
     Paramètres attendus :
-    - `pagination`: Un objet contenant les items à afficher (`pagination.items`) et les détails de la pagination (`page`, `limit`, `totalItems`).
     - `listeCanvas`: La configuration d'affichage de la liste, passée au sous-template `_list_row.html.twig`.
-    - `status`: Un objet décrivant le statut de la liste (nombre d'éléments, totaux, etc.).
 #}
 <div 
     data-controller="api-response-notifier"
-    data-api-response-notifier-status-value="{{ status | json_encode }}"
-    data-api-response-notifier-page-value="{{ pagination.page }}"
-    data-api-response-notifier-limit-value="{{ pagination.limit }}"
-    data-api-response-notifier-totalitems-value="{{ pagination.totalItems }}"
 >
-    {% if pagination.items|length == 0 %}
+    {% if data|length == 0 %}
         {# L'état vide est maintenant géré par _generic_list_component.html.twig, mais on garde une sécurité ici. #}
         <tr><td colspan="100%" class="text-center p-4">Aucune information trouvée pour les critères actuels.</td></tr>
     {% else %}
-        {% for entity in pagination.items %}
+        {% for entity in data %}
             {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas }) }}
         {% endfor %}
     {% endif %}
