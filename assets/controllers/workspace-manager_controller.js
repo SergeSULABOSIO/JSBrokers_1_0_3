@@ -619,6 +619,14 @@ export default class extends Controller {
     async loadComponent(event) {
         const clickedElement = event.currentTarget;
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
+        const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
+
+        // LOG: Vérifier les valeurs lues depuis le DOM
+        console.log('[WorkspaceManager] Clic sur une rubrique. Attributs lus:', {
+            'data-workspace-manager-component-name-param': componentName,
+            'data-workspace-manager-entity-name-param': entityName
+        });
+
         const description = clickedElement.dataset.workspaceManagerDescriptionParam;
 
         if (!componentName) return;
@@ -642,7 +650,10 @@ export default class extends Controller {
         }
 
         // Cet événement est spécifiquement destiné au Cerveau pour charger le composant
-        this.notifyCerveau('ui:component.load', { componentName: componentName });
+        this.notifyCerveau('ui:component.load', { 
+            componentName: componentName,
+            entityName: entityName // NOUVEAU : Envoyer le nom de l'entité
+        });
         this.updateActiveState(clickedElement);
     }
 

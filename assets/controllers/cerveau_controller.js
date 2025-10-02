@@ -62,8 +62,8 @@ export default class extends Controller {
         switch (type) {
             // --- Chargement du composant dans l'espace de travail ---
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
-                console.log(this.nomControleur + "🧠 [Cerveau]-> ACTION: Charger le composant '${payload.componentName}' pour l'espace de travail.");
-                this.loadWorkspaceComponent(payload.componentName);
+                console.log(this.nomControleur + `🧠 [Cerveau]-> ACTION: Charger le composant '${payload.componentName}' (entité: ${payload.entityName}) pour l'espace de travail.`);
+                this.loadWorkspaceComponent(payload.componentName, payload.entityName);
                 break;
 
             case 'app:error.api':
@@ -164,8 +164,16 @@ export default class extends Controller {
      * @fires workspace:component.loaded
      * @private
      */
-    async loadWorkspaceComponent(componentName) {
-        const url = `/espacedetravail/api/load-component?component=${componentName}`;
+    async loadWorkspaceComponent(componentName, entityName) {
+        let url = `/espacedetravail/api/load-component?component=${componentName}`;
+        // On ajoute le paramètre 'entity' s'il est fourni
+        if (entityName) {
+            url += `&entity=${entityName}`;
+        }
+
+        // LOG: Vérifier l'URL finale avant l'appel fetch
+        console.log(`[Cerveau] Appel fetch vers l'URL: ${url}`);
+
         try {
             const response = await fetch(url);
             if (!response.ok) {
