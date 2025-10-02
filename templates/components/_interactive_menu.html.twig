@@ -112,7 +112,8 @@
                             data-action="click->workspace-manager#loadComponent"
                             data-workspace-manager-component-name-param="{{ rubrique_data.composant_twig }}" 
                             data-workspace-manager-group-name-param="{{ group_name }}" 
-                            data-workspace-manager-description-param="" {# Les rubriques n'ont pas de description à afficher #}
+                            data-workspace-manager-entity-name-param="{{ rubrique_data.entity_name|default('') }}"
+                            data-workspace-manager-description-param=""
                         >
                             <twig:ux:icon name="{{ rubrique_data.icone }}" class="rubrique-icon" />
                             <span class="rubrique-text">{{ rubrique_name }}</span>
