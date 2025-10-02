@@ -37,7 +37,7 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "LIST-MANAGER";
         this.urlAPIDynamicQuery = `/admin/${this.controleurphpValue}/api/dynamic-query/${this.identrepriseValue}`;
-        console.log(`${this.nomControleur} - Connecté pour l'entité '${this.entiteValue}'.`);
+        // console.log(`${this.nomControleur} - Connecté pour l'entité '${this.entiteValue}'.`);
 
         this.selectedEntities = [];
         this.selectedIds = [];
@@ -50,7 +50,7 @@ export default class extends Controller {
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
 
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.addEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
+        document.addEventListener('app:list-row.selection-changed:relay', this.boundHandleItemSelectionChange);
         document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
         document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
 
@@ -63,7 +63,7 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.removeEventListener('app:list-item.selection-changed:relay', this.boundHandleItemSelectionChange);
+        document.removeEventListener('app:list-row.selection-changed:relay', this.boundHandleItemSelectionChange);
         document.removeEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
     }
@@ -144,11 +144,6 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleGlobalSelectionUpdate(event) {
-        // Ignore l'événement si la liste est cachée ou si elle est la source de l'événement.
-        if (this.element.offsetParent === null || event.detail.source === this.nomControleur) {
-            return;
-        }
-
         const restoredSelectionIds = new Set((event.detail.selection || []).map(id => String(id)));
         this.selectedIds = Array.from(restoredSelectionIds);
 
@@ -167,13 +162,27 @@ export default class extends Controller {
      * @private
      */
     publishSelection() {
-        console.log(`${this.nomControleur} - Publication de la sélection locale vers le Cerveau.`);
+        // CORRECTION : Enrichir le payload avec les données numériques dès le départ.
+        const numericDataRaw = this.element.dataset.listManagerNumericAttributesValue;
+        const numericData = numericDataRaw ? JSON.parse(numericDataRaw) : {};
+        let numericAttributesOptions = null;
+
+        const firstItemId = Object.keys(numericData)[0];
+        if (firstItemId && numericData[firstItemId] && Object.keys(numericData[firstItemId]).length > 0) {
+            numericAttributesOptions = {};
+            for (const key in numericData[firstItemId]) {
+                numericAttributesOptions[key] = numericData[firstItemId][key].description;
+            }
+        }
+
         this.notifyCerveau('ui:selection.updated', {
             selection: this.selectedIds,
             entities: this.selectedEntities,
             canvas: this.selectedEntityCanvas,
             entityType: this.selectedEntityType,
             entityFormCanvas: this.entityFormCanvasValue,
+            numericAttributes: numericAttributesOptions,
+            numericData: numericData,
         });
     }
 

@@ -57,11 +57,6 @@ class JSBDynamicSearchService
 
         $entityName = $data['entityName'] ?? null;
         $criteria = $data['criteria'] ?? [];
-        $page = (int) ($data['page'] ?? 1);
-        $limit = (int) ($data['limit'] ?? 10);
-
-        $page = max(1, $page);
-        $limit = max(1, min(100, $limit));
 
         if (!$entityName || !in_array($entityName, self::$allowedEntities, true)) {
             $status = [
@@ -69,7 +64,7 @@ class JSBDynamicSearchService
                 "code" => 403,
                 "message" => "L'interrogation de l'entité '{$entityName}' n'est pas autorisée."
             ];
-            return ['status' => $status, 'data' => [], 'page' => $page, 'limit' => $limit, 'totalItems' => 0];
+            return ['status' => $status, 'data' => [], 'totalItems' => 0];
         }
 
         try {
@@ -223,12 +218,6 @@ class JSBDynamicSearchService
                 }
             } // --- FIN DE LA BOUCLE PRINCIPALE DE CONSTRUCTION DES FILTRES ---
 
-
-            // Appliquer la pagination à la requête principale
-            $offset = ($page - 1) * $limit;
-            $qb->setFirstResult($offset) // Définir l'offset (à partir de quel élément commencer)
-                ->setMaxResults($limit); // Définir la limite (nombre maximum d'éléments à retourner)
-
             // Exécuter la requête pour obtenir les résultats (objets Doctrine)
             $results = $qb->getQuery()->getResult();
 
@@ -351,8 +340,6 @@ class JSBDynamicSearchService
         return [
             'status' => $status,
             'data' => $results,
-            'page' => $page,
-            'limit' => $limit,
             'totalItems' => $totalItems,
         ];
     }

@@ -17,8 +17,98 @@
     data-controller="list-row"
     data-list-row-idobjet-value="{{ entity.id }}"
     class="element-a-encadrer parent-a-options context-target align-middle"
-    data-action="click->list-row#toggleSelection dblclick->list-row#openDetails"
+    data-action="click->list-row#toggleSelection"
 >
-    {# Inclusion de la vue qui contient les `<td>` #}
-    {{ include('components/_list_row_view.html.twig') }}
+    {# Colonne 1 : Statique (Case à cocher et ID) #}
+    <td class="p-3 m-2" style="width:80px">
+        <div class="form-group">
+            {% set serialization_context = {
+                'groups': 'list:read',
+                'enable_max_depth': true
+            } %}
+            <input
+                type="checkbox"
+                id="check_{{ entity.id }}"
+                name="check_[]"
+                value="selectionnee"
+                class="form-check-input"
+                data-list-manager-target="rowCheckbox" {# Cible pour le contrôleur de liste (tout cocher) #}
+                data-list-row-target="checkbox" {# Cible pour le contrôleur de ligne #}
+                data-idobjet-value="{{ entity.id }}" 
+                {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
+                data-entity-type="{{entite_nom}}" 
+                data-entity='{{ entity|serialize('json', serialization_context)|e('html_attr') }}' 
+                data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}' 
+            >
+            <label for="check_{{ entity.id }}" class="text-secondary">
+                {{ entity.id }}
+            </label>
+        </div>
+    </td>
+
+    {# Colonne 2 : Cellule principale dynamique #}
+    <td class="p-2" data-controller="responsive-cell">
+        {% set col_principale = listeCanvas.colonne_principale %}
+
+        {# Ligne 1: Texte principal #}
+        <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
+            {# Icône #}
+            {% if col_principale.texte_principal.icone is defined %}
+                <twig:UX:Icon name="{{ col_principale.texte_principal.icone }}" style="width: {{ col_principale.texte_principal.icone_taille }}; height: {{ col_principale.texte_principal.icone_taille }};" />
+            {% endif %}
+
+            {# Préfixe et Texte#}
+            {{ col_principale.texte_principal.attribut_prefixe }}
+
+            {# Valeur formatée et tronquée si nécessaire #}
+            {% set texte_principal = col_principale.texte_principal %}
+            {% set valeur_principale = attribute(entity, texte_principal.attribut_code) %}
+            
+            {% if texte_principal.attribut_taille_max is defined and texte_principal.attribut_taille_max is not null and valeur_principale|length > texte_principal.attribut_taille_max %}
+                "{{ valeur_principale|slice(0, texte_principal.attribut_taille_max) ~ '...' }}"
+            {% else %}
+                "{{ valeur_principale }}"
+            {% endif %}
+        </div>
+
+        {# Ligne 2: Textes secondaires #}
+        <small class="text-secondary d-flex align-items-center mt-1" data-responsive-cell-target="secondaryInfo">
+            {% for texte in col_principale.textes_secondaires %}
+                <span class="d-inline-flex align-items-center">
+                    {# Icône #}
+                    {% if texte.icone is defined %}
+                        <twig:UX:Icon name="{{ texte.icone }}" style="width: {{ texte.icone_taille }}; height: {{ texte.icone_taille }}; margin-right: 4px;" />
+                    {% endif %}
+
+                    {# Préfixe #}
+                    {{ texte.attribut_prefixe }}
+
+                    {# Valeur formatée #}
+                    {% set valeur = attribute(entity, texte.attribut_code) %}
+                    
+                    {% if texte.attribut_type == 'date' and valeur is not null %}
+                        {{ valeur|date('d/m/Y') }}
+                    {% elseif texte.attribut_type == 'text' and texte.attribut_taille_max is not null and valeur|length > texte.attribut_taille_max %}
+                        {{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}
+                    {% else %}
+                        {{ valeur }}
+                    {% endif %}
+                </span>
+                {# Séparateur #}
+                {% if not loop.last %}
+                    <span class="mx-2">{{ col_principale.textes_secondaires_separateurs | raw }}</span>
+                {% endif %}
+            {% endfor %}
+        </small>
+    </td>
+
+    {# Colonnes suivantes : Cellules numériques dynamiques #}
+    {% for colonne in listeCanvas.colonnes_numeriques %}
+        <td class="text-end" style="font-weight: bold; color: #495057;"> {# Gris foncé #}
+            <small>
+                {% set valeur_numerique = attribute(entity, colonne.attribut_code) %}
+                {{ colonne.attribut_unité }}{{ valeur_numerique | number_format(2, ',', ' ') }}
+            </small>
+        </td>
+    {% endfor %}
 </tr>

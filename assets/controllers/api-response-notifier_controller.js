@@ -16,29 +16,14 @@ export default class extends Controller {
      * @property {NumberValue} totalitemsValue - Le nombre total d'éléments.
      */
     static values = {
-        status: Object,
-        page: Number,
-        limit: Number,
-        totalitems: Number,
     }
 
     /**
      * Méthode du cycle de vie de Stimulus.
      * S'exécute une seule fois lorsque le contrôleur est connecté.
-     * Notifie immédiatement le Cerveau de la réponse du serveur.
      */
     connect() {
         this.nomControleur = "API-RESPONSE-NOTIFIER";
-        console.log(`${this.nomControleur} - Réponse reçue, notification du Cerveau.`);
-
-        if (this.hasStatusValue) {
-            this.notifyCerveau('api:response.received', {
-                status: this.statusValue,
-                page: this.pageValue,
-                limit: this.limitValue,
-                totalitems: this.totalitemsValue,
-            });
-        }
     }
 
     /**

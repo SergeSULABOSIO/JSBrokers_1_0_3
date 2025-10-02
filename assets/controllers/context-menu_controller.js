@@ -43,7 +43,7 @@ export default class extends Controller {
 
         this.menuTarget.style.display = 'none';
         document.addEventListener('click', this.boundHideContextMenu, false);
-        document.addEventListener('ui:context-menu.request', this.boundHandleContextMenuRequest);
+        document.addEventListener('app:context-menu.show', this.boundHandleContextMenuRequest);
         document.addEventListener('ui:selection.changed', this.boundHandleSelectionUpdate);
     }
 
@@ -53,7 +53,7 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('click', this.boundHideContextMenu, false);
-        document.removeEventListener('ui:context-menu.request', this.boundHandleContextMenuRequest);
+        document.removeEventListener('app:context-menu.show', this.boundHandleContextMenuRequest);
         document.removeEventListener('ui:selection.changed', this.boundHandleSelectionUpdate);
     }
 
