@@ -100,8 +100,9 @@ export default class extends Controller {
         if (event.target.closest('a, button, input, label')) {
             return;
         }
-        // Inverse l'état de la checkbox et déclenche manuellement l'événement "change".
-        this.checkboxTarget.checked = !this.checkboxTarget.checked;
+        // CORRECTION : On ne modifie plus l'état directement ici.
+        // On se contente de déclencher l'événement 'change' sur la case à cocher.
+        // Le list-manager sera le seul responsable de la mise à jour visuelle.
         this.checkboxTarget.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
