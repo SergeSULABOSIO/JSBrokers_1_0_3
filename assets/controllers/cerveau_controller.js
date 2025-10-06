@@ -100,7 +100,11 @@ export default class extends Controller {
                 // On restaure l'état de la sélection avec les "selectos" fournis par le view-manager.
                 this.selectionState = payload.selectos || [];
                 this.selectionIds = new Set(this.selectionState.map(s => s.id));
-                this.publishSelection();
+                // On publie la sélection ET on rediffuse le contexte de l'onglet pour les composants comme la toolbar.
+                this.publishSelection(); 
+                this.broadcast('ui:tab.context-changed', {
+                    ...payload
+                });
                 break;
 
             // --- NOUVEAU : Gère la demande d'ajout depuis la barre d'outils ---
