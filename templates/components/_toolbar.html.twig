@@ -13,14 +13,15 @@
   class="context-toolbar" 
   role="toolbar"
   data-controller="toolbar"
+  data-toolbar-entity-form-canvas-value="{{ entityFormCanvas|json_encode }}"
 >
     <button 
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.close-request"
         data-toolbar-target="btquitter" 
         class="btn btn-sm btn-icon-danger" 
-        title="Quitter">
-        <twig:UX:Icon name="lucide:x-circle" />
+        title="Quitter" style="width: 22px; height: 22px; padding: 1px;">
+        <twig:UX:Icon name="hugeicons:logout-04" />
     </button>
     <div class="toolbar-separator"></div>
     <button 
@@ -28,26 +29,33 @@
         data-toolbar-event-name-param="ui:toolbar.add-request"
         data-toolbar-target="btajouter" 
         class="btn btn-sm" 
-        title="Ajouter">
+        title="Ajouter" style="width: 22px; height: 22px; padding: 1px;">
         <twig:UX:Icon name="gridicons:add" />
     </button>
     <button 
         data-action="click->toolbar#notify" 
-        data-toolbar-event-name-param="ui:toolbar.modify-request"
+        data-toolbar-event-name-param="ui:toolbar.edit-request"
         data-toolbar-target="btmodifier" 
         class="btn btn-sm" 
-        title="Modifier" 
-        style="display:none;">
-        <twig:UX:Icon name="lucide:edit" />
+        title="Modifier" style="display:none; width: 22px; height: 22px; padding: 1px;">
+        <twig:UX:Icon name="tabler:edit" />
+    </button>
+    {# NOUVEAU : Ajout du bouton Ouvrir #}
+    <button
+        data-action="click->toolbar#notify"
+        data-toolbar-event-name-param="ui:toolbar.open-request"
+        data-toolbar-target="btouvrir"
+        class="btn btn-sm" 
+        title="Ouvrir" style="display:none; width: 22px; height: 22px; padding: 1px;">
+        <twig:UX:Icon name="fad:open" />
     </button>
     <button 
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.delete-request"
         data-toolbar-target="btsupprimer" 
         class="btn btn-sm btn-icon-danger" 
-        title="Supprimer" 
-        style="display:none;">
-        <twig:UX:Icon name="lucide:trash-2" />
+        title="Supprimer" style="display:none; width: 22px; height: 22px; padding: 1px;">
+        <twig:UX:Icon name="fluent:delete-20-filled" />
     </button>
     <div class="toolbar-separator"></div>
     <button 
@@ -55,16 +63,16 @@
         data-toolbar-event-name-param="ui:toolbar.select-all-request"
         data-toolbar-target="bttoutcocher" 
         class="btn btn-sm" 
-        title="Sélectionner tout">
-        <twig:UX:Icon name="lucide:check-square" />
+        title="Sélectionner tout" style="width: 22px; height: 22px; padding: 1px;">
+        <twig:UX:Icon name="material-symbols:check-box" />
     </button>
     <button 
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.refresh-request"
         data-toolbar-target="btrecharger" 
         class="btn btn-sm" 
-        title="Actualiser">
-        <twig:UX:Icon name="lucide:refresh-cw" />
+        title="Actualiser" style="width: 22px; height: 22px; padding: 1px;">
+        <twig:UX:Icon name="ci:arrows-reload-01" />
     </button>
     <div class="toolbar-separator"></div>
     <button 
@@ -72,7 +80,7 @@
         data-toolbar-event-name-param="ui:toolbar.settings-request"
         data-toolbar-target="btparametres" 
         class="btn btn-sm" 
-        title="Paramètres">
-        <twig:UX:Icon name="lucide:settings" />
+        title="Paramètres" style="width: 22px; height: 22px; padding: 1px;">
+        <twig:UX:Icon name="material-symbols:settings" />
     </button>
 </div>

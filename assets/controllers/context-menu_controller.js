@@ -88,10 +88,11 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleSelectionUpdate(event) {
-        const { selection, entities, entityFormCanvas } = event.detail;
-        this.selection = selection || [];
-        this.entities = entities || [];
-        this.entityFormCanvas = entityFormCanvas;
+        // Le payload (event.detail) est maintenant directement le tableau des "selectos".
+        const selectos = event.detail || [];
+        this.selection = selectos.map(s => s.id);
+        this.entities = selectos;
+        this.entityFormCanvas = selectos.length > 0 ? selectos[0].entityFormCanvas : null;
         // Met à jour les boutons si le menu est déjà visible
         if (this.menuTarget.style.display === 'block') {
             this.organizeButtons(this.selection);
@@ -108,7 +109,7 @@ export default class extends Controller {
         const isSingleSelection = selection.length === 1;
 
         if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection ? "block" : "none";
-        if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection ? "block" : "none";
+        if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = isSingleSelection ? "block" : "none";
         if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection ? "block" : "none";
     }
 
@@ -119,6 +120,20 @@ export default class extends Controller {
         if (this.hasMenuTarget) {
             this.menuTarget.style.display = 'none';
         }
+    }
+
+    /**
+     * Gère l'action spécifique "Ouvrir" du menu contextuel pour corriger l'erreur.
+     * @param {MouseEvent} event - L'événement de clic.
+     */
+    context_action_ouvrir(event) {
+        // CORRECTION : Notifie directement le Cerveau avec le bon événement,
+        // car l'attribut data-context-menu-event-name-param est manquant sur le bouton.
+        event.stopPropagation();
+        this.hideContextMenu();
+
+        const payload = { entities: this.entities };
+        this.notifyCerveau('ui:toolbar.open-request', payload);
     }
 
     /**
