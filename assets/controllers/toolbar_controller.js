@@ -1,11 +1,11 @@
 import { Controller } from '@hotwired/stimulus';
 
 /**
- * @class ToolbarController
+ * @class ToolbarController - REFACTORED (V3)
  * @extends Controller
  * @description Gère la barre d'outils principale. Son rôle est de :
- * 1. Écouter l'événement `ui:selection.changed` pour connaître la sélection actuelle (les "selectos").
- * 2. Écouter l'événement `ui:tab.context-changed` pour connaître le contexte de formulaire actif (`entityFormCanvas`).
+ * 1. Écouter `ui:selection.changed` (via le Cerveau) pour mettre à jour la liste des éléments sélectionnés (`selectos`).
+ * 2. Écouter `ui:tab.context-changed` (via le Cerveau) pour mettre à jour le contexte de formulaire actif (`entityFormCanvas`).
  * 3. Ajuster la visibilité des boutons en fonction du nombre d'éléments sélectionnés.
  * 4. Notifier le Cerveau des actions initiées par l'utilisateur (Ajouter, Supprimer, etc.), en préfixant tous les événements par `ui:toolbar.`.
  */
@@ -55,8 +55,8 @@ export default class extends Controller {
      */
     initialize() {
         // L'état du contrôleur est simple : il ne stocke que le tableau des "selectos" reçu du Cerveau.
-        // et le canvas de formulaire de l'onglet actif.
         this.selectos = [];
+        // Le canvas de formulaire est initialisé avec celui de la rubrique principale, puis mis à jour au changement d'onglet.
         this.activeFormCanvas = this.entityFormCanvasValue; // Initialisation avec la valeur du contexte principal.
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
         this.boundHandleTabChange = this.handleTabChange.bind(this);
@@ -101,13 +101,16 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:tab.context-changed`.
      */
     handleTabChange(event) {
-        const selectos = event.detail.selectos || [];
-        if (selectos.length > 0) {
-            this.activeFormCanvas = selectos[0].entityFormCanvas;
+        const { tabId, formCanvas } = event.detail;
+
+        // Si le Cerveau fournit un formCanvas dans l'événement, on l'utilise.
+        if (formCanvas) {
+            this.activeFormCanvas = formCanvas;
         } else {
-            // Si l'onglet est vide, on essaie de trouver le canvas depuis le DOM
-            this.activeFormCanvas = this.findActiveFormCanvas();
+            // Sinon (cas de l'onglet principal vide), on revient à la valeur par défaut.
+            this.activeFormCanvas = this.entityFormCanvasValue;
         }
+        console.log(`${this.nomControleur} - Contexte de formulaire mis à jour pour l'onglet '${tabId}'.`);
     }
 
     /**
@@ -188,16 +191,6 @@ export default class extends Controller {
         }
 
         this.notifyCerveau(eventName, payload);
-    }
-
-    /**
-     * Trouve le `entityFormCanvas` de l'onglet actuellement visible.
-     * @returns {object|null}
-     */
-    findActiveFormCanvas() {
-        const activeContent = document.querySelector('.tab-content.active, .tab-content[style*="block"]');
-        const listManager = activeContent ? activeContent.querySelector('[data-controller="list-manager"]') : null;
-        return listManager ? JSON.parse(listManager.dataset.listManagerEntityFormCanvasValue || 'null') : this.entityFormCanvasValue;
     }
 
     /**
