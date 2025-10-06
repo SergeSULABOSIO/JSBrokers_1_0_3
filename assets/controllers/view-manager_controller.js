@@ -68,12 +68,31 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleSelection(event) {
+        // Le payload (event.detail) est maintenant directement le tableau des "selectos".
+        const selectos = event.detail || [];
+
         // On mémorise l'état de sélection pour l'onglet actuellement actif.
         if (this.activeTabId) {
-            this.tabStates[this.activeTabId] = event.detail;
+            this.tabStates[this.activeTabId] = selectos;
         }
 
-        const { entities, canvas, entityType } = event.detail;
+        const selection = selectos.map(s => s.id);
+        const entities = selectos.map(s => s.entity);
+        const canvas = selectos.length > 0 ? selectos[0].entityCanvas : null;
+        const entityType = selectos.length > 0 ? selectos[0].entityType : null;
+
+        // --- CORRECTION : Mettre à jour le display avec le statut de la sélection ---
+        if (this.hasDisplayTarget) {
+            const selectionCount = selection ? selection.length : 0;
+            if (selectionCount === 0) {
+                this.displayTarget.innerHTML = 'Prêt.';
+            } else if (selectionCount === 1) {
+                this.displayTarget.innerHTML = '1 élément sélectionné.';
+            } else {
+                this.displayTarget.innerHTML = `${selectionCount} éléments sélectionnés.`;
+            }
+        }
+
         const isSingleSelection = entities && entities.length === 1;
         const newParentId = isSingleSelection ? entities[0].id : null;
 
@@ -125,9 +144,12 @@ export default class extends Controller {
         }
 
         // On restaure l'état de la sélection pour cet onglet et on notifie le Cerveau.
-        const savedState = this.tabStates[this.activeTabId];
-        const payload = savedState || { entities: [], selection: [], canvas: {}, entityType: '' };
-        this.notifyCerveau(payload);
+        const savedSelectos = this.tabStates[this.activeTabId] || [];
+        this.notifyCerveau('ui:tab.context-changed', {
+            tabId: this.activeTabId,
+            // On envoie l'état de sélection sauvegardé pour ce nouvel onglet.
+            selectos: savedSelectos
+        });
     }
 
     /**
@@ -137,29 +159,11 @@ export default class extends Controller {
      * @fires cerveau:event
      * @private
      */
-    notifyCerveau(selectionState) {
+    notifyCerveau(type, payload = {}) {
         console.log(`${this.nomControleur} - Notification du Cerveau sur le changement de contexte.`);
-        const activeContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
-        const listControllerElement = activeContent ? activeContent.querySelector('[data-controller~="liste-principale"]') : null;
-
-        let payload = { ...selectionState, numericAttributes: null, numericData: null };
-
-        if (listControllerElement) {
-            const numericData = JSON.parse(listControllerElement.dataset.listePrincipaleNumericAttributesValue || '{}');
-            const firstItemId = Object.keys(numericData)[0];
-
-            if (firstItemId && numericData[firstItemId] && Object.keys(numericData[firstItemId]).length > 0) {
-                const numericAttributesOptions = {};
-                for (const key in numericData[firstItemId]) {
-                    numericAttributesOptions[key] = numericData[firstItemId][key].description;
-                }
-                payload.numericAttributes = numericAttributesOptions;
-                payload.numericData = numericData;
-            }
-        }
 
         this.dispatch('cerveau:event', {
-            type: 'ui:selection.changed',
+            type: type,
             source: this.nomControleur,
             payload: payload,
             timestamp: Date.now()

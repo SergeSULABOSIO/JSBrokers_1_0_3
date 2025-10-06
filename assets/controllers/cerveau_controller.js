@@ -21,6 +21,10 @@ export default class extends Controller {
      */
     connect() {
         this.nomControleur = "Cerveau";
+        // --- NOUVELLE ARCHITECTURE : Le Cerveau devient la source de vérité pour la sélection ---
+        this.selectionState = []; // Tableau des objets "selecto"
+        this.selectionIds = new Set(); // Pour une recherche rapide des IDs
+
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
         // --- CORRECTION : Lier la fonction une seule fois et stocker la référence ---
         this.boundHandleEvent = this.handleEvent.bind(this);
@@ -75,15 +79,13 @@ export default class extends Controller {
 
             // --- NOUVEAU : Relais du changement de sélection d'un élément de liste ---
             case 'ui:list-row.selection-changed':
-                console.log("-> ACTION: Relayer le changement de sélection d'un élément vers la liste principale.");
-                this.broadcast('app:list-row.selection-changed:relay', payload);
+                console.log("-> ACTION: Mise à jour de l'état de sélection.");
+                this.updateSelectionState(payload);
                 break;
 
-            // --- NOUVEAU : Relais de l'état de sélection complet d'une liste ---
-            // Cet événement est émis par liste-principale APRES avoir mis à jour son état.
             case 'ui:selection.updated':
-                console.log("-> ACTION: L'état de la sélection a été mis à jour. Diffusion aux composants dépendants (barre d'outils, etc.).");
-                this.broadcast('ui:selection.changed', payload);
+                // Cet événement est maintenant obsolète, la logique est dans 'ui:list-row.selection-changed'
+                console.warn("-> ATTENTION: Événement 'ui:selection.updated' obsolète. La logique est gérée par le Cerveau.");
                 break;
 
             // --- NOUVEAU : Gère la demande de fermeture d'une rubrique ---
@@ -94,13 +96,17 @@ export default class extends Controller {
 
             // --- NOUVEAU : Gère le changement de contexte d'un onglet ---
             case 'ui:tab.context-changed':
-                console.log("-> ACTION: Le contexte d'un onglet a changé. Diffusion de l'état de sélection mis à jour.");
-                this.broadcast('ui:selection.changed', payload);
+                console.log("-> ACTION: Le contexte d'un onglet a changé. Restauration de la sélection pour cet onglet.");
+                // On restaure l'état de la sélection avec les "selectos" fournis par le view-manager.
+                this.selectionState = payload.selectos || [];
+                this.selectionIds = new Set(this.selectionState.map(s => s.id));
+                this.publishSelection();
                 break;
 
             // --- NOUVEAU : Gère la demande d'ajout depuis la barre d'outils ---
             case 'ui:toolbar.add-request':
-                console.log("-> ACTION: Demande d'ajout. Ouverture de la boîte de dialogue.");
+                console.log("-> ACTION: Demande d'ajout. Préparation de l'ouverture de la boîte de dialogue.");
+                // Le payload contient maintenant directement { entityFormCanvas: ... }
                 this.broadcast('app:boite-dialogue:init-request', {
                     entity: {}, // Entité vide pour le mode création
                     entityFormCanvas: payload.entityFormCanvas,
@@ -161,11 +167,64 @@ export default class extends Controller {
                 this.broadcast('app:status.updated', payload);
                 break;
 
+            // --- NOUVEAU : Gère la demande d'ouverture d'un élément (depuis barre d'outils ou menu contextuel) ---
+            case 'ui:toolbar.open-request':
+                console.log("-> ACTION: Demande d'ouverture d'élément(s). Diffusion de l'ordre au WorkspaceManager.");
+                // Le workspace-manager écoute 'app:liste-element:openned' pour ouvrir les onglets.
+                // CORRECTION : On boucle sur toutes les entités et on envoie un événement pour chacune.
+                if (payload.entities && payload.entities.length > 0) {
+                    payload.entities.forEach(selecto => {
+                        // On restructure le payload pour qu'il corresponde exactement
+                        // à ce que `workspace-manager` attend : un objet avec les clés `entity`, `entityType`, `entityCanvas`.
+                        this.broadcast('app:liste-element:openned', selecto);
+                    });
+                }
+                break;
+
+            // --- NOUVEAU : Gère la demande de sélection/désélection de tous les éléments ---
+            case 'ui:toolbar.select-all-request':
+                console.log("-> ACTION: Demande de sélection totale. Diffusion de l'ordre au ListManager.");
+                this.broadcast('app:list.toggle-all-request', payload);
+                break;
+
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }
 
         console.groupEnd();
+    }
+
+    /**
+     * Met à jour l'état de la sélection et publie le changement.
+     * @param {object} selecto - L'objet de sélection d'une ligne.
+     * @private
+     */
+    updateSelectionState(selecto) {
+        const { id, isChecked } = selecto;
+
+        if (isChecked) {
+            if (!this.selectionIds.has(id)) {
+                this.selectionState.push(selecto);
+                this.selectionIds.add(id);
+            }
+        } else {
+            if (this.selectionIds.has(id)) {
+                this.selectionState = this.selectionState.filter(item => item.id !== id);
+                this.selectionIds.delete(id);
+            }
+        }
+        this.publishSelection();
+    }
+
+    /**
+     * Diffuse l'état de sélection actuel à toute l'application.
+     * @private
+     */
+    publishSelection() {
+        // --- NOUVELLE ARCHITECTURE ---
+        // Le payload est maintenant directement le tableau des "selectos".
+        console.log("-> ACTION: Publication de l'état de sélection mis à jour.", this.selectionState);
+        this.broadcast('ui:selection.changed', this.selectionState);
     }
 
     /**

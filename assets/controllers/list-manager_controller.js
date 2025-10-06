@@ -37,24 +37,16 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "LIST-MANAGER";
         this.urlAPIDynamicQuery = `/admin/${this.controleurphpValue}/api/dynamic-query/${this.identrepriseValue}`;
-        // console.log(`${this.nomControleur} - Connecté pour l'entité '${this.entiteValue}'.`);
-
-        this.selectedEntities = [];
-        this.selectedIds = [];
-        this.selectedEntityType = null;
-        this.selectedEntityCanvas = null;
 
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
-        this.boundHandleItemSelectionChange = this.handleItemSelectionChange.bind(this);
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
+        this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
 
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.addEventListener('app:list-row.selection-changed:relay', this.boundHandleItemSelectionChange);
         document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
         document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
-
-        this.publishSelection(); // Publie l'état initial (vide)
+        document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
     }
 
     /**
@@ -63,9 +55,9 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.removeEventListener('app:list-row.selection-changed:relay', this.boundHandleItemSelectionChange);
         document.removeEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
+        document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -84,37 +76,6 @@ export default class extends Controller {
                 checkbox.dispatchEvent(new Event('change', { bubbles: true }));
             }
         });
-    }
-
-    /**
-     * Gère le changement de sélection d'un élément individuel, relayé par le Cerveau.
-     * @param {CustomEvent} event - L'événement `app:list-item.selection-changed:relay`.
-     */
-    handleItemSelectionChange(event) {
-        const { id, isChecked, entity, canvas, entityType } = event.detail;
-        const idStr = String(id);
-
-        if (isChecked) {
-            if (!this.selectedIds.includes(idStr)) {
-                this.selectedIds.push(idStr);
-                this.selectedEntities.push(entity);
-                this.selectedEntityType = entityType;
-                this.selectedEntityCanvas = canvas;
-            }
-        } else {
-            const index = this.selectedIds.indexOf(idStr);
-            if (index > -1) {
-                this.selectedIds.splice(index, 1);
-                this.selectedEntities.splice(index, 1);
-            }
-            if (this.selectedIds.length === 0) {
-                this.selectedEntityType = null;
-                this.selectedEntityCanvas = null;
-            }
-        }
-
-        this.updateSelectAllCheckboxState();
-        this.publishSelection();
     }
 
     /**
@@ -144,45 +105,13 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleGlobalSelectionUpdate(event) {
-        const restoredSelectionIds = new Set((event.detail.selection || []).map(id => String(id)));
-        this.selectedIds = Array.from(restoredSelectionIds);
+        const selectos = event.detail || [];
+        const selectionIds = new Set(selectos.map(s => String(s.id)));
 
         this.rowCheckboxTargets.forEach(checkbox => {
             const checkboxId = String(checkbox.dataset.listRowIdobjetValue);
-            checkbox.checked = restoredSelectionIds.has(checkboxId);
+            checkbox.checked = selectionIds.has(checkboxId);
             checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
-        });
-
-        this.updateSelectAllCheckboxState();
-    }
-
-    /**
-     * Publie l'état de sélection actuel au Cerveau.
-     * @fires cerveau:event
-     * @private
-     */
-    publishSelection() {
-        // CORRECTION : Enrichir le payload avec les données numériques dès le départ.
-        const numericDataRaw = this.element.dataset.listManagerNumericAttributesValue;
-        const numericData = numericDataRaw ? JSON.parse(numericDataRaw) : {};
-        let numericAttributesOptions = null;
-
-        const firstItemId = Object.keys(numericData)[0];
-        if (firstItemId && numericData[firstItemId] && Object.keys(numericData[firstItemId]).length > 0) {
-            numericAttributesOptions = {};
-            for (const key in numericData[firstItemId]) {
-                numericAttributesOptions[key] = numericData[firstItemId][key].description;
-            }
-        }
-
-        this.notifyCerveau('ui:selection.updated', {
-            selection: this.selectedIds,
-            entities: this.selectedEntities,
-            canvas: this.selectedEntityCanvas,
-            entityType: this.selectedEntityType,
-            entityFormCanvas: this.entityFormCanvasValue,
-            numericAttributes: numericAttributesOptions,
-            numericData: numericData,
         });
     }
 
@@ -237,12 +166,8 @@ export default class extends Controller {
      * @private
      */
     resetSelection() {
-        this.selectedIds = [];
-        this.selectedEntities = [];
-        this.selectedEntityType = null;
-        this.selectedEntityCanvas = null;
         this.updateSelectAllCheckboxState();
-        this.publishSelection();
+        // La publication est maintenant gérée par le Cerveau
     }
 
     // --- COMMUNICATION ---

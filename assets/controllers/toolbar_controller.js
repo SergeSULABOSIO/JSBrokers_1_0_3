@@ -3,9 +3,11 @@ import { Controller } from '@hotwired/stimulus';
 /**
  * @class ToolbarController
  * @extends Controller
- * @description Gère la barre d'outils principale de l'application.
- * Ce contrôleur écoute les changements de contexte (sélection) et ajuste l'état de ses boutons.
- * Il notifie le Cerveau des actions initiées par l'utilisateur.
+ * @description Gère la barre d'outils principale. Son rôle est de :
+ * 1. Écouter l'événement `ui:selection.changed` pour connaître la sélection actuelle (les "selectos").
+ * 2. Écouter l'événement `ui:tab.context-changed` pour connaître le contexte de formulaire actif (`entityFormCanvas`).
+ * 3. Ajuster la visibilité des boutons en fonction du nombre d'éléments sélectionnés.
+ * 4. Notifier le Cerveau des actions initiées par l'utilisateur (Ajouter, Supprimer, etc.), en préfixant tous les événements par `ui:toolbar.`.
  */
 export default class extends Controller {
     /**
@@ -30,6 +32,14 @@ export default class extends Controller {
     ];
 
     /**
+     * @property {ObjectValue} entityFormCanvasValue - La configuration (canvas) du formulaire d'édition/création
+     * pour l'entité de la rubrique actuelle. Fourni par le serveur.
+     */
+    static values = {
+        entityFormCanvas: Object,
+    }
+
+    /**
      * Méthode du cycle de vie de Stimulus.
      * S'exécute lorsque le contrôleur est connecté au DOM.
      */
@@ -44,11 +54,12 @@ export default class extends Controller {
      * @private
      */
     initialize() {
-        this.tabSelectedCheckBoxs = [];
-        this.tabSelectedEntities = [];
-        this.formCanvas = null;
-
+        // L'état du contrôleur est simple : il ne stocke que le tableau des "selectos" reçu du Cerveau.
+        // et le canvas de formulaire de l'onglet actif.
+        this.selectos = [];
+        this.activeFormCanvas = this.entityFormCanvasValue; // Initialisation avec la valeur du contexte principal.
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
+        this.boundHandleTabChange = this.handleTabChange.bind(this);
 
         this.initializeToolbarState();
         this.setupEventListeners();
@@ -62,6 +73,7 @@ export default class extends Controller {
     setupEventListeners() {
         console.log(`${this.nomControleur} - Activation des écouteurs d'événements`);
         document.addEventListener('ui:selection.changed', this.boundHandleContextUpdate);
+        document.addEventListener('ui:tab.context-changed', this.boundHandleTabChange);
     }
 
     /**
@@ -71,6 +83,7 @@ export default class extends Controller {
     disconnect() {
         console.log(`${this.nomControleur} - Déconnecté - Suppression d'écouteurs.`);
         document.removeEventListener('ui:selection.changed', this.boundHandleContextUpdate);
+        document.removeEventListener('ui:tab.context-changed', this.boundHandleTabChange);
     }
 
     /**
@@ -78,48 +91,80 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleContextUpdate(event) {
-        console.log(`${this.nomControleur} - Mise à jour du contexte reçue du Cerveau`, event.detail);
-
-        const { selection, entities, entityFormCanvas } = event.detail;
-
-        this.tabSelectedCheckBoxs = selection || [];
-        this.tabSelectedEntities = entities || [];
-        this.formCanvas = entityFormCanvas;
-
-        this.organizeButtons(selection || []);
+        // Le payload est directement le tableau des "selectos".
+        this.selectos = event.detail || [];
+        this.organizeButtons();
     }
 
     /**
-     * Affiche ou masque les boutons en fonction de la sélection actuelle.
-     * @param {Array<string>} selection - Le tableau des IDs sélectionnés.
+     * Gère le changement d'onglet pour mettre à jour le canvas de formulaire actif.
+     * @param {CustomEvent} event - L'événement `ui:tab.context-changed`.
+     */
+    handleTabChange(event) {
+        const selectos = event.detail.selectos || [];
+        if (selectos.length > 0) {
+            this.activeFormCanvas = selectos[0].entityFormCanvas;
+        } else {
+            // Si l'onglet est vide, on essaie de trouver le canvas depuis le DOM
+            this.activeFormCanvas = this.findActiveFormCanvas();
+        }
+    }
+
+    /**
+     * Affiche ou masque les boutons contextuels en fonction de la sélection actuelle.
+     * La logique est centralisée ici et se base sur le nombre d'éléments dans `this.selectos`.
      * @private
      */
-    organizeButtons(selection) {
-        const hasSelection = selection.length > 0;
-        const isSingleSelection = selection.length === 1;
+    organizeButtons() {
+        const selectionCount = this.selectos.length;
+        const hasSelection = selectionCount > 0;
+        const isSingleSelection = selectionCount === 1;
 
-        if (this.hasBtmodifierTarget) this.btmodifierTarget.style.display = isSingleSelection ? "block" : "none";
-        if (this.hasBtouvrirTarget) this.btouvrirTarget.style.display = hasSelection ? "block" : "none";
-        if (this.hasBtsupprimerTarget) this.btsupprimerTarget.style.display = hasSelection ? "block" : "none";
+        // Règle : "Modifier" est visible uniquement pour une sélection unique.
+        this.toggleButton(this.btmodifierTarget, isSingleSelection);
+
+        // Règle : "Ouvrir" est visible dès qu'il y a au moins une sélection (unique ou multiple).
+        this.toggleButton(this.btouvrirTarget, hasSelection);
+
+        // Règle : "Supprimer" est visible dès qu'il y a au moins une sélection (unique ou multiple).
+        this.toggleButton(this.btsupprimerTarget, hasSelection);
     }
 
     /**
-     * Initialise l'état visible des boutons de la barre d'outils.
+     * Méthode utilitaire pour afficher/masquer un bouton cible.
+     * @param {HTMLElement | undefined} target - Le bouton cible Stimulus (peut être optionnel).
+     * @param {boolean} show - `true` pour afficher, `false` pour masquer.
+     * @private
+     */
+    toggleButton(target, show) {
+        if (!target) return;
+        target.style.display = show ? 'block' : 'none';
+    }
+
+    /**
+     * Initialise l'état des boutons. Certains sont toujours visibles,
+     * d'autres sont cachés par défaut.
      * @private
      */
     initializeToolbarState() {
+        // Ces boutons doivent toujours rester actifs et visibles.
         if (this.hasBtquitterTarget) this.btquitterTarget.style.display = "block";
         if (this.hasBtparametresTarget) this.btparametresTarget.style.display = "block";
         if (this.hasBtajouterTarget) this.btajouterTarget.style.display = "block";
         if (this.hasBtrechargerTarget) this.btrechargerTarget.style.display = "block";
         if (this.hasBttoutcocherTarget) this.bttoutcocherTarget.style.display = "block";
+
+        // Les boutons contextuels sont cachés par défaut.
+        this.toggleButton(this.btmodifierTarget, false);
+        this.toggleButton(this.btouvrirTarget, false);
+        this.toggleButton(this.btsupprimerTarget, false);
     }
 
     /**
      * Méthode générique pour notifier le Cerveau d'une action de la barre d'outils.
      * L'événement à envoyer est défini dans l'attribut `data-toolbar-event-name-param` du bouton.
      * @param {MouseEvent} event - L'événement de clic.
-     * @fires cerveau:event
+     * @fires CustomEvent#cerveau:event
      */
     notify(event) {
         const button = event.currentTarget;
@@ -133,14 +178,26 @@ export default class extends Controller {
         let payload = {};
         // Enrichit le payload en fonction de l'action demandée
         if (eventName === 'ui:toolbar.delete-request') {
-            payload = { selection: this.tabSelectedCheckBoxs };
-        } else if (eventName === 'ui:toolbar.add-request') {
-            payload = { entityFormCanvas: this.formCanvas };
-        } else if (['ui:toolbar.edit-request', 'ui:toolbar.open-request'].includes(eventName)) {
-            payload = { entities: this.tabSelectedEntities };
+            payload = { selection: this.selectos.map(s => s.id) }; // La suppression n'a besoin que des IDs.
+        } else if (eventName === 'ui:toolbar.add-request') { 
+            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
+            payload = { entityFormCanvas: this.activeFormCanvas };
+        } else if (['ui:toolbar.edit-request', 'ui:toolbar.open-request'].includes(eventName)) { 
+            // Pour "Ouvrir" ou "Modifier", on envoie le tableau complet des "selectos".
+            payload = { entities: this.selectos };
         }
 
         this.notifyCerveau(eventName, payload);
+    }
+
+    /**
+     * Trouve le `entityFormCanvas` de l'onglet actuellement visible.
+     * @returns {object|null}
+     */
+    findActiveFormCanvas() {
+        const activeContent = document.querySelector('.tab-content.active, .tab-content[style*="block"]');
+        const listManager = activeContent ? activeContent.querySelector('[data-controller="list-manager"]') : null;
+        return listManager ? JSON.parse(listManager.dataset.listManagerEntityFormCanvasValue || 'null') : this.entityFormCanvasValue;
     }
 
     /**

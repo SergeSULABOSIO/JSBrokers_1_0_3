@@ -77,16 +77,36 @@ export default class extends Controller {
         const checkbox = this.checkboxTarget;
         this.element.classList.toggle('row-selected', checkbox.checked);
 
+        // --- NOUVELLE ARCHITECTURE ---
+        // On prépare l'objet "selecto" complet pour le Cerveau.
+        const numericDataRaw = this.element.closest('[data-list-manager-numeric-attributes-value]')?.dataset.listManagerNumericAttributesValue;
+        const numericData = numericDataRaw ? JSON.parse(numericDataRaw) : {};
+
+        const payload = {
+            id: this.idobjetValue,
+            isChecked: checkbox.checked,
+            entity: JSON.parse(checkbox.dataset.entity || 'null'),
+            entityType: checkbox.dataset.entityType,
+            entityCanvas: JSON.parse(checkbox.dataset.canvas || 'null'),
+            entityFormCanvas: JSON.parse(this.element.closest('[data-list-manager-entity-form-canvas-value]')?.dataset.listManagerEntityFormCanvasValue || 'null'),
+            numericAttributes: numericData[this.idobjetValue] || {},
+        };
+
+        // --- NOUVEAU : Validation du payload avant l'envoi ---
+        const invalidKeys = Object.entries(payload).filter(([key, value]) => value === null || value === undefined);
+
+        if (invalidKeys.length > 0) {
+            console.error(`[${this.nomControleur}] Erreur de validation: Le payload contient des valeurs nulles ou non définies. Événement non envoyé.`, {
+                clesInvalides: invalidKeys.map(([key]) => key),
+                payloadComplet: payload
+            });
+            return; // On arrête l'exécution ici.
+        }
+
         this.dispatch('cerveau:event', {
             type: 'ui:list-row.selection-changed',
             source: this.nomControleur,
-            payload: {
-                id: this.idobjetValue,
-                isChecked: checkbox.checked,
-                entity: JSON.parse(checkbox.dataset.entity || '{}'),
-                entityType: checkbox.dataset.entityType,
-                canvas: JSON.parse(checkbox.dataset.canvas || '{}'),
-            },
+            payload: payload,
             timestamp: Date.now()
         });
     }
@@ -100,9 +120,8 @@ export default class extends Controller {
         if (event.target.closest('a, button, input, label')) {
             return;
         }
-        // CORRECTION : On ne modifie plus l'état directement ici.
-        // On se contente de déclencher l'événement 'change' sur la case à cocher.
-        // Le list-manager sera le seul responsable de la mise à jour visuelle.
+        // CORRECTION : Inverse l'état de la checkbox pour un feedback visuel immédiat.
+        this.checkboxTarget.checked = !this.checkboxTarget.checked;
         this.checkboxTarget.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
