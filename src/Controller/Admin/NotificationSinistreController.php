@@ -102,10 +102,13 @@ class NotificationSinistreController extends AbstractController
 
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
         $constante->loadCalculatedValue($entityCanvas, [$notification]);
+        $entityFormCanvas = $constante->getEntityFormCanvas($notification, $entreprise->getId());
+
+        // dd("ICI", $entityFormCanvas, $entityCanvas, $notification);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($notification, $entreprise->getId()),
+            'entityFormCanvas' => $entityFormCanvas,
             'entityCanvas' => $entityCanvas
         ]);
     }
