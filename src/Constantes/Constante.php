@@ -6327,9 +6327,7 @@ class Constante
                             ],
                         ],
                     ],
-                    "colonnes_numeriques" => [
-                        
-                    ],
+                    "colonnes_numeriques" => [],
                 ];
 
             case Contact::class:
@@ -6568,7 +6566,8 @@ class Constante
                     "titre_creation" => "Nouvelle Notification de Sinistre",
                     "titre_modification" => "Modification de la Notification #%id%",
                     "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
-                    "endpoint_form_url" => "/admin/notificationsinistre/api/get-form"
+                    "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
+                    "isCreationMode" => ($isParentNew === true)
                 ],
                 "form_layout" => $this->buildNotificationSinistreLayout($notificationId, $isParentNew)
             ];
@@ -6576,44 +6575,18 @@ class Constante
         if ($object instanceof Contact) {
             // L'ID est nécessaire pour construire les endpoints, assurons-nous qu'il est accessible.
             // En mode création, l'ID sera null, nous gérerons ce cas côté client.
-            $notificationId = $object->getId() ?? 0;
-
+            $contactId = $object->getId() ?? 0;
             return [
                 "parametres" => [
                     "titre_creation" => "Nouveau contact",
                     "titre_modification" => "Modification du contact #%id%",
                     "endpoint_submit_url" => "/admin/contact/api/submit",
                     "endpoint_form_url" => "/admin/contact/api/get-form",
-
-                    "form_layout" => [
-                        // Ligne 1 : 2 colonnes
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                ["champs" => ["nom"]],
-                            ]
-                        ],
-                        // Ligne 2 : 1 colonne
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                ["champs" => ["email"]],
-                                ["champs" => ["telephone"]]
-                            ]
-                        ],
-                        // Ligne 3 : 2 colonnes
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                ["champs" => ["fonction"]],
-                                ["champs" => ["type"]]
-                            ]
-                        ],
-                    ],
+                    "isCreationMode" => ($isParentNew === true)
                 ],
+                "form_layout" => $this->buildContactLayout($contactId, $isParentNew)
             ];
         }
-        // --- AJOUT DES DEFINITIONS DE CANVAS POUR LES NOUVELLES ENTITÉS ---
         if ($object instanceof PieceSinistre) {
             $pieceId = $object->getId() ?? 0;
             return [
@@ -6621,30 +6594,23 @@ class Constante
                     "titre_creation" => "Nouvelle pièce",
                     "titre_modification" => "Modification de la pièce #%id%",
                     "endpoint_submit_url" => "/admin/piecesinistre/api/submit",
-                    "endpoint_form_url" => "/admin/piecesinistre/api/get-form"
+                    "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
+                    "isCreationMode" => ($isParentNew === true)
                 ],
                 "form_layout" => $this->buildPieceSinistreLayout($pieceId, $isParentNew)
             ];
         }
         if ($object instanceof Document) {
+            $documentId = $object->getId() ?? 0;
             return [
                 "parametres" => [
-                    "form_layout" => [
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                ["champs" => ["nom"]],
-                                ["champs" => ["classeur"]]
-                            ]
-                        ],
-                        [
-                            "couleur_fond" => "white",
-                            "colonnes" => [
-                                ["champs" => ["fichier"]]
-                            ]
-                        ],
-                    ]
-                ]
+                    "titre_creation" => "Nouvelle Document",
+                    "titre_modification" => "Modification du document #%id%",
+                    "endpoint_submit_url" => "/admin/document/api/submit",
+                    "endpoint_form_url" => "/admin/document/api/get-form",
+                    "isCreationMode" => ($isParentNew === true)
+                ],
+                "form_layout" => $this->buildDocumentLayout($documentId, $isParentNew)
             ];
         }
         if ($object instanceof OffreIndemnisationSinistre) {
@@ -6654,7 +6620,8 @@ class Constante
                     "titre_creation" => "Nouvelle offre d'indemnisation",
                     "titre_modification" => "Modification de l'offre #%id%",
                     "endpoint_submit_url" => "/admin/offreindemnisation/api/submit",
-                    "endpoint_form_url" => "/admin/offreindemnisation/api/get-form"
+                    "endpoint_form_url" => "/admin/offreindemnisation/api/get-form",
+                    "isCreationMode" => ($isParentNew === true)
                 ],
                 "form_layout" => $this->buildOffreIndemnisationLayout($offreId, $isParentNew)
             ];
@@ -6666,7 +6633,8 @@ class Constante
                     "titre_creation" => "Nouvelle tâche",
                     "titre_modification" => "Modification de la tâche #%id%",
                     "endpoint_submit_url" => "/admin/tache/api/submit",
-                    "endpoint_form_url" => "/admin/tache/api/get-form"
+                    "endpoint_form_url" => "/admin/tache/api/get-form",
+                    "isCreationMode" => ($isParentNew === true)
                 ],
                 "form_layout" => $this->buildTacheLayout($tacheId, $isParentNew)
             ];
@@ -6678,12 +6646,12 @@ class Constante
                     "titre_creation" => "Nouvau Paiement",
                     "titre_modification" => "Modification du paiement #%id%",
                     "endpoint_submit_url" => "/admin/paiement/api/submit",
-                    "endpoint_form_url" => "/admin/paiement/api/get-form"
+                    "endpoint_form_url" => "/admin/paiement/api/get-form",
+                    "isCreationMode" => ($isParentNew === true)
                 ],
                 "form_layout" => $this->buildPaiementLayout($paiementId, $isParentNew)
             ];
         }
-        // --- AJOUT D'UN NOUVEAU BLOC POUR LE FORMULAIRE FEEDBACK LUI-MÊME ---
         if ($object instanceof Feedback) {
             $feedbackId = $object->getId() ?? 0;
             return [
@@ -6691,7 +6659,8 @@ class Constante
                     "titre_creation" => "Nouvau Feedback",
                     "titre_modification" => "Modification du feedback #%id%",
                     "endpoint_submit_url" => "/admin/feedback/api/submit",
-                    "endpoint_form_url" => "/admin/feedback/api/get-form"
+                    "endpoint_form_url" => "/admin/feedback/api/get-form",
+                    "isCreationMode" => ($isParentNew === true)
                 ],
                 "form_layout" => $this->buildFeedbackLayout($feedbackId, $isParentNew)
             ];
@@ -6748,6 +6717,26 @@ class Constante
                 ]
             ];
         }
+        // On ajoute les lignes de collection. Leur visibilité sera gérée par le flag 'disabled' dans les options.
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre", null, $isParentNew)]],
+                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre", null, $isParentNew)]]
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre", null, $isParentNew)]]
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre", null, $isParentNew)]]
+            ]
+        ];
 
         return $layout;
     }
@@ -6767,6 +6756,28 @@ class Constante
                 ]
             ];
         }
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre', null, $isParentNew)]]
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildContactLayout(int $contactId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]],["champs" => ["telephone"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fonction"]],["champs" => ["type"]]]],
+        ];
+
+        if (!$isParentNew) {
+            // $layout[] = [];
+        }
+        // Pas de collections pour Contact dans le layout actuel
 
         return $layout;
     }
@@ -6798,6 +6809,37 @@ class Constante
                 ]
             ];
         }
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
+                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", [
+                    'source' => 'montantPayable',
+                    'target' => 'montant'
+                ], $isParentNew)]],
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildDocumentLayout(int $documentId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["classeur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
+        ];
+
+        if (!$isParentNew) {
+            // $layout[] = [];
+        }
+        // Pas de collections pour Document dans le layout actuel
 
         return $layout;
     }
@@ -6818,6 +6860,13 @@ class Constante
                 ]
             ];
         }
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache', null, $isParentNew)]],
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache', null, $isParentNew)]],
+            ]
+        ];
 
         return $layout;
     }
@@ -6838,6 +6887,12 @@ class Constante
                 ]
             ];
         }
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement', null, $isParentNew)]]
+            ]
+        ];
 
         return $layout;
     }
@@ -6858,15 +6913,15 @@ class Constante
                     ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
                 ]
             ];
-        } else {
-            // En mode création, on affiche juste le champ nextAction
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => ["nextAction"]]
-                ]
-            ];
         }
+        // On ajoute toujours la ligne de collection. Sa visibilité sera gérée par le flag 'disabled'.
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => ["nextAction"]],
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
+            ]
+        ];
         return $layout;
     }
 
@@ -6895,6 +6950,10 @@ class Constante
                 // --- CORRECTION : On renomme 'disabled' en 'url' pour correspondre au widget ---
                 // Si le parent est nouveau (pas d'ID), l'URL sera vide, ce qui désactivera le widget.
                 "url" => $isParentNew ? "" : "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName
+                "fieldCode" => $fieldName, // Ajout pour que le JS puisse reconstruire l'URL
+                "disabled" => $isParentNew, // Indique si le widget doit être désactivé
+                // L'URL est toujours fournie, mais le JS l'utilisera seulement si 'disabled' est false
+                "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName
             ]
         ];
 

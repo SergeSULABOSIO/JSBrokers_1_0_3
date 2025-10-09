@@ -67,7 +67,12 @@ export default class extends Controller {
      *                                   Doit contenir `entityFormCanvas` et `entity`.
      */
     open(event) {
-        console.log(this.nomControlleur + " - (1) Open", event.detail);
+        const detail = event.detail;
+        console.log(this.nomControlleur + " - (1) Demande d'ouverture de dialogue reçue.", detail);
+        if (!detail || !detail.entityFormCanvas) {
+            console.error(`[${this.nomControlleur}] Échec de l'ouverture: le payload est invalide ou 'entityFormCanvas' est manquant.`, detail);
+            return;
+        }
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
         const modalElement = this.createModalElement();
         // --- MODIFICATION MAJEURE ICI ---

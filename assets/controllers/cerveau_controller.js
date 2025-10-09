@@ -111,9 +111,11 @@ export default class extends Controller {
             case 'ui:toolbar.add-request':
                 console.log("-> ACTION: Demande d'ajout. Préparation de l'ouverture de la boîte de dialogue.");
                 // Le payload contient maintenant directement { entityFormCanvas: ... }
+                // Et potentiellement isCreationMode: true
                 this.broadcast('app:boite-dialogue:init-request', {
                     entity: {}, // Entité vide pour le mode création
                     entityFormCanvas: payload.entityFormCanvas,
+                    isCreationMode: payload.isCreationMode, // Relayer l'information
                     context: {}
                 });
                 break;
