@@ -57,6 +57,7 @@ export default class extends Controller {
         this.canvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.context = detail.context || {};
+        this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
         this.isCreateMode = !(this.entity && this.entity.id);
         console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
         await this.buildAndShowShell();
@@ -284,6 +285,13 @@ export default class extends Controller {
             if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
+                // --- NOUVEAU : Activer les collections après la création ---
+                // On trouve tous les contrôleurs de collection dans la modale
+                const collectionControllers = this.elementContenu.querySelectorAll('[data-controller="collection"]');
+                collectionControllers.forEach(element => {
+                    const controller = this.application.getControllerForElementAndIdentifier(element, 'collection');
+                    if (controller && controller.enableAndLoad) controller.enableAndLoad(this.getCollectionUrlForElement(element));
+                });
                 await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
             }
 
@@ -307,6 +315,25 @@ export default class extends Controller {
             this.toggleProgressBar(false);
         }
     }
+    
+    /**
+     * Construit l'URL de la collection pour un élément donné, en utilisant le nouvel ID de l'entité.
+     * @param {HTMLElement} element - L'élément HTML du contrôleur de collection.
+     * @returns {string} L'URL de la collection mise à jour.
+     * @private
+     */
+    getCollectionUrlForElement(element) {
+        // Les valeurs parentFieldName et fieldCode sont passées via data-values du contrôleur Stimulus
+        const parentFieldName = element.dataset.collectionParentFieldNameValue;
+        const fieldName = element.dataset.collectionFieldCodeValue;
+        if (this.entity && this.entity.id && parentFieldName && fieldName) {
+            return `/admin/${parentFieldName.toLowerCase()}/api/${this.entity.id}/${fieldName}`;
+        }
+        // Fallback ou gestion d'erreur si les données nécessaires ne sont pas disponibles
+        console.error("Impossible de reconstruire l'URL de la collection pour l'élément:", element);
+        return '';
+    }
+
 
     /**
      * Recharge la vue complète (titre, formulaire, attributs) après une création réussie

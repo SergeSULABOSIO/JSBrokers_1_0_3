@@ -185,6 +185,10 @@ export default class extends Controller {
         } else if (eventName === 'ui:toolbar.add-request') { 
             // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
             payload = { entityFormCanvas: this.activeFormCanvas };
+            payload = { 
+                entityFormCanvas: this.activeFormCanvas,
+                isCreationMode: true // Indique explicitement que c'est une demande de création
+            };
         } else if (['ui:toolbar.edit-request', 'ui:toolbar.open-request'].includes(eventName)) { 
             // Pour "Ouvrir" ou "Modifier", on envoie le tableau complet des "selectos".
             payload = { entities: this.selectos };
