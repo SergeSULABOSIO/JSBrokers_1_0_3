@@ -122,15 +122,21 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:base-données:sélection-request`.
      */
     async handleDBRequest(event) {
-        const { criteria } = event.detail;
+        // --- CORRECTION : On s'assure que l'ID de l'entreprise est toujours correct ---
+        // On prend l'ID de l'événement s'il existe, sinon on prend la valeur initiale du contrôleur.
+        const idEntreprise = event.detail.idEntreprise || this.identrepriseValue;
+        const criteria = event.detail.criteria || {};
         const entityName = this.entiteValue;
 
         if (!entityName) return;
 
+        // On reconstruit l'URL avec le bon ID à chaque requête pour plus de sûreté.
+        const url = `/admin/${this.controleurphpValue}/api/dynamic-query/${idEntreprise}`;
+
         this.donneesTarget.innerHTML = `<div class="spinner-container"><div class="custom-spinner"></div></div>`;
 
         try {
-            const response = await fetch(this.urlAPIDynamicQuery, {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'text/html' },
                 body: JSON.stringify({ entityName, criteria, page: 1, limit: 100 }),
@@ -155,9 +161,12 @@ export default class extends Controller {
      */
     handleGlobalRefresh() {
         // On ne rafraîchit que la liste principale (pas les listes de collection dans les onglets)
-        if (this.element.closest('[data-content-id="principal"]')) {
+        // --- CORRECTION : On vérifie que le contrôleur est bien dans la vue principale ---
+        const parentView = this.element.closest('[data-controller="view-manager"]');
+        if (parentView) {
             console.log(`${this.nomControleur} - Demande de rafraîchissement reçue. Rechargement.`);
-            this.handleDBRequest({ detail: { criteria: {} } });
+            // On passe l'ID de l'entreprise du view-manager pour garantir que la requête est correcte.
+            this.handleDBRequest({ detail: { criteria: {}, idEntreprise: parentView.dataset.viewManagerIdEntrepriseValue } });
         }
     }
 
