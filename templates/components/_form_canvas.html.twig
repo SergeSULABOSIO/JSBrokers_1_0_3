@@ -76,7 +76,6 @@
                             {% else %}
                                 {% set field_code = (field is mapping and field.field_code is defined) ? field.field_code : field %}
                                 {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options|default({}) }) }}{% endif %}
-                                {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options|default({})}) }}{% endif %}
                             {% endif %}
                         {% endfor %}
                     </div>

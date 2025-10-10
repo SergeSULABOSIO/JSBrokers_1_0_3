@@ -16,9 +16,14 @@ export default class extends Controller {
     ];
 
     static values = {
-        url: String, // URL pour charger la liste des items
-        createTitle: String, // Titre pour la création
-        editTitle: String, // Titre pour l'édition
+        // --- AMÉLIORATION : Utiliser les URLs fournies par le serveur ---
+        listUrl: String, // URL pour charger la liste des items
+        itemFormUrl: String, // URL pour obtenir le formulaire d'un item
+        itemSubmitUrl: String, // URL pour soumettre le formulaire d'un item
+        itemDeleteUrl: String, // URL pour supprimer un item
+        itemTitleCreate: String, // Titre pour la création
+        itemTitleEdit: String, // Titre pour l'édition
+        disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
     };
 
     connect() {
@@ -29,7 +34,12 @@ export default class extends Controller {
         // Écoute l'événement de sauvegarde pour se rafraîchir
         document.addEventListener('app:entity.saved', this.boundRefresh);
 
-        this.load();
+        // --- CORRECTION : Ne charge pas si le widget est désactivé ---
+        if (this.disabledValue) {
+            this.listContainerTarget.innerHTML = '<div class="alert alert-info">Veuillez d\'abord enregistrer l\'élément principal pour pouvoir ajouter des pièces.</div>';
+        } else {
+            this.load();
+        }
     }
 
     disconnect() {
@@ -40,14 +50,15 @@ export default class extends Controller {
      * Charge ou recharge le contenu de la liste via AJAX.
      */
     async load() {
-        if (!this.urlValue) {
-            console.error(`${this.nomControleur} - Aucune URL n'est définie pour charger la collection.`);
+        // --- CORRECTION : Vérification de l'état désactivé ---
+        if (!this.listUrlValue || this.disabledValue) {
+            // console.error(`${this.nomControleur} - Aucune URL n'est définie pour charger la collection.`);
             this.listContainerTarget.innerHTML = '<div class="alert alert-warning">Configuration manquante: URL de chargement non définie.</div>';
             return;
         }
 
         try {
-            const response = await fetch(this.urlValue);
+            const response = await fetch(this.listUrlValue);
             if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
 
             const html = await response.text();
@@ -57,6 +68,57 @@ export default class extends Controller {
         } catch (error) {
             console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error);
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
+        }
+    }
+
+    /**
+     * Active le widget et charge son contenu. Appelé par dialog-instance après une création.
+     * @param {string} newUrl - La nouvelle URL à utiliser, contenant l'ID du parent.
+     */
+    enableAndLoad(newUrl) {
+        console.log(`${this.nomControleur} - Activation et chargement avec la nouvelle URL:`, newUrl);
+        this.disabledValue = false;
+        this.listUrlValue = newUrl;
+        this.element.classList.remove('is-disabled');
+        
+        // On ré-affiche le bouton "Ajouter" s'il existe
+        if (this.hasAddButtonContainerTarget) {
+            this.addButtonContainerTarget.style.display = '';
+        }
+        this.load();
+    }
+
+    // --- MÉTHODES RESTAURÉES POUR L'INTERACTIVITÉ DE L'ACCORDÉON ---
+
+    /**
+     * Affiche ou masque le contenu de l'accordéon.
+     */
+    toggleAccordion() {
+        // On ne permet pas d'ouvrir l'accordéon s'il est désactivé
+        if (this.disabledValue) return;
+
+        this.contentPanelTarget.classList.toggle('is-open');
+        const icon = this.element.querySelector('.toggle-icon');
+        if (icon) {
+            icon.textContent = this.contentPanelTarget.classList.contains('is-open') ? '-' : '+';
+        }
+    }
+
+    /**
+     * Affiche le bouton "Ajouter" au survol.
+     */
+    showAddButton() {
+        if (this.hasAddButtonContainerTarget) {
+            this.addButtonContainerTarget.style.opacity = '1';
+        }
+    }
+
+    /**
+     * Cache le bouton "Ajouter" lorsque la souris quitte la zone.
+     */
+    hideAddButton() {
+        if (this.hasAddButtonContainerTarget) {
+            this.addButtonContainerTarget.style.opacity = '0';
         }
     }
 
@@ -92,9 +154,9 @@ export default class extends Controller {
             entity: {}, // Entité vide pour la création
             entityFormCanvas: {
                 parametres: {
-                    titre_creation: this.createTitleValue,
-                    endpoint_form_url: this.urlValue.replace('/list', '/form'), // Hypothèse sur la structure de l'URL
-                    endpoint_submit_url: this.urlValue.replace('/list', '/submit'), // Hypothèse
+                    titre_creation: this.itemTitleCreateValue,
+                    endpoint_form_url: this.itemFormUrlValue,
+                    endpoint_submit_url: this.itemSubmitUrlValue,
                 }
             },
             context: {
@@ -109,16 +171,14 @@ export default class extends Controller {
      */
     editItem(event) {
         const itemId = event.currentTarget.dataset.itemId;
-        const formUrl = this.urlValue.replace('/list', `/form/`);
-        const submitUrl = this.urlValue.replace('/list', '/submit');
 
         this.notifyCerveau('app:boite-dialogue:init-request', {
             entity: { id: itemId }, // On passe juste l'ID pour l'édition
             entityFormCanvas: {
                 parametres: {
-                    titre_modification: this.editTitleValue,
-                    endpoint_form_url: formUrl,
-                    endpoint_submit_url: submitUrl,
+                    titre_modification: this.itemTitleEditValue,
+                    endpoint_form_url: this.itemFormUrlValue,
+                    endpoint_submit_url: this.itemSubmitUrlValue,
                 }
             },
             context: {
@@ -133,7 +193,6 @@ export default class extends Controller {
      */
     deleteItem(event) {
         const itemId = event.currentTarget.dataset.itemId;
-        const deleteUrl = this.urlValue.replace('/list', `/delete/`);
 
         this.notifyCerveau('ui:confirmation.request', {
             title: 'Confirmation de suppression',
@@ -141,7 +200,7 @@ export default class extends Controller {
             onConfirm: {
                 type: 'app:api.delete-request', // Le cerveau relaiera cette demande
                 payload: {
-                    url: deleteUrl,
+                    url: this.itemDeleteUrlValue,
                     originatorId: this.element.id
                 }
             }

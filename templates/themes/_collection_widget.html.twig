@@ -6,8 +6,11 @@
     {# On récupère l'état 'disabled' depuis les options #}
     {% set isDisabled = manager_options.disabled|default(false) %}
     
-    {# --- CORRECTION : On n'affiche le widget que si l'URL est valide. En mode création, l'URL est vide, donc le widget sera caché. --- #}
-    {% if manager_options.url is defined and manager_options.url %}
+    {# --- CORRECTION : On affiche toujours le widget, mais on lui ajoute une classe 'is-disabled' en mode création --- #}
+    <div 
+        {{ stimulus_controller('collection', manager_options) }} 
+        class="collection-manager-accordion {{ isDisabled ? 'is-disabled' : '' }}"
+    >
         {# TITRE DE L'ACCORDÉON #}
         <div class="accordion-title"
              data-action="
@@ -28,12 +31,15 @@
                     <div class="title-line-2 form-text">{{ form.vars.help }}</div>
                 {% endif %}
             </div>
-            <div class="title-right-block" data-collection-target="addButtonContainer">
-                <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">
-                    <twig:UX:Icon name="gridicons:add" style="width: 23px;" />
-                    <span>Ajouter </span>
-                </button>
-            </div>
+            {# --- CORRECTION : On n'affiche le bouton "Ajouter" qu'en mode édition --- #}
+            {% if not isDisabled %}
+                <div class="title-right-block" data-collection-target="addButtonContainer">
+                    <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">
+                        <twig:UX:Icon name="gridicons:add" style="width: 23px;" />
+                        <span>Ajouter </span>
+                    </button>
+                </div>
+            {% endif %}
         </div>
 
         {# CONTENU DE L'ACCORDÉON (la liste) #}
@@ -43,8 +49,7 @@
                 <div class="text-center p-5"><span class="spinner-border"></span> Chargement...</div>
             </div>
         </div>
-        </div>
-    {% endif %}
+    </div>
 
     {# On cache le rendu par défaut de Symfony #}
     <div style="display:none;">

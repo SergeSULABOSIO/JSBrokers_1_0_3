@@ -285,12 +285,15 @@ export default class extends Controller {
             if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
+                
                 // --- NOUVEAU : Activer les collections après la création ---
-                // On trouve tous les contrôleurs de collection dans la modale
                 const collectionControllers = this.elementContenu.querySelectorAll('[data-controller="collection"]');
                 collectionControllers.forEach(element => {
                     const controller = this.application.getControllerForElementAndIdentifier(element, 'collection');
-                    if (controller && controller.enableAndLoad) controller.enableAndLoad(this.getCollectionUrlForElement(element));
+                    if (controller && controller.enableAndLoad) {
+                        const newUrl = this.getCollectionUrlForElement(element);
+                        if (newUrl) controller.enableAndLoad(newUrl);
+                    }
                 });
                 await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
             }
@@ -323,15 +326,14 @@ export default class extends Controller {
      * @private
      */
     getCollectionUrlForElement(element) {
-        // Les valeurs parentFieldName et fieldCode sont passées via data-values du contrôleur Stimulus
-        const parentFieldName = element.dataset.collectionParentFieldNameValue;
-        const fieldName = element.dataset.collectionFieldCodeValue;
-        if (this.entity && this.entity.id && parentFieldName && fieldName) {
-            return `/admin/${parentFieldName.toLowerCase()}/api/${this.entity.id}/${fieldName}`;
+        // L'URL de base est dans les data-values, mais avec un ID de 0. On le remplace.
+        const baseUrl = element.dataset.collectionUrlValue;
+        if (baseUrl && this.entity && this.entity.id) {
+            return baseUrl.replace('/api/0/', `/api/${this.entity.id}/`);
         }
         // Fallback ou gestion d'erreur si les données nécessaires ne sont pas disponibles
         console.error("Impossible de reconstruire l'URL de la collection pour l'élément:", element);
-        return '';
+        return null;
     }
 
 
