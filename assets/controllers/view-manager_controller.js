@@ -13,12 +13,17 @@ export default class extends Controller {
      * @property {HTMLElement[]} displayTargets - L'élément où afficher les messages de statut.
      */
     static targets = ["tabsContainer", "tabContentContainer", "display"];
+    
+    static values = {
+        idEntreprise: Number
+    }
 
     /**
      * Méthode du cycle de vie de Stimulus.
      * S'exécute lorsque le contrôleur est connecté au DOM.
      */
     connect() {
+        console.log("ViewManager connecté avec idEntreprise:", this.idEntrepriseValue);
         this.nomControleur = "VIEW-MANAGER";
         /**
          * @property {string} activeTabId - L'ID de l'onglet actuellement actif.
@@ -35,6 +40,12 @@ export default class extends Controller {
          * @private
          */
         this.collectionTabsParentId = null;
+
+        // NOUVEAU : Notifier le cerveau du contexte initial de la rubrique, y compris l'ID de l'entreprise.
+        this.notifyCerveau('app:context.initialized', {
+            idEntreprise: this.idEntrepriseValue,
+            formCanvas: this.entityCanvasValue
+        });
 
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusUpdate = this.handleStatusUpdate.bind(this);
