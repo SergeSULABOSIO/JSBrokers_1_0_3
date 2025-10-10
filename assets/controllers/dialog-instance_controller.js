@@ -102,7 +102,14 @@ export default class extends Controller {
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="feedback-container w-100 text-danger mb-2" data-dialog-instance-target="feedback"></div>
+                <div class="feedback-container w-100 mb-2" data-dialog-instance-target="feedback">
+                    ${this.isCreateMode ? `
+                        <div class="alert alert-info d-flex align-items-center p-2" role="alert" style="font-size: 0.85rem; border-left: 5px solid #0dcaf0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle-fill flex-shrink-0 me-2" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
+                            <div>Les champs de type collection (pièces jointes, tâches, etc.) seront disponibles après le premier enregistrement.</div>
+                        </div>
+                    ` : ''}
+                </div>
                 <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">
                     <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
                     <span>Fermer</span>
