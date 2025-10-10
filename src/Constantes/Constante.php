@@ -6689,10 +6689,10 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["descriptionDeFait"]]]],
             // Ligne 5 : 3 colonnes
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["occuredAt"]], ["champs" => ["notifiedAt"]], ["champs" => ["lieu"]]]],
-            // Ligne 6 : 1 colonne
+            // Ligne 6 : 1 colonne 
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["descriptionVictimes"]]]],
             // Ligne 7 : 2 colonnes
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["dommage"]], ["champs" => ["evaluationChiffree"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["dommage"]], ["champs" => ["evaluationChiffree"]]]]
         ];
 
         // On n'ajoute les lignes de collection que si on est en mode édition.
@@ -6717,7 +6717,8 @@ class Constante
                 ]
             ];
         }
-        // On ajoute les lignes de collection. Leur visibilité sera gérée par le flag 'disabled' dans les options.
+
+        // On ajoute toujours les lignes de collection. Leur état sera géré par le flag 'disabled'.
         $layout[] = [
             "couleur_fond" => "white",
             "colonnes" => [
@@ -6744,18 +6745,10 @@ class Constante
     private function buildPieceSinistreLayout(int $pieceId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]], 
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fourniPar"]], ["champs" => ["receivedAt"]], ["champs" => ["type"]]]],
         ];
 
-        if (!$isParentNew) {
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre', null, $isParentNew)]]
-                ]
-            ];
-        }
         $layout[] = [
             "couleur_fond" => "white",
             "colonnes" => [
@@ -6774,11 +6767,6 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fonction"]],["champs" => ["type"]]]],
         ];
 
-        if (!$isParentNew) {
-            // $layout[] = [];
-        }
-        // Pas de collections pour Contact dans le layout actuel
-
         return $layout;
     }
 
@@ -6791,38 +6779,18 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["referenceBancaire"]]]],
         ];
 
-        if (!$isParentNew) {
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
-                    ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
-                ]
-            ];
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", [
-                        'source' => 'montantPayable',
-                        'target' => 'montant'
-                    ], $isParentNew)]],
-                ]
-            ];
-        }
         $layout[] = [
-            "couleur_fond" => "white",
+            "couleur_fond" => "white", 
             "colonnes" => [
                 ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
                 ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
             ]
         ];
+
         $layout[] = [
-            "couleur_fond" => "white",
+            "couleur_fond" => "white", 
             "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", [
-                    'source' => 'montantPayable',
-                    'target' => 'montant'
-                ], $isParentNew)]],
+                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", ['source' => 'montantPayable', 'target' => 'montant'], $isParentNew)]],
             ]
         ];
 
@@ -6836,11 +6804,6 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
         ];
 
-        if (!$isParentNew) {
-            // $layout[] = [];
-        }
-        // Pas de collections pour Document dans le layout actuel
-
         return $layout;
     }
 
@@ -6851,15 +6814,6 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["executor"]], ["champs" => ["closed"]]]],
         ];
 
-        if (!$isParentNew) {
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache', null, $isParentNew)]],
-                    ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache', null, $isParentNew)]],
-                ]
-            ];
-        }
         $layout[] = [
             "couleur_fond" => "white",
             "colonnes" => [
@@ -6879,14 +6833,6 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["paidAt"]], ["champs" => ["CompteBancaire"]]]],
         ];
 
-        if (!$isParentNew) {
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement', null, $isParentNew)]]
-                ]
-            ];
-        }
         $layout[] = [
             "couleur_fond" => "white",
             "colonnes" => [
@@ -6904,17 +6850,7 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["hasNextAction"]], ["champs" => ["nextActionAt"]], ["champs" => ["type"]]]],
         ];
 
-        // On ajoute la ligne de collection seulement si on est en mode édition
-        if (!$isParentNew) {
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => ["nextAction"]],
-                    ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
-                ]
-            ];
-        }
-        // On ajoute toujours la ligne de collection. Sa visibilité sera gérée par le flag 'disabled'.
+        // On ajoute toujours la ligne de collection.
         $layout[] = [
             "couleur_fond" => "white",
             "colonnes" => [
@@ -6945,12 +6881,8 @@ class Constante
                 "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
                 "itemTitleCreate" => "Ajouter : " . $formtitle,
-                "itemTitleEdit"   => "Modifier : " . $formtitle . " #%id%",
+                "itemTitleEdit" => "Modifier : " . $formtitle . " #%id%",
                 "parentFieldName" => $parentFieldName,
-                // --- CORRECTION : On renomme 'disabled' en 'url' pour correspondre au widget ---
-                // Si le parent est nouveau (pas d'ID), l'URL sera vide, ce qui désactivera le widget.
-                "url" => $isParentNew ? "" : "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName
-                "fieldCode" => $fieldName, // Ajout pour que le JS puisse reconstruire l'URL
                 "disabled" => $isParentNew, // Indique si le widget doit être désactivé
                 // L'URL est toujours fournie, mais le JS l'utilisera seulement si 'disabled' est false
                 "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName
