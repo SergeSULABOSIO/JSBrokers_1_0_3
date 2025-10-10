@@ -122,6 +122,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:base-données:sélection-request`.
      */
     async handleDBRequest(event) {
+        console.log(this.nomControleur + " - ICI Demande de chargement reçue.", event.detail);
         // --- CORRECTION : On s'assure que l'ID de l'entreprise est toujours correct ---
         // On prend l'ID de l'événement s'il existe, sinon on prend la valeur initiale du contrôleur.
         const idEntreprise = event.detail.idEntreprise || this.identrepriseValue;
@@ -159,14 +160,15 @@ export default class extends Controller {
     /**
      * Gère une demande de rafraîchissement globale.
      */
-    handleGlobalRefresh() {
-        // On ne rafraîchit que la liste principale (pas les listes de collection dans les onglets)
-        // --- CORRECTION : On vérifie que le contrôleur est bien dans la vue principale ---
+    handleGlobalRefresh(event) {
+        // MISSION 3 : On ne rafraîchit que si on est dans la vue principale
         const parentView = this.element.closest('[data-controller="view-manager"]');
         if (parentView) {
-            console.log(`${this.nomControleur} - Demande de rafraîchissement reçue. Rechargement.`);
-            // On passe l'ID de l'entreprise du view-manager pour garantir que la requête est correcte.
-            this.handleDBRequest({ detail: { criteria: {}, idEntreprise: parentView.dataset.viewManagerIdEntrepriseValue } });
+            console.log(`${this.nomControleur} - Demande de rafraîchissement global reçue.`);
+            // On récupère l'ID de l'entreprise directement depuis l'événement envoyé par le Cerveau.
+            const idEntreprise = event.detail.idEntreprise;
+            // On simule un événement de requête avec les bonnes informations.
+            this.handleDBRequest({ detail: { criteria: {}, idEntreprise: idEntreprise }});
         }
     }
 

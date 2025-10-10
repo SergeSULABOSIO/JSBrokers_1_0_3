@@ -24,6 +24,7 @@ export default class extends Controller {
         // --- NOUVELLE ARCHITECTURE : Le Cerveau devient la source de vérité pour la sélection ---
         this.selectionState = []; // Tableau des objets "selecto"
         this.selectionIds = new Set(); // Pour une recherche rapide des IDs
+        this.currentIdEntreprise = null; // NOUVEAU : Stocke l'ID de l'entreprise du contexte actuel
 
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
         // --- CORRECTION : Lier la fonction une seule fois et stocker la référence ---
@@ -68,6 +69,13 @@ export default class extends Controller {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
                 console.log(this.nomControleur + `🧠 [Cerveau]-> ACTION: Charger le composant '${payload.componentName}' (entité: ${payload.entityName}) pour l'espace de travail.`);
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName);
+                break;
+
+            // NOUVEAU : Un composant (view-manager) initialise le contexte
+            case 'app:context.initialized':
+                console.log("-> ACTION: Le contexte de la rubrique a été initialisé.");
+                this.currentIdEntreprise = payload.idEntreprise;
+                this.broadcast('ui:tab.context-changed', payload); // On relaie pour que la toolbar se mette à jour
                 break;
 
             case 'app:error.api':
@@ -130,7 +138,8 @@ export default class extends Controller {
                 console.log("-> ACTION: Une entité a été sauvegardée. Demande de rafraîchissement des listes et affichage d'une notification.");
                 // Diffusion pour rafraîchir les listes (principale et collections)
                 this.broadcast('app:list.refresh-request', {
-                    originatorId: payload.originatorId // Permet au bon collection-manager de se rafraîchir
+                    originatorId: payload.originatorId, // Permet au bon collection-manager de se rafraîchir
+                    idEntreprise: this.currentIdEntreprise // MISSION 2 : On ajoute l'ID de l'entreprise
                 });
                 // Diffusion pour afficher un toast de succès
                 this.broadcast('app:notification.show', { text: 'Enregistrement réussi !', type: 'success' });
@@ -148,7 +157,9 @@ export default class extends Controller {
             // --- NOUVEAU : Gère la demande d'actualisation depuis la barre d'outils ---
             case 'ui:toolbar.refresh-request':
                 console.log("-> ACTION: Demande d'actualisation de la liste principale. Diffusion de l'ordre de rafraîchissement.");
-                this.broadcast('app:list.refresh-request', {});
+                this.broadcast('app:list.refresh-request', {
+                    idEntreprise: this.currentIdEntreprise // MISSION 2 : On ajoute l'ID de l'entreprise
+                });
                 break;
             
             // --- NOUVEAU : Gère la demande d'ouverture du menu contextuel ---
