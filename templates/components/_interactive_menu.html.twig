@@ -17,7 +17,8 @@
 {% set menu = menu_data %}
 <div 
     {{ stimulus_controller('workspace-manager') }} 
-    {# data-espace-de-travail-entity-canvas-value="{{ entityCanvas|json_encode }}" #}
+    data-workspace-manager-id-entreprise-value="{{ idEntreprise }}"
+    data-workspace-manager-id-invite-value="{{ idInvite }}"
 >
     {# Barre de progression globale, contrôlée par Stimulus #}
     <div data-workspace-manager-target="progressBar" class="progress-bar"></div>

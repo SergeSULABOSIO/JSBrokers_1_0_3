@@ -388,11 +388,24 @@ class EspaceDeTravailComponentController extends AbstractController
      * @param LoggerInterface $logger
      * @return Response
      */
-    #[Route('/api/load-component', name: 'api_load_component', methods: ['GET'])]
-    public function loadComponent(Request $request, LoggerInterface $logger): Response
+    #[Route(
+        '/api/load-component/{idInvite}/{idEntreprise}', 
+        name: 'api_load_component', 
+        requirements: [
+            'idInvite' => Requirement::DIGITS,
+            'idEntreprise' => Requirement::DIGITS
+        ],
+        methods: ['GET']
+    )]
+    public function loadComponent(int $idInvite, int $idEntreprise, Request $request, LoggerInterface $logger): Response
     {
-        /** @var Utilisateur $utilisateur */
-        $utilisateur = $this->getUser();
+        // La validation de l'accès est maintenant implicitement faite par la route principale 'index'
+        // qui a déjà vérifié l'association Invite/Entreprise.
+        // On peut ajouter une double vérification ici si on veut être encore plus sûr.
+        $invite = $this->inviteRepository->find($idInvite);
+        if (!$invite || $invite->getEntreprise()->getId() !== $idEntreprise) {
+            throw new AccessDeniedHttpException("Accès non autorisé à ce composant.");
+        }
 
         // LOG: Ce que le serveur reçoit du client
         $logger->info('[ESPACE_DE_TRAVAIL] API /load-component reçue.', [
@@ -441,7 +454,7 @@ class EspaceDeTravailComponentController extends AbstractController
         // et nous donner son rendu HTML.
         return $this->forward($controllerAction, [
             // Vous pouvez même passer des paramètres au contrôleur cible si nécessaire
-            'idEntreprise' => $utilisateur->getConnectedTo()->getId(),
+            'idEntreprise' => $idEntreprise,
         ]);
     }
 

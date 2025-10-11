@@ -68,7 +68,7 @@ export default class extends Controller {
             // --- Chargement du composant dans l'espace de travail ---
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
                 console.log(this.nomControleur + `🧠 [Cerveau]-> ACTION: Charger le composant '${payload.componentName}' (entité: ${payload.entityName}) pour l'espace de travail.`);
-                this.loadWorkspaceComponent(payload.componentName, payload.entityName);
+                this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 break;
 
             // NOUVEAU : Un composant (view-manager) initialise le contexte
@@ -250,8 +250,9 @@ export default class extends Controller {
      * @fires workspace:component.loaded
      * @private
      */
-    async loadWorkspaceComponent(componentName, entityName) {
-        let url = `/espacedetravail/api/load-component?component=${componentName}`;
+    async loadWorkspaceComponent(componentName, entityName, idEntreprise, idInvite) {
+        // On construit l'URL avec les IDs dans le chemin, comme défini par la route Symfony
+        let url = `/espacedetravail/api/load-component/${idInvite}/${idEntreprise}?component=${componentName}`;
         // On ajoute le paramètre 'entity' s'il est fourni
         if (entityName) {
             url += `&entity=${entityName}`;

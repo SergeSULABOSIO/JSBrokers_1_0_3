@@ -20,6 +20,11 @@ export default class extends Controller {
         "accordionSearchInput",
     ];
 
+    static values = {
+        idEntreprise: Number,
+        idInvite: Number
+    }
+
     // Cible pour l'élément de menu actuellement actif
     activeNavItem = null;
     activeRubriqueItem = null;
@@ -662,7 +667,9 @@ export default class extends Controller {
         // Cet événement est spécifiquement destiné au Cerveau pour charger le composant
         this.notifyCerveau('ui:component.load', { 
             componentName: componentName,
-            entityName: entityName // NOUVEAU : Envoyer le nom de l'entité
+            entityName: entityName, // NOUVEAU : Envoyer le nom de l'entité
+            idEntreprise: this.idEntrepriseValue,
+            idInvite: this.idInviteValue
         });
         this.updateActiveState(clickedElement);
     }
