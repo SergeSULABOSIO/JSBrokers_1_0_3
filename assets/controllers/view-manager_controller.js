@@ -15,7 +15,8 @@ export default class extends Controller {
     static targets = ["tabsContainer", "tabContentContainer", "display"];
     
     static values = {
-        idEntreprise: Number
+        idEntreprise: Number,
+        idInvite: Number
     }
 
     /**
@@ -23,7 +24,7 @@ export default class extends Controller {
      * S'exécute lorsque le contrôleur est connecté au DOM.
      */
     connect() {
-        console.log("ViewManager connecté avec idEntreprise:", this.idEntrepriseValue);
+        console.log("ViewManager connecté avec idEntreprise:", this.idEntrepriseValue, "et idInvite:", this.idInviteValue);
         this.nomControleur = "VIEW-MANAGER";
         /**
          * @property {string} activeTabId - L'ID de l'onglet actuellement actif.
@@ -44,6 +45,7 @@ export default class extends Controller {
         // NOUVEAU : Notifier le cerveau du contexte initial de la rubrique, y compris l'ID de l'entreprise.
         this.notifyCerveau('app:context.initialized', {
             idEntreprise: this.idEntrepriseValue,
+            idInvite: this.idInviteValue,
             formCanvas: this.entityCanvasValue
         });
 

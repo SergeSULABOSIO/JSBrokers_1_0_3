@@ -124,7 +124,11 @@ export default class extends Controller {
                     entity: {}, // Entité vide pour le mode création
                     entityFormCanvas: payload.entityFormCanvas,
                     isCreationMode: payload.isCreationMode, // Relayer l'information
-                    context: {}
+                    // On enrichit le contexte avec les IDs mémorisés par le cerveau
+                    context: {
+                        idEntreprise: this.currentIdEntreprise,
+                        idInvite: this.currentIdInvite
+                    }
                 });
                 break;
 
