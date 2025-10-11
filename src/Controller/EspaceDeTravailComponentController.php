@@ -47,6 +47,8 @@ use App\Entity\Document;
 use App\Entity\Classeur;
 use App\Entity\Invite;
 use App\Entity\RevenuPourCourtier;
+use App\Repository\EntrepriseRepository;
+use App\Repository\InviteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -55,6 +57,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -67,6 +70,8 @@ class EspaceDeTravailComponentController extends AbstractController
         private EntityManagerInterface $em,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private EntrepriseRepository $entrepriseRepository,
+        private InviteRepository $inviteRepository
     ) {}
 
     /**
@@ -126,11 +131,37 @@ class EspaceDeTravailComponentController extends AbstractController
 
 
 
-    #[Route('/{id}', name: 'index', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index(Entreprise $entreprise, Request $request): Response
+    #[Route(
+        '/{idInvite}/{idEntreprise}',
+        name: 'index',
+        requirements: [
+            'idInvite' => Requirement::DIGITS,
+            'idEntreprise' => Requirement::DIGITS
+        ],
+        methods: ['GET','POST']
+    )]
+    public function index(int $idInvite, int $idEntreprise, Request $request): Response
     {
-        // [cite_start] Le tableau associatif tel que fourni dans le prompt [cite: 16-183]
+        // MISSION 2 & 4 : Vérifier si l'entreprise existe.
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        if (!$entreprise) {
+            // Si l'entreprise n'est pas trouvée, on lance une exception pour générer une page 404.
+            // C'est une mesure de sécurité et de propreté.
+            throw $this->createNotFoundException("L'espace de travail pour l'entreprise avec l'ID $idEntreprise n'a pas été trouvé.");
+        }
+        
+        // NOUVEAU : Vérification de l'invité et de son appartenance à l'entreprise
+        /** @var Invite|null $invite */
+        $invite = $this->inviteRepository->find($idInvite);
+
+        // On vérifie si l'invité existe ET si son entreprise correspond à celle de l'URL.
+        // Cette condition unique gère les deux cas : invité inexistant ou invité appartenant à une autre entreprise.
+        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
+            throw new AccessDeniedHttpException("Vous n'avez pas les droits pour accéder à cet espace de travail.");
+        }
+
         $menuData = [
+            // MISSION 1 : Le code existant pour la création du menu est conservé.
             'colonne_1' => [
                 'tableau_de_bord' => [
                     'icone' => "ant-design:dashboard-twotone", //source: https://ux.symfony.com/icons
@@ -339,12 +370,10 @@ class EspaceDeTravailComponentController extends AbstractController
         };
         $processMenu($menuData); // On lance la transformation sur tout le tableau
 
-        // dd($menuData);
-
-        // Remplir le reste des données pour être complet...
-        // ... (Ajoutez ici toutes les données des groupes Production, Marketing, etc.)
         return $this->render('espace_de_travail_component/index.html.twig', [
             'menu_data' => $menuData,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
@@ -492,7 +521,7 @@ class EspaceDeTravailComponentController extends AbstractController
 
         $entityClass = 'App\\Entity\\' . $entityType;
         $repository = $em->getRepository($entityClass);
-        
+
         // On récupère toutes les entités. Pour de grandes listes, il faudrait paginer.
         $entities = $repository->findAll();
 
