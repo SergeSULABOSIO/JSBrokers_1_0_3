@@ -633,12 +633,6 @@ export default class extends Controller {
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
         const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
 
-        // LOG: Vérifier les valeurs lues depuis le DOM
-        // console.log('[WorkspaceManager] Clic sur une rubrique. Attributs lus:', {
-        //     'data-workspace-manager-component-name-param': componentName,
-        //     'data-workspace-manager-entity-name-param': entityName
-        // });
-
         const groupName = clickedElement.dataset.workspaceManagerGroupNameParam;
         const description = clickedElement.dataset.workspaceManagerDescriptionParam;
 
