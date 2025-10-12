@@ -133,7 +133,7 @@ export default class extends Controller {
 
         // On reconstruit l'URL avec le bon ID à chaque requête pour plus de sûreté.
         const url = `/admin/${this.controleurphpValue}/api/dynamic-query/${idEntreprise}`;
-
+        console.log(this.nomControleur + " - ICI URL:", url);
         this.donneesTarget.innerHTML = `<div class="spinner-container"><div class="custom-spinner"></div></div>`;
 
         try {
@@ -164,11 +164,21 @@ export default class extends Controller {
         // MISSION 3 : On ne rafraîchit que si on est dans la vue principale
         const parentView = this.element.closest('[data-controller="view-manager"]');
         if (parentView) {
-            console.log(`${this.nomControleur} - Demande de rafraîchissement global reçue.`);
+            console.log(`${this.nomControleur} - Demande de rafraîchissement global reçue.`, event.detail);
             // On récupère l'ID de l'entreprise directement depuis l'événement envoyé par le Cerveau.
             const idEntreprise = event.detail.idEntreprise;
+            const idInvite = event.detail.idInvite;
             // On simule un événement de requête avec les bonnes informations.
-            this.handleDBRequest({ detail: { criteria: {}, idEntreprise: idEntreprise }});
+            this.handleDBRequest(
+                { 
+                    detail: 
+                    { 
+                        criteria: {}, 
+                        idEntreprise: idEntreprise,
+                        idInvite: idInvite
+                    }
+                }
+            );
         }
     }
 
