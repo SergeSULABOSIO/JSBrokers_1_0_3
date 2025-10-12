@@ -144,7 +144,7 @@ export default class extends Controller {
                 this.broadcast('app:list.refresh-request', {
                     originatorId: payload.originatorId, // Permet au bon collection-manager de se rafraîchir
                     idEntreprise: this.currentIdEntreprise, // MISSION 2 : On ajoute l'ID de l'entreprise
-                    idInvite:this.currentIdInvite,
+                    idInvite: this.currentIdInvite,
                 });
                 // Diffusion pour afficher un toast de succès
                 this.broadcast('app:notification.show', { text: 'Enregistrement réussi !', type: 'success' });
@@ -163,7 +163,8 @@ export default class extends Controller {
             case 'ui:toolbar.refresh-request':
                 console.log("-> ACTION: Demande d'actualisation de la liste principale. Diffusion de l'ordre de rafraîchissement.");
                 this.broadcast('app:list.refresh-request', {
-                    idEntreprise: this.currentIdEntreprise // MISSION 2 : On ajoute l'ID de l'entreprise
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite: this.currentIdInvite,
                 });
                 break;
             
