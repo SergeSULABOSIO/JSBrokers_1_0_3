@@ -58,8 +58,12 @@ class NotificationSinistreController extends AbstractController
     ) {}
 
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request, Constante $constante)
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', 
+    requirements: [
+        'idEntreprise' => Requirement::DIGITS,
+        'idInvite' => Requirement::DIGITS
+    ], methods: ['GET', 'POST'])]
+    public function index(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
     {
         $data = $this->notificationSinistreRepository->findAll();
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
@@ -75,6 +79,8 @@ class NotificationSinistreController extends AbstractController
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $idEntreprise),
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $idInvite,
+            'idEntreprise' => $idEntreprise,
         ]);
     }
 

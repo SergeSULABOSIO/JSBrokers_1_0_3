@@ -455,6 +455,7 @@ class EspaceDeTravailComponentController extends AbstractController
         return $this->forward($controllerAction, [
             // Vous pouvez même passer des paramètres au contrôleur cible si nécessaire
             'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
