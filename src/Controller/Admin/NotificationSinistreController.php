@@ -80,18 +80,30 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?NotificationSinistre $notification, Constante $constante): Response
+    public function getFormApi(?NotificationSinistre $notification, Request $request, Constante $constante): Response
     {
+        // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
+        $idEntreprise = $request->query->get('idEntreprise');
+        $idInvite = $request->query->get('idInvite');
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
+        if (!$idEntreprise) {
+            // Fallback pour les cas où il n'est pas passé (ex: collections)
+            $entreprise = $this->getEntreprise();
+        } else {
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        }
+        if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
-
+        if (!$idInvite) {
+            // Fallback pour les cas où il n'est pas passé (ex: collections)
+            $invite = $this->getInvite();
+        } else {
+            $invite = $this->inviteRepository->find($idInvite);
+        }
+        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
+            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
+        }
+        
         if (!$notification) {
             $notification = new NotificationSinistre();
             $notification->setNotifiedAt(new DateTimeImmutable("now"));
@@ -102,7 +114,7 @@ class NotificationSinistreController extends AbstractController
 
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
         $constante->loadCalculatedValue($entityCanvas, [$notification]);
-        $entityFormCanvas = $constante->getEntityFormCanvas($notification, $entreprise->getId());
+        $entityFormCanvas = $constante->getEntityFormCanvas($notification, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 
         // dd("ICI", $entityFormCanvas, $entityCanvas, $notification);
 
