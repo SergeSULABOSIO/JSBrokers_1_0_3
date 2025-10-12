@@ -143,7 +143,8 @@ export default class extends Controller {
                 // Diffusion pour rafraîchir les listes (principale et collections)
                 this.broadcast('app:list.refresh-request', {
                     originatorId: payload.originatorId, // Permet au bon collection-manager de se rafraîchir
-                    idEntreprise: this.currentIdEntreprise // MISSION 2 : On ajoute l'ID de l'entreprise
+                    idEntreprise: this.currentIdEntreprise, // MISSION 2 : On ajoute l'ID de l'entreprise
+                    idInvite:this.currentIdInvite,
                 });
                 // Diffusion pour afficher un toast de succès
                 this.broadcast('app:notification.show', { text: 'Enregistrement réussi !', type: 'success' });
