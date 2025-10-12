@@ -18,6 +18,7 @@
         data-controller="list-manager" 
         data-list-manager-nbelements-value="{{ data|length }}" 
         data-list-manager-entite-value="{{ entite_nom }}" 
+        data-list-manager-server-root-name-value="{{ serverRootName }}" 
         data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
         data-list-manager-numeric-attributes-value='{{ numericAttributes|default({})|json_encode|e('html_attr') }}' 
     > 
@@ -49,7 +50,8 @@
                         'data': data,
                         'entityCanvas': entityCanvas,
                         'listeCanvas': listeCanvas,
-                        'entite_nom': entite_nom
+                        'entite_nom': entite_nom,
+                        'serverRootName': serverRootName,
                     }) }}
                     </tbody>
                 </table>

@@ -13,6 +13,7 @@
     data-controller="view-manager"
     data-view-manager-id-entreprise-value="{{ idEntreprise }}"
     data-view-manager-id-invite-value="{{ idInvite }}"
+    data-view-manager-server-root-name-value="{{ serverRootName }}"
     data-view-manager-entity-canvas-value='{{ entityCanvas|json_encode|e('html_attr') }}'
 >
     {# ================================================================== #}
@@ -44,11 +45,17 @@
     {# SECTION 2 : ZONE DE CONTENU DYNAMIQUE (LISTES)                     #}
     {# ================================================================== #}
     <div class="flex-grow-1" style="overflow-y: auto;" data-view-manager-target="tabContentContainer">
-        <div data-content-id="principal" data-entity-name="{{ entite_nom }}" data-can-add="true">
+        <div 
+            data-content-id="principal" 
+            data-entity-name="{{ entite_nom }}" 
+            data-server-root-name="{{ serverRootName }}" 
+            data-can-add="true"
+        >
             {# On utilise notre nouveau composant générique pour la liste principale #}
             {{ include('components/_generic_list_component.html.twig', {
                 'data': data,
                 'entite_nom': entite_nom,
+                'serverRootName': serverRootName,
                 'entityCanvas': entityCanvas,
                 'listeCanvas': listeCanvas,
                 'entityFormCanvas': entityFormCanvas,
