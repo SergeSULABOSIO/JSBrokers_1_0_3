@@ -21,13 +21,13 @@ export default class extends Controller {
     /**
      * @property {ObjectValue} entityFormCanvasValue - La configuration (canvas) du formulaire d'édition/création.
      * @property {StringValue} entiteValue - Le nom de l'entité gérée par la liste (ex: 'Sinistre').
-     * @property {StringValue} controleurphpValue - Le nom du contrôleur PHP pour les appels API.
+     * @property {StringValue} serverRootNameValue - Le nom racine du contrôleur PHP pour les appels API.
      */
     static values = {
         identreprise: Number,
         entityFormCanvas: Object,
         entite: String,
-        controleurphp: String,
+        serverRootName: String
     };
 
     /**
@@ -36,7 +36,8 @@ export default class extends Controller {
      */
     connect() {
         this.nomControleur = "LIST-MANAGER";
-        this.urlAPIDynamicQuery = `/admin/${this.controleurphpValue}/api/dynamic-query/${this.identrepriseValue}`;
+        // this.urlAPIDynamicQuery = `/admin/${this.controleurphpValue}/api/dynamic-query/${this.identrepriseValue}`;
+        this.urlAPIDynamicQuery = `/admin/${this.serverRootNameValue}/api/dynamic-query/${this.identrepriseValue}`;
 
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
@@ -132,7 +133,8 @@ export default class extends Controller {
         if (!entityName) return;
 
         // On reconstruit l'URL avec le bon ID à chaque requête pour plus de sûreté.
-        const url = `/admin/${this.controleurphpValue}/api/dynamic-query/${idEntreprise}`;
+        // const url = `/admin/${this.controleurphpValue}/api/dynamic-query/${idEntreprise}`;
+        const url = `/admin/${this.serverRootNameValue}/api/dynamic-query/${idEntreprise}`;
         console.log(this.nomControleur + " - ICI URL:", url);
         this.donneesTarget.innerHTML = `<div class="spinner-container"><div class="custom-spinner"></div></div>`;
 

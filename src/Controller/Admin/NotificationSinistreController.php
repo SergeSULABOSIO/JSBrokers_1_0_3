@@ -74,6 +74,7 @@ class NotificationSinistreController extends AbstractController
         return $this->render('components/_view_manager.html.twig', [
             'data' => $data,
             'entite_nom' => "NotificationSinistre",
+            'serverRootName' => "notificationsinistre",
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
