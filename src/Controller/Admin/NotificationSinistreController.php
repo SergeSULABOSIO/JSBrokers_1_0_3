@@ -58,11 +58,15 @@ class NotificationSinistreController extends AbstractController
     ) {}
 
 
-    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', 
-    requirements: [
-        'idEntreprise' => Requirement::DIGITS,
-        'idInvite' => Requirement::DIGITS
-    ], methods: ['GET', 'POST'])]
+    #[Route(
+        '/index/{idInvite}/{idEntreprise}',
+        name: 'index',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['GET', 'POST']
+    )]
     public function index(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
     {
         $data = $this->notificationSinistreRepository->findAll();
@@ -110,7 +114,7 @@ class NotificationSinistreController extends AbstractController
         if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
             throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
         }
-        
+
         if (!$notification) {
             $notification = new NotificationSinistre();
             $notification->setNotifiedAt(new DateTimeImmutable("now"));
@@ -238,21 +242,20 @@ class NotificationSinistreController extends AbstractController
 
 
 
-    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', 
-    requirements: [
-        'idEntreprise' => Requirement::DIGITS,
-        'idInvite' => Requirement::DIGITS
-    ], methods: ['POST'])]
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
     public function query(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
     {
-        // On récupère les données JSON du corps de la requête
         $requestData = json_decode($request->getContent(), true) ?? [];
-        // On appelle le service pour obtenir les résultats
         $reponseData = $this->searchService->search($requestData);
-
-        // 2. On récupère la "recette" d'affichage depuis le canvas
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
-
         $constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination

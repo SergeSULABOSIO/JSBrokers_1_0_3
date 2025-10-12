@@ -304,9 +304,12 @@ export default class extends Controller {
                 
                 // --- NOUVEAU : Activer les collections après la création ---
                 const collectionControllers = this.elementContenu.querySelectorAll('[data-controller="collection"]');
-                collectionControllers.forEach(element => {
-                    const controller = this.application.getControllerForElementAndIdentifier(element, 'collection');
-                    if (controller && controller.enableAndLoad) {
+                // CORRECTION : On ne peut pas utiliser les outlets car le contrôleur est dynamique.
+                // On récupère l'application depuis la fenêtre et on cherche les contrôleurs manuellement.
+                const application = this.application;
+                collectionControllers.forEach((element) => {
+                    const controller = application.getControllerForElementAndIdentifier(element, 'collection');
+                    if (controller.enableAndLoad) {
                         const newUrl = this.getCollectionUrlForElement(element);
                         if (newUrl) controller.enableAndLoad(newUrl);
                     }
