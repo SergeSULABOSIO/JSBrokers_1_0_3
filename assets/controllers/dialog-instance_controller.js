@@ -194,6 +194,15 @@ export default class extends Controller {
                 url.searchParams.set(`default_${this.context.defaultValue.target}`, this.context.defaultValue.value);
             }
 
+            // MISSION 3 : Ajouter idEntreprise et idInvite au chargement du formulaire
+            if (this.context.idEntreprise) {
+                url.searchParams.set('idEntreprise', this.context.idEntreprise);
+            }
+            if (this.context.idInvite) {
+                url.searchParams.set('idInvite', this.context.idInvite);
+            }
+            // Note : idInvite n'est pas toujours nécessaire ici, mais on peut l'ajouter par cohérence.
+
             // 5. On lance la requête avec l'URL finale correctement construite
             const finalUrl = url.pathname + url.search;
             console.log(this.nomControlleur + " - URL de chargement du formulaire:", finalUrl); // Pour débogage
