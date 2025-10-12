@@ -24,7 +24,8 @@ export default class extends Controller {
      * @property {StringValue} serverRootNameValue - Le nom racine du contrôleur PHP pour les appels API.
      */
     static values = {
-        identreprise: Number,
+        idEntreprise: Number,
+        idInvite: Number,
         entityFormCanvas: Object,
         entite: String,
         serverRootName: String
@@ -37,7 +38,7 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "LIST-MANAGER";
         // this.urlAPIDynamicQuery = `/admin/${this.controleurphpValue}/api/dynamic-query/${this.identrepriseValue}`;
-        this.urlAPIDynamicQuery = `/admin/${this.serverRootNameValue}/api/dynamic-query/${this.identrepriseValue}`;
+        this.urlAPIDynamicQuery = `/admin/${this.serverRootNameValue}/api/dynamic-query/${this.idInviteValue}/${this.idEntrepriseValue}`;
 
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
@@ -126,7 +127,8 @@ export default class extends Controller {
         console.log(this.nomControleur + " - ICI Demande de chargement reçue.", event.detail);
         // --- CORRECTION : On s'assure que l'ID de l'entreprise est toujours correct ---
         // On prend l'ID de l'événement s'il existe, sinon on prend la valeur initiale du contrôleur.
-        const idEntreprise = event.detail.idEntreprise || this.identrepriseValue;
+        const idEntreprise = event.detail.idEntreprise || this.idEntrepriseValue;
+        const idInvite = event.detail.idInvite || this.idInviteValue;
         const criteria = event.detail.criteria || {};
         const entityName = this.entiteValue;
 
@@ -134,7 +136,7 @@ export default class extends Controller {
 
         // On reconstruit l'URL avec le bon ID à chaque requête pour plus de sûreté.
         // const url = `/admin/${this.controleurphpValue}/api/dynamic-query/${idEntreprise}`;
-        const url = `/admin/${this.serverRootNameValue}/api/dynamic-query/${idEntreprise}`;
+        const url = `/admin/${this.serverRootNameValue}/api/dynamic-query/${idInvite}/${idEntreprise}`;
         console.log(this.nomControleur + " - ICI URL:", url);
         this.donneesTarget.innerHTML = `<div class="spinner-container"><div class="custom-spinner"></div></div>`;
 
