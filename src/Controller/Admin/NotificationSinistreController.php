@@ -238,12 +238,13 @@ class NotificationSinistreController extends AbstractController
 
 
 
-    #[Route('/api/dynamic-query/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['POST'])]
-    public function query($idEntreprise, Request $request, Constante $constante)
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', 
+    requirements: [
+        'idEntreprise' => Requirement::DIGITS,
+        'idInvite' => Requirement::DIGITS
+    ], methods: ['POST'])]
+    public function query(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
     {
-        /** @var Utilisateur $utilisateur */
-        $utilisateur = $this->getUser(); // Vous pouvez l'utiliser pour des logiques de droits si nécessaire.
-
         // On récupère les données JSON du corps de la requête
         $requestData = json_decode($request->getContent(), true) ?? [];
         // On appelle le service pour obtenir les résultats
@@ -252,28 +253,22 @@ class NotificationSinistreController extends AbstractController
         // 2. On récupère la "recette" d'affichage depuis le canvas
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
 
-        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
         $constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
-        // $this->loadCalculatedValue($entityCanvas, $reponseData["data"], $constante);
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
         return $this->render('components/_list_content.html.twig', [
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'utilisateur' => $utilisateur,
-            'constante' => $this->constante,
-            'rubrique_nom' => "Notification Sinistre",
-            'entite_nom' => "NotificationSinistre",
-            'racine_url_controleur_php_nom' => "notificationsinistre",
-            'controleur_stimulus_nom' => "notificationsinistre-formulaire",
             'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
-            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
-            'page' => $reponseData["page"], // La page actuelle, utile si la pagination est gérée côté client dans le template
-            'limit' => $reponseData["limit"],            // La limite par page
             'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
-            // 'numericAttributes' => $this->constante->getNumericAttributes(new NotificationSinistre()),
+            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
+            'entite_nom' => "NotificationSinistre",
+            'serverRootName' => "notificationsinistre",
+            'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
             'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $idEntreprise),
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
