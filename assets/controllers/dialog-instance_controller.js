@@ -28,6 +28,7 @@ export default class extends Controller {
         this.nomControlleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
         this.elementContenu = this.element;
+        this.cetteApplication = this.application;
         this.boundAdjustZIndex = this.adjustZIndex.bind(this);
         if (detail) {
             this.start(detail);
@@ -301,19 +302,16 @@ export default class extends Controller {
             if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
-                
-                // --- NOUVEAU : Activer les collections après la création ---
-                const collectionControllers = this.elementContenu.querySelectorAll('[data-controller="collection"]');
-                // CORRECTION : On ne peut pas utiliser les outlets car le contrôleur est dynamique.
-                // On récupère l'application depuis la fenêtre et on cherche les contrôleurs manuellement.
-                const application = this.application;
-                collectionControllers.forEach((element) => {
-                    const controller = application.getControllerForElementAndIdentifier(element, 'collection');
-                    if (controller.enableAndLoad) {
+                const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
+                collectionElements.forEach(element => {
+                    // On récupère l'instance du contrôleur 'collection' pour cet élément.
+                    const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
+                    if (controller && controller.enableAndLoad) {
                         const newUrl = this.getCollectionUrlForElement(element);
                         if (newUrl) controller.enableAndLoad(newUrl);
                     }
                 });
+
                 await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
             }
 

@@ -31,15 +31,13 @@
                     <div class="title-line-2 form-text">{{ form.vars.help }}</div>
                 {% endif %}
             </div>
-            {# --- CORRECTION : On n'affiche le bouton "Ajouter" qu'en mode édition --- #}
-            {% if not isDisabled %}
-                <div class="title-right-block" data-collection-target="addButtonContainer">
-                    <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">
-                        <twig:UX:Icon name="gridicons:add" style="width: 23px;" />
-                        <span>Ajouter </span>
-                    </button>
-                </div>
-            {% endif %}
+            {# --- CORRECTION : On rend toujours le bouton, mais on le cache avec une classe si désactivé --- #}
+            <div class="title-right-block {{ isDisabled ? 'd-none' : '' }}" data-collection-target="addButtonContainer">
+                <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">
+                    <twig:UX:Icon name="gridicons:add" style="width: 23px;" />
+                    <span>Ajouter </span>
+                </button>
+            </div>
         </div>
 
         {# CONTENU DE L'ACCORDÉON (la liste) #}
