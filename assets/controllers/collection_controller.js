@@ -80,10 +80,11 @@ export default class extends Controller {
         this.disabledValue = false;
         this.listUrlValue = newUrl;
         this.element.classList.remove('is-disabled');
-        
-        // On ré-affiche le bouton "Ajouter" en retirant la classe 'd-none'
+
+        // CORRECTION : On s'assure que le bouton est invisible au départ en mode édition.
+        // Le survol le rendra visible.
         if (this.hasAddButtonContainerTarget) {
-            this.addButtonContainerTarget.classList.remove('d-none');
+            this.addButtonContainerTarget.style.opacity = '0';
         }
         this.load();
     }
@@ -101,6 +102,32 @@ export default class extends Controller {
         const icon = this.element.querySelector('.toggle-icon');
         if (icon) {
             icon.textContent = this.contentPanelTarget.classList.contains('is-open') ? '-' : '+';
+        }
+    }
+
+    /**
+     * Affiche un message dans la console lorsque la souris entre dans la zone du titre.
+     * Ne fait rien si le widget est désactivé (mode création).
+     */
+    logMouseEnter() {
+        // console.log(`${this.nomControleur} - Souris entrée sur le titre de l'accordéon (mode édition).`, this.addButtonContainerTarget);
+        if (!this.disabledValue) {
+            if (this.hasAddButtonContainerTarget) {
+                this.addButtonContainerTarget.style.opacity = '1';
+            }
+        }
+    }
+
+    /**
+     * Affiche un message dans la console lorsque la souris quitte la zone du titre.
+     * Ne fait rien si le widget est désactivé (mode création).
+     */
+    logMouseLeave() {
+        // console.log(`${this.nomControleur} - Souris sortie du titre de l'accordéon (mode édition).`, this.addButtonContainerTarget);
+        if (!this.disabledValue) {
+            if (this.hasAddButtonContainerTarget) {
+                this.addButtonContainerTarget.style.opacity = '0';
+            }
         }
     }
 
@@ -131,7 +158,10 @@ export default class extends Controller {
     /**
      * Déclenche l'ouverture de la boîte de dialogue pour ajouter un nouvel élément.
      */
-    addItem() {
+    addItem(event) {
+        // CORRECTION : On empêche l'événement de "buller" vers les éléments parents,
+        // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
+        event.stopPropagation();
         this.notifyCerveau('app:boite-dialogue:init-request', {
             entity: {}, // Entité vide pour la création
             entityFormCanvas: {

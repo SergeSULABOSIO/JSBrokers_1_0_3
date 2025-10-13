@@ -293,10 +293,9 @@ a:active {
     margin-top: 0; 
 }
 .title-right-block {
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity 0.3s ease; /* On ne garde que la transition sur l'opacité */
     opacity: 0;
     padding-right: 10px;
-    visibility: hidden;
 }
 .accordion-content {
     max-height: 0;
