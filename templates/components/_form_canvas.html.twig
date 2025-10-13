@@ -13,7 +13,9 @@
        - Gère un widget spécial pour les collections, identifié par `collection` (anciennement `collection-manager`).
 #}
 {# On dit à Twig d'utiliser notre thème personnalisé pour ce formulaire #}
-{% form_theme form 'themes/_collection_widget.html.twig' %}
+{% form_theme form 'themes/_collection_widget.html.twig', 
+    {'idEntreprise': idEntreprise, 'idInvite': idInvite}
+%}
 
 {# ========================================================== #}
 {# PARTIE 1 : La colonne des attributs calculés (gauche)      #}
