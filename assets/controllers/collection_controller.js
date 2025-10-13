@@ -105,30 +105,6 @@ export default class extends Controller {
     }
 
     /**
-     * Affiche le bouton "Ajouter" au survol.
-     * NOTE : Cette méthode est maintenant gérée par le CSS pour une meilleure performance.
-     * On la garde vide pour ne pas casser l'attribut data-action.
-     */
-    showAddButton() {
-        // Si un timer de masquage était en cours, on l'annule.
-        clearTimeout(this.hideButtonTimeout);
-    }
-
-    /**
-     * Cache le bouton "Ajouter" lorsque la souris quitte la zone.
-     * CORRECTION : On ajoute une temporisation pour améliorer l'expérience utilisateur.
-     */
-    hideAddButton() {
-        // On lance un timer. Si la souris ne revient pas sur la zone avant la fin,
-        // le bouton disparaîtra.
-        this.hideButtonTimeout = setTimeout(() => {
-            if (this.hasAddButtonContainerTarget) {
-                // La logique de masquage est maintenant gérée par le CSS.
-            }
-        }, 300); // Délai de 300ms
-    }
-
-    /**
      * Rafraîchit la liste si l'événement de sauvegarde concerne cette collection.
      * @param {CustomEvent} event
      */
