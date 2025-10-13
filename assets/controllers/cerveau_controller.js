@@ -114,6 +114,20 @@ export default class extends Controller {
                     ...payload
                 });
                 break;
+            case 'ui:boite-dialogue:add-collection-item-request':
+                console.log("-> ACTION: Demande d'ajout à la collection. Préparation de l'ouverture de la boîte de dialogue secondaire.");
+                this.broadcast('app:boite-dialogue:init-request', {
+                    entity: {}, // Entité vide pour le mode création
+                    entityFormCanvas: payload.entityFormCanvas,
+                    isCreationMode: payload.isCreationMode, // Relayer l'information
+                    // On enrichit le contexte avec les IDs mémorisés par le cerveau
+                    context: {
+                        idEntreprise: this.currentIdEntreprise,
+                        idInvite: this.currentIdInvite,
+                        originatorId: payload.context.originatorId
+                    }
+                });
+                break;
 
             // --- NOUVEAU : Gère la demande d'ajout depuis la barre d'outils ---
             case 'ui:toolbar.add-request':

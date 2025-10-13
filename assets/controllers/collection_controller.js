@@ -13,6 +13,8 @@ export default class extends Controller {
         "listContainer",
         "addButtonContainer",
         "countBadge"
+        
+
     ];
 
     static values = {
@@ -162,8 +164,10 @@ export default class extends Controller {
         // CORRECTION : On empêche l'événement de "buller" vers les éléments parents,
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
-        this.notifyCerveau('app:boite-dialogue:init-request', {
+        console.log(`${this.nomControleur} - Ajout d'un nouvel élément à la collection`, event);
+        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
             entity: {}, // Entité vide pour la création
+            isCreationMode: true,
             entityFormCanvas: {
                 parametres: {
                     titre_creation: this.itemTitleCreateValue,
@@ -171,6 +175,8 @@ export default class extends Controller {
                     endpoint_submit_url: this.itemSubmitUrlValue,
                 }
             },
+            idEntreprise: this.idEntrepriseValue,
+            idInvite: this.idInviteValue,
             context: {
                 originatorId: this.element.id // On s'identifie pour le rafraîchissement
             }
@@ -192,6 +198,8 @@ export default class extends Controller {
                     endpoint_submit_url: this.itemSubmitUrlValue,
                 }
             },
+            idEntreprise: this.idEntrepriseValue,
+            idInvite: this.idInviteValue,
             context: {
                 originatorId: this.element.id
             }
