@@ -13,7 +13,11 @@
     >
         {# TITRE DE L'ACCORDÉON #}
         <div class="accordion-title"
-             data-action="click->collection#toggleAccordion"
+             data-action="
+                click->collection#toggleAccordion
+                mouseenter->collection#logMouseEnter
+                mouseleave->collection#logMouseLeave
+             "
         >
             <div class="title-left-block">
                 {# Ligne 1 #}
