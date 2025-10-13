@@ -132,7 +132,9 @@ class NotificationSinistreController extends AbstractController
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $entityFormCanvas,
-            'entityCanvas' => $entityCanvas
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
