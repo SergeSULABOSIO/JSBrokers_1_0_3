@@ -4,7 +4,7 @@
 
     Fonctionnement :
     - Il affiche une liste d'éléments existants.
-    - Il permet d'ajouter, de modifier ou de supprimer des éléments de la collection via des boîtes de dialogue modales.
+    - Il permet "d'ajouter", "de modifier" ou "de supprimer" des éléments de la collection via des boîtes de dialogue modales.
     - Les interactions (ajout, suppression) sont gérées via des appels AJAX pour une expérience utilisateur fluide.
     - Il se rafraîchit automatiquement lorsqu'une entité de la collection est sauvegardée.
 
@@ -24,10 +24,14 @@
     <div data-collection-target="contentPanel">
         {# Cible pour la liste des éléments elle-même #}
         <div data-collection-target="listContainer">
-            {{ include('components/_collection_list.html.twig', {
-                'items': items,
-                'item_template': item_template
-            }) }}
+            {% if items is not empty and items|length > 0 %}
+                {% for item in items %}
+                    {# On inclut le sous-template spécifique pour chaque élément de la boucle #}
+                    {% include item_template with {'item': item} %}
+                {% endfor %}
+            {% else %}
+                <div class="text-center p-4 text-muted"><em>Aucun élément dans cette collection.</em></div>
+            {% endif %}
         </div>
     </div>
     {# Cible pour le conteneur du bouton "Ajouter" #}

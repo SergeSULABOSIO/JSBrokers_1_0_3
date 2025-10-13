@@ -183,7 +183,6 @@ export default class extends Controller {
      */
     editItem(event) {
         const itemId = event.currentTarget.dataset.itemId;
-
         this.notifyCerveau('app:boite-dialogue:init-request', {
             entity: { id: itemId }, // On passe juste l'ID pour l'édition
             entityFormCanvas: {

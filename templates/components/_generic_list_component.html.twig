@@ -63,7 +63,7 @@
                         title: "Votre liste " ~ entite_nom|lower ~ " est vide",
                         description: "Commencez par ajouter un " ~ entite_nom|lower ~ " pour organiser vos données.",
                         button_text: "Ajouter un " ~ entite_nom|lower,
-                        button_action: "click->list-manager#handleAddRequest",
+                        button_action: customAddAction|default("click->list-manager#handleAddRequest"),
                         icon_name: entityCanvas.parametres.icone | default('lucide:inbox')
                     }) }}
                 </div>
