@@ -153,11 +153,15 @@ export default class extends Controller {
             // Affiche les résultats et met à jour l'état
             this.donneesTarget.innerHTML = html;
             this.resetSelection();
+            // On notifie le cerveau que le chargement est terminé
             this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
 
         } catch (error) {
             this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
             this.notifyCerveau('app:error.api', { error: error.message });
+        } finally {
+            // Dans tous les cas (succès ou erreur), on notifie que le chargement est terminé pour cacher la barre de progression.
+            document.dispatchEvent(new CustomEvent('app:base-données:données-loaded'));
         }
     }
 

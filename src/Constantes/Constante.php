@@ -6695,29 +6695,6 @@ class Constante
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["dommage"]], ["champs" => ["evaluationChiffree"]]]]
         ];
 
-        // On n'ajoute les lignes de collection que si on est en mode édition.
-        if (!$isParentNew) {
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre", null, $isParentNew)]],
-                    ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre", null, $isParentNew)]]
-                ]
-            ];
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre", null, $isParentNew)]]
-                ]
-            ];
-            $layout[] = [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre", null, $isParentNew)]]
-                ]
-            ];
-        }
-
         // On ajoute toujours les lignes de collection. Leur état sera géré par le flag 'disabled'.
         $layout[] = [
             "couleur_fond" => "white",

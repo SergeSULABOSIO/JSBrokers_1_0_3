@@ -81,9 +81,9 @@ export default class extends Controller {
         this.listUrlValue = newUrl;
         this.element.classList.remove('is-disabled');
         
-        // On ré-affiche le bouton "Ajouter" s'il existe
+        // On ré-affiche le bouton "Ajouter" en retirant la classe 'd-none'
         if (this.hasAddButtonContainerTarget) {
-            this.addButtonContainerTarget.style.display = '';
+            this.addButtonContainerTarget.classList.remove('d-none');
         }
         this.load();
     }

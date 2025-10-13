@@ -301,6 +301,9 @@ class NotificationSinistreController extends AbstractController
         if ($id !== 0) {
             /** @var NotificationSinistre $notification */
             $notification = $this->notificationSinistreRepository->find($id);
+            if (!$notification) {
+                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
+            }
             $data = $notification->getContacts();
         }
         $contactCanvas = $this->constante->getEntityCanvas(Contact::class);
@@ -308,12 +311,15 @@ class NotificationSinistreController extends AbstractController
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => 'Contacts',
-            'entityCanvas' => $contactCanvas,
-            'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $this->getEntreprise()->getId()),
+            'entite_nom' => "Contacts",
+            'serverRootName' => "contact",
             'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
+            'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
+            'entityCanvas' => $contactCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
         ]);
     }
 
@@ -325,6 +331,9 @@ class NotificationSinistreController extends AbstractController
         if ($id !== 0) {
             /** @var NotificationSinistre $notification */
             $notification = $this->notificationSinistreRepository->find($id);
+            if (!$notification) {
+                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
+            }
             $data = $notification->getPieces();
         }
         $pieceCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
@@ -332,12 +341,15 @@ class NotificationSinistreController extends AbstractController
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => 'Pièces',
-            'entityCanvas' => $pieceCanvas,
-            'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $this->getEntreprise()->getId()),
+            'entite_nom' => "PieceSinistre",
+            'serverRootName' => "piecesinistre",
             'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
+            'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
+            'entityCanvas' => $pieceCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
         ]);
     }
 
@@ -349,6 +361,9 @@ class NotificationSinistreController extends AbstractController
         if ($id !== 0) {
             /** @var NotificationSinistre $notification */
             $notification = $this->notificationSinistreRepository->find($id);
+            if (!$notification) {
+                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
+            }
             $data = $notification->getTaches();
         }
         $tacheCanvas = $this->constante->getEntityCanvas(Tache::class);
@@ -356,12 +371,15 @@ class NotificationSinistreController extends AbstractController
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => 'Taches',
-            'entityCanvas' => $tacheCanvas,
-            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
+            'entite_nom' => "Tache",
+            'serverRootName' => "tache",
             'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
+            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
+            'entityCanvas' => $tacheCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
         ]);
     }
 
@@ -373,6 +391,9 @@ class NotificationSinistreController extends AbstractController
         if ($id !== 0) {
             /** @var NotificationSinistre $notification */
             $notification = $this->notificationSinistreRepository->find($id);
+            if (!$notification) {
+                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
+            }
             $data = $notification->getOffreIndemnisationSinistres();
         }
         $offreCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
@@ -380,12 +401,15 @@ class NotificationSinistreController extends AbstractController
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => 'Offres',
-            'entityCanvas' => $offreCanvas,
-            'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $this->getEntreprise()->getId()),
+            'entite_nom' => "OffreIndemnisationSinistre",
+            'serverRootName' => "offreindemnisationsinistre",
             'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
+            'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
+            'entityCanvas' => $offreCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
         ]);
     }
 }
