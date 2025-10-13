@@ -579,3 +579,14 @@ html {
   color: #888;
   font-style: italic;
 }
+
+/* --- NOUVEAU : Styles pour le bouton "Ajouter" de l'accordéon collection --- */
+.accordion-title .title-right-block {
+  opacity: 0; /* Caché par défaut */
+  transition: opacity 0.3s ease-in-out; /* Animation de fondu douce */
+}
+
+/* Le bouton devient visible lorsque la souris survole le titre de l'accordéon */
+.accordion-title:hover .title-right-block {
+  opacity: 1;
+}
