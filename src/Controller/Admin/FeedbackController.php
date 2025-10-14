@@ -14,37 +14,33 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
-use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
-use App\Entity\Avenant;
-use App\Entity\Feedback;
-use App\Entity\Invite;
-use App\Entity\Piste;
 use App\Entity\Tache;
+use App\Entity\Feedback;
 use App\Form\FeedbackType;
-use App\Form\PisteType;
-use App\Form\TacheType;
+use App\Constantes\Constante;
 use App\Repository\InviteRepository;
-use App\Repository\EntrepriseRepository;
 use App\Repository\FeedbackRepository;
-use App\Repository\PisteRepository;
-use App\Repository\TacheRepository;
+use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/feedback", name: 'admin.feedback.')]
 #[IsGranted('ROLE_USER')]
 class FeedbackController extends AbstractController
 {
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
+
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -54,6 +50,13 @@ class FeedbackController extends AbstractController
         private FeedbackRepository $feedbackRepository,
         private Constante $constante,
     ) {}
+
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            'tache' => Tache::class,
+        ];
+    }
 
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -76,16 +79,11 @@ class FeedbackController extends AbstractController
      * Fournit le formulaire HTML pour un Feedback.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Feedback $feedback, Constante $constante): Response
+    public function getFormApi(?Feedback $feedback, Request $request): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
+        $idEntreprise = $entreprise->getId();
+        $idInvite = $invite->getId();
 
         if (!$feedback) {
             $feedback = new Feedback();
@@ -93,13 +91,15 @@ class FeedbackController extends AbstractController
 
         $form = $this->createForm(FeedbackType::class, $feedback);
 
-        $entityCanvas = $constante->getEntityCanvas(Feedback::class);
-        $constante->loadCalculatedValue($entityCanvas, [$feedback]);
+        $entityCanvas = $this->constante->getEntityCanvas(Feedback::class);
+        $this->constante->loadCalculatedValue($entityCanvas, [$feedback]);
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($feedback, $entreprise->getId()),
-            'entityCanvas' => $constante->getEntityCanvas(Feedback::class)
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas($feedback, $entreprise->getId()),
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
@@ -115,16 +115,11 @@ class FeedbackController extends AbstractController
 
         $feedback = isset($data['id']) ? $em->getRepository(Feedback::class)->find($data['id']) : new Feedback();
 
-        // On lie le feedback à sa tâche parente
-        if (isset($data['tache'])) {
-            $tache = $em->getReference(Tache::class, $data['tache']);
-            if ($tache) $feedback->setTache($tache);
-        }
-
         $form = $this->createForm(FeedbackType::class, $feedback);
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->associateParent($feedback, $data, $em);
             $em->persist($feedback);
             $em->flush();
 
@@ -135,12 +130,14 @@ class FeedbackController extends AbstractController
             ]);
         }
 
-        // Gestion des erreurs de validation...
         $errors = [];
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
-        return $this->json(['message' => 'Veuillez corriger les erreurs.', 'errors' => $errors], 422);
+        return $this->json([
+            'message' => 'Veuillez corriger les erreurs ci-dessous.', 
+            'errors' => $errors
+        ], 422);
     }
 
     /**
