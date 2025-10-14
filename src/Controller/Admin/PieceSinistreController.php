@@ -42,8 +42,6 @@ class PieceSinistreController extends AbstractController
 {
     use HandleChildAssociationTrait;
 
-    public MenuActivator $activator;
-
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -52,9 +50,7 @@ class PieceSinistreController extends AbstractController
         private InviteRepository $inviteRepository,
         private PieceSinistreRepository $pieceSinistreRepository,
         private Constante $constante,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
-    }
+    ) {}
 
     protected function getParentAssociationMap(): array
     {
