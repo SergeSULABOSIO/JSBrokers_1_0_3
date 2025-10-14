@@ -30,6 +30,7 @@ use App\Repository\ClasseurRepository;
 use App\Repository\PaiementRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -60,57 +61,46 @@ class PaiementController extends AbstractController
         private ClasseurRepository $classeurRepository,
         private ServiceMonnaies $serviceMonnaies,
         private Constante $constante,
+        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
-
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    protected function getParentAssociationMap(): array
     {
-        $page = $request->query->getInt("page", 1);
+        return [
+            // Un paiement peut être lié à une OffreIndemnisationSinistre
+            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
+            // Ajoutez d'autres parents ici si nécessaire
+        ];
+    }
 
-        return $this->render('admin/paiement/index.html.twig', [
-            'pageName' => $this->translator->trans("paiement_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'paiements' => $this->paiementRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'serviceMonnaie' => $this->serviceMonnaies,
+    
+    #[Route(
+        '/index/{idInvite}/{idEntreprise}',
+        name: 'index',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['GET', 'POST']
+    )]
+    public function index(int $idInvite, int $idEntreprise)
+    {
+        $data = $this->paiementRepository->findAll();
+        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+
+        return $this->render('components/_view_manager.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName($this),
+            'serverRootName' => $this->getServerRootName($this),
             'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $idInvite,
+            'idEntreprise' => $idEntreprise,
         ]);
-    }
-
-    private function loadClasseurPreuvesDesPaiements(Entreprise $entreprise): Classeur
-    {
-        /** @var Classeur $classeurPOP */
-        $classeurPOP = $this->classeurRepository->findOneByNom(Classeur::NOM_CLASSEUR_POP, $entreprise->getId());
-        // $classeurPOP = $this->loadClasseurPreuvesDesPaiements($idEntreprise);
-        if ($classeurPOP == null) {
-            $classeurPOP = (new Classeur())
-                ->setNom(Classeur::NOM_CLASSEUR_POP)
-                ->setDescription("Classeur des preuves des paiements")
-                ->setEntreprise($entreprise);
-            $this->manager->persist($classeurPOP);
-            $this->manager->flush();
-            // dd("Classeur POP", $classeurPOP, "Crée.");
-        }
-        return $classeurPOP;
-    }
-
-
-    private function loadDataOnNote(Paiement $paiement): string
-    {
-        $refNote = "";
-        $montPayable = 0;
-        $montPaye = 0;
-        $montSolde = 0;
-        if ($paiement->getNote() != null) {
-            $note = $paiement->getNote();
-            $refNote = $note->getReference();
-            $montPayable = number_format($this->constante->Note_getMontant_payable($note), 2, ",", " ");
-            $montPaye = number_format($this->constante->Note_getMontant_paye($note), 2, ",", " ");
-            $montSolde = number_format($this->constante->Note_getMontant_solde($note), 2, ",", " ");
-        }
-        return $refNote . "__1986__" . $montPayable . "__1986__" . $montPaye . "__1986__" . $montSolde;
     }
 
     /**
@@ -119,14 +109,25 @@ class PaiementController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Paiement $paiement, Constante $constante, Request $request): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
+        // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
+        $idEntreprise = $request->query->get('idEntreprise');
+        $idInvite = $request->query->get('idInvite');
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        if (!$idEntreprise) {
+            $entreprise = $this->getEntreprise();
+        } else {
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        }
+        if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
 
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
+        if (!$idInvite) {
+            $invite = $this->getInvite();
+        } else {
+            $invite = $this->inviteRepository->find($idInvite);
+        }
+        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
+            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
+        }
 
         if (!$paiement) {
             $paiement = new Paiement();
@@ -140,24 +141,19 @@ class PaiementController extends AbstractController
 
         $form = $this->createForm(PaiementType::class, $paiement);
 
-        $entityCanvas = $constante->getEntityCanvas(Paiement::class);
-        $constante->loadCalculatedValue($entityCanvas, [$paiement]);
+        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
+        $this->constante->loadCalculatedValue($entityCanvas, [$paiement]);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($paiement, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($paiement, $entreprise->getId()), // ID entreprise à adapter
-            'entityCanvas' => $constante->getEntityCanvas(Paiement::class)
+            'entityFormCanvas' => $entityFormCanvas,
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
-    protected function getParentAssociationMap(): array
-    {
-        return [
-            // Un paiement peut être lié à une OffreIndemnisationSinistre
-            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
-            // Ajoutez d'autres parents ici si nécessaire
-        ];
-    }
 
     /**
      * Traite la soumission du formulaire.
@@ -165,15 +161,6 @@ class PaiementController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
-
         $data = $request->request->all();
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
@@ -181,13 +168,18 @@ class PaiementController extends AbstractController
         /** @var Paiement $paiement */
         $paiement = isset($data['id']) ? $em->getRepository(Paiement::class)->find($data['id']) : new Paiement();
 
+        $notificationId = $data['id'] ?? null;
+        if (!$notificationId) {
+            //Paramètres par défaut
+            $paiement->setCreatedAt(new DateTimeImmutable("now"));
+        }
+        $paiement->setUpdatedAt(new DateTimeImmutable("now"));
+
         $form = $this->createForm(PaiementType::class, $paiement);
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Notre "boîte à outils" s'occupe de lier le paiement à son parent
             $this->associateParent($paiement, $data, $em);
-
             $em->persist($paiement);
             $em->flush();
             
@@ -197,13 +189,16 @@ class PaiementController extends AbstractController
                 'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
             ]);
         }
-
-        // Gestion des erreurs de validation...
         $errors = [];
+        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
-        return $this->json(['message' => 'Veuillez corriger les erreurs.', 'errors' => $errors], 422);
+        return $this->json([
+            'success' => false,
+            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
+        ], 422); // 422 = Unprocessable Entity
     }
 
     /**
@@ -221,17 +216,71 @@ class PaiementController extends AbstractController
         }
     }
 
-    #[Route('/api/{id}/preuves', name: 'api.get_preuves', methods: ['GET'])]
-    public function getPreuvesListApi(int $id, PaiementRepository $repository): Response
-    {
-        $paiement = ($id === 0) ? new Paiement() : $repository->find($id);
-        if (!$paiement) {
-            $paiement = new Paiement();
-        }
 
-        return $this->render('components/_collection_list.html.twig', [
-            'items' => $paiement->getPreuves(),
-            'item_template' => 'components/collection_items/_document_item.html.twig'
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
+    public function query(int $idInvite, int $idEntreprise, Request $request)
+    {
+        $requestData = json_decode($request->getContent(), true) ?? [];
+        $reponseData = $this->searchService->search($requestData);
+        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
+
+        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
+        return $this->render('components/_list_content.html.twig', [
+            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
+            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
+            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
+            'entite_nom' => $this->getEntityName($this),
+            'serverRootName' => $this->getServerRootName($this),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
+        ]);
+    }
+
+
+
+    #[Route('/api/{id}/preuves', name: 'api.get_preuves', methods: ['GET'])]
+    public function getPreuvesListApi(int $id): Response
+    {
+        $data = [];
+        if ($id !== 0) {
+            /** @var Paiement $paiement */
+            $paiement = $this->paiementRepository->find($id);
+            if (!$paiement) {
+                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
+            }
+            $data = $paiement->getPreuves();
+        }
+        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+        
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName(Paiement::class),
+            'serverRootName' => $this->getServerRootName(Paiement::class),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
+            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
+            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
         ]);
     }
 
