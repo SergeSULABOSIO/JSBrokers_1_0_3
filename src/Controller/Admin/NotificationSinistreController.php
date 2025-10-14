@@ -13,12 +13,14 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Tache;
 use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Entity\Contact;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
+use App\Entity\PieceSinistre;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
@@ -27,12 +29,11 @@ use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\PieceSinistre;
-use App\Entity\Tache;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -45,6 +46,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class NotificationSinistreController extends AbstractController
 {
+    use HandleChildAssociationTrait;
+
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -57,6 +60,12 @@ class NotificationSinistreController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            'notificationSinistre' => NotificationSinistre::class,
+        ];
+    }
 
     #[Route(
         '/index/{idInvite}/{idEntreprise}',
@@ -158,6 +167,7 @@ class NotificationSinistreController extends AbstractController
         $form->submit($submittedData, false); //puisque les données sont fournies ici sous forme de JSON. On ne peut pas utiliser handleRequest
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->associateParent($notification, $data, $em);
             $em->persist($notification);
             $em->flush();
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
