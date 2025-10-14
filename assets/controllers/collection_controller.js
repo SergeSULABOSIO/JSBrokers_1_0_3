@@ -25,6 +25,8 @@ export default class extends Controller {
         itemDeleteUrl: String, // URL pour supprimer un item
         itemTitleCreate: String, // Titre pour la création
         itemTitleEdit: String, // Titre pour l'édition
+        parentEntityId: Number, // ID de l'entité parente (ex: NotificationSinistre)
+        parentFieldName: String, // ID de l'entité parente (ex: NotificationSinistre)
         disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
     };
 
@@ -77,11 +79,10 @@ export default class extends Controller {
      * Active le widget et charge son contenu. Appelé par dialog-instance après une création.
      * @param {string} newUrl - La nouvelle URL à utiliser, contenant l'ID du parent.
      */
-    enableAndLoad(newUrl) {
-        console.log(`${this.nomControleur} - Activation et chargement avec la nouvelle URL:`, newUrl);
+    enableAndLoad() {
         this.disabledValue = false;
-        this.listUrlValue = newUrl;
         this.element.classList.remove('is-disabled');
+        console.log(`${this.nomControleur} - (4) Collection activée. L'ID parent est maintenant: ${this.parentEntityIdValue}`);
 
         // CORRECTION : On s'assure que le bouton est invisible au départ en mode édition.
         // Le survol le rendra visible.
@@ -89,6 +90,16 @@ export default class extends Controller {
             this.addButtonContainerTarget.style.opacity = '0';
         }
         this.load();
+    }
+
+    /**
+     * Met à jour l'ID de l'entité parente. Appelé par dialog-instance.
+     * @param {number} parentId 
+     */
+    updateParentEntityId(parentId) {
+        this.parentEntityIdValue = parentId;
+        // On met aussi à jour l'URL de la liste avec le nouvel ID.
+        this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
     }
 
     // --- MÉTHODES RESTAURÉES POUR L'INTERACTIVITÉ DE L'ACCORDÉON ---
@@ -164,8 +175,15 @@ export default class extends Controller {
         // CORRECTION : On empêche l'événement de "buller" vers les éléments parents,
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
-        console.log(`${this.nomControleur} - Ajout d'un nouvel élément à la collection`, event);
-        console.log(`${this.nomControleur} - ID de l'objet parent: `, this.element.id);
+        console.log(`${this.nomControleur} - (5) Clic sur 'Ajouter'. Demande d'ouverture du formulaire de tâche.`);
+        console.log(`${this.nomControleur} - (6) L'ID de l'entité parente (${this.parentEntityIdValue}) va être inclus dans le contexte sous la clé '${this.parentFieldNameValue}'.`);
+
+        // On construit dynamiquement l'objet de contexte pour l'ID parent.
+        const parentContext = {};
+        if (this.parentFieldNameValue && this.parentEntityIdValue) {
+            parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
+        }
+
         this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
             entity: {}, // Entité vide pour la création
             isCreationMode: true,
@@ -179,7 +197,8 @@ export default class extends Controller {
             idEntreprise: this.idEntrepriseValue,
             idInvite: this.idInviteValue,
             context: {
-                originatorId: this.element.id // On s'identifie pour le rafraîchissement
+                originatorId: this.element.id, // On s'identifie pour le rafraîchissement.
+                ...parentContext // On fusionne le contexte parent dynamique.
             }
         });
     }
