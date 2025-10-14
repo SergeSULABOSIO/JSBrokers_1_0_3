@@ -71,8 +71,6 @@ class NotificationSinistreController extends AbstractController
     {
         $data = $this->notificationSinistreRepository->findAll();
         $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
-
-        //On charge les valeurs calculées
         $constante->loadCalculatedValue($entityCanvas, $data);
 
         return $this->render('components/_view_manager.html.twig', [
@@ -98,7 +96,6 @@ class NotificationSinistreController extends AbstractController
         $idInvite = $request->query->get('idInvite');
 
         if (!$idEntreprise) {
-            // Fallback pour les cas où il n'est pas passé (ex: collections)
             $entreprise = $this->getEntreprise();
         } else {
             $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -106,7 +103,6 @@ class NotificationSinistreController extends AbstractController
         if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
 
         if (!$idInvite) {
-            // Fallback pour les cas où il n'est pas passé (ex: collections)
             $invite = $this->getInvite();
         } else {
             $invite = $this->inviteRepository->find($idInvite);
@@ -127,8 +123,6 @@ class NotificationSinistreController extends AbstractController
         $constante->loadCalculatedValue($entityCanvas, [$notification]);
         $entityFormCanvas = $constante->getEntityFormCanvas($notification, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 
-        // dd("ICI", $entityFormCanvas, $entityCanvas, $notification);
-
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
             'entityFormCanvas' => $entityFormCanvas,
@@ -142,48 +136,30 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var NotificationSinistre $notification */
-        $notification = new NotificationSinistre();
-
         $data = $request->request->all();
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
 
-        $notificationId = $data['id'] ?? null;
+        /** @var NotificationSinistre $notification */
+        $notification = isset($data['id']) ? $em->getRepository(NotificationSinistre::class)->find($data['id']) : new NotificationSinistre();
 
-        if ($notificationId) {
-            // Mode "Modification"
-            $notification = $this->notificationSinistreRepository->find($notificationId);
-            if (!$notification) {
-                return $this->json(['success' => false, 'message' => 'Entité non trouvée.'], 404);
-            }
-        } else {
-            // Mode "Création"
-            $notification = new NotificationSinistre();
+        $notificationId = $data['id'] ?? null;
+        if (!$notificationId) {
             //Paramètres par défaut
             $notification->setOccuredAt(new DateTimeImmutable("now"));
             $notification->setNotifiedAt(new DateTimeImmutable("now"));
             $notification->setCreatedAt(new DateTimeImmutable("now"));
-            $notification->setInvite($invite);
+            $notification->setInvite($this->getInvite());
             $notification->setDescriptionDeFait("RAS");
         }
         $notification->setUpdatedAt(new DateTimeImmutable("now"));
 
-        // Utiliser les formulaires Symfony pour la validation est une bonne pratique
         $form = $this->createForm(NotificationSinistreType::class, $notification);
-        // Le 'false' permet de ne soumettre que les champs présents dans $data
         $form->submit($submittedData, false); //puisque les données sont fournies ici sous forme de JSON. On ne peut pas utiliser handleRequest
 
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($notification);
             $em->flush();
-
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
             $jsonEntity = $serializer->serialize($notification, 'json', ['groups' => 'list:read']);
             return $this->json([
@@ -197,7 +173,6 @@ class NotificationSinistreController extends AbstractController
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
-
         return $this->json([
             'success' => false,
             'message' => 'Veuillez corriger les erreurs ci-dessous.',
@@ -205,43 +180,20 @@ class NotificationSinistreController extends AbstractController
         ], 422); // 422 = Unprocessable Entity
     }
 
-
-
-    #[Route('/getlistelementdetails/{idEntreprise}/{idNotificationsinistre}', name: 'getlistelementdetails')]
-    public function getlistelementdetails($idEntreprise, $idNotificationsinistre, Request $request, Constante $constante)
+    /**
+     * Supprime une pièce.
+     */
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(NotificationSinistre $notification, EntityManagerInterface $em): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var NotificationSinistre $notificationsinistre */
-        $notificationsinistre = $this->notificationSinistreRepository->find($idNotificationsinistre);
-        $data[] = $notificationsinistre;
-
-        // 2. On récupère la "recette" d'affichage depuis le canvas
-        $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
-
-        // --- AJOUT : BOUCLE D'AUGMENTATION DES DONNÉES ---
-        $constante->loadCalculatedValue($entityCanvas, $data);
-        // $this->loadCalculatedValue($entityCanvas, $data, $constante);
-
-        //On se dirie vers la page le formulaire d'édition
-        return $this->render('admin/notificationsinistre/elementview.html.twig', [
-            'notificationsinistre' => $data[0],
-            'entreprise' => $entreprise,
-            'utilisateur' => $user,
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
-            'entityCanvas' => $entityCanvas,
-        ]);
+        try {
+            $em->remove($notification);
+            $em->flush();
+            return $this->json(['message' => 'Notification supprimée avec succès.']);
+        } catch (\Exception $e) {
+            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
-
 
 
     #[Route(
@@ -275,22 +227,6 @@ class NotificationSinistreController extends AbstractController
             'idEntreprise' => $idEntreprise,
             'idInvite' => $idInvite,
         ]);
-    }
-
-    private function getEntreprise(): Entreprise
-    {
-        /** @var Invite $invite */
-        $invite = $this->getInvite();
-        return $invite->getEntreprise();
-    }
-
-    private function getInvite(): Invite
-    {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-        return $invite;
     }
 
     /**
@@ -425,5 +361,21 @@ class NotificationSinistreController extends AbstractController
             // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
             // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
         ]);
+    }
+
+    private function getEntreprise(): Entreprise
+    {
+        /** @var Invite $invite */
+        $invite = $this->getInvite();
+        return $invite->getEntreprise();
+    }
+
+    private function getInvite(): Invite
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        return $invite;
     }
 }

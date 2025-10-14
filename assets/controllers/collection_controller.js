@@ -165,6 +165,7 @@ export default class extends Controller {
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
         console.log(`${this.nomControleur} - Ajout d'un nouvel élément à la collection`, event);
+        console.log(`${this.nomControleur} - ID de l'objet parent: `, this.element.id);
         this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
             entity: {}, // Entité vide pour la création
             isCreationMode: true,
