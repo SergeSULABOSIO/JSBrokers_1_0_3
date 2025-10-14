@@ -100,7 +100,7 @@ class TacheController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Tache $tache, Request $request, Constante $constante): Response
+    public function getFormApi(?Tache $tache, Request $request): Response
     {
         // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
         $idEntreprise = $request->query->get('idEntreprise');
@@ -131,9 +131,9 @@ class TacheController extends AbstractController
 
         $form = $this->createForm(TacheType::class, $tache);
 
-        $entityCanvas = $constante->getEntityCanvas(Tache::class);
-        $constante->loadCalculatedValue($entityCanvas, [$tache]);
-        $entityFormCanvas = $constante->getEntityFormCanvas($tache, $entreprise->getId());
+        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
+        $this->constante->loadCalculatedValue($entityCanvas, [$tache]);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($tache, $entreprise->getId());
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
@@ -156,6 +156,14 @@ class TacheController extends AbstractController
 
         /** @var Tache $tache */
         $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
+
+        $tacheId = $data['id'] ?? null;
+        if ($tacheId) {
+            //Paramètres par défaut
+            $tache->setUpdatedAt(new DateTimeImmutable("now"));
+        }else{
+            $tache->setCreatedAt(new DateTimeImmutable("now"));
+        }
 
         $form = $this->createForm(TacheType::class, $tache);
         $form->submit($submittedData, false);
@@ -220,8 +228,8 @@ class TacheController extends AbstractController
             'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
             'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
             'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
-            'entite_nom' => $this->getEntityName(),
-            'serverRootName' => $this->getServerRootName(),
+            'entite_nom' => $this->getEntityName($this),
+            'serverRootName' => $this->getServerRootName($this),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
             'entityCanvas' => $entityCanvas,
@@ -245,16 +253,16 @@ class TacheController extends AbstractController
             }
             $data = $tache->getFeedbacks();
         }
-        $feedbackCanvas = $this->constante->getEntityCanvas(Feedback::class);
-        $this->constante->loadCalculatedValue($feedbackCanvas, $data);
+        $entityCanvas = $this->constante->getEntityCanvas(Feedback::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => $this->getEntityName(),
-            'serverRootName' => $this->getServerRootName(),
+            'entite_nom' => $this->getEntityName(Feedback::class),
+            'serverRootName' => $this->getServerRootName(Feedback::class),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(Feedback::class),
-            'entityCanvas' => $feedbackCanvas,
+            'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Feedback(), $this->getEntreprise()->getId()),
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
             'idInvite' => $this->getInvite()->getId(),
