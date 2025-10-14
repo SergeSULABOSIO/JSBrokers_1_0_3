@@ -22,14 +22,12 @@ use App\Entity\Document;
 use App\Entity\Feedback;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Repository\TacheRepository;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
-use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,16 +75,16 @@ class TacheController extends AbstractController
         ], 
         methods: ['GET', 'POST'])
     ]
-    public function index(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
+    public function index(int $idInvite, int $idEntreprise)
     {
         $data = $this->tacheRepository->findAll();
-        $entityCanvas = $constante->getEntityCanvas(Tache::class);
-        $constante->loadCalculatedValue($entityCanvas, $data);
+        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
 
         return $this->render('components/_view_manager.html.twig', [
             'data' => $data,
-            'entite_nom' => "Tache",
-            'serverRootName' => "tache",
+            'entite_nom' => $this->getEntityName($this),
+            'serverRootName' => $this->getServerRootName($this),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
             'entityCanvas' => $entityCanvas,
@@ -222,8 +220,8 @@ class TacheController extends AbstractController
             'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
             'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
             'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
-            'entite_nom' => "Tache",
-            'serverRootName' => "tache",
+            'entite_nom' => $this->getEntityName(),
+            'serverRootName' => $this->getServerRootName(),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
             'entityCanvas' => $entityCanvas,
@@ -252,8 +250,8 @@ class TacheController extends AbstractController
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => "Feedback",
-            'serverRootName' => "feedback",
+            'entite_nom' => $this->getEntityName(),
+            'serverRootName' => $this->getServerRootName(),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(Feedback::class),
             'entityCanvas' => $feedbackCanvas,
@@ -285,8 +283,8 @@ class TacheController extends AbstractController
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => "Document",
-            'serverRootName' => "document",
+            'entite_nom' => $this->getEntityName(),
+            'serverRootName' => $this->getServerRootName(),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(Document::class),
             'entityCanvas' => $documentCanvas,
@@ -314,5 +312,26 @@ class TacheController extends AbstractController
         /** @var Invite $invite */
         $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
         return $invite;
+    }
+
+    /**
+     * Déduit le nom de l'entité à partir du nom du contrôleur.
+     * Exemple: PieceSinistreController -> PieceSinistre
+     * @return string
+     */
+    private function getEntityName($objectOrClass): string
+    {
+        $shortClassName = (new \ReflectionClass($objectOrClass))->getShortName();
+        return str_replace('Controller', '', $shortClassName);
+    }
+
+    /**
+     * Déduit le nom racine du serveur à partir du nom du contrôleur.
+     * Exemple: PieceSinistreController -> piecesinistre
+     * @return string
+     */
+    private function getServerRootName($className): string
+    {
+        return strtolower($this->getEntityName($className));
     }
 }

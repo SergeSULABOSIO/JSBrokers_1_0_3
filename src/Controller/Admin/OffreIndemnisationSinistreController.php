@@ -14,9 +14,11 @@
 
 namespace App\Controller\Admin;
 
+use Dom\Document;
+use App\Entity\Tache;
 use App\Entity\Invite;
+use App\Entity\Paiement;
 use App\Entity\Entreprise;
-use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
@@ -25,29 +27,26 @@ use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Paiement;
-use App\Entity\Tache;
 use App\Form\OffreIndemnisationSinistreType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use App\Repository\OffreIndemnisationSinistreRepository;
-use Dom\Document;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/offreindemnisationsinistre", name: 'admin.offreindemnisationsinistre.')]
 #[IsGranted('ROLE_USER')]
 class OffreIndemnisationSinistreController extends AbstractController
 {
     use HandleChildAssociationTrait;
-
-    public MenuActivator $activator;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -58,9 +57,8 @@ class OffreIndemnisationSinistreController extends AbstractController
         private OffreIndemnisationSinistreRepository $repository,
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
-    }
+        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+    ) {}
 
     protected function getParentAssociationMap(): array
     {
@@ -70,23 +68,32 @@ class OffreIndemnisationSinistreController extends AbstractController
     }
 
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    #[Route(
+        '/index/{idInvite}/{idEntreprise}',
+        name: 'index',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['GET', 'POST']
+    )]
+    public function index(int $idInvite, int $idEntreprise)
     {
-        $page = $request->query->getInt("page", 1);
+        $data = $this->repository->findAll();
+        $entityCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
 
-        /** @var Utilisateur $utilisateur */
-        $utilisateur = $this->getUser();
-
-        return $this->render('admin/offreindemnisation/index.html.twig', [
-            'pageName' => $this->translator->trans("offreindemnisation_page_name_new"),
-            'utilisateur' => $utilisateur,
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'offreindemnisations' => $this->repository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
+        return $this->render('components/_view_manager.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName($this),
+            'serverRootName' => $this->getServerRootName($this),
             'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'activator' => $this->activator,
+            'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $idInvite,
+            'idEntreprise' => $idEntreprise,
         ]);
     }
 
@@ -95,16 +102,27 @@ class OffreIndemnisationSinistreController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?OffreIndemnisationSinistre $offre, Constante $constante): Response
+    public function getFormApi(?OffreIndemnisationSinistre $offre, Request $request): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
+        // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
+        $idEntreprise = $request->query->get('idEntreprise');
+        $idInvite = $request->query->get('idInvite');
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        if (!$idEntreprise) {
+            $entreprise = $this->getEntreprise();
+        } else {
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        }
+        if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
 
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
+        if (!$idInvite) {
+            $invite = $this->getInvite();
+        } else {
+            $invite = $this->inviteRepository->find($idInvite);
+        }
+        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
+            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
+        }
 
         if (!$offre) {
             $offre = new OffreIndemnisationSinistre();
@@ -112,13 +130,16 @@ class OffreIndemnisationSinistreController extends AbstractController
 
         $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
 
-        $entityCanvas = $constante->getEntityCanvas(OffreIndemnisationSinistre::class);
-        $constante->loadCalculatedValue($entityCanvas, [$offre]);
+        $entityCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
+        $this->constante->loadCalculatedValue($entityCanvas, [$offre]);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($offre, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($offre, $entreprise->getId()), // ID entreprise à adapter
-            'entityCanvas' => $constante->getEntityCanvas(OffreIndemnisationSinistre::class)
+            'entityFormCanvas' => $entityFormCanvas,
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
@@ -132,7 +153,8 @@ class OffreIndemnisationSinistreController extends AbstractController
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
 
-        $offre = isset($data['id']) && $data['id'] ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
+        /** @var OffreIndemnisationSinistre $offre */
+        $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
 
         $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
         $form->submit($submittedData, false);
@@ -141,7 +163,6 @@ class OffreIndemnisationSinistreController extends AbstractController
             $this->associateParent($offre, $data, $em);
             $em->persist($offre);
             $em->flush();
-
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
             $jsonEntity = $serializer->serialize($offre, 'json', ['groups' => 'list:read']);
             return $this->json([
@@ -149,13 +170,11 @@ class OffreIndemnisationSinistreController extends AbstractController
                 'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
             ]);
         }
-
         $errors = [];
         // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
-
         return $this->json([
             'success' => false,
             'message' => 'Veuillez corriger les erreurs ci-dessous.',
@@ -178,6 +197,137 @@ class OffreIndemnisationSinistreController extends AbstractController
         }
     }
 
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
+    public function query(int $idInvite, int $idEntreprise, Request $request)
+    {
+        $requestData = json_decode($request->getContent(), true) ?? [];
+        $reponseData = $this->searchService->search($requestData);
+        $entityCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
+       $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
+
+        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
+        return $this->render('components/_list_content.html.twig', [
+            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
+            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
+            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
+            'entite_nom' => $this->getEntityName($this),
+            'serverRootName' => $this->getServerRootName($this),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
+        ]);
+    }
+
+
+    #[Route('/api/{id}/paiements', name: 'api.get_paiements', methods: ['GET'])]
+    public function getPaiementsListApi(int $id): Response
+    {
+        $data = [];
+        if ($id !== 0) {
+            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
+            $offreIndemnisationSinistre = $this->repository->find($id);
+            if (!$offreIndemnisationSinistre) {
+                throw $this->createNotFoundException("L'offre sinistre avec l'ID $id n'a pas été trouvée.");
+            }
+            $data = $offreIndemnisationSinistre->getPaiements();
+        }
+        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName(Paiement::class),
+            'serverRootName' => $this->getServerRootName(Paiement::class),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
+            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
+            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
+        ]);
+    }
+
+    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
+    public function getDocumentsListApi(int $id): Response
+    {
+        $data = [];
+        if ($id !== 0) {
+            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
+            $offreIndemnisationSinistre = $this->repository->find($id);
+            if (!$offreIndemnisationSinistre) {
+                throw $this->createNotFoundException("L'offre avec l'ID $id n'a pas été trouvée.");
+            }
+            $data = $offreIndemnisationSinistre->getDocuments();
+        }
+        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName(Document::class),
+            'serverRootName' => $this->getServerRootName(Document::class),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
+            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
+            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
+        ]);
+    }
+
+    #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
+    public function getTachesListApi(int $id): Response
+    {
+        $data = [];
+        if ($id !== 0) {
+            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
+            $offreIndemnisationSinistre = $this->repository->find($id);
+            if (!$offreIndemnisationSinistre) {
+                throw $this->createNotFoundException("L'offre avec l'ID $id n'a pas été trouvée.");
+            }
+            $data = $offreIndemnisationSinistre->getTaches();
+        }
+        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName(Tache::class),
+            'serverRootName' => $this->getServerRootName(Tache::class),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
+            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
+            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
+        ]);
+    }
+
+
     private function getEntreprise(): Entreprise
     {
         /** @var Invite $invite */
@@ -194,72 +344,25 @@ class OffreIndemnisationSinistreController extends AbstractController
         return $invite;
     }
 
-    #[Route('/api/{id}/paiements', name: 'api.get_paiements', methods: ['GET'])]
-    public function getPaiementsListApi(int $id): Response
+    
+    /**
+     * Déduit le nom de l'entité à partir du nom du contrôleur.
+     * Exemple: PieceSinistreController -> PieceSinistre
+     * @return string
+     */
+    private function getEntityName($objectOrClass): string
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
-            $offreIndemnisationSinistre = $this->repository->find($id);
-            $data = $offreIndemnisationSinistre->getPaiements();
-        }
-        $paiementCanvas = $this->constante->getEntityCanvas(Paiement::class);
-        $this->constante->loadCalculatedValue($paiementCanvas, $data);
-
-        return $this->render('components/_generic_list_component.html.twig', [
-            'data' => $data,
-            'entite_nom' => 'Paiements',
-            'entityCanvas' => $paiementCanvas,
-            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $this->getEntreprise()->getId()),
-            'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
-        ]);
+        $shortClassName = (new \ReflectionClass($objectOrClass))->getShortName();
+        return str_replace('Controller', '', $shortClassName);
     }
 
-    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id, OffreIndemnisationSinistreRepository $repository): Response
+    /**
+     * Déduit le nom racine du serveur à partir du nom du contrôleur.
+     * Exemple: PieceSinistreController -> piecesinistre
+     * @return string
+     */
+    private function getServerRootName($className): string
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
-            $offreIndemnisationSinistre = $this->repository->find($id);
-            $data = $offreIndemnisationSinistre->getDocuments();
-        }
-        $documentCanvas = $this->constante->getEntityCanvas(Paiement::class);
-        $this->constante->loadCalculatedValue($documentCanvas, $data);
-
-        return $this->render('components/_generic_list_component.html.twig', [
-            'data' => $data,
-            'entite_nom' => 'Documents',
-            'entityCanvas' => $documentCanvas,
-            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
-            'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
-        ]);
-    }
-
-    #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(int $id): Response
-    {
-        $data = [];
-        if ($id !== 0) {
-            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
-            $offreIndemnisationSinistre = $this->repository->find($id);
-            $data = $offreIndemnisationSinistre->getTaches();
-        }
-        $tacheCanvas = $this->constante->getEntityCanvas(Paiement::class);
-        $this->constante->loadCalculatedValue($tacheCanvas, $data);
-
-        return $this->render('components/_generic_list_component.html.twig', [
-            'data' => $data,
-            'entite_nom' => 'Tâches',
-            'entityCanvas' => $tacheCanvas,
-            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
-            'constante' => $this->constante,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
-        ]);
+        return strtolower($this->getEntityName($className));
     }
 }
