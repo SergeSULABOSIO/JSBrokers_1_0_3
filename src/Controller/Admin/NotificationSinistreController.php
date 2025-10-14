@@ -34,6 +34,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
+use App\Entity\Traits\UtilitairesTrait;
 use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -47,6 +48,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class NotificationSinistreController extends AbstractController
 {
     use HandleChildAssociationTrait;
+    use UtilitairesTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -370,42 +372,5 @@ class NotificationSinistreController extends AbstractController
             // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
             // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
         ]);
-    }
-
-    private function getEntreprise(): Entreprise
-    {
-        /** @var Invite $invite */
-        $invite = $this->getInvite();
-        return $invite->getEntreprise();
-    }
-
-    private function getInvite(): Invite
-    {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-        return $invite;
-    }
-
-    /**
-     * Déduit le nom de l'entité à partir du nom du contrôleur.
-     * Exemple: PieceSinistreController -> PieceSinistre
-     * @return string
-     */
-    private function getEntityName($objectOrClass): string
-    {
-        $shortClassName = (new \ReflectionClass($objectOrClass))->getShortName();
-        return str_replace('Controller', '', $shortClassName);
-    }
-
-    /**
-     * Déduit le nom racine du serveur à partir du nom du contrôleur.
-     * Exemple: PieceSinistreController -> piecesinistre
-     * @return string
-     */
-    private function getServerRootName($className): string
-    {
-        return strtolower($this->getEntityName($className));
     }
 }
