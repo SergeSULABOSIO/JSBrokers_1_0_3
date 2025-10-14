@@ -219,7 +219,7 @@ class NotificationSinistreController extends AbstractController
         $requestData = json_decode($request->getContent(), true) ?? [];
         $reponseData = $this->searchService->search($requestData);
         $entityCanvas = $this->constante->getEntityCanvas(NotificationSinistre::class);
-       $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
+        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
         return $this->render('components/_list_content.html.twig', [

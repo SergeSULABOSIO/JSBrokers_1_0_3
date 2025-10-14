@@ -286,16 +286,16 @@ class TacheController extends AbstractController
             }
             $data = $tache->getDocuments();
         }
-        $documentCanvas = $this->constante->getEntityCanvas(Document::class);
-        $this->constante->loadCalculatedValue($documentCanvas, $data);
+        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
 
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => $this->getEntityName(),
-            'serverRootName' => $this->getServerRootName(),
+            'entite_nom' => $this->getEntityName(Document::class),
+            'serverRootName' => $this->getServerRootName(Document::class),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(Document::class),
-            'entityCanvas' => $documentCanvas,
+            'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
             'idInvite' => $this->getInvite()->getId(),
