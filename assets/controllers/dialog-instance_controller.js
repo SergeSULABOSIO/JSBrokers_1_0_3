@@ -306,13 +306,10 @@ export default class extends Controller {
                 collectionElements.forEach(element => {
                     // On récupère l'instance du contrôleur 'collection' pour cet élément.
                     const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
-                    if (controller) {
-                        // On met à jour l'ID de l'entité parente dans le contrôleur de collection.
-                        console.log(`Dialog-Instance - (3) Mise à jour du contrôleur de collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
-                        controller.updateParentEntityId(this.entity.id);
-                        
-                        // On active et charge la collection.
-                        controller.enableAndLoad();
+                    if (controller && controller.enableAndLoad) {
+                        console.log(`Dialog-Instance - (3) Activation de la collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
+                        // On passe directement le nouvel ID à la collection pour qu'elle se mette à jour et se charge.
+                        controller.enableAndLoad(this.entity.id);
                     }
                 });
 
