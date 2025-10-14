@@ -13,6 +13,8 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Client;
+use App\Entity\Invite;
 use App\Entity\Contact;
 use App\Form\ContactType;
 use App\Entity\Entreprise;
@@ -38,7 +40,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class ContactController extends AbstractController
 {
-    // use HandleChildAssociationTrait;
+    use HandleChildAssociationTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -50,6 +52,14 @@ class ContactController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
+
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            'notificationSinistre' => NotificationSinistre::class,
+            'client' => Client::class,
+        ];
+    }
 
 
     #[Route(
@@ -86,16 +96,27 @@ class ContactController extends AbstractController
      * Fournit le formulaire HTML pour un contact (nouveau ou existant).
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Contact $contact, Constante $constante): Response
+    public function getFormApi(?Contact $contact , Request $request): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
+        // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
+        $idEntreprise = $request->query->get('idEntreprise');
+        $idInvite = $request->query->get('idInvite');
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        if (!$idEntreprise) {
+            $entreprise = $this->getEntreprise();
+        } else {
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        }
+        if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
 
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
+        if (!$idInvite) {
+            $invite = $this->getInvite();
+        } else {
+            $invite = $this->inviteRepository->find($idInvite);
+        }
+        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
+            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
+        }
 
         if (!$contact) {
             $contact = new Contact();
@@ -103,13 +124,16 @@ class ContactController extends AbstractController
 
         $form = $this->createForm(ContactType::class, $contact);
 
-        $entityCanvas = $constante->getEntityCanvas($contact);
-        $constante->loadCalculatedValue($entityCanvas, [$contact]);
+        $entityCanvas = $this->constante->getEntityCanvas($contact);
+        $this->constante->loadCalculatedValue($entityCanvas, [$contact]);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($contact, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($contact, $entreprise->getId()),
-            'entityCanvas' => $constante->getEntityCanvas($contact)
+            'entityFormCanvas' => $entityFormCanvas,
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
@@ -126,20 +150,13 @@ class ContactController extends AbstractController
         /** @var Contact $contact */
         $contact = isset($data['id']) && $data['id'] ? $em->getRepository(Contact::class)->find($data['id']) : new Contact();
 
-        if (!$contact) {
-            return $this->json(['message' => 'Contact non trouvé'], Response::HTTP_NOT_FOUND);
-        }
-
         $form = $this->createForm(ContactType::class, $contact);
         $form->submit($submittedData, false); // Le 'false' permet de ne pas vider les champs non soumis
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Notre Trait s'occupe de lier le contact à son parent
             $this->associateParent($contact, $data, $em);
-
             $em->persist($contact);
             $em->flush();
-
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
             $jsonEntity = $serializer->serialize($contact, 'json', ['groups' => 'list:read']);
             return $this->json([
@@ -174,5 +191,55 @@ class ContactController extends AbstractController
         } catch (\Exception $e) {
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
+    public function query(int $idInvite, int $idEntreprise, Request $request)
+    {
+        $requestData = json_decode($request->getContent(), true) ?? [];
+        $reponseData = $this->searchService->search($requestData);
+        $entityCanvas = $this->constante->getEntityCanvas(Contact::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
+
+        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
+        return $this->render('components/_list_content.html.twig', [
+            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
+            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
+            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
+            'entite_nom' => "Contact",
+            'serverRootName' => "contact",
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
+        ]);
+    }
+
+    private function getEntreprise(): Entreprise
+    {
+        /** @var Invite $invite */
+        $invite = $this->getInvite();
+        return $invite->getEntreprise();
+    }
+
+    private function getInvite(): Invite
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        return $invite;
     }
 }

@@ -34,6 +34,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -45,6 +46,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class TacheController extends AbstractController
 {
+    use HandleChildAssociationTrait;
+
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -55,6 +58,14 @@ class TacheController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
+
+
+    protected function getParentAssociationMap(): array
+    {
+        return [
+            'notificationSinistre' => NotificationSinistre::class,
+        ];
+    }
 
 
     #[Route(
@@ -148,21 +159,11 @@ class TacheController extends AbstractController
         /** @var Tache $tache */
         $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
 
-        if (isset($data['notificationSinistre'])) {
-            /** @var NotificationSinistre $notification */
-            $notification = $em->getReference(NotificationSinistre::class, $data['notificationSinistre']);
-            if ($notification) $tache->setNotificationSinistre($notification);
-        }
-        if (isset($data['offreIndemnisation'])) {
-            /** @var OffreIndemnisationSinistre $offreIndemnisation */
-            $offreIndemnisation = $em->getReference(OffreIndemnisationSinistre::class, $data['offreIndemnisation']);
-            if ($offreIndemnisation) $tache->setOffreIndemnisationSinistre($offreIndemnisation);
-        }
-
         $form = $this->createForm(TacheType::class, $tache);
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $this->associateParent($tache, $data, $em);
             $em->persist($tache);
             $em->flush();
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
@@ -209,12 +210,12 @@ class TacheController extends AbstractController
         ],
         methods: ['POST']
     )]
-    public function query(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
+    public function query(int $idInvite, int $idEntreprise, Request $request)
     {
         $requestData = json_decode($request->getContent(), true) ?? [];
         $reponseData = $this->searchService->search($requestData);
-        $entityCanvas = $constante->getEntityCanvas(Tache::class);
-        $constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
+        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
 
         // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
         return $this->render('components/_list_content.html.twig', [

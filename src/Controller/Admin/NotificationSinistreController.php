@@ -89,7 +89,7 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?NotificationSinistre $notification, Request $request, Constante $constante): Response
+    public function getFormApi(?NotificationSinistre $notification, Request $request): Response
     {
         // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
         $idEntreprise = $request->query->get('idEntreprise');
@@ -119,9 +119,9 @@ class NotificationSinistreController extends AbstractController
 
         $form = $this->createForm(NotificationSinistreType::class, $notification);
 
-        $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
-        $constante->loadCalculatedValue($entityCanvas, [$notification]);
-        $entityFormCanvas = $constante->getEntityFormCanvas($notification, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
+        $entityCanvas = $this->constante->getEntityCanvas(NotificationSinistre::class);
+        $this->constante->loadCalculatedValue($entityCanvas, [$notification]);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($notification, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
