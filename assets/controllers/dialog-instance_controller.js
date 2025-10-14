@@ -306,9 +306,13 @@ export default class extends Controller {
                 collectionElements.forEach(element => {
                     // On récupère l'instance du contrôleur 'collection' pour cet élément.
                     const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
-                    if (controller && controller.enableAndLoad) {
-                        const newUrl = this.getCollectionUrlForElement(element);
-                        if (newUrl) controller.enableAndLoad(newUrl);
+                    if (controller) {
+                        // On met à jour l'ID de l'entité parente dans le contrôleur de collection.
+                        console.log(`Dialog-Instance - (3) Mise à jour du contrôleur de collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
+                        controller.updateParentEntityId(this.entity.id);
+                        
+                        // On active et charge la collection.
+                        controller.enableAndLoad();
                     }
                 });
 
@@ -334,23 +338,6 @@ export default class extends Controller {
             this.toggleLoading(false);
             this.toggleProgressBar(false);
         }
-    }
-    
-    /**
-     * Construit l'URL de la collection pour un élément donné, en utilisant le nouvel ID de l'entité.
-     * @param {HTMLElement} element - L'élément HTML du contrôleur de collection.
-     * @returns {string} L'URL de la collection mise à jour.
-     * @private
-     */
-    getCollectionUrlForElement(element) {
-        // L'URL de base est dans les data-values, mais avec un ID de 0. On le remplace.
-        const baseUrl = element.dataset.collectionUrlValue;
-        if (baseUrl && this.entity && this.entity.id) {
-            return baseUrl.replace('/api/0/', `/api/${this.entity.id}/`);
-        }
-        // Fallback ou gestion d'erreur si les données nécessaires ne sont pas disponibles
-        console.error("Impossible de reconstruire l'URL de la collection pour l'élément:", element);
-        return null;
     }
 
 

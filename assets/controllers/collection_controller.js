@@ -25,8 +25,6 @@ export default class extends Controller {
         itemDeleteUrl: String, // URL pour supprimer un item
         itemTitleCreate: String, // Titre pour la création
         itemTitleEdit: String, // Titre pour l'édition
-        parentEntityId: Number, // ID de l'entité parente (ex: NotificationSinistre)
-        parentFieldName: String, // ID de l'entité parente (ex: NotificationSinistre)
         disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
     };
 
@@ -175,15 +173,7 @@ export default class extends Controller {
         // CORRECTION : On empêche l'événement de "buller" vers les éléments parents,
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
-        console.log(`${this.nomControleur} - (5) Clic sur 'Ajouter'. Demande d'ouverture du formulaire de tâche.`);
-        console.log(`${this.nomControleur} - (6) L'ID de l'entité parente (${this.parentEntityIdValue}) va être inclus dans le contexte sous la clé '${this.parentFieldNameValue}'.`);
-
-        // On construit dynamiquement l'objet de contexte pour l'ID parent.
-        const parentContext = {};
-        if (this.parentFieldNameValue && this.parentEntityIdValue) {
-            parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
-        }
-
+        console.log(`${this.nomControleur} - Ajout d'un nouvel élément à la collection`, event);
         this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
             entity: {}, // Entité vide pour la création
             isCreationMode: true,
@@ -197,8 +187,7 @@ export default class extends Controller {
             idEntreprise: this.idEntrepriseValue,
             idInvite: this.idInviteValue,
             context: {
-                originatorId: this.element.id, // On s'identifie pour le rafraîchissement.
-                ...parentContext // On fusionne le contexte parent dynamique.
+                originatorId: this.element.id // On s'identifie pour le rafraîchissement
             }
         });
     }
