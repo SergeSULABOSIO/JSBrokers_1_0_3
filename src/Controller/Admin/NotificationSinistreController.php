@@ -14,11 +14,8 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;
-use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Entity\Contact;
-use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Entity\PieceSinistre;
 use App\Services\ServiceMonnaies;
@@ -31,10 +28,10 @@ use App\Services\JSBDynamicSearchService;
 use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
-use App\Entity\Traits\UtilitairesTrait;
 use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -48,7 +45,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class NotificationSinistreController extends AbstractController
 {
     use HandleChildAssociationTrait;
-    use UtilitairesTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -102,25 +99,9 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?NotificationSinistre $notification, Request $request): Response
     {
-        // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
-        $idEntreprise = $request->query->get('idEntreprise');
-        $idInvite = $request->query->get('idInvite');
-
-        if (!$idEntreprise) {
-            $entreprise = $this->getEntreprise();
-        } else {
-            $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        }
-        if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
-        
-        if (!$idInvite) {
-            $invite = $this->getInvite();
-        } else {
-            $invite = $this->inviteRepository->find($idInvite);
-        }
-        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
-            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
-        }
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
+        $idEntreprise = $entreprise->getId();
+        $idInvite = $invite->getId();
 
         if (!$notification) {
             $notification = new NotificationSinistre();

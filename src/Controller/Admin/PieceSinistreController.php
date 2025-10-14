@@ -2,6 +2,7 @@
 
 /**
  * @file Ce fichier contient le contrôleur PieceSinistreController.
+ * @file Ce fichier contient le contrôleur PieceSinistreController.
  * @description Ce contrôleur est un CRUD complet pour l'entité `PieceSinistre`.
  * Il est responsable de :
  * 1. `index()`: Afficher la vue principale de la liste des pièces de sinistre.
@@ -14,7 +15,9 @@
 
 namespace App\Controller\Admin;
 
+use Dom\Document;
 use App\Entity\Invite;
+use DateTimeImmutable;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Entity\PieceSinistre;
@@ -28,6 +31,7 @@ use App\Services\JSBDynamicSearchService;
 use App\Repository\PieceSinistreRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
@@ -42,6 +46,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class PieceSinistreController extends AbstractController
 {
     use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -80,7 +85,7 @@ class PieceSinistreController extends AbstractController
         return $this->render('components/_view_manager.html.twig', [
             'data' => $data,
             'entite_nom' => "PieceSinistre",
-            'serverRootName' => $this->getServerRootName(),
+            'serverRootName' => $this->getServerRootName($this),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
             'entityCanvas' => $entityCanvas,
@@ -96,16 +101,11 @@ class PieceSinistreController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?PieceSinistre $piece, Constante $constante): Response
+    public function getFormApi(?PieceSinistre $piece, Request $request): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
+        $idEntreprise = $entreprise->getId();
+        $idInvite = $invite->getId();
 
         if (!$piece) {
             $piece = new PieceSinistre();
@@ -114,13 +114,16 @@ class PieceSinistreController extends AbstractController
 
         $form = $this->createForm(PieceSinistreType::class, $piece);
 
-        $entityCanvas = $constante->getEntityCanvas($piece);
-        $constante->loadCalculatedValue($entityCanvas, [$piece]);
+        $entityCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
+        $this->constante->loadCalculatedValue($entityCanvas, [$piece]);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($piece, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($piece, $entreprise->getId()), // ID entreprise à adapter
-            'entityCanvas' => $constante->getEntityCanvas($piece)
+            'entityFormCanvas' => $entityFormCanvas,
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
@@ -130,21 +133,17 @@ class PieceSinistreController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
-
         $data = $request->request->all();
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
 
         /** @var PieceSinistre $piece */
         $piece = isset($data['id']) && $data['id'] ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
+
+        if (!isset($data['id']) || !$data['id']) {
+            $piece->setReceivedAt(new DateTimeImmutable("now"));
+            $piece->setInvite($this->getInvite());
+        }
 
         $form = $this->createForm(PieceSinistreType::class, $piece);
         $form->submit($submittedData, false);
@@ -191,34 +190,68 @@ class PieceSinistreController extends AbstractController
         }
     }
 
-    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id, PieceSinistreRepository $repository): Response
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
+    public function query(int $idInvite, int $idEntreprise, Request $request)
     {
-        $piece = null;
-        if ($id === 0) {
-            $piece = new PieceSinistre();
-        } else {
-            $piece = $repository->find($id);
-        }
-        if (!$piece) {
-            $piece = new PieceSinistre();
-        }
+        $requestData = json_decode($request->getContent(), true) ?? [];
+        $reponseData = $this->searchService->search($requestData);
+        $entityCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
 
-        return $this->render('components/_collection_list.html.twig', [
-            'items' => $piece->getDocuments(),
-            'item_template' => 'components/collection_items/_document_item.html.twig'
+        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
+        return $this->render('components/_list_content.html.twig', [
+            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
+            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
+            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
+            'entite_nom' => $this->getEntityName($this),
+            'serverRootName' => $this->getServerRootName($this),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
-    /**
-     * Déduit le nom racine du serveur à partir du nom du contrôleur.
-     * Exemple: PieceSinistreController -> piecesinistre
-     * @return string
-     */
-    private function getServerRootName(): string
+    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
+    public function getDocumentsListApi(int $id, PieceSinistreRepository $repository): Response
     {
-        $shortClassName = (new \ReflectionClass($this))->getShortName();
-        $entityName = str_replace('Controller', '', $shortClassName);
-        return strtolower($entityName);
+        $data = [];
+        if ($id !== 0) {
+            /** @var PieceSinistre $piece */
+            $piece = $this->pieceSinistreRepository->find($id);
+            if (!$piece) {
+                throw $this->createNotFoundException("La pièce sinistre avec l'ID $id n'a pas été trouvée.");
+            }
+            $data = $piece->getDocuments();
+        }
+        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+        
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName(Document::class),
+            'serverRootName' => $this->getServerRootName(Document::class),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
+            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
+            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
+        ]);
     }
 }

@@ -14,15 +14,11 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Invite;
 use DateTimeImmutable;
-use App\Entity\Classeur;
 use App\Entity\Document;
 use App\Entity\Paiement;
-use App\Entity\Entreprise;
 use App\Form\PaiementType;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
@@ -34,6 +30,7 @@ use App\Services\JSBDynamicSearchService;
 use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
@@ -49,6 +46,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class PaiementController extends AbstractController
 {
     use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -109,25 +107,9 @@ class PaiementController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Paiement $paiement, Constante $constante, Request $request): Response
     {
-        // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
-        $idEntreprise = $request->query->get('idEntreprise');
-        $idInvite = $request->query->get('idInvite');
-
-        if (!$idEntreprise) {
-            $entreprise = $this->getEntreprise();
-        } else {
-            $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        }
-        if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
-
-        if (!$idInvite) {
-            $invite = $this->getInvite();
-        } else {
-            $invite = $this->inviteRepository->find($idInvite);
-        }
-        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
-            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
-        }
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
+        $idEntreprise = $entreprise->getId();
+        $idInvite = $invite->getId();
 
         if (!$paiement) {
             $paiement = new Paiement();
@@ -264,17 +246,17 @@ class PaiementController extends AbstractController
             }
             $data = $paiement->getPreuves();
         }
-        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
+        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
         
         return $this->render('components/_generic_list_component.html.twig', [
             'data' => $data,
-            'entite_nom' => $this->getEntityName(Paiement::class),
-            'serverRootName' => $this->getServerRootName(Paiement::class),
+            'entite_nom' => $this->getEntityName(Document::class),
+            'serverRootName' => $this->getServerRootName(Document::class),
             'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
+            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
             'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $this->getEntreprise()->getId()),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
             'idInvite' => $this->getInvite()->getId(),
             'idEntreprise' => $this->getEntreprise()->getId(),
@@ -282,42 +264,5 @@ class PaiementController extends AbstractController
             // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
             // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
         ]);
-    }
-
-    private function getEntreprise(): Entreprise
-    {
-        /** @var Invite $invite */
-        $invite = $this->getInvite();
-        return $invite->getEntreprise();
-    }
-
-    private function getInvite(): Invite
-    {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-        return $invite;
-    }
-
-    /**
-     * Déduit le nom de l'entité à partir du nom du contrôleur.
-     * Exemple: PieceSinistreController -> PieceSinistre
-     * @return string
-     */
-    private function getEntityName($objectOrClass): string
-    {
-        $shortClassName = (new \ReflectionClass($objectOrClass))->getShortName();
-        return str_replace('Controller', '', $shortClassName);
-    }
-
-    /**
-     * Déduit le nom racine du serveur à partir du nom du contrôleur.
-     * Exemple: PieceSinistreController -> piecesinistre
-     * @return string
-     */
-    private function getServerRootName($className): string
-    {
-        return strtolower($this->getEntityName($className));
     }
 }
