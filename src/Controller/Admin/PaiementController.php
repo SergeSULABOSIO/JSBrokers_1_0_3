@@ -14,6 +14,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Entity\Classeur;
 use App\Entity\Document;
@@ -22,8 +23,6 @@ use App\Entity\Entreprise;
 use App\Form\PaiementType;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
-use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
@@ -31,15 +30,17 @@ use App\Repository\ClasseurRepository;
 use App\Repository\PaiementRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Serializer\SerializerInterface;
 
 
 #[Route("/admin/paiement", name: 'admin.paiement.')]
@@ -232,5 +233,42 @@ class PaiementController extends AbstractController
             'items' => $paiement->getPreuves(),
             'item_template' => 'components/collection_items/_document_item.html.twig'
         ]);
+    }
+
+    private function getEntreprise(): Entreprise
+    {
+        /** @var Invite $invite */
+        $invite = $this->getInvite();
+        return $invite->getEntreprise();
+    }
+
+    private function getInvite(): Invite
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        return $invite;
+    }
+
+    /**
+     * Déduit le nom de l'entité à partir du nom du contrôleur.
+     * Exemple: PieceSinistreController -> PieceSinistre
+     * @return string
+     */
+    private function getEntityName($objectOrClass): string
+    {
+        $shortClassName = (new \ReflectionClass($objectOrClass))->getShortName();
+        return str_replace('Controller', '', $shortClassName);
+    }
+
+    /**
+     * Déduit le nom racine du serveur à partir du nom du contrôleur.
+     * Exemple: PieceSinistreController -> piecesinistre
+     * @return string
+     */
+    private function getServerRootName($className): string
+    {
+        return strtolower($this->getEntityName($className));
     }
 }
