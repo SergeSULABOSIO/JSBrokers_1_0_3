@@ -45,8 +45,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class TacheController extends AbstractController
 {
-    public MenuActivator $activator;
-
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
@@ -56,9 +54,7 @@ class TacheController extends AbstractController
         private TacheRepository $tacheRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
-    }
+    ) {}
 
 
     #[Route(

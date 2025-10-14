@@ -14,32 +14,31 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Contact;
-use App\Entity\Assureur;
 use App\Form\ContactType;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\NotificationSinistre;
-use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Repository\InviteRepository;
 use App\Repository\ContactRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/contact", name: 'admin.contact.')]
 #[IsGranted('ROLE_USER')]
 class ContactController extends AbstractController
 {
-    use HandleChildAssociationTrait;
+    // use HandleChildAssociationTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -49,35 +48,36 @@ class ContactController extends AbstractController
         private InviteRepository $inviteRepository,
         private ContactRepository $contactRepository,
         private Constante $constante,
-    ) {
-    }
+        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+    ) {}
 
-    /**
-     * On déclare ici tous les parents possibles pour un Contact.
-     */
-    protected function getParentAssociationMap(): array
+
+    #[Route(
+        '/index/{idInvite}/{idEntreprise}',
+        name: 'index', 
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['GET', 'POST']
+    )]
+    public function index(int $idInvite, int $idEntreprise)
     {
-        return [
-            // La clé 'notificationSinistre' correspond à celle envoyée par le JS
-            'notificationSinistre' => NotificationSinistre::class,
-            // Si un jour un contact peut être lié à un Client :
-            // 'client' => \App\Entity\Client::class,
-        ];
-    }
+        $data = $this->contactRepository->findAll();
+        $entityCanvas = $this->constante->getEntityCanvas(Contact::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
 
-
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
-    {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/contact/index.html.twig', [
-            'pageName' => $this->translator->trans("contact_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'contacts' => $this->contactRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
+        return $this->render('components/_view_manager.html.twig', [
+            'data' => $data,
+            'entite_nom' => "Contact",
+            'serverRootName' => "contact",
             'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $idInvite,
+            'idEntreprise' => $idEntreprise,
         ]);
     }
 

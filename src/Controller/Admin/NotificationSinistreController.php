@@ -67,11 +67,11 @@ class NotificationSinistreController extends AbstractController
         ],
         methods: ['GET', 'POST']
     )]
-    public function index(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
+    public function index(int $idInvite, int $idEntreprise)
     {
         $data = $this->notificationSinistreRepository->findAll();
-        $entityCanvas = $constante->getEntityCanvas(NotificationSinistre::class);
-        $constante->loadCalculatedValue($entityCanvas, $data);
+        $entityCanvas = $this->constante->getEntityCanvas(NotificationSinistre::class);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
 
         return $this->render('components/_view_manager.html.twig', [
             'data' => $data,
