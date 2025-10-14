@@ -1,5 +1,6 @@
 {#
     Ce template est le "canvas" d'un formulaire, conçu pour être chargé dynamiquement dans une boîte de dialogue.
+ Ce template est le "canvas" d'un formulaire, conçu pour être chargé dynamiquement dans une boîte de dialogue.
     Il est divisé en deux colonnes :
 
     1. Colonne de gauche (Attributs calculés) :
@@ -13,9 +14,7 @@
        - Gère un widget spécial pour les collections, identifié par `collection` (anciennement `collection-manager`).
 #}
 {# On dit à Twig d'utiliser notre thème personnalisé pour ce formulaire #}
-{% form_theme form 'themes/_collection_widget.html.twig', 
-    {'idEntreprise': idEntreprise, 'idInvite': idInvite}
-%}
+{% form_theme form 'themes/_collection_widget.html.twig' %}
 
 {# ========================================================== #}
 {# PARTIE 1 : La colonne des attributs calculés (gauche)      #}
@@ -74,7 +73,7 @@
                         {% for field in champs_list %}
                             {% if field is mapping and field.widget is defined and field.widget == 'collection' %}
                                 {% set field_code = field.field_code %}
-                                {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options}) }}{% endif %}
+                                {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}{% endif %}
                             {% else %}
                                 {% set field_code = (field is mapping and field.field_code is defined) ? field.field_code : field %}
                                 {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options|default({}) }) }}{% endif %}

@@ -16,26 +16,29 @@ namespace App\Controller\Admin;
 
 use App\Entity\Tache;
 use App\Entity\Invite;
+use DateTimeImmutable;
 use App\Form\TacheType;
+use App\Entity\Document;
+use App\Entity\Feedback;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Constantes\MenuActivator;
 use App\Repository\TacheRepository;
 use App\Entity\NotificationSinistre;
-use App\Entity\OffreIndemnisationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
+use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Serializer\SerializerInterface;
 
 
 #[Route("/admin/tache", name: 'admin.tache.')]
@@ -52,24 +55,38 @@ class TacheController extends AbstractController
         private InviteRepository $inviteRepository,
         private TacheRepository $tacheRepository,
         private Constante $constante,
+        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {
         $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
     }
 
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    #[Route(
+        '/index/{idInvite}/{idEntreprise}', 
+        name: 'index', 
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ], 
+        methods: ['GET', 'POST'])
+    ]
+    public function index(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
     {
-        $page = $request->query->getInt("page", 1);
+        $data = $this->tacheRepository->findAll();
+        $entityCanvas = $constante->getEntityCanvas(Tache::class);
+        $constante->loadCalculatedValue($entityCanvas, $data);
 
-        return $this->render('admin/tache/index.html.twig', [
-            'pageName' => $this->translator->trans("tache_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'taches' => $this->tacheRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
+        return $this->render('components/_view_manager.html.twig', [
+            'data' => $data,
+            'entite_nom' => "Tache",
+            'serverRootName' => "tache",
             'constante' => $this->constante,
-            'activator' => $this->activator,
+            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $idInvite,
+            'idEntreprise' => $idEntreprise,
         ]);
     }
 
@@ -78,16 +95,27 @@ class TacheController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Tache $tache, Constante $constante): Response
+    public function getFormApi(?Tache $tache, Request $request, Constante $constante): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
+        // MISSION 3 : Récupérer l'idEntreprise depuis la requête.
+        $idEntreprise = $request->query->get('idEntreprise');
+        $idInvite = $request->query->get('idInvite');
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        if (!$idEntreprise) {
+            $entreprise = $this->getEntreprise();
+        } else {
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        }
+        if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
 
-        /** @var Entreprise $entreprise */
-        $entreprise = $invite->getEntreprise();
+        if (!$idInvite) {
+            $invite = $this->getInvite();
+        } else {
+            $invite = $this->inviteRepository->find($idInvite);
+        }
+        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
+            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
+        }
 
         if (!$tache) {
             $tache = new Tache();
@@ -100,11 +128,14 @@ class TacheController extends AbstractController
 
         $entityCanvas = $constante->getEntityCanvas(Tache::class);
         $constante->loadCalculatedValue($entityCanvas, [$tache]);
+        $entityFormCanvas = $constante->getEntityFormCanvas($tache, $entreprise->getId());
 
         return $this->render('components/_form_canvas.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $constante->getEntityFormCanvas($tache, $entreprise->getId()), // ID entreprise à adapter
-            'entityCanvas' => $constante->getEntityCanvas(Tache::class)
+            'entityFormCanvas' => $entityFormCanvas, // ID entreprise à adapter
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
         ]);
     }
 
@@ -138,8 +169,6 @@ class TacheController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($tache);
             $em->flush();
-
-            // --- MODIFICATION ---
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
             $jsonEntity = $serializer->serialize($tache, 'json', ['groups' => 'list:read']);
             return $this->json([
@@ -148,13 +177,11 @@ class TacheController extends AbstractController
             ]);
         }
 
-
         $errors = [];
         // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
-
         return $this->json([
             'success' => false,
             'message' => 'Veuillez corriger les erreurs ci-dessous.',
@@ -177,43 +204,118 @@ class TacheController extends AbstractController
         }
     }
 
-    // AJOUTEZ CETTE NOUVELLE ACTION
-    #[Route('/api/{id}/feedbacks', name: 'api.get_feedbacks', methods: ['GET'])]
-    public function getFeedbacksListApi(int $id, TacheRepository $repository): Response
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
+    public function query(int $idInvite, int $idEntreprise, Request $request, Constante $constante)
     {
-        $tache = null;
-        if ($id === 0) {
-            $tache = new Tache();
-        } else {
-            $tache = $repository->find($id);
-        }
-        if (!$tache) {
-            $tache = new Tache();
-        }
+        $requestData = json_decode($request->getContent(), true) ?? [];
+        $reponseData = $this->searchService->search($requestData);
+        $entityCanvas = $constante->getEntityCanvas(Tache::class);
+        $constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
 
-        return $this->render('components/_collection_list.html.twig', [
-            'items' => $tache->getFeedbacks(),
-            'item_template' => 'components/collection_items/_feedback_item.html.twig'
+        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
+        return $this->render('components/_list_content.html.twig', [
+            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
+            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
+            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
+            'entite_nom' => "Tache",
+            'serverRootName' => "tache",
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
+            'idEntreprise' => $idEntreprise,
+            'idInvite' => $idInvite,
+        ]);
+    }
+
+
+    #[Route('/api/{id}/feedbacks', name: 'api.get_feedbacks', methods: ['GET'])]
+    public function getFeedbacksListApi(int $id): Response
+    {
+        $data = [];
+        if ($id !== 0) {
+            /** @var Tache $tache */
+            $tache = $this->tacheRepository->find($id);
+            if (!$tache) {
+                throw $this->createNotFoundException("La tâche avec l'ID $id n'a pas été trouvée.");
+            }
+            $data = $tache->getFeedbacks();
+        }
+        $feedbackCanvas = $this->constante->getEntityCanvas(Feedback::class);
+        $this->constante->loadCalculatedValue($feedbackCanvas, $data);
+
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $data,
+            'entite_nom' => "Feedback",
+            'serverRootName' => "feedback",
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Feedback::class),
+            'entityCanvas' => $feedbackCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Feedback(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
+            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
+            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
         ]);
     }
 
     // AJOUTEZ CETTE NOUVELLE ACTION
     #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id, TacheRepository $repository): Response
+    public function getDocumentsListApi(int $id): Response
     {
-        $tache = null;
-        if ($id === 0) {
-            $tache = new Tache();
-        } else {
-            $tache = $repository->find($id);
+        $data = [];
+        if ($id !== 0) {
+            /** @var Tache $tache */
+            $tache = $this->tacheRepository->find($id);
+            if (!$tache) {
+                throw $this->createNotFoundException("L'objet avec l'ID $id n'a pas été trouvée.");
+            }
+            $data = $tache->getDocuments();
         }
-        if (!$tache) {
-            $tache = new Tache();
-        }
+        $documentCanvas = $this->constante->getEntityCanvas(Document::class);
+        $this->constante->loadCalculatedValue($documentCanvas, $data);
 
-        return $this->render('components/_collection_list.html.twig', [
-            'items' => $tache->getDocuments(),
-            'item_template' => 'components/collection_items/_document_item.html.twig'
+        return $this->render('components/_generic_list_component.html.twig', [
+            'data' => $data,
+            'entite_nom' => "Document",
+            'serverRootName' => "document",
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
+            'entityCanvas' => $documentCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
+            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
+            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
         ]);
+    }
+
+    private function getEntreprise(): Entreprise
+    {
+        /** @var Invite $invite */
+        $invite = $this->getInvite();
+        return $invite->getEntreprise();
+    }
+
+    private function getInvite(): Invite
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        /** @var Invite $invite */
+        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        return $invite;
     }
 }

@@ -10,6 +10,7 @@
     <div 
         {{ stimulus_controller('collection', manager_options) }} 
         class="collection-manager-accordion {{ isDisabled ? 'is-disabled' : '' }}"
+        id="collection-{{ id }}"
         data-collection-id-entreprise-value="{{ idEntreprise }}"
         data-collection-id-invite-value="{{ idInvite }}"
     >
