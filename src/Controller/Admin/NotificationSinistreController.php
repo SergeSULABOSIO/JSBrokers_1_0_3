@@ -110,7 +110,7 @@ class NotificationSinistreController extends AbstractController
             $entreprise = $this->entrepriseRepository->find($idEntreprise);
         }
         if (!$entreprise) throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
-
+        
         if (!$idInvite) {
             $invite = $this->getInvite();
         } else {
