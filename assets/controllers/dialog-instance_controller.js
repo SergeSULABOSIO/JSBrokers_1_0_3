@@ -60,6 +60,7 @@ export default class extends Controller {
         this.context = detail.context || {};
         this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
         this.isCreateMode = !(this.entity && this.entity.id);
+        console.log(`${this.nomControlleur} - Open - PARENT - ATTRIBUT AND ID:`, detail);
         console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
         await this.buildAndShowShell();
         await this.loadFormAndAttributes();
@@ -283,6 +284,8 @@ export default class extends Controller {
                 formData.append(key, value);
             }
         }
+        console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
+        console.log(this.nomControlleur + " - Submit vers le serveur: " + this.canvas.parametres.endpoint_submit_url, this.context);
         try {
             const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
                 method: 'POST',
@@ -302,18 +305,14 @@ export default class extends Controller {
             if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
-                const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
-                collectionElements.forEach(element => {
-                    // On récupère l'instance du contrôleur 'collection' pour cet élément.
-                    const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
-                    if (controller) {
-                        console.log(`Dialog-Instance - (3) Activation de la collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
-                        // On passe directement le nouvel ID à la collection pour qu'elle se mette à jour et se charge.
-                        controller.enableAndLoad(this.entity.id);
-                    }
-                });
 
                 await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
+            } else {
+                // Si on est déjà en mode édition, on rafraîchit juste les listes
+                // sans recharger toute la vue.
+                this.notifyCerveau('app:list.refresh-request', {
+                    originatorId: this.context.originatorId
+                });
             }
 
         } catch (error) {
@@ -347,6 +346,17 @@ export default class extends Controller {
         this.updateTitle();
         this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
+
+        // NOUVELLE LOGIQUE : Après le rechargement du HTML, on active les nouvelles instances de collection.
+        const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
+        collectionElements.forEach(element => {
+            const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
+            if (controller) {
+                console.log(`${this.nomControlleur} - (3) Activation de la collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
+                // On passe directement le nouvel ID à la collection pour qu'elle se mette à jour et se charge.
+                controller.enableAndLoad(this.entity.id);
+            }
+        });
     }
     
     /**
@@ -438,7 +448,8 @@ export default class extends Controller {
     /**
      * Nettoie les messages d'erreur et les styles d'invalidité du formulaire.
      * @private
-     */    clearErrors() {
+     */    
+    clearErrors() {
         this.elementContenu.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         this.elementContenu.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
         this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');

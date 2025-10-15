@@ -116,15 +116,16 @@ export default class extends Controller {
                 break;
             case 'ui:boite-dialogue:add-collection-item-request':
                 console.log("-> ACTION: Demande d'ajout à la collection. Préparation de l'ouverture de la boîte de dialogue secondaire.");
+                console.log(`${this.nomControleur} - HandleEvent - PARENT - ATTRIBUT AND ID:`, payload.context);
                 this.broadcast('app:boite-dialogue:init-request', {
                     entity: {}, // Entité vide pour le mode création
                     entityFormCanvas: payload.entityFormCanvas,
-                    isCreationMode: payload.isCreationMode, // Relayer l'information
-                    // On enrichit le contexte avec les IDs mémorisés par le cerveau
+                    isCreationMode: payload.isCreationMode,
+                    // On fusionne le contexte existant (contenant l'ID parent) avec le contexte global
                     context: {
+                        ...payload.context, // On garde le contexte d'origine (parent, etc.)
                         idEntreprise: this.currentIdEntreprise,
-                        idInvite: this.currentIdInvite,
-                        originatorId: payload.context.originatorId
+                        idInvite: this.currentIdInvite
                     }
                 });
                 break;

@@ -91,6 +91,8 @@ export default class extends Controller {
      * @param {number} parentId - Le nouvel ID de l'entité parente.
      */
     enableAndLoad(parentId) {
+        console.log(this.nomControleur + " - PASSATION ID PARENT VERS COLLECTION:", parentId);
+        this.verbaliser();
         this.parentEntityIdValue = parentId;
         this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
         this.disabledValue = false;
@@ -180,6 +182,8 @@ export default class extends Controller {
         event.stopPropagation();
         console.log(`${this.nomControleur} - (5) Clic sur 'Ajouter'. Demande d'ouverture du formulaire de tâche.`);
         console.log(`${this.nomControleur} - (6) L'ID de l'entité parente (${this.parentEntityIdValue}) va être inclus dans le contexte sous la clé '${this.parentFieldNameValue}'.`);
+        console.log(`${this.nomControleur} - AddItem - PARENT - ATTRIBUT: ${this.parentFieldNameValue}.`);
+        console.log(`${this.nomControleur} - AddItem - PARENT - ID: ${this.parentEntityIdValue}.`);
 
         // On construit dynamiquement l'objet de contexte pour l'ID parent.
         const parentContext = {};
