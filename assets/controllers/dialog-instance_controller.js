@@ -306,7 +306,7 @@ export default class extends Controller {
                 collectionElements.forEach(element => {
                     // On récupère l'instance du contrôleur 'collection' pour cet élément.
                     const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
-                    if (controller && controller.enableAndLoad) {
+                    if (controller) {
                         console.log(`Dialog-Instance - (3) Activation de la collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
                         // On passe directement le nouvel ID à la collection pour qu'elle se mette à jour et se charge.
                         controller.enableAndLoad(this.entity.id);
