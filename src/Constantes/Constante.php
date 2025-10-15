@@ -6861,8 +6861,8 @@ class Constante
                 "itemTitleEdit" => "Modifier : " . $formtitle . " #%id%",
                 "parentFieldName" => $parentFieldName,
                 "disabled" => $isParentNew, // Indique si le widget doit être désactivé
-                // L'URL est toujours fournie, mais le JS l'utilisera seulement si 'disabled' est false
-                "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName
+                // L'URL est maintenant correcte, le JS l'utilisera
+                "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
             ]
         ];
 
