@@ -68,6 +68,7 @@ export default class extends Controller {
      */
     open(event) {
         const detail = event.detail;
+        console.log(`${this.nomControlleur} - Open - PARENT - ATTRIBUT AND ID:`, detail);
         console.log(this.nomControlleur + " - (1) Demande d'ouverture de dialogue reçue.", detail);
         if (!detail || !detail.entityFormCanvas) {
             console.error(`[${this.nomControlleur}] Échec de l'ouverture: le payload est invalide ou 'entityFormCanvas' est manquant.`, detail);
