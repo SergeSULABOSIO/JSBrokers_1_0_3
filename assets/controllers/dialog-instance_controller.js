@@ -60,6 +60,7 @@ export default class extends Controller {
         this.context = detail.context || {};
         this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
         this.isCreateMode = !(this.entity && this.entity.id);
+        console.log(this.nomControlleur + " - (0) updateTitle() - this.canvas.parametres:", this.canvas.parametres);
         console.log(`${this.nomControlleur} - Open - PARENT - ATTRIBUT AND ID:`, detail);
         console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
         await this.buildAndShowShell();
@@ -316,6 +317,7 @@ export default class extends Controller {
             }
 
         } catch (error) {
+            console.error(error);
             // NOUVEAU : Notifier le cerveau de l'échec de validation
             this.notifyCerveau('app:form.validation-error', {
                 message: error.message || 'Erreur de validation',
@@ -404,8 +406,12 @@ export default class extends Controller {
      */
     updateTitle() {
         const titleElement = this.elementContenu.querySelector('.modal-title');
+        console.log(this.nomControlleur + " - (1) updateTitle() - titleElement:", titleElement);
+        console.log(this.nomControlleur + " - (2) updateTitle() - this.canvas.parametres:", this.canvas.parametres);
+        console.log(this.nomControlleur + " - (3) updateTitle() - titre_modification:", this.canvas.parametres.titre_modification);
         if (titleElement) {
             titleElement.textContent = this.canvas.parametres.titre_modification.replace('%id%', this.entity.id);
+            console.log(this.nomControlleur + " - (4) updateTitle() - textContent:", titleElement.textContent);
         }
     }
 
