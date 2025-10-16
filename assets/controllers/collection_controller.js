@@ -196,6 +196,7 @@ export default class extends Controller {
             entityFormCanvas: {
                 parametres: {
                     titre_creation: this.itemTitleCreateValue,
+                    titre_modification: this.itemTitleEditValue,
                     endpoint_form_url: this.itemFormUrlValue,
                     endpoint_submit_url: this.itemSubmitUrlValue,
                 }
