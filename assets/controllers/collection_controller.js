@@ -199,6 +199,7 @@ export default class extends Controller {
                     titre_modification: this.itemTitleEditValue,
                     endpoint_form_url: this.itemFormUrlValue,
                     endpoint_submit_url: this.itemSubmitUrlValue,
+                    isCreationMode: true,
                 }
             },
             idEntreprise: this.idEntrepriseValue,
