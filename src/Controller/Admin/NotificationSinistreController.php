@@ -224,8 +224,8 @@ class NotificationSinistreController extends AbstractController
     /**
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
-    #[Route('/api/{id}/contacts', name: 'api.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(int $id): Response
+    #[Route('/api/{id}/contacts/{usage}', name: 'api.get_contacts', methods: ['GET'])]
+    public function getContactsListApi(int $id, ?string $usage): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -239,7 +239,7 @@ class NotificationSinistreController extends AbstractController
         $entityCanvas = $this->constante->getEntityCanvas(Contact::class);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
 
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Contact::class),
             'serverRootName' => $this->getServerRootName(Contact::class),
@@ -257,8 +257,8 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/pieces', name: 'api.get_pieces', methods: ['GET'])]
-    public function getPiecesListApi(int $id): Response
+    #[Route('/api/{id}/pieces/{usage}', name: 'api.get_pieces', methods: ['GET'])]
+    public function getPiecesListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -272,7 +272,7 @@ class NotificationSinistreController extends AbstractController
         $pieceCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
         $this->constante->loadCalculatedValue($pieceCanvas, $data);
 
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(PieceSinistre::class),
             'serverRootName' => $this->getServerRootName(PieceSinistre::class),
@@ -323,8 +323,8 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/offreIndemnisationSinistres', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
-    public function getOffresIndemnisationListApi(int $id): Response
+    #[Route('/api/{id}/offreIndemnisationSinistres/{usage}', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
+    public function getOffresIndemnisationListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -338,7 +338,7 @@ class NotificationSinistreController extends AbstractController
         $offreCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
         $this->constante->loadCalculatedValue($offreCanvas, $data);
 
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(OffreIndemnisationSinistre::class),
             'serverRootName' => $this->getServerRootName(OffreIndemnisationSinistre::class),

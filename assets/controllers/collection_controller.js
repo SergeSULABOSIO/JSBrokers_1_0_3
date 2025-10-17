@@ -12,7 +12,8 @@ export default class extends Controller {
         "contentPanel",
         "listContainer",
         "addButtonContainer",
-        "countBadge"
+        "countBadge",
+        "rowActions" // NOUVEAU : Cible pour les conteneurs d'actions de ligne
     ];
 
     static values = {
@@ -27,6 +28,12 @@ export default class extends Controller {
         parentFieldName: String,
         disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
     };
+
+    /**
+     * @property {Object} hideTimeouts - Stocke les minuteurs pour masquer les boutons.
+     * @private
+     */
+    hideTimeouts = {};
 
     connect() {
         this.nomControleur = "Collection";
@@ -150,6 +157,40 @@ export default class extends Controller {
             }
         }
     }
+
+    /**
+     * Affiche les boutons d'action pour une ligne survolée.
+     * @param {MouseEvent} event
+     */
+    showRowActions(event) {
+        const row = event.currentTarget;
+        const actionsContainer = row.querySelector('[data-collection-target="rowActions"]');
+
+        if (actionsContainer) {
+            // Annule tout minuteur de masquage existant pour cette ligne
+            if (this.hideTimeouts[row.id]) {
+                clearTimeout(this.hideTimeouts[row.id]);
+            }
+            actionsContainer.classList.add('visible');
+        }
+    }
+
+    /**
+     * Masque les boutons d'action après un délai lorsque la souris quitte une ligne.
+     * @param {MouseEvent} event
+     */
+    hideRowActions(event) {
+        const row = event.currentTarget;
+        const actionsContainer = row.querySelector('[data-collection-target="rowActions"]');
+
+        if (actionsContainer) {
+            // Lance un minuteur pour masquer les boutons après 3 secondes
+            this.hideTimeouts[row.id] = setTimeout(() => {
+                actionsContainer.classList.remove('visible');
+            }, 3000);
+        }
+    }
+
 
     /**
      * Rafraîchit la liste si l'événement de sauvegarde concerne cette collection.
