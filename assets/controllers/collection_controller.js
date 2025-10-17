@@ -33,7 +33,7 @@ export default class extends Controller {
         console.log(`${this.nomControleur} - Connecté.`);
         this.boundRefresh = this.refresh.bind(this);
         // Écoute l'événement de sauvegarde pour se rafraîchir
-        document.addEventListener('app:entity.saved', this.boundRefresh);
+        document.addEventListener('app:list.refresh-request', this.boundRefresh);
         // --- CORRECTION : Ne charge pas si le widget est désactivé ---
         if (this.disabledValue) {
             this.listContainerTarget.innerHTML = '<div class="alert alert-info">Veuillez d\'abord enregistrer l\'élément principal pour pouvoir ajouter des pièces.</div>';
@@ -44,7 +44,7 @@ export default class extends Controller {
     }
 
     disconnect() {
-        document.removeEventListener('app:entity.saved', this.boundRefresh);
+        document.removeEventListener('app:list.refresh-request', this.boundRefresh);
     }
 
     verbaliser(){
@@ -64,7 +64,8 @@ export default class extends Controller {
      */
     async load() {
         // --- CORRECTION : Vérification de l'état désactivé ---
-        console.log(`${this.nomControleur} - Chargement de la liste...(fonction *load()*)`);
+        const dialogListUrl = this.listUrlValue + "/dialog";
+        console.log(this.nomControleur + " load - (3/5) Actualisation de la Collection", dialogListUrl);
         this.verbaliser();
         if (!this.listUrlValue || this.disabledValue) {
             // console.error(`${this.nomControleur} - Aucune URL n'est définie pour charger la collection.`);
@@ -73,13 +74,14 @@ export default class extends Controller {
         }
 
         try {
-            const response = await fetch(this.listUrlValue);
+            console.log(this.nomControleur + " refresh - (4/5) Actualisation de la Collection, listUrl:" + dialogListUrl);
+            const response = await fetch(dialogListUrl);
             if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
 
             const html = await response.text();
             this.listContainerTarget.innerHTML = html;
             this.updateCount();
-
+            console.log(this.nomControleur + " refresh - (5/5) fin de l'Actualisation de la Collection." + html);
         } catch (error) {
             console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
@@ -154,6 +156,7 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     refresh(event) {
+        console.log(this.nomControleur + " refresh - (2/5) Actualisation de la Collection:", event);
         // L'ID 'originatorId' est l'ID de l'élément HTML du contrôleur collection
         // qui a initié l'action. On ne rafraîchit que si c'est nous.
         if (event.detail.originatorId === this.element.id) {

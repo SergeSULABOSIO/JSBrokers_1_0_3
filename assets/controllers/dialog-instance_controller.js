@@ -296,6 +296,7 @@ export default class extends Controller {
             if (!response.ok) throw result;
 
             this.showFeedback('success', result.message);
+            console.log(this.nomControleur + " submitForm - (0/5) Actualisation de la Collection:", result.entity, this.context.originatorId);
 
             // NOUVEAU : Notifier le cerveau du succès de l'enregistrement
             this.notifyCerveau('app:entity.saved', {

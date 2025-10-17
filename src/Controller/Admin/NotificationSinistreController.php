@@ -290,8 +290,8 @@ class NotificationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(int $id): Response
+    #[Route('/api/{id}/taches/{usage}', name: 'api.get_taches', methods: ['GET'])]
+    public function getTachesListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -305,7 +305,7 @@ class NotificationSinistreController extends AbstractController
         $tacheCanvas = $this->constante->getEntityCanvas(Tache::class);
         $this->constante->loadCalculatedValue($tacheCanvas, $data);
 
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Tache::class),
             'serverRootName' => $this->getServerRootName(Tache::class),

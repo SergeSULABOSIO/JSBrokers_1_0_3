@@ -156,6 +156,7 @@ export default class extends Controller {
             case 'app:entity.saved':
                 console.log("-> ACTION: Une entité a été sauvegardée. Demande de rafraîchissement des listes et affichage d'une notification.");
                 // Diffusion pour rafraîchir les listes (principale et collections)
+                console.log(this.nomControleur + " handleEvent - (1/5) Actualisation des listes", payload);
                 this.broadcast('app:list.refresh-request', {
                     originatorId: payload.originatorId, // Permet au bon collection-manager de se rafraîchir
                     idEntreprise: this.currentIdEntreprise, // MISSION 2 : On ajoute l'ID de l'entreprise
