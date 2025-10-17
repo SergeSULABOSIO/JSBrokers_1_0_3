@@ -1,3 +1,22 @@
+{#
+    @file _dialog_list_component.html.twig
+    @description Ce template est une version simplifiée et non-interactive du composant de liste,
+    spécifiquement conçue pour être affichée à l'intérieur d'une boîte de dialogue.
+    Il est idéal pour visualiser des collections en "lecture seule".
+
+    Caractéristiques principales :
+    - **Affichage simple** : Conçu pour une lecture rapide, il n'inclut pas les fonctionnalités de sélection (cases à cocher) ou les menus contextuels.
+    - **Mise en page à colonne unique** : L'affichage est centré sur la `colonne_principale` définie dans le `listeCanvas`.
+    - **Responsive** : Utilise le contrôleur Stimulus `responsive-cell` pour masquer les informations secondaires sur les petits écrans, évitant ainsi un affichage surchargé.
+    - **État vide** : Gère élégamment le cas où il n'y a pas de données à afficher en incluant le template `_empty_state.html.twig`.
+
+    Paramètres attendus :
+    - `data`: Un tableau d'objets entité à afficher.
+    - `listeCanvas`: La configuration d'affichage de la liste, qui doit contenir la définition de `colonne_principale`.
+    - `entityCanvas`: La configuration du formulaire de l'entité (utilisé par l'état vide).
+    - `entite_nom`: Le nom de l'entité (utilisé par l'état vide).
+    - `customAddAction` (optionnel): L'action Stimulus pour le bouton "Ajouter" de l'état vide.
+#}
 <div id="list-controller-{{ random() }}"> 
     <div class="table-scroll-wrapper flex-grow-1">
         {% if data is not empty %}
@@ -15,10 +34,25 @@
                     {% for entity in data %}
                         <tr
                             id="liste_row_{{ entity.id }}"
-                            class="element-a-encadrer parent-a-options context-target align-middle"
+                            class="element-a-encadrer parent-a-options context-target align-middle position-relative"
+                            data-action="mouseenter->collection#showRowActions mouseleave->collection#hideRowActions"
                         >
                             {# Colonne 2 : Cellule principale dynamique #}
                             <td class="p-2" data-controller="responsive-cell">
+                                {# --- NOUVEAU : Conteneur pour les boutons d'action contextuels --- #}
+                                <div class="contextual-row-actions" data-collection-target="rowActions">
+                                    <button class="btn btn-sm btn-icon" title="Modifier"
+                                            data-action="click->collection#editItem"
+                                            data-item-id="{{ entity.id }}">
+                                        <twig:UX:Icon name="tabler:edit" />
+                                    </button>
+                                    <button class="btn btn-sm btn-icon btn-icon-danger" title="Supprimer"
+                                            data-action="click->collection#deleteItem"
+                                            data-item-id="{{ entity.id }}">
+                                        <twig:UX:Icon name="fluent:delete-20-filled" />
+                                    </button>
+                                </div>
+
                                 {% set col_principale = listeCanvas.colonne_principale %}
                                 {# Ligne 1: Texte principal #}
                                 <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
