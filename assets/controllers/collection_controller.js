@@ -187,7 +187,7 @@ export default class extends Controller {
             // Lance un minuteur pour masquer les boutons après 3 secondes
             this.hideTimeouts[row.id] = setTimeout(() => {
                 actionsContainer.classList.remove('visible');
-            }, 3000);
+            }, 800);
         }
     }
 
@@ -261,8 +261,12 @@ export default class extends Controller {
      */
     editItem(event) {
         this.verbaliser();
-        const itemId = event.currentTarget.dataset.itemId;
-        this.notifyCerveau('app:boite-dialogue:init-request', {
+        // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
+        const row = event.currentTarget.closest('tr');
+        if (!row || !row.dataset.itemId) return;
+        const itemId = row.dataset.itemId;
+
+        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
             entity: { id: itemId }, // On passe juste l'ID pour l'édition
             entityFormCanvas: {
                 parametres: {
@@ -284,17 +288,22 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     deleteItem(event) {
-        const itemId = event.currentTarget.dataset.itemId;
+        // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
+        const row = event.currentTarget.closest('tr');
+        if (!row || !row.dataset.itemId) return;
+        const itemId = row.dataset.itemId;
 
-        this.notifyCerveau('ui:confirmation.request', {
+        console.log(this.nomControleur + " (0) - deleteItem(): " + itemId);
+
+        // CORRECTION : On utilise le même événement que la toolbar pour la cohérence.
+        this.notifyCerveau('ui:toolbar.delete-request', {
             title: 'Confirmation de suppression',
-            body: `Êtes-vous sûr de vouloir supprimer cet élément ?`,
-            onConfirm: {
-                type: 'app:api.delete-request', // Le cerveau relaiera cette demande
-                payload: {
-                    url: this.itemDeleteUrlValue,
-                    originatorId: this.element.id
-                }
+            body: `Êtes-vous sûr de vouloir supprimer cet élément ?`, // Message personnalisé
+            selection: [itemId], // On passe l'ID dans un tableau pour être compatible avec le cerveau
+            // On passe les informations nécessaires à l'action de suppression
+            actionConfig: {
+                url: this.itemDeleteUrlValue,
+                originatorId: this.element.id // L'ID de la collection, pour le rafraîchissement
             }
         });
     }

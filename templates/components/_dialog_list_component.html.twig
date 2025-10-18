@@ -35,21 +35,18 @@
                         <tr
                             id="liste_row_{{ entity.id }}"
                             class="element-a-encadrer parent-a-options context-target align-middle position-relative"
+                            data-item-id="{{ entity.id }}"
                             data-action="mouseenter->collection#showRowActions mouseleave->collection#hideRowActions"
                         >
                             {# Colonne 2 : Cellule principale dynamique #}
                             <td class="p-2" data-controller="responsive-cell">
                                 {# --- NOUVEAU : Conteneur pour les boutons d'action contextuels --- #}
                                 <div class="contextual-row-actions" data-collection-target="rowActions">
-                                    <button class="btn btn-sm btn-icon" title="Modifier"
-                                            data-action="click->collection#editItem"
-                                            data-item-id="{{ entity.id }}">
-                                        <twig:UX:Icon name="tabler:edit" />
+                                    <button class="btn btn-sm btn-icon" title="Modifier" data-action="click->collection#editItem">
+                                        {{ ux_icon('tabler:edit', {width: "19px"}) }}
                                     </button>
-                                    <button class="btn btn-sm btn-icon btn-icon-danger" title="Supprimer"
-                                            data-action="click->collection#deleteItem"
-                                            data-item-id="{{ entity.id }}">
-                                        <twig:UX:Icon name="fluent:delete-20-filled" />
+                                    <button class="btn btn-sm btn-icon btn-icon-danger" title="Supprimer" data-action="click->collection#deleteItem">
+                                        {{ ux_icon('fluent:delete-20-filled', {width: "19px"}) }}
                                     </button>
                                 </div>
 

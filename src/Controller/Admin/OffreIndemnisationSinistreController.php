@@ -217,8 +217,8 @@ class OffreIndemnisationSinistreController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/paiements', name: 'api.get_paiements', methods: ['GET'])]
-    public function getPaiementsListApi(int $id): Response
+    #[Route('/api/{id}/paiements/{usage}', name: 'api.get_paiements', methods: ['GET'])]
+    public function getPaiementsListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -232,7 +232,7 @@ class OffreIndemnisationSinistreController extends AbstractController
         $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
 
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Paiement::class),
             'serverRootName' => $this->getServerRootName(Paiement::class),
@@ -249,8 +249,8 @@ class OffreIndemnisationSinistreController extends AbstractController
         ]);
     }
 
-    #[Route('/api/{id}/documents', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id): Response
+    #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
+    public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -264,7 +264,7 @@ class OffreIndemnisationSinistreController extends AbstractController
         $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
 
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Document::class),
             'serverRootName' => $this->getServerRootName(Document::class),
@@ -281,8 +281,8 @@ class OffreIndemnisationSinistreController extends AbstractController
         ]);
     }
 
-    #[Route('/api/{id}/taches', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(int $id): Response
+    #[Route('/api/{id}/taches/{usage}', name: 'api.get_taches', methods: ['GET'])]
+    public function getTachesListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -296,7 +296,7 @@ class OffreIndemnisationSinistreController extends AbstractController
         $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
 
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Tache::class),
             'serverRootName' => $this->getServerRootName(Tache::class),
