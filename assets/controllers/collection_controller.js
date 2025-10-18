@@ -266,19 +266,27 @@ export default class extends Controller {
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
 
+        const parentContext = {};
+        if (this.parentFieldNameValue && this.parentEntityIdValue) {
+            parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
+        }
         this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
-            entity: { id: itemId }, // On passe juste l'ID pour l'édition
+            entity: { id: itemId }, // Entité vide pour la création
+            isCreationMode: false,
             entityFormCanvas: {
                 parametres: {
+                    titre_creation: this.itemTitleCreateValue,
                     titre_modification: this.itemTitleEditValue,
                     endpoint_form_url: this.itemFormUrlValue,
                     endpoint_submit_url: this.itemSubmitUrlValue,
+                    isCreationMode: false,
                 }
             },
             idEntreprise: this.idEntrepriseValue,
             idInvite: this.idInviteValue,
             context: {
-                originatorId: this.element.id
+                originatorId: this.element.id, // On s'identifie pour le rafraîchissement
+                ...parentContext
             }
         });
     }
