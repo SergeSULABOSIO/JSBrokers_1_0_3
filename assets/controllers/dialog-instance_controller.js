@@ -60,8 +60,15 @@ export default class extends Controller {
         this.context = detail.context || {};
         this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
         this.isCreateMode = !(this.entity && this.entity.id);
-        console.log(this.nomControlleur + " - (0) updateTitle() - this.canvas.parametres:", this.canvas.parametres);
-        console.log(`${this.nomControlleur} - Open - PARENT - ATTRIBUT AND ID:`, detail);
+
+        // Log de démarrage détaillé
+        console.groupCollapsed(`${this.nomControlleur} - Démarrage`);
+        console.log(`| Mode: ${this.isCreateMode ? 'Création' : 'Édition'}`);
+        console.log('| Entité:', this.entity);
+        console.log('| Contexte:', this.context);
+        console.log('| Canvas:', this.canvas);
+        console.groupEnd();
+
         console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
         await this.buildAndShowShell();
         await this.loadFormAndAttributes();

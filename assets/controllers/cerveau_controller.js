@@ -114,6 +114,21 @@ export default class extends Controller {
                     ...payload
                 });
                 break;
+            case 'dialog:boite-dialogue:init-request':
+                console.log("-> ACTION: Demande d'ouverture de la boît de dialogue depuis la collection");
+                console.log(`${this.nomControleur} - HandleEvent - PARENT - ATTRIBUT AND ID:`, payload.context);
+                this.broadcast('app:boite-dialogue:init-request', {
+                    entity: {}, // Entité vide pour le mode création
+                    entityFormCanvas: payload.entityFormCanvas,
+                    isCreationMode: payload.isCreationMode,
+                    // On fusionne le contexte existant (contenant l'ID parent) avec le contexte global
+                    context: {
+                        ...payload.context, // On garde le contexte d'origine (parent, etc.)
+                        idEntreprise: this.currentIdEntreprise,
+                        idInvite: this.currentIdInvite
+                    }
+                });
+                break;            
             case 'ui:boite-dialogue:add-collection-item-request':
                 console.log("-> ACTION: Demande d'ajout à la collection. Préparation de l'ouverture de la boîte de dialogue secondaire.");
                 console.log(`${this.nomControleur} - HandleEvent - PARENT - ATTRIBUT AND ID:`, payload.context);
@@ -190,13 +205,59 @@ export default class extends Controller {
                 this.broadcast('app:context-menu.show', payload);
                 break;
 
-            // --- NOUVEAU : Gère la demande de suppression depuis la barre d'outils ---
-            case 'ui:toolbar.delete-request':
-                console.log("-> ACTION: Demande de suppression reçue. Ouverture du dialogue de confirmation.");
+            // --- NOUVEAU : Gère la demande de suppression API ---
+            case 'app:api.delete-request':
+                console.log("-> ACTION: Exécution de la requête de suppression API.", payload);
+                const { ids, url, originatorId } = payload;
+
+                // On crée une promesse pour chaque suppression
+                const deletePromises = ids.map(id => {
+                    const deleteUrl = url.replace('/0', `/${id}`); // Construit l'URL finale
+                    return fetch(deleteUrl, { method: 'DELETE' })
+                        .then(response => {
+                            if (!response.ok) throw new Error(`Erreur lors de la suppression de l'élément ${id}.`);
+                            return response.json();
+                        });
+                });
+
+                // On attend que toutes les suppressions soient terminées
+                Promise.all(deletePromises)
+                    .then(results => {
+                        const message = results.length > 1 ? `${results.length} éléments supprimés.` : 'Élément supprimé avec succès.';
+                        console.log("-> SUCCÈS: Suppression(s) réussie(s).", results);
+                        this.broadcast('app:notification.show', { text: message, type: 'success' });
+                        this.broadcast('app:list.refresh-request', { originatorId: originatorId });
+                        this.broadcast('ui:confirmation.close');
+                    })
+                    .catch(error => {
+                        console.error("-> ERREUR: Échec de la suppression API.", error);
+                        this.broadcast('app:error.api', { error: error.message || "La suppression a échoué." });
+                    });
+                break;
+
+            case 'dialog:confirmation.request':
+                console.log("-> ACTION: Demande de confirmation. Diffusion de l'ordre.");
                 this.broadcast('ui:confirmation.request', {
                     title: 'Confirmation de suppression',
                     body: `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
                     onConfirm: { type: 'app:api.delete-request', payload: payload }
+                });
+                break;
+
+            // --- NOUVEAU : Gère la demande de suppression depuis la barre d'outils ---
+            case 'ui:toolbar.delete-request':
+                console.log("-> ACTION: Demande de suppression reçue. Ouverture du dialogue de confirmation.");
+                this.broadcast('ui:confirmation.request', {
+                    title: payload.title || 'Confirmation de suppression',
+                    body: payload.body || `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
+                    onConfirm: {
+                        type: 'app:api.delete-request',
+                        payload: {
+                            ids: payload.selection, // Les IDs à supprimer
+                            url: payload.actionConfig.url, // L'URL de base pour la suppression
+                            originatorId: payload.actionConfig.originatorId // L'ID de la collection à rafraîchir
+                        }
+                    }
                 });
                 break;
 

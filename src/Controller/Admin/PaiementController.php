@@ -234,8 +234,8 @@ class PaiementController extends AbstractController
 
 
 
-    #[Route('/api/{id}/preuves', name: 'api.get_preuves', methods: ['GET'])]
-    public function getPreuvesListApi(int $id): Response
+    #[Route('/api/{id}/preuves/{usage}', name: 'api.get_preuves', methods: ['GET'])]
+    public function getPreuvesListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {
@@ -249,7 +249,7 @@ class PaiementController extends AbstractController
         $entityCanvas = $this->constante->getEntityCanvas(Document::class);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
         
-        return $this->render('components/_generic_list_component.html.twig', [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Document::class),
             'serverRootName' => $this->getServerRootName(Document::class),

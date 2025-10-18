@@ -996,3 +996,31 @@ textarea:hover,
   width: 26px !important;
   height: 26px !important;
 }
+
+/*
+===================================================================
+ SECTION: BOUTONS D'ACTION CONTEXTUELS POUR LES LIGNES DE LISTE
+===================================================================
+*/
+
+.contextual-row-actions {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 0.25rem 0.5rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    z-index: 10;
+}
+
+.contextual-row-actions.visible {
+    opacity: 1;
+    visibility: visible;
+}
