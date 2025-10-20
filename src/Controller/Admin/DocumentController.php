@@ -147,6 +147,7 @@ class DocumentController extends AbstractController
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
 
+        /** @var Document $document */
         $document = isset($data['id']) ? $em->getRepository(Document::class)->find($data['id']) : new Document();
 
         $form = $this->createForm(DocumentType::class, $document);

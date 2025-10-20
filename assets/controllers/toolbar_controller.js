@@ -181,19 +181,32 @@ export default class extends Controller {
         let payload = {};
         // Enrichit le payload en fonction de l'action demandée
         if (eventName === 'ui:toolbar.delete-request') {
-            payload = { selection: this.selectos.map(s => s.id) }; // La suppression n'a besoin que des IDs.
-        } else if (eventName === 'ui:toolbar.add-request') { 
-            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
-            payload = { entityFormCanvas: this.activeFormCanvas };
-            payload = { 
-                entityFormCanvas: this.activeFormCanvas,
-                isCreationMode: true // Indique explicitement que c'est une demande de création
+            payload = {
+                selection: this.selectos.map(s => s.id)
             };
-        } else if (['ui:toolbar.edit-request', 'ui:toolbar.open-request'].includes(eventName)) { 
+            // La suppression n'a besoin que des IDs.
+        } else if (eventName === 'ui:toolbar.add-request') {
+            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
+            payload = {
+                entity: {},
+                entityFormCanvas: this.activeFormCanvas,
+                isCreationMode: true,
+            };
+        } else if (eventName === 'ui:toolbar.edit-request') {
+            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
+            console.log(this.nomControleur + " - Notify - édition", this.selectos);
+            payload = {
+                entity: this.selectos[0],
+                entityFormCanvas: this.selectos[0].activeFormCanvas,
+                isCreationMode: false,
+            };
+        } else if (eventName === 'ui:toolbar.open-request') {
             // Pour "Ouvrir" ou "Modifier", on envoie le tableau complet des "selectos".
-            payload = { entities: this.selectos };
+            console.log(this.nomControleur + " - Ouverture", this.selectos);
+            payload = {
+                entities: this.selectos
+            };
         }
-
         this.notifyCerveau(eventName, payload);
     }
 
@@ -208,11 +221,12 @@ export default class extends Controller {
         const event = new CustomEvent('cerveau:event', {
             bubbles: true,
             detail: {
-            type: type,
-            source: this.nomControleur,
-            payload: payload,
-            timestamp: Date.now()
-        }});
+                type: type,
+                source: this.nomControleur,
+                payload: payload,
+                timestamp: Date.now()
+            }
+        });
         this.element.dispatchEvent(event);
     }
 }

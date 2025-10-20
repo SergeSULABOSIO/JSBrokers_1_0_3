@@ -108,7 +108,7 @@ class ContactController extends AbstractController
 
         $form = $this->createForm(ContactType::class, $contact);
 
-        $entityCanvas = $this->constante->getEntityCanvas($contact);
+        $entityCanvas = $this->constante->getEntityCanvas(Contact::class);
         $this->constante->loadCalculatedValue($entityCanvas, [$contact]);
         $entityFormCanvas = $this->constante->getEntityFormCanvas($contact, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
 

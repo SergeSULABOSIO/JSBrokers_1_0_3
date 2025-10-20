@@ -62,11 +62,11 @@ export default class extends Controller {
         this.isCreateMode = !(this.entity && this.entity.id);
 
         // Log de démarrage détaillé
-        console.groupCollapsed(`${this.nomControlleur} - Démarrage`);
-        console.log(`| Mode: ${this.isCreateMode ? 'Création' : 'Édition'}`);
-        console.log('| Entité:', this.entity);
-        console.log('| Contexte:', this.context);
-        console.log('| Canvas:', this.canvas);
+        console.groupCollapsed(`${this.nomControlleur} - start - EDITDIAL(3)`);
+        console.log(`| Mode: ${detail.isCreationMode ? 'Création' : 'Édition'}`);
+        console.log('| Entité:', detail.entity);
+        console.log('| Contexte:', detail.context);
+        console.log('| Canvas:', detail.entityFormCanvas);
         console.groupEnd();
 
         console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);

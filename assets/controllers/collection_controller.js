@@ -54,11 +54,11 @@ export default class extends Controller {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
     }
 
-    verbaliser(){
+    verbaliser() {
         console.log(this.nomControleur + " - Options - listUrlValue:", this.listUrlValue);
         console.log(this.nomControleur + " - Options - itemFormUrlValue:", this.itemFormUrlValue);
         console.log(this.nomControleur + " - Options - itemSubmitUrlValue:", this.itemSubmitUrlValue);
-        console.log(this.nomControleur + " - Options - itemDeleteUrlValue:", this.itemDeleteUrlValue); 
+        console.log(this.nomControleur + " - Options - itemDeleteUrlValue:", this.itemDeleteUrlValue);
         console.log(this.nomControleur + " - Options - itemTitleCreateValue:", this.itemTitleCreateValue);
         console.log(this.nomControleur + " - Options - itemTitleEditValue:", this.itemTitleEditValue);
         console.log(this.nomControleur + " - Options - parentEntityIdValue:", this.parentEntityIdValue);
@@ -88,10 +88,10 @@ export default class extends Controller {
             const html = await response.text();
             this.listContainerTarget.innerHTML = html;
             this.updateCount();
-            console.log(this.nomControleur + " refresh - (5/5) fin de l'Actualisation de la Collection." + html);
+            // console.log(this.nomControleur + " refresh - (5/5) fin de l'Actualisation de la Collection." + html);
         } catch (error) {
-            console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
+            console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
         }
     }
 
@@ -224,34 +224,41 @@ export default class extends Controller {
         this.verbaliser();
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
-        console.log(`${this.nomControleur} - (5) Clic sur 'Ajouter'. Demande d'ouverture du formulaire de tâche.`);
-        console.log(`${this.nomControleur} - (6) L'ID de l'entité parente (${this.parentEntityIdValue}) va être inclus dans le contexte sous la clé '${this.parentFieldNameValue}'.`);
-        console.log(`${this.nomControleur} - AddItem - PARENT - ATTRIBUT: ${this.parentFieldNameValue}.`);
-        console.log(`${this.nomControleur} - AddItem - PARENT - ID: ${this.parentEntityIdValue}.`);
 
-        // On construit dynamiquement l'objet de contexte pour l'ID parent.
         const parentContext = {};
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
-        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
-            entity: {}, // Entité vide pour la création
-            isCreationMode: true,
-            entityFormCanvas: {
-                parametres: {
-                    titre_creation: this.itemTitleCreateValue,
-                    titre_modification: this.itemTitleEditValue,
-                    endpoint_form_url: this.itemFormUrlValue,
-                    endpoint_submit_url: this.itemSubmitUrlValue,
-                    isCreationMode: true,
-                }
-            },
-            idEntreprise: this.idEntrepriseValue,
-            idInvite: this.idInviteValue,
-            context: {
-                originatorId: this.element.id, // On s'identifie pour le rafraîchissement
-                ...parentContext
+
+        //Les variables à transporter
+        const entity = {};// Entité vide pour la création, avec l'id pour l'édition
+        const isCreationMode = true;
+        const entityFormCanvas = {
+            parametres: {
+                titre_creation: this.itemTitleCreateValue,
+                titre_modification: this.itemTitleEditValue,
+                endpoint_form_url: this.itemFormUrlValue,
+                endpoint_submit_url: this.itemSubmitUrlValue,
+                isCreationMode: true,
             }
+        };
+        const context = {
+            originatorId: this.element.id, // On s'identifie pour le rafraîchissement
+            ...parentContext,
+        };
+
+        console.groupCollapsed(`${this.nomControleur} - addItem - EDITDIAL(0)`);
+        console.log(`| Mode: ${isCreationMode ? 'Création' : 'Édition'}`);
+        console.log('| Entité:', entity);
+        console.log('| Contexte:', context);
+        console.log('| Canvas:', entityFormCanvas);
+        console.groupEnd();
+
+        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
+            entity: entity, // Entité vide pour la création
+            isCreationMode: isCreationMode,
+            entityFormCanvas: entityFormCanvas,
+            context: context
         });
     }
 
@@ -270,24 +277,36 @@ export default class extends Controller {
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
-        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
-            entity: { id: itemId }, // Entité vide pour la création
-            isCreationMode: false,
-            entityFormCanvas: {
-                parametres: {
-                    titre_creation: this.itemTitleCreateValue,
-                    titre_modification: this.itemTitleEditValue,
-                    endpoint_form_url: this.itemFormUrlValue,
-                    endpoint_submit_url: this.itemSubmitUrlValue,
-                    isCreationMode: false,
-                }
-            },
-            idEntreprise: this.idEntrepriseValue,
-            idInvite: this.idInviteValue,
-            context: {
-                originatorId: this.element.id, // On s'identifie pour le rafraîchissement
-                ...parentContext
+
+        //Les variables à transporter
+        const entity = { id: itemId };// Entité vide pour la création, avec l'id pour l'édition
+        const isCreationMode = false;
+        const entityFormCanvas = {
+            parametres: {
+                titre_creation: this.itemTitleCreateValue,
+                titre_modification: this.itemTitleEditValue,
+                endpoint_form_url: this.itemFormUrlValue,
+                endpoint_submit_url: this.itemSubmitUrlValue,
+                isCreationMode: false,
             }
+        };
+        const context = {
+            originatorId: this.element.id, // On s'identifie pour le rafraîchissement
+            ...parentContext,
+        };
+
+        console.groupCollapsed(`${this.nomControleur} - editItem - EDITDIAL(0)`);
+        console.log(`| Mode: ${isCreationMode ? 'Création' : 'Édition'}`);
+        console.log('| Entité:', entity);
+        console.log('| Contexte:', context);
+        console.log('| Canvas:', entityFormCanvas);
+        console.groupEnd();
+
+        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
+            entity: entity,
+            isCreationMode: isCreationMode,
+            entityFormCanvas: entityFormCanvas,
+            context: context
         });
     }
 

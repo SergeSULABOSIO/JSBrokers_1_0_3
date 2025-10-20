@@ -68,8 +68,13 @@ export default class extends Controller {
      */
     open(event) {
         const detail = event.detail;
-        console.log(`${this.nomControlleur} - Open - PARENT - ATTRIBUT AND ID:`, detail);
-        console.log(this.nomControlleur + " - (1) Demande d'ouverture de dialogue reçue.", detail);
+        console.groupCollapsed(`${this.nomControlleur} - open - EDITDIAL(2)`);
+        console.log(`| Mode: ${detail.isCreationMode ? 'Création' : 'Édition'}`);
+        console.log('| Entité:', detail.entity);
+        console.log('| Contexte:', detail.context);
+        console.log('| Canvas:', detail.entityFormCanvas);
+        console.groupEnd();
+
         if (!detail || !detail.entityFormCanvas) {
             console.error(`[${this.nomControlleur}] Échec de l'ouverture: le payload est invalide ou 'entityFormCanvas' est manquant.`, detail);
             return;
@@ -87,7 +92,7 @@ export default class extends Controller {
         // On ajoute l'élément au body. Stimulus va maintenant le détecter et connecter le contrôleur.
         document.body.appendChild(modalElement);
     }
-    
+
     /**
      * Crée un élément DOM à partir du template HTML de la modale.
      * @returns {HTMLElement} L'élément racine de la nouvelle modale.
