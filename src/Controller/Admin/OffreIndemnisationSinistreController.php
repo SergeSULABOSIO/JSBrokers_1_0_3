@@ -14,14 +14,10 @@
 
 namespace App\Controller\Admin;
 
-use Dom\Document;
 use App\Entity\Tache;
-use App\Entity\Invite;
+use App\Entity\Document;
 use App\Entity\Paiement;
-use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;

@@ -15,14 +15,11 @@
 
 namespace App\Controller\Admin;
 
-use Dom\Document;
-use App\Entity\Invite;
 use DateTimeImmutable;
-use App\Entity\Entreprise;
+use App\Entity\Document;
 use App\Constantes\Constante;
 use App\Entity\PieceSinistre;
 use App\Form\PieceSinistreType;
-use App\Constantes\MenuActivator;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -140,7 +137,8 @@ class PieceSinistreController extends AbstractController
         /** @var PieceSinistre $piece */
         $piece = isset($data['id']) && $data['id'] ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
 
-        if (!isset($data['id']) || !$data['id']) {
+        $pieceId = $data['id'] ?? null;
+        if (!$pieceId) {
             $piece->setReceivedAt(new DateTimeImmutable("now"));
             $piece->setInvite($this->getInvite());
         }
@@ -238,7 +236,7 @@ class PieceSinistreController extends AbstractController
         $entityCanvas = $this->constante->getEntityCanvas(Document::class);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
         
-        return $this->render("components/_" . $usage . "_generic_list_component.html.twig", [
+        return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Document::class),
             'serverRootName' => $this->getServerRootName(Document::class),

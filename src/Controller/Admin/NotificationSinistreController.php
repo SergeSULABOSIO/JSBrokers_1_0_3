@@ -225,7 +225,7 @@ class NotificationSinistreController extends AbstractController
      * Retourne la liste des contacts pour une notification de sinistre donnée.
      */
     #[Route('/api/{id}/contacts/{usage}', name: 'api.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(int $id, ?string $usage): Response
+    public function getContactsListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
         if ($id !== 0) {

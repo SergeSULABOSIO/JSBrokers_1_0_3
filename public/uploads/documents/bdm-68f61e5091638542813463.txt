@@ -1,0 +1,2273 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Hôte : 127.0.0.1
+-- Généré le : lun. 20 oct. 2025 à 12:26
+-- Version du serveur : 10.4.32-MariaDB
+-- Version de PHP : 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Base de données : `bdm`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `article`
+--
+
+CREATE TABLE `article` (
+  `id` int(11) NOT NULL,
+  `tranche_id` int(11) DEFAULT NULL,
+  `note_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `montant` double DEFAULT NULL,
+  `id_poste` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `article`
+--
+
+INSERT INTO `article` (`id`, `tranche_id`, `note_id`, `nom`, `montant`, `id_poste`) VALUES
+(202, 49, 73, 'Commission ordinaire', 5800, 65),
+(203, 47, 74, 'Commission ordinaire', 1160, 64),
+(250, 48, 88, 'Commission ordinaire', 5800, 65);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `assureur`
+--
+
+CREATE TABLE `assureur` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `adresse_physique` varchar(255) DEFAULT NULL,
+  `numimpot` varchar(255) NOT NULL,
+  `idnat` varchar(255) NOT NULL,
+  `rccm` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `assureur`
+--
+
+INSERT INTO `assureur` (`id`, `entreprise_id`, `nom`, `email`, `url`, `adresse_physique`, `numimpot`, `idnat`, `rccm`) VALUES
+(1, 1, 'SFA CONGO SA', 'infos@sfa.com', 'http://www.sfa-congo.cd', 'Gombe, Kinshasa / RDC', 'IND004578', 'ID0478800', 'CFRML7878'),
+(2, 1, 'RAWSUR RDC SA', 'infos@rawsur.com', 'https://www.rawsur.com', 'Kinshasa / Gombe, RDC', 'IND0045', 'ID00478', 'RCCM14454');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `autorite_fiscale`
+--
+
+CREATE TABLE `autorite_fiscale` (
+  `id` int(11) NOT NULL,
+  `taxe_id` int(11) DEFAULT NULL,
+  `note_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `abreviation` varchar(10) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `autorite_fiscale`
+--
+
+INSERT INTO `autorite_fiscale` (`id`, `taxe_id`, `note_id`, `nom`, `abreviation`) VALUES
+(1, 1, NULL, 'Direction Générale des Impôts', 'DGI'),
+(5, 2, NULL, 'Autorité de Régulation des Assurance en RDC', 'ARCA');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `avenant`
+--
+
+CREATE TABLE `avenant` (
+  `id` int(11) NOT NULL,
+  `cotation_id` int(11) DEFAULT NULL,
+  `starting_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `ending_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `description` varchar(255) NOT NULL,
+  `reference_police` varchar(255) NOT NULL,
+  `numero` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `avenant`
+--
+
+INSERT INTO `avenant` (`id`, `cotation_id`, `starting_at`, `ending_at`, `created_at`, `updated_at`, `description`, `reference_police`, `numero`) VALUES
+(29, 38, '2025-01-04 00:01:00', '2026-01-10 23:59:00', '2025-04-11 01:22:53', '2025-05-31 15:54:58', 'Couverture en place', 'SVVSDFEE1204578-2025', '0'),
+(30, 39, '2025-01-02 00:01:00', '2026-01-02 23:59:00', '2025-04-12 22:18:54', '2025-07-12 20:41:25', 'Couverture en place', '6645SDFEE1204578-2025', '0');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `bordereau`
+--
+
+CREATE TABLE `bordereau` (
+  `id` int(11) NOT NULL,
+  `assureur_id` int(11) DEFAULT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `type` int(11) NOT NULL,
+  `nom` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `received_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `montant_ttc` double NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `bordereau`
+--
+
+INSERT INTO `bordereau` (`id`, `assureur_id`, `invite_id`, `type`, `nom`, `created_at`, `updated_at`, `received_at`, `montant_ttc`) VALUES
+(1, 2, 1, 0, 'Bordereau Rawsur Mars 2025', '2025-04-19 15:40:41', '2025-05-17 09:46:59', '2025-04-19 15:40:00', 130000);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `chargement`
+--
+
+CREATE TABLE `chargement` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(20) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `fonction` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `chargement`
+--
+
+INSERT INTO `chargement` (`id`, `entreprise_id`, `nom`, `description`, `fonction`) VALUES
+(1, 1, 'Prime nette', 'Prime nette avant toutes les taxes', 1),
+(2, 1, 'Fronting', 'Commission de cession du risque vers les réassureurs. Cette commission est fixée à 17.65% de la prime de réassurance', 2),
+(3, 1, 'Accessoire', 'Frais accessoire ou administrative', 3),
+(4, 1, 'Frais Arca', 'Frais de surveillance dû au régulateur du marché.', 4),
+(5, 1, 'Tva', 'Taxe sur la valeur ajoutée', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `chargement_pour_prime`
+--
+
+CREATE TABLE `chargement_pour_prime` (
+  `id` int(11) NOT NULL,
+  `type_id` int(11) DEFAULT NULL,
+  `cotation_id` int(11) DEFAULT NULL,
+  `montant_flat_exceptionel` double DEFAULT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `nom` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `chargement_pour_prime`
+--
+
+INSERT INTO `chargement_pour_prime` (`id`, `type_id`, `cotation_id`, `montant_flat_exceptionel`, `created_at`, `updated_at`, `nom`) VALUES
+(153, 1, 38, 10000, '2025-04-10 23:40:35', '2025-05-31 15:54:58', 'Prime nette'),
+(154, 3, 38, 50, '2025-04-10 23:41:28', '2025-05-31 15:54:58', 'Frais admin'),
+(155, 4, 38, 25, '2025-04-10 23:41:46', '2025-05-31 15:54:58', 'Frais Arca'),
+(156, 5, 38, 160, '2025-04-10 23:42:01', '2025-05-31 15:54:58', 'TVA (16%)'),
+(157, 5, 39, 9500, '2025-04-12 22:18:54', '2025-07-12 20:41:25', 'TVA (16%)'),
+(158, 1, 39, 100000, '2025-04-12 22:20:07', '2025-07-12 20:41:25', 'PRIME NETTE'),
+(159, 3, 39, 1250, '2025-04-12 22:20:37', '2025-07-12 20:41:25', 'ACCESSOIRE'),
+(160, 4, 39, 160, '2025-04-12 22:20:55', '2025-07-12 20:41:25', 'FRAIS ARCA');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `classeur`
+--
+
+CREATE TABLE `classeur` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `classeur`
+--
+
+INSERT INTO `classeur` (`id`, `entreprise_id`, `nom`, `description`) VALUES
+(1, 1, 'POLICES - 2024', 'Les pièces liées à la production, tels que les polices, les propositions, les formulaires, etc.'),
+(2, 1, 'SINISTRES - 2024', 'Ce dossier contient tous les documents qui ont trait aux sinistres.'),
+(3, 1, 'PREUVES DES PAIEMENTS', 'Classeur des preuves des paiements');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `client`
+--
+
+CREATE TABLE `client` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `groupe_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `adresse` varchar(255) DEFAULT NULL,
+  `telephone` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `exonere` tinyint(1) NOT NULL,
+  `numimpot` varchar(255) DEFAULT NULL,
+  `rccm` varchar(255) DEFAULT NULL,
+  `idnat` varchar(255) DEFAULT NULL,
+  `civilite` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `client`
+--
+
+INSERT INTO `client` (`id`, `entreprise_id`, `groupe_id`, `nom`, `adresse`, `telephone`, `email`, `exonere`, `numimpot`, `rccm`, `idnat`, `civilite`) VALUES
+(1, 1, 1, 'BGFibank RDC SA', 'Kinshasa, Gombe / RDC', '+243828727706', 'info@bgfibank.com', 0, 'Nif47001', 'Rccm45454546', 'IDna47001', 2),
+(2, 1, 2, 'Kibali Gold Mines', 'Lubumbashi - RDC', '+243828727706', 'nj@gmail.com', 1, 'Nif47000', 'Rccm45454545', 'IDna47000', 2),
+(3, 1, 2, 'KAMOA', 'Lubumbashi - RDC', '+243828727706', 'nj@gmail.com', 0, 'Nif47000', 'Rccm45454545', 'IDna47000', 2),
+(4, 1, 2, 'GLENCORE SA', 'Lubumbashi - RDC', '+243488403514', 'nj@gmail.com', 0, 'Nif47001', 'Rccm45454546', 'IDna47001', 2),
+(5, 1, 3, 'Jean-Mark KABUNDA', 'Kinshasa - Gombe / RDC', '+243828727706', 'jeanmarkkabund@gmail.com', 0, NULL, NULL, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `client_partenaire`
+--
+
+CREATE TABLE `client_partenaire` (
+  `client_id` int(11) NOT NULL,
+  `partenaire_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `client_partenaire`
+--
+
+INSERT INTO `client_partenaire` (`client_id`, `partenaire_id`) VALUES
+(1, 1),
+(2, 2),
+(3, 2);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `compte_bancaire`
+--
+
+CREATE TABLE `compte_bancaire` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `intitule` varchar(255) NOT NULL,
+  `numero` varchar(255) NOT NULL,
+  `banque` varchar(255) NOT NULL,
+  `code_swift` varchar(255) NOT NULL,
+  `nom` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `compte_bancaire`
+--
+
+INSERT INTO `compte_bancaire` (`id`, `entreprise_id`, `intitule`, `numero`, `banque`, `code_swift`, `nom`) VALUES
+(1, 1, 'ALLIED INSURANCE BROKERS', '001245454121212-11012', 'Equity BCDC', '00145CDKIN', 'Compte Equity - USD'),
+(2, 1, 'ALLIED INSURANCE BROKERS', '001245454121212-11013', 'RAWBANK RDC SA', 'CFKIN45452', 'Compte Rawbank - USD');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `condition_partage`
+--
+
+CREATE TABLE `condition_partage` (
+  `id` int(11) NOT NULL,
+  `partenaire_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `formule` int(11) NOT NULL,
+  `seuil` double NOT NULL,
+  `taux` double DEFAULT NULL,
+  `critere_risque` int(11) NOT NULL,
+  `piste_id` int(11) DEFAULT NULL,
+  `unite_mesure` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `condition_partage`
+--
+
+INSERT INTO `condition_partage` (`id`, `partenaire_id`, `nom`, `formule`, `seuil`, `taux`, `critere_risque`, `piste_id`, `unite_mesure`) VALUES
+(4, NULL, 'Condition de partage spéciale 2025', 0, 140, 0.01, 0, NULL, NULL),
+(7, 1, 'Condition teste', 0, 80, 0.1, 1, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `contact`
+--
+
+CREATE TABLE `contact` (
+  `id` int(11) NOT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `notification_sinistre_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `telephone` varchar(255) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `fonction` varchar(255) DEFAULT NULL,
+  `type` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `contact`
+--
+
+INSERT INTO `contact` (`id`, `client_id`, `notification_sinistre_id`, `nom`, `telephone`, `email`, `fonction`, `type`) VALUES
+(36, NULL, NULL, 'ELEMBO ENDJINGA Jean-paul', '+243828727706', 'admin@js-brokers.com', 'Directeur Juridique', 2),
+(37, NULL, 102, 'ELEMBO ENDJINGA Jean-paul', '+243828727706', 'admin@js-brokers.com', 'Directeur Juridique', 2),
+(40, NULL, 102, 'SULA ESSA Mardoché', '+243828727706', 'admin@js-brokers.com', 'Dir Ops', 2),
+(43, NULL, 102, 'Julien MVUMU', '+243828727706', 'admin@js-brokers.com', 'Directeur Juridique', 2),
+(44, NULL, 187, 'ELEMBO ENDJINGA Jean-paul', '+243828727706', 'admin@js-brokers.com', 'Directeur Juridique', 2),
+(45, NULL, 187, 'SULA BOSIO Serge', '+243828727706', 'bobo@js-brokers.com', 'Directeur des Opérations', 2);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `cotation`
+--
+
+CREATE TABLE `cotation` (
+  `id` int(11) NOT NULL,
+  `assureur_id` int(11) DEFAULT NULL,
+  `piste_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `duree` int(11) NOT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `cotation`
+--
+
+INSERT INTO `cotation` (`id`, `assureur_id`, `piste_id`, `nom`, `duree`, `created_at`, `updated_at`) VALUES
+(38, 1, 42, 'Cotation - SFA (option 12 mois)', 12, '2025-04-10 23:39:31', '2025-05-31 15:54:58'),
+(39, 2, 43, 'Cotation - RAWSUR, Option pour 12 mois.', 12, '2025-04-12 22:18:54', '2025-07-12 20:41:25');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `doctrine_migration_versions`
+--
+
+CREATE TABLE `doctrine_migration_versions` (
+  `version` varchar(191) NOT NULL,
+  `executed_at` datetime DEFAULT NULL,
+  `execution_time` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+--
+-- Déchargement des données de la table `doctrine_migration_versions`
+--
+
+INSERT INTO `doctrine_migration_versions` (`version`, `executed_at`, `execution_time`) VALUES
+('DoctrineMigrations\\Version20250113212617', '2025-01-13 22:26:22', 7776),
+('DoctrineMigrations\\Version20250116210742', '2025-01-16 22:07:54', 44),
+('DoctrineMigrations\\Version20250125152430', '2025-01-25 16:24:49', 63),
+('DoctrineMigrations\\Version20250125153238', '2025-01-25 16:32:42', 17),
+('DoctrineMigrations\\Version20250125153801', '2025-01-25 16:38:05', 17),
+('DoctrineMigrations\\Version20250125153920', '2025-01-25 16:39:25', 18),
+('DoctrineMigrations\\Version20250125160656', '2025-01-25 17:07:00', 165),
+('DoctrineMigrations\\Version20250125161348', '2025-01-25 17:13:52', 17),
+('DoctrineMigrations\\Version20250131143557', '2025-01-31 15:36:12', 194),
+('DoctrineMigrations\\Version20250201142433', '2025-02-01 15:24:37', 21),
+('DoctrineMigrations\\Version20250203111110', '2025-02-03 12:11:19', 231),
+('DoctrineMigrations\\Version20250203130920', '2025-02-03 14:09:29', 24),
+('DoctrineMigrations\\Version20250204181450', '2025-02-04 19:15:00', 35),
+('DoctrineMigrations\\Version20250204214707', '2025-02-04 22:47:17', 20),
+('DoctrineMigrations\\Version20250207213144', '2025-02-07 22:31:54', 194),
+('DoctrineMigrations\\Version20250207213753', '2025-02-07 22:37:57', 18),
+('DoctrineMigrations\\Version20250207214318', '2025-02-07 22:43:29', 125),
+('DoctrineMigrations\\Version20250207215014', '2025-02-07 22:50:19', 461),
+('DoctrineMigrations\\Version20250208094849', '2025-02-08 10:49:00', 130),
+('DoctrineMigrations\\Version20250208095157', '2025-02-08 10:52:04', 202),
+('DoctrineMigrations\\Version20250208102601', '2025-02-08 11:26:05', 33),
+('DoctrineMigrations\\Version20250208233043', '2025-02-09 00:30:53', 238),
+('DoctrineMigrations\\Version20250208233206', '2025-02-09 00:32:16', 126),
+('DoctrineMigrations\\Version20250211133038', '2025-02-11 14:30:46', 121),
+('DoctrineMigrations\\Version20250211133419', '2025-02-11 14:34:25', 14),
+('DoctrineMigrations\\Version20250217110932', '2025-02-17 12:09:43', 76),
+('DoctrineMigrations\\Version20250226094804', '2025-02-26 10:48:13', 76),
+('DoctrineMigrations\\Version20250228161123', '2025-02-28 17:11:32', 184),
+('DoctrineMigrations\\Version20250301190135', '2025-03-01 20:01:48', 47),
+('DoctrineMigrations\\Version20250301200412', '2025-03-01 21:04:19', 20),
+('DoctrineMigrations\\Version20250302172606', '2025-03-02 18:26:15', 58),
+('DoctrineMigrations\\Version20250302174348', '2025-03-02 18:43:57', 19),
+('DoctrineMigrations\\Version20250303140211', '2025-03-03 15:02:19', 70),
+('DoctrineMigrations\\Version20250303141506', '2025-03-03 15:15:15', 17),
+('DoctrineMigrations\\Version20250304112749', '2025-03-04 12:28:04', 65),
+('DoctrineMigrations\\Version20250314132757', '2025-03-14 14:28:06', 52),
+('DoctrineMigrations\\Version20250314133318', '2025-03-14 14:33:21', 14),
+('DoctrineMigrations\\Version20250314134401', '2025-03-14 14:44:05', 13),
+('DoctrineMigrations\\Version20250331154228', '2025-03-31 17:42:42', 47),
+('DoctrineMigrations\\Version20250331224929', '2025-04-01 00:49:36', 17),
+('DoctrineMigrations\\Version20250404124035', '2025-04-04 14:40:51', 211),
+('DoctrineMigrations\\Version20250405122347', '2025-04-05 14:23:56', 35),
+('DoctrineMigrations\\Version20250417124425', '2025-04-17 14:44:32', 202),
+('DoctrineMigrations\\Version20250417133011', '2025-04-17 15:30:21', 18),
+('DoctrineMigrations\\Version20250421154421', '2025-04-21 17:44:33', 73),
+('DoctrineMigrations\\Version20250424134825', '2025-04-24 15:48:40', 81),
+('DoctrineMigrations\\Version20250424135133', '2025-04-24 15:51:38', 28),
+('DoctrineMigrations\\Version20250424135239', '2025-04-24 15:52:45', 20),
+('DoctrineMigrations\\Version20250424135418', '2025-04-24 15:54:23', 14),
+('DoctrineMigrations\\Version20250424135648', '2025-04-24 15:56:52', 14),
+('DoctrineMigrations\\Version20250424151610', '2025-04-24 17:16:15', 152),
+('DoctrineMigrations\\Version20250430141532', '2025-04-30 16:15:44', 116),
+('DoctrineMigrations\\Version20250501214056', '2025-05-01 23:41:06', 176),
+('DoctrineMigrations\\Version20250502085707', '2025-05-02 10:58:06', 66),
+('DoctrineMigrations\\Version20250502085936', '2025-05-02 10:59:42', 138),
+('DoctrineMigrations\\Version20250502142224', '2025-05-02 16:22:39', 93),
+('DoctrineMigrations\\Version20250502142549', '2025-05-02 16:25:56', 147),
+('DoctrineMigrations\\Version20250502150146', '2025-05-02 17:01:55', 31),
+('DoctrineMigrations\\Version20250502150310', '2025-05-02 17:03:21', 137),
+('DoctrineMigrations\\Version20250514155450', '2025-05-14 17:55:02', 62),
+('DoctrineMigrations\\Version20250517102705', '2025-05-17 12:27:17', 77),
+('DoctrineMigrations\\Version20250521132253', '2025-05-21 15:23:05', 71),
+('DoctrineMigrations\\Version20250606121602', '2025-06-06 14:16:16', 117),
+('DoctrineMigrations\\Version20250612152944', '2025-06-12 17:29:59', 165),
+('DoctrineMigrations\\Version20250829130706', '2025-08-29 15:08:28', 215),
+('DoctrineMigrations\\Version20250901170848', '2025-09-01 19:09:03', 164);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `document`
+--
+
+CREATE TABLE `document` (
+  `id` int(11) NOT NULL,
+  `classeur_id` int(11) DEFAULT NULL,
+  `piece_sinistre_id` int(11) DEFAULT NULL,
+  `offre_indemnisation_sinistre_id` int(11) DEFAULT NULL,
+  `cotation_id` int(11) DEFAULT NULL,
+  `avenant_id` int(11) DEFAULT NULL,
+  `tache_id` int(11) DEFAULT NULL,
+  `feedback_id` int(11) DEFAULT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `bordereau_id` int(11) DEFAULT NULL,
+  `compte_bancaire_id` int(11) DEFAULT NULL,
+  `piste_id` int(11) DEFAULT NULL,
+  `partenaire_id` int(11) DEFAULT NULL,
+  `paiement_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `nom_fichier_stocke` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `document`
+--
+
+INSERT INTO `document` (`id`, `classeur_id`, `piece_sinistre_id`, `offre_indemnisation_sinistre_id`, `cotation_id`, `avenant_id`, `tache_id`, `feedback_id`, `client_id`, `bordereau_id`, `compte_bancaire_id`, `piste_id`, `partenaire_id`, `paiement_id`, `nom`, `created_at`, `updated_at`, `nom_fichier_stocke`) VALUES
+(69, 2, 9, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Formulaire signé par le client', '2025-08-29 17:47:28', '2025-09-01 12:26:45', 'entretien-de-mimie-68b1d6ae28d2e012245868.xlsx'),
+(70, 2, 9, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'PV du constat de la police', '2025-08-31 22:28:40', '2025-09-01 12:27:13', 'renewal-list-upto-31-august-2025-68b4b078c01c0961538262.xlsx'),
+(71, 2, NULL, 9, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Offre d\'indemnisation', '2025-09-01 00:26:04', '2025-09-01 00:26:04', 'renewal-list-upto-31-august-2025-68b4cbfceb48f945729252.xlsx'),
+(72, 2, NULL, NULL, NULL, NULL, 14, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Attestation d\'indemnité signée par le client et la victime.', '2025-09-01 12:00:23', '2025-09-01 12:03:00', 'final-bound-bgfi-bbb-ecc-client-mrc-slip-2025-68b56f5494e38813754379.docx'),
+(75, 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 63, 'POP', '2025-09-02 15:01:25', '2025-09-02 15:01:26', 'bureau-324-1-68b6eaa6077f9982031024.docx'),
+(76, 2, 11, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Doc de test', '2025-09-03 17:05:21', '2025-09-03 17:05:22', 'cv-s-aon-drc-metro-68b8593243491957126274.docx'),
+(77, 2, 11, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Doc de test autre', '2025-09-03 17:10:36', '2025-09-03 17:10:36', 'modele-de-lettre-d-engagement-68b85a6c53d29703981450.docx'),
+(78, 1, NULL, NULL, NULL, NULL, NULL, 6, NULL, NULL, NULL, NULL, NULL, NULL, 'Doc de test', '2025-09-03 17:47:55', '2025-09-03 17:47:55', 'draft-mandat-de-courtage-68b8632b57b74050384045.docx'),
+(79, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Doc de test', '2025-10-20 00:43:28', '2025-10-20 00:43:29', 'nicd-interim-mpox-clinical-guidelines-june-2025-1-68f5699191b91393158138.pdf'),
+(80, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'PV de la réunion', '2025-10-20 00:50:28', '2025-10-20 00:50:28', '20250425-mpox-hcw-toolkit-brochure-fr-68f56b34b271e998086349.pdf'),
+(81, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'DOC Test', '2025-10-20 10:23:34', '2025-10-20 10:23:34', 'dsctest-6059-68f5f186b0561015567280.jpg'),
+(82, 2, NULL, NULL, NULL, NULL, NULL, 17, NULL, NULL, NULL, NULL, NULL, NULL, 'PV de la réunion', '2025-10-20 10:49:51', '2025-10-20 10:49:51', 'dsc-6059-68f5f7af97b80667498723.tif'),
+(83, 2, NULL, NULL, NULL, NULL, 57, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Doc de test', '2025-10-20 10:51:04', '2025-10-20 10:51:04', 'dsc-6059-68f5f7f8a6f0b546693670.tif');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `entreprise`
+--
+
+CREATE TABLE `entreprise` (
+  `id` int(11) NOT NULL,
+  `utilisateur_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `licence` varchar(255) NOT NULL,
+  `adresse` varchar(255) NOT NULL,
+  `telephone` varchar(255) NOT NULL,
+  `rccm` varchar(255) NOT NULL,
+  `idnat` varchar(255) NOT NULL,
+  `numimpot` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `thumbnail` varchar(255) DEFAULT NULL,
+  `capital_sociale` double DEFAULT NULL,
+  `siteweb` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `entreprise`
+--
+
+INSERT INTO `entreprise` (`id`, `utilisateur_id`, `nom`, `licence`, `adresse`, `telephone`, `rccm`, `idnat`, `numimpot`, `created_at`, `updated_at`, `thumbnail`, `capital_sociale`, `siteweb`) VALUES
+(1, 1, 'AIB RDC Sarl', '557754', 'Av. de la Gombe, Kinshasa / RDC', '+33 5 54 18 91 11', 'RCCM-39232209', 'IDNAT-94453482', 'NUMIMP-1221821', '2025-01-14 08:51:30', '2025-04-01 15:49:52', 'stockcake-protective-insurance-agent-1728165178-67862fe53e393163260350.jpg', 2000000, 'https://www.aib-brokers.com');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `feedback`
+--
+
+CREATE TABLE `feedback` (
+  `id` int(11) NOT NULL,
+  `tache_id` int(11) DEFAULT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `description` varchar(255) NOT NULL,
+  `next_action_at` datetime DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `next_action` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `type` int(11) NOT NULL,
+  `has_next_action` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `feedback`
+--
+
+INSERT INTO `feedback` (`id`, `tache_id`, `invite_id`, `description`, `next_action_at`, `next_action`, `created_at`, `updated_at`, `type`, `has_next_action`) VALUES
+(13, 14, NULL, 'C\'est fait bro!', NULL, NULL, '2025-09-05 19:13:51', '2025-09-05 19:13:51', 0, 0),
+(14, 18, NULL, 'On a fiat avec succès!', NULL, NULL, '2025-09-05 19:15:31', '2025-09-05 19:15:31', 0, 0),
+(15, 55, NULL, 'C\'est fait.\r\nNous nous sommes vus, et nous avons passé en revue les listes des actifs à assurer.\r\nA nous de faire les offres financières.', '2025-10-19 23:22:00', 'Produire les offres pour le client', '2025-10-20 00:22:31', '2025-10-20 00:22:31', 4, 1),
+(16, 56, NULL, 'La réunion a eut leu et le client est content de nos services.', '2025-10-20 09:19:00', 'Produire les offres.', '2025-10-20 10:19:45', '2025-10-20 10:19:45', 0, 1),
+(17, 57, NULL, 'Organiser une réunion', NULL, NULL, '2025-10-20 10:48:40', '2025-10-20 10:48:40', 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `groupe`
+--
+
+CREATE TABLE `groupe` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `groupe`
+--
+
+INSERT INTO `groupe` (`id`, `entreprise_id`, `nom`, `description`) VALUES
+(1, 1, 'Assurances et Banques', 'Ce groupe contient les banques ou les sociétés d\'assurance'),
+(2, 1, 'Sociétés Minières', 'Ce groupe contient les sociétés minières'),
+(3, 1, 'Particuliers', 'Les individus simples qui ne sont pas des entreprises ou organisations. Donc, des simples ménages.'),
+(4, 1, 'Autres Stés', 'Autres Clients dont la nature d\'activités exercée ne permet pas de les classifier.');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `invite`
+--
+
+CREATE TABLE `invite` (
+  `id` int(11) NOT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `email` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `nom` varchar(255) DEFAULT NULL,
+  `proprietaire` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `invite`
+--
+
+INSERT INTO `invite` (`id`, `invite_id`, `entreprise_id`, `email`, `created_at`, `updated_at`, `nom`, `proprietaire`) VALUES
+(1, NULL, 1, 'admin@js-brokers.com', '2025-01-14 08:51:30', '2025-05-02 17:23:09', 'Mr. Serge SULA BOSIO', 1),
+(2, 1, 1, 'vesafe@js-brokers.com', '2025-05-02 00:45:54', '2025-05-02 17:25:53', 'Victor ESFA LOLONGI', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `messenger_messages`
+--
+
+CREATE TABLE `messenger_messages` (
+  `id` bigint(20) NOT NULL,
+  `body` longtext NOT NULL,
+  `headers` longtext NOT NULL,
+  `queue_name` varchar(190) NOT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `available_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `delivered_at` datetime DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `messenger_messages`
+--
+
+INSERT INTO `messenger_messages` (`id`, `body`, `headers`, `queue_name`, `created_at`, `available_at`, `delivered_at`) VALUES
+(2, 'O:36:\\\"Symfony\\\\Component\\\\Messenger\\\\Envelope\\\":2:{s:44:\\\"\\0Symfony\\\\Component\\\\Messenger\\\\Envelope\\0stamps\\\";a:1:{s:46:\\\"Symfony\\\\Component\\\\Messenger\\\\Stamp\\\\BusNameStamp\\\";a:1:{i:0;O:46:\\\"Symfony\\\\Component\\\\Messenger\\\\Stamp\\\\BusNameStamp\\\":1:{s:55:\\\"\\0Symfony\\\\Component\\\\Messenger\\\\Stamp\\\\BusNameStamp\\0busName\\\";s:21:\\\"messenger.bus.default\\\";}}}s:45:\\\"\\0Symfony\\\\Component\\\\Messenger\\\\Envelope\\0message\\\";O:51:\\\"Symfony\\\\Component\\\\Mailer\\\\Messenger\\\\SendEmailMessage\\\":2:{s:60:\\\"\\0Symfony\\\\Component\\\\Mailer\\\\Messenger\\\\SendEmailMessage\\0message\\\";O:39:\\\"Symfony\\\\Bridge\\\\Twig\\\\Mime\\\\TemplatedEmail\\\":5:{i:0;s:38:\\\"home/mail/message_invitation.html.twig\\\";i:1;N;i:2;a:2:{s:6:\\\"invite\\\";O:17:\\\"App\\\\Entity\\\\Invite\\\":18:{s:21:\\\"\\0App\\\\Entity\\\\Invite\\0id\\\";i:2;s:24:\\\"\\0App\\\\Entity\\\\Invite\\0email\\\";s:19:\\\"user@js-brokers.com\\\";s:28:\\\"\\0App\\\\Entity\\\\Invite\\0createdAt\\\";O:17:\\\"DateTimeImmutable\\\":3:{s:4:\\\"date\\\";s:26:\\\"2025-05-02 00:45:54.674498\\\";s:13:\\\"timezone_type\\\";i:3;s:8:\\\"timezone\\\";s:13:\\\"Europe/Berlin\\\";}s:28:\\\"\\0App\\\\Entity\\\\Invite\\0updatedAt\\\";O:17:\\\"DateTimeImmutable\\\":3:{s:4:\\\"date\\\";s:26:\\\"2025-05-02 00:45:54.674488\\\";s:13:\\\"timezone_type\\\";i:3;s:8:\\\"timezone\\\";s:13:\\\"Europe/Berlin\\\";}s:25:\\\"\\0App\\\\Entity\\\\Invite\\0pistes\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:25:\\\"\\0App\\\\Entity\\\\Invite\\0taches\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:27:\\\"\\0App\\\\Entity\\\\Invite\\0feedback\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:29:\\\"\\0App\\\\Entity\\\\Invite\\0bordereaus\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:33:\\\"\\0App\\\\Entity\\\\Invite\\0pieceSinistres\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:40:\\\"\\0App\\\\Entity\\\\Invite\\0notificationSinistres\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:22:\\\"\\0App\\\\Entity\\\\Invite\\0nom\\\";s:7:\\\"UN TEST\\\";s:25:\\\"\\0App\\\\Entity\\\\Invite\\0invite\\\";N;s:29:\\\"\\0App\\\\Entity\\\\Invite\\0assistants\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:29:\\\"\\0App\\\\Entity\\\\Invite\\0entreprise\\\";O:36:\\\"Proxies\\\\__CG__\\\\App\\\\Entity\\\\Entreprise\\\":31:{s:25:\\\"\\0App\\\\Entity\\\\Entreprise\\0id\\\";i:1;s:26:\\\"\\0App\\\\Entity\\\\Entreprise\\0nom\\\";s:12:\\\"AIB RDC Sarl\\\";s:30:\\\"\\0App\\\\Entity\\\\Entreprise\\0licence\\\";s:6:\\\"557754\\\";s:30:\\\"\\0App\\\\Entity\\\\Entreprise\\0adresse\\\";s:31:\\\"Av. de la Gombe, Kinshasa / RDC\\\";s:32:\\\"\\0App\\\\Entity\\\\Entreprise\\0telephone\\\";s:17:\\\"+33 5 54 18 91 11\\\";s:27:\\\"\\0App\\\\Entity\\\\Entreprise\\0rccm\\\";s:13:\\\"RCCM-39232209\\\";s:28:\\\"\\0App\\\\Entity\\\\Entreprise\\0idnat\\\";s:14:\\\"IDNAT-94453482\\\";s:31:\\\"\\0App\\\\Entity\\\\Entreprise\\0numimpot\\\";s:14:\\\"NUMIMP-1221821\\\";s:32:\\\"\\0App\\\\Entity\\\\Entreprise\\0createdAt\\\";O:17:\\\"DateTimeImmutable\\\":3:{s:4:\\\"date\\\";s:26:\\\"2025-01-14 08:51:30.000000\\\";s:13:\\\"timezone_type\\\";i:3;s:8:\\\"timezone\\\";s:13:\\\"Europe/Berlin\\\";}s:32:\\\"\\0App\\\\Entity\\\\Entreprise\\0updatedAt\\\";O:17:\\\"DateTimeImmutable\\\":3:{s:4:\\\"date\\\";s:26:\\\"2025-04-01 15:49:52.000000\\\";s:13:\\\"timezone_type\\\";i:3;s:8:\\\"timezone\\\";s:13:\\\"Europe/Berlin\\\";}s:32:\\\"\\0App\\\\Entity\\\\Entreprise\\0thumbnail\\\";s:74:\\\"stockcake-protective-insurance-agent-1728165178-67862fe53e393163260350.jpg\\\";s:36:\\\"\\0App\\\\Entity\\\\Entreprise\\0thumbnailFile\\\";N;s:34:\\\"\\0App\\\\Entity\\\\Entreprise\\0utilisateur\\\";O:22:\\\"App\\\\Entity\\\\Utilisateur\\\":11:{s:26:\\\"\\0App\\\\Entity\\\\Utilisateur\\0id\\\";i:1;s:29:\\\"\\0App\\\\Entity\\\\Utilisateur\\0email\\\";s:20:\\\"admin@js-brokers.com\\\";s:29:\\\"\\0App\\\\Entity\\\\Utilisateur\\0roles\\\";a:0:{}s:32:\\\"\\0App\\\\Entity\\\\Utilisateur\\0password\\\";s:60:\\\"$2y$13$dl6vyAaM6EHKPhmOlFMh2edTXya.AEm2CpOtSYgLCaNnaUX3MNbzO\\\";s:27:\\\"\\0App\\\\Entity\\\\Utilisateur\\0nom\\\";s:10:\\\"Serge SULA\\\";s:34:\\\"\\0App\\\\Entity\\\\Utilisateur\\0isVerified\\\";b:1;s:33:\\\"\\0App\\\\Entity\\\\Utilisateur\\0createdAt\\\";O:17:\\\"DateTimeImmutable\\\":3:{s:4:\\\"date\\\";s:26:\\\"2025-01-13 22:26:55.000000\\\";s:13:\\\"timezone_type\\\";i:3;s:8:\\\"timezone\\\";s:13:\\\"Europe/Berlin\\\";}s:33:\\\"\\0App\\\\Entity\\\\Utilisateur\\0updatedAt\\\";O:17:\\\"DateTimeImmutable\\\":3:{s:4:\\\"date\\\";s:26:\\\"2025-04-24 12:02:43.000000\\\";s:13:\\\"timezone_type\\\";i:3;s:8:\\\"timezone\\\";s:13:\\\"Europe/Berlin\\\";}s:35:\\\"\\0App\\\\Entity\\\\Utilisateur\\0entreprises\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:30:\\\"\\0App\\\\Entity\\\\Utilisateur\\0locale\\\";s:2:\\\"fr\\\";s:35:\\\"\\0App\\\\Entity\\\\Utilisateur\\0connectedTo\\\";r:52;}s:37:\\\"\\0App\\\\Entity\\\\Entreprise\\0connectedUsers\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:32:\\\"\\0App\\\\Entity\\\\Entreprise\\0classeurs\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:32:\\\"\\0App\\\\Entity\\\\Entreprise\\0assureurs\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:31:\\\"\\0App\\\\Entity\\\\Entreprise\\0monnaies\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:38:\\\"\\0App\\\\Entity\\\\Entreprise\\0compteBancaires\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:43:\\\"\\0App\\\\Entity\\\\Entreprise\\0modelePieceSinistres\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:34:\\\"\\0App\\\\Entity\\\\Entreprise\\0partenaires\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:34:\\\"\\0App\\\\Entity\\\\Entreprise\\0chargements\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:30:\\\"\\0App\\\\Entity\\\\Entreprise\\0risques\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:34:\\\"\\0App\\\\Entity\\\\Entreprise\\0typerevenus\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:28:\\\"\\0App\\\\Entity\\\\Entreprise\\0taxes\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:30:\\\"\\0App\\\\Entity\\\\Entreprise\\0clients\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:29:\\\"\\0App\\\\Entity\\\\Entreprise\\0taches\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:31:\\\"\\0App\\\\Entity\\\\Entreprise\\0feedback\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:30:\\\"\\0App\\\\Entity\\\\Entreprise\\0invites\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:30:\\\"\\0App\\\\Entity\\\\Entreprise\\0groupes\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:0;}s:37:\\\"\\0App\\\\Entity\\\\Entreprise\\0capitalSociale\\\";d:2000000;s:30:\\\"\\0App\\\\Entity\\\\Entreprise\\0siteweb\\\";s:27:\\\"https://www.aib-brokers.com\\\";}s:31:\\\"\\0App\\\\Entity\\\\Invite\\0proprietaire\\\";b:0;s:24:\\\"\\0App\\\\Entity\\\\Invite\\0notes\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:0:{}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:33:\\\"\\0App\\\\Entity\\\\Invite\\0rolesEnFinance\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:1:{i:0;O:25:\\\"App\\\\Entity\\\\RolesEnFinance\\\":13:{s:29:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0id\\\";i:2;s:30:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0nom\\\";s:39:\\\"Droits d\\\'accèss dans le module Finance\\\";s:40:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessMonnaie\\\";a:1:{i:0;i:0;}s:47:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessCompteBancaire\\\";a:1:{i:0;i:0;}s:37:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessTaxe\\\";a:1:{i:0;i:0;}s:33:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0invite\\\";r:11;s:43:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessTypeRevenu\\\";a:1:{i:0;i:0;}s:40:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessTranche\\\";a:1:{i:0;i:0;}s:47:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessTypeChargement\\\";a:1:{i:0;i:0;}s:37:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessNote\\\";a:1:{i:0;i:0;}s:41:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessPaiement\\\";a:1:{i:0;i:0;}s:42:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessBordereau\\\";a:1:{i:0;i:0;}s:39:\\\"\\0App\\\\Entity\\\\RolesEnFinance\\0accessRevenu\\\";a:1:{i:0;i:0;}}}}s:14:\\\"\\0*\\0initialized\\\";b:1;}s:35:\\\"\\0App\\\\Entity\\\\Invite\\0rolesEnMarketing\\\";O:33:\\\"Doctrine\\\\ORM\\\\PersistentCollection\\\":2:{s:13:\\\"\\0*\\0collection\\\";O:43:\\\"Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\\":1:{s:53:\\\"\\0Doctrine\\\\Common\\\\Collections\\\\ArrayCollection\\0elements\\\";a:1:{i:0;O:27:\\\"App\\\\Entity\\\\RolesEnMarketing\\\":6:{s:31:\\\"\\0App\\\\Entity\\\\RolesEnMarketing\\0id\\\";i:1;s:32:\\\"\\0App\\\\Entity\\\\RolesEnMarketing\\0nom\\\";s:41:\\\"Droits d\\\'accèss dans le module Marketing\\\";s:40:\\\"\\0App\\\\Entity\\\\RolesEnMarketing\\0accessPiste\\\";a:1:{i:0;i:0;}s:40:\\\"\\0App\\\\Entity\\\\RolesEnMarketing\\0accessTache\\\";a:1:{i:0;i:0;}s:43:\\\"\\0App\\\\Entity\\\\RolesEnMarketing\\0accessFeedback\\\";a:1:{i:0;i:0;}s:35:\\\"\\0App\\\\Entity\\\\RolesEnMarketing\\0invite\\\";r:11;}}}s:14:\\\"\\0*\\0initialized\\\";b:1;}}s:10:\\\"entreprise\\\";r:52;}i:3;a:6:{i:0;N;i:1;N;i:2;N;i:3;N;i:4;a:0:{}i:5;a:2:{i:0;O:37:\\\"Symfony\\\\Component\\\\Mime\\\\Header\\\\Headers\\\":2:{s:46:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\Headers\\0headers\\\";a:4:{s:2:\\\"to\\\";a:1:{i:0;O:47:\\\"Symfony\\\\Component\\\\Mime\\\\Header\\\\MailboxListHeader\\\":5:{s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0name\\\";s:2:\\\"To\\\";s:56:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lineLength\\\";i:76;s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lang\\\";N;s:53:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0charset\\\";s:5:\\\"utf-8\\\";s:58:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\MailboxListHeader\\0addresses\\\";a:1:{i:0;O:30:\\\"Symfony\\\\Component\\\\Mime\\\\Address\\\":2:{s:39:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Address\\0address\\\";s:21:\\\"contact@jsbrokers.com\\\";s:36:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Address\\0name\\\";s:0:\\\"\\\";}}}}s:4:\\\"from\\\";a:1:{i:0;O:47:\\\"Symfony\\\\Component\\\\Mime\\\\Header\\\\MailboxListHeader\\\":5:{s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0name\\\";s:4:\\\"From\\\";s:56:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lineLength\\\";i:76;s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lang\\\";N;s:53:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0charset\\\";s:5:\\\"utf-8\\\";s:58:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\MailboxListHeader\\0addresses\\\";a:1:{i:0;O:30:\\\"Symfony\\\\Component\\\\Mime\\\\Address\\\":2:{s:39:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Address\\0address\\\";s:19:\\\"user@js-brokers.com\\\";s:36:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Address\\0name\\\";s:0:\\\"\\\";}}}}s:10:\\\"x-priority\\\";a:1:{i:0;O:48:\\\"Symfony\\\\Component\\\\Mime\\\\Header\\\\UnstructuredHeader\\\":5:{s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0name\\\";s:10:\\\"X-Priority\\\";s:56:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lineLength\\\";i:76;s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lang\\\";N;s:53:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0charset\\\";s:5:\\\"utf-8\\\";s:55:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\UnstructuredHeader\\0value\\\";s:8:\\\"2 (High)\\\";}}s:7:\\\"subject\\\";a:1:{i:0;O:48:\\\"Symfony\\\\Component\\\\Mime\\\\Header\\\\UnstructuredHeader\\\":5:{s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0name\\\";s:7:\\\"Subject\\\";s:56:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lineLength\\\";i:76;s:50:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0lang\\\";N;s:53:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\AbstractHeader\\0charset\\\";s:5:\\\"utf-8\\\";s:55:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\UnstructuredHeader\\0value\\\";s:59:\\\"Invitation JS Brokers venant de AIB RDC Sarl via JS Brokers\\\";}}}s:49:\\\"\\0Symfony\\\\Component\\\\Mime\\\\Header\\\\Headers\\0lineLength\\\";i:76;}i:1;N;}}i:4;N;}s:61:\\\"\\0Symfony\\\\Component\\\\Mailer\\\\Messenger\\\\SendEmailMessage\\0envelope\\\";N;}}', '[]', 'default', '2025-05-01 22:45:59', '2025-05-01 22:45:59', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `modele_piece_sinistre`
+--
+
+CREATE TABLE `modele_piece_sinistre` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `obligatoire` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `modele_piece_sinistre`
+--
+
+INSERT INTO `modele_piece_sinistre` (`id`, `entreprise_id`, `nom`, `description`, `obligatoire`) VALUES
+(1, 1, 'Formulaire de déclaration de sinistre', 'Formulaire décrivant et relatant la circonstance.', 1),
+(2, 1, 'PV de la police', 'Procès verbal de la police.', 1),
+(3, 1, 'Les potos', 'Images des dégâts.', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `monnaie`
+--
+
+CREATE TABLE `monnaie` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `code` varchar(255) NOT NULL,
+  `tauxusd` decimal(10,2) NOT NULL,
+  `fonction` int(11) NOT NULL,
+  `locale` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `monnaie`
+--
+
+INSERT INTO `monnaie` (`id`, `entreprise_id`, `nom`, `code`, `tauxusd`, `fonction`, `locale`) VALUES
+(1, 1, 'Dollars Américains', 'USD', 1.00, 0, 0),
+(2, 1, 'Francs Congolais', 'CDF', 2800.00, -1, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `note`
+--
+
+CREATE TABLE `note` (
+  `id` int(11) NOT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `partenaire_id` int(11) DEFAULT NULL,
+  `assureur_id` int(11) DEFAULT NULL,
+  `autoritefiscale_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `type` int(11) NOT NULL,
+  `addressed_to` int(11) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `reference` varchar(255) NOT NULL,
+  `validated` tinyint(1) NOT NULL,
+  `signature` varchar(255) NOT NULL,
+  `signed_by` varchar(255) DEFAULT NULL,
+  `title_signed_by` varchar(255) DEFAULT NULL,
+  `sent_at` datetime DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `note`
+--
+
+INSERT INTO `note` (`id`, `invite_id`, `client_id`, `partenaire_id`, `assureur_id`, `autoritefiscale_id`, `nom`, `type`, `addressed_to`, `description`, `reference`, `validated`, `signature`, `signed_by`, `title_signed_by`, `sent_at`) VALUES
+(73, 1, NULL, NULL, 2, NULL, 'Commissions AIB - Mars 2025', 0, 1, 'Commissions AIB - Mars 2025.', 'N1745067248', 1, '1745067248', 'Serge SULA BOSIO', 'Managing Director', '2025-04-14 09:27:00'),
+(74, 1, NULL, NULL, 1, NULL, 'Commissions AIB - Mars 2025 - SFA', 0, 1, 'Commissions AIB - Mars 2025 - SFA', 'N1745336585', 1, '1745336585', 'Serge SULA BOSIO', 'Managing Director', '2025-04-09 16:43:00'),
+(88, 1, NULL, NULL, 2, NULL, 'Test', 0, 1, 'Test', 'N1746989853', 0, '1746989853', 'Serge SULA BOSIO', 'Managing Director', '2025-05-11 19:57:00');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `note_compte_bancaire`
+--
+
+CREATE TABLE `note_compte_bancaire` (
+  `note_id` int(11) NOT NULL,
+  `compte_bancaire_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `note_compte_bancaire`
+--
+
+INSERT INTO `note_compte_bancaire` (`note_id`, `compte_bancaire_id`) VALUES
+(73, 1),
+(73, 2),
+(74, 1),
+(74, 2),
+(88, 1),
+(88, 2);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `notification_sinistre`
+--
+
+CREATE TABLE `notification_sinistre` (
+  `id` int(11) NOT NULL,
+  `assure_id` int(11) DEFAULT NULL,
+  `risque_id` int(11) DEFAULT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `reference_police` varchar(255) DEFAULT NULL,
+  `reference_sinistre` varchar(255) DEFAULT NULL,
+  `description_de_fait` varchar(255) DEFAULT NULL,
+  `occured_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `lieu` varchar(255) DEFAULT 'Non défini.',
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `dommage` double DEFAULT NULL,
+  `evaluation_chiffree` double DEFAULT NULL,
+  `notified_at` datetime DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `assureur_id` int(11) DEFAULT NULL,
+  `description_victimes` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `notification_sinistre`
+--
+
+INSERT INTO `notification_sinistre` (`id`, `assure_id`, `risque_id`, `invite_id`, `reference_police`, `reference_sinistre`, `description_de_fait`, `occured_at`, `lieu`, `created_at`, `updated_at`, `dommage`, `evaluation_chiffree`, `notified_at`, `assureur_id`, `description_victimes`) VALUES
+(98, 2, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/2024-561', 'SULA. Ah oui, non! Mon oncle qui est à kinshasa et venu nous rendre visite.', '2025-07-20 00:00:00', 'Kinshasa', '2025-07-20 22:26:54', '2025-08-14 08:57:45', 3500, 2500, '2025-07-20 00:00:00', 2, 'Serge SULA BOSIO'),
+(101, 2, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/2024-56457', 'Il marche bien Papa. Un autre test pour la notification à l\'écran.', '2025-07-23 00:00:00', 'Kinshasa', '2025-07-23 00:03:37', '2025-08-04 18:14:22', 1000, 2800, '2025-07-23 00:00:00', 2, 'Serge SULA BOSIO'),
+(102, 2, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Serge SULA Barbe. Un matin du vendredi 25 décembre 2025, nous avons décidé d\'aller faire un tour sur le blvrd du 30 juin. C\'est alors que ce véhicule nous a percuté par derrière.', '2025-08-02 00:00:00', 'Kinshasa', '2025-08-02 19:44:32', '2025-09-07 01:16:46', 1000, 1250, '2025-08-03 00:00:00', 2, 'Moi et un autre passant qui était à notre gauche.'),
+(106, 2, 3, 1, '6645SDFEE1204578-2025d', 'SIN/SFA/202457878/2024-560', 'Yannick, Juste à titre conservatoire, les détails viendront au fur et en mesure que les informations sont accumulées.', '2025-08-03 00:00:00', 'Kinshasa', '2025-08-03 16:58:41', '2025-08-05 18:04:24', 2500, 1400, '2025-08-03 00:00:00', 2, 'Merci'),
+(107, 2, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/2024-5645744511', 'Test Juste', '2025-08-05 00:00:00', 'Kolwezi à Lubumbashi, RDC', '2025-08-05 18:04:25', '2025-08-05 18:04:25', 1000, 2800, '2025-08-05 00:00:00', 2, 'Moi même'),
+(112, 2, 1, 1, 'POL-0012457878-2025', 'SIN-0012457878-2025', 'SULA BOSIO', '2025-08-14 06:39:00', 'Kinshasa, sur le boulevard du 30 juin.', '2025-08-14 07:39:33', '2025-08-14 07:39:33', 1000, NULL, '2025-08-14 06:39:00', 1, 'TOTOSULABO'),
+(113, 1, 2, 1, 'POL-0012457878-2025', 'SIN-0012457878-2025', 'On m\'a congé.', '2025-08-14 06:41:00', 'Kinshasa', '2025-08-14 07:41:24', '2025-08-14 08:13:41', 1000, 10, '2025-08-14 06:41:00', 2, 'sula'),
+(114, 1, 5, 1, '6645SDFEE1204578-2025', 'SIN/RAW/202457878/2024-561', 'FALA SULA - SULA BOSIO', '2025-08-14 08:01:00', 'Kinshasa', '2025-08-14 09:01:47', '2025-08-14 12:27:56', 1000, 0, '2025-08-14 09:00:00', 2, 'Serge SULA BOSIO'),
+(115, 1, 2, 1, '6645SDFEE120457856-2025', 'SIN/SFA/202457878/20124-5656', 'Je me suis juste réveillé le matin quand j\'ai constaté cela.', '2025-09-22 00:00:00', 'Kinshasa', '2025-09-26 15:21:59', '2025-09-26 15:21:59', 1500, NULL, '2025-09-26 00:00:00', 1, 'Mon voisin de droite.'),
+(116, 1, 1, 1, 'POL-0014452457878-2025', 'SIN/SFA/202457878/22050124-56', 'Un petit test pour le cerveau.', '2025-09-25 00:00:00', 'Kinshasa', '2025-09-26 18:00:59', '2025-09-26 18:01:50', 100, 100, '2025-09-26 00:00:00', 1, 'Un passant.'),
+(117, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/RAW/202457878/2024-561', 'Un petit test urgent.', '2025-10-10 00:00:00', 'Kinshasa', '2025-10-10 18:22:36', '2025-10-10 18:22:36', 1000, 1250, '2025-10-10 00:00:00', 1, 'Un quado.'),
+(118, 1, 2, 1, 'POL-0012457878-2025', 'SIN/SFA/202457878/20124-56', 'RAS', '2025-10-10 00:00:00', 'Kinshasa', '2025-10-10 19:11:09', '2025-10-10 19:11:09', 1000, 2500, '2025-10-10 00:00:00', 1, 'Bras'),
+(119, 2, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Tatata', '2025-10-10 00:00:00', 'Kinshasa', '2025-10-10 20:02:52', '2025-10-10 20:02:52', 1000, 1250, '2025-10-10 00:00:00', 1, 'Tata'),
+(120, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'TOTO', '2025-10-10 00:00:00', 'Kinshasa', '2025-10-10 20:20:22', '2025-10-10 20:20:22', 1000, 1250, '2025-10-10 00:00:00', 1, 'UN QUELQU\'UN'),
+(121, 1, 2, 1, 'POL-0012457878-2025', 'SIN/SFA/202457878/20124-56', 'SOSO', '2025-10-10 00:00:00', 'Kinshasa', '2025-10-10 22:31:30', '2025-10-10 22:31:30', NULL, NULL, '2025-10-10 00:00:00', 2, 'SERGE'),
+(122, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Just a demo', '2025-10-19 00:00:00', 'Kinshasa', '2025-10-12 13:35:34', '2025-10-12 13:35:34', 1000, 1250, '2025-10-12 00:00:00', 1, 'Moi-même'),
+(123, 1, 2, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Ketura', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 19:42:48', '2025-10-12 19:42:48', 1000, 1250, '2025-10-12 00:00:00', 1, 'Oui'),
+(124, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Moi', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 19:58:12', '2025-10-12 19:58:12', NULL, NULL, '2025-10-12 00:00:00', 1, 'Moi'),
+(125, 3, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'DODO', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 20:03:51', '2025-10-12 20:03:51', 100, 100, '2025-10-12 00:00:00', 1, 'DODO'),
+(126, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'KeKe', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 21:05:21', '2025-10-12 21:05:21', 1000, 2500, '2025-10-12 00:00:00', 1, 'Moi'),
+(127, 1, 2, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'COCO', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 21:44:27', '2025-10-12 21:44:27', 1000, 1250, '2025-10-12 00:00:00', 1, 'Kekek'),
+(128, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'uouo', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 22:08:49', '2025-10-12 22:08:49', 1000, 2500, '2025-10-12 00:00:00', 2, 'uouo'),
+(129, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'ooo', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 22:26:53', '2025-10-12 22:26:53', 1000, 2500, '2025-10-12 00:00:00', 1, 'oooo'),
+(130, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'bb', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 22:33:07', '2025-10-12 22:33:07', 1000, 2500, '2025-10-12 00:00:00', 1, 'bbb'),
+(131, 1, 2, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'lplplp', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 22:53:00', '2025-10-12 22:53:00', 1000, 2500, '2025-10-12 00:00:00', 1, 'lololo'),
+(132, 2, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'lololo', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 23:00:50', '2025-10-12 23:00:50', 1000, 2500, '2025-10-12 00:00:00', 2, 'HOHOHOHO'),
+(133, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'oooo', '2025-10-12 00:00:00', 'Kinshasa', '2025-10-12 23:53:14', '2025-10-12 23:53:14', 1000, 2500, '2025-10-12 00:00:00', 1, 'ppppp'),
+(134, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'popo', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 02:01:00', '2025-10-13 02:01:00', 1000, 2500, '2025-10-13 00:00:00', 1, 'keke'),
+(135, 1, 2, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'poppoo', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 02:18:58', '2025-10-13 02:18:58', 1000, 2500, '2025-10-13 00:00:00', 1, 'loloo'),
+(136, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'jeje', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 02:27:55', '2025-10-13 02:27:55', 1000, 10, '2025-10-13 00:00:00', 1, 'ee'),
+(137, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'ppppp', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 02:36:04', '2025-10-13 02:36:04', 1500, 100, '2025-10-13 00:00:00', 1, 'ppmpmpp'),
+(138, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Un matin-soir', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 02:37:49', '2025-10-13 02:37:49', 3500, 2500, '2025-10-13 00:00:00', 1, 'Jean-paul ELEMBO'),
+(139, 1, 2, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'bbbbbb', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 03:07:26', '2025-10-13 03:07:26', 1000, 2500, '2025-10-13 00:00:00', 1, 'bbbbb'),
+(140, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'bobo', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 03:21:19', '2025-10-13 03:21:19', 1000, 2500, '2025-10-13 00:00:00', 1, 'bobo'),
+(141, 1, 3, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'bbbbb', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 03:32:12', '2025-10-13 03:32:12', 1500, 100, '2025-10-13 00:00:00', 1, 'bbbbb'),
+(142, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'uuuuuu', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 03:49:55', '2025-10-13 03:49:55', 1000, 100, '2025-10-13 00:00:00', 1, 'ooooo'),
+(143, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'nnnnn', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 04:24:14', '2025-10-13 04:24:14', 1000, 100, '2025-10-13 00:00:00', 1, 'nnnnn'),
+(144, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'pppop', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 04:27:47', '2025-10-13 04:27:47', 1000, 2500, '2025-10-13 00:00:00', 1, 'opopop'),
+(145, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'pipi', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 04:42:10', '2025-10-13 04:42:10', 1000, 2500, '2025-10-13 00:00:00', 1, 'pipi'),
+(146, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'gogo', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 04:46:25', '2025-10-13 04:46:25', 1000, 2500, '2025-10-13 00:00:00', 1, 'gogo'),
+(147, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'gggg', '2025-10-14 00:00:00', 'Kinshasa', '2025-10-13 04:52:54', '2025-10-13 04:52:54', 1000, 2500, '2025-10-13 00:00:00', 1, 'gggg'),
+(148, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'bnbnb', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 05:01:53', '2025-10-13 05:01:53', 3500, 100, '2025-10-13 00:00:00', 2, 'bnbnbn'),
+(149, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/RAW/202457878/2024-561', 'opopop', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 05:14:59', '2025-10-13 05:14:59', 1000, NULL, '2025-10-13 00:00:00', 2, 'opopo'),
+(150, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Autre test', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 16:21:39', '2025-10-13 16:21:39', NULL, NULL, '2025-10-13 00:00:00', 1, 'tonton'),
+(151, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'drdrdr', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 16:54:55', '2025-10-13 16:54:55', NULL, NULL, '2025-10-13 00:00:00', 1, 'gtgtgt'),
+(152, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Serge', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 18:26:12', '2025-10-13 18:26:12', NULL, NULL, '2025-10-13 00:00:00', 1, 'toto'),
+(153, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'SAbot', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 18:41:38', '2025-10-13 18:41:38', NULL, NULL, '2025-10-13 00:00:00', 1, 'vgvg'),
+(154, 1, 2, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'keke', '2025-10-13 00:00:00', 'Kinshasa', '2025-10-13 22:09:19', '2025-10-13 22:09:19', NULL, NULL, '2025-10-13 00:00:00', 1, 'Dodo'),
+(155, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'njnj', '2025-10-14 00:00:00', 'Kinshasa', '2025-10-14 12:33:09', '2025-10-14 12:33:09', NULL, NULL, '2025-10-14 00:00:00', 1, 'kokoko'),
+(156, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'eded', '2025-10-14 00:00:00', 'Kinshasa', '2025-10-14 12:49:22', '2025-10-14 12:49:22', NULL, NULL, '2025-10-14 00:00:00', 1, 'de'),
+(157, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'SERGE', '2025-10-14 00:00:00', 'Kinshasa', '2025-10-15 02:22:19', '2025-10-15 02:22:19', NULL, NULL, '2025-10-15 00:00:00', 1, 'ToTo'),
+(158, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'DR', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-15 02:30:57', '2025-10-15 02:30:57', NULL, NULL, '2025-10-15 00:00:00', 1, 'DRe'),
+(159, 1, 5, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'DREDRE', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-15 02:36:55', '2025-10-15 02:36:55', NULL, NULL, '2025-10-15 00:00:00', 2, 'DRE'),
+(160, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'CAbrit', '2025-10-14 00:00:00', 'Kinshasa', '2025-10-15 02:58:33', '2025-10-15 02:58:33', NULL, NULL, '2025-10-15 00:00:00', 1, 'Tenda'),
+(161, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'sera', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-15 03:11:37', '2025-10-15 03:11:37', NULL, NULL, '2025-10-15 00:00:00', 1, 'seraz'),
+(162, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'RE', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-15 03:27:19', '2025-10-15 03:27:19', NULL, NULL, '2025-10-15 00:00:00', 1, 'RE'),
+(163, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'ER', '2025-10-22 00:00:00', 'Kinshasa', '2025-10-15 03:33:16', '2025-10-15 03:33:16', NULL, NULL, '2025-10-15 00:00:00', 1, 'ER'),
+(164, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'BO', '2025-10-22 00:00:00', 'Kinshasa', '2025-10-15 03:36:38', '2025-10-15 03:36:38', NULL, NULL, '2025-10-15 00:00:00', 2, 'BO'),
+(165, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'toto', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-15 03:58:22', '2025-10-15 03:58:22', NULL, NULL, '2025-10-15 00:00:00', 1, 'toto'),
+(166, 1, 5, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'roro', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-15 04:11:27', '2025-10-15 04:11:28', NULL, NULL, '2025-10-15 00:00:00', 1, 'roro'),
+(167, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Nzengi', '2025-10-15 00:00:00', 'Kinshasa', '2025-10-15 11:35:19', '2025-10-15 11:35:19', NULL, NULL, '2025-10-15 00:00:00', 1, 'Nzengi'),
+(168, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'bb', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-16 10:11:31', '2025-10-16 10:11:31', NULL, NULL, '2025-10-16 00:00:00', 1, 'bb'),
+(169, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'njnj', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-16 10:20:39', '2025-10-16 10:20:39', NULL, NULL, '2025-10-16 00:00:00', 1, 'njnj'),
+(170, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'bbb', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-16 10:34:13', '2025-10-16 10:34:13', NULL, NULL, '2025-10-16 00:00:00', 1, 'bbb'),
+(171, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'koko', '2025-10-16 00:00:00', 'Kinshasa', '2025-10-16 14:43:17', '2025-10-16 14:43:17', NULL, NULL, '2025-10-16 00:00:00', 1, 'koko'),
+(172, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'zeze', '2025-10-24 00:00:00', 'Kinshasa', '2025-10-17 14:24:16', '2025-10-17 14:24:16', NULL, NULL, '2025-10-17 00:00:00', 1, 'zeze'),
+(173, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Test', '2025-10-17 00:00:00', 'Kinshasa', '2025-10-17 22:53:22', '2025-10-17 22:53:22', NULL, NULL, '2025-10-17 00:00:00', 1, 'Autre personne'),
+(174, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'klkl', '2025-10-17 00:00:00', 'Kinshasa', '2025-10-17 23:09:52', '2025-10-17 23:09:52', NULL, NULL, '2025-10-17 00:00:00', 1, 'koko'),
+(175, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'lplp', '2025-10-17 00:00:00', 'Kinshasa', '2025-10-17 23:14:57', '2025-10-17 23:14:57', NULL, NULL, '2025-10-17 00:00:00', 1, 'koko'),
+(176, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'ppppp', '2025-10-17 00:00:00', 'Kinshasa', '2025-10-17 23:18:41', '2025-10-17 23:20:17', NULL, NULL, '2025-10-17 00:00:00', 1, 'popop'),
+(177, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Zumba', '2025-10-18 00:00:00', 'Kinshasa, sur le boulevard du 30 juin.', '2025-10-18 01:35:27', '2025-10-18 01:36:41', NULL, NULL, '2025-10-18 00:00:00', 1, 'Zozo'),
+(178, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Vouvous', '2025-10-18 00:00:00', 'Kinshasa', '2025-10-18 01:53:25', '2025-10-18 01:54:40', NULL, NULL, '2025-10-18 00:00:00', 1, 'toto'),
+(179, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'test', '2025-10-18 00:00:00', 'Kinshasa', '2025-10-18 03:23:06', '2025-10-18 03:27:54', NULL, NULL, '2025-10-18 00:00:00', 1, 'tttata'),
+(180, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Leto', '2025-10-18 00:00:00', 'Kinshasa', '2025-10-18 03:34:13', '2025-10-18 03:35:17', NULL, NULL, '2025-10-18 00:00:00', 1, 'dedede'),
+(181, 1, 2, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'zozo', '2025-10-18 00:00:00', 'Kinshasa', '2025-10-18 03:36:42', '2025-10-18 03:37:02', NULL, NULL, '2025-10-18 00:00:00', 1, 'zozo'),
+(182, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'erere', '2025-10-18 00:00:00', 'Kinshasa', '2025-10-18 03:39:32', '2025-10-18 03:39:53', NULL, NULL, '2025-10-18 00:00:00', 1, 'frrrr'),
+(183, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'DO', '2025-10-19 00:00:00', 'Kinshasa', '2025-10-19 17:01:33', '2025-10-19 17:03:08', NULL, NULL, '2025-10-19 00:00:00', 1, 'DO'),
+(184, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Jo', '2025-10-19 00:00:00', 'Kinshasa', '2025-10-19 17:44:55', '2025-10-19 17:46:56', NULL, NULL, '2025-10-19 00:00:00', 1, 'Jo'),
+(185, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Keke', '2025-10-19 00:00:00', 'Kinshasa', '2025-10-20 00:19:21', '2025-10-20 00:55:04', NULL, NULL, '2025-10-20 00:00:00', 1, 'Keke'),
+(186, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Autre test', '2025-10-20 00:00:00', 'Kinshasa', '2025-10-20 09:34:45', '2025-10-20 09:34:45', NULL, NULL, '2025-10-20 00:00:00', 1, 'Pas de victime.'),
+(187, 1, 1, 1, '6645SDFEE1204578-2025', 'SIN/SFA/202457878/20124-56', 'Autre déclaration', '2025-10-20 00:00:00', 'Kinshasa', '2025-10-20 09:58:09', '2025-10-20 10:55:42', NULL, NULL, '2025-10-20 00:00:00', 1, 'Une victime');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `offre_indemnisation_sinistre`
+--
+
+CREATE TABLE `offre_indemnisation_sinistre` (
+  `id` int(11) NOT NULL,
+  `notification_sinistre_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) DEFAULT NULL,
+  `franchise_appliquee` double DEFAULT NULL,
+  `montant_payable` double NOT NULL,
+  `beneficiaire` varchar(255) NOT NULL,
+  `reference_bancaire` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `offre_indemnisation_sinistre`
+--
+
+INSERT INTO `offre_indemnisation_sinistre` (`id`, `notification_sinistre_id`, `nom`, `franchise_appliquee`, `montant_payable`, `beneficiaire`, `reference_bancaire`) VALUES
+(9, 102, 'Indeminisation sinistre de Serge - Lubumbashi en RDC', 100, 2500, 'Mr. Serge SULA BOSIOO', 'EQUITYBCDC0012478784578787-0001245-2025'),
+(13, 179, 'ELEMBO ENDJINGA Jean-paul', 100, 2500, 'Mr. Serge SULA BOSIO', 'EQUITYBCDC0012478784578787-0001245-2025'),
+(14, 187, 'Offre d\'indemnisation koko', 100, 2500, 'Mr. Serge SULA BOSIO', 'EQUITYBCDC0012478784578787-0001245-2025');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `paiement`
+--
+
+CREATE TABLE `paiement` (
+  `id` int(11) NOT NULL,
+  `offre_indemnisation_sinistre_id` int(11) DEFAULT NULL,
+  `note_id` int(11) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `montant` double NOT NULL,
+  `reference` varchar(255) DEFAULT NULL,
+  `paid_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `compte_bancaire_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `paiement`
+--
+
+INSERT INTO `paiement` (`id`, `offre_indemnisation_sinistre_id`, `note_id`, `description`, `montant`, `reference`, `paid_at`, `created_at`, `updated_at`, `compte_bancaire_id`) VALUES
+(45, NULL, 73, 'Premier paiement', 355, 'BVBCVCBVCBH56', '2025-05-08 22:27:00', '2025-05-10 14:36:55', '2025-05-10 16:52:49', 1),
+(46, NULL, 73, 'Deuxième paiement', 300, 'BVBCVCBVCBH57', '2025-05-10 13:39:00', '2025-05-10 14:39:33', '2025-05-10 16:52:49', 2),
+(49, NULL, 74, 'Premier versement', 161, 'BVBCVCBVCBH56', '2025-05-11 13:27:00', '2025-05-11 14:27:13', '2025-05-11 20:41:38', 1),
+(50, NULL, 74, 'Deuxième versement', 35, '45787878ABfr', '2025-05-12 13:27:00', '2025-05-11 14:28:04', '2025-05-15 11:09:14', 1),
+(51, NULL, 74, 'Trosième versement', 26, 'KLAUUFUDIDUI02UIEEE47878', '2025-05-14 13:29:00', '2025-05-11 14:29:08', '2025-05-15 10:32:58', 1),
+(52, NULL, 88, 'Paiement X', 5000, 'ABS001245004', '2025-05-20 11:20:00', '2025-05-20 12:20:27', '2025-05-21 17:43:17', 1),
+(53, NULL, 88, 'Autre versement', 250, 'xcxcdssf457878', '2025-05-19 10:00:00', '2025-05-20 12:23:20', '2025-05-21 17:43:17', 1),
+(63, 9, NULL, 'Descript. à générer automatiquement ici.', 2500, 'GDTEYTYEEE-2025', '2025-09-02 14:56:00', '2025-09-02 14:58:02', '2025-09-02 14:58:02', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `partenaire`
+--
+
+CREATE TABLE `partenaire` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `adresse_physique` varchar(255) DEFAULT NULL,
+  `telephone` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `part` double NOT NULL,
+  `idnat` varchar(255) DEFAULT NULL,
+  `numimpot` varchar(255) DEFAULT NULL,
+  `rccm` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `partenaire`
+--
+
+INSERT INTO `partenaire` (`id`, `entreprise_id`, `nom`, `adresse_physique`, `telephone`, `email`, `part`, `idnat`, `numimpot`, `rccm`) VALUES
+(1, 1, 'OLEA', 'Paris - France', '+243828727706', 'infos@olea.com', 0.1, 'ID14546', 'NIF001246', 'RCCM004546'),
+(2, 1, 'MARSH', 'Afrique du Sud', '+243828727706', 'infos@marsh.com', 0.3, 'ID14545AB', 'NIF001245', 'RCCM004545');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `piece_sinistre`
+--
+
+CREATE TABLE `piece_sinistre` (
+  `id` int(11) NOT NULL,
+  `type_id` int(11) DEFAULT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `notification_sinistre_id` int(11) DEFAULT NULL,
+  `description` varchar(255) NOT NULL,
+  `received_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `fourni_par` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `piece_sinistre`
+--
+
+INSERT INTO `piece_sinistre` (`id`, `type_id`, `invite_id`, `notification_sinistre_id`, `description`, `received_at`, `fourni_par`) VALUES
+(9, 1, NULL, 102, 'Formulaire de déclaration de sinistre', '2025-08-28 00:00:00', 'Yannick SULA'),
+(11, 2, NULL, 102, 'PV de la police', '2025-09-03 00:00:00', 'Yannick SULA'),
+(12, 2, 1, 187, 'PV de la police', '2025-10-20 00:00:00', 'Yannick SULA');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `piste`
+--
+
+CREATE TABLE `piste` (
+  `id` int(11) NOT NULL,
+  `risque_id` int(11) DEFAULT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `prime_potentielle` double DEFAULT NULL,
+  `commission_potentielle` double DEFAULT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `type_avenant` int(11) NOT NULL,
+  `description_du_risque` varchar(255) NOT NULL,
+  `exercice` int(11) NOT NULL,
+  `avenant_de_base_id` int(11) DEFAULT NULL,
+  `renewal_condition` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `piste`
+--
+
+INSERT INTO `piste` (`id`, `risque_id`, `client_id`, `invite_id`, `nom`, `prime_potentielle`, `commission_potentielle`, `created_at`, `updated_at`, `type_avenant`, `description_du_risque`, `exercice`, `avenant_de_base_id`, `renewal_condition`) VALUES
+(42, 2, 1, 1, 'Incendie pour BGFibank RDC SA', 10000, 100, '2025-04-10 23:37:48', '2025-05-20 01:37:08', 0, 'Incendie pour le siège', 2025, NULL, 0),
+(43, 1, 2, 1, 'RC Auto pour les agents de Kibali Gold Mines RDC SA', 10000, 100, '2025-04-12 22:18:55', '2025-05-18 21:32:28', 0, 'RC Auto', 2025, NULL, 0),
+(45, 2, 4, 1, 'PDBI pour Glencore', 10000, 9000, '2025-04-15 12:34:47', '2025-05-31 16:53:30', 0, 'PDBI pour Glencore', 2025, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `piste_partenaire`
+--
+
+CREATE TABLE `piste_partenaire` (
+  `piste_id` int(11) NOT NULL,
+  `partenaire_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `revenu_pour_courtier`
+--
+
+CREATE TABLE `revenu_pour_courtier` (
+  `id` int(11) NOT NULL,
+  `type_revenu_id` int(11) DEFAULT NULL,
+  `cotation_id` int(11) DEFAULT NULL,
+  `montant_flat_exceptionel` double DEFAULT NULL,
+  `taux_exceptionel` double DEFAULT NULL,
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `nom` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `revenu_pour_courtier`
+--
+
+INSERT INTO `revenu_pour_courtier` (`id`, `type_revenu_id`, `cotation_id`, `montant_flat_exceptionel`, `taux_exceptionel`, `created_at`, `updated_at`, `nom`) VALUES
+(65, 1, 39, NULL, NULL, '2025-04-12 22:18:54', '2025-07-12 20:41:25', 'Commission ordinaire'),
+(66, 2, 38, NULL, NULL, '2025-05-29 22:43:37', '2025-05-31 15:54:58', 'Frais de gestion'),
+(68, 1, 38, NULL, NULL, '2025-05-29 22:49:45', '2025-05-31 15:54:58', 'Commission Arca ou Ordinaire');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `risque`
+--
+
+CREATE TABLE `risque` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `condition_partage_id` int(11) DEFAULT NULL,
+  `code` varchar(6) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `pourcentage_commission_specifique_ht` double DEFAULT NULL,
+  `branche` int(11) NOT NULL,
+  `nom_complet` varchar(255) NOT NULL,
+  `imposable` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `risque`
+--
+
+INSERT INTO `risque` (`id`, `entreprise_id`, `condition_partage_id`, `code`, `description`, `pourcentage_commission_specifique_ht`, `branche`, `nom_complet`, `imposable`) VALUES
+(1, 1, 7, 'Motor', 'TPL', 0.1, 0, 'RESPONSABILITE CIVILE AUTOMOBILE', 1),
+(2, 1, 7, 'IMR', 'Fire', 0.1, 0, 'INCENDIE ET RISQUES DIVERS', 1),
+(3, 1, NULL, 'Vie', 'L\'assurance vie.', 0.1, 1, 'ASSURANCE VIE, DECES ET INVALIDITE', 0),
+(5, 1, NULL, 'GIT', 'Assurances des biens en cours de transit autres que les fonds. Une assurance de facultés à l\'importation.', 0.15, 0, 'FACULTE A L\'IMPORTATION', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `roles_en_administration`
+--
+
+CREATE TABLE `roles_en_administration` (
+  `id` int(11) NOT NULL,
+  `nom` varchar(255) NOT NULL,
+  `access_document` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_classeur` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_invite` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `invite_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `roles_en_administration`
+--
+
+INSERT INTO `roles_en_administration` (`id`, `nom`, `access_document`, `access_classeur`, `access_invite`, `invite_id`) VALUES
+(2, 'Droits d\'accès dans le module Administration', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 1),
+(3, 'Droits d\'accès dans le module Administration', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 2);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `roles_en_finance`
+--
+
+CREATE TABLE `roles_en_finance` (
+  `id` int(11) NOT NULL,
+  `nom` varchar(255) NOT NULL,
+  `access_monnaie` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_compte_bancaire` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_taxe` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `invite_id` int(11) DEFAULT NULL,
+  `access_type_revenu` longtext DEFAULT NULL COMMENT '(DC2Type:array)',
+  `access_tranche` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_type_chargement` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_note` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_paiement` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_bordereau` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_revenu` longtext NOT NULL COMMENT '(DC2Type:array)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `roles_en_finance`
+--
+
+INSERT INTO `roles_en_finance` (`id`, `nom`, `access_monnaie`, `access_compte_bancaire`, `access_taxe`, `invite_id`, `access_type_revenu`, `access_tranche`, `access_type_chargement`, `access_note`, `access_paiement`, `access_bordereau`, `access_revenu`) VALUES
+(3, 'Droits d\'accès dans le module Finance', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 1, 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}'),
+(4, 'Droits d\'accèss dans le module Finance', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 2, 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `roles_en_marketing`
+--
+
+CREATE TABLE `roles_en_marketing` (
+  `id` int(11) NOT NULL,
+  `invite_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `access_piste` longtext DEFAULT NULL COMMENT '(DC2Type:array)',
+  `access_tache` longtext DEFAULT NULL COMMENT '(DC2Type:array)',
+  `access_feedback` longtext DEFAULT NULL COMMENT '(DC2Type:array)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `roles_en_marketing`
+--
+
+INSERT INTO `roles_en_marketing` (`id`, `invite_id`, `nom`, `access_piste`, `access_tache`, `access_feedback`) VALUES
+(7, 1, 'Droits d\'accès dans le module Marketing', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `roles_en_production`
+--
+
+CREATE TABLE `roles_en_production` (
+  `id` int(11) NOT NULL,
+  `nom` varchar(255) NOT NULL,
+  `access_groupe` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_client` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_assureur` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_contact` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_risque` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_avenant` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_partenaire` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_cotation` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `invite_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `roles_en_production`
+--
+
+INSERT INTO `roles_en_production` (`id`, `nom`, `access_groupe`, `access_client`, `access_assureur`, `access_contact`, `access_risque`, `access_avenant`, `access_partenaire`, `access_cotation`, `invite_id`) VALUES
+(2, 'Droits d\'accès dans le module Production', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 1),
+(3, 'Droits d\'accès dans le module Production', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 'a:1:{i:0;i:0;}', 2);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `roles_en_sinistre`
+--
+
+CREATE TABLE `roles_en_sinistre` (
+  `id` int(11) NOT NULL,
+  `nom` varchar(255) NOT NULL,
+  `access_type_piece` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_notification` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `access_reglement` longtext NOT NULL COMMENT '(DC2Type:array)',
+  `invite_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `roles_en_sinistre`
+--
+
+INSERT INTO `roles_en_sinistre` (`id`, `nom`, `access_type_piece`, `access_notification`, `access_reglement`, `invite_id`) VALUES
+(2, 'Droits d\'accès dans le module Sinistre', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 'a:4:{i:0;i:0;i:1;i:1;i:2;i:2;i:3;i:3;}', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `tache`
+--
+
+CREATE TABLE `tache` (
+  `id` int(11) NOT NULL,
+  `executor_id` int(11) DEFAULT NULL,
+  `piste_id` int(11) DEFAULT NULL,
+  `cotation_id` int(11) DEFAULT NULL,
+  `notification_sinistre_id` int(11) DEFAULT NULL,
+  `offre_indemnisation_sinistre_id` int(11) DEFAULT NULL,
+  `description` varchar(255) NOT NULL,
+  `to_be_ended_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `closed` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `tache`
+--
+
+INSERT INTO `tache` (`id`, `executor_id`, `piste_id`, `cotation_id`, `notification_sinistre_id`, `offre_indemnisation_sinistre_id`, `description`, `to_be_ended_at`, `created_at`, `updated_at`, `closed`) VALUES
+(14, 1, NULL, NULL, 102, NULL, 'Il faut tout imprimer pour le client attestant qu\'il a été indemnisé avec succès et que l\'assureur ne lui doit plus rien. Oui, justement.', '2025-08-28 00:00:00', '2025-08-28 18:01:39', '2025-09-03 18:34:47', 1),
+(18, 1, NULL, NULL, NULL, 9, 'Organiser le paiement rapidement le paiement et faire signer le client ainsi que la victime une décharge', '2025-09-08 00:00:00', '2025-09-01 09:44:27', '2025-09-01 09:45:51', 1),
+(23, 1, NULL, NULL, NULL, NULL, 'Organiser un appel pour discuter sur les possibilités de mettre en place la couverture d\'assurance.', '2025-10-14 00:00:00', '2025-10-13 22:10:20', '2025-10-13 22:10:20', 0),
+(24, 1, NULL, NULL, NULL, NULL, 'Faire une réunion chez eux', '2025-10-14 00:00:00', '2025-10-13 22:12:53', '2025-10-13 22:12:53', 0),
+(25, 1, NULL, NULL, NULL, NULL, 'Faire du bien.', '2025-10-15 00:00:00', '2025-10-14 12:34:28', '2025-10-14 12:34:28', 0),
+(26, 1, NULL, NULL, NULL, NULL, 'dore', '2025-10-15 00:00:00', '2025-10-14 12:51:11', '2025-10-14 12:51:11', 0),
+(27, 1, NULL, NULL, NULL, NULL, 'Ok', '2025-10-16 00:00:00', '2025-10-15 03:12:32', '2025-10-15 03:12:32', 0),
+(28, 1, NULL, NULL, NULL, NULL, 'Amour', '2025-10-16 00:00:00', '2025-10-15 04:04:06', '2025-10-15 04:04:06', 0),
+(29, 1, NULL, NULL, NULL, NULL, 'roro', '2025-10-16 00:00:00', '2025-10-15 04:12:40', '2025-10-15 04:12:40', 0),
+(30, 1, NULL, NULL, 167, NULL, 'On part', '2025-10-16 00:00:00', '2025-10-15 11:39:24', '2025-10-15 11:39:24', 0),
+(31, 1, NULL, NULL, 168, NULL, 'njnj', '2025-10-17 00:00:00', '2025-10-16 10:12:25', '2025-10-16 10:12:25', 0),
+(32, 1, NULL, NULL, 169, NULL, 'vv', '2025-10-17 00:00:00', '2025-10-16 10:23:45', '2025-10-16 10:23:45', 0),
+(33, 1, NULL, NULL, 171, NULL, 'On doit organiser une réunion pour étudier la faisabilité.\r\nJe crois que cette fois-ci ça va fonctionner et nous allons avancer.', '2025-10-17 00:00:00', '2025-10-16 14:44:34', '2025-10-16 14:44:34', 0),
+(34, 1, NULL, NULL, 172, NULL, 'aza', '2025-10-25 00:00:00', '2025-10-17 14:27:26', '2025-10-17 14:27:26', 0),
+(35, 1, NULL, NULL, 172, NULL, 'Un autre test de collection sur la tâche', '2025-10-21 00:00:00', '2025-10-17 14:31:34', '2025-10-17 14:31:34', 0),
+(36, 1, NULL, NULL, 172, NULL, 'Roko', '2025-10-18 00:00:00', '2025-10-17 20:53:35', '2025-10-17 20:53:35', 0),
+(37, 1, NULL, NULL, 173, NULL, 'Tast de test', '2025-10-18 00:00:00', '2025-10-17 22:54:16', '2025-10-17 22:54:16', 0),
+(38, 1, NULL, NULL, 173, NULL, 'nnnnn', '2025-10-18 00:00:00', '2025-10-17 23:07:13', '2025-10-17 23:07:13', 0),
+(39, 1, NULL, NULL, 174, NULL, 'popo', '2025-10-18 00:00:00', '2025-10-17 23:10:10', '2025-10-17 23:10:10', 0),
+(40, 1, NULL, NULL, 175, NULL, 'llll', '2025-10-18 00:00:00', '2025-10-17 23:15:33', '2025-10-17 23:15:33', 0),
+(41, 1, NULL, NULL, 176, NULL, 'momo', '2025-10-18 00:00:00', '2025-10-17 23:18:59', '2025-10-17 23:18:59', 0),
+(42, 1, NULL, NULL, 176, NULL, 'tyty', '2025-10-18 00:00:00', '2025-10-17 23:20:00', '2025-10-17 23:20:00', 0),
+(43, 1, NULL, NULL, 177, NULL, 'Tonton', '2025-10-19 00:00:00', '2025-10-18 01:35:49', '2025-10-18 01:35:49', 0),
+(44, 1, NULL, NULL, 178, NULL, 'Test', '2025-10-19 00:00:00', '2025-10-18 01:53:38', '2025-10-18 01:53:38', 0),
+(45, 1, NULL, NULL, 178, NULL, 'Zongo', '2025-10-19 00:00:00', '2025-10-18 01:53:52', '2025-10-18 01:53:52', 0),
+(46, 2, NULL, NULL, 178, NULL, 'Réunion', '2025-10-19 00:00:00', '2025-10-18 01:54:19', '2025-10-18 01:54:19', 0),
+(47, 1, NULL, NULL, 179, NULL, 'testo', '2025-10-19 00:00:00', '2025-10-18 03:23:27', '2025-10-18 03:23:27', 0),
+(48, 1, NULL, NULL, 179, NULL, 'Autre', '2025-10-19 00:00:00', '2025-10-18 03:24:19', '2025-10-18 03:24:19', 0),
+(49, 1, NULL, NULL, 180, NULL, 'test', '2025-10-19 00:00:00', '2025-10-18 03:34:34', '2025-10-18 03:34:34', 0),
+(50, 1, NULL, NULL, 180, NULL, 'Dadu', '2025-10-19 00:00:00', '2025-10-18 03:34:54', '2025-10-18 03:34:54', 0),
+(51, 1, NULL, NULL, 181, NULL, 'zozo', '2025-10-19 00:00:00', '2025-10-18 03:36:54', '2025-10-18 03:36:54', 0),
+(52, 1, NULL, NULL, 182, NULL, 'frfrrr', '2025-10-19 00:00:00', '2025-10-18 03:39:45', '2025-10-18 03:39:45', 0),
+(53, 1, NULL, NULL, 183, NULL, 'Tache testo', '2025-10-20 00:00:00', '2025-10-19 17:02:50', '2025-10-19 17:03:42', 0),
+(54, 1, NULL, NULL, 184, NULL, 'Bonjour Serge SULA BOSIO.', '2025-10-20 00:00:00', '2025-10-19 17:46:02', '2025-10-19 17:47:06', 0),
+(55, 1, NULL, NULL, 185, NULL, 'Organiser une réunion pour en discuter de vive voix.', '2025-10-27 00:00:00', '2025-10-20 00:20:50', '2025-10-20 00:53:17', 0),
+(56, 1, NULL, NULL, 187, NULL, 'Organiser une réunion avec le client.', '2025-10-21 00:00:00', '2025-10-20 10:18:50', '2025-10-20 10:18:50', 0),
+(57, 1, NULL, NULL, 187, NULL, 'Tache teste Serge SULA', '2025-10-21 00:00:00', '2025-10-20 10:37:29', '2025-10-20 10:37:29', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `taxe`
+--
+
+CREATE TABLE `taxe` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `description` varchar(255) NOT NULL,
+  `taux_iard` decimal(10,2) NOT NULL,
+  `taux_vie` decimal(10,2) NOT NULL,
+  `code` varchar(5) NOT NULL,
+  `redevable` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `taxe`
+--
+
+INSERT INTO `taxe` (`id`, `entreprise_id`, `description`, `taux_iard`, `taux_vie`, `code`, `redevable`) VALUES
+(1, 1, 'Taxe sur la valeur ajoutée', 0.16, 0.16, 'Tva', 0),
+(2, 1, 'Frais de surveillance', 0.02, 0.02, 'Arca', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `tranche`
+--
+
+CREATE TABLE `tranche` (
+  `id` int(11) NOT NULL,
+  `cotation_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `montant_flat` double DEFAULT NULL,
+  `pourcentage` double DEFAULT NULL,
+  `payable_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `created_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime NOT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `echeance_at` datetime DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `tranche`
+--
+
+INSERT INTO `tranche` (`id`, `cotation_id`, `nom`, `montant_flat`, `pourcentage`, `payable_at`, `created_at`, `updated_at`, `echeance_at`) VALUES
+(47, 38, 'Première Tranche', NULL, 1, '2025-01-01 00:01:00', '2025-04-10 23:45:01', '2025-05-31 15:54:58', '2025-12-31 23:59:00'),
+(48, 39, 'Deuxième tranche', NULL, 0.5, '2025-07-01 00:01:00', '2025-04-12 22:18:54', '2025-07-12 20:41:25', '2025-12-31 23:59:00'),
+(49, 39, 'Première tranche', NULL, 0.5, '2025-02-01 00:01:00', '2025-04-12 22:21:56', '2025-07-12 20:41:25', '2025-12-31 23:59:00');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `type_revenu`
+--
+
+CREATE TABLE `type_revenu` (
+  `id` int(11) NOT NULL,
+  `entreprise_id` int(11) DEFAULT NULL,
+  `nom` varchar(255) NOT NULL,
+  `montantflat` double DEFAULT NULL,
+  `shared` tinyint(1) NOT NULL,
+  `multipayments` tinyint(1) NOT NULL,
+  `redevable` int(11) NOT NULL,
+  `pourcentage` double DEFAULT NULL,
+  `appliquer_pourcentage_du_risque` tinyint(1) DEFAULT NULL,
+  `type_chargement_id` int(11) DEFAULT NULL,
+  `note_id` int(11) DEFAULT NULL,
+  `article_id` int(11) DEFAULT NULL,
+  `mode_calcul` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `type_revenu`
+--
+
+INSERT INTO `type_revenu` (`id`, `entreprise_id`, `nom`, `montantflat`, `shared`, `multipayments`, `redevable`, `pourcentage`, `appliquer_pourcentage_du_risque`, `type_chargement_id`, `note_id`, `article_id`, `mode_calcul`) VALUES
+(1, 1, 'Commission Ordinaire', NULL, 1, 1, 1, 0.1, 1, 1, NULL, NULL, 0),
+(2, 1, 'Frais de gestion (client)', NULL, 1, 1, 0, 0.05, 0, 1, NULL, NULL, 0),
+(3, 1, 'Honnoraire de placement', NULL, 1, 1, 1, 0.05, 0, 1, NULL, NULL, 0),
+(4, 1, 'Commission sur Fronting.', NULL, 0, 1, 1, 0.3, 0, 2, NULL, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `utilisateur`
+--
+
+CREATE TABLE `utilisateur` (
+  `id` int(11) NOT NULL,
+  `connected_to_id` int(11) DEFAULT NULL,
+  `email` varchar(180) NOT NULL,
+  `roles` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '(DC2Type:json)' CHECK (json_valid(`roles`)),
+  `password` varchar(255) NOT NULL,
+  `nom` varchar(255) NOT NULL,
+  `is_verified` tinyint(1) NOT NULL,
+  `created_at` datetime DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `updated_at` datetime DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)',
+  `locale` varchar(255) NOT NULL DEFAULT 'fr'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `utilisateur`
+--
+
+INSERT INTO `utilisateur` (`id`, `connected_to_id`, `email`, `roles`, `password`, `nom`, `is_verified`, `created_at`, `updated_at`, `locale`) VALUES
+(1, 1, 'admin@js-brokers.com', '[]', '$2y$13$dl6vyAaM6EHKPhmOlFMh2edTXya.AEm2CpOtSYgLCaNnaUX3MNbzO', 'Serge SULA', 1, '2025-01-13 22:26:55', '2025-04-24 12:02:43', 'fr');
+
+--
+-- Index pour les tables déchargées
+--
+
+--
+-- Index pour la table `article`
+--
+ALTER TABLE `article`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_23A0E66B76F6B31` (`tranche_id`),
+  ADD KEY `IDX_23A0E6626ED0855` (`note_id`);
+
+--
+-- Index pour la table `assureur`
+--
+ALTER TABLE `assureur`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_7B0E5955A4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `autorite_fiscale`
+--
+ALTER TABLE `autorite_fiscale`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_FF4842301AB947A4` (`taxe_id`),
+  ADD KEY `IDX_FF48423026ED0855` (`note_id`);
+
+--
+-- Index pour la table `avenant`
+--
+ALTER TABLE `avenant`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_2FE5CE55D14FAF0` (`cotation_id`);
+
+--
+-- Index pour la table `bordereau`
+--
+ALTER TABLE `bordereau`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_F7B4C56180F7E20A` (`assureur_id`),
+  ADD KEY `IDX_F7B4C561EA417747` (`invite_id`);
+
+--
+-- Index pour la table `chargement`
+--
+ALTER TABLE `chargement`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_36328758A4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `chargement_pour_prime`
+--
+ALTER TABLE `chargement_pour_prime`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_8065D3CAC54C8C93` (`type_id`),
+  ADD KEY `IDX_8065D3CA5D14FAF0` (`cotation_id`);
+
+--
+-- Index pour la table `classeur`
+--
+ALTER TABLE `classeur`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_D15F835AA4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `client`
+--
+ALTER TABLE `client`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_C7440455A4AEAFEA` (`entreprise_id`),
+  ADD KEY `IDX_C74404557A45358C` (`groupe_id`);
+
+--
+-- Index pour la table `client_partenaire`
+--
+ALTER TABLE `client_partenaire`
+  ADD PRIMARY KEY (`client_id`,`partenaire_id`),
+  ADD KEY `IDX_A2AB9E3219EB6921` (`client_id`),
+  ADD KEY `IDX_A2AB9E3298DE13AC` (`partenaire_id`);
+
+--
+-- Index pour la table `compte_bancaire`
+--
+ALTER TABLE `compte_bancaire`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_50BC21DEA4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `condition_partage`
+--
+ALTER TABLE `condition_partage`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_CF012D1F98DE13AC` (`partenaire_id`),
+  ADD KEY `IDX_CF012D1FC34065BC` (`piste_id`);
+
+--
+-- Index pour la table `contact`
+--
+ALTER TABLE `contact`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_4C62E63819EB6921` (`client_id`),
+  ADD KEY `IDX_4C62E638F4F2559E` (`notification_sinistre_id`);
+
+--
+-- Index pour la table `cotation`
+--
+ALTER TABLE `cotation`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_996DA94480F7E20A` (`assureur_id`),
+  ADD KEY `IDX_996DA944C34065BC` (`piste_id`);
+
+--
+-- Index pour la table `doctrine_migration_versions`
+--
+ALTER TABLE `doctrine_migration_versions`
+  ADD PRIMARY KEY (`version`);
+
+--
+-- Index pour la table `document`
+--
+ALTER TABLE `document`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_D8698A76EC10E96A` (`classeur_id`),
+  ADD KEY `IDX_D8698A76DFB9960E` (`piece_sinistre_id`),
+  ADD KEY `IDX_D8698A7672DDD90D` (`offre_indemnisation_sinistre_id`),
+  ADD KEY `IDX_D8698A765D14FAF0` (`cotation_id`),
+  ADD KEY `IDX_D8698A7685631A3A` (`avenant_id`),
+  ADD KEY `IDX_D8698A76D2235D39` (`tache_id`),
+  ADD KEY `IDX_D8698A76D249A887` (`feedback_id`),
+  ADD KEY `IDX_D8698A7619EB6921` (`client_id`),
+  ADD KEY `IDX_D8698A7655D5304E` (`bordereau_id`),
+  ADD KEY `IDX_D8698A76AF1E371E` (`compte_bancaire_id`),
+  ADD KEY `IDX_D8698A76C34065BC` (`piste_id`),
+  ADD KEY `IDX_D8698A7698DE13AC` (`partenaire_id`),
+  ADD KEY `IDX_D8698A762A4C4478` (`paiement_id`);
+
+--
+-- Index pour la table `entreprise`
+--
+ALTER TABLE `entreprise`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_D19FA60FB88E14F` (`utilisateur_id`);
+
+--
+-- Index pour la table `feedback`
+--
+ALTER TABLE `feedback`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_D2294458D2235D39` (`tache_id`),
+  ADD KEY `IDX_D2294458EA417747` (`invite_id`);
+
+--
+-- Index pour la table `groupe`
+--
+ALTER TABLE `groupe`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_4B98C21A4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `invite`
+--
+ALTER TABLE `invite`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_C7E210D7EA417747` (`invite_id`),
+  ADD KEY `IDX_C7E210D7A4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `messenger_messages`
+--
+ALTER TABLE `messenger_messages`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_75EA56E0FB7336F0` (`queue_name`),
+  ADD KEY `IDX_75EA56E0E3BD61CE` (`available_at`),
+  ADD KEY `IDX_75EA56E016BA31DB` (`delivered_at`);
+
+--
+-- Index pour la table `modele_piece_sinistre`
+--
+ALTER TABLE `modele_piece_sinistre`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_3723B98AA4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `monnaie`
+--
+ALTER TABLE `monnaie`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_B3A6E2E6A4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `note`
+--
+ALTER TABLE `note`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_CFBDFA14EA417747` (`invite_id`),
+  ADD KEY `IDX_CFBDFA1419EB6921` (`client_id`),
+  ADD KEY `IDX_CFBDFA1498DE13AC` (`partenaire_id`),
+  ADD KEY `IDX_CFBDFA1480F7E20A` (`assureur_id`),
+  ADD KEY `IDX_CFBDFA14D8FB132F` (`autoritefiscale_id`);
+
+--
+-- Index pour la table `note_compte_bancaire`
+--
+ALTER TABLE `note_compte_bancaire`
+  ADD PRIMARY KEY (`note_id`,`compte_bancaire_id`),
+  ADD KEY `IDX_956D59AE26ED0855` (`note_id`),
+  ADD KEY `IDX_956D59AEAF1E371E` (`compte_bancaire_id`);
+
+--
+-- Index pour la table `notification_sinistre`
+--
+ALTER TABLE `notification_sinistre`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_A0BC42C21F4BE942` (`assure_id`),
+  ADD KEY `IDX_A0BC42C24ECC2413` (`risque_id`),
+  ADD KEY `IDX_A0BC42C2EA417747` (`invite_id`),
+  ADD KEY `IDX_A0BC42C280F7E20A` (`assureur_id`);
+
+--
+-- Index pour la table `offre_indemnisation_sinistre`
+--
+ALTER TABLE `offre_indemnisation_sinistre`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_D73D1ECCF4F2559E` (`notification_sinistre_id`);
+
+--
+-- Index pour la table `paiement`
+--
+ALTER TABLE `paiement`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_B1DC7A1E72DDD90D` (`offre_indemnisation_sinistre_id`),
+  ADD KEY `IDX_B1DC7A1E26ED0855` (`note_id`),
+  ADD KEY `IDX_B1DC7A1EAF1E371E` (`compte_bancaire_id`);
+
+--
+-- Index pour la table `partenaire`
+--
+ALTER TABLE `partenaire`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_32FFA373A4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `piece_sinistre`
+--
+ALTER TABLE `piece_sinistre`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_C1DE1588C54C8C93` (`type_id`),
+  ADD KEY `IDX_C1DE1588EA417747` (`invite_id`),
+  ADD KEY `IDX_C1DE1588F4F2559E` (`notification_sinistre_id`);
+
+--
+-- Index pour la table `piste`
+--
+ALTER TABLE `piste`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `UNIQ_59E25077DF6F6FEC` (`avenant_de_base_id`),
+  ADD KEY `IDX_59E250774ECC2413` (`risque_id`),
+  ADD KEY `IDX_59E2507719EB6921` (`client_id`),
+  ADD KEY `IDX_59E25077EA417747` (`invite_id`);
+
+--
+-- Index pour la table `piste_partenaire`
+--
+ALTER TABLE `piste_partenaire`
+  ADD PRIMARY KEY (`piste_id`,`partenaire_id`),
+  ADD KEY `IDX_6110D3B3C34065BC` (`piste_id`),
+  ADD KEY `IDX_6110D3B398DE13AC` (`partenaire_id`);
+
+--
+-- Index pour la table `revenu_pour_courtier`
+--
+ALTER TABLE `revenu_pour_courtier`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_8CAA04C120F3EE6A` (`type_revenu_id`),
+  ADD KEY `IDX_8CAA04C15D14FAF0` (`cotation_id`);
+
+--
+-- Index pour la table `risque`
+--
+ALTER TABLE `risque`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_20230D24A4AEAFEA` (`entreprise_id`),
+  ADD KEY `IDX_20230D2426164BCB` (`condition_partage_id`);
+
+--
+-- Index pour la table `roles_en_administration`
+--
+ALTER TABLE `roles_en_administration`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_E4BAB4BAEA417747` (`invite_id`);
+
+--
+-- Index pour la table `roles_en_finance`
+--
+ALTER TABLE `roles_en_finance`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_D3801708EA417747` (`invite_id`);
+
+--
+-- Index pour la table `roles_en_marketing`
+--
+ALTER TABLE `roles_en_marketing`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_C12A8B85EA417747` (`invite_id`);
+
+--
+-- Index pour la table `roles_en_production`
+--
+ALTER TABLE `roles_en_production`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_D0384CFEA417747` (`invite_id`);
+
+--
+-- Index pour la table `roles_en_sinistre`
+--
+ALTER TABLE `roles_en_sinistre`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_5B60B8D0EA417747` (`invite_id`);
+
+--
+-- Index pour la table `tache`
+--
+ALTER TABLE `tache`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_938720758ABD09BB` (`executor_id`),
+  ADD KEY `IDX_93872075C34065BC` (`piste_id`),
+  ADD KEY `IDX_938720755D14FAF0` (`cotation_id`),
+  ADD KEY `IDX_93872075F4F2559E` (`notification_sinistre_id`),
+  ADD KEY `IDX_9387207572DDD90D` (`offre_indemnisation_sinistre_id`);
+
+--
+-- Index pour la table `taxe`
+--
+ALTER TABLE `taxe`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_56322FE9A4AEAFEA` (`entreprise_id`);
+
+--
+-- Index pour la table `tranche`
+--
+ALTER TABLE `tranche`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_666758405D14FAF0` (`cotation_id`);
+
+--
+-- Index pour la table `type_revenu`
+--
+ALTER TABLE `type_revenu`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `IDX_5E74AB7DA4AEAFEA` (`entreprise_id`),
+  ADD KEY `IDX_5E74AB7DC8165237` (`type_chargement_id`),
+  ADD KEY `IDX_5E74AB7D26ED0855` (`note_id`),
+  ADD KEY `IDX_5E74AB7D7294869C` (`article_id`);
+
+--
+-- Index pour la table `utilisateur`
+--
+ALTER TABLE `utilisateur`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `UNIQ_IDENTIFIER_EMAIL` (`email`),
+  ADD KEY `IDX_1D1C63B3318EA8F9` (`connected_to_id`);
+
+--
+-- AUTO_INCREMENT pour les tables déchargées
+--
+
+--
+-- AUTO_INCREMENT pour la table `article`
+--
+ALTER TABLE `article`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `assureur`
+--
+ALTER TABLE `assureur`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `autorite_fiscale`
+--
+ALTER TABLE `autorite_fiscale`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `avenant`
+--
+ALTER TABLE `avenant`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `bordereau`
+--
+ALTER TABLE `bordereau`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `chargement`
+--
+ALTER TABLE `chargement`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `chargement_pour_prime`
+--
+ALTER TABLE `chargement_pour_prime`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `classeur`
+--
+ALTER TABLE `classeur`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `client`
+--
+ALTER TABLE `client`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `compte_bancaire`
+--
+ALTER TABLE `compte_bancaire`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `condition_partage`
+--
+ALTER TABLE `condition_partage`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `contact`
+--
+ALTER TABLE `contact`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `cotation`
+--
+ALTER TABLE `cotation`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `document`
+--
+ALTER TABLE `document`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `entreprise`
+--
+ALTER TABLE `entreprise`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `feedback`
+--
+ALTER TABLE `feedback`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `groupe`
+--
+ALTER TABLE `groupe`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `invite`
+--
+ALTER TABLE `invite`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `messenger_messages`
+--
+ALTER TABLE `messenger_messages`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `modele_piece_sinistre`
+--
+ALTER TABLE `modele_piece_sinistre`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `monnaie`
+--
+ALTER TABLE `monnaie`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `note`
+--
+ALTER TABLE `note`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `notification_sinistre`
+--
+ALTER TABLE `notification_sinistre`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `offre_indemnisation_sinistre`
+--
+ALTER TABLE `offre_indemnisation_sinistre`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `paiement`
+--
+ALTER TABLE `paiement`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `partenaire`
+--
+ALTER TABLE `partenaire`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `piece_sinistre`
+--
+ALTER TABLE `piece_sinistre`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `piste`
+--
+ALTER TABLE `piste`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `revenu_pour_courtier`
+--
+ALTER TABLE `revenu_pour_courtier`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `risque`
+--
+ALTER TABLE `risque`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `roles_en_administration`
+--
+ALTER TABLE `roles_en_administration`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `roles_en_finance`
+--
+ALTER TABLE `roles_en_finance`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `roles_en_marketing`
+--
+ALTER TABLE `roles_en_marketing`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `roles_en_production`
+--
+ALTER TABLE `roles_en_production`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `roles_en_sinistre`
+--
+ALTER TABLE `roles_en_sinistre`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `tache`
+--
+ALTER TABLE `tache`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `taxe`
+--
+ALTER TABLE `taxe`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `tranche`
+--
+ALTER TABLE `tranche`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `type_revenu`
+--
+ALTER TABLE `type_revenu`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT pour la table `utilisateur`
+--
+ALTER TABLE `utilisateur`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- Contraintes pour les tables déchargées
+--
+
+--
+-- Contraintes pour la table `article`
+--
+ALTER TABLE `article`
+  ADD CONSTRAINT `FK_23A0E6626ED0855` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`),
+  ADD CONSTRAINT `FK_23A0E66B76F6B31` FOREIGN KEY (`tranche_id`) REFERENCES `tranche` (`id`);
+
+--
+-- Contraintes pour la table `assureur`
+--
+ALTER TABLE `assureur`
+  ADD CONSTRAINT `FK_7B0E5955A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `autorite_fiscale`
+--
+ALTER TABLE `autorite_fiscale`
+  ADD CONSTRAINT `FK_FF4842301AB947A4` FOREIGN KEY (`taxe_id`) REFERENCES `taxe` (`id`),
+  ADD CONSTRAINT `FK_FF48423026ED0855` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`);
+
+--
+-- Contraintes pour la table `avenant`
+--
+ALTER TABLE `avenant`
+  ADD CONSTRAINT `FK_2FE5CE55D14FAF0` FOREIGN KEY (`cotation_id`) REFERENCES `cotation` (`id`);
+
+--
+-- Contraintes pour la table `bordereau`
+--
+ALTER TABLE `bordereau`
+  ADD CONSTRAINT `FK_F7B4C56180F7E20A` FOREIGN KEY (`assureur_id`) REFERENCES `assureur` (`id`),
+  ADD CONSTRAINT `FK_F7B4C561EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `chargement`
+--
+ALTER TABLE `chargement`
+  ADD CONSTRAINT `FK_36328758A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `chargement_pour_prime`
+--
+ALTER TABLE `chargement_pour_prime`
+  ADD CONSTRAINT `FK_8065D3CA5D14FAF0` FOREIGN KEY (`cotation_id`) REFERENCES `cotation` (`id`),
+  ADD CONSTRAINT `FK_8065D3CAC54C8C93` FOREIGN KEY (`type_id`) REFERENCES `chargement` (`id`);
+
+--
+-- Contraintes pour la table `classeur`
+--
+ALTER TABLE `classeur`
+  ADD CONSTRAINT `FK_D15F835AA4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `client`
+--
+ALTER TABLE `client`
+  ADD CONSTRAINT `FK_C74404557A45358C` FOREIGN KEY (`groupe_id`) REFERENCES `groupe` (`id`),
+  ADD CONSTRAINT `FK_C7440455A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `client_partenaire`
+--
+ALTER TABLE `client_partenaire`
+  ADD CONSTRAINT `FK_A2AB9E3219EB6921` FOREIGN KEY (`client_id`) REFERENCES `client` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `FK_A2AB9E3298DE13AC` FOREIGN KEY (`partenaire_id`) REFERENCES `partenaire` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `compte_bancaire`
+--
+ALTER TABLE `compte_bancaire`
+  ADD CONSTRAINT `FK_50BC21DEA4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `condition_partage`
+--
+ALTER TABLE `condition_partage`
+  ADD CONSTRAINT `FK_CF012D1F98DE13AC` FOREIGN KEY (`partenaire_id`) REFERENCES `partenaire` (`id`),
+  ADD CONSTRAINT `FK_CF012D1FC34065BC` FOREIGN KEY (`piste_id`) REFERENCES `piste` (`id`);
+
+--
+-- Contraintes pour la table `contact`
+--
+ALTER TABLE `contact`
+  ADD CONSTRAINT `FK_4C62E63819EB6921` FOREIGN KEY (`client_id`) REFERENCES `client` (`id`),
+  ADD CONSTRAINT `FK_4C62E638F4F2559E` FOREIGN KEY (`notification_sinistre_id`) REFERENCES `notification_sinistre` (`id`);
+
+--
+-- Contraintes pour la table `cotation`
+--
+ALTER TABLE `cotation`
+  ADD CONSTRAINT `FK_996DA94480F7E20A` FOREIGN KEY (`assureur_id`) REFERENCES `assureur` (`id`),
+  ADD CONSTRAINT `FK_996DA944C34065BC` FOREIGN KEY (`piste_id`) REFERENCES `piste` (`id`);
+
+--
+-- Contraintes pour la table `document`
+--
+ALTER TABLE `document`
+  ADD CONSTRAINT `FK_D8698A7619EB6921` FOREIGN KEY (`client_id`) REFERENCES `client` (`id`),
+  ADD CONSTRAINT `FK_D8698A762A4C4478` FOREIGN KEY (`paiement_id`) REFERENCES `paiement` (`id`),
+  ADD CONSTRAINT `FK_D8698A7655D5304E` FOREIGN KEY (`bordereau_id`) REFERENCES `bordereau` (`id`),
+  ADD CONSTRAINT `FK_D8698A765D14FAF0` FOREIGN KEY (`cotation_id`) REFERENCES `cotation` (`id`),
+  ADD CONSTRAINT `FK_D8698A7672DDD90D` FOREIGN KEY (`offre_indemnisation_sinistre_id`) REFERENCES `offre_indemnisation_sinistre` (`id`),
+  ADD CONSTRAINT `FK_D8698A7685631A3A` FOREIGN KEY (`avenant_id`) REFERENCES `avenant` (`id`),
+  ADD CONSTRAINT `FK_D8698A7698DE13AC` FOREIGN KEY (`partenaire_id`) REFERENCES `partenaire` (`id`),
+  ADD CONSTRAINT `FK_D8698A76AF1E371E` FOREIGN KEY (`compte_bancaire_id`) REFERENCES `compte_bancaire` (`id`),
+  ADD CONSTRAINT `FK_D8698A76C34065BC` FOREIGN KEY (`piste_id`) REFERENCES `piste` (`id`),
+  ADD CONSTRAINT `FK_D8698A76D2235D39` FOREIGN KEY (`tache_id`) REFERENCES `tache` (`id`),
+  ADD CONSTRAINT `FK_D8698A76D249A887` FOREIGN KEY (`feedback_id`) REFERENCES `feedback` (`id`),
+  ADD CONSTRAINT `FK_D8698A76DFB9960E` FOREIGN KEY (`piece_sinistre_id`) REFERENCES `piece_sinistre` (`id`),
+  ADD CONSTRAINT `FK_D8698A76EC10E96A` FOREIGN KEY (`classeur_id`) REFERENCES `classeur` (`id`);
+
+--
+-- Contraintes pour la table `entreprise`
+--
+ALTER TABLE `entreprise`
+  ADD CONSTRAINT `FK_D19FA60FB88E14F` FOREIGN KEY (`utilisateur_id`) REFERENCES `utilisateur` (`id`);
+
+--
+-- Contraintes pour la table `feedback`
+--
+ALTER TABLE `feedback`
+  ADD CONSTRAINT `FK_D2294458D2235D39` FOREIGN KEY (`tache_id`) REFERENCES `tache` (`id`),
+  ADD CONSTRAINT `FK_D2294458EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `groupe`
+--
+ALTER TABLE `groupe`
+  ADD CONSTRAINT `FK_4B98C21A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `invite`
+--
+ALTER TABLE `invite`
+  ADD CONSTRAINT `FK_C7E210D7A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`),
+  ADD CONSTRAINT `FK_C7E210D7EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `modele_piece_sinistre`
+--
+ALTER TABLE `modele_piece_sinistre`
+  ADD CONSTRAINT `FK_3723B98AA4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `monnaie`
+--
+ALTER TABLE `monnaie`
+  ADD CONSTRAINT `FK_B3A6E2E6A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `note`
+--
+ALTER TABLE `note`
+  ADD CONSTRAINT `FK_CFBDFA1419EB6921` FOREIGN KEY (`client_id`) REFERENCES `client` (`id`),
+  ADD CONSTRAINT `FK_CFBDFA1480F7E20A` FOREIGN KEY (`assureur_id`) REFERENCES `assureur` (`id`),
+  ADD CONSTRAINT `FK_CFBDFA1498DE13AC` FOREIGN KEY (`partenaire_id`) REFERENCES `partenaire` (`id`),
+  ADD CONSTRAINT `FK_CFBDFA14D8FB132F` FOREIGN KEY (`autoritefiscale_id`) REFERENCES `autorite_fiscale` (`id`),
+  ADD CONSTRAINT `FK_CFBDFA14EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `note_compte_bancaire`
+--
+ALTER TABLE `note_compte_bancaire`
+  ADD CONSTRAINT `FK_956D59AE26ED0855` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `FK_956D59AEAF1E371E` FOREIGN KEY (`compte_bancaire_id`) REFERENCES `compte_bancaire` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `notification_sinistre`
+--
+ALTER TABLE `notification_sinistre`
+  ADD CONSTRAINT `FK_A0BC42C21F4BE942` FOREIGN KEY (`assure_id`) REFERENCES `client` (`id`),
+  ADD CONSTRAINT `FK_A0BC42C24ECC2413` FOREIGN KEY (`risque_id`) REFERENCES `risque` (`id`),
+  ADD CONSTRAINT `FK_A0BC42C280F7E20A` FOREIGN KEY (`assureur_id`) REFERENCES `assureur` (`id`),
+  ADD CONSTRAINT `FK_A0BC42C2EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `offre_indemnisation_sinistre`
+--
+ALTER TABLE `offre_indemnisation_sinistre`
+  ADD CONSTRAINT `FK_D73D1ECCF4F2559E` FOREIGN KEY (`notification_sinistre_id`) REFERENCES `notification_sinistre` (`id`);
+
+--
+-- Contraintes pour la table `paiement`
+--
+ALTER TABLE `paiement`
+  ADD CONSTRAINT `FK_B1DC7A1E26ED0855` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`),
+  ADD CONSTRAINT `FK_B1DC7A1E72DDD90D` FOREIGN KEY (`offre_indemnisation_sinistre_id`) REFERENCES `offre_indemnisation_sinistre` (`id`),
+  ADD CONSTRAINT `FK_B1DC7A1EAF1E371E` FOREIGN KEY (`compte_bancaire_id`) REFERENCES `compte_bancaire` (`id`);
+
+--
+-- Contraintes pour la table `partenaire`
+--
+ALTER TABLE `partenaire`
+  ADD CONSTRAINT `FK_32FFA373A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `piece_sinistre`
+--
+ALTER TABLE `piece_sinistre`
+  ADD CONSTRAINT `FK_C1DE1588C54C8C93` FOREIGN KEY (`type_id`) REFERENCES `modele_piece_sinistre` (`id`),
+  ADD CONSTRAINT `FK_C1DE1588EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`),
+  ADD CONSTRAINT `FK_C1DE1588F4F2559E` FOREIGN KEY (`notification_sinistre_id`) REFERENCES `notification_sinistre` (`id`);
+
+--
+-- Contraintes pour la table `piste`
+--
+ALTER TABLE `piste`
+  ADD CONSTRAINT `FK_59E2507719EB6921` FOREIGN KEY (`client_id`) REFERENCES `client` (`id`),
+  ADD CONSTRAINT `FK_59E250774ECC2413` FOREIGN KEY (`risque_id`) REFERENCES `risque` (`id`),
+  ADD CONSTRAINT `FK_59E25077DF6F6FEC` FOREIGN KEY (`avenant_de_base_id`) REFERENCES `avenant` (`id`),
+  ADD CONSTRAINT `FK_59E25077EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `piste_partenaire`
+--
+ALTER TABLE `piste_partenaire`
+  ADD CONSTRAINT `FK_6110D3B398DE13AC` FOREIGN KEY (`partenaire_id`) REFERENCES `partenaire` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `FK_6110D3B3C34065BC` FOREIGN KEY (`piste_id`) REFERENCES `piste` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `revenu_pour_courtier`
+--
+ALTER TABLE `revenu_pour_courtier`
+  ADD CONSTRAINT `FK_8CAA04C120F3EE6A` FOREIGN KEY (`type_revenu_id`) REFERENCES `type_revenu` (`id`),
+  ADD CONSTRAINT `FK_8CAA04C15D14FAF0` FOREIGN KEY (`cotation_id`) REFERENCES `cotation` (`id`);
+
+--
+-- Contraintes pour la table `risque`
+--
+ALTER TABLE `risque`
+  ADD CONSTRAINT `FK_20230D2426164BCB` FOREIGN KEY (`condition_partage_id`) REFERENCES `condition_partage` (`id`),
+  ADD CONSTRAINT `FK_20230D24A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `roles_en_administration`
+--
+ALTER TABLE `roles_en_administration`
+  ADD CONSTRAINT `FK_E4BAB4BAEA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `roles_en_finance`
+--
+ALTER TABLE `roles_en_finance`
+  ADD CONSTRAINT `FK_D3801708EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `roles_en_marketing`
+--
+ALTER TABLE `roles_en_marketing`
+  ADD CONSTRAINT `FK_C12A8B85EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `roles_en_production`
+--
+ALTER TABLE `roles_en_production`
+  ADD CONSTRAINT `FK_D0384CFEA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `roles_en_sinistre`
+--
+ALTER TABLE `roles_en_sinistre`
+  ADD CONSTRAINT `FK_5B60B8D0EA417747` FOREIGN KEY (`invite_id`) REFERENCES `invite` (`id`);
+
+--
+-- Contraintes pour la table `tache`
+--
+ALTER TABLE `tache`
+  ADD CONSTRAINT `FK_938720755D14FAF0` FOREIGN KEY (`cotation_id`) REFERENCES `cotation` (`id`),
+  ADD CONSTRAINT `FK_9387207572DDD90D` FOREIGN KEY (`offre_indemnisation_sinistre_id`) REFERENCES `offre_indemnisation_sinistre` (`id`),
+  ADD CONSTRAINT `FK_938720758ABD09BB` FOREIGN KEY (`executor_id`) REFERENCES `invite` (`id`),
+  ADD CONSTRAINT `FK_93872075C34065BC` FOREIGN KEY (`piste_id`) REFERENCES `piste` (`id`),
+  ADD CONSTRAINT `FK_93872075F4F2559E` FOREIGN KEY (`notification_sinistre_id`) REFERENCES `notification_sinistre` (`id`);
+
+--
+-- Contraintes pour la table `taxe`
+--
+ALTER TABLE `taxe`
+  ADD CONSTRAINT `FK_56322FE9A4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`);
+
+--
+-- Contraintes pour la table `tranche`
+--
+ALTER TABLE `tranche`
+  ADD CONSTRAINT `FK_666758405D14FAF0` FOREIGN KEY (`cotation_id`) REFERENCES `cotation` (`id`);
+
+--
+-- Contraintes pour la table `type_revenu`
+--
+ALTER TABLE `type_revenu`
+  ADD CONSTRAINT `FK_5E74AB7D26ED0855` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`),
+  ADD CONSTRAINT `FK_5E74AB7D7294869C` FOREIGN KEY (`article_id`) REFERENCES `article` (`id`),
+  ADD CONSTRAINT `FK_5E74AB7DA4AEAFEA` FOREIGN KEY (`entreprise_id`) REFERENCES `entreprise` (`id`),
+  ADD CONSTRAINT `FK_5E74AB7DC8165237` FOREIGN KEY (`type_chargement_id`) REFERENCES `chargement` (`id`);
+
+--
+-- Contraintes pour la table `utilisateur`
+--
+ALTER TABLE `utilisateur`
+  ADD CONSTRAINT `FK_1D1C63B3318EA8F9` FOREIGN KEY (`connected_to_id`) REFERENCES `entreprise` (`id`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
