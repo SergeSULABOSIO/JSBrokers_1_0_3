@@ -15,12 +15,10 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;
-use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Form\TacheType;
 use App\Entity\Document;
 use App\Entity\Feedback;
-use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Repository\TacheRepository;
 use App\Entity\NotificationSinistre;
