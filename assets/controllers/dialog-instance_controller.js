@@ -303,7 +303,7 @@ export default class extends Controller {
             if (!response.ok) throw result;
 
             this.showFeedback('success', result.message);
-            console.log(this.nomControleur + " submitForm - (0/5) Actualisation de la Collection:", result.entity, this.context.originatorId);
+            console.log(this.nomControlleur + " submitForm (réponse du serveur) - (0/5) Actualisation de la Collection:", result.entity, this.context.originatorId);
 
             // NOUVEAU : Notifier le cerveau du succès de l'enregistrement
             this.notifyCerveau('app:entity.saved', {
@@ -362,7 +362,7 @@ export default class extends Controller {
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
             if (controller) {
-                console.log(`${this.nomControlleur} - (3) Activation de la collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
+                // console.log(`${this.nomControlleur} - (3) Activation de la collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
                 // On passe directement le nouvel ID à la collection pour qu'elle se mette à jour et se charge.
                 controller.enableAndLoad(this.entity.id);
             }
