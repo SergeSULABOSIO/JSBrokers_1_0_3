@@ -74,7 +74,13 @@ export default class extends Controller {
             // NOUVEAU : Un composant (view-manager) initialise le contexte
             case 'app:context.initialized':
                 console.log("-> ACTION: Le contexte de la rubrique a été initialisé.");
+
                 this.currentIdEntreprise = payload.idEntreprise;
+                this.currentIdInvite = payload.idInvite;
+
+                this.idEntreprise = payload.idEntreprise;
+                this.idInvite = payload.idInvite;
+
                 this.broadcast('ui:tab.context-changed', payload); // On relaie pour que la toolbar se mette à jour
                 break;
 
@@ -109,57 +115,21 @@ export default class extends Controller {
                 this.selectionState = payload.selectos || [];
                 this.selectionIds = new Set(this.selectionState.map(s => s.id));
                 // On publie la sélection ET on rediffuse le contexte de l'onglet pour les composants comme la toolbar.
-                this.publishSelection(); 
+                this.publishSelection();
                 this.broadcast('ui:tab.context-changed', {
                     ...payload
                 });
                 break;
             case 'dialog:boite-dialogue:init-request':
-                console.log("-> ACTION: Demande d'ouverture de la boît de dialogue depuis la collection");
-                console.log(`${this.nomControleur} - HandleEvent - PARENT - ATTRIBUT AND ID:`, payload.context);
-                this.broadcast('app:boite-dialogue:init-request', {
-                    entity: {}, // Entité vide pour le mode création
-                    entityFormCanvas: payload.entityFormCanvas,
-                    isCreationMode: payload.isCreationMode,
-                    // On fusionne le contexte existant (contenant l'ID parent) avec le contexte global
-                    context: {
-                        ...payload.context, // On garde le contexte d'origine (parent, etc.)
-                        idEntreprise: this.currentIdEntreprise,
-                        idInvite: this.currentIdInvite
-                    }
-                });
-                break;            
+                this.openDialogBox(payload);
+                break;
             case 'ui:boite-dialogue:add-collection-item-request':
-                console.log("-> ACTION: Demande d'ajout à la collection. Préparation de l'ouverture de la boîte de dialogue secondaire.");
-                console.log(`${this.nomControleur} - HandleEvent - PARENT - ATTRIBUT AND ID:`, payload.context);
-                this.broadcast('app:boite-dialogue:init-request', {
-                    entity: {}, // Entité vide pour le mode création
-                    entityFormCanvas: payload.entityFormCanvas,
-                    isCreationMode: payload.isCreationMode,
-                    // On fusionne le contexte existant (contenant l'ID parent) avec le contexte global
-                    context: {
-                        ...payload.context, // On garde le contexte d'origine (parent, etc.)
-                        idEntreprise: this.currentIdEntreprise,
-                        idInvite: this.currentIdInvite
-                    }
-                });
+                this.openDialogBox(payload);
                 break;
 
             // --- NOUVEAU : Gère la demande d'ajout depuis la barre d'outils ---
             case 'ui:toolbar.add-request':
-                console.log("-> ACTION: Demande d'ajout. Préparation de l'ouverture de la boîte de dialogue.");
-                // Le payload contient maintenant directement { entityFormCanvas: ... }
-                // Et potentiellement isCreationMode: true
-                this.broadcast('app:boite-dialogue:init-request', {
-                    entity: {}, // Entité vide pour le mode création
-                    entityFormCanvas: payload.entityFormCanvas,
-                    isCreationMode: payload.isCreationMode, // Relayer l'information
-                    // On enrichit le contexte avec les IDs mémorisés par le cerveau
-                    context: {
-                        idEntreprise: this.currentIdEntreprise,
-                        idInvite: this.currentIdInvite
-                    }
-                });
+                this.openDialogBox(payload);
                 break;
 
             // --- NOUVEAU : Gestion des événements du cycle de vie des dialogues ---
@@ -189,7 +159,7 @@ export default class extends Controller {
             case 'ui:dialog.closed':
                 console.log("-> ACTION: Une boîte de dialogue a été fermée.", payload);
                 break;
-            
+
             // --- NOUVEAU : Gère la demande d'actualisation depuis la barre d'outils ---
             case 'ui:toolbar.refresh-request':
                 console.log("-> ACTION: Demande d'actualisation de la liste principale. Diffusion de l'ordre de rafraîchissement.");
@@ -198,7 +168,7 @@ export default class extends Controller {
                     idInvite: this.currentIdInvite,
                 });
                 break;
-            
+
             // --- NOUVEAU : Gère la demande d'ouverture du menu contextuel ---
             case 'ui:context-menu.request':
                 console.log("-> ACTION: Demande d'affichage du menu contextuel. Diffusion de l'ordre.");
@@ -292,6 +262,29 @@ export default class extends Controller {
         }
 
         console.groupEnd();
+    }
+
+
+    openDialogBox(payload) {
+        console.groupCollapsed(`${this.nomControleur} - handleEvent - EDITDIAL(1)`);
+        console.log(`| Mode: ${payload.isCreationMode ? 'Création' : 'Édition'}`);
+        console.log('| Entité:', payload.entity);
+        console.log('| Contexte:', payload.context);
+        console.log('| Canvas:', payload.entityFormCanvas);
+        console.log('| idEntreprise:', this.idEntreprise);
+        console.log('| idInvite:', this.idInvite);
+        console.groupEnd();
+
+        this.broadcast('app:boite-dialogue:init-request', {
+            entity: payload.entity, // Entité vide pour le mode création
+            entityFormCanvas: payload.entityFormCanvas,
+            isCreationMode: payload.isCreationMode,
+            context: {
+                ...payload.context,
+                idEntreprise: this.idEntreprise,
+                idInvite: this.idInvite
+            }
+        });
     }
 
     /**

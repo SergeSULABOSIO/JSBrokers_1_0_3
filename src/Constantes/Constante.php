@@ -6478,6 +6478,41 @@ class Constante
                     "colonnes_numeriques" => [],
                 ];
 
+            case Feedback::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Feedbacks",
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "description",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "fluent-mdl2:feedback",
+                            "icone_taille" => "19px",
+                        ],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            [
+                                "attribut_prefixe" => "Suivante: ",
+                                "attribut_code" => "nextAction",
+                                "attribut_type" => "text",
+                                "attribut_taille_max" => 30,
+                                "icone" => "mdi:checkbox-marked-circle-outline",
+                                "icone_taille" => "16px",
+                            ],
+                            [
+                                "attribut_prefixe" => "Créé le: ",
+                                "attribut_code" => "nextActionAt",
+                                "attribut_type" => "date",
+                                "attribut_taille_max" => null,
+                                "icone" => "fluent-mdl2:date-time-mirrored",
+                                "icone_taille" => "16px",
+                            ],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
             case Paiement::class:
                 return [
                     "colonne_principale" => [
