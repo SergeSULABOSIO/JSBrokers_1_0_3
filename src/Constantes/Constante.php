@@ -6735,6 +6735,11 @@ class Constante
             "couleur_fond" => "white",
             "colonnes" => [
                 ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre", null, $isParentNew)]],
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
                 ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre", null, $isParentNew)]]
             ]
         ];
@@ -6794,11 +6799,15 @@ class Constante
         $layout[] = [
             "couleur_fond" => "white", 
             "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
                 ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
             ]
         ];
-
+        $layout[] = [
+            "couleur_fond" => "white", 
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
+            ]
+        ];
         $layout[] = [
             "couleur_fond" => "white", 
             "colonnes" => [
@@ -6830,6 +6839,11 @@ class Constante
             "couleur_fond" => "white",
             "colonnes" => [
                 ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache', null, $isParentNew)]],
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
                 ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache', null, $isParentNew)]],
             ]
         ];

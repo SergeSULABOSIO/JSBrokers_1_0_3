@@ -55,15 +55,17 @@ export default class extends Controller {
     }
 
     verbaliser() {
-        console.log(this.nomControleur + " - Options - listUrlValue:", this.listUrlValue);
-        console.log(this.nomControleur + " - Options - itemFormUrlValue:", this.itemFormUrlValue);
-        console.log(this.nomControleur + " - Options - itemSubmitUrlValue:", this.itemSubmitUrlValue);
-        console.log(this.nomControleur + " - Options - itemDeleteUrlValue:", this.itemDeleteUrlValue);
-        console.log(this.nomControleur + " - Options - itemTitleCreateValue:", this.itemTitleCreateValue);
-        console.log(this.nomControleur + " - Options - itemTitleEditValue:", this.itemTitleEditValue);
-        console.log(this.nomControleur + " - Options - parentEntityIdValue:", this.parentEntityIdValue);
-        console.log(this.nomControleur + " - Options - parentFieldNameValue:", this.parentFieldNameValue);
-        console.log(this.nomControleur + " - Options - disabledValue:", this.disabledValue);
+        console.groupCollapsed(`${this.nomControleur} - Verbalisation`)
+        console.log("| " + this.nomControleur + " - Options - listUrlValue:", this.listUrlValue);
+        console.log("| " + this.nomControleur + " - Options - itemFormUrlValue:", this.itemFormUrlValue);
+        console.log("| " + this.nomControleur + " - Options - itemSubmitUrlValue:", this.itemSubmitUrlValue);
+        console.log("| " + this.nomControleur + " - Options - itemDeleteUrlValue:", this.itemDeleteUrlValue);
+        console.log("| " + this.nomControleur + " - Options - itemTitleCreateValue:", this.itemTitleCreateValue);
+        console.log("| " + this.nomControleur + " - Options - itemTitleEditValue:", this.itemTitleEditValue);
+        console.log("| " + this.nomControleur + " - Options - parentEntityIdValue:", this.parentEntityIdValue);
+        console.log("| " + this.nomControleur + " - Options - parentFieldNameValue:", this.parentFieldNameValue);
+        console.log("| " + this.nomControleur + " - Options - disabledValue:", this.disabledValue);
+        console.groupEnd();
     }
 
     /**
@@ -221,15 +223,16 @@ export default class extends Controller {
      * Déclenche l'ouverture de la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
+        console.log(this.nomControleur + " (0) - addItem()");
         this.verbaliser();
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
-
+        
         const parentContext = {};
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
-
+        
         //Les variables à transporter
         const entity = {};// Entité vide pour la création, avec l'id pour l'édition
         const isCreationMode = true;
@@ -267,6 +270,7 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     editItem(event) {
+        console.log(this.nomControleur + " (0) - editItem()");
         this.verbaliser();
         // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
         const row = event.currentTarget.closest('tr');
