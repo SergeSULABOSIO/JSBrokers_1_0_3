@@ -361,10 +361,19 @@ export default class extends Controller {
         const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
-            if (controller) {
-                // console.log(`${this.nomControlleur} - (3) Activation de la collection '${element.id}' avec le nouvel ID parent: ${this.entity.id}`);
-                // On passe directement le nouvel ID à la collection pour qu'elle se mette à jour et se charge.
+            if (controller && this.entity && this.entity.id) {
+                // On active la collection avec l'ID de l'entité actuelle (ex: PieceSinistre)
                 controller.enableAndLoad(this.entity.id);
+
+                // NOUVEAU : On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
+                // à la collection enfant (ex: la collection de Documents).
+                // Cela garantit que si la collection de documents doit créer un nouvel élément,
+                // elle connaîtra non seulement son parent direct (PieceSinistre) mais aussi
+                // le contexte plus large.
+                if (this.context) {
+                    console.log(`${this.nomControlleur} - Transmission du contexte à la collection enfant '${element.id}':`, this.context);
+                    Object.assign(controller.contextValue, this.context);
+                }
             }
         });
     }

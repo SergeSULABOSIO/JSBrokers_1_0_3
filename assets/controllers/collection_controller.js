@@ -27,6 +27,7 @@ export default class extends Controller {
         parentEntityId: Number,
         parentFieldName: String,
         disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
+        context: Object, // NOUVEAU : Pour recevoir le contexte d'un dialogue parent
     };
 
     /**
@@ -228,6 +229,7 @@ export default class extends Controller {
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
         
+        // Contexte du parent immédiat (celui de la collection)
         const parentContext = {};
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
@@ -246,8 +248,10 @@ export default class extends Controller {
             }
         };
         const context = {
+            // On fusionne le contexte reçu du dialogue parent (s'il existe)
+            ...this.contextValue,
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
-            ...parentContext,
+            ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
 
         console.groupCollapsed(`${this.nomControleur} - addItem - EDITDIAL(0)`);
@@ -277,6 +281,7 @@ export default class extends Controller {
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
 
+        // Contexte du parent immédiat (celui de la collection)
         const parentContext = {};
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
@@ -295,8 +300,10 @@ export default class extends Controller {
             }
         };
         const context = {
+            // On fusionne le contexte reçu du dialogue parent (s'il existe)
+            ...this.contextValue,
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
-            ...parentContext,
+            ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
 
         console.groupCollapsed(`${this.nomControleur} - editItem - EDITDIAL(0)`);
