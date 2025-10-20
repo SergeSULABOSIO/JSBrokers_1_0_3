@@ -288,8 +288,16 @@ export default class extends Controller {
         }
         // On fusionne tout le contexte. C'est plus simple et plus dynamique.
         if (this.context) {
-            for (const [key, value] of Object.entries(this.context)) {
-                formData.append(key, value);
+            for (const [key, rawValue] of Object.entries(this.context)) {
+                // CORRECTION : Gestion des valeurs complexes dans le contexte.
+                // Si la valeur est un objet avec un 'id', on prend l'id.
+                // Sinon, on prend la valeur brute. Cela évite d'envoyer "[object Object]".
+                let valueToAppend = rawValue;
+                if (typeof rawValue === 'object' && rawValue !== null && 'id' in rawValue) {
+                    valueToAppend = rawValue.id;
+                }
+
+                formData.append(key, valueToAppend);
             }
         }
         console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
