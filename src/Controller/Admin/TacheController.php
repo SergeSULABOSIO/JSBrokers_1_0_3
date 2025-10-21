@@ -29,6 +29,7 @@ use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
@@ -62,6 +63,7 @@ class TacheController extends AbstractController
     {
         return [
             'notificationSinistre' => NotificationSinistre::class,
+            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
         ];
     }
 
@@ -251,9 +253,9 @@ class TacheController extends AbstractController
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
             'idInvite' => $this->getInvite()->getId(),
             'idEntreprise' => $this->getEntreprise()->getId(),
+            'parentEntityId' => $id,
+            'parentFieldName' => 'tache', // Le Feedback est lié par le champ 'tache'
             'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
         ]);
     }
 
@@ -284,6 +286,8 @@ class TacheController extends AbstractController
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
             'idInvite' => $this->getInvite()->getId(),
             'idEntreprise' => $this->getEntreprise()->getId(),
+            'parentEntityId' => $id,
+            'parentFieldName' => 'tache', // Le Document est lié par le champ 'tache'
             'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
             // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
             // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
