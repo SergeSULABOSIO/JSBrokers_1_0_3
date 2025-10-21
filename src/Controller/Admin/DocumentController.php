@@ -37,6 +37,14 @@ use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\Avenant;
+use App\Entity\Bordereau;
+use App\Entity\Classeur;
+use App\Entity\Client;
+use App\Entity\CompteBancaire;
+use App\Entity\Cotation;
+use App\Entity\Partenaire;
+use App\Entity\Piste;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Vich\UploaderBundle\Handler\DownloadHandler;
@@ -73,11 +81,20 @@ class DocumentController extends AbstractController
     {
         return [
             // Clé envoyée par le client => Classe de l'entité parente
+            'classeur' => Classeur::class,
             'pieceSinistre' => PieceSinistre::class,
+            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
+            'cotation' => Cotation::class,
+            'avenant' => Avenant::class,
             'tache' => Tache::class,
-            'offreIndemnisation' => OffreIndemnisationSinistre::class,
-            'paiement' => Paiement::class,
             'feedback' => Feedback::class,
+            'paiement' => Paiement::class,
+            'client' => Client::class,
+            'bordereau' => Bordereau::class,
+            'compteBancaire' => CompteBancaire::class,
+            'piste' => Piste::class,
+            'partenaire' => Partenaire::class,
+            'paiement' => Paiement::class,
             // Si demain un Document peut être lié à une 'Facture',
             // il suffira d'ajouter 'facture' => Facture::class ici.
         ];
@@ -155,6 +172,8 @@ class DocumentController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->associateParent($document, $data, $em);
+            // dd("Parents", $submittedData);
+
             $em->persist($document);
             $em->flush();
 

@@ -48,15 +48,15 @@ export default class extends Controller {
         } else {
             this.load();
         }
-        this.verbaliser();
+        // this.verbaliser();
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
     }
 
-    verbaliser() {
-        console.groupCollapsed(`${this.nomControleur} - Verbalisation`)
+    verbaliser(repere) {
+        console.groupCollapsed(this.nomControleur + " - Verbalisation * " + repere + " *");
         console.log("| " + this.nomControleur + " - Options - listUrlValue:", this.listUrlValue);
         console.log("| " + this.nomControleur + " - Options - itemFormUrlValue:", this.itemFormUrlValue);
         console.log("| " + this.nomControleur + " - Options - itemSubmitUrlValue:", this.itemSubmitUrlValue);
@@ -76,13 +76,13 @@ export default class extends Controller {
         // --- CORRECTION : Vérification de l'état désactivé ---
         const dialogListUrl = this.listUrlValue + "/dialog";
         console.log(this.nomControleur + " load - (3/5) Actualisation de la Collection", dialogListUrl);
-        this.verbaliser();
+        this.verbaliser("load");
         if (!this.listUrlValue || this.disabledValue) {
             // console.error(`${this.nomControleur} - Aucune URL n'est définie pour charger la collection.`);
             this.listContainerTarget.innerHTML = '<div class="alert alert-warning">Configuration manquante: URL de chargement non définie.</div>';
             return;
         }
-
+        
         try {
             console.log(this.nomControleur + " refresh - (4/5) Actualisation de la Collection, listUrl:" + dialogListUrl);
             const response = await fetch(dialogListUrl);
@@ -104,7 +104,7 @@ export default class extends Controller {
      */
     enableAndLoad(parentId) {
         console.log(this.nomControleur + " - PASSATION ID PARENT VERS COLLECTION:", parentId);
-        this.verbaliser();
+        // this.verbaliser();
         this.parentEntityIdValue = parentId;
         this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
         this.disabledValue = false;
@@ -225,7 +225,6 @@ export default class extends Controller {
      */
     addItem(event) {
         console.log(this.nomControleur + " (0) - addItem()");
-        this.verbaliser();
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
         
@@ -234,6 +233,8 @@ export default class extends Controller {
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
+        this.verbaliser("addItem");
+        console.log(this.nomControleur + " - parentContext (addItem):", parentContext);
         
         //Les variables à transporter
         const entity = {};// Entité vide pour la création, avec l'id pour l'édition
@@ -249,7 +250,6 @@ export default class extends Controller {
         };
         const context = {
             // On fusionne le contexte reçu du dialogue parent (s'il existe)
-            ...this.contextValue,
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
             ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
@@ -275,17 +275,21 @@ export default class extends Controller {
      */
     editItem(event) {
         console.log(this.nomControleur + " (0) - editItem()");
-        this.verbaliser();
         // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
         const row = event.currentTarget.closest('tr');
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
-
+        
         // Contexte du parent immédiat (celui de la collection)
         const parentContext = {};
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
+        // --- DÉBOGAGE : Affichage des informations parentes récupérées ---
+        console.log(`${this.nomControleur} - editItem - Infos parent récupérées:`, {
+            parentFieldName: this.parentFieldNameValue,
+            parentEntityId: this.parentEntityIdValue
+        });
 
         //Les variables à transporter
         const entity = { id: itemId };// Entité vide pour la création, avec l'id pour l'édition
@@ -300,7 +304,7 @@ export default class extends Controller {
             }
         };
         const context = {
-            // On fusionne le contexte reçu du dialogue parent (s'il existe)
+            // On fusionne le contexte hérité du dialogue parent (ex: {notificationSinistre: 123})
             ...this.contextValue,
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
             ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)

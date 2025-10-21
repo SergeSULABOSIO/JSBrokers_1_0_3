@@ -62,7 +62,7 @@ export default class extends Controller {
         this.isCreateMode = !(this.entity && this.entity.id);
 
         // Log de démarrage détaillé
-        console.groupCollapsed(`${this.nomControlleur} - start - EDITDIAL(3)`);
+        console.groupCollapsed(`${this.nomControlleur} - Verbalisation - start - EDITDIAL(3)`);
         console.log(`| Mode: ${detail.isCreationMode ? 'Création' : 'Édition'}`);
         console.log('| Entité:', detail.entity);
         console.log('| Contexte:', detail.context);
@@ -255,6 +255,11 @@ export default class extends Controller {
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');
             }
+
+            // CORRECTION : Propager le contexte aux collections dès le premier chargement en mode édition.
+            if (!this.isCreateMode) {
+                this.propagateContextToCollections();
+            }
         } catch (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
             this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
@@ -364,20 +369,24 @@ export default class extends Controller {
         this.updateTitle();
         this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
+        this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
+    }
 
-        // NOUVELLE LOGIQUE : Après le rechargement du HTML, on active les nouvelles instances de collection.
+    /**
+     * Parcourt toutes les collections chargées dans la modale, les active
+     * et leur transmet le contexte du dialogue actuel.
+     * @private
+     */
+    propagateContextToCollections() {
         const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
             if (controller && this.entity && this.entity.id) {
-                // On active la collection avec l'ID de l'entité actuelle (ex: PieceSinistre)
+                // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
                 controller.enableAndLoad(this.entity.id);
 
-                // NOUVEAU : On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
-                // à la collection enfant (ex: la collection de Documents).
-                // Cela garantit que si la collection de documents doit créer un nouvel élément,
-                // elle connaîtra non seulement son parent direct (PieceSinistre) mais aussi
-                // le contexte plus large.
+                // On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
+                // à la collection enfant (ex: la collection de Tâches).
                 if (this.context) {
                     console.log(`${this.nomControlleur} - Transmission du contexte à la collection enfant '${element.id}':`, this.context);
                     Object.assign(controller.contextValue, this.context);
@@ -385,7 +394,7 @@ export default class extends Controller {
             }
         });
     }
-    
+
     /**
      * Affiche un message de feedback (succès, erreur) horodaté dans le pied de page de la modale.
      * @param {'success'|'error'|'warning'} type - Le type de message.

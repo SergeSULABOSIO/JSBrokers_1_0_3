@@ -18,7 +18,19 @@
     - `customAddAction` (optionnel): L'action Stimulus pour le bouton "Ajouter" de l'état vide.
 #}
 <div id="list-controller-{{ random() }}"> 
-    <div class="table-scroll-wrapper flex-grow-1">
+    <div 
+        class="table-scroll-wrapper flex-grow-1"
+        data-controller="collection"
+        data-collection-list-url-value="{{ path(serverRootName ~ '.api.get_' ~ entite_nom|lower ~ 's', {id: 0, usage: 'dialog'}) }}"
+        data-collection-item-form-url-value="{{ path('admin.' ~ entite_nom|lower ~ '.api.get_form') }}"
+        data-collection-item-submit-url-value="{{ path('admin.'~ entite_nom|lower ~ '.api.submit') }}"
+        data-collection-item-delete-url-value="{{ path('admin.'~ entite_nom|lower ~ '.api.delete', {id: 0}) }}"
+        data-collection-item-title-create-value="{{ entityFormCanvas.parametres.titre_creation }}"
+        data-collection-item-title-edit-value="{{ entityFormCanvas.parametres.titre_modification }}"
+        data-collection-parent-field-name-value="{{ parentFieldName ?? entite_nom|lower }}"
+        data-collection-parent-entity-id-value="{{ parentEntityId|default(0) }}"
+        data-collection-disabled-value="true"
+    >
         {% if data is not empty %}
             <table class="table table-hover table-sm table-enhanced">
                 <thead class="table-light sticky-header">
@@ -42,7 +54,11 @@
                             <td class="p-2" data-controller="responsive-cell">
                                 {# --- NOUVEAU : Conteneur pour les boutons d'action contextuels --- #}
                                 <div class="contextual-row-actions" data-collection-target="rowActions">
-                                    <button class="btn btn-sm btn-icon" title="Modifier" data-action="click->collection#editItem">
+                                    <button 
+                                        class="btn btn-sm btn-icon" 
+                                        title="Modifier" 
+                                        data-action="click->collection#editItem"
+                                    >
                                         {{ ux_icon('tabler:edit', {width: "19px"}) }}
                                     </button>
                                     <button class="btn btn-sm btn-icon btn-icon-danger" title="Supprimer" data-action="click->collection#deleteItem">
