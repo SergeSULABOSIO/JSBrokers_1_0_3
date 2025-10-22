@@ -34,7 +34,7 @@ export default class extends Controller {
         listeCanvas: Object,
         entityCanvas: Object,
         entityFormCanvas: Object,
-        numericAttributes: Object,
+        numericAttributes: Array,
         parentFieldName: String,
         disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
         context: Object, // NOUVEAU : Pour recevoir le contexte d'un dialogue parent
