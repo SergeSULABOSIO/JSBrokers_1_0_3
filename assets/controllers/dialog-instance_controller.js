@@ -187,6 +187,7 @@ export default class extends Controller {
      * @private
      */
     async loadFormAndAttributes() {//loadFormBody() {
+        console.log(this.nomControlleur + " - loadFormAndAttributes() - Code:1986");
         try {
             // 1. On commence avec l'URL de base
             let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
@@ -274,6 +275,7 @@ export default class extends Controller {
      * Gère la soumission du formulaire via AJAX.
      */
     async submitForm(event) {
+        console.log(this.nomControlleur + " - submitForm() - Code:1986");
         event.preventDefault();
         this.toggleLoading(true);
         this.toggleProgressBar(true);
@@ -324,7 +326,7 @@ export default class extends Controller {
                 originatorId: this.context.originatorId // Pour savoir quelle collection rafraîchir
             });
 
-            if (this.isCreateMode && result.entity) {
+            if (result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
 
@@ -378,6 +380,8 @@ export default class extends Controller {
      * @private
      */
     propagateContextToCollections() {
+        console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986");
+        
         const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
@@ -385,11 +389,12 @@ export default class extends Controller {
                 // On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
                 // à la collection enfant (ex: la collection de Tâches).
                 if (this.context) {
-                    console.log(`${this.nomControlleur} - Transmission du contexte à la collection enfant '${element.id}':`, this.context, element);
+                    console.log(`${this.nomControlleur} - propagateContextToCollections() - Code:1986 - Transmission du contexte à la collection enfant '${element.id}':`, this.context, element);
                     Object.assign(controller.contextValue, this.context);
                 }
                 // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
                 controller.enableAndLoad(this.entity.id);
+                console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986 - Done");
             }
         });
     }
