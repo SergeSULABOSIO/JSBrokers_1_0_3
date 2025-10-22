@@ -55,7 +55,7 @@ export default class extends Controller {
      * @param {object} detail.entity - L'entité à éditer, ou un objet vide pour une création.
      */
     async start(detail) {
-        this.canvas = detail.entityFormCanvas;
+        this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.context = detail.context || {};
         this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
@@ -81,8 +81,8 @@ export default class extends Controller {
      */
     async buildAndShowShell() {
         const title = this.isCreateMode
-            ? this.canvas.parametres.titre_creation
-            : this.canvas.parametres.titre_modification.replace('%id%', this.entity.id);
+            ? this.entityFormCanvas.parametres.titre_creation
+            : this.entityFormCanvas.parametres.titre_modification.replace('%id%', this.entity.id);
 
         // --- MODIFICATION : On retire la balise <form> d'ici ---
         // On met l'action de soumission sur l'élément racine du contrôleur
@@ -189,7 +189,7 @@ export default class extends Controller {
     async loadFormAndAttributes() {//loadFormBody() {
         try {
             // 1. On commence avec l'URL de base
-            let urlString = this.canvas.parametres.endpoint_form_url;
+            let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
 
             // 2. Si c'est une édition, on ajoute l'ID à l'URL
             if (this.entity && this.entity.id) {
@@ -215,7 +215,7 @@ export default class extends Controller {
 
             // 5. On lance la requête avec l'URL finale correctement construite
             const finalUrl = url.pathname + url.search;
-            console.log(this.nomControlleur + " - URL de chargement du formulaire:", finalUrl); // Pour débogage
+            // console.log(this.nomControlleur + " - URL de chargement du formulaire:", finalUrl); // Pour débogage
 
             const response = await fetch(finalUrl);
             if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
@@ -305,10 +305,10 @@ export default class extends Controller {
                 formData.append(key, valueToAppend);
             }
         }
-        console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
-        console.log(this.nomControlleur + " - Submit vers le serveur: " + this.canvas.parametres.endpoint_submit_url, this.context);
+        // console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
+        // console.log(this.nomControlleur + " - Submit vers le serveur: " + this.entityFormCanvas.parametres.endpoint_submit_url, this.context);
         try {
-            const response = await fetch(this.canvas.parametres.endpoint_submit_url, {
+            const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
                 method: 'POST',
                 body: formData // On envoie l'objet FormData directement.
             });
@@ -369,7 +369,7 @@ export default class extends Controller {
         this.updateTitle();
         this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
-        this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
+        // this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
     }
 
     /**
@@ -382,15 +382,14 @@ export default class extends Controller {
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
             if (controller && this.entity && this.entity.id) {
-                // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
-                controller.enableAndLoad(this.entity.id);
-
                 // On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
                 // à la collection enfant (ex: la collection de Tâches).
                 if (this.context) {
-                    console.log(`${this.nomControlleur} - Transmission du contexte à la collection enfant '${element.id}':`, this.context);
+                    console.log(`${this.nomControlleur} - Transmission du contexte à la collection enfant '${element.id}':`, this.context, element);
                     Object.assign(controller.contextValue, this.context);
                 }
+                // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
+                controller.enableAndLoad(this.entity.id);
             }
         });
     }
@@ -441,10 +440,10 @@ export default class extends Controller {
     updateTitle() {
         const titleElement = this.elementContenu.querySelector('.modal-title');
         console.log(this.nomControlleur + " - (1) updateTitle() - titleElement:", titleElement);
-        console.log(this.nomControlleur + " - (2) updateTitle() - this.canvas.parametres:", this.canvas.parametres);
-        console.log(this.nomControlleur + " - (3) updateTitle() - titre_modification:", this.canvas.parametres.titre_modification);
+        console.log(this.nomControlleur + " - (2) updateTitle() - this.entityFormCanvas.parametres:", this.entityFormCanvas.parametres);
+        console.log(this.nomControlleur + " - (3) updateTitle() - titre_modification:", this.entityFormCanvas.parametres.titre_modification);
         if (titleElement) {
-            titleElement.textContent = this.canvas.parametres.titre_modification.replace('%id%', this.entity.id);
+            titleElement.textContent = this.entityFormCanvas.parametres.titre_modification.replace('%id%', this.entity.id);
             console.log(this.nomControlleur + " - (4) updateTitle() - textContent:", titleElement.textContent);
         }
     }

@@ -17,14 +17,24 @@ export default class extends Controller {
     ];
 
     static values = {
-        // --- AMÉLIORATION : Utiliser les URLs fournies par le serveur ---
-        listUrl: String, // URL pour charger la liste des items
-        itemFormUrl: String, // URL pour obtenir le formulaire d'un item
-        itemSubmitUrl: String, // URL pour soumettre le formulaire d'un item
-        itemDeleteUrl: String, // URL pour supprimer un item
-        itemTitleCreate: String, // Titre pour la création
-        itemTitleEdit: String, // Titre pour l'édition
+        //Fournies déjà par les options du _form_canvas.html.twig
+        listUrl: String,
+        itemFormUrl: String,
+        itemSubmitUrl: String,
+        itemDeleteUrl: String,
+        itemTitleCreate: String,
+        itemTitleEdit: String,
+        idEntreprise: Number,
+        idInvite: Number,
         parentEntityId: Number,
+        
+        //Fournies par _dialog_list_component.html.twig
+        entiteNom: String,
+        serverRootName: String,
+        listeCanvas: Object,
+        entityCanvas: Object,
+        entityFormCanvas: Object,
+        numericAttributes: Object,
         parentFieldName: String,
         disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
         context: Object, // NOUVEAU : Pour recevoir le contexte d'un dialogue parent
@@ -42,56 +52,60 @@ export default class extends Controller {
         this.boundRefresh = this.refresh.bind(this);
         // Écoute l'événement de sauvegarde pour se rafraîchir
         document.addEventListener('app:list.refresh-request', this.boundRefresh);
-        // --- CORRECTION : Ne charge pas si le widget est désactivé ---
-        if (this.disabledValue) {
-            this.listContainerTarget.innerHTML = '<div class="alert alert-info">Veuillez d\'abord enregistrer l\'élément principal pour pouvoir ajouter des pièces.</div>';
-        } else {
-            this.load();
-        }
-        // this.verbaliser();
+        this.load();
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
     }
 
-    verbaliser(repere) {
-        console.groupCollapsed(this.nomControleur + " - Verbalisation * " + repere + " *");
-        console.log("| " + this.nomControleur + " - Options - listUrlValue:", this.listUrlValue);
-        console.log("| " + this.nomControleur + " - Options - itemFormUrlValue:", this.itemFormUrlValue);
-        console.log("| " + this.nomControleur + " - Options - itemSubmitUrlValue:", this.itemSubmitUrlValue);
-        console.log("| " + this.nomControleur + " - Options - itemDeleteUrlValue:", this.itemDeleteUrlValue);
-        console.log("| " + this.nomControleur + " - Options - itemTitleCreateValue:", this.itemTitleCreateValue);
-        console.log("| " + this.nomControleur + " - Options - itemTitleEditValue:", this.itemTitleEditValue);
-        console.log("| " + this.nomControleur + " - Options - parentEntityIdValue:", this.parentEntityIdValue);
-        console.log("| " + this.nomControleur + " - Options - parentFieldNameValue:", this.parentFieldNameValue);
-        console.log("| " + this.nomControleur + " - Options - disabledValue:", this.disabledValue);
-        console.groupEnd();
-    }
-
     /**
      * Charge ou recharge le contenu de la liste via AJAX.
      */
     async load() {
-        // --- CORRECTION : Vérification de l'état désactivé ---
-        const dialogListUrl = this.listUrlValue + "/dialog";
-        console.log(this.nomControleur + " load - (3/5) Actualisation de la Collection", dialogListUrl);
-        this.verbaliser("load");
+        console.groupCollapsed(this.nomControleur + " - Load() - Code:1986");
+        console.log("| " + this.nomControleur + " - id:", this.element.id);
+        console.log("| " + this.nomControleur + " - listUrl:", this.listUrlValue);
+        console.log("| " + this.nomControleur + " - itemFormUrl:", this.itemFormUrlValue);
+        console.log("| " + this.nomControleur + " - itemSubmitUrl:", this.itemSubmitUrlValue);
+        console.log("| " + this.nomControleur + " - itemDeleteUrl:", this.itemDeleteUrlValue);
+        console.log("| " + this.nomControleur + " - itemTitleCreate:", this.itemTitleCreateValue);
+        console.log("| " + this.nomControleur + " - itemTitleEdit:", this.itemTitleEditValue);
+        console.log("| " + this.nomControleur + " - idEntreprise:", this.idEntrepriseValue);
+        console.log("| " + this.nomControleur + " - idInvite:", this.idInviteValue);
+        console.log("| " + this.nomControleur + " - parentEntityId:", this.parentEntityIdValue);
+        console.log("| " + this.nomControleur + " - parentFieldName:", this.parentFieldNameValue);
+        console.log("| " + this.nomControleur + " - disabledValue:", this.disabledValue);
+        console.log("| " + this.nomControleur + " - context:", this.contextValue);
+        console.log("********");
+        console.log("| " + this.nomControleur + " - entiteNom:", this.entiteNomValue);
+        console.log("| " + this.nomControleur + " - serverRoot:", this.serverRootNameValue);
+        console.log("| " + this.nomControleur + " - listeCanvas:", this.listeCanvasValue);
+        console.log("| " + this.nomControleur + " - entityCanvas:", this.entityCanvasValue);
+        console.log("| " + this.nomControleur + " - Contenu de entityCanvasValue:", JSON.stringify(this.entityCanvasValue, null, 2));
+        console.log("| " + this.nomControleur + " - entityFormCanvas:", this.entityFormCanvasValue);
+        console.log("| " + this.nomControleur + " - numericAttributes:", this.numericAttributesValue);
+        console.groupEnd();
+
         if (!this.listUrlValue || this.disabledValue) {
             // console.error(`${this.nomControleur} - Aucune URL n'est définie pour charger la collection.`);
             this.listContainerTarget.innerHTML = '<div class="alert alert-warning">Configuration manquante: URL de chargement non définie.</div>';
             return;
         }
-        
+
         try {
-            console.log(this.nomControleur + " refresh - (4/5) Actualisation de la Collection, listUrl:" + dialogListUrl);
+            //Tout est activé car l'objet parent est maintenant disponible,
+            //On doit charger les élements de la collection
+            const dialogListUrl = this.listUrlValue + "/dialog";
+            console.log(this.nomControleur + " Load() - Code:1986 - Actualisation de la Collection", dialogListUrl);
             const response = await fetch(dialogListUrl);
             if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
 
             const html = await response.text();
             this.listContainerTarget.innerHTML = html;
+
+            console.log(this.nomControleur + " Load() - Code:1986 - Collection " + this.element.id + " via '" + this.listUrlValue + "' est chargée.");
             this.updateCount();
-            // console.log(this.nomControleur + " refresh - (5/5) fin de l'Actualisation de la Collection." + html);
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
             console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
@@ -103,19 +117,21 @@ export default class extends Controller {
      * @param {number} parentId - Le nouvel ID de l'entité parente.
      */
     enableAndLoad(parentId) {
-        console.log(this.nomControleur + " - PASSATION ID PARENT VERS COLLECTION:", parentId);
-        // this.verbaliser();
+        console.log(this.nomControleur + " - EnableAndLoad()");
+        //Affectation des variables sur le nouveau parent
         this.parentEntityIdValue = parentId;
-        this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
-        this.disabledValue = false;
-        this.element.classList.remove('is-disabled');
-        console.log(`${this.nomControleur} - (4) Collection activée. L'ID parent est maintenant: ${this.parentEntityIdValue}. URL de liste mise à jour: ${this.listUrlValue}`);
 
-        // CORRECTION : On s'assure que le bouton est invisible au départ en mode édition.
-        // Le survol le rendra visible.
+        //On reactive la collection sur la plan visuel et logique
+        this.element.classList.remove('is-disabled');
+        this.disabledValue = false;
+        //On reactive le bouton d'ajout
         if (this.hasAddButtonContainerTarget) {
             this.addButtonContainerTarget.style.opacity = '0';
         }
+        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986 - Correction de l'URL de chargement de la collection: " + this.listUrlValue);
+        this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
+        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986 - Correction de l'URL de chargement de la collection: " + this.listUrlValue);
+        
         this.load();
     }
 
@@ -227,15 +243,14 @@ export default class extends Controller {
         console.log(this.nomControleur + " (0) - addItem()");
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
-        
+
         // Contexte du parent immédiat (celui de la collection)
         const parentContext = {};
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
-        this.verbaliser("addItem");
         console.log(this.nomControleur + " - parentContext (addItem):", parentContext);
-        
+
         //Les variables à transporter
         const entity = {};// Entité vide pour la création, avec l'id pour l'édition
         const isCreationMode = true;
@@ -279,7 +294,7 @@ export default class extends Controller {
         const row = event.currentTarget.closest('tr');
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
-        
+
         // Contexte du parent immédiat (celui de la collection)
         const parentContext = {};
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
