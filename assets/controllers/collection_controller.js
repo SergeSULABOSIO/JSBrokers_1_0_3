@@ -82,7 +82,7 @@ export default class extends Controller {
         console.log("| " + this.nomControleur + " - serverRoot:", this.serverRootNameValue);
         console.log("| " + this.nomControleur + " - listeCanvas:", this.listeCanvasValue);
         console.log("| " + this.nomControleur + " - entityCanvas:", this.entityCanvasValue);
-        console.log("| " + this.nomControleur + " - Contenu de entityCanvasValue:", JSON.stringify(this.entityCanvasValue, null, 2));
+        // console.log("| " + this.nomControleur + " - Contenu de entityCanvasValue:", JSON.stringify(this.entityCanvasValue, null, 2));
         console.log("| " + this.nomControleur + " - entityFormCanvas:", this.entityFormCanvasValue);
         console.log("| " + this.nomControleur + " - numericAttributes:", this.numericAttributesValue);
         console.groupEnd();
@@ -117,7 +117,7 @@ export default class extends Controller {
      * @param {number} parentId - Le nouvel ID de l'entité parente.
      */
     enableAndLoad(parentId) {
-        console.log(this.nomControleur + " - EnableAndLoad()");
+        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986");
         //Affectation des variables sur le nouveau parent
         this.parentEntityIdValue = parentId;
 
