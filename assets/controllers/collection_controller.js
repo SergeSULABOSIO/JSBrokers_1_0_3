@@ -18,26 +18,27 @@ export default class extends Controller {
 
     static values = {
         //Fournies déjà par les options du _form_canvas.html.twig
+        url: String,
         listUrl: String,
         itemFormUrl: String,
         itemSubmitUrl: String,
         itemDeleteUrl: String,
         itemTitleCreate: String,
         itemTitleEdit: String,
+        parentFieldName: String,
+        parentEntityId: Number,
+        disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
+        entiteNom: String,
         idEntreprise: Number,
         idInvite: Number,
-        parentEntityId: Number,
+        entityCanvas: Object,
+        listeCanvas: Object,
+        context: Object, // NOUVEAU : Pour recevoir le contexte d'un dialogue parent
         
         //Fournies par _dialog_list_component.html.twig
-        entiteNom: String,
-        serverRootName: String,
-        listeCanvas: Object,
-        entityCanvas: Object,
-        entityFormCanvas: Object,
-        numericAttributes: Array,
-        parentFieldName: String,
-        disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
-        context: Object, // NOUVEAU : Pour recevoir le contexte d'un dialogue parent
+        // serverRootName: String,
+        // entityFormCanvas: Object,
+        // numericAttributes: Array,
     };
 
     /**
@@ -65,26 +66,26 @@ export default class extends Controller {
     async load() {
         console.groupCollapsed(this.nomControleur + " - Load() - Code:1986");
         console.log("| " + this.nomControleur + " - id:", this.element.id);
+        console.log("| " + this.nomControleur + " - url:", this.urlValue);
         console.log("| " + this.nomControleur + " - listUrl:", this.listUrlValue);
         console.log("| " + this.nomControleur + " - itemFormUrl:", this.itemFormUrlValue);
         console.log("| " + this.nomControleur + " - itemSubmitUrl:", this.itemSubmitUrlValue);
         console.log("| " + this.nomControleur + " - itemDeleteUrl:", this.itemDeleteUrlValue);
         console.log("| " + this.nomControleur + " - itemTitleCreate:", this.itemTitleCreateValue);
         console.log("| " + this.nomControleur + " - itemTitleEdit:", this.itemTitleEditValue);
-        console.log("| " + this.nomControleur + " - idEntreprise:", this.idEntrepriseValue);
-        console.log("| " + this.nomControleur + " - idInvite:", this.idInviteValue);
         console.log("| " + this.nomControleur + " - parentEntityId:", this.parentEntityIdValue);
         console.log("| " + this.nomControleur + " - parentFieldName:", this.parentFieldNameValue);
         console.log("| " + this.nomControleur + " - disabledValue:", this.disabledValue);
+        console.log("| " + this.nomControleur + " - entiteNom:", this.entiteNomValue);
+        console.log("| " + this.nomControleur + " - idEntreprise:", this.idEntrepriseValue);
+        console.log("| " + this.nomControleur + " - idInvite:", this.idInviteValue);
         console.log("| " + this.nomControleur + " - context:", this.contextValue);
         console.log("********");
-        console.log("| " + this.nomControleur + " - entiteNom:", this.entiteNomValue);
         console.log("| " + this.nomControleur + " - serverRoot:", this.serverRootNameValue);
         console.log("| " + this.nomControleur + " - listeCanvas:", this.listeCanvasValue);
         console.log("| " + this.nomControleur + " - entityCanvas:", this.entityCanvasValue);
-        // console.log("| " + this.nomControleur + " - Contenu de entityCanvasValue:", JSON.stringify(this.entityCanvasValue, null, 2));
-        console.log("| " + this.nomControleur + " - entityFormCanvas:", this.entityFormCanvasValue);
-        console.log("| " + this.nomControleur + " - numericAttributes:", this.numericAttributesValue);
+        // console.log("| " + this.nomControleur + " - entityFormCanvas:", this.entityFormCanvasValue);
+        // console.log("| " + this.nomControleur + " - numericAttributes:", this.numericAttributesValue);
         console.groupEnd();
 
         if (!this.listUrlValue || this.disabledValue) {
@@ -117,10 +118,10 @@ export default class extends Controller {
      * @param {number} parentId - Le nouvel ID de l'entité parente.
      */
     enableAndLoad(parentId) {
-        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986");
+        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986 - Reception de l'ID du parent: " + parentId);
         //Affectation des variables sur le nouveau parent
         this.parentEntityIdValue = parentId;
-
+        
         //On reactive la collection sur la plan visuel et logique
         this.element.classList.remove('is-disabled');
         this.disabledValue = false;
@@ -240,7 +241,7 @@ export default class extends Controller {
      * Déclenche l'ouverture de la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
-        console.log(this.nomControleur + " (0) - addItem()");
+        console.log(this.nomControleur + " - addItem() - Code:1986");
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
 
@@ -249,7 +250,6 @@ export default class extends Controller {
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
-        console.log(this.nomControleur + " - parentContext (addItem):", parentContext);
 
         //Les variables à transporter
         const entity = {};// Entité vide pour la création, avec l'id pour l'édition
@@ -289,7 +289,8 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     editItem(event) {
-        console.log(this.nomControleur + " (0) - editItem()");
+        console.log(this.nomControleur + " - editItem() - Code:1986");
+
         // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
         const row = event.currentTarget.closest('tr');
         if (!row || !row.dataset.itemId) return;
@@ -300,11 +301,6 @@ export default class extends Controller {
         if (this.parentFieldNameValue && this.parentEntityIdValue) {
             parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
         }
-        // --- DÉBOGAGE : Affichage des informations parentes récupérées ---
-        console.log(`${this.nomControleur} - editItem - Infos parent récupérées:`, {
-            parentFieldName: this.parentFieldNameValue,
-            parentEntityId: this.parentEntityIdValue
-        });
 
         //Les variables à transporter
         const entity = { id: itemId };// Entité vide pour la création, avec l'id pour l'édition
@@ -325,7 +321,7 @@ export default class extends Controller {
             ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
 
-        console.groupCollapsed(`${this.nomControleur} - editItem - EDITDIAL(0)`);
+        console.groupCollapsed(`${this.nomControleur} - editItem() - Code:1986`);
         console.log(`| Mode: ${isCreationMode ? 'Création' : 'Édition'}`);
         console.log('| Entité:', entity);
         console.log('| Contexte:', context);

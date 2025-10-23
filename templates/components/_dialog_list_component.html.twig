@@ -21,17 +21,23 @@
     <div 
         class="table-scroll-wrapper flex-grow-1"
         data-controller="collection"
+        data-collection-url-value="{{ collectionOptions.url }}" 
+        data-collection-list-url-value="{{ collectionOptions.listUrl }}" 
+        data-collection-item-form-url-value="{{ collectionOptions.itemFormUrl }}" 
+        data-collection-item-submit-url-value="{{ collectionOptions.itemSubmitUrl }}" 
+        data-collection-item-delete-url-value="{{ collectionOptions.itemDeleteUrl }}" 
+        data-collection-item-title-create-value="{{ collectionOptions.itemTitleCreate }}" 
+        data-collection-item-title-edit-value="{{ collectionOptions.itemTitleEdit }}" 
+        data-collection-parent-field-name-value="{{ collectionOptions.parentFieldName }}"
+        data-collection-parent-entity-id-value="{{ parentEntityId|default(0) }}"
+        data-collection-disabled-value="{{ collectionOptions.disabled | default(false)}}"
         data-collection-entite-nom-value="{{ entite_nom }}"
-        data-collection-server-root-name-value="{{ serverRootName }}"
-        data-collection-liste-canvas-value="{{ listeCanvas|json_encode|e('html_attr') }}"
-        data-collection-entity-canvas-value="{{ entityCanvas|json_encode|e('html_attr') }}"
-        data-collection-entity-form-canvas-value="{{ entityFormCanvas|json_encode|e('html_attr') }}"
-        data-collection-numeric-attributes-value='{{ numericAttributes|default({})|json_encode|e('html_attr') }}' 
         data-collection-id-entreprise-value="{{ idEntreprise }}"
         data-collection-id-invite-value="{{ idInvite }}"
-        data-collection-parent-field-name-value="{{ parentFieldName }}"
-        data-collection-parent-entity-id-value="{{ parentEntityId|default(0) }}"
-        data-collection-disabled-value="true"
+        data-collection-entity-canvas-value="{{ entityCanvas|json_encode|e('html_attr') }}"
+        data-collection-liste-canvas-value'{{ entityCanvas|json_encode|e('html_attr') }}' 
+
+        {# data-collection-server-root-name-value="{{ serverRootName|default('') }}" #}
     >
         <div data-collection-target="listContainer">
             {% if data is not empty %}
