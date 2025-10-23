@@ -82,4 +82,25 @@ trait ControllerUtilsTrait
     {
         return strtolower($this->getEntityName($objectOrClass));
     }
+
+    /**
+     * Extrait les options d'un widget de collection depuis le canevas de formulaire.
+     *
+     * @param array $entityFormCanvas Le tableau de configuration du formulaire.
+     * @param string $collectionFieldName Le 'field_code' du widget de collection à trouver.
+     * @return array Les options trouvées, ou un tableau vide.
+     */
+    private function getCollectionOptionsFromCanvas(array $entityFormCanvas, string $collectionFieldName): array
+    {
+        foreach (($entityFormCanvas['form_layout'] ?? []) as $row) {
+            foreach (($row['colonnes'] ?? []) as $col) {
+                foreach (($col['champs'] ?? []) as $field) {
+                    if (is_array($field) && ($field['widget'] ?? null) === 'collection' && ($field['field_code'] ?? null) === $collectionFieldName) {
+                        return $field['options'] ?? [];
+                    }
+                }
+            }
+        }
+        return [];
+    }
 }
