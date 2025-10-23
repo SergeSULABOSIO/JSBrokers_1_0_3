@@ -232,10 +232,12 @@ export default class extends Controller {
             const formContainer = this.elementContenu.querySelector('.form-column');
             const mainDialogElement = this.elementContenu.closest('.app-dialog');
 
+            //On redessine la colonne du formulaire
             if (formContent && formContainer) {
                 formContainer.innerHTML = '';
                 formContainer.appendChild(formContent);
             }
+            //On redessine la colonne des attributs calculables
             if (attributesContent && attributesContainer) {
                 const hasCalculatedAttrs = attributesContent.querySelector('.calculated-attributes-list li');
                 if (hasCalculatedAttrs) {
@@ -256,11 +258,10 @@ export default class extends Controller {
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');
             }
-
-            // CORRECTION : Propager le contexte aux collections dès le premier chargement en mode édition.
-            if (!this.isCreateMode) {
-                this.propagateContextToCollections();
-            }
+            // // CORRECTION : Propager le contexte aux collections dès le premier chargement en mode édition.
+            // if (!this.isCreateMode) {
+            //     this.propagateContextToCollections();
+            // }
         } catch (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
             this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
@@ -368,10 +369,11 @@ export default class extends Controller {
      * @private
      */
     async reloadView() {
+        console.log(this.nomControlleur + " - reloadView() - Code:1986");
         this.updateTitle();
         this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
-        // this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
+        this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
     }
 
     /**
@@ -380,21 +382,20 @@ export default class extends Controller {
      * @private
      */
     propagateContextToCollections() {
-        console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986");
-        
         const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
             if (controller && this.entity && this.entity.id) {
+                console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986 - Transmission à " + element.id);
                 // On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
                 // à la collection enfant (ex: la collection de Tâches).
                 if (this.context) {
-                    console.log(`${this.nomControlleur} - propagateContextToCollections() - Code:1986 - Transmission du contexte à la collection enfant '${element.id}':`, this.context, element);
+                    // console.log(`${this.nomControlleur} - propagateContextToCollections() - Code:1986 - Transmission du contexte à la collection enfant '${element.id}':`, this.context, element);
                     Object.assign(controller.contextValue, this.context);
                 }
                 // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
                 controller.enableAndLoad(this.entity.id);
-                console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986 - Done");
+                console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986 - Transmission à " + element.id + " terminée.");
             }
         });
     }

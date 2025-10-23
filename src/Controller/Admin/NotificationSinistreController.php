@@ -298,8 +298,9 @@ class NotificationSinistreController extends AbstractController
     public function getTachesListApi(int $id, ?string $usage = "generic"): Response
     {
         $data = [];
+        /** @var NotificationSinistre $notification */
+        $notification = null;
         if ($id !== 0) {
-            /** @var NotificationSinistre $notification */
             $notification = $this->notificationSinistreRepository->find($id);
             if (!$notification) {
                 throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
@@ -308,23 +309,38 @@ class NotificationSinistreController extends AbstractController
         }
         $tacheCanvas = $this->constante->getEntityCanvas(Tache::class);
         $this->constante->loadCalculatedValue($tacheCanvas, $data);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($notification, $this->getEntreprise()->getId());
+
+        // --- NOUVEAU : Extraction des options de la collection ---
+        $collectionOptions = [];
+        // On parcourt le layout du formulaire pour trouver le widget de la collection de tâches.
+        foreach ($entityFormCanvas['form_layout'] as $row) {
+            foreach ($row['colonnes'] as $col) {
+                foreach ($col['champs'] as $field) {
+                    // On vérifie si le champ est un widget de collection et si son nom correspond à 'taches'.
+                    if (is_array($field) && ($field['widget'] ?? null) === 'collection' && ($field['field_code'] ?? null) === 'taches') {
+                        $collectionOptions = $field['options'];
+                        break 3; // On a trouvé, on sort des trois boucles.
+                    }
+                }
+            }
+        }
 
         return $this->render("components/_" . $usage . "_list_component.html.twig", [
             'data' => $data,
             'entite_nom' => $this->getEntityName(Tache::class),
-            'serverRootName' => $this->getServerRootName(Tache::class),
-            'constante' => $this->constante,
+            'collectionOptions' => $collectionOptions, // On passe les options au template
             'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
             'entityCanvas' => $tacheCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
             'idInvite' => $this->getInvite()->getId(),
             'idEntreprise' => $this->getEntreprise()->getId(),
             'parentEntityId' => $id,
-            'parentFieldName' => 'notificationSinistre', // La Tache est liée par le champ 'notificationSinistre'
             'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
+            
+            // 'serverRootName' => $this->getServerRootName(Tache::class),
+            // 'constante' => $this->constante,
+            // 'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
+            // 'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
         ]);
     }
 
