@@ -17,7 +17,6 @@ export default class extends Controller {
     ];
 
     static values = {
-        //Fournies déjà par les options du _form_canvas.html.twig
         url: String,
         listUrl: String,
         itemFormUrl: String,
@@ -27,18 +26,11 @@ export default class extends Controller {
         itemTitleEdit: String,
         parentFieldName: String,
         parentEntityId: Number,
-        disabled: Boolean, // NOUVEAU : Pour gérer l'état activé/désactivé
+        disabled: Boolean,
         entiteNom: String,
         idEntreprise: Number,
         idInvite: Number,
-        entityCanvas: Object,
-        listeCanvas: Object,
-        context: Object, // NOUVEAU : Pour recevoir le contexte d'un dialogue parent
-        
-        //Fournies par _dialog_list_component.html.twig
-        // serverRootName: String,
-        // entityFormCanvas: Object,
-        // numericAttributes: Array,
+        context: Object,
     };
 
     /**
@@ -80,12 +72,6 @@ export default class extends Controller {
         console.log("| " + this.nomControleur + " - idEntreprise:", this.idEntrepriseValue);
         console.log("| " + this.nomControleur + " - idInvite:", this.idInviteValue);
         console.log("| " + this.nomControleur + " - context:", this.contextValue);
-        console.log("********");
-        console.log("| " + this.nomControleur + " - serverRoot:", this.serverRootNameValue);
-        console.log("| " + this.nomControleur + " - listeCanvas:", this.listeCanvasValue);
-        console.log("| " + this.nomControleur + " - entityCanvas:", this.entityCanvasValue);
-        // console.log("| " + this.nomControleur + " - entityFormCanvas:", this.entityFormCanvasValue);
-        // console.log("| " + this.nomControleur + " - numericAttributes:", this.numericAttributesValue);
         console.groupEnd();
 
         if (!this.listUrlValue || this.disabledValue) {
