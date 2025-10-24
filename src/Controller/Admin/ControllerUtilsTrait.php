@@ -1,10 +1,11 @@
 <?php
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @trait ControllerUtilsTrait
@@ -102,5 +103,70 @@ trait ControllerUtilsTrait
             }
         }
         return [];
+    }
+
+    /**
+     * Finds a parent entity by its ID or returns a new instance if the ID is 0.
+     *
+     * @param string $entityClass The Fully Qualified Class Name of the entity.
+     * @param int $id The ID of the entity to find.
+     * @return object A persisted entity or a new instance.
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException If ID is not 0 and entity is not found.
+     */
+    private function findParentOrNew(string $entityClass, int $id): object
+    {
+        if ($id === 0) {
+            return new $entityClass();
+        }
+
+        $entity = $this->em->getRepository($entityClass)->find($id);
+        if (!$entity) {
+            throw $this->createNotFoundException("L'entité parente de type " . (new \ReflectionClass($entityClass))->getShortName() . " avec l'ID $id n'a pas été trouvée.");
+        }
+        return $entity;
+    }
+
+    /**
+     * Renders a list component, choosing between a generic list and a dialog collection list.
+     *
+     * @param string $usage 'generic' for main lists, 'dialog' for collections in modals.
+     * @param string $entityClass The FQCN of the child entity.
+     * @param object $parentEntity The parent entity instance.
+     * @param int $parentId The ID of the parent entity.
+     * @param Collection|array $data The collection of child entities to display.
+     * @param string $collectionFieldName The name of the collection field on the parent entity's form canvas.
+     * @return Response
+     */
+    private function renderCollectionOrList(
+        string $usage,
+        string $entityClass,
+        object $parentEntity,
+        int $parentId,
+        $data,
+        string $collectionFieldName
+    ): Response {
+        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+
+        $template = "components/_" . $usage . "_list_component.html.twig";
+        $parameters = [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName($entityClass),
+            'listeCanvas' => $this->constante->getListeCanvas($entityClass),
+            'entityCanvas' => $entityCanvas,
+            'idInvite' => $this->getInvite()->getId(),
+            'idEntreprise' => $this->getEntreprise()->getId(),
+            'customAddAction' => "click->collection#addItem",
+            'parentEntityId' => $parentId,
+        ];
+
+        if ($usage === "dialog") {
+            $entityFormCanvas = $this->constante->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
+            $parameters['collectionOptions'] = $this->getCollectionOptionsFromCanvas($entityFormCanvas, $collectionFieldName);
+        } else {
+            // This part is for the generic list, which is less likely to be used in this context, but we keep it for completeness
+        }
+
+        return $this->render($template, $parameters);
     }
 }

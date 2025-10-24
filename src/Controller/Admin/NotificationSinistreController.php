@@ -227,70 +227,20 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/{id}/contacts/{usage}', name: 'api.get_contacts', methods: ['GET'])]
     public function getContactsListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var NotificationSinistre $notification */
-            $notification = $this->notificationSinistreRepository->find($id);
-            if (!$notification) {
-                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $notification->getContacts();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Contact::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Contact::class),
-            'serverRootName' => $this->getServerRootName(Contact::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'notificationSinistre', // Le Contact est lié par le champ 'notificationSinistre'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
-        ]);
+        /** @var NotificationSinistre $notification */
+        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
+        $data = $notification->getContacts();
+        return $this->renderCollectionOrList($usage, Contact::class, $notification, $id, $data, 'contacts');
     }
 
 
     #[Route('/api/{id}/pieces/{usage}', name: 'api.get_pieces', methods: ['GET'])]
     public function getPiecesListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var NotificationSinistre $notification */
-            $notification = $this->notificationSinistreRepository->find($id);
-            if (!$notification) {
-                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $notification->getPieces();
-        }
-        $pieceCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
-        $this->constante->loadCalculatedValue($pieceCanvas, $data);
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(PieceSinistre::class),
-            'serverRootName' => $this->getServerRootName(PieceSinistre::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
-            'entityCanvas' => $pieceCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'notificationSinistre', // La PieceSinistre est liée par le champ 'notificationSinistre'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
-        ]);
+        /** @var NotificationSinistre $notification */
+        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
+        $data = $notification->getPieces();
+        return $this->renderCollectionOrList($usage, PieceSinistre::class, $notification, $id, $data, 'pieces');
     }
 
 
@@ -298,35 +248,9 @@ class NotificationSinistreController extends AbstractController
     public function getTachesListApi(int $id, ?string $usage = "generic"): Response
     {
         /** @var NotificationSinistre $notification */
-        $data = [];
-        if ($id !== 0) {
-            $notification = $this->notificationSinistreRepository->find($id);
-            if (!$notification) {
-                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $notification->getTaches();
-        }
-        $tacheCanvas = $this->constante->getEntityCanvas(Tache::class);
-        $this->constante->loadCalculatedValue($tacheCanvas, $data);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($notification, $this->getEntreprise()->getId());
-        $collectionOptions = $this->getCollectionOptionsFromCanvas($this->constante->getEntityFormCanvas($notification, $this->getEntreprise()->getId()), 'taches');
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Tache::class),
-            'collectionOptions' => $collectionOptions, // On passe les options au template
-            'serverRootName' => $this->getServerRootName(Tache::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
-            'entityCanvas' => $tacheCanvas,
-            'entityFormCanvas' => $entityFormCanvas,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            // 'parentFieldName' => 'notificationSinistre', // L'OffreIndemnisationSinistre est liée par le champ 'notificationSinistre'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-        ]);
+        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
+        $data = $notification->getTaches();
+        return $this->renderCollectionOrList($usage, Tache::class, $notification, $id, $data, 'taches');
     }
 
 
@@ -334,34 +258,8 @@ class NotificationSinistreController extends AbstractController
     public function getOffresIndemnisationListApi(int $id, ?string $usage = "generic"): Response
     {
         /** @var NotificationSinistre $notification */
-        $data = [];
-        if ($id !== 0) {
-            $notification = $this->notificationSinistreRepository->find($id);
-            if (!$notification) {
-                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $notification->getOffreIndemnisationSinistres();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($notification, $this->getEntreprise()->getId());
-        $collectionOptions = $this->getCollectionOptionsFromCanvas($entityFormCanvas, 'offreIndemnisationSinistres');
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(OffreIndemnisationSinistre::class),
-            'collectionOptions' => $collectionOptions, // On passe les options au template
-            'serverRootName' => $this->getServerRootName(OffreIndemnisationSinistre::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $entityFormCanvas,
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            // 'parentFieldName' => 'notificationSinistre', // L'OffreIndemnisationSinistre est liée par le champ 'notificationSinistre'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-        ]);
+        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
+        $data = $notification->getOffreIndemnisationSinistres();
+        return $this->renderCollectionOrList($usage, OffreIndemnisationSinistre::class, $notification, $id, $data, 'offreIndemnisationSinistres');
     }
 }
