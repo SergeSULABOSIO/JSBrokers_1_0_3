@@ -90,22 +90,22 @@ export default class extends Controller {
      * @param {number} parentId - Le nouvel ID de l'entité parente.
      */
     enableAndLoad(parentId) {
-        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986 - Reception de l'ID du parent: " + parentId);
-        //Affectation des variables sur le nouveau parent
-        this.parentEntityIdValue = parentId;
+        // console.log(this.nomControleur + " - EnableAndLoad() - Code: 1986 - Reception de l'ID du parent: " + parentId);
+        // //Affectation des variables sur le nouveau parent
+        // this.parentEntityIdValue = parentId;
         
-        //On reactive la collection sur la plan visuel et logique
-        this.element.classList.remove('is-disabled');
-        this.disabledValue = false;
-        //On reactive le bouton d'ajout
-        if (this.hasAddButtonContainerTarget) {
-            this.addButtonContainerTarget.style.opacity = '1';
-        }
-        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986 - Correction de l'URL de chargement de la collection: " + this.listUrlValue);
-        this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
-        console.log(this.nomControleur + " - EnableAndLoad() - Code:1986 - Correction de l'URL de chargement de la collection: " + this.listUrlValue);
+        // //On reactive la collection sur la plan visuel et logique
+        // this.element.classList.remove('is-disabled');
+        // this.disabledValue = false;
+        // //On reactive le bouton d'ajout
+        // if (this.hasAddButtonContainerTarget) {
+        //     this.addButtonContainerTarget.style.opacity = '1';
+        // }
+        // console.log(this.nomControleur + " - EnableAndLoad() - Code: 1986 - Correction de l'URL de chargement de la collection: " + this.listUrlValue);
+        // this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
+        // console.log(this.nomControleur + " - EnableAndLoad() - Code: 1986 - Correction de l'URL de chargement de la collection: " + this.listUrlValue);
         
-        this.load();
+        // this.load();
     }
 
     // --- MÉTHODES RESTAURÉES POUR L'INTERACTIVITÉ DE L'ACCORDÉON ---

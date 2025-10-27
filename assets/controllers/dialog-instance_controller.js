@@ -252,9 +252,10 @@ export default class extends Controller {
                 mainDialogElement.classList.add('is-edit-mode');
             }
             // CORRECTION : Propager le contexte aux collections dès le premier chargement en mode édition.
-            if (!this.isCreateMode) {
-                this.propagateContextToCollections();
-            }
+            // if (!this.isCreateMode) {
+            //     console.log(`${this.nomControlleur} - loadFormAndAttributes() - Code: 1986 - Préparation pour la propagation du contexte aux collections. Mode création: ${this.isCreateMode}`);
+            //     this.propagateContextToCollections();
+            // }
         } catch (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
             this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
@@ -377,8 +378,10 @@ export default class extends Controller {
         this._logState("propagateContextToCollections", "1986", this.detail);
 
         const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
+        console.log(this.nomControlleur + " - propagateContextToCollections() - Code: 1986 - collectionElements:", collectionElements);
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
+            console.log(this.nomControlleur + " - propagateContextToCollections() - Code: 1986 - controller:", controller);
             if (controller && this.entity && this.entity.id) {
                 // On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
                 // à la collection enfant (ex: la collection de Tâches).
@@ -386,8 +389,8 @@ export default class extends Controller {
                     Object.assign(controller.contextValue, this.context);
                 }
                 // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
+                console.log(`${this.nomControlleur} - propagateContextToCollections() - Code: 1986 - Activation de la collection ${element.id} avec l'ID parent ${this.entity.id}`);
                 controller.enableAndLoad(this.entity.id);
-                console.log(`${this.nomControlleur} - propagateContextToCollections() - Activation de la collection ${element.id} avec l'ID parent ${this.entity.id}`);
             }
         });
     }

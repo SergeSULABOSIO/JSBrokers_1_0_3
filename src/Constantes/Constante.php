@@ -6908,6 +6908,7 @@ class Constante
                 "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
                 "itemTitleCreate" => "Ajouter : " . $formtitle,
                 "itemTitleEdit" => "Modifier : " . $formtitle . " #%id%",
+                "parentEntityId" => $parentId,
                 "parentFieldName" => $parentFieldName,
                 "disabled" => $isParentNew, // Indique si le widget doit être désactivé
                 // L'URL est maintenant correcte, le JS l'utilisera
