@@ -56,27 +56,14 @@ export default class extends Controller {
      * Charge ou recharge le contenu de la liste via AJAX.
      */
     async load() {
-        console.groupCollapsed(this.nomControleur + " - Load() - Code:1986");
-        console.log("| " + this.nomControleur + " - id:", this.element.id);
-        console.log("| " + this.nomControleur + " - url:", this.urlValue);
-        console.log("| " + this.nomControleur + " - listUrl:", this.listUrlValue);
-        console.log("| " + this.nomControleur + " - itemFormUrl:", this.itemFormUrlValue);
-        console.log("| " + this.nomControleur + " - itemSubmitUrl:", this.itemSubmitUrlValue);
-        console.log("| " + this.nomControleur + " - itemDeleteUrl:", this.itemDeleteUrlValue);
-        console.log("| " + this.nomControleur + " - itemTitleCreate:", this.itemTitleCreateValue);
-        console.log("| " + this.nomControleur + " - itemTitleEdit:", this.itemTitleEditValue);
-        console.log("| " + this.nomControleur + " - parentEntityId:", this.parentEntityIdValue);
-        console.log("| " + this.nomControleur + " - parentFieldName:", this.parentFieldNameValue);
-        console.log("| " + this.nomControleur + " - disabledValue:", this.disabledValue);
-        console.log("| " + this.nomControleur + " - entiteNom:", this.entiteNomValue);
-        console.log("| " + this.nomControleur + " - idEntreprise:", this.idEntrepriseValue);
-        console.log("| " + this.nomControleur + " - idInvite:", this.idInviteValue);
-        console.log("| " + this.nomControleur + " - context:", this.contextValue);
-        console.groupEnd();
-
-        if (!this.listUrlValue || this.disabledValue) {
-            // console.error(`${this.nomControleur} - Aucune URL n'est définie pour charger la collection.`);
-            this.listContainerTarget.innerHTML = '<div class="alert alert-warning">Configuration manquante: URL de chargement non définie.</div>';
+        if (this.disabledValue) {
+            console.log(`${this.nomControleur} - load() - Code: 1986 - disabledValue: `, this.disabledValue);
+            this.listContainerTarget.innerHTML = '<div class="alert alert-warning">Commencez par enregistrer.</div>';
+            return;
+        }
+        if (!this.listUrlValue) {
+            console.log(`${this.nomControleur} - load() - Code: 1986 - listUrlValue: `, this.listUrlValue);
+            this.listContainerTarget.innerHTML = "<div class='alert alert-warning'>L'url de la liste n'est pas définie.</div>";
             return;
         }
 
@@ -84,15 +71,14 @@ export default class extends Controller {
             //Tout est activé car l'objet parent est maintenant disponible,
             //On doit charger les élements de la collection
             const dialogListUrl = this.listUrlValue + "/dialog";
-            console.log(this.nomControleur + " Load() - Code:1986 - Actualisation de la Collection", dialogListUrl);
             const response = await fetch(dialogListUrl);
             if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
 
             const html = await response.text();
             this.listContainerTarget.innerHTML = html;
 
-            console.log(this.nomControleur + " Load() - Code:1986 - Collection " + this.element.id + " via '" + this.listUrlValue + "' est chargée.");
             this.updateCount();
+            this._logState('load', '1986 avec /dialog done.');
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
             console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
@@ -113,7 +99,7 @@ export default class extends Controller {
         this.disabledValue = false;
         //On reactive le bouton d'ajout
         if (this.hasAddButtonContainerTarget) {
-            this.addButtonContainerTarget.style.opacity = '0';
+            this.addButtonContainerTarget.style.opacity = '1';
         }
         console.log(this.nomControleur + " - EnableAndLoad() - Code:1986 - Correction de l'URL de chargement de la collection: " + this.listUrlValue);
         this.listUrlValue = this.listUrlValue.replace('/api/0/', `/api/${parentId}/`);
@@ -203,11 +189,9 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     refresh(event) {
-        console.log(this.nomControleur + " refresh - (2/5) Actualisation de la Collection:", event);
         // L'ID 'originatorId' est l'ID de l'élément HTML du contrôleur collection
         // qui a initié l'action. On ne rafraîchit que si c'est nous.
         if (event.detail.originatorId === this.element.id) {
-            console.log(`${this.nomControleur} - Rafraîchissement demandé.`);
             this.load();
         }
     }
@@ -227,7 +211,7 @@ export default class extends Controller {
      * Déclenche l'ouverture de la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
-        console.log(this.nomControleur + " - addItem() - Code:1986");
+        this._logState("addItem", "1986");
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
 
@@ -255,7 +239,7 @@ export default class extends Controller {
             ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
 
-        console.groupCollapsed(`${this.nomControleur} - addItem - EDITDIAL(0)`);
+        console.groupCollapsed(`${this.nomControleur} - addItem() - Code: 1986`);
         console.log(`| Mode: ${isCreationMode ? 'Création' : 'Édition'}`);
         console.log('| Entité:', entity);
         console.log('| Contexte:', context);
@@ -358,5 +342,31 @@ export default class extends Controller {
             detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
         });
         this.element.dispatchEvent(event);
+    }
+
+    /**
+     * Affiche l'état actuel des valeurs du contrôleur dans la console pour le débogage.
+     * @param {string} callingFunction - Le nom de la fonction qui appelle ce logger.
+     * @param {string} code - Un code de suivi pour filtrer les logs.
+     * @private
+     */
+    _logState(callingFunction, code) {
+        console.groupCollapsed(`${this.nomControleur} - ${callingFunction}() - Code:${code}`);
+        console.log(`| id:`, this.element.id);
+        console.log(`| url:`, this.urlValue);
+        console.log(`| listUrl:`, this.listUrlValue);
+        console.log(`| itemFormUrl:`, this.itemFormUrlValue);
+        console.log(`| itemSubmitUrl:`, this.itemSubmitUrlValue);
+        console.log(`| itemDeleteUrl:`, this.itemDeleteUrlValue);
+        console.log(`| itemTitleCreate:`, this.itemTitleCreateValue);
+        console.log(`| itemTitleEdit:`, this.itemTitleEditValue);
+        console.log(`| parentEntityId:`, this.parentEntityIdValue);
+        console.log(`| parentFieldName:`, this.parentFieldNameValue);
+        console.log(`| disabledValue:`, this.disabledValue);
+        console.log(`| entiteNom:`, this.entiteNomValue);
+        console.log(`| idEntreprise:`, this.idEntrepriseValue);
+        console.log(`| idInvite:`, this.idInviteValue);
+        console.log(`| context:`, this.contextValue);
+        console.groupEnd();
     }
 }

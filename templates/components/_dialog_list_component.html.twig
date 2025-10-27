@@ -1,147 +1,104 @@
-{#
-    @file _dialog_list_component.html.twig
-    @description Ce template est une version simplifiée et non-interactive du composant de liste,
-    spécifiquement conçue pour être affichée à l'intérieur d'une boîte de dialogue.
-    Il est idéal pour visualiser des collections en "lecture seule".
+<div class="table-scroll-wrapper flex-grow-1">
+    {% if data is not empty %}
+        <table class="table table-hover table-sm table-enhanced">
+            <thead class="table-light sticky-header">
+                <tr class="text-center">
+                    {% if listeCanvas.colonne_principale is defined %}
+                        <th scope="col">
+                            <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
+                        </th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="table-group-divider context-target" data-list-manager-target="donnees">
+                {% for entity in data %}
+                    <tr
+                        id="liste_row_{{ entity.id }}"
+                        class="element-a-encadrer parent-a-options context-target align-middle position-relative"
+                        data-item-id="{{ entity.id }}"
+                        data-action="mouseenter->collection#showRowActions mouseleave->collection#hideRowActions"
+                    >
+                        {# Colonne 2 : Cellule principale dynamique #}
+                        <td class="p-2" data-controller="responsive-cell">
+                            {# --- NOUVEAU : Conteneur pour les boutons d'action contextuels --- #}
+                            <div class="contextual-row-actions" data-collection-target="rowActions">
+                                <button 
+                                    class="btn btn-sm btn-icon" 
+                                    title="Modifier" 
+                                    data-action="click->collection#editItem"
+                                >
+                                    {{ ux_icon('tabler:edit', {width: "19px"}) }}
+                                </button>
+                                <button class="btn btn-sm btn-icon btn-icon-danger" title="Supprimer" data-action="click->collection#deleteItem">
+                                    {{ ux_icon('fluent:delete-20-filled', {width: "19px"}) }}
+                                </button>
+                            </div>
 
-    Caractéristiques principales :
-    - **Affichage simple** : Conçu pour une lecture rapide, il n'inclut pas les fonctionnalités de sélection (cases à cocher) ou les menus contextuels.
-    - **Mise en page à colonne unique** : L'affichage est centré sur la `colonne_principale` définie dans le `listeCanvas`.
-    - **Responsive** : Utilise le contrôleur Stimulus `responsive-cell` pour masquer les informations secondaires sur les petits écrans, évitant ainsi un affichage surchargé.
-    - **État vide** : Gère élégamment le cas où il n'y a pas de données à afficher en incluant le template `_empty_state.html.twig`.
+                            {% set col_principale = listeCanvas.colonne_principale %}
+                            {# Ligne 1: Texte principal #}
+                            <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
+                                {# Icône #}
+                                {% if col_principale.texte_principal.icone is defined %}
+                                    <twig:UX:Icon name="{{ col_principale.texte_principal.icone }}" style="width: {{ col_principale.texte_principal.icone_taille }}; height: {{ col_principale.texte_principal.icone_taille }};" />
+                                {% endif %}
 
-    Paramètres attendus :
-    - `data`: Un tableau d'objets entité à afficher.
-    - `listeCanvas`: La configuration d'affichage de la liste, qui doit contenir la définition de `colonne_principale`.
-    - `entityCanvas`: La configuration du formulaire de l'entité (utilisé par l'état vide).
-    - `entite_nom`: Le nom de l'entité (utilisé par l'état vide).
-    - `customAddAction` (optionnel): L'action Stimulus pour le bouton "Ajouter" de l'état vide.
-#}
-<div id="list-controller-{{ random() }}"> 
-    <div 
-        class="table-scroll-wrapper flex-grow-1"
-        data-controller="collection"
-        data-collection-url-value="{{ collectionOptions.url }}" 
-        data-collection-list-url-value="{{ collectionOptions.listUrl }}" 
-        data-collection-item-form-url-value="{{ collectionOptions.itemFormUrl }}" 
-        data-collection-item-submit-url-value="{{ collectionOptions.itemSubmitUrl }}" 
-        data-collection-item-delete-url-value="{{ collectionOptions.itemDeleteUrl }}" 
-        data-collection-item-title-create-value="{{ collectionOptions.itemTitleCreate }}" 
-        data-collection-item-title-edit-value="{{ collectionOptions.itemTitleEdit }}" 
-        data-collection-parent-field-name-value="{{ collectionOptions.parentFieldName }}"
-        data-collection-parent-entity-id-value="{{ parentEntityId|default(0) }}"
-        data-collection-disabled-value="{{ collectionOptions.disabled | default(false)}}"
-        data-collection-entite-nom-value="{{ entite_nom }}"
-        data-collection-id-entreprise-value="{{ idEntreprise }}"
-        data-collection-id-invite-value="{{ idInvite }}"
-        data-collection-entity-canvas-value="{{ entityCanvas|json_encode|e('html_attr') }}"
-        data-collection-liste-canvas-value'{{ entityCanvas|json_encode|e('html_attr') }}' 
+                                {# Préfixe et Texte#}
+                                {{ col_principale.texte_principal.attribut_prefixe }}
 
-        {# data-collection-server-root-name-value="{{ serverRootName|default('') }}" #}
-    >
-        <div data-collection-target="listContainer">
-            {% if data is not empty %}
-                <table class="table table-hover table-sm table-enhanced">
-                    <thead class="table-light sticky-header">
-                        <tr class="text-center">
-                            {% if listeCanvas.colonne_principale is defined %}
-                                <th scope="col">
-                                    <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
-                                </th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody class="table-group-divider context-target" data-list-manager-target="donnees">
-                        {% for entity in data %}
-                            <tr
-                                id="liste_row_{{ entity.id }}"
-                                class="element-a-encadrer parent-a-options context-target align-middle position-relative"
-                                data-item-id="{{ entity.id }}"
-                                data-action="mouseenter->collection#showRowActions mouseleave->collection#hideRowActions"
-                            >
-                                {# Colonne 2 : Cellule principale dynamique #}
-                                <td class="p-2" data-controller="responsive-cell">
-                                    {# --- NOUVEAU : Conteneur pour les boutons d'action contextuels --- #}
-                                    <div class="contextual-row-actions" data-collection-target="rowActions">
-                                        <button 
-                                            class="btn btn-sm btn-icon" 
-                                            title="Modifier" 
-                                            data-action="click->collection#editItem"
-                                        >
-                                            {{ ux_icon('tabler:edit', {width: "19px"}) }}
-                                        </button>
-                                        <button class="btn btn-sm btn-icon btn-icon-danger" title="Supprimer" data-action="click->collection#deleteItem">
-                                            {{ ux_icon('fluent:delete-20-filled', {width: "19px"}) }}
-                                        </button>
-                                    </div>
+                                {# Valeur formatée et tronquée si nécessaire #}
+                                {% set texte_principal = col_principale.texte_principal %}
+                                {% set valeur_principale = attribute(entity, texte_principal.attribut_code) %}
+                                
+                                {% if texte_principal.attribut_taille_max is defined and texte_principal.attribut_taille_max is not null and valeur_principale|length > texte_principal.attribut_taille_max %}
+                                    "{{ valeur_principale|slice(0, texte_principal.attribut_taille_max) ~ '...' }}"
+                                {% else %}
+                                    "{{ valeur_principale }}"
+                                {% endif %}
+                            </div>
 
-                                    {% set col_principale = listeCanvas.colonne_principale %}
-                                    {# Ligne 1: Texte principal #}
-                                    <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
+                            {# Ligne 2: Textes secondaires #}
+                            <small class="text-secondary d-flex align-items-center mt-1" data-responsive-cell-target="secondaryInfo">
+                                {% for texte in col_principale.textes_secondaires %}
+                                    <span class="d-inline-flex align-items-center">
                                         {# Icône #}
-                                        {% if col_principale.texte_principal.icone is defined %}
-                                            <twig:UX:Icon name="{{ col_principale.texte_principal.icone }}" style="width: {{ col_principale.texte_principal.icone_taille }}; height: {{ col_principale.texte_principal.icone_taille }};" />
+                                        {% if texte.icone is defined %}
+                                            <twig:UX:Icon name="{{ texte.icone }}" style="width: {{ texte.icone_taille }}; height: {{ texte.icone_taille }}; margin-right: 4px;" />
                                         {% endif %}
 
-                                        {# Préfixe et Texte#}
-                                        {{ col_principale.texte_principal.attribut_prefixe }}
+                                        {# Préfixe #}
+                                        {{ texte.attribut_prefixe }}
 
-                                        {# Valeur formatée et tronquée si nécessaire #}
-                                        {% set texte_principal = col_principale.texte_principal %}
-                                        {% set valeur_principale = attribute(entity, texte_principal.attribut_code) %}
+                                        {# Valeur formatée #}
+                                        {% set valeur = attribute(entity, texte.attribut_code) %}
                                         
-                                        {% if texte_principal.attribut_taille_max is defined and texte_principal.attribut_taille_max is not null and valeur_principale|length > texte_principal.attribut_taille_max %}
-                                            "{{ valeur_principale|slice(0, texte_principal.attribut_taille_max) ~ '...' }}"
+                                        {% if texte.attribut_type == 'date' and valeur is not null %}
+                                            {{ valeur|date('d/m/Y') }}
+                                        {% elseif texte.attribut_type == 'text' and texte.attribut_taille_max is not null and valeur|length > texte.attribut_taille_max %}
+                                            {{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}
                                         {% else %}
-                                            "{{ valeur_principale }}"
+                                            {{ valeur }}
                                         {% endif %}
-                                    </div>
-
-                                    {# Ligne 2: Textes secondaires #}
-                                    <small class="text-secondary d-flex align-items-center mt-1" data-responsive-cell-target="secondaryInfo">
-                                        {% for texte in col_principale.textes_secondaires %}
-                                            <span class="d-inline-flex align-items-center">
-                                                {# Icône #}
-                                                {% if texte.icone is defined %}
-                                                    <twig:UX:Icon name="{{ texte.icone }}" style="width: {{ texte.icone_taille }}; height: {{ texte.icone_taille }}; margin-right: 4px;" />
-                                                {% endif %}
-
-                                                {# Préfixe #}
-                                                {{ texte.attribut_prefixe }}
-
-                                                {# Valeur formatée #}
-                                                {% set valeur = attribute(entity, texte.attribut_code) %}
-                                                
-                                                {% if texte.attribut_type == 'date' and valeur is not null %}
-                                                    {{ valeur|date('d/m/Y') }}
-                                                {% elseif texte.attribut_type == 'text' and texte.attribut_taille_max is not null and valeur|length > texte.attribut_taille_max %}
-                                                    {{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}
-                                                {% else %}
-                                                    {{ valeur }}
-                                                {% endif %}
-                                            </span>
-                                            {# Séparateur #}
-                                            {% if not loop.last %}
-                                                <span class="mx-2">{{ col_principale.textes_secondaires_separateurs | raw }}</span>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </small>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div data-list-manager-target="donnees">
-                    {{ include('components/_empty_state.html.twig', {
-                        title: "Votre liste " ~ entite_nom|lower ~ " est vide",
-                        description: "Commencez par ajouter un " ~ entite_nom|lower ~ " pour organiser vos données.",
-                        button_text: "Ajouter un " ~ entite_nom|lower,
-                        button_action: customAddAction|default("click->list-manager#handleAddRequest"),
-                        icon_name: entityCanvas.parametres.icone | default('lucide:inbox')
-                    }) }}
-                </div>
-            {% endif %}
+                                    </span>
+                                    {# Séparateur #}
+                                    {% if not loop.last %}
+                                        <span class="mx-2">{{ col_principale.textes_secondaires_separateurs | raw }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </small>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div data-list-manager-target="donnees">
+            {{ include('components/_empty_state.html.twig', {
+                title: "Votre liste " ~ entite_nom|lower ~ " est vide",
+                description: "Commencez par ajouter un " ~ entite_nom|lower ~ " pour organiser vos données.",
+                button_text: "Ajouter un " ~ entite_nom|lower,
+                button_action: customAddAction|default("click->list-manager#handleAddRequest"),
+                icon_name: entityCanvas.parametres.icone | default('lucide:inbox')
+            }) }}
         </div>
-    </div>
+    {% endif %}
 </div>

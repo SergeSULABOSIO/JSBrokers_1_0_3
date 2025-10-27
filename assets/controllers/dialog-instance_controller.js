@@ -57,19 +57,11 @@ export default class extends Controller {
     async start(detail) {
         this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
+        this.isCreateMode = !(this.entity && this.entity.id);
         this.context = detail.context || {};
         this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
-        this.isCreateMode = !(this.entity && this.entity.id);
+        this._logState('start', '1986', detail);
 
-        // Log de démarrage détaillé
-        console.groupCollapsed(`${this.nomControlleur} - Verbalisation - start - EDITDIAL(3)`);
-        console.log(`| Mode: ${detail.isCreationMode ? 'Création' : 'Édition'}`);
-        console.log('| Entité:', detail.entity);
-        console.log('| Contexte:', detail.context);
-        console.log('| Canvas:', detail.entityFormCanvas);
-        console.groupEnd();
-
-        console.log(this.nomControlleur + " - start:", detail, "isCreateMode: " + this.isCreateMode);
         await this.buildAndShowShell();
         await this.loadFormAndAttributes();
     }
@@ -187,7 +179,8 @@ export default class extends Controller {
      * @private
      */
     async loadFormAndAttributes() {//loadFormBody() {
-        console.log(this.nomControlleur + " - loadFormAndAttributes() - Code:1986");
+        this._logState("loadFormAndAttributes", "1986", this.detail);
+        console.log(this.nomControlleur + " - loadFormAndAttributes() - Code:1986 - this.entity:", this.entity);
         try {
             // 1. On commence avec l'URL de base
             let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
@@ -216,7 +209,7 @@ export default class extends Controller {
 
             // 5. On lance la requête avec l'URL finale correctement construite
             const finalUrl = url.pathname + url.search;
-            // console.log(this.nomControlleur + " - URL de chargement du formulaire:", finalUrl); // Pour débogage
+            console.log(this.nomControlleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
 
             const response = await fetch(finalUrl);
             if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
@@ -249,19 +242,19 @@ export default class extends Controller {
                 }
 
                 // NOUVEAU : Notifier le cerveau que le dialogue est prêt
-                this.notifyCerveau('ui:dialog.opened', {
-                    mode: this.isCreateMode ? 'creation' : 'edition',
-                    entity: this.entity
-                });
+                // this.notifyCerveau('ui:dialog.opened', {
+                //     mode: this.isCreateMode ? 'creation' : 'edition',
+                //     entity: this.entity
+                // });
             }
             // On s'assure que la classe de mode édition est bien présente si nécessaire
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');
             }
-            // // CORRECTION : Propager le contexte aux collections dès le premier chargement en mode édition.
-            // if (!this.isCreateMode) {
-            //     this.propagateContextToCollections();
-            // }
+            // CORRECTION : Propager le contexte aux collections dès le premier chargement en mode édition.
+            if (!this.isCreateMode) {
+                this.propagateContextToCollections();
+            }
         } catch (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
             this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
@@ -319,7 +312,6 @@ export default class extends Controller {
             if (!response.ok) throw result;
 
             this.showFeedback('success', result.message);
-            console.log(this.nomControlleur + " submitForm (réponse du serveur) - (0/5) Actualisation de la Collection:", result.entity, this.context.originatorId);
 
             // NOUVEAU : Notifier le cerveau du succès de l'enregistrement
             this.notifyCerveau('app:entity.saved', {
@@ -335,9 +327,9 @@ export default class extends Controller {
             } else {
                 // Si on est déjà en mode édition, on rafraîchit juste les listes
                 // sans recharger toute la vue.
-                this.notifyCerveau('app:list.refresh-request', {
-                    originatorId: this.context.originatorId
-                });
+                // this.notifyCerveau('app:list.refresh-request', {
+                //     originatorId: this.context.originatorId
+                // });
             }
 
         } catch (error) {
@@ -369,11 +361,11 @@ export default class extends Controller {
      * @private
      */
     async reloadView() {
-        console.log(this.nomControlleur + " - reloadView() - Code:1986");
+        // console.log(this.nomControlleur + " - reloadView() - Code:1986");
         this.updateTitle();
         this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
-        this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
+        // this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
     }
 
     /**
@@ -382,20 +374,20 @@ export default class extends Controller {
      * @private
      */
     propagateContextToCollections() {
+        this._logState("propagateContextToCollections", "1986", this.detail);
+
         const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
         collectionElements.forEach(element => {
             const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
             if (controller && this.entity && this.entity.id) {
-                console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986 - Transmission à " + element.id);
                 // On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
                 // à la collection enfant (ex: la collection de Tâches).
                 if (this.context) {
-                    // console.log(`${this.nomControlleur} - propagateContextToCollections() - Code:1986 - Transmission du contexte à la collection enfant '${element.id}':`, this.context, element);
                     Object.assign(controller.contextValue, this.context);
                 }
                 // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
                 controller.enableAndLoad(this.entity.id);
-                console.log(this.nomControlleur + " - propagateContextToCollections() - Code:1986 - Transmission à " + element.id + " terminée.");
+                console.log(`${this.nomControlleur} - propagateContextToCollections() - Activation de la collection ${element.id} avec l'ID parent ${this.entity.id}`);
             }
         });
     }
@@ -493,7 +485,7 @@ export default class extends Controller {
     /**
      * Nettoie les messages d'erreur et les styles d'invalidité du formulaire.
      * @private
-     */    
+     */
     clearErrors() {
         this.elementContenu.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
         this.elementContenu.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
@@ -583,5 +575,30 @@ export default class extends Controller {
             payload: payload,
             timestamp: Date.now()
         });
+    }
+
+    /**
+     * Affiche l'état des variables vitales du dialogue dans la console pour le débogage.
+     * @param {string} callingFunction - Le nom de la fonction qui appelle ce logger.
+     * @param {string} code - Un code de suivi pour filtrer les logs.
+     * @param {object} detail - L'objet contenant les données à logger.
+     * @private
+     */
+    _logState(callingFunction, code, detail) {
+        if (detail) {
+            var isCreateMode = true;
+            if (detail.entity) {
+                if (detail.entity.id) {
+                    isCreateMode = false;
+                }
+            }
+            console.groupCollapsed(`${this.nomControlleur} - ${callingFunction}() - Code:${code}`);
+            console.log(`| Mode:`, (isCreateMode) ? 'Création' : 'Édition');
+            console.log(`| Entité:`, detail.entity);
+            console.log(`| Contexte:`, detail.context);
+            console.log(`| Canvas:`, detail.entityFormCanvas);
+            console.groupEnd();
+        }
+
     }
 }
