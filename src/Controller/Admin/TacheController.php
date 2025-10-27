@@ -155,7 +155,10 @@ class TacheController extends AbstractController
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($tache, $data, $em);
+            // --- CORRECTION : Utiliser le trait pour associer l'enfant au parent ---
+            // Cette méthode lit le contexte (`notificationSinistre`, `offreIndemnisationSinistre`, etc.)
+            // et attache la Tache à l'entité parente correspondante.
+            $this->associateParent($tache, $data, $em); 
             $em->persist($tache);
             $em->flush();
             // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
