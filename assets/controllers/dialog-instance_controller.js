@@ -242,20 +242,15 @@ export default class extends Controller {
                 }
 
                 // NOUVEAU : Notifier le cerveau que le dialogue est prêt
-                // this.notifyCerveau('ui:dialog.opened', {
-                //     mode: this.isCreateMode ? 'creation' : 'edition',
-                //     entity: this.entity
-                // });
+                this.notifyCerveau('ui:dialog.opened', {
+                    mode: this.isCreateMode ? 'creation' : 'edition',
+                    entity: this.entity
+                });
             }
             // On s'assure que la classe de mode édition est bien présente si nécessaire
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');
             }
-            // CORRECTION : Propager le contexte aux collections dès le premier chargement en mode édition.
-            // if (!this.isCreateMode) {
-            //     console.log(`${this.nomControlleur} - loadFormAndAttributes() - Code: 1986 - Préparation pour la propagation du contexte aux collections. Mode création: ${this.isCreateMode}`);
-            //     this.propagateContextToCollections();
-            // }
         } catch (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
             this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
@@ -328,9 +323,9 @@ export default class extends Controller {
             } else {
                 // Si on est déjà en mode édition, on rafraîchit juste les listes
                 // sans recharger toute la vue.
-                // this.notifyCerveau('app:list.refresh-request', {
-                //     originatorId: this.context.originatorId
-                // });
+                this.notifyCerveau('app:list.refresh-request', {
+                    originatorId: this.context.originatorId
+                });
             }
 
         } catch (error) {
@@ -362,37 +357,9 @@ export default class extends Controller {
      * @private
      */
     async reloadView() {
-        // console.log(this.nomControlleur + " - reloadView() - Code:1986");
         this.updateTitle();
         this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
-        // this.propagateContextToCollections(); // On propage le contexte aux nouvelles collections
-    }
-
-    /**
-     * Parcourt toutes les collections chargées dans la modale, les active
-     * et leur transmet le contexte du dialogue actuel.
-     * @private
-     */
-    propagateContextToCollections() {
-        this._logState("propagateContextToCollections", "1986", this.detail);
-
-        const collectionElements = this.elementContenu.querySelectorAll('[data-controller="collection"]');
-        console.log(this.nomControlleur + " - propagateContextToCollections() - Code: 1986 - collectionElements:", collectionElements);
-        collectionElements.forEach(element => {
-            const controller = this.cetteApplication.getControllerForElementAndIdentifier(element, 'collection');
-            console.log(this.nomControlleur + " - propagateContextToCollections() - Code: 1986 - controller:", controller);
-            if (controller && this.entity && this.entity.id) {
-                // On transmet le contexte du dialogue parent (ex: {notificationSinistre: 123})
-                // à la collection enfant (ex: la collection de Tâches).
-                if (this.context) {
-                    Object.assign(controller.contextValue, this.context);
-                }
-                // On active la collection avec l'ID de l'entité actuelle (ex: OffreIndemnisation)
-                console.log(`${this.nomControlleur} - propagateContextToCollections() - Code: 1986 - Activation de la collection ${element.id} avec l'ID parent ${this.entity.id}`);
-                controller.enableAndLoad(this.entity.id);
-            }
-        });
     }
 
     /**
@@ -482,18 +449,6 @@ export default class extends Controller {
                 input.parentNode.insertBefore(errorDiv, input.nextSibling);
             }
         }
-    }
-
-
-    /**
-     * Nettoie les messages d'erreur et les styles d'invalidité du formulaire.
-     * @private
-     */
-    clearErrors() {
-        this.elementContenu.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-        this.elementContenu.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
-        this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
-        if (this.feedbackContainer) this.feedbackContainer.innerHTML = '';
     }
 
 
