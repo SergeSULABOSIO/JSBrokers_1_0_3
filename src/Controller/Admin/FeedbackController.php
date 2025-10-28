@@ -45,7 +45,7 @@ class FeedbackController extends AbstractController
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private FeedbackRepository $feedbackRepository,
