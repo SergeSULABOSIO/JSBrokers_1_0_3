@@ -60,20 +60,19 @@ class FeedbackController extends AbstractController
     }
 
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    #[Route(
+        '/index/{idInvite}/{idEntreprise}',
+        name: 'index',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['GET', 'POST']
+    )]
+    public function index(int $idInvite, int $idEntreprise)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/feedback/index.html.twig', [
-            'pageName' => $this->translator->trans("feedback_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'feedbacks' => $this->feedbackRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            // 'activator' => $this->activator,
-        ]);
+        // Utilisation de la fonction réutilisable du trait
+        return $this->renderViewManager(Feedback::class, $idInvite, $idEntreprise);
     }
 
     /**
@@ -82,26 +81,13 @@ class FeedbackController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Feedback $feedback, Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$feedback) {
-            $feedback = new Feedback();
-        }
-
-        $form = $this->createForm(FeedbackType::class, $feedback);
-
-        $entityCanvas = $this->constante->getEntityCanvas(Feedback::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$feedback]);
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas($feedback, $entreprise->getId()),
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Feedback::class,
+            FeedbackType::class,
+            $feedback
+            // No specific initializer needed for a new Feedback
+        );
     }
 
     /**

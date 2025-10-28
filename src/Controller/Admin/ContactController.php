@@ -64,7 +64,7 @@ class ContactController extends AbstractController
 
     #[Route(
         '/index/{idInvite}/{idEntreprise}',
-        name: 'index', 
+        name: 'index',
         requirements: [
             'idEntreprise' => Requirement::DIGITS,
             'idInvite' => Requirement::DIGITS
@@ -73,22 +73,8 @@ class ContactController extends AbstractController
     )]
     public function index(int $idInvite, int $idEntreprise)
     {
-        $data = $this->contactRepository->findAll();
-        $entityCanvas = $this->constante->getEntityCanvas(Contact::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render('components/_view_manager.html.twig', [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Contact::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Contact(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $idInvite,
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // Utilisation de la fonction réutilisable du trait
+        return $this->renderViewManager(Contact::class, $idInvite, $idEntreprise);
     }
 
 
@@ -98,27 +84,13 @@ class ContactController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Contact $contact , Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$contact) {
-            $contact = new Contact();
-        }
-
-        $form = $this->createForm(ContactType::class, $contact);
-
-        $entityCanvas = $this->constante->getEntityCanvas(Contact::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$contact]);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($contact, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $entityFormCanvas,
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Contact::class,
+            ContactType::class,
+            $contact
+            // No specific initializer needed for a new Contact
+        );
     }
 
     /**

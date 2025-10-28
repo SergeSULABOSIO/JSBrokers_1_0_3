@@ -147,6 +147,7 @@ trait ControllerUtilsTrait
     ): Response {
         $entityCanvas = $this->constante->getEntityCanvas($entityClass);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
+        $entityFormCanvas = $this->constante->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
 
         $template = "components/_" . $usage . "_list_component.html.twig";
         $parameters = [
@@ -154,6 +155,8 @@ trait ControllerUtilsTrait
             'entite_nom' => $this->getEntityName($entityClass),
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $entityFormCanvas,
+            'serverRootName' => $this->getServerRootName($entityClass),
             'idInvite' => $this->getInvite()->getId(),
             'idEntreprise' => $this->getEntreprise()->getId(),
             'customAddAction' => "click->collection#addItem",
@@ -161,12 +164,86 @@ trait ControllerUtilsTrait
         ];
 
         if ($usage === "dialog") {
-            $entityFormCanvas = $this->constante->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
             $parameters['collectionOptions'] = $this->getCollectionOptionsFromCanvas($entityFormCanvas, $collectionFieldName);
         } else {
             // This part is for the generic list, which is less likely to be used in this context, but we keep it for completeness
         }
 
         return $this->render($template, $parameters);
+    }
+
+    /**
+     * Renders the main view manager component for a given entity.
+     * Fetches all entities of the specified class, ordered by ID in descending order.
+     *
+     * @param string $entityClass The FQCN of the entity to display.
+     * @param int $idInvite The ID of the current invite.
+     * @param int $idEntreprise The ID of the current enterprise.
+     * @return Response
+     */
+    private function renderViewManager(string $entityClass, int $idInvite, int $idEntreprise): Response
+    {
+        $repository = $this->em->getRepository($entityClass);
+        // Fetch all entities, ordered by ID in descending order to show most recent first.
+        // Using 'id' as a generic field for ordering, assuming it's auto-incrementing.
+        // If a 'createdAt' field is consistently available and indexed, it could be used instead.
+        $data = $repository->findBy([], ['id' => 'DESC']);
+
+        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
+        $this->constante->loadCalculatedValue($entityCanvas, $data);
+
+        return $this->render('components/_view_manager.html.twig', [
+            'data' => $data,
+            'entite_nom' => $this->getEntityName($entityClass),
+            'serverRootName' => $this->getServerRootName($entityClass),
+            'constante' => $this->constante,
+            'listeCanvas' => $this->constante->getListeCanvas($entityClass),
+            'entityCanvas' => $entityCanvas,
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), $idEntreprise),
+            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
+            'idInvite' => $idInvite,
+            'idEntreprise' => $idEntreprise,
+        ]);
+    }
+
+    /**
+     * Renders the form canvas component for creating or editing an entity.
+     *
+     * @param Request $request The current HTTP request.
+     * @param string $entityClass The FQCN of the entity.
+     * @param string $formTypeClass The FQCN of the form type.
+     * @param ?object $entity The entity instance (from ParamConverter), or null for creation.
+     * @param ?callable $initializer A function to set default values on a new entity instance.
+     *                               It receives the new entity and the current Invite as arguments.
+     * @return Response
+     */
+    private function renderFormCanvas(
+        Request $request,
+        string $entityClass,
+        string $formTypeClass,
+        ?object $entity,
+        ?callable $initializer = null
+    ): Response {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
+
+        if (!$entity) {
+            $entity = new $entityClass();
+            if (is_callable($initializer)) {
+                // Call the initializer function with the new entity and the invite
+                $initializer($entity, $invite);
+            }
+        }
+
+        $form = $this->createForm($formTypeClass, $entity);
+        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
+        $this->constante->loadCalculatedValue($entityCanvas, [$entity]);
+
+        return $this->render('components/_form_canvas.html.twig', [
+            'form' => $form->createView(),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas($entity, $entreprise->getId()),
+            'entityCanvas' => $entityCanvas,
+            'idEntreprise' => $entreprise->getId(),
+            'idInvite' => $invite->getId(),
+        ]);
     }
 }

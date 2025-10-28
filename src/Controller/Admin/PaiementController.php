@@ -83,22 +83,8 @@ class PaiementController extends AbstractController
     )]
     public function index(int $idInvite, int $idEntreprise)
     {
-        $data = $this->paiementRepository->findAll();
-        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render('components/_view_manager.html.twig', [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $idInvite,
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // Utilisation de la fonction réutilisable du trait
+        return $this->renderViewManager(Paiement::class, $idInvite, $idEntreprise);
     }
 
     /**
@@ -107,33 +93,21 @@ class PaiementController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Paiement $paiement, Constante $constante, Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$paiement) {
-            $paiement = new Paiement();
-            $defaultMontant = $request->query->get('default_montant');
-            if ($defaultMontant !== null && $defaultMontant !== '') {
-                $paiement->setMontant((float)$defaultMontant);
+        return $this->renderFormCanvas(
+            $request,
+            Paiement::class,
+            PaiementType::class,
+            $paiement,
+            function (Paiement $paiement) use ($request) {
+                // Custom initializer for a new Paiement
+                $defaultMontant = $request->query->get('default_montant');
+                if ($defaultMontant !== null && $defaultMontant !== '') {
+                    $paiement->setMontant((float)$defaultMontant);
+                }
+                $paiement->setPaidAt(new DateTimeImmutable("now"));
+                $paiement->setDescription("Descript. à générer automatiquement ici.");
             }
-            $paiement->setPaidAt(new DateTimeImmutable("now"));
-            $paiement->setDescription("Descript. à générer automatiquement ici.");
-        }
-
-        $form = $this->createForm(PaiementType::class, $paiement);
-
-        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$paiement]);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($paiement, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $entityFormCanvas,
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        );
     }
 
 

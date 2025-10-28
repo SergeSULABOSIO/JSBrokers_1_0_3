@@ -75,22 +75,9 @@ class PieceSinistreController extends AbstractController
     ]
     public function index(int $idInvite, int $idEntreprise)
     {
-        $data = $this->pieceSinistreRepository->findAll();
-        $entityCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render('components/_view_manager.html.twig', [
-            'data' => $data,
-            'entite_nom' => "PieceSinistre",
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $idInvite,
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // Utilisation de la fonction réutilisable du trait pour assurer que toutes
+        // les variables nécessaires, y compris 'serverRootName', sont passées.
+        return $this->renderViewManager(PieceSinistre::class, $idInvite, $idEntreprise);
     }
 
 
@@ -100,28 +87,16 @@ class PieceSinistreController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?PieceSinistre $piece, Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$piece) {
-            $piece = new PieceSinistre();
-            $piece->setInvite($invite);
-        }
-
-        $form = $this->createForm(PieceSinistreType::class, $piece);
-
-        $entityCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$piece]);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($piece, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $entityFormCanvas,
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            PieceSinistre::class,
+            PieceSinistreType::class,
+            $piece,
+            function (PieceSinistre $piece, \App\Entity\Invite $invite) {
+                // Custom initializer for a new PieceSinistre
+                $piece->setInvite($invite);
+            }
+        );
     }
 
     /**

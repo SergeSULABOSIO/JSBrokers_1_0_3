@@ -77,22 +77,8 @@ class OffreIndemnisationSinistreController extends AbstractController
     )]
     public function index(int $idInvite, int $idEntreprise)
     {
-        $data = $this->repository->findAll();
-        $entityCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render('components/_view_manager.html.twig', [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(OffreIndemnisationSinistre::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new OffreIndemnisationSinistre(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $idInvite,
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // Utilisation de la fonction réutilisable du trait
+        return $this->renderViewManager(OffreIndemnisationSinistre::class, $idInvite, $idEntreprise);
     }
 
 
@@ -102,27 +88,13 @@ class OffreIndemnisationSinistreController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?OffreIndemnisationSinistre $offre, Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$offre) {
-            $offre = new OffreIndemnisationSinistre();
-        }
-
-        $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
-
-        $entityCanvas = $this->constante->getEntityCanvas(OffreIndemnisationSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$offre]);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($offre, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $entityFormCanvas,
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            OffreIndemnisationSinistre::class,
+            OffreIndemnisationSinistreType::class,
+            $offre
+            // No specific initializer needed for a new OffreIndemnisationSinistre
+        );
     }
 
     /**
