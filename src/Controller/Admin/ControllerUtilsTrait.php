@@ -4,8 +4,11 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 
 /**
  * @trait ControllerUtilsTrait
@@ -245,5 +248,59 @@ trait ControllerUtilsTrait
             'idEntreprise' => $entreprise->getId(),
             'idInvite' => $invite->getId(),
         ]);
+    }
+
+    /**
+     * Handles the submission of a form via API, for both creation and editing.
+     *
+     * @param Request $request The current HTTP request.
+     * @param string $entityClass The FQCN of the entity.
+     * @param string $formTypeClass The FQCN of the form type.
+     * @param EntityManagerInterface $em The entity manager.
+     * @param SerializerInterface $serializer The serializer.
+     * @param ?callable $initializer A function to set default values on a new or existing entity before validation.
+     *                               It receives the entity instance and the submitted data array as arguments.
+     * @return JsonResponse
+     */
+    private function handleFormSubmission(
+        Request $request,
+        string $entityClass,
+        string $formTypeClass,
+        EntityManagerInterface $em,
+        SerializerInterface $serializer,
+        ?callable $initializer = null
+    ): JsonResponse {
+        $data = $request->request->all();
+        $files = $request->files->all();
+        $submittedData = array_merge($data, $files);
+
+        $entity = isset($data['id']) && $data['id']
+            ? $em->getRepository($entityClass)->find($data['id'])
+            : new $entityClass();
+
+        if (is_callable($initializer)) {
+            $initializer($entity, $submittedData);
+        }
+
+        $form = $this->createForm($formTypeClass, $entity);
+        $form->submit($submittedData, false);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            if (method_exists($this, 'associateParent')) {
+                $this->associateParent($entity, $data, $em);
+            }
+            $em->persist($entity);
+            $em->flush();
+
+            $jsonEntity = $serializer->serialize($entity, 'json', ['groups' => 'list:read']);
+            return $this->json(['message' => 'Enregistrée avec succès!', 'entity' => json_decode($jsonEntity)]);
+        }
+
+        $errors = [];
+        foreach ($form->getErrors(true) as $error) {
+            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
+        }
+
+        return $this->json(['message' => 'Veuillez corriger les erreurs ci-dessous.', 'errors' => $errors], 422);
     }
 }

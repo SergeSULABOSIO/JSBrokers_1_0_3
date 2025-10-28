@@ -14,6 +14,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;
+use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Entity\Contact;
 use App\Constantes\Constante;
@@ -90,7 +91,7 @@ class NotificationSinistreController extends AbstractController
             NotificationSinistre::class,
             NotificationSinistreType::class,
             $notification,
-            function (NotificationSinistre $notification, \App\Entity\Invite $invite) {
+            function (NotificationSinistre $notification, Invite $invite) {
                 // Custom initializer for a new NotificationSinistre
                 $notification->setNotifiedAt(new DateTimeImmutable("now"));
                 $notification->setInvite($invite);
@@ -102,48 +103,23 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        /** @var NotificationSinistre $notification */
-        $notification = isset($data['id']) ? $em->getRepository(NotificationSinistre::class)->find($data['id']) : new NotificationSinistre();
-
-        $notificationId = $data['id'] ?? null;
-        if (!$notificationId) {
-            //Paramètres par défaut
-            $notification->setOccuredAt(new DateTimeImmutable("now"));
-            $notification->setNotifiedAt(new DateTimeImmutable("now"));
-            $notification->setCreatedAt(new DateTimeImmutable("now"));
-            $notification->setInvite($this->getInvite());
-            $notification->setDescriptionDeFait("RAS");
-        }
-        $notification->setUpdatedAt(new DateTimeImmutable("now"));
-
-        $form = $this->createForm(NotificationSinistreType::class, $notification);
-        $form->submit($submittedData, false); //puisque les données sont fournies ici sous forme de JSON. On ne peut pas utiliser handleRequest
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($notification, $data, $em);
-            $em->persist($notification);
-            $em->flush();
-            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
-            $jsonEntity = $serializer->serialize($notification, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-        $errors = [];
-        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->handleFormSubmission(
+            $request,
+            NotificationSinistre::class,
+            NotificationSinistreType::class,
+            $em,
+            $serializer,
+            function (NotificationSinistre $notification, array $data) {
+                if (!$notification->getId()) {
+                    $notification->setOccuredAt(new DateTimeImmutable("now"));
+                    $notification->setNotifiedAt(new DateTimeImmutable("now"));
+                    $notification->setCreatedAt(new DateTimeImmutable("now"));
+                    $notification->setInvite($this->getInvite());
+                    $notification->setDescriptionDeFait("RAS");
+                }
+                $notification->setUpdatedAt(new DateTimeImmutable("now"));
+            }
+        );
     }
 
     /**
