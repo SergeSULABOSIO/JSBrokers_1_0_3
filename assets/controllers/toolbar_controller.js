@@ -194,10 +194,10 @@ export default class extends Controller {
             };
         } else if (eventName === 'ui:toolbar.edit-request') {
             // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
-            console.log(this.nomControleur + " - Notify - édition", this.selectos);
             payload = {
-                entity: this.selectos[0],
-                entityFormCanvas: this.selectos[0].activeFormCanvas,
+                // On envoie l'entité elle-même, pas l'objet selecto complet
+                entity: this.selectos[0].entity, 
+                entityFormCanvas: this.activeFormCanvas,
                 isCreationMode: false,
             };
         } else if (eventName === 'ui:toolbar.open-request') {

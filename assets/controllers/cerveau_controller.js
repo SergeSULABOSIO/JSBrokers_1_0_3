@@ -131,6 +131,11 @@ export default class extends Controller {
             case 'ui:toolbar.add-request':
                 this.openDialogBox(payload);
                 break;
+            
+            // AJOUT: Gérer explicitement la demande de modification
+            case 'ui:toolbar.edit-request':
+                this.openDialogBox(payload);
+                break;
 
             // --- NOUVEAU : Gestion des événements du cycle de vie des dialogues ---
             case 'ui:dialog.opened':
