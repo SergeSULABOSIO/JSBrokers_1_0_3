@@ -99,39 +99,13 @@ class ContactController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        /** @var Contact $contact */
-        $contact = isset($data['id']) && $data['id'] ? $em->getRepository(Contact::class)->find($data['id']) : new Contact();
-
-        $form = $this->createForm(ContactType::class, $contact);
-        $form->submit($submittedData, false); // Le 'false' permet de ne pas vider les champs non soumis
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($contact, $data, $em);
-            $em->persist($contact);
-            $em->flush();
-            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
-            $jsonEntity = $serializer->serialize($contact, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-
-        $errors = [];
-        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->handleFormSubmission(
+            $request,
+            Contact::class,
+            ContactType::class,
+            $em,
+            $serializer
+        );
     }
 
     /**

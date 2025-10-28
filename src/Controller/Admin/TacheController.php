@@ -111,49 +111,19 @@ class TacheController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        /** @var Tache $tache */
-        $tache = isset($data['id']) ? $em->getRepository(Tache::class)->find($data['id']) : new Tache();
-
-        $tacheId = $data['id'] ?? null;
-        if ($tacheId) {
-            //Paramètres par défaut
-            $tache->setUpdatedAt(new DateTimeImmutable("now"));
-        }else{
-            $tache->setCreatedAt(new DateTimeImmutable("now"));
-        }
-
-        $form = $this->createForm(TacheType::class, $tache);
-        $form->submit($submittedData, false);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            // --- CORRECTION : Utiliser le trait pour associer l'enfant au parent ---
-            // Cette méthode lit le contexte (`notificationSinistre`, `offreIndemnisationSinistre`, etc.)
-            // et attache la Tache à l'entité parente correspondante.
-            $this->associateParent($tache, $data, $em); 
-            $em->persist($tache);
-            $em->flush();
-            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
-            $jsonEntity = $serializer->serialize($tache, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-
-        $errors = [];
-        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->handleFormSubmission(
+            $request,
+            Tache::class,
+            TacheType::class,
+            $em,
+            $serializer,
+            function (Tache $tache) {
+                // Le trait TimestampableTrait gère createdAt et updatedAt
+                // automatiquement grâce à l'annotation #[ORM\HasLifecycleCallbacks]
+                // et aux méthodes dans le trait.
+                // Il n'est donc plus nécessaire de les définir manuellement ici.
+            }
+        );
     }
 
     /**

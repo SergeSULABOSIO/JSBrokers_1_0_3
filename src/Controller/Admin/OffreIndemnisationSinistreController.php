@@ -103,37 +103,13 @@ class OffreIndemnisationSinistreController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        /** @var OffreIndemnisationSinistre $offre */
-        $offre = isset($data['id']) ? $em->getRepository(OffreIndemnisationSinistre::class)->find($data['id']) : new OffreIndemnisationSinistre();
-
-        $form = $this->createForm(OffreIndemnisationSinistreType::class, $offre);
-        $form->submit($submittedData, false);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($offre, $data, $em);
-            $em->persist($offre);
-            $em->flush();
-            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
-            $jsonEntity = $serializer->serialize($offre, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-        $errors = [];
-        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->handleFormSubmission(
+            $request,
+            OffreIndemnisationSinistre::class,
+            OffreIndemnisationSinistreType::class,
+            $em,
+            $serializer
+        );
     }
 
     /**

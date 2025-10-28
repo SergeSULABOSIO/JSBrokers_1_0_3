@@ -96,36 +96,16 @@ class FeedbackController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        $feedback = isset($data['id']) ? $em->getRepository(Feedback::class)->find($data['id']) : new Feedback();
-
-        $form = $this->createForm(FeedbackType::class, $feedback);
-        $form->submit($submittedData, false);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($feedback, $data, $em);
-            $em->persist($feedback);
-            $em->flush();
-
-            $jsonEntity = $serializer->serialize($feedback, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-
-        $errors = [];
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-        return $this->json([
-            'message' => 'Veuillez corriger les erreurs ci-dessous.', 
-            'errors' => $errors
-        ], 422);
+        return $this->handleFormSubmission(
+            $request,
+            Feedback::class,
+            FeedbackType::class,
+            $em,
+            $serializer
+        );
     }
+
+
 
     /**
      * Supprime un Feedback.

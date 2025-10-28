@@ -105,47 +105,20 @@ class PieceSinistreController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        /** @var PieceSinistre $piece */
-        $piece = isset($data['id']) && $data['id'] ? $em->getRepository(PieceSinistre::class)->find($data['id']) : new PieceSinistre();
-
-        $pieceId = $data['id'] ?? null;
-        if (!$pieceId) {
-            $piece->setReceivedAt(new DateTimeImmutable("now"));
-            $piece->setInvite($this->getInvite());
-        }
-
-        $form = $this->createForm(PieceSinistreType::class, $piece);
-        $form->submit($submittedData, false);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($piece, $data, $em);
-            $em->persist($piece);
-            $em->flush();
-
-            // On sérialise l'entité complète (avec son nouvel ID) pour la renvoyer
-            $jsonEntity = $serializer->serialize($piece, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-
-        // --- CORRECTION : GESTION DES ERREURS DE VALIDATION ---
-        $errors = [];
-        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->handleFormSubmission(
+            $request,
+            PieceSinistre::class,
+            PieceSinistreType::class,
+            $em,
+            $serializer,
+            function (PieceSinistre $piece) {
+                if (!$piece->getId()) {
+                    $piece->setReceivedAt(new DateTimeImmutable("now"));
+                    // L'initialiseur de renderFormCanvas s'en occupe déjà
+                    // $piece->setInvite($this->getInvite());
+                }
+            }
+        );
     }
 
     /**

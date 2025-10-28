@@ -117,44 +117,21 @@ class PaiementController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        /** @var Paiement $paiement */
-        $paiement = isset($data['id']) ? $em->getRepository(Paiement::class)->find($data['id']) : new Paiement();
-
-        $notificationId = $data['id'] ?? null;
-        if (!$notificationId) {
-            //Paramètres par défaut
-            $paiement->setCreatedAt(new DateTimeImmutable("now"));
-        }
-        $paiement->setUpdatedAt(new DateTimeImmutable("now"));
-
-        $form = $this->createForm(PaiementType::class, $paiement);
-        $form->submit($submittedData, false);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($paiement, $data, $em);
-            $em->persist($paiement);
-            $em->flush();
-            
-            $jsonEntity = $serializer->serialize($paiement, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-        $errors = [];
-        // On parcourt toutes les erreurs du formulaire (y compris celles des champs enfants)
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->handleFormSubmission(
+            $request,
+            Paiement::class,
+            PaiementType::class,
+            $em,
+            $serializer,
+            function (Paiement $paiement) {
+                if (!$paiement->getId()) {
+                    // Le trait TimestampableTrait s'en occupe déjà
+                    // $paiement->setCreatedAt(new DateTimeImmutable("now"));
+                }
+                // Le trait TimestampableTrait s'en occupe déjà
+                // $paiement->setUpdatedAt(new DateTimeImmutable("now"));
+            }
+        );
     }
 
     /**

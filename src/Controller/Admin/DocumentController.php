@@ -132,39 +132,13 @@ class DocumentController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
     {
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        /** @var Document $document */
-        $document = isset($data['id']) ? $em->getRepository(Document::class)->find($data['id']) : new Document();
-
-        $form = $this->createForm(DocumentType::class, $document);
-        $form->submit($submittedData, false);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->associateParent($document, $data, $em);
-            // dd("Parents", $submittedData);
-
-            $em->persist($document);
-            $em->flush();
-
-            $jsonEntity = $serializer->serialize($document, 'json', ['groups' => 'list:read']);
-            return $this->json([
-                'message' => 'Enregistrée avec succès!',
-                'entity' => json_decode($jsonEntity) // On renvoie l'objet JSON
-            ]);
-        }
-
-        $errors = [];
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-        return $this->json([
-            'success' => false,
-            'message' => 'Veuillez corriger les erreurs ci-dessous.',
-            'errors'  => $errors // On envoie le tableau détaillé des erreurs au client
-        ], 422); // 422 = Unprocessable Entity
+        return $this->handleFormSubmission(
+            $request,
+            Document::class,
+            DocumentType::class,
+            $em,
+            $serializer
+        );
     }
 
 
