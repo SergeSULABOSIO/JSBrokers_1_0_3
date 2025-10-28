@@ -172,32 +172,9 @@ class PieceSinistreController extends AbstractController
     #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
     public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var PieceSinistre $piece */
-            $piece = $this->pieceSinistreRepository->find($id);
-            if (!$piece) {
-                throw $this->createNotFoundException("La pièce sinistre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $piece->getDocuments();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-        
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Document::class),
-            'serverRootName' => $this->getServerRootName(Document::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'pieceSinistre',
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-        ]);
+        /** @var PieceSinistre $piece */
+        $piece = $this->findParentOrNew(PieceSinistre::class, $id);
+        $data = $piece->getDocuments();
+        return $this->renderCollectionOrList($usage, Document::class, $piece, $id, $data, 'pieceSinistre');
     }
 }

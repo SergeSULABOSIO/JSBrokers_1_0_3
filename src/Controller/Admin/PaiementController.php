@@ -188,34 +188,9 @@ class PaiementController extends AbstractController
     #[Route('/api/{id}/preuves/{usage}', name: 'api.get_preuves', methods: ['GET'])]
     public function getPreuvesListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var Paiement $paiement */
-            $paiement = $this->paiementRepository->find($id);
-            if (!$paiement) {
-                throw $this->createNotFoundException("La notification de sinistre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $paiement->getPreuves();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-        
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Document::class),
-            'serverRootName' => $this->getServerRootName(Document::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'paiement', // Le Document (preuve) est lié par le champ 'paiement'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
-        ]);
+        /** @var Paiement $paiement */
+        $paiement = $this->findParentOrNew(Paiement::class, $id);
+        $data = $paiement->getPreuves();
+        return $this->renderCollectionOrList($usage, Document::class, $paiement, $id, $data, 'paiement');
     }
 }

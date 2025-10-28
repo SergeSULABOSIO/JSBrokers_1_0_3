@@ -164,100 +164,27 @@ class OffreIndemnisationSinistreController extends AbstractController
     #[Route('/api/{id}/paiements/{usage}', name: 'api.get_paiements', methods: ['GET'])]
     public function getPaiementsListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
-            $offreIndemnisationSinistre = $this->repository->find($id);
-            if (!$offreIndemnisationSinistre) {
-                throw $this->createNotFoundException("L'offre sinistre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $offreIndemnisationSinistre->getPaiements();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Paiement::class),
-            'serverRootName' => $this->getServerRootName(Paiement::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Paiement::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Paiement(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'offreIndemnisationSinistre', // Le Paiement est lié par le champ 'offreIndemnisationSinistre'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
-        ]);
+        /** @var OffreIndemnisationSinistre $offre */
+        $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
+        $data = $offre->getPaiements();
+        return $this->renderCollectionOrList($usage, Paiement::class, $offre, $id, $data, 'offreIndemnisationSinistre');
     }
 
     #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
     public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
-            $offreIndemnisationSinistre = $this->repository->find($id);
-            if (!$offreIndemnisationSinistre) {
-                throw $this->createNotFoundException("L'offre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $offreIndemnisationSinistre->getDocuments();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Paiement::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Document::class),
-            'serverRootName' => $this->getServerRootName(Document::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'offreIndemnisationSinistre', // Le Document est lié par le champ 'offreIndemnisationSinistre'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-        ]);
+        /** @var OffreIndemnisationSinistre $offre */
+        $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
+        $data = $offre->getDocuments();
+        return $this->renderCollectionOrList($usage, Document::class, $offre, $id, $data, 'offreIndemnisationSinistre');
     }
 
     #[Route('/api/{id}/taches/{usage}', name: 'api.get_taches', methods: ['GET'])]
     public function getTachesListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var OffreIndemnisationSinistre $offreIndemnisationSinistre */
-            $offreIndemnisationSinistre = $this->repository->find($id);
-            if (!$offreIndemnisationSinistre) {
-                throw $this->createNotFoundException("L'offre avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $offreIndemnisationSinistre->getTaches();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Tache::class),
-            'serverRootName' => $this->getServerRootName(Tache::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'offreIndemnisationSinistre', // La Tache est liée par le champ 'offreIndemnisationSinistre'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
-        ]);
+        /** @var OffreIndemnisationSinistre $offre */
+        $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
+        $data = $offre->getTaches();
+        return $this->renderCollectionOrList($usage, Tache::class, $offre, $id, $data, 'offreIndemnisationSinistre');
     }
 }
