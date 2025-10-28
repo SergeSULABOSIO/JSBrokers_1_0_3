@@ -175,6 +175,6 @@ class PieceSinistreController extends AbstractController
         /** @var PieceSinistre $piece */
         $piece = $this->findParentOrNew(PieceSinistre::class, $id);
         $data = $piece->getDocuments();
-        return $this->renderCollectionOrList($usage, Document::class, $piece, $id, $data, 'pieceSinistre');
+        return $this->renderCollectionOrList($usage, Document::class, $piece, $id, $data, 'documents');
     }
 }

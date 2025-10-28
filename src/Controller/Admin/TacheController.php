@@ -181,7 +181,7 @@ class TacheController extends AbstractController
         /** @var Tache $tache */
         $tache = $this->findParentOrNew(Tache::class, $id);
         $data = $tache->getFeedbacks();
-        return $this->renderCollectionOrList($usage, Feedback::class, $tache, $id, $data, 'tache');
+        return $this->renderCollectionOrList($usage, Feedback::class, $tache, $id, $data, 'feedbacks');
     }
 
     // AJOUTEZ CETTE NOUVELLE ACTION
@@ -191,6 +191,6 @@ class TacheController extends AbstractController
         /** @var Tache $tache */
         $tache = $this->findParentOrNew(Tache::class, $id);
         $data = $tache->getDocuments();
-        return $this->renderCollectionOrList($usage, Document::class, $tache, $id, $data, 'tache');
+        return $this->renderCollectionOrList($usage, Document::class, $tache, $id, $data, 'documents');
     }
 }

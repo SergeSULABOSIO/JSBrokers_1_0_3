@@ -191,6 +191,6 @@ class PaiementController extends AbstractController
         /** @var Paiement $paiement */
         $paiement = $this->findParentOrNew(Paiement::class, $id);
         $data = $paiement->getPreuves();
-        return $this->renderCollectionOrList($usage, Document::class, $paiement, $id, $data, 'paiement');
+        return $this->renderCollectionOrList($usage, Document::class, $paiement, $id, $data, 'preuves');
     }
 }
