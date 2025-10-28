@@ -178,67 +178,19 @@ class TacheController extends AbstractController
     #[Route('/api/{id}/feedbacks/{usage}', name: 'api.get_feedbacks', methods: ['GET'])]
     public function getFeedbacksListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var Tache $tache */
-            $tache = $this->tacheRepository->find($id);
-            if (!$tache) {
-                throw $this->createNotFoundException("La tâche avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $tache->getFeedbacks();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Feedback::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Feedback::class),
-            'serverRootName' => $this->getServerRootName(Feedback::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Feedback::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Feedback(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'tache', // Le Feedback est lié par le champ 'tache'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-        ]);
+        /** @var Tache $tache */
+        $tache = $this->findParentOrNew(Tache::class, $id);
+        $data = $tache->getFeedbacks();
+        return $this->renderCollectionOrList($usage, Feedback::class, $tache, $id, $data, 'tache');
     }
 
     // AJOUTEZ CETTE NOUVELLE ACTION
     #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
     public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
     {
-        $data = [];
-        if ($id !== 0) {
-            /** @var Tache $tache */
-            $tache = $this->tacheRepository->find($id);
-            if (!$tache) {
-                throw $this->createNotFoundException("L'objet avec l'ID $id n'a pas été trouvée.");
-            }
-            $data = $tache->getDocuments();
-        }
-        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render("components/_" . $usage . "_list_component.html.twig", [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName(Document::class),
-            'serverRootName' => $this->getServerRootName(Document::class),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $this->getEntreprise()->getId()),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $this->getInvite()->getId(),
-            'idEntreprise' => $this->getEntreprise()->getId(),
-            'parentEntityId' => $id,
-            'parentFieldName' => 'tache', // Le Document est lié par le champ 'tache'
-            'customAddAction' => "click->collection#addItem", //Custom Action pour Ajouter à la collection
-            // 'customEditAction' => "click->collection#editItem", //Custom Action pour Editer un élement de la collection
-            // 'customDeleteAction' => "click->collection#deleteItem", //Custom Action pour Supprimer un élément de la collection
-        ]);
+        /** @var Tache $tache */
+        $tache = $this->findParentOrNew(Tache::class, $id);
+        $data = $tache->getDocuments();
+        return $this->renderCollectionOrList($usage, Document::class, $tache, $id, $data, 'tache');
     }
 }
