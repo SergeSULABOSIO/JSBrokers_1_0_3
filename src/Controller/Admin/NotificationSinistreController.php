@@ -77,51 +77,25 @@ class NotificationSinistreController extends AbstractController
     )]
     public function index(int $idInvite, int $idEntreprise)
     {
-        $data = $this->notificationSinistreRepository->findAll();
-        $entityCanvas = $this->constante->getEntityCanvas(NotificationSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render('components/_view_manager.html.twig', [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $idInvite,
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // Utilisation de la fonction réutilisable du trait
+        return $this->renderViewManager(NotificationSinistre::class, $idInvite, $idEntreprise);
     }
 
 
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?NotificationSinistre $notification, Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$notification) {
-            $notification = new NotificationSinistre();
-            $notification->setNotifiedAt(new DateTimeImmutable("now"));
-            $notification->setInvite($invite);
-        }
-
-        $form = $this->createForm(NotificationSinistreType::class, $notification);
-
-        $entityCanvas = $this->constante->getEntityCanvas(NotificationSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$notification]);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($notification, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $entityFormCanvas,
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            NotificationSinistre::class,
+            NotificationSinistreType::class,
+            $notification,
+            function (NotificationSinistre $notification, \App\Entity\Invite $invite) {
+                // Custom initializer for a new NotificationSinistre
+                $notification->setNotifiedAt(new DateTimeImmutable("now"));
+                $notification->setInvite($invite);
+            }
+        );
     }
 
 

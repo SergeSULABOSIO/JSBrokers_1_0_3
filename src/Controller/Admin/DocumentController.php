@@ -112,48 +112,20 @@ class DocumentController extends AbstractController
     )]
     public function index(int $idInvite, int $idEntreprise)
     {
-        $data = $this->documentRepository->findAll();
-        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render('components/_view_manager.html.twig', [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Document::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Document(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $idInvite,
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // Utilisation de la fonction réutilisable du trait
+        return $this->renderViewManager(Document::class, $idInvite, $idEntreprise);
     }
 
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Document $document, Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$document) {
-            $document = new Document();
-        }
-
-        $form = $this->createForm(DocumentType::class, $document);
-
-        $entityCanvas = $this->constante->getEntityCanvas(Document::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$document]);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($document, $entreprise->getId()); // On utilise l'ID de l'entreprise validée
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $entityFormCanvas,
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Document::class,
+            DocumentType::class,
+            $document
+            // No specific initializer needed for a new Document
+        );
     }
 
 

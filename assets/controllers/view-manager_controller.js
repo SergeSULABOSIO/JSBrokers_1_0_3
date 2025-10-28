@@ -206,7 +206,9 @@ export default class extends Controller {
         const tabId = `${collectionInfo.code}-for-${parentEntity.id}`;
         const tab = document.createElement('button');
         tab.className = 'list-tab';
-        const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}`;
+        // CORRECTION : On ajoute le paramètre 'usage' qui est attendu par le contrôleur PHP.
+        // Pour un onglet, l'usage est 'generic'.
+        const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}/generic`;
 
         Object.assign(tab.dataset, {
             tabId: tabId,

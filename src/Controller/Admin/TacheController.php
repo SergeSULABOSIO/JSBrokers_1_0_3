@@ -15,6 +15,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;
+use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Form\TacheType;
 use App\Entity\Document;
@@ -26,10 +27,10 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
-use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
@@ -79,22 +80,8 @@ class TacheController extends AbstractController
     ]
     public function index(int $idInvite, int $idEntreprise)
     {
-        $data = $this->tacheRepository->findAll();
-        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
-
-        return $this->render('components/_view_manager.html.twig', [
-            'data' => $data,
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // On passe le nouveau tableau de valeurs
-            'idInvite' => $idInvite,
-            'idEntreprise' => $idEntreprise,
-        ]);
+        // Utilisation de la fonction réutilisable du trait
+        return $this->renderViewManager(Tache::class, $idInvite, $idEntreprise);
     }
 
 
@@ -104,30 +91,18 @@ class TacheController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Tache $tache, Request $request): Response
     {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
-        $idEntreprise = $entreprise->getId();
-        $idInvite = $invite->getId();
-
-        if (!$tache) {
-            $tache = new Tache();
-            $tache->setClosed(false);
-            $tache->setToBeEndedAt(new DateTimeImmutable("+1 days"));
-            $tache->setExecutor($invite);
-        }
-
-        $form = $this->createForm(TacheType::class, $tache);
-
-        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
-        $this->constante->loadCalculatedValue($entityCanvas, [$tache]);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($tache, $entreprise->getId());
-
-        return $this->render('components/_form_canvas.html.twig', [
-            'form' => $form->createView(),
-            'entityFormCanvas' => $entityFormCanvas, // ID entreprise à adapter
-            'entityCanvas' => $entityCanvas,
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Tache::class,
+            TacheType::class,
+            $tache,
+            function (Tache $tache, Invite $invite) {
+                // Custom initializer for a new Tache
+                $tache->setClosed(false);
+                $tache->setToBeEndedAt(new DateTimeImmutable("+1 days"));
+                $tache->setExecutor($invite);
+            }
+        );
     }
 
     /**
