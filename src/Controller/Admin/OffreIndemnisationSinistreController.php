@@ -167,7 +167,7 @@ class OffreIndemnisationSinistreController extends AbstractController
         /** @var OffreIndemnisationSinistre $offre */
         $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
         $data = $offre->getPaiements();
-        return $this->renderCollectionOrList($usage, Paiement::class, $offre, $id, $data, 'offreIndemnisationSinistre');
+        return $this->renderCollectionOrList($usage, Paiement::class, $offre, $id, $data, 'paiements');
     }
 
     #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
@@ -176,7 +176,7 @@ class OffreIndemnisationSinistreController extends AbstractController
         /** @var OffreIndemnisationSinistre $offre */
         $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
         $data = $offre->getDocuments();
-        return $this->renderCollectionOrList($usage, Document::class, $offre, $id, $data, 'offreIndemnisationSinistre');
+        return $this->renderCollectionOrList($usage, Document::class, $offre, $id, $data, 'documents');
     }
 
     #[Route('/api/{id}/taches/{usage}', name: 'api.get_taches', methods: ['GET'])]
@@ -185,6 +185,6 @@ class OffreIndemnisationSinistreController extends AbstractController
         /** @var OffreIndemnisationSinistre $offre */
         $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
         $data = $offre->getTaches();
-        return $this->renderCollectionOrList($usage, Tache::class, $offre, $id, $data, 'offreIndemnisationSinistre');
+        return $this->renderCollectionOrList($usage, Tache::class, $offre, $id, $data, 'taches');
     }
 }
