@@ -19,6 +19,7 @@ use DateTimeImmutable;
 use App\Entity\Contact;
 use App\Constantes\Constante;
 use App\Entity\PieceSinistre;
+use App\Entity\Document;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
@@ -59,6 +60,22 @@ class NotificationSinistreController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
+
+    /**
+     * @var array<string, string>
+     * Table de correspondance entre le nom de la collection dans l'URL et la classe de l'entité.
+     */
+    private const COLLECTION_MAP = [
+        'contacts' => Contact::class,
+        'pieces' => PieceSinistre::class,
+        'taches' => Tache::class,
+        'offreIndemnisationSinistres' => OffreIndemnisationSinistre::class,
+    ];
+
+    protected function getCollectionMap(): array
+    {
+        return self::COLLECTION_MAP;
+    }
 
     protected function getParentAssociationMap(): array
     {
@@ -145,45 +162,19 @@ class NotificationSinistreController extends AbstractController
         return $this->renderViewOrListComponent(NotificationSinistre::class, $request, true);
     }
 
+
     /**
-     * Retourne la liste des contacts pour une notification de sinistre donnée.
+     * Action générique pour retourner la liste d'une collection liée à une NotificationSinistre.
+     * Fusionne les anciennes méthodes getContactsListApi, getPiecesListApi, etc.
+     *
+     * @param int $id L'ID de la NotificationSinistre parente.
+     * @param string $collectionName Le nom de la collection (ex: 'contacts', 'pieces').
+     * @param string|null $usage Le contexte d'affichage ('generic' ou 'dialog').
+     * @return Response
      */
-    #[Route('/api/{id}/contacts/{usage}', name: 'api.get_contacts', methods: ['GET'])]
-    public function getContactsListApi(int $id, ?string $usage = "generic"): Response
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        /** @var NotificationSinistre $notification */
-        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
-        $data = $notification->getContacts();
-        return $this->renderCollectionOrList($usage, Contact::class, $notification, $id, $data, 'contacts');
-    }
-
-
-    #[Route('/api/{id}/pieces/{usage}', name: 'api.get_pieces', methods: ['GET'])]
-    public function getPiecesListApi(int $id, ?string $usage = "generic"): Response
-    {
-        /** @var NotificationSinistre $notification */
-        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
-        $data = $notification->getPieces();
-        return $this->renderCollectionOrList($usage, PieceSinistre::class, $notification, $id, $data, 'pieces');
-    }
-
-
-    #[Route('/api/{id}/taches/{usage}', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(int $id, ?string $usage = "generic"): Response
-    {
-        /** @var NotificationSinistre $notification */
-        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
-        $data = $notification->getTaches();
-        return $this->renderCollectionOrList($usage, Tache::class, $notification, $id, $data, 'taches');
-    }
-
-
-    #[Route('/api/{id}/offreIndemnisationSinistres/{usage}', name: 'api.get_offreIndemnisationSinistres', methods: ['GET'])]
-    public function getOffresIndemnisationListApi(int $id, ?string $usage = "generic"): Response
-    {
-        /** @var NotificationSinistre $notification */
-        $notification = $this->findParentOrNew(NotificationSinistre::class, $id);
-        $data = $notification->getOffreIndemnisationSinistres();
-        return $this->renderCollectionOrList($usage, OffreIndemnisationSinistre::class, $notification, $id, $data, 'offreIndemnisationSinistres');
+        return $this->handleCollectionApiRequest($id, $collectionName, NotificationSinistre::class, $usage);
     }
 }

@@ -5,6 +5,7 @@ use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -337,11 +338,55 @@ trait ControllerUtilsTrait
             $entityName = $this->getEntityName($entity);
             $em->remove($entity);
             $em->flush();
-
+            
             // Using (e) to be more generic with gender.
             return $this->json(['message' => ucfirst($entityName) . ' supprimé(e) avec succès.']);
         } catch (\Exception $e) {
             return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Doit être implémentée par le contrôleur qui utilise ce Trait.
+     * Cette fonction définit la carte de correspondance entre le nom de la collection dans l'URL
+     * et la classe de l'entité correspondante pour un contrôleur donné.
+     *
+     * Exemple :
+     * ```php
+     * protected function getCollectionMap(): array
+     * {
+     *     return [
+     *         'contacts' => Contact::class,
+     *         'pieces' => PieceSinistre::class,
+     *     ];
+     * }
+     * ```
+     * @return array<string, string>
+     */
+    abstract protected function getCollectionMap(): array;
+
+    /**
+     * Gère une requête API générique pour une collection liée à une entité parente.
+     *
+     * @param int $id L'ID de l'entité parente.
+     * @param string $collectionName Le nom de la collection (ex: 'contacts', 'pieces').
+     * @param string $parentEntityClass Le FQCN de l'entité parente (ex: NotificationSinistre::class).
+     * @param string|null $usage Le contexte de rendu ('generic' ou 'dialog').
+     * @return Response
+     */
+    protected function handleCollectionApiRequest(int $id, string $collectionName, string $parentEntityClass, ?string $usage = "generic"): Response
+    {
+        $collectionMap = $this->getCollectionMap();
+        if (!isset($collectionMap[$collectionName])) {
+            throw new NotFoundHttpException("La collection '$collectionName' n'existe pas ou n'est pas autorisée.");
+        }
+        $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
+        $getter = 'get' . ucfirst($collectionName);
+        if (!method_exists($parentEntity, $getter)) {
+            throw new \BadMethodCallException(sprintf('La méthode "%s" n\'existe pas sur l\'entité "%s".', $getter, get_class($parentEntity)));
+        }
+        $data = $parentEntity->$getter();
+        $entityClass = $collectionMap[$collectionName];
+        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName);
     }
 }
