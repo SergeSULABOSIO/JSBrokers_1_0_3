@@ -78,12 +78,12 @@ class TacheController extends AbstractController
         ], 
         methods: ['GET', 'POST'])
     ]
-    public function index(int $idInvite, int $idEntreprise)
+    public function index(Request $request)
     {
-        // Utilisation de la fonction réutilisable du trait
-        return $this->renderViewManager(Tache::class, $idInvite, $idEntreprise);
+        return $this->renderViewOrListComponent(Tache::class, $request);
     }
 
+    
 
     /**
      * Fournit le formulaire HTML pour une pièce.
@@ -104,6 +104,8 @@ class TacheController extends AbstractController
             }
         );
     }
+
+
 
     /**
      * Traite la soumission du formulaire.
@@ -126,6 +128,8 @@ class TacheController extends AbstractController
         );
     }
 
+
+
     /**
      * Supprime une pièce.
      */
@@ -134,6 +138,8 @@ class TacheController extends AbstractController
     {
         return $this->handleDeleteApi($tache, $em);
     }
+
+
 
     #[Route(
         '/api/dynamic-query/{idInvite}/{idEntreprise}',
@@ -144,29 +150,11 @@ class TacheController extends AbstractController
         ],
         methods: ['POST']
     )]
-    public function query(int $idInvite, int $idEntreprise, Request $request)
+    public function query(Request $request)
     {
-        $requestData = json_decode($request->getContent(), true) ?? [];
-        $reponseData = $this->searchService->search($requestData);
-        $entityCanvas = $this->constante->getEntityCanvas(Tache::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
-
-        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
-        return $this->render('components/_list_content.html.twig', [
-            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
-            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
-            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(Tache::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new Tache(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderViewOrListComponent(Tache::class, $request, true);
     }
+
 
 
     #[Route('/api/{id}/feedbacks/{usage}', name: 'api.get_feedbacks', methods: ['GET'])]
@@ -177,6 +165,8 @@ class TacheController extends AbstractController
         $data = $tache->getFeedbacks();
         return $this->renderCollectionOrList($usage, Feedback::class, $tache, $id, $data, 'feedbacks');
     }
+
+
 
     // AJOUTEZ CETTE NOUVELLE ACTION
     #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
