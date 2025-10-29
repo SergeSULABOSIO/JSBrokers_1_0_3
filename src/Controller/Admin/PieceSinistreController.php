@@ -56,16 +56,10 @@ class PieceSinistreController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
-    /**
-     * @var array<string, string>
-     */
-    private const COLLECTION_MAP = [
-        'documents' => Document::class,
-    ];
-
     protected function getCollectionMap(): array
     {
-        return self::COLLECTION_MAP;
+        // Utilise la méthode du trait pour construire dynamiquement la carte.
+        return $this->buildCollectionMapFromEntity(PieceSinistre::class);
     }
 
 

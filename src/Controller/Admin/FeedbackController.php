@@ -52,16 +52,9 @@ class FeedbackController extends AbstractController
         private Constante $constante,
     ) {}
 
-    /**
-     * @var array<string, string>
-     */
-    private const COLLECTION_MAP = [
-        'documents' => Document::class,
-    ];
-
     protected function getCollectionMap(): array
     {
-        return self::COLLECTION_MAP;
+        return $this->buildCollectionMapFromEntity(Feedback::class);
     }
 
     protected function getParentAssociationMap(): array

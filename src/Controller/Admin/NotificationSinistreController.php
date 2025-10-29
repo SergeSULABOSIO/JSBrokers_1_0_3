@@ -35,6 +35,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Repository\NotificationSinistreRepository;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -61,20 +62,10 @@ class NotificationSinistreController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
-    /**
-     * @var array<string, string>
-     * Table de correspondance entre le nom de la collection dans l'URL et la classe de l'entité.
-     */
-    private const COLLECTION_MAP = [
-        'contacts' => Contact::class,
-        'pieces' => PieceSinistre::class,
-        'taches' => Tache::class,
-        'offreIndemnisationSinistres' => OffreIndemnisationSinistre::class,
-    ];
-
     protected function getCollectionMap(): array
     {
-        return self::COLLECTION_MAP;
+        // Utilise la méthode du trait pour construire dynamiquement la carte.
+        return $this->buildCollectionMapFromEntity(NotificationSinistre::class);
     }
 
     protected function getParentAssociationMap(): array
