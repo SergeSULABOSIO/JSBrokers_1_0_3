@@ -413,4 +413,26 @@ trait ControllerUtilsTrait
         }
         return $collectionMap;
     }
+
+    /**
+     * Construit dynamiquement la carte des associations parentes pour une entité enfant donnée
+     * en inspectant ses relations ManyToOne.
+     *
+     * @param string $entityClass Le FQCN de l'entité enfant à inspecter.
+     * @return array<string, string> La carte d'association (nom de la propriété => FQCN de l'entité parente).
+     */
+    protected function buildParentAssociationMapFromEntity(string $entityClass): array
+    {
+        $parentMap = [];
+        if (!property_exists($this, 'em') || !$this->em instanceof EntityManagerInterface) {
+            return [];
+        }
+        $metadata = $this->em->getClassMetadata($entityClass);
+        foreach ($metadata->getAssociationMappings() as $fieldName => $mapping) {
+            if ($mapping['type'] === ClassMetadata::MANY_TO_ONE) {
+                $parentMap[$fieldName] = $mapping['targetEntity'];
+            }
+        }
+        return $parentMap;
+    }
 }
