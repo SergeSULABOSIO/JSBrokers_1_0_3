@@ -145,9 +145,7 @@ class DocumentController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Document $document, EntityManagerInterface $em): Response
     {
-        $em->remove($document);
-        $em->flush();
-        return $this->json(['message' => 'Document supprimé.']);
+        return $this->handleDeleteApi($document, $em);
     }
 
     /**

@@ -140,13 +140,7 @@ class PaiementController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Paiement $paiement, EntityManagerInterface $em): Response
     {
-        try {
-            $em->remove($paiement);
-            $em->flush();
-            return $this->json(['message' => 'Paiement supprimée avec succès.']);
-        } catch (\Exception $e) {
-            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return $this->handleDeleteApi($paiement, $em);
     }
 
 

@@ -128,13 +128,7 @@ class NotificationSinistreController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(NotificationSinistre $notification, EntityManagerInterface $em): Response
     {
-        try {
-            $em->remove($notification);
-            $em->flush();
-            return $this->json(['message' => 'Notification supprimée avec succès.']);
-        } catch (\Exception $e) {
-            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return $this->handleDeleteApi($notification, $em);
     }
 
 

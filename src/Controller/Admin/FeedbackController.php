@@ -113,13 +113,7 @@ class FeedbackController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Feedback $feedback, EntityManagerInterface $em): Response
     {
-        try {
-            $em->remove($feedback);
-            $em->flush();
-            return $this->json(['message' => 'Feedback supprimé avec succès.']);
-        } catch (\Exception $e) {
-            return $this->json(['message' => 'Erreur lors de la suppression.'], 500);
-        }
+        return $this->handleDeleteApi($feedback, $em);
     }
 
     #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]

@@ -127,13 +127,7 @@ class PieceSinistreController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(PieceSinistre $piece, EntityManagerInterface $em): Response
     {
-        try {
-            $em->remove($piece);
-            $em->flush();
-            return $this->json(['message' => 'Pièce supprimée avec succès.']);
-        } catch (\Exception $e) {
-            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return $this->handleDeleteApi($piece, $em);
     }
 
     #[Route(
