@@ -56,6 +56,19 @@ class PieceSinistreController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
+    /**
+     * @var array<string, string>
+     */
+    private const COLLECTION_MAP = [
+        'documents' => Document::class,
+    ];
+
+    protected function getCollectionMap(): array
+    {
+        return self::COLLECTION_MAP;
+    }
+
+
     protected function getParentAssociationMap(): array
     {
         return [
@@ -144,12 +157,9 @@ class PieceSinistreController extends AbstractController
         return $this->renderViewOrListComponent(PieceSinistre::class, $request, true);
     }
 
-    #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        /** @var PieceSinistre $piece */
-        $piece = $this->findParentOrNew(PieceSinistre::class, $id);
-        $data = $piece->getDocuments();
-        return $this->renderCollectionOrList($usage, Document::class, $piece, $id, $data, 'documents');
+        return $this->handleCollectionApiRequest($id, $collectionName, PieceSinistre::class, $usage);
     }
 }

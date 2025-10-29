@@ -62,6 +62,18 @@ class PaiementController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
+    /**
+     * @var array<string, string>
+     */
+    private const COLLECTION_MAP = [
+        'preuves' => Document::class,
+    ];
+
+    protected function getCollectionMap(): array
+    {
+        return self::COLLECTION_MAP;
+    }
+
     protected function getParentAssociationMap(): array
     {
         return [
@@ -158,13 +170,9 @@ class PaiementController extends AbstractController
     }
 
 
-
-    #[Route('/api/{id}/preuves/{usage}', name: 'api.get_preuves', methods: ['GET'])]
-    public function getPreuvesListApi(int $id, ?string $usage = "generic"): Response
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        /** @var Paiement $paiement */
-        $paiement = $this->findParentOrNew(Paiement::class, $id);
-        $data = $paiement->getPreuves();
-        return $this->renderCollectionOrList($usage, Document::class, $paiement, $id, $data, 'preuves');
+        return $this->handleCollectionApiRequest($id, $collectionName, Paiement::class, $usage);
     }
 }
