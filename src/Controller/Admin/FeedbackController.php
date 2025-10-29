@@ -52,6 +52,18 @@ class FeedbackController extends AbstractController
         private Constante $constante,
     ) {}
 
+    /**
+     * @var array<string, string>
+     */
+    private const COLLECTION_MAP = [
+        'documents' => Document::class,
+    ];
+
+    protected function getCollectionMap(): array
+    {
+        return self::COLLECTION_MAP;
+    }
+
     protected function getParentAssociationMap(): array
     {
         return [
@@ -69,10 +81,10 @@ class FeedbackController extends AbstractController
         ],
         methods: ['GET', 'POST']
     )]
-    public function index(int $idInvite, int $idEntreprise)
+    public function index(Request $request)
     {
         // Utilisation de la fonction réutilisable du trait
-        return $this->renderViewManager(Feedback::class, $idInvite, $idEntreprise);
+        return $this->renderViewOrListComponent(Feedback::class, $request);
     }
 
     /**
@@ -116,12 +128,9 @@ class FeedbackController extends AbstractController
         return $this->handleDeleteApi($feedback, $em);
     }
 
-    #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        /** @var Feedback $feedback */
-        $feedback = $this->findParentOrNew(Feedback::class, $id);
-        $data = $feedback->getDocuments();
-        return $this->renderCollectionOrList($usage, Document::class, $feedback, $id, $data, 'feedback');
+        return $this->handleCollectionApiRequest($id, $collectionName, Feedback::class, $usage);
     }
 }

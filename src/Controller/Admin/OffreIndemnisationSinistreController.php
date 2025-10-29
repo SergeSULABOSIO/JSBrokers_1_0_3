@@ -58,6 +58,21 @@ class OffreIndemnisationSinistreController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
+    /**
+     * @var array<string, string>
+     */
+    private const COLLECTION_MAP = [
+        'paiements' => Paiement::class,
+        'documents' => Document::class,
+        'taches' => Tache::class,
+    ];
+
+    protected function getCollectionMap(): array
+    {
+        return self::COLLECTION_MAP;
+    }
+
+
     protected function getParentAssociationMap(): array
     {
         return [
@@ -134,31 +149,9 @@ class OffreIndemnisationSinistreController extends AbstractController
         return $this->renderViewOrListComponent(OffreIndemnisationSinistre::class, $request, true);
     }
 
-
-    #[Route('/api/{id}/paiements/{usage}', name: 'api.get_paiements', methods: ['GET'])]
-    public function getPaiementsListApi(int $id, ?string $usage = "generic"): Response
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        /** @var OffreIndemnisationSinistre $offre */
-        $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
-        $data = $offre->getPaiements();
-        return $this->renderCollectionOrList($usage, Paiement::class, $offre, $id, $data, 'paiements');
-    }
-
-    #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
-    {
-        /** @var OffreIndemnisationSinistre $offre */
-        $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
-        $data = $offre->getDocuments();
-        return $this->renderCollectionOrList($usage, Document::class, $offre, $id, $data, 'documents');
-    }
-
-    #[Route('/api/{id}/taches/{usage}', name: 'api.get_taches', methods: ['GET'])]
-    public function getTachesListApi(int $id, ?string $usage = "generic"): Response
-    {
-        /** @var OffreIndemnisationSinistre $offre */
-        $offre = $this->findParentOrNew(OffreIndemnisationSinistre::class, $id);
-        $data = $offre->getTaches();
-        return $this->renderCollectionOrList($usage, Tache::class, $offre, $id, $data, 'taches');
+        return $this->handleCollectionApiRequest($id, $collectionName, OffreIndemnisationSinistre::class, $usage);
     }
 }

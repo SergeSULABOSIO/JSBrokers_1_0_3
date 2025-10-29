@@ -59,6 +59,19 @@ class TacheController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
+    /**
+     * @var array<string, string>
+     */
+    private const COLLECTION_MAP = [
+        'feedbacks' => Feedback::class,
+        'documents' => Document::class,
+    ];
+
+    protected function getCollectionMap(): array
+    {
+        return self::COLLECTION_MAP;
+    }
+
 
     protected function getParentAssociationMap(): array
     {
@@ -156,25 +169,9 @@ class TacheController extends AbstractController
     }
 
 
-
-    #[Route('/api/{id}/feedbacks/{usage}', name: 'api.get_feedbacks', methods: ['GET'])]
-    public function getFeedbacksListApi(int $id, ?string $usage = "generic"): Response
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        /** @var Tache $tache */
-        $tache = $this->findParentOrNew(Tache::class, $id);
-        $data = $tache->getFeedbacks();
-        return $this->renderCollectionOrList($usage, Feedback::class, $tache, $id, $data, 'feedbacks');
-    }
-
-
-
-    // AJOUTEZ CETTE NOUVELLE ACTION
-    #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]
-    public function getDocumentsListApi(int $id, ?string $usage = "generic"): Response
-    {
-        /** @var Tache $tache */
-        $tache = $this->findParentOrNew(Tache::class, $id);
-        $data = $tache->getDocuments();
-        return $this->renderCollectionOrList($usage, Document::class, $tache, $id, $data, 'documents');
+        return $this->handleCollectionApiRequest($id, $collectionName, Tache::class, $usage);
     }
 }
