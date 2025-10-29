@@ -62,16 +62,9 @@ class PaiementController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
-    /**
-     * @var array<string, string>
-     */
-    private const COLLECTION_MAP = [
-        'preuves' => Document::class,
-    ];
-
     protected function getCollectionMap(): array
     {
-        return self::COLLECTION_MAP;
+        return $this->buildCollectionMapFromEntity(Paiement::class);
     }
 
     protected function getParentAssociationMap(): array

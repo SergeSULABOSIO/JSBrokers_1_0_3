@@ -58,18 +58,10 @@ class OffreIndemnisationSinistreController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
     ) {}
 
-    /**
-     * @var array<string, string>
-     */
-    private const COLLECTION_MAP = [
-        'paiements' => Paiement::class,
-        'documents' => Document::class,
-        'taches' => Tache::class,
-    ];
-
     protected function getCollectionMap(): array
     {
-        return self::COLLECTION_MAP;
+        // Utilise la méthode du trait pour construire dynamiquement la carte.
+        return $this->buildCollectionMapFromEntity(OffreIndemnisationSinistre::class);
     }
 
 

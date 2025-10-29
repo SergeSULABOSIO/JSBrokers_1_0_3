@@ -5,6 +5,7 @@ use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -388,5 +389,28 @@ trait ControllerUtilsTrait
         $data = $parentEntity->$getter();
         $entityClass = $collectionMap[$collectionName];
         return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName);
+    }
+
+    /**
+     * Construit dynamiquement la carte des collections autorisées pour une entité donnée
+     * en inspectant ses métadonnées Doctrine.
+     *
+     * @param string $entityClass Le FQCN de l'entité à inspecter.
+     * @return array<string, string> La carte des collections (nom de la propriété => FQCN de l'entité cible).
+     */
+    protected function buildCollectionMapFromEntity(string $entityClass): array
+    {
+        $collectionMap = [];
+        // Assure que l'EntityManager est disponible. Il est injecté dans les contrôleurs qui utilisent ce trait.
+        if (!property_exists($this, 'em') || !$this->em instanceof EntityManagerInterface) {
+            return []; // Retourne une carte vide si l'em n'est pas disponible.
+        }
+        $metadata = $this->em->getClassMetadata($entityClass);
+        foreach ($metadata->getAssociationMappings() as $fieldName => $mapping) {
+            if ($mapping['type'] === ClassMetadata::ONE_TO_MANY) {
+                $collectionMap[$fieldName] = $mapping['targetEntity'];
+            }
+        }
+        return $collectionMap;
     }
 }
