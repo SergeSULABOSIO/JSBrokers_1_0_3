@@ -68,10 +68,7 @@ class TacheController extends AbstractController
 
     protected function getParentAssociationMap(): array
     {
-        return [
-            'notificationSinistre' => NotificationSinistre::class,
-            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
-        ];
+        return $this->buildParentAssociationMapFromEntity(Tache::class);
     }
 
 

@@ -59,9 +59,7 @@ class FeedbackController extends AbstractController
 
     protected function getParentAssociationMap(): array
     {
-        return [
-            'tache' => Tache::class,
-        ];
+        return $this->buildParentAssociationMapFromEntity(Feedback::class);
     }
 
 

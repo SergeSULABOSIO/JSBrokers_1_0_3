@@ -79,25 +79,9 @@ class DocumentController extends AbstractController
      */
     protected function getParentAssociationMap(): array
     {
-        return [
-            // Clé envoyée par le client => Classe de l'entité parente
-            'classeur' => Classeur::class,
-            'pieceSinistre' => PieceSinistre::class,
-            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
-            'cotation' => Cotation::class,
-            'avenant' => Avenant::class,
-            'tache' => Tache::class,
-            'feedback' => Feedback::class,
-            'paiement' => Paiement::class,
-            'client' => Client::class,
-            'bordereau' => Bordereau::class,
-            'compteBancaire' => CompteBancaire::class,
-            'piste' => Piste::class,
-            'partenaire' => Partenaire::class,
-            'paiement' => Paiement::class,
-            // Si demain un Document peut être lié à une 'Facture',
-            // il suffira d'ajouter 'facture' => Facture::class ici.
-        ];
+        // Utilise la méthode du trait pour construire dynamiquement la carte
+        // en inspectant les relations ManyToOne de l'entité Document.
+        return $this->buildParentAssociationMapFromEntity(Document::class);
     }
 
     protected function getCollectionMap(): array

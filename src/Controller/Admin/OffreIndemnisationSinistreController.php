@@ -67,9 +67,7 @@ class OffreIndemnisationSinistreController extends AbstractController
 
     protected function getParentAssociationMap(): array
     {
-        return [
-            'notificationSinistre' => NotificationSinistre::class,
-        ];
+        return $this->buildParentAssociationMapFromEntity(OffreIndemnisationSinistre::class);
     }
 
 

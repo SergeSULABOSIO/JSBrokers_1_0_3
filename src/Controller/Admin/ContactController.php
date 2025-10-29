@@ -55,10 +55,7 @@ class ContactController extends AbstractController
 
     protected function getParentAssociationMap(): array
     {
-        return [
-            'notificationSinistre' => NotificationSinistre::class,
-            'client' => Client::class,
-        ];
+        return $this->buildParentAssociationMapFromEntity(Contact::class);
     }
 
     protected function getCollectionMap(): array

@@ -69,11 +69,7 @@ class PaiementController extends AbstractController
 
     protected function getParentAssociationMap(): array
     {
-        return [
-            // Un paiement peut être lié à une OffreIndemnisationSinistre
-            'offreIndemnisationSinistre' => OffreIndemnisationSinistre::class,
-            // Ajoutez d'autres parents ici si nécessaire
-        ];
+        return $this->buildParentAssociationMapFromEntity(Paiement::class);
     }
 
     
