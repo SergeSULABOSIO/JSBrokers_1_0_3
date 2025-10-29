@@ -114,13 +114,7 @@ class ContactController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Contact $contact, EntityManagerInterface $em): Response
     {
-        try {
-            $em->remove($contact);
-            $em->flush();
-            return $this->json(['message' => 'Contact supprimé avec succès.']);
-        } catch (\Exception $e) {
-            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return $this->handleDeleteApi($contact, $em);
     }
 
 

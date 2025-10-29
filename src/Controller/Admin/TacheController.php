@@ -132,13 +132,7 @@ class TacheController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Tache $tache, EntityManagerInterface $em): Response
     {
-        try {
-            $em->remove($tache);
-            $em->flush();
-            return $this->json(['message' => 'Pièce supprimée avec succès.']);
-        } catch (\Exception $e) {
-            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return $this->handleDeleteApi($tache, $em);
     }
 
     #[Route(

@@ -303,4 +303,25 @@ trait ControllerUtilsTrait
 
         return $this->json(['message' => 'Veuillez corriger les erreurs ci-dessous.', 'errors' => $errors], 422);
     }
+
+    /**
+     * Handles the API deletion of any given entity.
+     *
+     * @param object $entity The entity instance to delete.
+     * @param EntityManagerInterface $em The entity manager.
+     * @return JsonResponse
+     */
+    private function handleDeleteApi(object $entity, EntityManagerInterface $em): JsonResponse
+    {
+        try {
+            $entityName = $this->getEntityName($entity);
+            $em->remove($entity);
+            $em->flush();
+
+            // Using (e) to be more generic with gender.
+            return $this->json(['message' => ucfirst($entityName) . ' supprimé(e) avec succès.']);
+        } catch (\Exception $e) {
+            return $this->json(['message' => 'Erreur lors de la suppression.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }
