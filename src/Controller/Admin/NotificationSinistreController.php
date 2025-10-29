@@ -76,10 +76,9 @@ class NotificationSinistreController extends AbstractController
         ],
         methods: ['GET', 'POST']
     )]
-    public function index(int $idInvite, int $idEntreprise)
+    public function index(Request $request)
     {
-        // Utilisation de la fonction réutilisable du trait
-        return $this->renderViewManager(NotificationSinistre::class, $idInvite, $idEntreprise);
+        return $this->renderViewOrListComponent(NotificationSinistre::class, $request);
     }
 
 
@@ -141,28 +140,9 @@ class NotificationSinistreController extends AbstractController
         ],
         methods: ['POST']
     )]
-    public function query(int $idInvite, int $idEntreprise, Request $request)
+    public function query(Request $request)
     {
-        $requestData = json_decode($request->getContent(), true) ?? [];
-        $reponseData = $this->searchService->search($requestData);
-        $entityCanvas = $this->constante->getEntityCanvas(NotificationSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
-
-        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
-        return $this->render('components/_list_content.html.twig', [
-            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
-            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
-            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(NotificationSinistre::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new NotificationSinistre(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderViewOrListComponent(NotificationSinistre::class, $request, true);
     }
 
     /**

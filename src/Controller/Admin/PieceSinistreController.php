@@ -73,11 +73,11 @@ class PieceSinistreController extends AbstractController
         ], 
         methods: ['GET', 'POST'])
     ]
-    public function index(int $idInvite, int $idEntreprise)
+    public function index(Request $request)
     {
         // Utilisation de la fonction réutilisable du trait pour assurer que toutes
         // les variables nécessaires, y compris 'serverRootName', sont passées.
-        return $this->renderViewManager(PieceSinistre::class, $idInvite, $idEntreprise);
+        return $this->renderViewOrListComponent(PieceSinistre::class, $request);
     }
 
 
@@ -139,28 +139,9 @@ class PieceSinistreController extends AbstractController
         ],
         methods: ['POST']
     )]
-    public function query(int $idInvite, int $idEntreprise, Request $request)
+    public function query(Request $request)
     {
-        $requestData = json_decode($request->getContent(), true) ?? [];
-        $reponseData = $this->searchService->search($requestData);
-        $entityCanvas = $this->constante->getEntityCanvas(PieceSinistre::class);
-        $this->constante->loadCalculatedValue($entityCanvas, $reponseData["data"]);
-
-        // 6. Rendre le template Twig avec les données filtrées et les informations de statut/pagination
-        return $this->render('components/_list_content.html.twig', [
-            'status' => $reponseData["status"], // Contient l'erreur ou les infos de pagination
-            'totalItems' => $reponseData["totalItems"],  // Le nombre total d'éléments (pour la pagination)
-            'data' => $reponseData["data"], // Les entités NotificationSinistre trouvées
-            'entite_nom' => $this->getEntityName($this),
-            'serverRootName' => $this->getServerRootName($this),
-            'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas(PieceSinistre::class),
-            'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new PieceSinistre(), $idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($reponseData["data"]),
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->renderViewOrListComponent(PieceSinistre::class, $request, true);
     }
 
     #[Route('/api/{id}/documents/{usage}', name: 'api.get_documents', methods: ['GET'])]

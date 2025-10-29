@@ -176,37 +176,57 @@ trait ControllerUtilsTrait
     }
 
     /**
-     * Renders the main view manager component for a given entity.
-     * Fetches all entities of the specified class, ordered by ID in descending order.
+     * Renders either the full view manager or just the list component for a given entity.
+     * This method handles both initial page loads (index) and dynamic search queries (query).
      *
      * @param string $entityClass The FQCN of the entity to display.
-     * @param int $idInvite The ID of the current invite.
-     * @param int $idEntreprise The ID of the current enterprise.
+     * @param Request $request The current HTTP request.
+     * @param bool $isQueryResult If true, performs a search and renders only the list content.
      * @return Response
      */
-    private function renderViewManager(string $entityClass, int $idInvite, int $idEntreprise): Response
+    private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false): Response
     {
-        $repository = $this->em->getRepository($entityClass);
-        // Fetch all entities, ordered by ID in descending order to show most recent first.
-        // Using 'id' as a generic field for ordering, assuming it's auto-incrementing.
-        // If a 'createdAt' field is consistently available and indexed, it could be used instead.
-        $data = $repository->findBy([], ['id' => 'DESC']);
+        $idInvite = $request->attributes->get('idInvite');
+        $idEntreprise = $request->attributes->get('idEntreprise');
+        $data = [];
+        $reponseData = null;
+
+        if ($isQueryResult) {
+            $requestData = json_decode($request->getContent(), true) ?? [];
+            // The searchService is expected to handle sorting, filtering, and pagination.
+            // The user's requirement to sort by most recent should be configured in the search criteria sent by the frontend.
+            $reponseData = $this->searchService->search($requestData);
+            $data = $reponseData["data"];
+            $template = 'components/_list_content.html.twig';
+        } else {
+            $repository = $this->em->getRepository($entityClass);
+            // For initial load, sort by ID DESC to show most recent first.
+            $data = $repository->findBy([], ['id' => 'DESC']);
+            $template = 'components/_view_manager.html.twig';
+        }
 
         $entityCanvas = $this->constante->getEntityCanvas($entityClass);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
 
-        return $this->render('components/_view_manager.html.twig', [
+        $parameters = [
             'data' => $data,
             'entite_nom' => $this->getEntityName($entityClass),
             'serverRootName' => $this->getServerRootName($entityClass),
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), $idEntreprise),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
             'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,
-        ]);
+        ];
+
+        if ($isQueryResult && $reponseData) {
+            $parameters['status'] = $reponseData["status"];
+            $parameters['totalItems'] = $reponseData["totalItems"];
+        }
+
+        return $this->render($template, $parameters);
     }
 
     /**
