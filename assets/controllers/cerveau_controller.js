@@ -197,19 +197,7 @@ export default class extends Controller {
             // --- NOUVEAU : Gère la demande de suppression depuis la barre d'outils ---
             case 'ui:toolbar.delete-request':
                 console.log(this.nomControleur + " - Code: 1986 - Demande de suppression", payload);
-
-                this.broadcast('ui:confirmation.request', {
-                    title: payload.title || 'Confirmation de suppression',
-                    body: payload.body || `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
-                    onConfirm: {
-                        type: 'app:api.delete-request',
-                        payload: {
-                            ids: payload.selection, // Les IDs à supprimer
-                            url: payload.actionConfig.url, // L'URL de base pour la suppression
-                            originatorId: payload.actionConfig?.originatorId // L'ID de la collection à rafraîchir (optionnel)
-                        }
-                    }
-                });
+                this._handleToolbarDeleteRequest(payload);
                 break;
 
             // --- NOUVEAU : Gère la notification de statut ---
@@ -406,6 +394,29 @@ export default class extends Controller {
             title: 'Confirmation de suppression',
             body: `Êtes-vous sûr de vouloir supprimer ${itemCount} élément(s) ?`,
             onConfirm: { type: 'app:api.delete-request', payload: payload }
+        });
+    }
+
+
+    
+    /**
+     * Gère une demande de suppression provenant de la barre d'outils en construisant
+     * et en diffusant une demande de confirmation.
+     * @param {object} payload - Le payload de l'événement, contenant `selection` et `actionConfig`.
+     * @private
+     */
+    _handleToolbarDeleteRequest(payload) {
+        this.broadcast('ui:confirmation.request', {
+            title: payload.title || 'Confirmation de suppression',
+            body: payload.body || `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
+            onConfirm: {
+                type: 'app:api.delete-request',
+                payload: {
+                    ids: payload.selection, // Les IDs à supprimer
+                    url: payload.actionConfig.url, // L'URL de base pour la suppression
+                    originatorId: payload.actionConfig?.originatorId // L'ID de la collection à rafraîchir (optionnel)
+                }
+            }
         });
     }
 }
