@@ -50,6 +50,7 @@ class FeedbackController extends AbstractController
         private InviteRepository $inviteRepository,
         private FeedbackRepository $feedbackRepository,
         private Constante $constante,
+        private SerializerInterface $serializer,
     ) {}
 
     protected function getCollectionMap(): array
@@ -97,14 +98,12 @@ class FeedbackController extends AbstractController
      * Traite la soumission du formulaire de Feedback.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
+    public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
             Feedback::class,
-            FeedbackType::class,
-            $em,
-            $serializer
+            FeedbackType::class
         );
     }
 
@@ -114,9 +113,9 @@ class FeedbackController extends AbstractController
      * Supprime un Feedback.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(Feedback $feedback, EntityManagerInterface $em): Response
+    public function deleteApi(Feedback $feedback): Response
     {
-        return $this->handleDeleteApi($feedback, $em);
+        return $this->handleDeleteApi($feedback);
     }
 
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]

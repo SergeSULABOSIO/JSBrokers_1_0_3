@@ -54,6 +54,7 @@ class PieceSinistreController extends AbstractController
         private PieceSinistreRepository $pieceSinistreRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private SerializerInterface $serializer,
     ) {}
 
     protected function getCollectionMap(): array
@@ -108,14 +109,12 @@ class PieceSinistreController extends AbstractController
      * Traite la soumission du formulaire.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
+    public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
             PieceSinistre::class,
             PieceSinistreType::class,
-            $em,
-            $serializer,
             function (PieceSinistre $piece) {
                 if (!$piece->getId()) {
                     $piece->setReceivedAt(new DateTimeImmutable("now"));
@@ -130,9 +129,9 @@ class PieceSinistreController extends AbstractController
      * Supprime une pièce.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(PieceSinistre $piece, EntityManagerInterface $em): Response
+    public function deleteApi(PieceSinistre $piece): Response
     {
-        return $this->handleDeleteApi($piece, $em);
+        return $this->handleDeleteApi($piece);
     }
 
     #[Route(

@@ -51,6 +51,7 @@ class ContactController extends AbstractController
         private ContactRepository $contactRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private SerializerInterface $serializer,
     ) {}
 
     protected function getParentAssociationMap(): array
@@ -98,14 +99,12 @@ class ContactController extends AbstractController
      * Traite la soumission du formulaire de contact (création ou modification).
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
+    public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
             Contact::class,
-            ContactType::class,
-            $em,
-            $serializer
+            ContactType::class
         );
     }
 
@@ -113,9 +112,9 @@ class ContactController extends AbstractController
      * Supprime un contact.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(Contact $contact, EntityManagerInterface $em): Response
+    public function deleteApi(Contact $contact): Response
     {
-        return $this->handleDeleteApi($contact, $em);
+        return $this->handleDeleteApi($contact);
     }
 
 

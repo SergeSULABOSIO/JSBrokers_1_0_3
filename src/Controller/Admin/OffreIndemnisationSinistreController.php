@@ -55,7 +55,8 @@ class OffreIndemnisationSinistreController extends AbstractController
         private OffreIndemnisationSinistreRepository $repository,
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
-        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
     ) {}
 
     protected function getCollectionMap(): array
@@ -97,14 +98,12 @@ class OffreIndemnisationSinistreController extends AbstractController
      * Traite la soumission du formulaire.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
+    public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
             OffreIndemnisationSinistre::class,
-            OffreIndemnisationSinistreType::class,
-            $em,
-            $serializer
+            OffreIndemnisationSinistreType::class
         );
     }
 
@@ -112,9 +111,9 @@ class OffreIndemnisationSinistreController extends AbstractController
      * Supprime une pièce.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(OffreIndemnisationSinistre $offreIndemnisationSinistre, EntityManagerInterface $em): Response
+    public function deleteApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
     {
-        return $this->handleDeleteApi($offreIndemnisationSinistre, $em);
+        return $this->handleDeleteApi($offreIndemnisationSinistre, $this->em);
     }
 
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
