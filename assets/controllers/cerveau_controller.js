@@ -59,10 +59,13 @@ export default class extends Controller {
         }
 
         // Log stylisé pour le débogage
-        console.groupCollapsed(`🧠 [Cerveau] Événement Reçu: %c${type}`, 'color: #4CAF50; font-weight: bold;');
-        console.log(`| Source:`, source);
-        console.log(`| Données (Payload):`, payload);
-        console.log(`| Horodatage:`, new Date(timestamp).toLocaleString('fr-FR'));
+        // console.groupCollapsed(`🧠 [Cerveau] Événement Reçu: %c${type}`, 'color: #4CAF50; font-weight: bold;');
+        // console.log(`| Source:`, source);
+        // console.log(`| Données (Payload):`, payload);
+        // console.log(`| Horodatage:`, new Date(timestamp).toLocaleString('fr-FR'));
+        // console.groupEnd();
+        // console.log(this.nomControleur + " - Code: 1986", event.detail);
+
 
         switch (type) {
             // --- Chargement du composant dans l'espace de travail ---
@@ -182,46 +185,19 @@ export default class extends Controller {
 
             // --- NOUVEAU : Gère la demande de suppression API ---
             case 'app:api.delete-request':
-                console.log("-> ACTION: Exécution de la requête de suppression API.", payload);
-                const { ids, url, originatorId } = payload;
-
-                // On crée une promesse pour chaque suppression
-                const deletePromises = ids.map(id => {
-                    const deleteUrl = url.replace('/0', `/${id}`); // Construit l'URL finale
-                    return fetch(deleteUrl, { method: 'DELETE' })
-                        .then(response => {
-                            if (!response.ok) throw new Error(`Erreur lors de la suppression de l'élément ${id}.`);
-                            return response.json();
-                        });
-                });
-
-                // On attend que toutes les suppressions soient terminées
-                Promise.all(deletePromises)
-                    .then(results => {
-                        const message = results.length > 1 ? `${results.length} éléments supprimés.` : 'Élément supprimé avec succès.';
-                        console.log("-> SUCCÈS: Suppression(s) réussie(s).", results);
-                        this.broadcast('app:notification.show', { text: message, type: 'success' });
-                        this.broadcast('app:list.refresh-request', { originatorId: originatorId });
-                        this.broadcast('ui:confirmation.close');
-                    })
-                    .catch(error => {
-                        console.error("-> ERREUR: Échec de la suppression API.", error);
-                        this.broadcast('app:error.api', { error: error.message || "La suppression a échoué." });
-                    });
+                console.log(this.nomControleur + " - Code: 1986 - Lancement de la suppression API", payload);
+                this._handleApiDeleteRequest(payload);
                 break;
 
             case 'dialog:confirmation.request':
                 console.log("-> ACTION: Demande de confirmation. Diffusion de l'ordre.");
-                this.broadcast('ui:confirmation.request', {
-                    title: 'Confirmation de suppression',
-                    body: `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
-                    onConfirm: { type: 'app:api.delete-request', payload: payload }
-                });
+                this._requestDeleteConfirmation(payload);
                 break;
 
             // --- NOUVEAU : Gère la demande de suppression depuis la barre d'outils ---
             case 'ui:toolbar.delete-request':
-                console.log("-> ACTION: Demande de suppression reçue. Ouverture du dialogue de confirmation.");
+                console.log(this.nomControleur + " - Code: 1986 - Demande de suppression", payload);
+
                 this.broadcast('ui:confirmation.request', {
                     title: payload.title || 'Confirmation de suppression',
                     body: payload.body || `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
@@ -230,7 +206,7 @@ export default class extends Controller {
                         payload: {
                             ids: payload.selection, // Les IDs à supprimer
                             url: payload.actionConfig.url, // L'URL de base pour la suppression
-                            originatorId: payload.actionConfig.originatorId // L'ID de la collection à rafraîchir
+                            originatorId: payload.actionConfig?.originatorId // L'ID de la collection à rafraîchir (optionnel)
                         }
                     }
                 });
@@ -366,5 +342,63 @@ export default class extends Controller {
      */
     broadcast(eventName, detail) {
         document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
+    }
+
+
+    
+
+    /**
+     * Gère la logique de suppression d'éléments via l'API en exécutant plusieurs requêtes en parallèle.
+     * Notifie le reste de l'application en cas de succès ou d'échec.
+     * @param {object} payload - Le payload contenant les IDs, l'URL et l'originatorId.
+     * @param {number[]} payload.ids - Tableau des IDs des entités à supprimer.
+     * @param {string} payload.url - L'URL de base de l'API de suppression.
+     * @param {string} [payload.originatorId] - L'ID du composant qui a initié la demande (pour un rafraîchissement ciblé).
+     * @private
+     */
+    _handleApiDeleteRequest(payload) {
+        const { ids, url, originatorId } = payload;
+
+        // On crée un tableau de promesses, une pour chaque requête de suppression.
+        const deletePromises = ids.map(id => {
+            const deleteUrl = `${url}/${id}`; // Construit l'URL finale pour chaque ID.
+            return fetch(deleteUrl, { method: 'DELETE' })
+                .then(response => {
+                    if (!response.ok) throw new Error(`Erreur lors de la suppression de l'élément ${id}.`);
+                    return response.json();
+                });
+        });
+
+        // On attend que toutes les promesses de suppression soient résolues.
+        Promise.all(deletePromises)
+            .then(results => {
+                const message = results.length > 1 ? `${results.length} éléments supprimés avec succès.` : 'Élément supprimé avec succès.';
+                console.log(`${this.nomControleur} - SUCCÈS: Suppression(s) réussie(s).`, results);
+                this.broadcast('app:notification.show', { text: message, type: 'success' });
+                this.broadcast('app:list.refresh-request', { originatorId: originatorId, idEntreprise: this.currentIdEntreprise, idInvite: this.currentIdInvite });
+                this.broadcast('ui:confirmation.close');
+            })
+            .catch(error => {
+                console.error("-> ERREUR: Échec de la suppression API.", error);
+                this.broadcast('app:error.api', { error: error.message || "La suppression a échoué." });
+                this.broadcast('ui:confirmation.close'); // Ferme aussi la modale en cas d'erreur.
+            });
+    }
+
+
+    /**
+     * Encapsule la logique de diffusion d'une demande de confirmation de suppression.
+     * @param {object} payload - Le payload de l'événement d'origine, doit contenir `selection`.
+     * @private
+     */
+    _requestDeleteConfirmation(payload) {
+        const itemCount = payload.selection ? payload.selection.length : 0;
+        if (itemCount === 0) return; // Ne rien faire si la sélection est vide.
+
+        this.broadcast('ui:confirmation.request', {
+            title: 'Confirmation de suppression',
+            body: `Êtes-vous sûr de vouloir supprimer ${itemCount} élément(s) ?`,
+            onConfirm: { type: 'app:api.delete-request', payload: payload }
+        });
     }
 }

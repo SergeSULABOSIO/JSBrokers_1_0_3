@@ -6601,6 +6601,7 @@ class Constante
                     "titre_creation" => "Nouvelle Notification de Sinistre",
                     "titre_modification" => "Modification de la Notification #%id%",
                     "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
+                    "endpoint_delete_url" => "/admin/notificationsinistre/api/delete", // AJOUT DE L'URL DE SUPPRESSION
                     "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
                     "isCreationMode" => ($isParentNew === true)
                 ],
