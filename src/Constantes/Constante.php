@@ -6999,6 +6999,8 @@ class Constante
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
                         ["code" => "referenceSinistre", "intitule" => "Réf. Sinistre", "type" => "Texte"],
+                        ["code" => "descriptionDeFait", "intitule" => "Description des faits", "type" => "Texte", "description" => "Détails sur les circonstances du sinistre."],
+                        ["code" => "descriptionVictimes", "intitule" => "Détails Victimes", "type" => "Texte", "description" => "Informations sur les victimes et les dommages corporels/matériels."],
                         ["code" => "assure", "intitule" => "Assuré", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
                         ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
                         ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
