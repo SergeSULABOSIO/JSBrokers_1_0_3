@@ -60,6 +60,7 @@ class NotificationSinistreController extends AbstractController
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private SerializerInterface $serializer,
     ) {}
 
     protected function getCollectionMap(): array
@@ -100,14 +101,12 @@ class NotificationSinistreController extends AbstractController
 
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
+    public function submitApi(Request $request): JsonResponse
     {
         return $this->handleFormSubmission(
             $request,
             NotificationSinistre::class,
             NotificationSinistreType::class,
-            $em,
-            $serializer,
             function (NotificationSinistre $notification, array $data) {
                 if (!$notification->getId()) {
                     $notification->setOccuredAt(new DateTimeImmutable("now"));
@@ -125,9 +124,9 @@ class NotificationSinistreController extends AbstractController
      * Supprime une pièce.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(NotificationSinistre $notification, EntityManagerInterface $em): Response
+    public function deleteApi(NotificationSinistre $notification): Response
     {
-        return $this->handleDeleteApi($notification, $em);
+        return $this->handleDeleteApi($notification);
     }
 
 

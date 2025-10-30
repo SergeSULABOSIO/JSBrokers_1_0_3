@@ -53,6 +53,7 @@ class TacheController extends AbstractController
         private TacheRepository $tacheRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private SerializerInterface $serializer,
     ) {}
 
     protected function getCollectionMap(): array
@@ -102,14 +103,12 @@ class TacheController extends AbstractController
      * Traite la soumission du formulaire.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
+    public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
             Tache::class,
             TacheType::class,
-            $em,
-            $serializer,
             function (Tache $tache) {
                 // Le trait TimestampableTrait gère createdAt et updatedAt
                 // automatiquement grâce à l'annotation #[ORM\HasLifecycleCallbacks]
@@ -125,9 +124,9 @@ class TacheController extends AbstractController
      * Supprime une pièce.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(Tache $tache, EntityManagerInterface $em): Response
+    public function deleteApi(Tache $tache): Response
     {
-        return $this->handleDeleteApi($tache, $em);
+        return $this->handleDeleteApi($tache);
     }
 
 

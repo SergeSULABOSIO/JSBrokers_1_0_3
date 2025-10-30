@@ -119,22 +119,20 @@ class DocumentController extends AbstractController
 
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
+    public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
             Document::class,
-            DocumentType::class,
-            $em,
-            $serializer
+            DocumentType::class
         );
     }
 
 
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(Document $document, EntityManagerInterface $em): Response
+    public function deleteApi(Document $document): Response
     {
-        return $this->handleDeleteApi($document, $em);
+        return $this->handleDeleteApi($document);
     }
 
     /**

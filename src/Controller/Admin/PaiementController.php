@@ -60,6 +60,7 @@ class PaiementController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private SerializerInterface $serializer,
     ) {}
 
     protected function getCollectionMap(): array
@@ -91,7 +92,7 @@ class PaiementController extends AbstractController
      * Fournit le formulaire HTML pour une pièce.
      */
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Paiement $paiement, Constante $constante, Request $request): Response
+    public function getFormApi(?Paiement $paiement, Request $request): Response
     {
         return $this->renderFormCanvas(
             $request,
@@ -115,14 +116,12 @@ class PaiementController extends AbstractController
      * Traite la soumission du formulaire.
      */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): Response
+    public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
             Paiement::class,
             PaiementType::class,
-            $em,
-            $serializer,
             function (Paiement $paiement) {
                 if (!$paiement->getId()) {
                     // Le trait TimestampableTrait s'en occupe déjà
@@ -138,9 +137,9 @@ class PaiementController extends AbstractController
      * Supprime une pièce.
      */
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(Paiement $paiement, EntityManagerInterface $em): Response
+    public function deleteApi(Paiement $paiement): Response
     {
-        return $this->handleDeleteApi($paiement, $em);
+        return $this->handleDeleteApi($paiement);
     }
 
 

@@ -278,8 +278,6 @@ trait ControllerUtilsTrait
      * @param Request $request The current HTTP request.
      * @param string $entityClass The FQCN of the entity.
      * @param string $formTypeClass The FQCN of the form type.
-     * @param EntityManagerInterface $em The entity manager.
-     * @param SerializerInterface $serializer The serializer.
      * @param ?callable $initializer A function to set default values on a new or existing entity before validation.
      *                               It receives the entity instance and the submitted data array as arguments.
      * @return JsonResponse
@@ -288,8 +286,6 @@ trait ControllerUtilsTrait
         Request $request,
         string $entityClass,
         string $formTypeClass,
-        EntityManagerInterface $em,
-        SerializerInterface $serializer,
         ?callable $initializer = null
     ): JsonResponse {
         $data = $request->request->all();
@@ -297,7 +293,7 @@ trait ControllerUtilsTrait
         $submittedData = array_merge($data, $files);
 
         $entity = isset($data['id']) && $data['id']
-            ? $em->getRepository($entityClass)->find($data['id'])
+            ? $this->em->getRepository($entityClass)->find($data['id'])
             : new $entityClass();
 
         if (is_callable($initializer)) {
@@ -309,12 +305,12 @@ trait ControllerUtilsTrait
 
         if ($form->isSubmitted() && $form->isValid()) {
             if (method_exists($this, 'associateParent')) {
-                $this->associateParent($entity, $data, $em);
+                $this->associateParent($entity, $data, $this->em);
             }
-            $em->persist($entity);
-            $em->flush();
+            $this->em->persist($entity);
+            $this->em->flush();
 
-            $jsonEntity = $serializer->serialize($entity, 'json', ['groups' => 'list:read']);
+            $jsonEntity = $this->serializer->serialize($entity, 'json', ['groups' => 'list:read']);
             return $this->json(['message' => 'Enregistrée avec succès!', 'entity' => json_decode($jsonEntity)]);
         }
 
@@ -330,15 +326,14 @@ trait ControllerUtilsTrait
      * Handles the API deletion of any given entity.
      *
      * @param object $entity The entity instance to delete.
-     * @param EntityManagerInterface $em The entity manager.
      * @return JsonResponse
      */
-    private function handleDeleteApi(object $entity, EntityManagerInterface $em): JsonResponse
+    private function handleDeleteApi(object $entity): JsonResponse
     {
         try {
             $entityName = $this->getEntityName($entity);
-            $em->remove($entity);
-            $em->flush();
+            $this->em->remove($entity);
+            $this->em->flush();
             
             // Using (e) to be more generic with gender.
             return $this->json(['message' => ucfirst($entityName) . ' supprimé(e) avec succès.']);
