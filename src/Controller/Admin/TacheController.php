@@ -18,16 +18,12 @@ use App\Entity\Tache;
 use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Form\TacheType;
-use App\Entity\Document;
-use App\Entity\Feedback;
 use App\Constantes\Constante;
 use App\Repository\TacheRepository;
-use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
-use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -72,15 +68,7 @@ class TacheController extends AbstractController
     }
 
 
-    #[Route(
-        '/index/{idInvite}/{idEntreprise}', 
-        name: 'index', 
-        requirements: [
-            'idEntreprise' => Requirement::DIGITS,
-            'idInvite' => Requirement::DIGITS
-        ], 
-        methods: ['GET', 'POST'])
-    ]
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index(Request $request)
     {
         return $this->renderViewOrListComponent(Tache::class, $request);
@@ -144,15 +132,7 @@ class TacheController extends AbstractController
 
 
 
-    #[Route(
-        '/api/dynamic-query/{idInvite}/{idEntreprise}',
-        name: 'app_dynamic_query',
-        requirements: [
-            'idEntreprise' => Requirement::DIGITS,
-            'idInvite' => Requirement::DIGITS
-        ],
-        methods: ['POST']
-    )]
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request)
     {
         return $this->renderViewOrListComponent(Tache::class, $request, true);
