@@ -71,9 +71,7 @@ class NotificationSinistreController extends AbstractController
 
     protected function getParentAssociationMap(): array
     {
-        return [
-            'notificationSinistre' => NotificationSinistre::class,
-        ];
+        return $this->buildParentAssociationMapFromEntity(NotificationSinistre::class);
     }
 
     #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]

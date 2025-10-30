@@ -61,8 +61,7 @@ class ContactController extends AbstractController
 
     protected function getCollectionMap(): array
     {
-        // Ce contrôleur n'expose pas de collections via l'API générique.
-        return [];
+        return $this->buildCollectionMapFromEntity(Contact::class);
     }
 
     #[Route(
