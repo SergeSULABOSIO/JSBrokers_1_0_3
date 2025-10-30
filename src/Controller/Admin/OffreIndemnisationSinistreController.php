@@ -71,15 +71,7 @@ class OffreIndemnisationSinistreController extends AbstractController
     }
 
 
-    #[Route(
-        '/index/{idInvite}/{idEntreprise}',
-        name: 'index',
-        requirements: [
-            'idEntreprise' => Requirement::DIGITS,
-            'idInvite' => Requirement::DIGITS
-        ],
-        methods: ['GET', 'POST']
-    )]
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index(Request $request)
     {
         return $this->renderViewOrListComponent(OffreIndemnisationSinistre::class, $request);
@@ -125,15 +117,7 @@ class OffreIndemnisationSinistreController extends AbstractController
         return $this->handleDeleteApi($offreIndemnisationSinistre, $em);
     }
 
-    #[Route(
-        '/api/dynamic-query/{idInvite}/{idEntreprise}',
-        name: 'app_dynamic_query',
-        requirements: [
-            'idEntreprise' => Requirement::DIGITS,
-            'idInvite' => Requirement::DIGITS
-        ],
-        methods: ['POST']
-    )]
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request)
     {
         return $this->renderViewOrListComponent(OffreIndemnisationSinistre::class, $request, true);
