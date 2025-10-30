@@ -86,8 +86,7 @@ class DocumentController extends AbstractController
 
     protected function getCollectionMap(): array
     {
-        // Un document n'a pas de sous-collections à exposer.
-        return [];
+        return $this->buildCollectionMapFromEntity(Document::class);
     }
 
 
