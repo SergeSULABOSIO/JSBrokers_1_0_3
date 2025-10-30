@@ -221,15 +221,7 @@ export default class extends Controller {
             // --- NOUVEAU : Gère la demande d'ouverture d'un élément (depuis barre d'outils ou menu contextuel) ---
             case 'ui:toolbar.open-request':
                 console.log("-> ACTION: Demande d'ouverture d'élément(s). Diffusion de l'ordre au WorkspaceManager.");
-                // Le workspace-manager écoute 'app:liste-element:openned' pour ouvrir les onglets.
-                // CORRECTION : On boucle sur toutes les entités et on envoie un événement pour chacune.
-                if (payload.entities && payload.entities.length > 0) {
-                    payload.entities.forEach(selecto => {
-                        // On restructure le payload pour qu'il corresponde exactement
-                        // à ce que `workspace-manager` attend : un objet avec les clés `entity`, `entityType`, `entityCanvas`.
-                        this.broadcast('app:liste-element:openned', selecto);
-                    });
-                }
+                this._handleOpenRequest(payload);
                 break;
 
             // --- NOUVEAU : Gère la demande de sélection/désélection de tous les éléments ---
@@ -241,8 +233,23 @@ export default class extends Controller {
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }
+    }
 
-        console.groupEnd();
+
+    /**
+     * Gère une demande d'ouverture d'éléments en diffusant un événement pour chaque entité sélectionnée.
+     * @param {object} payload - Le payload contenant le tableau `entities`.
+     * @param {Array} payload.entities - Tableau d'objets "selecto".
+     * @private
+     */
+    _handleOpenRequest(payload) {
+        if (payload.entities && payload.entities.length > 0) {
+            payload.entities.forEach(selecto => {
+                // Le Cerveau relaie l'objet "selecto" complet.
+                // Le workspace-manager est responsable de l'interpréter.
+                this.broadcast('app:liste-element:openned', selecto);
+            });
+        }
     }
 
 
