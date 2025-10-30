@@ -209,29 +209,21 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     openTabInVisualization(event) {
-        // CORRECTION : Le Cerveau envoie l'entité directement dans event.detail.
-        // On ne déstructure plus, on utilise event.detail comme étant l'entité.
-        const entity = event.detail;
+        // Le Cerveau envoie l'objet "selecto" complet. On le déstructure pour en extraire les informations nécessaires.
+        const { entity, entityType, entityCanvas } = event.detail;
 
-        // La validation doit maintenant se faire sur l'objet 'entity' directement.
-        if (!entity || typeof entity !== 'object' || typeof entity.id === 'undefined' || entity.id === null) {
-            console.error("Validation échouée : l'objet 'entity' est invalide ou ne contient pas d'ID.", event.detail);
+        // Validation robuste des données reçues.
+        if (!entity || typeof entity.id === 'undefined' || !entityType || !entityCanvas) {
+            console.error("WorkspaceManager - Validation échouée : l'objet 'selecto' reçu est invalide ou incomplet.", event.detail);
             return;
         }
 
-        // On récupère les autres informations depuis les attributs de l'entité ou du contexte.
-        // Pour l'instant, on suppose que le canvas et le type sont disponibles dans l'objet entité
-        // ou qu'ils seront récupérés via un autre mécanisme si nécessaire.
-        // CORRECTION : Le Cerveau envoie un objet qui contient l'entité et ses métadonnées.
-        // Le canvas et le type ne sont pas des propriétés directes de l'entité de la base de données.
-        // Ils sont dans l'objet `event.detail` que nous avons renommé `entity`.
-        const entityType = event.detail.entityType;
-        const entityCanvas = event.detail.canvas;
-
+        // On vérifie si un onglet pour cette entité (même ID et même type) existe déjà.
         const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
         if (existingTab) {
             this.activateTab({ currentTarget: existingTab });
         } else {
+            // On passe le 'entityCanvas' qui contient la structure correcte pour l'accordéon.
             this.createTab(entity, entityType, entityCanvas);
         }
 
