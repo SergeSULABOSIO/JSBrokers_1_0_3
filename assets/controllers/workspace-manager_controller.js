@@ -239,14 +239,16 @@ export default class extends Controller {
      * @param {object} entityCanvas - La nouvelle structure avec "paramètres" et "liste"
      */
     createTab(entity, entityType, entityCanvas) {
-        // --- Création de l'en-tête de l'onglet ---
         const tabElement = this.tabTemplateTarget.content.cloneNode(true).firstElementChild;
         tabElement.dataset.entityId = entity.id;
         tabElement.dataset.entityType = entityType;
-        tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
-        // --- NOUVELLE LOGIQUE D'ICÔNE PAR CLONAGE ---
+
         const params = entityCanvas.parametres;
         tabElement.title = params.description;
+
+        // On ne modifie plus l'icône, on laisse celle par défaut du template.
+        tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
+
         // --- Création du contenu de l'onglet (accordéon) ---
         const contentElement = this.tabContentTemplateTarget.content.cloneNode(true).firstElementChild;
         const accordionContainer = contentElement.querySelector('.accordion');

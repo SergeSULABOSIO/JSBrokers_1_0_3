@@ -181,9 +181,16 @@ export default class extends Controller {
         let payload = {};
         // Enrichit le payload en fonction de l'action demandée
         if (eventName === 'ui:toolbar.delete-request') {
+            // Pour la suppression, on envoie les IDs et la configuration de l'action
+            // (URL de base) pour que le Cerveau puisse construire la requête API.
             payload = {
-                selection: this.selectos.map(s => s.id)
+                selection: this.selectos.map(s => s.id),
+                actionConfig: {
+                    // On récupère l'URL de base pour la suppression depuis le canvas du formulaire actif.
+                    url: this.activeFormCanvas.parametres.endpoint_delete_url,
+                }
             };
+            console.log(this.nomControleur + " - Code: 1986 - Suppression", payload);
             // La suppression n'a besoin que des IDs.
         } else if (eventName === 'ui:toolbar.add-request') {
             // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
@@ -217,7 +224,6 @@ export default class extends Controller {
      * @private
      */
     notifyCerveau(type, payload = {}) {
-        console.log(`${this.nomControleur} - Notification du Cerveau: ${type}`, payload);
         const event = new CustomEvent('cerveau:event', {
             bubbles: true,
             detail: {

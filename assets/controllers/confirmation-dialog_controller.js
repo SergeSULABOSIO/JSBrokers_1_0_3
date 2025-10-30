@@ -18,7 +18,10 @@ export default class extends Controller {
 
         // Centralisation des écouteurs d'événements via le Cerveau
         this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
-        document.addEventListener('cerveau:event', this.boundHandleCerveauEvent);
+        document.addEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
+
+        this.boundClose = this.close.bind(this);
+        this.element.addEventListener('ui:confirmation.close', this.boundClose);
 
         // Écouteur pour la gestion du z-index
         this.boundAdjustZIndex = this.adjustZIndex.bind(this);
@@ -26,7 +29,8 @@ export default class extends Controller {
     }
 
     disconnect() {
-        document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
+        document.removeEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
+        document.removeEventListener('ui:confirmation.close', this.boundClose);
         this.element.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
@@ -36,18 +40,19 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     handleCerveauEvent(event) {
-        const { type, payload } = event.detail;
+        console.log(this.nomControlleur + " - Code: 1986 - handleCerveauEvent - ConfirmationDialogController", event.detail);
+        const { type } = event.detail.onConfirm;
         switch (type) {
-            case 'ui:confirmation.request':
-                this.open(payload);
+            case 'app:api.delete-request':
+                this.open(event.detail);
                 break;
-            case 'ui:confirmation.close':
-                this.close();
-                break;
+            // case 'ui:confirmation.request':
+            //     this.open(event.detail);
+            //     break;
             case 'app:error.api':
                 // Si une erreur API survient pendant que la confirmation est en attente, on arrête le chargement.
                 if (this.confirmButtonTarget.disabled) {
-                    this.handleError(payload);
+                    this.handleError(event.detail);
                 }
                 break;
         }
