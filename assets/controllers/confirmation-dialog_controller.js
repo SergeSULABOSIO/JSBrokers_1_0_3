@@ -21,7 +21,7 @@ export default class extends Controller {
         document.addEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
 
         this.boundClose = this.close.bind(this);
-        this.element.addEventListener('ui:confirmation.close', this.boundClose);
+        document.addEventListener('ui:confirmation.close', this.boundClose);
 
         // Écouteur pour la gestion du z-index
         this.boundAdjustZIndex = this.adjustZIndex.bind(this);
