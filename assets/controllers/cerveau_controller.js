@@ -100,10 +100,6 @@ export default class extends Controller {
                 this.openDialogBox(payload);
                 break;
 
-            case 'ui:dialog.opened':
-                console.log("-> ACTION: Une boîte de dialogue a été ouverte.", payload);
-                break;
-
             case 'app:entity.saved':
                 this._requestListRefresh(payload.originatorId);
                 this._showNotification('Enregistrement réussi !', 'success');
