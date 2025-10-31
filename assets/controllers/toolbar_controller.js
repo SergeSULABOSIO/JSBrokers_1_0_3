@@ -188,6 +188,7 @@ export default class extends Controller {
                 actionConfig: {
                     // On récupère l'URL de base pour la suppression depuis le canvas du formulaire actif.
                     url: this.activeFormCanvas.parametres.endpoint_delete_url,
+                    originatorId: null, // Indique que la requête vient de la barre d'outils principale, pour un rafraîchissement global.
                 }
             };
             console.log(this.nomControleur + " - Code: 1986 - Suppression", payload);
