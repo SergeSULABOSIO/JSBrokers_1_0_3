@@ -315,7 +315,9 @@ export default class extends Controller {
                 const message = results.length > 1 ? `${results.length} éléments supprimés avec succès.` : 'Élément supprimé avec succès.';
                 console.log(`${this.nomControleur} - SUCCÈS: Suppression(s) réussie(s).`, results);
                 this._showNotification(message, 'success');
-                this.broadcast('app:list.refresh-request', { originatorId: originatorId, idEntreprise: this.currentIdEntreprise, idInvite: this.currentIdInvite });
+                // On réinitialise l'état de la sélection et on notifie tout le monde (toolbar, etc.)
+                this._setSelectionState([]);
+                this._requestListRefresh(originatorId);
                 this.broadcast('ui:confirmation.close');
             })
             .catch(error => {
