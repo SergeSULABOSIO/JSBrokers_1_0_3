@@ -39,6 +39,8 @@ export default class extends Controller {
         document.removeEventListener('cerveau:event', this.boundHandleEvent);
     }
 
+
+    
     /**
      * Point d'entrée unique pour tous les événements destinés au Cerveau.
      * Analyse le type d'événement et délègue l'action appropriée.

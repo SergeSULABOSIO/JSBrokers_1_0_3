@@ -169,24 +169,23 @@ export default class extends Controller {
      * Gère une demande de rafraîchissement globale.
      */
     handleGlobalRefresh(event) {
-        // MISSION 3 : On ne rafraîchit que si on est dans la vue principale
-        const parentView = this.element.closest('[data-controller="view-manager"]');
-        if (parentView) {
-            console.log(`${this.nomControleur} - Demande de rafraîchissement global reçue.`, event.detail);
-            // On récupère l'ID de l'entreprise directement depuis l'événement envoyé par le Cerveau.
-            const idEntreprise = event.detail.idEntreprise;
-            const idInvite = event.detail.idInvite;
-            // On simule un événement de requête avec les bonnes informations.
-            this.handleDBRequest(
-                { 
-                    detail: 
-                    { 
-                        criteria: {}, 
-                        idEntreprise: idEntreprise,
-                        idInvite: idInvite
-                    }
+        const { originatorId, idEntreprise, idInvite } = event.detail;
+
+        // Le list-manager doit se rafraîchir si :
+        // 1. L'originatorId est null ou undefined (rafraîchissement global, ex: depuis la toolbar principale ou un save général).
+        // 2. L'originatorId correspond à l'ID de ce list-manager (rafraîchissement ciblé).
+        // De plus, s'assurer que ce list-manager est bien celui de la vue principale (pas une collection imbriquée).
+        const isMainListManager = this.element.closest('[data-controller="view-manager"]');
+
+        if (isMainListManager && (originatorId === null || originatorId === undefined || originatorId === this.element.id)) {
+            console.log(`${this.nomControleur} - Demande de rafraîchissement reçue.`, event.detail);
+            this.handleDBRequest({
+                detail: {
+                    criteria: {},
+                    idEntreprise: idEntreprise,
+                    idInvite: idInvite
                 }
-            );
+            });
         }
     }
 
