@@ -241,12 +241,12 @@ export default class extends Controller {
                     mainDialogElement.classList.remove('has-attributes-column');
                 }
 
-                // NOUVEAU : Notifier le cerveau que le dialogue est prêt
-                this.notifyCerveau('ui:dialog.opened', {
-                    mode: this.isCreateMode ? 'creation' : 'edition',
-                    entity: this.entity
-                });
             }
+            // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
+            this.notifyCerveau('ui:dialog.opened', {
+                mode: this.isCreateMode ? 'creation' : 'edition',
+                entity: this.entity
+            });
             // On s'assure que la classe de mode édition est bien présente si nécessaire
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');

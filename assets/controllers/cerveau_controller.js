@@ -87,19 +87,28 @@ export default class extends Controller {
                 break;
 
             case 'dialog:boite-dialogue:init-request':
+                this.broadcast('app:loading.start');
                 this.openDialogBox(payload);
                 break;
 
             case 'ui:boite-dialogue:add-collection-item-request':
+                this.broadcast('app:loading.start');
                 this.openDialogBox(payload);
                 break;
 
             case 'ui:toolbar.add-request':
+                this.broadcast('app:loading.start');
                 this.openDialogBox(payload);
                 break;
             
             case 'ui:toolbar.edit-request':
+                this.broadcast('app:loading.start');
                 this.openDialogBox(payload);
+                break;
+
+            // NOUVEAU : Le dialogue est complètement chargé et affiché.
+            case 'ui:dialog.opened':
+                this.broadcast('app:loading.stop');
                 break;
 
             case 'app:entity.saved':
@@ -144,7 +153,13 @@ export default class extends Controller {
                 break;
 
             case 'ui:toolbar.open-request':
+                this.broadcast('app:loading.start');
                 this._handleOpenRequest(payload);
+                break;
+
+            // NOUVEAU : Un onglet a été ouvert avec succès dans la colonne de visualisation.
+            case 'app:tab.opened':
+                this.broadcast('app:loading.stop');
                 break;
 
             case 'ui:toolbar.select-all-request':
