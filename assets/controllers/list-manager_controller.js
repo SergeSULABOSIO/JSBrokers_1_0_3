@@ -65,19 +65,35 @@ export default class extends Controller {
     // --- GESTION DE LA SÉLECTION ---
 
     /**
-     * Gère le clic sur la case "Tout cocher".
-     * Coche ou décoche toutes les cases de la liste et met à jour l'état.
+     * Gère le clic sur la case "Tout cocher" ou une demande externe du Cerveau.
+     * Coche ou décoche toutes les cases de la liste et notifie le Cerveau avec l'état final.
      */
-    toggleAll() {
-        const isChecked = this.selectAllCheckboxTarget.checked;
+    toggleAll(event) {
+        // Si l'événement vient de la case à cocher de l'en-tête, on utilise son état.
+        // Sinon (demande du Cerveau), on détermine s'il faut cocher ou décocher.
+        const isTriggeredByUser = event && event.currentTarget === this.selectAllCheckboxTarget;
+        const totalRows = this.rowCheckboxTargets.length;
+        const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length;
+        
+        // Détermine l'action : si tout est déjà coché, on décoche. Sinon, on coche.
+        const shouldCheck = isTriggeredByUser ? this.selectAllCheckboxTarget.checked : checkedRows < totalRows;
+
+        const allSelectos = [];
         this.rowCheckboxTargets.forEach(checkbox => {
-            // On ne déclenche l'événement que si l'état change réellement
-            if (checkbox.checked !== isChecked) {
-                checkbox.checked = isChecked;
-                // Déclenche manuellement l'événement 'change' pour que le contrôleur list-row réagisse
-                checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+            checkbox.checked = shouldCheck;
+            checkbox.closest('tr')?.classList.toggle('row-selected', shouldCheck);
+            if (shouldCheck) {
+                // Construit et ajoute le "selecto" à la liste
+                const listRowController = this.application.getControllerForElementAndIdentifier(checkbox.closest('[data-controller="list-row"]'), 'list-row');
+                if (listRowController) {
+                    allSelectos.push(listRowController.buildSelectoPayload());
+                }
             }
         });
+
+        // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
+        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos });
+        this.updateSelectAllCheckboxState();
     }
 
     /**
@@ -153,15 +169,13 @@ export default class extends Controller {
             // Affiche les résultats et met à jour l'état
             this.donneesTarget.innerHTML = html;
             this.resetSelection();
-            // On notifie le cerveau que le chargement est terminé
+            // On notifie le Cerveau que la liste est chargée et on lui passe le nombre d'éléments.
             this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
+            this.notifyCerveau('app:list.refreshed', {}); // NOUVEAU : Notifie le Cerveau que l'actualisation est terminée.
 
         } catch (error) {
             this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
             this.notifyCerveau('app:error.api', { error: error.message });
-        } finally {
-            // Dans tous les cas (succès ou erreur), on notifie que le chargement est terminé pour cacher la barre de progression.
-            document.dispatchEvent(new CustomEvent('app:base-données:données-loaded'));
         }
     }
 

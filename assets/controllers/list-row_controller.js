@@ -69,6 +69,33 @@ export default class extends Controller {
     }
 
     /**
+     * Construit et retourne le payload "selecto" pour cette ligne.
+     * Centralise la création de l'objet pour être réutilisé.
+     * @returns {object|null} Le payload "selecto" ou null en cas d'erreur de validation.
+     */
+    buildSelectoPayload() {
+        const numericDataRaw = this.element.closest('[data-list-manager-numeric-attributes-value]')?.dataset.listManagerNumericAttributesValue;
+        const numericData = numericDataRaw ? JSON.parse(numericDataRaw) : {};
+
+        const payload = {
+            id: this.idobjetValue,
+            isChecked: this.checkboxTarget.checked,
+            entity: JSON.parse(this.checkboxTarget.dataset.entity || 'null'),
+            entityType: this.checkboxTarget.dataset.entityType,
+            entityCanvas: JSON.parse(this.checkboxTarget.dataset.canvas || 'null'),
+            entityFormCanvas: JSON.parse(this.element.closest('[data-list-manager-entity-form-canvas-value]')?.dataset.listManagerEntityFormCanvasValue || 'null'),
+            numericAttributes: numericData[this.idobjetValue] || {},
+        };
+
+        const invalidKeys = Object.entries(payload).filter(([key, value]) => value === null || value === undefined);
+        if (invalidKeys.length > 0) {
+            console.error(`[${this.nomControleur}] Erreur de validation: Le payload contient des valeurs nulles ou non définies.`, { clesInvalides: invalidKeys.map(([key]) => key), payloadComplet: payload });
+            return null;
+        }
+        return payload;
+    }
+
+    /**
      * Gère le changement d'état de la case à cocher et notifie le Cerveau.
      * @param {Event} event - L'événement de changement.
      * @fires cerveau:event
@@ -77,29 +104,9 @@ export default class extends Controller {
         const checkbox = this.checkboxTarget;
         this.element.classList.toggle('row-selected', checkbox.checked);
 
-        // --- NOUVELLE ARCHITECTURE ---
-        // On prépare l'objet "selecto" complet pour le Cerveau.
-        const numericDataRaw = this.element.closest('[data-list-manager-numeric-attributes-value]')?.dataset.listManagerNumericAttributesValue;
-        const numericData = numericDataRaw ? JSON.parse(numericDataRaw) : {};
+        const payload = this.buildSelectoPayload();
 
-        const payload = {
-            id: this.idobjetValue,
-            isChecked: checkbox.checked,
-            entity: JSON.parse(checkbox.dataset.entity || 'null'),
-            entityType: checkbox.dataset.entityType,
-            entityCanvas: JSON.parse(checkbox.dataset.canvas || 'null'),
-            entityFormCanvas: JSON.parse(this.element.closest('[data-list-manager-entity-form-canvas-value]')?.dataset.listManagerEntityFormCanvasValue || 'null'),
-            numericAttributes: numericData[this.idobjetValue] || {},
-        };
-
-        // --- NOUVEAU : Validation du payload avant l'envoi ---
-        const invalidKeys = Object.entries(payload).filter(([key, value]) => value === null || value === undefined);
-
-        if (invalidKeys.length > 0) {
-            console.error(`[${this.nomControleur}] Erreur de validation: Le payload contient des valeurs nulles ou non définies. Événement non envoyé.`, {
-                clesInvalides: invalidKeys.map(([key]) => key),
-                payloadComplet: payload
-            });
+        if (!payload) {
             return; // On arrête l'exécution ici.
         }
 

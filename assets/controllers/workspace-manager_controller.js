@@ -45,12 +45,12 @@ export default class extends Controller {
         document.addEventListener('app:workspace.load-default', this.boundLoadDefault);
 
         // --- NOUVEAU : Gestion de la barre de progression pour l'actualisation de la liste ---
-        // Écoute la demande de rafraîchissement pour afficher la barre.
-        this.boundHandleListRefreshRequest = this.handleListRefreshRequest.bind(this);
-        document.addEventListener('app:list.refresh-request', this.boundHandleListRefreshRequest);
-        // Écoute la fin du chargement des données pour cacher la barre.
-        this.boundHandleListRefreshCompleted = this.handleListRefreshCompleted.bind(this);
-        document.addEventListener('app:base-données:données-loaded', this.boundHandleListRefreshCompleted);
+        // Écoute les ordres du Cerveau pour afficher/masquer la barre de progression.
+        this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
+        document.addEventListener('app:loading.start', this.boundHandleLoadingStart);
+
+        this.boundHandleLoadingStop = this.handleLoadingStop.bind(this);
+        document.addEventListener('app:loading.stop', this.boundHandleLoadingStop);
         this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
@@ -120,8 +120,8 @@ export default class extends Controller {
         document.removeEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
-        document.removeEventListener('app:list.refresh-request', this.boundHandleListRefreshRequest);
-        document.removeEventListener('app:base-données:données-loaded', this.boundHandleListRefreshCompleted);
+        document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
+        document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
     }
 
 
@@ -689,15 +689,15 @@ export default class extends Controller {
     /**
      * Affiche la barre de progression lors d'une demande d'actualisation de liste.
      */
-    handleListRefreshRequest() {
+    handleLoadingStart() {
         console.log(this.nomControleur + " - Demande d'actualisation détectée, affichage de la barre de progression.");
         this.progressBarTarget.style.display = 'block';
     }
 
     /**
-     * Cache la barre de progression une fois les données de la liste chargées.
+     * Cache la barre de progression sur ordre du Cerveau.
      */
-    handleListRefreshCompleted() {
+    handleLoadingStop() {
         console.log(this.nomControleur + " - Fin du chargement des données, masquage de la barre de progression.");
         this.progressBarTarget.style.display = 'none';
     }
