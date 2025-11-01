@@ -154,7 +154,16 @@ export default class extends Controller {
         // const url = `/admin/${this.controleurphpValue}/api/dynamic-query/${idEntreprise}`;
         const url = `/admin/${this.serverRootNameValue}/api/dynamic-query/${idInvite}/${idEntreprise}`;
         console.log(this.nomControleur + " - ICI URL:", url);
-        this.donneesTarget.innerHTML = `<div class="spinner-container"><div class="custom-spinner"></div></div>`;
+
+        // On récupère le nombre de colonnes depuis l'en-tête du tableau pour que la cellule du spinner puisse s'étendre sur toute la largeur.
+        const columnCount = this.element.querySelector('thead tr')?.childElementCount || 1;
+        this.donneesTarget.innerHTML = `
+            <tr>
+                <td colspan="${columnCount}" class="text-center py-5">
+                    <div class="spinner-container d-flex justify-content-center align-items-center"><div class="custom-spinner"></div></div>
+                </td>
+            </tr>
+        `;
 
         try {
             const response = await fetch(url, {
