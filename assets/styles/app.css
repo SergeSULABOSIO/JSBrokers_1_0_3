@@ -108,7 +108,6 @@ a:active {
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 10px;
 }
 
 .context-menu li:hover {
@@ -126,6 +125,7 @@ a:active {
 .context-menu .menu-icon {
     width: 18px;
     height: 18px;
+    margin-right: 10px; /* Remplace la propriété 'gap' pour un meilleur contrôle */
 }
 
 /* STYLES POUR LA BARRE DE RECHERCHE */
@@ -898,6 +898,11 @@ textarea:hover,
 
 .context-menu ul li:hover {
     background-color: #495057 !important; /* Fond de survol plus clair */
+}
+
+/* CORRECTION : Assure la visibilité du texte des raccourcis en mode sombre */
+.context-menu ul li .text-muted {
+    color: rgba(248, 249, 250, 0.65) !important; /* Texte clair mais moins prononcé que l'option principale */
 }
 
 .context-menu ul li.separator {
