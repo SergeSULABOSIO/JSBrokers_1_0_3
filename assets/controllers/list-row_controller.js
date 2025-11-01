@@ -58,9 +58,17 @@ export default class extends Controller {
     handleContextMenu(event) {
         event.preventDefault();
         event.stopPropagation();
-        console.log(`${this.nomControleur} - Clic droit détecté. Demande d'ouverture du menu contextuel.`);
 
-        this.dispatch('cerveau:event', { // Dispatch to Cerveau
+        // S'assure que la ligne est cochée.
+        if (!this.checkboxTarget.checked) {
+            this.checkboxTarget.checked = true;
+            // On notifie le changement de sélection pour que le Cerveau mette à jour son état.
+            this.handleCheckboxChange(event);
+        }
+
+        // On demande l'ouverture du menu contextuel.
+        // Le Cerveau a maintenant le bon état de sélection.
+        this.notifyCerveau('ui:context-menu.request', {
             type: 'ui:context-menu.request',
             source: this.nomControleur,
             payload: { menuX: event.clientX, menuY: event.clientY },
@@ -141,5 +149,19 @@ export default class extends Controller {
     dispatch(name, detail = {}) {
         // L'événement est distribué depuis l'élément lui-même pour qu'il puisse remonter au Cerveau.
         this.element.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    }
+
+    /**
+     * Méthode centralisée pour envoyer un événement au Cerveau.
+     * @param {string} type Le type d'événement pour le Cerveau.
+     * @param {object} [payload={}] - Données additionnelles à envoyer.
+     * @private
+     */
+    notifyCerveau(type, payload = {}) {
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
+        });
+        this.element.dispatchEvent(event);
     }
 }

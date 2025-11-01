@@ -40,6 +40,7 @@ export default class extends Controller {
         this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
         this.boundHandleSelectionUpdate = this.handleSelectionUpdate.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
+        this.boundHandleKeyboardShortcuts = this.handleKeyboardShortcuts.bind(this);
 
         this.menuTarget.style.display = 'none';
         document.addEventListener('click', this.boundHideContextMenu, false);
@@ -55,6 +56,7 @@ export default class extends Controller {
         document.removeEventListener('click', this.boundHideContextMenu, false);
         document.removeEventListener('app:context-menu.show', this.boundHandleContextMenuRequest);
         document.removeEventListener('ui:selection.changed', this.boundHandleSelectionUpdate);
+        document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
     /**
@@ -81,6 +83,8 @@ export default class extends Controller {
         // Met à jour et affiche le menu
         this.organizeButtons(this.selection);
         this.menuTarget.style.display = 'block';
+        // Active l'écoute des raccourcis clavier uniquement quand le menu est visible
+        document.addEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
     /**
@@ -119,6 +123,8 @@ export default class extends Controller {
     hideContextMenu() {
         if (this.hasMenuTarget) {
             this.menuTarget.style.display = 'none';
+            // Désactive l'écoute des raccourcis clavier quand le menu est caché
+            document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
         }
     }
 
@@ -126,14 +132,37 @@ export default class extends Controller {
      * Gère l'action spécifique "Ouvrir" du menu contextuel pour corriger l'erreur.
      * @param {MouseEvent} event - L'événement de clic.
      */
-    context_action_ouvrir(event) {
-        // CORRECTION : Notifie directement le Cerveau avec le bon événement,
-        // car l'attribut data-context-menu-event-name-param est manquant sur le bouton.
-        event.stopPropagation();
-        this.hideContextMenu();
+    handleKeyboardShortcuts(event) {
+        if (this.menuTarget.style.display !== 'block') return;
 
-        const payload = { entities: this.entities };
-        this.notifyCerveau('ui:toolbar.open-request', payload);
+        const key = event.key.toUpperCase();
+        let targetButton = null;
+
+        switch (key) {
+            case 'A':
+                targetButton = this.btAjouterTarget;
+                break;
+            case 'M':
+                targetButton = this.btModifierTarget;
+                break;
+            case 'O':
+                targetButton = this.btOuvrirTarget;
+                break;
+            case 'S':
+                targetButton = this.btSupprimerTarget;
+                break;
+            case 'R':
+                targetButton = this.btActualiserTarget;
+                break;
+            case 'Q':
+                targetButton = this.btQuitterTarget;
+                break;
+        }
+
+        if (targetButton && targetButton.style.display !== 'none') {
+            event.preventDefault();
+            targetButton.click();
+        }
     }
 
     /**
@@ -153,13 +182,18 @@ export default class extends Controller {
         }
 
         let payload = {};
-        // --- CORRECTION : Enrichit le payload avec les données de sélection ---
-        if (['ui:toolbar.edit-request', 'ui:toolbar.open-request'].includes(eventName)) {
+        // Enrichit le payload en fonction de l'action demandée
+        if (eventName === 'ui:toolbar.add-request') {
+            payload = { entity: {}, entityFormCanvas: this.entityFormCanvas, isCreationMode: true };
+        } else if (eventName === 'ui:toolbar.edit-request') {
+            // Pour l'édition, on envoie la première entité sélectionnée
+            payload = { entity: this.entities.length > 0 ? this.entities[0].entity : {}, entityFormCanvas: this.entityFormCanvas, isCreationMode: false };
+        } else if (eventName === 'ui:toolbar.open-request') {
+            // Pour "Ouvrir", on envoie le tableau complet des "selectos".
             payload = { entities: this.entities };
         } else if (eventName === 'ui:toolbar.delete-request') {
-            payload = { selection: this.selection };
-        } else if (eventName === 'ui:toolbar.add-request') {
-            payload = { entityFormCanvas: this.entityFormCanvas };
+            // Pour la suppression, on envoie les IDs et la configuration de l'action
+            payload = { selection: this.selection, actionConfig: { url: this.entityFormCanvas?.parametres?.endpoint_delete_url, originatorId: null } };
         }
 
         this.notifyCerveau(eventName, payload);
