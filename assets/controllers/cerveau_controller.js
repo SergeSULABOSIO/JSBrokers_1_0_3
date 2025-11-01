@@ -112,7 +112,15 @@ export default class extends Controller {
                 break;
 
             case 'ui:toolbar.refresh-request':
+                // On notifie le début du chargement pour que la barre de progression s'affiche
+                this.broadcast('app:loading.start');
                 this._requestListRefresh();
+                break;
+
+            // NOUVEAU : La liste a terminé son actualisation.
+            case 'app:list.refreshed':
+                this._setSelectionState([]); // On réinitialise la sélection
+                this.broadcast('app:loading.stop'); // On notifie la fin pour masquer la barre de progression
                 break;
 
             case 'ui:context-menu.request':
@@ -140,7 +148,12 @@ export default class extends Controller {
                 break;
 
             case 'ui:toolbar.select-all-request':
-                this.broadcast('app:list.toggle-all-request', payload);
+                this.broadcast('app:list.toggle-all-request');
+                break;
+
+            // NOUVEAU : La liste a terminé une opération de sélection de masse.
+            case 'ui:list.selection-completed':
+                this._setSelectionState(payload.selectos || []);
                 break;
 
             default:
