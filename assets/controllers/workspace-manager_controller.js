@@ -229,6 +229,9 @@ export default class extends Controller {
 
         this.element.classList.add('visualization-visible');
         this.visualizationColumnTarget.style.display = 'flex';
+
+        // NOUVEAU : Notifier le cerveau que l'onglet est ouvert pour qu'il puisse arrêter le chargement.
+        this.notifyCerveau('app:tab.opened', { entityId: entity.id, entityType: entityType });
     }
 
 
