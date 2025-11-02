@@ -209,29 +209,36 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     openTabInVisualization(event) {
-        // Le Cerveau envoie l'objet "selecto" complet. On le déstructure pour en extraire les informations nécessaires.
-        const { entity, entityType, entityCanvas } = event.detail;
-
-        // Validation robuste des données reçues.
-        if (!entity || typeof entity.id === 'undefined' || !entityType || !entityCanvas) {
-            console.error("WorkspaceManager - Validation échouée : l'objet 'selecto' reçu est invalide ou incomplet.", event.detail);
-            return;
-        }
-
-        // On vérifie si un onglet pour cette entité (même ID et même type) existe déjà.
-        const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
-        if (existingTab) {
-            this.activateTab({ currentTarget: existingTab });
-        } else {
-            // On passe le 'entityCanvas' qui contient la structure correcte pour l'accordéon.
-            this.createTab(entity, entityType, entityCanvas);
-        }
-
-        this.element.classList.add('visualization-visible');
-        this.visualizationColumnTarget.style.display = 'flex';
-
-        // NOUVEAU : Notifier le cerveau que l'onglet est ouvert pour qu'il puisse arrêter le chargement.
-        this.notifyCerveau('app:tab.opened', { entityId: entity.id, entityType: entityType });
+        // On utilise requestAnimationFrame pour s'assurer que le navigateur a le temps
+        // d'afficher la barre de progression (déclenchée par le Cerveau) avant
+        // d'exécuter le code (potentiellement lourd) de création de l'onglet.
+        requestAnimationFrame(() => {
+            // Le Cerveau envoie l'objet "selecto" complet. On le déstructure pour en extraire les informations nécessaires.
+            const { entity, entityType, entityCanvas } = event.detail;
+    
+            // Validation robuste des données reçues.
+            if (!entity || typeof entity.id === 'undefined' || !entityType || !entityCanvas) {
+                console.error("WorkspaceManager - Validation échouée : l'objet 'selecto' reçu est invalide ou incomplet.", event.detail);
+                // On notifie le cerveau d'arrêter le chargement même en cas d'erreur.
+                this.notifyCerveau('app:loading.stop', {});
+                return;
+            }
+    
+            // On vérifie si un onglet pour cette entité (même ID et même type) existe déjà.
+            const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
+            if (existingTab) {
+                this.activateTab({ currentTarget: existingTab });
+            } else {
+                // On passe le 'entityCanvas' qui contient la structure correcte pour l'accordéon.
+                this.createTab(entity, entityType, entityCanvas);
+            }
+    
+            this.element.classList.add('visualization-visible');
+            this.visualizationColumnTarget.style.display = 'flex';
+    
+            // NOUVEAU : Notifier le cerveau que l'onglet est ouvert pour qu'il puisse arrêter le chargement.
+            this.notifyCerveau('app:tab.opened', { entityId: entity.id, entityType: entityType });
+        });
     }
 
 
