@@ -92,8 +92,8 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleSelectionUpdate(event) {
-        // Le payload (event.detail) est maintenant directement le tableau des "selectos".
-        const selectos = event.detail || [];
+        // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
+        const selectos = event.detail.selection || [];
         this.selection = selectos.map(s => s.id);
         this.entities = selectos;
         this.entityFormCanvas = selectos.length > 0 ? selectos[0].entityFormCanvas : null;

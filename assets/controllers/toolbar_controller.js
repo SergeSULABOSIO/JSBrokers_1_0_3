@@ -91,8 +91,8 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleContextUpdate(event) {
-        // Le payload est directement le tableau des "selectos".
-        this.selectos = event.detail || [];
+        // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
+        this.selectos = event.detail.selection || [];
         this.organizeButtons();
     }
 

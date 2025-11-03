@@ -24,6 +24,8 @@ export default class extends Controller {
         // --- NOUVELLE ARCHITECTURE : Le Cerveau devient la source de vérité pour la sélection ---
         this.selectionState = []; // Tableau des objets "selecto"
         this.selectionIds = new Set(); // Pour une recherche rapide des IDs
+        this.numericData = {}; // Données numériques de la liste active
+        this.numericAttributes = {}; // Description des attributs numériques
         this.currentIdEntreprise = null;
         this.currentIdInvite = null;
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
@@ -130,6 +132,12 @@ export default class extends Controller {
             case 'app:list.refreshed':
                 this._setSelectionState([]); // On réinitialise la sélection
                 this.broadcast('app:loading.stop'); // On notifie la fin pour masquer la barre de progression
+                break;
+            
+            // NOUVEAU : La liste a chargé ses données, on stocke les infos numériques.
+            case 'app:list.data-loaded':
+                this.numericData = payload.numericData || {};
+                this.numericAttributes = payload.numericAttributes || {};
                 break;
 
             case 'ui:context-menu.request':
@@ -241,9 +249,12 @@ export default class extends Controller {
      */
     publishSelection() {
         // --- NOUVELLE ARCHITECTURE ---
-        // Le payload est maintenant directement le tableau des "selectos".
         console.log("-> ACTION: Publication de l'état de sélection mis à jour.", this.selectionState);
-        this.broadcast('ui:selection.changed', this.selectionState);
+        this.broadcast('ui:selection.changed', {
+            selection: this.selectionState,
+            numericData: this.numericData,
+            numericAttributes: this.numericAttributes
+        });
     }
 
     /**

@@ -123,7 +123,8 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleGlobalSelectionUpdate(event) {
-        const selectos = event.detail || [];
+        // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
+        const selectos = event.detail.selection || [];
         const selectionIds = new Set(selectos.map(s => String(s.id)));
 
         this.rowCheckboxTargets.forEach(checkbox => {
