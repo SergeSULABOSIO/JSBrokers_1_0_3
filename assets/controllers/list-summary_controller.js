@@ -79,14 +79,15 @@ export default class extends Controller {
      * @private
      */
     updateAttributeSelector(attributes) {
-        // --- CORRECTION : Le format reçu est un tableau d'objets, pas un objet clé/valeur. ---
-        // On s'assure que 'attributes' est bien un tableau avant de l'utiliser.
-        if (!Array.isArray(attributes)) {
-            console.error(`${this.nomControleur} - Le format des attributs numériques est incorrect. Attendu: Array, Reçu:`, typeof attributes);
-            this.attributeSelectorTarget.innerHTML = '<option value="">Erreur de format</option>';
+        // On vide les options existantes
+        this.attributeSelectorTarget.innerHTML = '<option value="">-- Choisir --</option>';
+
+        // On vérifie que les attributs sont bien un tableau (format attendu de `colonnes_numeriques`)
+        if (!Array.isArray(attributes) || attributes.length === 0) {
             return;
         }
-        this.attributeSelectorTarget.innerHTML = '';
+
+        // On itère sur le tableau d'objets pour créer les options
         for (const attr of attributes) {
             this.attributeSelectorTarget.appendChild(new Option(attr.titre_colonne, attr.attribut_code));
         }
