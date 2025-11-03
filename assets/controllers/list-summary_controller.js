@@ -69,6 +69,7 @@ export default class extends Controller {
         this.element.style.display = 'flex';
         this.numericData = numericData || {};
         this.selectedIds = new Set((selection || []).map(id => parseInt(id, 10)));
+        this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
         this.updateAttributeSelector(numericAttributes || {});
         this.recalculate();
     }

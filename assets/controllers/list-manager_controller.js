@@ -180,6 +180,11 @@ export default class extends Controller {
             this.resetSelection();
             // On notifie le Cerveau que la liste est chargée et on lui passe le nombre d'éléments.
             this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
+            // NOUVEAU : On notifie le Cerveau avec les données numériques pour la barre des totaux.
+            this.notifyCerveau('app:list.data-loaded', {
+                numericData: JSON.parse(this.element.dataset.listManagerNumericDataValue || '{}'),
+                numericAttributes: JSON.parse(this.element.dataset.listManagerNumericAttributesValue || '{}')
+            });
             this.notifyCerveau('app:list.refreshed', {}); // NOUVEAU : Notifie le Cerveau que l'actualisation est terminée.
 
         } catch (error) {
