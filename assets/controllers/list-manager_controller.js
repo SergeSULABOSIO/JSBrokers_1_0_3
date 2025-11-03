@@ -183,8 +183,8 @@ export default class extends Controller {
             this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
             // NOUVEAU : On notifie le Cerveau avec les données numériques pour la barre des totaux.
             this.notifyCerveau('app:list.data-loaded', {
-                numericData: JSON.parse(this.element.dataset.listManagerNumericDataValue || '{}'),
-                numericAttributes: JSON.parse(this.element.dataset.listManagerNumericAttributesValue || '{}')
+                numericData: JSON.parse(this.element.dataset.listManagerNumericDataValue || '{}'), // Un objet est correct ici
+                numericAttributes: JSON.parse(this.element.dataset.listManagerNumericAttributesValue || '[]') // Doit être un tableau
             });
             this.notifyCerveau('app:list.refreshed', {}); // NOUVEAU : Notifie le Cerveau que l'actualisation est terminée.
 

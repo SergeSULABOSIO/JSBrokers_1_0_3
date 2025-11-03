@@ -54,9 +54,11 @@ export default class extends Controller {
      */
     handleStateUpdate(event) {
         const { selection, numericAttributes, numericData } = event.detail;
+        console.log(this.nomControleur + " - code: 1986 - Data:", event.detail);
 
         // Si aucun attribut numérique n'est fourni, on masque la barre et on réinitialise tout.
-        if (!numericAttributes || Object.keys(numericAttributes).length === 0) {
+        // CORRECTION : On vérifie si c'est un tableau non vide.
+        if (!Array.isArray(numericAttributes) || numericAttributes.length === 0) {
             this.element.style.display = 'none';
             this.numericData = {};
             this.selectedIds.clear();
@@ -109,8 +111,9 @@ export default class extends Controller {
 
         for (const id in this.numericData) {
             const itemData = this.numericData[id];
-            if (itemData && itemData[attribute]) {
-                const value = itemData[attribute].value; // La valeur est en centimes
+            // CORRECTION : La valeur est directement dans itemData[attribute], pas dans un sous-objet .value
+            if (itemData && itemData[attribute] && typeof itemData[attribute].value === 'number') {
+                const value = itemData[attribute]; // La valeur est déjà un nombre (en centimes)
                 globalTotal += value;
 
                 if (this.selectedIds.has(parseInt(id, 10))) {

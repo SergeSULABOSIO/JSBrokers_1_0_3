@@ -80,9 +80,6 @@ export default class extends Controller {
      * @returns {object|null} Le payload "selecto" ou null en cas d'erreur de validation.
      */
     buildSelectoPayload() {
-        const numericDataRaw = this.element.closest('[data-list-manager-numeric-attributes-value]')?.dataset.listManagerNumericAttributesValue;
-        const numericData = numericDataRaw ? JSON.parse(numericDataRaw) : {};
-
         const payload = {
             id: this.idobjetValue,
             isChecked: this.checkboxTarget.checked,
@@ -90,7 +87,9 @@ export default class extends Controller {
             entityType: this.checkboxTarget.dataset.entityType,
             entityCanvas: JSON.parse(this.checkboxTarget.dataset.canvas || 'null'),
             entityFormCanvas: JSON.parse(this.element.closest('[data-list-manager-entity-form-canvas-value]')?.dataset.listManagerEntityFormCanvasValue || 'null'),
-            numericAttributes: numericData[this.idobjetValue] || {},
+            // CORRECTION : Les données numériques sont directement sur l'élément de la ligne.
+            numericData: JSON.parse(this.element.dataset.numericData || '{}'),
+            numericAttributes: JSON.parse(this.element.dataset.numericAttributes || '[]'),
         };
 
         const invalidKeys = Object.entries(payload).filter(([key, value]) => value === null || value === undefined);
