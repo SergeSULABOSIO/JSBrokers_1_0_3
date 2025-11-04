@@ -4,13 +4,15 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 /**
  * @trait ControllerUtilsTrait
@@ -429,5 +431,205 @@ trait ControllerUtilsTrait
             }
         }
         return $parentMap;
+    }
+
+    /**
+     * Traite récursivement un tableau de configuration (ex: menu) pour transformer
+     * les noms de classe complets (FQCN) en noms courts.
+     *
+     * @param array $data Le tableau de données à traiter.
+     * @return array Le tableau de données traité.
+     */
+    protected function processDataForShortEntityNames(array $data): array
+    {
+        $process = function (&$array) use (&$process) {
+            foreach ($array as $key => &$value) {
+                if (is_array($value)) {
+                    $process($value); // Appel récursif sur les sous-tableaux
+                } elseif ($key === 'entity_name' && is_string($value) && class_exists($value)) {
+                    $value = (new \ReflectionClass($value))->getShortName();
+                }
+            }
+        };
+        $process($data);
+        return $data;
+    }
+
+    /**
+     * Retourne la carte de correspondance entre les composants Twig et les actions de contrôleur.
+     *
+     * @return array<string, string|array<string, string>>
+     */
+    private function getComponentMap(): array
+    {
+        // Ce tableau était auparavant une constante dans EspaceDeTravailComponentController.
+        // Le déplacer ici le rend accessible à tous les contrôleurs utilisant ce trait.
+        return [
+            '_tableau_de_bord_component.html.twig' => 'App\Controller\Admin\EntrepriseDashbordController::index',
+            // FINANCES
+            '_view_manager.html.twig' => [
+                \App\Entity\Monnaie::class => 'App\Controller\Admin\MonnaieController::index',
+                \App\Entity\CompteBancaire::class => 'App\Controller\Admin\CompteBancaireController::index',
+                \App\Entity\Taxe::class => 'App\Controller\Admin\TaxeController::index',
+                \App\Entity\TypeRevenu::class => 'App\Controller\Admin\TypeRevenuController::index',
+                \App\Entity\Tranche::class => 'App\Controller\Admin\TrancheController::index',
+                \App\Entity\Chargement::class => 'App\Controller\Admin\ChargementController::index',
+                \App\Entity\Note::class => 'App\Controller\Admin\NoteController::index',
+                \App\Entity\Paiement::class => 'App\Controller\Admin\PaiementController::index',
+                \App\Entity\Bordereau::class => 'App\Controller\Admin\BordereauController::index',
+                \App\Entity\RevenuPourCourtier::class => 'App\Controller\Admin\RevenuCourtierController::index',
+            ],
+            // MARKETING
+            '_view_manager_marketing.html.twig' => [
+                \App\Entity\Piste::class => 'App\Controller\Admin\PisteController::index',
+                \App\Entity\Tache::class => 'App\Controller\Admin\TacheController::index',
+                \App\Entity\Feedback::class => 'App\Controller\Admin\FeedbackController::index',
+            ],
+            // PRODUCTION
+            '_view_manager_production.html.twig' => [
+                \App\Entity\Groupe::class => 'App\Controller\Admin\GroupeController::index',
+                \App\Entity\Client::class => 'App\Controller\Admin\ClientController::index',
+                \App\Entity\Assureur::class => 'App\Controller\Admin\AssureurController::index',
+                \App\Entity\Contact::class => 'App\Controller\Admin\ContactController::index',
+                \App\Entity\Risque::class => 'App\Controller\Admin\RisqueController::index',
+                \App\Entity\Avenant::class => 'App\Controller\Admin\AvenantController::index',
+                \App\Entity\Partenaire::class => 'App\Controller\Admin\PartenaireController::index',
+                \App\Entity\Cotation::class => 'App\Controller\Admin\CotationController::index',
+            ],
+            // SINISTRE
+            '_view_manager_sinistre.html.twig' => [
+                \App\Entity\ModelePieceSinistre::class => 'App\Controller\Admin\ModelePieceSinistreController::index',
+                \App\Entity\NotificationSinistre::class => 'App\Controller\Admin\NotificationSinistreController::index',
+                \App\Entity\OffreIndemnisationSinistre::class => 'App\Controller\Admin\OffreIndemnisationSinistreController::index',
+            ],
+            // ADMINISTRATION
+            '_view_manager_administration.html.twig' => [
+                \App\Entity\Document::class => 'App\Controller\Admin\DocumentController::index',
+                \App\Entity\Classeur::class => 'App\Controller\Admin\ClasseurController::index',
+                \App\Entity\Invite::class => 'App\Controller\Admin\InviteController::index',
+            ],
+            //PARAMETRES
+            '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
+            '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index', // TODO: A remplacer par le bon contrôleur
+        ];
+    }
+
+    protected function forwardToComponent(Request $request): Response
+    {
+        $componentName = $request->query->get('component');
+        $entityName = $request->query->get('entity');
+
+        if (!$componentName) {
+            return new Response('Nom de composant manquant.', Response::HTTP_BAD_REQUEST);
+        }
+
+        $componentMap = $this->getComponentMap();
+        $controllerAction = $componentMap[$componentName] ?? null;
+
+        if (is_array($controllerAction)) {
+            $actionFound = false;
+            foreach ($controllerAction as $classFqcn => $action) {
+                if ((new \ReflectionClass($classFqcn))->getShortName() === $entityName) {
+                    $controllerAction = $action;
+                    $actionFound = true;
+                    break;
+                }
+            }
+            if (!$actionFound) {
+                return new Response('Action de contrôleur non trouvée pour l\'entité: ' . $entityName, Response::HTTP_NOT_FOUND);
+            }
+        }
+
+        if (!$controllerAction || !is_string($controllerAction)) {
+            return new Response('Composant non autorisé ou action de contrôleur invalide.', Response::HTTP_FORBIDDEN);
+        }
+
+        return $this->forward($controllerAction, $request->attributes->all());
+    }
+
+    public function loadCalculatedValues($entityCanvas, $entity)
+    {
+        // --- MODIFICATION : AJOUT DES VALEURS CALCULÉES ---
+        foreach ($entityCanvas['liste'] as $field) {
+            if ($field['type'] === 'Calcul') {
+                $functionName = $field['fonction'];
+                $args = []; // Initialiser le tableau d'arguments
+
+                // On vérifie si la clé "params" existe et n'est pas vide
+                if (!empty($field['params'])) {
+                    // CAS 1 : Des paramètres spécifiques sont listés (logique existante)
+                    $paramNames = $field['params'];
+                    $args = array_map(function ($paramName) use ($entity) {
+                        $getter = 'get' . ucfirst($paramName);
+                        if (method_exists($entity, $getter)) {
+                            return $entity->$getter();
+                        }
+                        return null;
+                    }, $paramNames);
+                } else {
+                    // CAS 2 : La clé "params" est absente, on passe l'entité entière
+                    $args[] = $entity;
+                }
+
+                // On appelle la fonction du service avec les arguments préparés
+                if (method_exists($this->constante, $functionName)) {
+                    $calculatedValue = $this->constante->$functionName(...$args);
+                    // On ajoute le résultat à l'objet entité pour la sérialisation
+                    $entity->{$field['code']} = $calculatedValue;
+                }
+            }
+        }
+        // --- FIN DE LA MODIFICATION ---
+    }
+
+    /**
+     * Récupère une collection d'entités d'un type donné après validation.
+     *
+     * @param string $entityType Le nom court de l'entité (ex: 'Client').
+     * @return array La collection d'entités trouvées.
+     * @throws AccessDeniedException Si le type d'entité n'est pas autorisé.
+     */
+    protected function getEntitiesForType(string $entityType): array
+    {
+        // Sécurité : Vérifier si l'entité est dans la liste autorisée du service de recherche.
+        // Note: Il serait préférable que cette liste soit un paramètre de service plutôt qu'une propriété statique.
+        if (!in_array($entityType, JSBDynamicSearchService::$allowedEntities)) {
+            throw $this->createAccessDeniedException("Cette entité n'est pas accessible.");
+        }
+
+        $entityClass = 'App\\Entity\\' . $entityType;
+        $repository = $this->em->getRepository($entityClass);
+
+        return $repository->findAll();
+    }
+
+    /**
+     * Récupère les détails d'une entité spécifique, son canvas, et charge les valeurs calculées.
+     *
+     * @param string $entityType Le nom court de l'entité (ex: 'Client').
+     * @param int $id L'ID de l'entité à récupérer.
+     * @return array Un tableau contenant l'entité, son type et son canvas.
+     * @throws AccessDeniedException Si le type d'entité n'est pas autorisé.
+     * @throws NotFoundHttpException Si l'entité n'est pas trouvée.
+     */
+    protected function getEntityDetailsForType(string $entityType, int $id): array
+    {
+        // Sécurité : Vérifier si l'entité est autorisée
+        if (!in_array($entityType, JSBDynamicSearchService::$allowedEntities)) {
+            throw $this->createAccessDeniedException("Cette entité n'est pas accessible.");
+        }
+
+        $entityClass = 'App\\Entity\\' . $entityType;
+        $entity = $this->em->getRepository($entityClass)->find($id);
+
+        if (!$entity) {
+            throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
+        }
+
+        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
+        $this->loadCalculatedValues($entityCanvas, $entity);
+
+        // On retourne le tableau de données prêt à être sérialisé.
+        return ['entity' => $entity, 'entityType' => $entityType, 'entityCanvas' => $entityCanvas];
     }
 }

@@ -86,72 +86,9 @@ class EspaceDeTravailComponentController extends AbstractController
         return [];
     }
 
-
-    /**
-     * @var array<string, string>
-     * @deprecated La configuration du menu est maintenant gérée via config/packages/menu.yaml et injectée.
-     * Table de correspondance entre le nom du composant et l'action du contrôleur à appeler.
-     * Format : 'nom_du_composant' => 'Namespace\Controller::methode'
-     */
-    private const COMPONENT_MAP = [
-        '_tableau_de_bord_component.html.twig' => 'App\Controller\Admin\EntrepriseDashbordController::index',
-        // FINANCES
-        '_view_manager.html.twig' => [
-            Monnaie::class => 'App\Controller\Admin\MonnaieController::index',
-            CompteBancaire::class => 'App\Controller\Admin\CompteBancaireController::index',
-            Taxe::class => 'App\Controller\Admin\TaxeController::index',
-            TypeRevenu::class => 'App\Controller\Admin\TypeRevenuController::index',
-            Tranche::class => 'App\Controller\Admin\TrancheController::index',
-            Chargement::class => 'App\Controller\Admin\ChargementController::index',
-            Note::class => 'App\Controller\Admin\NoteController::index',
-            Paiement::class => 'App\Controller\Admin\PaiementController::index',
-            Bordereau::class => 'App\Controller\Admin\BordereauController::index',
-            RevenuPourCourtier::class => 'App\Controller\Admin\RevenuCourtierController::index',
-        ],
-        // MARKETING
-        '_view_manager_marketing.html.twig' => [
-            Piste::class => 'App\Controller\Admin\PisteController::index',
-            Tache::class => 'App\Controller\Admin\TacheController::index',
-            Feedback::class => 'App\Controller\Admin\FeedbackController::index',
-        ],
-        // PRODUCTION
-        '_view_manager_production.html.twig' => [
-            Groupe::class => 'App\Controller\Admin\GroupeController::index',
-            Client::class => 'App\Controller\Admin\ClientController::index',
-            Assureur::class => 'App\Controller\Admin\AssureurController::index',
-            Contact::class => 'App\Controller\Admin\ContactController::index',
-            Risque::class => 'App\Controller\Admin\RisqueController::index',
-            Avenant::class => 'App\Controller\Admin\AvenantController::index',
-            Partenaire::class => 'App\Controller\Admin\PartenaireController::index',
-            Cotation::class => 'App\Controller\Admin\CotationController::index',
-        ],
-        // SINISTRE
-        '_view_manager_sinistre.html.twig' => [
-            ModelePieceSinistre::class => 'App\Controller\Admin\ModelePieceSinistreController::index',
-            NotificationSinistre::class => 'App\Controller\Admin\NotificationSinistreController::index',
-            OffreIndemnisationSinistre::class => 'App\Controller\Admin\OffreIndemnisationSinistreController::index',
-        ],
-        // ADMINISTRATION
-        '_view_manager_administration.html.twig' => [
-            Document::class => 'App\Controller\Admin\DocumentController::index',
-            Classeur::class => 'App\Controller\Admin\ClasseurController::index',
-            Invite::class => 'App\Controller\Admin\InviteController::index',
-        ],
-        //PARAMETRES
-        '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
-        '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index',
-    ];
-
-
-
-
-    #[Route(
-        '/{idInvite}/{idEntreprise}',
+    #[Route('/{idInvite}/{idEntreprise}',
         name: 'index',
-        requirements: [
-            'idInvite' => Requirement::DIGITS,
-            'idEntreprise' => Requirement::DIGITS
-        ],
+        requirements: ['idInvite' => Requirement::DIGITS,'idEntreprise' => Requirement::DIGITS],
         methods: ['GET','POST']
     )]
     public function index(int $idInvite, int $idEntreprise, Request $request): Response
@@ -159,24 +96,11 @@ class EspaceDeTravailComponentController extends AbstractController
         // La validation de l'accès est maintenant dans une méthode privée dédiée.
         $this->validateWorkspaceAccess($request);
 
-        // Le menu est maintenant injecté, mais il faut encore transformer les noms de classe.
-        $menuData = $this->menuData;
-
-        // CORRECTION : Utilisation d'une fonction récursive qui modifie le tableau par référence via ses clés.
-        $processMenu = function (&$array) use (&$processMenu) {
-            foreach ($array as $key => &$value) {
-                if (is_array($value)) {
-                    $processMenu($value); // Appel récursif sur les sous-tableaux
-                } elseif ($key === 'entity_name' && is_string($value) && class_exists($value)) {
-                    // Transformation du nom de classe complet en nom court
-                    $value = (new \ReflectionClass($value))->getShortName();
-                }
-            }
-        };
-        $processMenu($menuData); // On lance la transformation sur tout le tableau
+        // La logique de transformation du menu est maintenant dans le ControllerUtilsTrait.
+        $processedMenuData = $this->processDataForShortEntityNames($this->menuData);
 
         return $this->render('espace_de_travail_component/index.html.twig', [
-            'menu_data' => $menuData,
+            'menu_data' => $processedMenuData,
             'idEntreprise' => $idEntreprise,
             'idInvite' => $idInvite,
         ]);
@@ -191,13 +115,9 @@ class EspaceDeTravailComponentController extends AbstractController
      * @param LoggerInterface $logger
      * @return Response
      */
-    #[Route(
-        '/api/load-component/{idInvite}/{idEntreprise}', 
+    #[Route('/api/load-component/{idInvite}/{idEntreprise}', 
         name: 'api_load_component', 
-        requirements: [
-            'idInvite' => Requirement::DIGITS,
-            'idEntreprise' => Requirement::DIGITS
-        ],
+        requirements: ['idInvite' => Requirement::DIGITS,'idEntreprise' => Requirement::DIGITS],
         methods: ['GET']
     )]
     public function loadComponent(int $idInvite, int $idEntreprise, Request $request, LoggerInterface $logger): Response
@@ -205,139 +125,27 @@ class EspaceDeTravailComponentController extends AbstractController
         // La validation est maintenant centralisée dans une méthode privée.
         $this->validateWorkspaceAccess($request);
 
-        // LOG: Ce que le serveur reçoit du client
-        $logger->info('[ESPACE_DE_TRAVAIL] API /load-component reçue.', [
-            'query_params' => $request->query->all()
+        $logger->info('[ESPACE_DE_TRAVAIL] API /load-component reçue, redirection vers le contrôleur compétent.', [
+            'params' => $request->query->all()
         ]);
-
-        $componentName = $request->query->get('component');
-        $entityName = $request->query->get('entity'); // Nouveau paramètre
-
-        if (!$componentName) {
-            return new Response('Nom de composant manquant.', Response::HTTP_BAD_REQUEST);
-        }
-
-        // 1. Sécurité : Vérifier que le composant demandé est bien dans notre liste autorisée
-        if (!isset(self::COMPONENT_MAP[$componentName])) {
-            return new Response('Composant non autorisé ou non trouvé.', Response::HTTP_FORBIDDEN);
-        }
-
-        $controllerActions = self::COMPONENT_MAP[$componentName];
-
-        // Si les actions sont dans un sous-tableau (basé sur l'entité), on le sélectionne
-        if (is_array($controllerActions)) {
-            $found = false;
-            // On parcourt les actions possibles pour ce composant
-            foreach ($controllerActions as $classFqcn => $action) {
-                // On compare le nom court de la clé avec le nom d'entité reçu
-                if ((new \ReflectionClass($classFqcn))->getShortName() === $entityName) {
-                    $controllerAction = $action;
-                    $found = true;
-                    $logger->info('[ESPACE_DE_TRAVAIL] Action trouvée pour l\'entité.', ['entity' => $entityName, 'action' => $controllerAction]);
-                    break; // On a trouvé, on arrête la boucle
-                }
-            }
-            if (!$found) {
-                $logger->error('[ESPACE_DE_TRAVAIL] Action non trouvée pour l\'entité.', ['entity_short_name' => $entityName, 'available_keys' => array_keys($controllerActions)]);
-                return new Response('Action de contrôleur non trouvée pour l\'entité: ' . $entityName, Response::HTTP_FORBIDDEN);
-            }
-        } elseif (is_string($controllerActions)) {
-            $controllerAction = $controllerActions;
-        } else {
-            return new Response('Configuration du contrôleur invalide.', Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        // 3. Exécuter la sous-requête vers le contrôleur dédié et retourner sa réponse
-        // C'est ici que la magie opère. Symfony va appeler TableauDeBordController::index()
-        // et nous donner son rendu HTML.
-        return $this->forward($controllerAction, [
-            // Vous pouvez même passer des paramètres au contrôleur cible si nécessaire
-            'idEntreprise' => $idEntreprise,
-            'idInvite' => $idInvite,
-        ]);
+        return $this->forwardToComponent($request);
     }
+
 
     #[Route('/api/get-entity-details/{entityType}/{id}', name: 'api_get_entity_details')]
-    public function getEntityDetails(
-        string $entityType,
-        int $id,
-        EntityManagerInterface $em,
-        Constante $constante
-    ): JsonResponse {
-        // Sécurité : Vérifier si l'entité est autorisée
-        if (!in_array($entityType, $this->searchService::$allowedEntities)) {
-            throw $this->createAccessDeniedException("Cette entité n'est pas accessible.");
-        }
-
-        $entityClass = 'App\\Entity\\' . $entityType;
-        $entity = $em->getRepository($entityClass)->find($id);
-
-        if (!$entity) {
-            throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
-        }
-
-        $entityCanvas = $constante->getEntityCanvas($entityClass);
-        $responseData = [
-            'entity' => $entity,
-            'entityType' => $entityType,
-            'entityCanvas' => $entityCanvas
-        ];
-        $this->loadCalculatedValues($entityCanvas, $entity, $constante);
-
-        // On retourne à la fois l'entité et son canvas
-        return $this->json($responseData, 200, [], ['groups' => 'list:read']); // Important d'utiliser le groupe de sérialisation
+    public function getEntityDetails(string $entityType, int $id): JsonResponse {
+        // La logique de récupération et de préparation des données est maintenant dans le trait.
+        $responseData = $this->getEntityDetailsForType($entityType, $id);
+        // Le contrôleur reste responsable de la réponse JSON finale.
+        return $this->json($responseData, 200, [], ['groups' => 'list:read']);
     }
-
-    public function loadCalculatedValues($entityCanvas, $entity, Constante $constante)
-    {
-        // --- MODIFICATION : AJOUT DES VALEURS CALCULÉES ---
-        foreach ($entityCanvas['liste'] as $field) {
-            if ($field['type'] === 'Calcul') {
-                $functionName = $field['fonction'];
-                $args = []; // Initialiser le tableau d'arguments
-
-                // On vérifie si la clé "params" existe et n'est pas vide
-                if (!empty($field['params'])) {
-                    // CAS 1 : Des paramètres spécifiques sont listés (logique existante)
-                    $paramNames = $field['params'];
-                    $args = array_map(function ($paramName) use ($entity) {
-                        $getter = 'get' . ucfirst($paramName);
-                        if (method_exists($entity, $getter)) {
-                            return $entity->$getter();
-                        }
-                        return null;
-                    }, $paramNames);
-                } else {
-                    // CAS 2 : La clé "params" est absente, on passe l'entité entière
-                    $args[] = $entity;
-                }
-
-                // On appelle la fonction du service avec les arguments préparés
-                if (method_exists($constante, $functionName)) {
-                    $calculatedValue = $constante->$functionName(...$args);
-                    // On ajoute le résultat à l'objet entité pour la sérialisation
-                    $entity->{$field['code']} = $calculatedValue;
-                }
-            }
-        }
-        // --- FIN DE LA MODIFICATION ---
-    }
+    
 
     #[Route('/api/get-entities/{entityType}/{idEntreprise}', name: 'api_get_entities', methods: ['GET'])]
-    public function getEntities(string $entityType, int $idEntreprise, EntityManagerInterface $em): JsonResponse
+    public function getEntities(string $entityType, int $idEntreprise): JsonResponse
     {
-        // Sécurité : Vérifier si l'entité est autorisée
-        if (!in_array($entityType, JSBDynamicSearchService::$allowedEntities)) {
-            throw $this->createAccessDeniedException("Cette entité n'est pas accessible.");
-        }
-
-        $entityClass = 'App\\Entity\\' . $entityType;
-        $repository = $em->getRepository($entityClass);
-
-        // On récupère toutes les entités. Pour de grandes listes, il faudrait paginer.
-        $entities = $repository->findAll();
-
+        // La logique de validation et de récupération est maintenant dans le trait.
         // On retourne les entités en utilisant le groupe de sérialisation
-        return $this->json($entities, 200, [], ['groups' => 'list:read']);
+        return $this->json($this->getEntitiesForType($entityType), 200, [], ['groups' => 'list:read']);
     }
 }
