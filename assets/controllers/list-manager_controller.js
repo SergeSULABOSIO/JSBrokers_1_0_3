@@ -7,6 +7,17 @@ import { Controller } from '@hotwired/stimulus';
  * et la communication de l'état de la liste au reste de l'application via le Cerveau.
  */
 export default class extends Controller {
+    // --- CONSTANTES D'ÉVÉNEMENTS ---
+    static EVENTS = {
+        SELECTION_CHANGED: 'ui:selection.changed',
+        DB_REQUEST: 'app:base-données:sélection-request',
+        LIST_REFRESH_REQUEST: 'app:list.refresh-request',
+        LIST_TOGGLE_ALL_REQUEST: 'app:list.toggle-all-request',
+        LIST_DATA_LOADED: 'app:list.data-loaded',
+        LIST_REFRESHED: 'app:list.refreshed',
+        UI_STATUS_NOTIFY: 'ui:status.notify',
+        APP_ERROR_API: 'app:error.api',
+    };
     /**
      * @property {HTMLElement[]} donneesTargets - Le conteneur (<tbody>) où les lignes de données sont affichées.
      * @property {HTMLInputElement[]} selectAllCheckboxTargets - La case à cocher dans l'en-tête pour tout sélectionner.
@@ -24,11 +35,13 @@ export default class extends Controller {
      * @property {StringValue} serverRootNameValue - Le nom racine du contrôleur PHP pour les appels API.
      */
     static values = {
+        nbElements: Number,
+        entite: String,
+        serverRootName: String,
         idEntreprise: Number,
         idInvite: Number,
         entityFormCanvas: Object,
-        entite: String,
-        serverRootName: String
+        numericAttributes: Array,
     };
 
     /**
@@ -44,11 +57,11 @@ export default class extends Controller {
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
-
-        document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
-        document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
-        document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
+        
+        document.addEventListener(ListManagerController.EVENTS.SELECTION_CHANGED, this.boundHandleGlobalSelectionUpdate);
+        document.addEventListener(ListManagerController.EVENTS.DB_REQUEST, this.boundHandleDBRequest);
+        document.addEventListener(ListManagerController.EVENTS.LIST_REFRESH_REQUEST, this.boundHandleGlobalRefresh);
+        document.addEventListener(ListManagerController.EVENTS.LIST_TOGGLE_ALL_REQUEST, this.boundToggleAll); // Écouter l'ordre du Cerveau
     }
 
     /**
@@ -56,10 +69,10 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.removeEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
-        document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
-        document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
+        document.removeEventListener(ListManagerController.EVENTS.SELECTION_CHANGED, this.boundHandleGlobalSelectionUpdate);
+        document.removeEventListener(ListManagerController.EVENTS.DB_REQUEST, this.boundHandleDBRequest);
+        document.removeEventListener(ListManagerController.EVENTS.LIST_REFRESH_REQUEST, this.boundHandleGlobalRefresh);
+        document.removeEventListener(ListManagerController.EVENTS.LIST_TOGGLE_ALL_REQUEST, this.boundToggleAll);
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -71,10 +84,10 @@ export default class extends Controller {
     toggleAll(event) {
         // Si l'événement vient de la case à cocher de l'en-tête, on utilise son état.
         // Sinon (demande du Cerveau), on détermine s'il faut cocher ou décocher.
-        const isTriggeredByUser = event && event.currentTarget === this.selectAllCheckboxTarget;
-        const totalRows = this.rowCheckboxTargets.length;
-        const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length;
-        
+        const isTriggeredByUser = event && this.hasSelectAllCheckboxTarget && event.currentTarget === this.selectAllCheckboxTarget;
+        const totalRows = this.rowCheckboxTargets.length; // Utilise la propriété Stimulus
+        const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length; // Utilise la propriété Stimulus
+
         // Détermine l'action : si tout est déjà coché, on décoche. Sinon, on coche.
         const shouldCheck = isTriggeredByUser ? this.selectAllCheckboxTarget.checked : checkedRows < totalRows;
 
@@ -92,7 +105,7 @@ export default class extends Controller {
         });
 
         // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
-        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos });
+        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos }); // Cet événement est spécifique à la complétion de la sélection
         this.updateSelectAllCheckboxState();
     }
 
@@ -123,10 +136,8 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleGlobalSelectionUpdate(event) {
-        // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
         const selectos = event.detail.selection || [];
         const selectionIds = new Set(selectos.map(s => String(s.id)));
-
         this.rowCheckboxTargets.forEach(checkbox => {
             const checkboxId = String(checkbox.dataset.listRowIdobjetValue);
             checkbox.checked = selectionIds.has(checkboxId);
@@ -141,30 +152,18 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:base-données:sélection-request`.
      */
     async handleDBRequest(event) {
-        console.log(this.nomControleur + " - ICI Demande de chargement reçue.", event.detail);
-        // --- CORRECTION : On s'assure que l'ID de l'entreprise est toujours correct ---
-        // On prend l'ID de l'événement s'il existe, sinon on prend la valeur initiale du contrôleur.
-        const idEntreprise = event.detail.idEntreprise || this.idEntrepriseValue;
-        const idInvite = event.detail.idInvite || this.idInviteValue;
+        this._logDebug("Demande de chargement reçue.", event.detail);
+
+        const { idEntreprise, idInvite } = this._getIdsFromEventOrValues(event.detail);
         const criteria = event.detail.criteria || {};
         const entityName = this.entiteValue;
 
         if (!entityName) return;
 
-        // On reconstruit l'URL avec le bon ID à chaque requête pour plus de sûreté.
-        // const url = `/admin/${this.controleurphpValue}/api/dynamic-query/${idEntreprise}`;
-        const url = `/admin/${this.serverRootNameValue}/api/dynamic-query/${idInvite}/${idEntreprise}`;
-        console.log(this.nomControleur + " - ICI URL:", url);
+        const url = this._buildDynamicQueryUrl(idInvite, idEntreprise);
+        this._logDebug("URL de requête:", url);
 
-        // On récupère le nombre de colonnes depuis l'en-tête du tableau pour que la cellule du spinner puisse s'étendre sur toute la largeur.
-        const columnCount = this.element.querySelector('thead tr')?.childElementCount || 1;
-        this.donneesTarget.innerHTML = `
-            <tr>
-                <td colspan="${columnCount}" class="text-center py-5">
-                    <div class="spinner-container d-flex justify-content-center align-items-center"><div class="custom-spinner"></div></div>
-                </td>
-            </tr>
-        `;
+        this._showLoadingSpinner();
 
         try {
             const response = await fetch(url, {
@@ -178,19 +177,11 @@ export default class extends Controller {
 
             // Affiche les résultats et met à jour l'état
             this.donneesTarget.innerHTML = html;
-            this.resetSelection();
-            // On notifie le Cerveau que la liste est chargée et on lui passe le nombre d'éléments.
-            this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
-            // NOUVEAU : On notifie le Cerveau avec les données numériques pour la barre des totaux.
-            this.notifyCerveau('app:list.data-loaded', {
-                numericData: JSON.parse(this.element.dataset.listManagerNumericDataValue || '{}'), // Un objet est correct ici
-                numericAttributes: JSON.parse(this.element.dataset.listManagerNumericAttributesValue || '[]') // Doit être un tableau
-            });
-            this.notifyCerveau('app:list.refreshed', {}); // NOUVEAU : Notifie le Cerveau que l'actualisation est terminée.
+            this._postDataLoadActions();
 
         } catch (error) {
             this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
-            this.notifyCerveau('app:error.api', { error: error.message });
+            this.notifyCerveau(ListManagerController.EVENTS.APP_ERROR_API, { error: error.message });
         }
     }
 
@@ -204,7 +195,7 @@ export default class extends Controller {
         // 1. L'originatorId est null ou undefined (rafraîchissement global, ex: depuis la toolbar principale ou un save général).
         // 2. L'originatorId correspond à l'ID de ce list-manager (rafraîchissement ciblé).
         // De plus, s'assurer que ce list-manager est bien celui de la vue principale (pas une collection imbriquée).
-        const isMainListManager = this.element.closest('[data-controller="view-manager"]');
+        const isMainListManager = this.element.closest('[data-controller="view-manager"]') !== null;
 
         if (isMainListManager && (originatorId === null || originatorId === undefined || originatorId === this.element.id)) {
             console.log(`${this.nomControleur} - Demande de rafraîchissement reçue.`, event.detail);
@@ -223,7 +214,7 @@ export default class extends Controller {
      * @private
      */
     resetSelection() {
-        this.updateSelectAllCheckboxState();
+        this.updateSelectAllCheckboxState(); // Met à jour l'état de la case "tout cocher"
         // La publication est maintenant gérée par le Cerveau
     }
 
@@ -241,5 +232,80 @@ export default class extends Controller {
             detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
         });
         this.element.dispatchEvent(event);
+    }
+
+    // --- MÉTHODES PRIVÉES DE REFACTORISATION ---
+
+    /**
+     * Récupère les IDs d'entreprise et d'invité depuis l'événement ou les valeurs du contrôleur.
+     * @param {object} detail - Le détail de l'événement.
+     * @returns {{idEntreprise: number, idInvite: number}}
+     * @private
+     */
+    _getIdsFromEventOrValues(detail) {
+        return {
+            idEntreprise: detail.idEntreprise || this.idEntrepriseValue,
+            idInvite: detail.idInvite || this.idInviteValue,
+        };
+    }
+
+    /**
+     * Construit l'URL pour la requête de recherche dynamique.
+     * @param {number} idInvite
+     * @param {number} idEntreprise
+     * @returns {string}
+     * @private
+     */
+    _buildDynamicQueryUrl(idInvite, idEntreprise) {
+        return `/admin/${this.serverRootNameValue}/api/dynamic-query/${idInvite}/${idEntreprise}`;
+    }
+
+    /**
+     * Affiche un spinner de chargement dans le tableau.
+     * @private
+     */
+    _showLoadingSpinner() {
+        const columnCount = this.element.querySelector('thead tr')?.childElementCount || 1;
+        this.donneesTarget.innerHTML = `
+            <tr>
+                <td colspan="${columnCount}" class="text-center py-5">
+                    <div class="spinner-container d-flex justify-content-center align-items-center"><div class="custom-spinner"></div></div>
+                </td>
+            </tr>
+        `;
+    }
+
+    /**
+     * Exécute les actions post-chargement des données.
+     * @private
+     */
+    _postDataLoadActions() {
+        this.resetSelection();
+        this.notifyCerveau(ListManagerController.EVENTS.UI_STATUS_NOTIFY, { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
+        const numericDataPayload = this._extractNumericDataFromResponse();
+        this.notifyCerveau(ListManagerController.EVENTS.LIST_DATA_LOADED, { ...numericDataPayload });
+        this.notifyCerveau(ListManagerController.EVENTS.LIST_REFRESHED, {});
+    }
+
+    /**
+     * Extrait les données numériques (pour les totaux) du HTML de la réponse.
+     * @returns {{numericData: object, numericAttributes: array}}
+     * @private
+     */
+    _extractNumericDataFromResponse() {
+        const responseContainer = this.donneesTarget.querySelector('[data-numeric-attributes-value]');
+        if (!responseContainer) return { numericData: {}, numericAttributes: [] };
+        const numericInfo = JSON.parse(responseContainer.dataset.numericAttributesValue || '{}');
+        return { numericData: numericInfo.valeurs || {}, numericAttributes: numericInfo.colonnes || [] };
+    }
+
+    /**
+     * Méthode de log pour le débogage.
+     * @param {string} message
+     * @param {*} [data]
+     * @private
+     */
+    _logDebug(message, data = null) {
+        console.log(`${this.nomControleur} - ${message}`, data);
     }
 }
