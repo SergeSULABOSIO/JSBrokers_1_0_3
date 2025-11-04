@@ -227,7 +227,7 @@ trait ControllerUtilsTrait
             $parameters['status'] = $reponseData["status"];
             $parameters['totalItems'] = $reponseData["totalItems"];
         }
-
+        // dd("Paramètres - numericAttributes:", $parameters["numericAttributes"]);
         return $this->render($template, $parameters);
     }
 
