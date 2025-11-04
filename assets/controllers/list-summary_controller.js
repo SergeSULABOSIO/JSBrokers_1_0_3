@@ -112,8 +112,8 @@ export default class extends Controller {
         for (const id in this.numericData) {
             const itemData = this.numericData[id];
             // CORRECTION : La valeur est directement dans itemData[attribute], pas dans un sous-objet .value
-            if (itemData && itemData[attribute] && typeof itemData[attribute].value === 'number') {
-                const value = itemData[attribute]; // La valeur est déjà un nombre (en centimes)
+            if (itemData && itemData[attribute] && typeof itemData[attribute].value === 'number') { // Vérifie que la structure est correcte
+                const value = itemData[attribute].value; // La valeur est en centimes
                 globalTotal += value;
 
                 if (this.selectedIds.has(parseInt(id, 10))) {

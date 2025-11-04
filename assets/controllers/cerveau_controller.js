@@ -76,11 +76,6 @@ export default class extends Controller {
                 break;
 
             case 'ui:list-row.selection-changed':
-                // On met à jour les données numériques avec celles de la dernière ligne cliquée.
-                // Cela garantit que la barre des totaux a toujours les bons attributs.
-                this.numericData = payload.numericData || {};
-                this.numericAttributes = payload.numericAttributes || [];
-                // Puis on met à jour l'état de la sélection.
                 this.updateSelectionState(payload);
                 break;
 
