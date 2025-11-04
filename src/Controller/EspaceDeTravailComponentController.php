@@ -13,69 +13,83 @@
 
 namespace App\Controller;
 
-use App\Constantes\Constante;
-use Twig\Environment;
-use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
-use App\Services\JSBDynamicSearchService;
-use ReflectionClass;
-use App\Entity\Monnaie;
-use App\Entity\CompteBancaire;
-use App\Entity\Taxe;
-use App\Entity\TypeRevenu;
-use App\Entity\Tranche;
-use App\Entity\Chargement;
 use App\Entity\Note;
-use App\Entity\Paiement;
-use App\Entity\Bordereau;
-use App\Entity\RevenuCourtier;
+use App\Entity\Taxe;
+use ReflectionClass;
 use App\Entity\Piste;
 use App\Entity\Tache;
-use App\Entity\Feedback;
-use App\Entity\Groupe;
+use Twig\Environment;
 use App\Entity\Client;
-use App\Entity\Assureur;
-use App\Entity\Contact;
+use App\Entity\Groupe;
+use App\Entity\Invite;
 use App\Entity\Risque;
 use App\Entity\Avenant;
-use App\Entity\Partenaire;
+use App\Entity\Contact;
+use App\Entity\Monnaie;
+use App\Entity\Tranche;
+use App\Entity\Assureur;
+use App\Entity\Classeur;
 use App\Entity\Cotation;
+use App\Entity\Document;
+use App\Entity\Feedback;
+use App\Entity\Paiement;
+use App\Entity\Bordereau;
+use App\Entity\Chargement;
+use App\Entity\Partenaire;
+use App\Entity\TypeRevenu;
+use Psr\Log\LoggerInterface;
+use App\Constantes\Constante;
+use App\Entity\CompteBancaire;
+use App\Entity\RevenuPourCourtier;
 use App\Entity\ModelePieceSinistre;
 use App\Entity\NotificationSinistre;
-use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Document;
-use App\Entity\Classeur;
-use App\Entity\Invite;
-use App\Entity\RevenuPourCourtier;
-use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
+use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Log\LoggerInterface;
+use App\Services\JSBDynamicSearchService;
+use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
+use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 #[Route('/espacedetravail', name: 'app_espace_de_travail_component.')]
 #[IsGranted('ROLE_USER')]
 class EspaceDeTravailComponentController extends AbstractController
 {
 
+    use ControllerUtilsTrait;
+
     public function __construct(
         private EntityManagerInterface $em,
         private Constante $constante,
-        private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private JSBDynamicSearchService $searchService,
         private EntrepriseRepository $entrepriseRepository,
-        private InviteRepository $inviteRepository
+        private InviteRepository $inviteRepository,
+        private array $menuData // Injection du paramètre de service
     ) {}
+
+    protected function getCollectionMap(): array
+    {
+        // Utilise la méthode du trait pour construire dynamiquement la carte.
+        return [];
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return [];
+    }
+
 
     /**
      * @var array<string, string>
+     * @deprecated La configuration du menu est maintenant gérée via config/packages/menu.yaml et injectée.
      * Table de correspondance entre le nom du composant et l'action du contrôleur à appeler.
      * Format : 'nom_du_composant' => 'Namespace\Controller::methode'
      */
@@ -142,220 +156,11 @@ class EspaceDeTravailComponentController extends AbstractController
     )]
     public function index(int $idInvite, int $idEntreprise, Request $request): Response
     {
-        // MISSION 2 & 4 : Vérifier si l'entreprise existe.
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        if (!$entreprise) {
-            // Si l'entreprise n'est pas trouvée, on lance une exception pour générer une page 404.
-            // C'est une mesure de sécurité et de propreté.
-            throw $this->createNotFoundException("L'espace de travail pour l'entreprise avec l'ID $idEntreprise n'a pas été trouvé.");
-        }
-        
-        // NOUVEAU : Vérification de l'invité et de son appartenance à l'entreprise
-        /** @var Invite|null $invite */
-        $invite = $this->inviteRepository->find($idInvite);
+        // La validation de l'accès est maintenant dans une méthode privée dédiée.
+        $this->validateWorkspaceAccess($request);
 
-        // On vérifie si l'invité existe ET si son entreprise correspond à celle de l'URL.
-        // Cette condition unique gère les deux cas : invité inexistant ou invité appartenant à une autre entreprise.
-        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
-            throw new AccessDeniedHttpException("Vous n'avez pas les droits pour accéder à cet espace de travail.");
-        }
-
-        $menuData = [
-            // MISSION 1 : Le code existant pour la création du menu est conservé.
-            'colonne_1' => [
-                'tableau_de_bord' => [
-                    'icone' => "ant-design:dashboard-twotone", //source: https://ux.symfony.com/icons
-                    'nom' => "Tableau de bord",
-                    'description' => "Le tableau de bord vous présente la santé de votre société en un seul coup d'oeil.",
-                    'composant_twig' => "_tableau_de_bord_component.html.twig",
-                ],
-                'groupes' => [
-                    "Finances" => [   //Groupe Finances
-                        'icone' => "mdi:finance", //source: https://ux.symfony.com/icons
-                        'description' => "Le groupe Finance présente les fonctions indispensables pour la gestion et le parametrage de tout ce qui a trait avec les finances au sein de votre société de courtage",
-                        'rubriques' => [
-                            "Monnaies" => [
-                                "icone" => "tdesign:money-filled", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => Monnaie::class,
-                            ],
-                            "Comptes bancaires" => [
-                                "icone" => "clarity:piggy-bank-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => CompteBancaire::class,
-                            ],
-                            "Taxes" => [
-                                "icone" => "emojione-monotone:police-car-light", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => Taxe::class,
-                            ],
-                            "Types Revenus" => [
-                                "icone" => "hugeicons:award-01", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => TypeRevenu::class,
-                            ],
-                            "Tranches" => [
-                                "icone" => "icon-park-solid:chart-proportion", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => Tranche::class,
-                            ],
-                            "Types Chargements" => [
-                                "icone" => "tabler:truck-loading", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => Chargement::class,
-                            ],
-                            "Notes" => [
-                                "icone" => "hugeicons:invoice-04", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => Note::class,
-                            ],
-                            "Paiements" => [
-                                "icone" => "streamline:payment-10-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => Paiement::class,
-                            ],
-                            "Bordereaux" => [
-                                "icone" => "gg:list", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => Bordereau::class,
-                            ],
-                            "Revenus pour courtier" => [
-                                "icone" => "hugeicons:money-bag-02", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager.html.twig",
-                                "entity_name" => RevenuPourCourtier::class,
-                            ],
-                        ],
-                    ],
-                    "Marketing" => [   //Groupe Marketing
-                        "icone" => "hugeicons:marketing", //source: https://ux.symfony.com/icons
-                        "description" => "Le groupe Marketing présente les fonctions indispensables pour la gestion et le parametrage de tout ce qui a trait avec vos interactions avec les clients mais aussi entre vous en termes des tâches et des feedbacks.",
-                        "rubriques" => [
-                            "Pistes" => [
-                                "icone" => "fa-solid:road", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_marketing.html.twig",
-                                "entity_name" => Piste::class,
-                            ],
-                            "Tâches" => [
-                                "icone" => "mingcute:task-2-fill", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_marketing.html.twig",
-                                "entity_name" => Tache::class,
-                            ],
-                            "Feedbacks" => [
-                                "icone" => "fluent-mdl2:feedback", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_marketing.html.twig",
-                                "entity_name" => Feedback::class,
-                            ],
-                        ],
-                    ],
-                    "Production" => [  //Groupe Production
-                        "icone" => "streamline-flex:production-belt-time", //source: https://ux.symfony.com/icons
-                        "description" => "Le groupe Production présente les fonctions indispensables pour la gestion et le parametrage de tout ce qui a trait avec votre production càd vos activités génératrices des revenus.",
-                        "rubriques" => [
-                            "Groupes" => [
-                                "icone" => "clarity:group-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Groupe::class,
-                            ],
-                            "Clients" => [
-                                "icone" => "fa-solid:house-user", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Client::class,
-                            ],
-                            "Assureurs" => [
-                                "icone" => "wpf:security-checked", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Assureur::class,
-                            ],
-                            "Contacts" => [
-                                "icone" => "hugeicons:contact-01", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Contact::class,
-                            ],
-                            "Risques" => [
-                                "icone" => "ep:goods", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Risque::class,
-                            ],
-                            "Avenants" => [
-                                "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Avenant::class,
-                            ],
-                            "Intermédiaires" => [
-                                "icone" => "carbon:partnership", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Partenaire::class,
-                            ],
-                            "Propositions" => [
-                                "icone" => "streamline:store-computer-solid", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_production.html.twig",
-                                "entity_name" => Cotation::class,
-                            ],
-                        ],
-                    ],
-                    "Sinistre" => [   //Groupe Sinistre
-                        "icone" => "game-icons:mine-explosion", //source: https://ux.symfony.com/icons
-                        "description" => "Le groupe Sinistre présente les fonctions indispensables pour la gestion et le parametrage de tout ce qui a trait avec les sinistres et leurs compensations.",
-                        "rubriques" => [
-                            "Types pièces" => [
-                                "icone" => "codex:file", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_sinistre.html.twig",
-                                "entity_name" => ModelePieceSinistre::class,
-                            ],
-                            "Notifications" => [
-                                "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_sinistre.html.twig",
-                                "entity_name" => NotificationSinistre::class,
-                            ],
-                            "Règlements" => [
-                                "icone" => "icon-park-outline:funds", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_sinistre.html.twig",
-                                "entity_name" => OffreIndemnisationSinistre::class,
-                            ],
-                        ],
-                    ],
-                    "Administration" => [   //Groupe Administration
-                        "icone" => "clarity:administrator-solid", //source: https://ux.symfony.com/icons
-                        "description" => "Le groupe Administration présente les fonctions indispensables pour la gestion et le parametrage de tout ce qui a trait avec l'organisation des documents chargés sur votre compte ainsi que les personnes que vous inviterez pour travailler en équipe.",
-                        "rubriques" => [
-                            "Documents" => [
-                                "icone" => "famicons:document", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_administration.html.twig",
-                                "entity_name" => Document::class,
-                            ],
-                            "Classeurs" => [
-                                "icone" => "ic:baseline-folder", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_administration.html.twig",
-                                "entity_name" => Classeur::class,
-                            ],
-                            "Invités" => [
-                                "icone" => "raphael:user", //source: https://ux.symfony.com/icons
-                                "composant_twig" => "_view_manager_administration.html.twig",
-                                "entity_name" => Invite::class,
-                            ],
-                        ],
-                    ],
-                ],
-                "parametres" => [
-                    "Mon Compte" => [
-                        "icone" => "material-symbols:settings", //source: https://ux.symfony.com/icons
-                        "composant_twig" => "_mon_compte_component.html.twig",
-                        "description" => "Ici la description sur la fonction Mon Compte",
-                    ],
-                    "Licence" => [
-                        "icone" => "ci:arrows-reload-01", //source: https://ux.symfony.com/icons
-                        "composant_twig" => "_licence_component.html.twig",
-                        "description" => "Ici la description de la fonction de paiement de la licence / Version Premium ou Payante.",
-                    ],
-                ],
-            ],
-            "colonne_2" => [
-                "logo" => "images/entreprises/logofav.png", //source: dans le dossier "public/images/entreprises/logofav.png"
-                "titre" => "JS Brokers",
-                "description" => "Votre partenaire fiable pour optimiser la gestion de votre porte-feuille client.",
-                "version" => "1.1.0",
-            ],
-        ];
+        // Le menu est maintenant injecté, mais il faut encore transformer les noms de classe.
+        $menuData = $this->menuData;
 
         // CORRECTION : Utilisation d'une fonction récursive qui modifie le tableau par référence via ses clés.
         $processMenu = function (&$array) use (&$processMenu) {
@@ -378,8 +183,6 @@ class EspaceDeTravailComponentController extends AbstractController
     }
 
 
-
-
     /**
      * Charge et rend un composant Twig demandé via AJAX.
      *
@@ -399,13 +202,8 @@ class EspaceDeTravailComponentController extends AbstractController
     )]
     public function loadComponent(int $idInvite, int $idEntreprise, Request $request, LoggerInterface $logger): Response
     {
-        // La validation de l'accès est maintenant implicitement faite par la route principale 'index'
-        // qui a déjà vérifié l'association Invite/Entreprise.
-        // On peut ajouter une double vérification ici si on veut être encore plus sûr.
-        $invite = $this->inviteRepository->find($idInvite);
-        if (!$invite || $invite->getEntreprise()->getId() !== $idEntreprise) {
-            throw new AccessDeniedHttpException("Accès non autorisé à ce composant.");
-        }
+        // La validation est maintenant centralisée dans une méthode privée.
+        $this->validateWorkspaceAccess($request);
 
         // LOG: Ce que le serveur reçoit du client
         $logger->info('[ESPACE_DE_TRAVAIL] API /load-component reçue.', [
