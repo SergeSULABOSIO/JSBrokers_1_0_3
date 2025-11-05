@@ -17,7 +17,11 @@ export default class extends Controller {
         "tabContentContainer",
         "tabTemplate",
         "tabContentTemplate",
+        "item", 
+        "searchInput", 
+        "noResultsMessage"
     ];
+
 
     static values = {
         idEntreprise: Number,
@@ -130,11 +134,15 @@ export default class extends Controller {
         if (event.target.tagName.toLowerCase() === 'button' || event.target.closest('button')) {
             return;
         }
+        this.searchInputTarget.focus();
+
+
         // On cherche le contrôleur de l'accordéon et on lui demande de focus son input
-        const accordionController = this.application.getControllerForElementAndIdentifier(event.currentTarget.nextElementSibling, 'accordion');
-        if (accordionController && accordionController.hasSearchInputTarget) {
-            accordionController.searchInputTarget.focus();
-        }
+        // const accordionController = this.application.getControllerForElementAndIdentifier(event.currentTarget.nextElementSibling, 'accordion');
+        // console.log(this.nomControleur + " - FocusSearch - Code: 1986 - Data:", accordionController);
+        // if (accordionController && accordionController.hasSearchInputTarget) {
+        //     accordionController.searchInputTarget.focus();
+        // }
     }
 
 
@@ -232,10 +240,12 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Données de l'attribut:", attribute);
 
         const item = document.createElement('div'); // Cet élément sera la target "item" pour le contrôleur accordion
+        item.dataset.accordionTarget = "item"; // AJOUT : Marque cet élément comme un "item" target pour l'AccordionController
         item.className = 'accordion-item';
         const title = document.createElement('div');
         title.className = 'accordion-title'; // Ensure this class is set
-        title.dataset.action = 'click->workspace-manager#toggleAccordion';
+        title.dataset.action = 'click->accordion#toggle';
+        // title.dataset.action = 'click->workspace-manager#toggleAccordion';
         title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
 
         const content = document.createElement('div');
@@ -661,5 +671,88 @@ export default class extends Controller {
             detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
         });
         this.element.dispatchEvent(event);
+    }
+
+
+    /**
+     * Filtre les éléments de l'accordéon en fonction de la saisie de l'utilisateur.
+     * Applique un surlignage sur le terme recherché.
+     * @param {InputEvent} event
+     */
+    filter(event) {
+        const input = event.currentTarget;
+        const searchTerm = input.value.trim().toLowerCase();
+
+        console.log(this.nomControleur + " - Filter - Code: 1986 - Data:", event.currentTarget);
+
+        let visibleCount = 0;
+
+        this.itemTargets.forEach(item => {
+            const titleElement = item.querySelector('.accordion-title');
+            if (!titleElement) return;
+
+            const toggleIcon = titleElement.querySelector('.accordion-toggle');
+            const iconHtml = toggleIcon ? toggleIcon.outerHTML : '';
+
+            // Stocke le titre original une seule fois pour la performance
+            if (!titleElement.dataset.originalTitle) {
+                const tempClone = titleElement.cloneNode(true);
+                tempClone.querySelector('.accordion-toggle')?.remove();
+                titleElement.dataset.originalTitle = tempClone.textContent.trim();
+            }
+
+            const originalTitleText = titleElement.dataset.originalTitle;
+
+            if (originalTitleText.toLowerCase().includes(searchTerm)) {
+                item.style.display = '';
+                visibleCount++;
+
+                if (searchTerm) {
+                    const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+                    const highlightedText = originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`);
+                    titleElement.innerHTML = `${iconHtml} ${highlightedText}`;
+                } else {
+                    titleElement.innerHTML = `${iconHtml} ${originalTitleText}`;
+                }
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (this.hasNoResultsMessageTarget) {
+            this.noResultsMessageTarget.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * Réinitialise le champ de recherche et le filtre de l'accordéon.
+     */
+    resetFilter() {
+        if (this.hasSearchInputTarget) {
+            this.searchInputTarget.value = '';
+            this.searchInputTarget.dispatchEvent(new Event('input'));
+        }
+    }
+
+    /**
+     * Bascule l'affichage du contenu d'un item d'accordéon (ouvert/fermé).
+     * @param {MouseEvent} event
+     */
+    toggle(event) {
+        const title = event.currentTarget;
+        const content = title.nextElementSibling;
+        const toggleIcon = title.querySelector('.accordion-toggle');
+
+        if (!content || !toggleIcon) return;
+
+        const isOpen = content.classList.contains('open');
+
+        if (isOpen) {
+            content.classList.remove('open');
+            toggleIcon.textContent = '+';
+        } else {
+            content.classList.add('open');
+            toggleIcon.textContent = '-';
+        }
     }
 }
