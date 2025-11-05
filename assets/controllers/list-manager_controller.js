@@ -7,17 +7,7 @@ import { Controller } from '@hotwired/stimulus';
  * et la communication de l'état de la liste au reste de l'application via le Cerveau.
  */
 export default class extends Controller {
-    // --- CONSTANTES D'ÉVÉNEMENTS ---
-    static EVENTS = {
-        SELECTION_CHANGED: 'ui:selection.changed',
-        DB_REQUEST: 'app:base-données:sélection-request',
-        LIST_REFRESH_REQUEST: 'app:list.refresh-request',
-        LIST_TOGGLE_ALL_REQUEST: 'app:list.toggle-all-request',
-        LIST_DATA_LOADED: 'app:list.data-loaded',
-        LIST_REFRESHED: 'app:list.refreshed',
-        UI_STATUS_NOTIFY: 'ui:status.notify',
-        APP_ERROR_API: 'app:error.api',
-    };
+    
     /**
      * @property {HTMLElement[]} donneesTargets - Le conteneur (<tbody>) où les lignes de données sont affichées.
      * @property {HTMLInputElement[]} selectAllCheckboxTargets - La case à cocher dans l'en-tête pour tout sélectionner.
@@ -58,10 +48,10 @@ export default class extends Controller {
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
         
-        document.addEventListener(ListManagerController.EVENTS.SELECTION_CHANGED, this.boundHandleGlobalSelectionUpdate);
-        document.addEventListener(ListManagerController.EVENTS.DB_REQUEST, this.boundHandleDBRequest);
-        document.addEventListener(ListManagerController.EVENTS.LIST_REFRESH_REQUEST, this.boundHandleGlobalRefresh);
-        document.addEventListener(ListManagerController.EVENTS.LIST_TOGGLE_ALL_REQUEST, this.boundToggleAll); // Écouter l'ordre du Cerveau
+        document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
+        document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
+        document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
     }
 
     /**
@@ -69,10 +59,10 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener(ListManagerController.EVENTS.SELECTION_CHANGED, this.boundHandleGlobalSelectionUpdate);
-        document.removeEventListener(ListManagerController.EVENTS.DB_REQUEST, this.boundHandleDBRequest);
-        document.removeEventListener(ListManagerController.EVENTS.LIST_REFRESH_REQUEST, this.boundHandleGlobalRefresh);
-        document.removeEventListener(ListManagerController.EVENTS.LIST_TOGGLE_ALL_REQUEST, this.boundToggleAll);
+        document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        document.removeEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
+        document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
+        document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
     }
 
     // --- GESTION DE LA SÉLECTION ---

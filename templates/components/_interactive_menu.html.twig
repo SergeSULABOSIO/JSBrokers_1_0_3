@@ -144,10 +144,10 @@
                 <input type="text" 
                     class="accordion-search-input"
                     placeholder="Filtrer Ici"
-                    data-action="input->accordion#filter"
-                    data-accordion-target="searchInput"
+                    data-action="input->workspace-manager#filter"
+                    data-workspace-manager-target="searchInput"
                 >
-                <button type="button" class="icon-button" data-action="click->accordion#resetFilter" title="Réinitialiser">
+                <button type="button" class="icon-button" data-action="click->workspace-manager#resetFilter" title="Réinitialiser">
                     {{ ux_icon('heroicons:x-mark') }}
                 </button>
                 <span class="separator"></span>
@@ -155,10 +155,10 @@
                     {{ ux_icon('lucide:log-out') }}
                 </button>
             </div>
-            <div class="accordion" data-controller="accordion">
+            <div class="accordion" data-controller="workspace-manager">
                 {# L'accordéon avec les détails de l'entité sera généré ici par Stimulus #}
             </div>
-            <div class="no-results-message" data-accordion-target="noResultsMessage" style="display: none;">
+            <div class="no-results-message" data-workspace-manager-target="noResultsMessage" style="display: none;">
                 Aucun attribut ne correspond à votre recherche.
             </div>
         </div>
