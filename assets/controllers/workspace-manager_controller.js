@@ -17,7 +17,6 @@ export default class extends Controller {
         "tabContentContainer",
         "tabTemplate",
         "tabContentTemplate",
-        "accordionSearchInput",
     ];
 
     static values = {
@@ -51,7 +50,6 @@ export default class extends Controller {
 
         this.boundHandleLoadingStop = this.handleLoadingStop.bind(this);
         document.addEventListener('app:loading.stop', this.boundHandleLoadingStop);
-        this.accordionController = this.application.getControllerForElementAndIdentifier(this.element, 'accordion');
     }
 
     /**
@@ -124,73 +122,6 @@ export default class extends Controller {
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
     }
 
-
-    /**
-     * Filtre les éléments de l'accordéon dans un onglet en fonction de la saisie de l'utilisateur.
-     * Applique un surlignage sur le terme recherché.
-     * @param {InputEvent} event
-     */
-    filterAccordion(event) {
-        const input = event.currentTarget;
-        const searchTerm = input.value.trim();
-        const tabContent = input.closest('.tab-content');
-        const accordion = tabContent.querySelector('.accordion');
-        const noResultsMessage = tabContent.querySelector('.no-results-message');
-        const items = accordion.querySelectorAll('.accordion-item');
-        let visibleCount = 0;
-
-        items.forEach(item => {
-            const titleElement = item.querySelector('.accordion-title');
-            const toggleIcon = titleElement.querySelector('.accordion-toggle');
-            const iconHtml = toggleIcon ? toggleIcon.outerHTML : '';
-
-            // Stocke le titre original une seule fois pour la performance
-            if (!titleElement.dataset.originalTitle) {
-                const tempClone = titleElement.cloneNode(true);
-                tempClone.querySelector('.accordion-toggle')?.remove();
-                titleElement.dataset.originalTitle = tempClone.textContent.trim();
-            }
-
-            const originalTitleText = titleElement.dataset.originalTitle;
-
-            // La recherche est insensible à la casse
-            if (originalTitleText.toLowerCase().includes(searchTerm.toLowerCase())) {
-                item.style.display = '';
-                visibleCount++;
-
-                // Applique le surlignage si un terme est recherché
-                if (searchTerm) {
-                    // Regex insensible à la casse pour trouver le terme
-                    const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-                    // '$&' réinsère la correspondance originale (pour préserver la casse)
-                    const highlightedText = originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`);
-                    // Reconstruction robuste de l'innerHTML
-                    titleElement.innerHTML = `${iconHtml} ${highlightedText}`;
-                } else {
-                    // Restaure le titre original si la recherche est vide
-                    titleElement.innerHTML = `${iconHtml} ${originalTitleText}`;
-                }
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        // Gérer le message "aucun résultat"
-        noResultsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
-    }
-
-    /**
-     * Réinitialise le champ de recherche et le filtre de l'accordéon.
-     */
-    resetFilter(event) {
-        const input = event.currentTarget.closest('.accordion-search-bar').querySelector('.accordion-search-input');
-        if (input) {
-            input.value = '';
-            // Déclenche manuellement l'événement 'input' pour mettre à jour la liste
-            input.dispatchEvent(new Event('input'));
-        }
-    }
-
     /**
      * Donne le focus au champ de recherche de l'accordéon quand on clique sur la barre.
      */
@@ -199,7 +130,11 @@ export default class extends Controller {
         if (event.target.tagName.toLowerCase() === 'button' || event.target.closest('button')) {
             return;
         }
-        event.currentTarget.querySelector('.accordion-search-input').focus();
+        // On cherche le contrôleur de l'accordéon et on lui demande de focus son input
+        const accordionController = this.application.getControllerForElementAndIdentifier(event.currentTarget.nextElementSibling, 'accordion');
+        if (accordionController && accordionController.hasSearchInputTarget) {
+            accordionController.searchInputTarget.focus();
+        }
     }
 
 
@@ -296,7 +231,7 @@ export default class extends Controller {
     createAccordionItem(attribute, entity) {
         console.log(this.nomControleur + " - Données de l'attribut:", attribute);
 
-        const item = document.createElement('div');
+        const item = document.createElement('div'); // Cet élément sera la target "item" pour le contrôleur accordion
         item.className = 'accordion-item';
         const title = document.createElement('div');
         title.className = 'accordion-title'; // Ensure this class is set
@@ -497,32 +432,6 @@ export default class extends Controller {
             if (lastTab) this.activateTab({ currentTarget: lastTab });
         }
     }
-
-
-
-    /**
-     * Bascule l'affichage du contenu d'un item d'accordéon (ouvert/fermé).
-     * @param {Event} event 
-     */
-    toggleAccordion(event) {
-        const title = event.currentTarget;
-        const content = title.nextElementSibling;
-        const toggleIcon = title.querySelector('.accordion-toggle');
-
-        // Vérifie si le panneau est déjà ouvert
-        const isOpen = content.classList.contains('open');
-
-        if (isOpen) {
-            // Si oui, on le ferme
-            content.classList.remove('open');
-            toggleIcon.textContent = '+';
-        } else {
-            // Si non, on l'ouvre
-            content.classList.add('open');
-            toggleIcon.textContent = '-';
-        }
-    }
-
 
     /**
      * Formate une valeur en fonction de son type.
