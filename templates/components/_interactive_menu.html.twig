@@ -33,7 +33,7 @@
                     data-workspace-manager-description-param="{{ menu.colonne_1.tableau_de_bord.description }}"
                     data-workspace-manager-target="dashboardItem"  {# AJOUTEZ CETTE LIGNE #}
                 >
-                    <twig:ux:icon name="{{ menu.colonne_1.tableau_de_bord.icone }}" class="nav-icon"/>
+                    {{ component('ux:icon', { name: (menu.colonne_1.tableau_de_bord.icone), class: 'nav-icon' }) }}
                     <span class="nav-text">{{ menu.colonne_1.tableau_de_bord.nom }}</span>
                 </div>
             </div>
@@ -46,7 +46,7 @@
                         data-workspace-manager-group-name-param="{{ group_name }}"
                         data-workspace-manager-description-param="{{ group_data.description }}"
                     >
-                        <twig:ux:icon name="{{ group_data.icone }}" class="nav-icon"/>
+                        {{ component('ux:icon', { name: (group_data.icone), class: 'nav-icon' }) }}
                         <span class="nav-text">{{ group_name }}</span>
                     </div>
                 {% endfor %}
@@ -60,7 +60,7 @@
                         data-workspace-manager-component-name-param="{{ param_data.composant_twig }}"
                         data-workspace-manager-description-param="{{ param_data.description }}"
                     >
-                        <twig:ux:icon name="{{ param_data.icone }}" class="nav-icon"/>
+                        {{ component('ux:icon', { name: (param_data.icone), class: 'nav-icon' }) }}
                         <span class="nav-text">{{ param_name }}</span>
                     </div>
                 {% endfor %}
@@ -116,7 +116,7 @@
                             data-workspace-manager-entity-name-param="{{ rubrique_data.entity_name|default('') }}"
                             data-workspace-manager-description-param=""
                         >
-                            <twig:ux:icon name="{{ rubrique_data.icone }}" class="rubrique-icon" />
+                            {{ component('ux:icon', { name: (rubrique_data.icone), class: 'rubrique-icon' }) }}
                             <span class="rubrique-text">{{ rubrique_name }}</span>
                         </div>
                     {% endfor %}
@@ -125,16 +125,11 @@
         </div>
     </template>
 
-    {# [MODIFICATION 3] AJOUT DES TEMPLATES POUR LES ONGLETS ET LEUR CONTENU #}
-
     {# Template pour un seul onglet (le titre cliquable) #}
     <template data-workspace-manager-target="tabTemplate">
         <div class="tab-item" data-action="click->workspace-manager#activateTab">
-            {# MODIFICATION : Le contenu de l'icône est vide. JS s'en occupera. #}
             <span class="tab-item-icon">{{ ux_icon('mage:file-2') }}</span>
-            <span class="tab-item-title" data-role="tab-title"></span> {# L'ID de l'objet ira ici [cite: 52] #}
-            {# <button class="tab-item-close" data-action="click->workspace-manager#closeTab">X</button> #}
-            {# MODIFICATION : Le "X" est remplacé par une icône #}
+            <span class="tab-item-title" data-role="tab-title"></span>
             <button class="tab-item-close" data-action="click->workspace-manager#closeTab">
                 {{ ux_icon('heroicons:x-mark') }}
             </button>
@@ -149,10 +144,10 @@
                 <input type="text" 
                     class="accordion-search-input"
                     placeholder="Filtrer Ici"
-                    data-action="input->workspace-manager#filterAccordion"
-                    data-workspace-manager-target="accordionSearchInput"
+                    data-action="input->accordion#filter"
+                    data-accordion-target="searchInput"
                 >
-                <button type="button" class="icon-button" data-action="click->workspace-manager#resetFilter" title="Réinitialiser">
+                <button type="button" class="icon-button" data-action="click->accordion#resetFilter" title="Réinitialiser">
                     {{ ux_icon('heroicons:x-mark') }}
                 </button>
                 <span class="separator"></span>
@@ -163,7 +158,7 @@
             <div class="accordion" data-controller="accordion">
                 {# L'accordéon avec les détails de l'entité sera généré ici par Stimulus #}
             </div>
-            <div class="no-results-message" style="display: none;">
+            <div class="no-results-message" data-accordion-target="noResultsMessage" style="display: none;">
                 Aucun attribut ne correspond à votre recherche.
             </div>
         </div>

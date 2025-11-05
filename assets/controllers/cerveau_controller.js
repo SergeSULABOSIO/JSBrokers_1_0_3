@@ -138,6 +138,11 @@ export default class extends Controller {
             case 'app:list.data-loaded':
                 this.numericData = payload.numericData || {};
                 this.numericAttributes = payload.numericAttributes || {};
+                // --- AJOUT DU LOG ---
+                console.log("🧠 [Cerveau] Données numériques reçues:", { 
+                    attributes: this.numericAttributes, 
+                    data: this.numericData 
+                });
                 break;
 
             case 'ui:context-menu.request':
