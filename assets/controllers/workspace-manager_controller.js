@@ -240,12 +240,11 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Données de l'attribut:", attribute);
 
         const item = document.createElement('div'); // Cet élément sera la target "item" pour le contrôleur accordion
-        item.dataset.accordionTarget = "item"; // AJOUT : Marque cet élément comme un "item" target pour l'AccordionController
+        item.dataset.workspaceManagerTarget = "item"; // L'élément est une cible pour le contrôleur workspace-manager
         item.className = 'accordion-item';
         const title = document.createElement('div');
         title.className = 'accordion-title'; // Ensure this class is set
-        title.dataset.action = 'click->accordion#toggle';
-        // title.dataset.action = 'click->workspace-manager#toggleAccordion';
+        title.dataset.action = 'click->workspace-manager#toggle'; // L'action appelle la méthode toggle de ce contrôleur
         title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
 
         const content = document.createElement('div');
