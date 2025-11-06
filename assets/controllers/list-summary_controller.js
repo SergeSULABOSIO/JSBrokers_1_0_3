@@ -57,10 +57,28 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Code: 1980 - handleStateUpdate - Received selection:", selection, "numericAttributesAndValues:", numericAttributesAndValues);
 
         // On décompose l'objet ici, dans le contrôleur consommateur
-        const numericAttributes = numericAttributesAndValues.colonnes || [];
-        const numericData = numericAttributesAndValues.valeurs || {};
+        let numericAttributes = [];
+        let numericData = {};
 
+        // Récupérer le premier élément (ID) de numericAttributesAndValues pour extraire les noms des attributs
+        if (numericAttributesAndValues && Object.keys(numericAttributesAndValues).length > 0) {
+            const firstKey = Object.keys(numericAttributesAndValues)[0];
+            const firstElement = numericAttributesAndValues[firstKey];
+    
+            // Vérifier si firstElement est un objet et contient des propriétés avec une description
+            if (typeof firstElement === 'object' && firstElement !== null) {
+                numericAttributes = Object.entries(firstElement).map(([attribut_code, details]) => ({
+                    attribut_code: attribut_code,
+                    titre_colonne: details.description // Extraire le titre de chaque colonne
+                }));
+            }
+            numericData = numericAttributesAndValues;
+        }
+
+        
         // Si aucun attribut numérique n'est fourni, on masque la barre et on réinitialise tout.
+
+
         if (!Array.isArray(numericAttributes) || numericAttributes.length === 0) {
             this.element.style.display = 'none';
             this.numericData = {};
@@ -137,6 +155,7 @@ export default class extends Controller {
     displayTotals(globalTotal, selectionTotal) {
         console.log(this.nomControleur + " - Code: 1980 - displayTotals - Global Total:", globalTotal, "Selection Total:", selectionTotal);
         this.globalTotalTarget.textContent = this.formatCurrency(globalTotal);
+
         this.selectionTotalTarget.textContent = this.formatCurrency(selectionTotal);
     }
 
