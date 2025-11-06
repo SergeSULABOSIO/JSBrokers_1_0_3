@@ -53,16 +53,19 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleStateUpdate(event) {
-        const { selection, numericAttributes, numericData } = event.detail;
-        console.log(this.nomControleur + " - Code: 1980 - handleStateUpdate - Received selection:", selection, "numericAttributes:", numericAttributes, "numericData:", numericData);
+        const { selection, numericAttributesAndValues } = event.detail;
+        console.log(this.nomControleur + " - Code: 1980 - handleStateUpdate - Received selection:", selection, "numericAttributesAndValues:", numericAttributesAndValues);
+
+        // On décompose l'objet ici, dans le contrôleur consommateur
+        const numericAttributes = numericAttributesAndValues.colonnes || [];
+        const numericData = numericAttributesAndValues.valeurs || {};
 
         // Si aucun attribut numérique n'est fourni, on masque la barre et on réinitialise tout.
-        // CORRECTION : On vérifie si c'est un tableau non vide.
         if (!Array.isArray(numericAttributes) || numericAttributes.length === 0) {
             this.element.style.display = 'none';
             this.numericData = {};
             this.selectedIds.clear();
-            this.updateAttributeSelector({});
+            this.updateAttributeSelector([]);
             this.displayTotals(0, 0);
             return;
         }
@@ -71,7 +74,7 @@ export default class extends Controller {
         this.element.style.display = 'flex';
         this.numericData = numericData || {};
         this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
-        this.updateAttributeSelector(numericAttributes || {});
+        this.updateAttributeSelector(numericAttributes);
         this.recalculate();
     }
 
