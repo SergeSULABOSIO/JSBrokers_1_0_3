@@ -31,7 +31,7 @@ export default class extends Controller {
         idEntreprise: Number,
         idInvite: Number,
         entityFormCanvas: Object,
-        numericAttributes: Array,
+        numericAttributesAndValues: Object, // Correction: Changed from Array to Object
     };
 
     /**
@@ -48,6 +48,7 @@ export default class extends Controller {
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
         
+        console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
         document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
@@ -283,10 +284,21 @@ export default class extends Controller {
      * @private
      */
     _extractNumericDataFromResponse() {
-        const responseContainer = this.donneesTarget.querySelector('[data-numeric-attributes-value]');
-        if (!responseContainer) return { numericData: {}, numericAttributes: [] };
-        const numericInfo = JSON.parse(responseContainer.dataset.numericAttributesValue || '{}');
-        return { numericData: numericInfo.valeurs || {}, numericAttributes: numericInfo.colonnes || [] };
+        const responseContainer = this.donneesTarget.querySelector('[data-numeric-attributes-and-values]');
+        let extractedNumericData = {};
+        let extractedNumericAttributesDefinitions = []; // This will be the 'colonnes' array
+
+        if (responseContainer) {
+            const rawData = JSON.parse(responseContainer.dataset.numericAttributesAndValues || '{}');
+            extractedNumericData = rawData.valeurs || {};
+            extractedNumericAttributesDefinitions = rawData.colonnes || [];
+        } else {
+            // Fallback: If no new data is found in the AJAX response, use the initial definitions from the full page load.
+            extractedNumericAttributesDefinitions = this.numericAttributesValue.colonnes || [];
+        }
+        const payload = { numericData: extractedNumericData, numericAttributes: extractedNumericAttributesDefinitions };
+        console.log(this.nomControleur + " - Code: 1980 - _extractNumericDataFromResponse - Extracted payload for Cerveau:", payload);
+        return payload;
     }
 
     /**

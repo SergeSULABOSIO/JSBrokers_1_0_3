@@ -54,7 +54,7 @@ export default class extends Controller {
      */
     handleStateUpdate(event) {
         const { selection, numericAttributes, numericData } = event.detail;
-        console.log(this.nomControleur + " - code: 1986 - Data:", event.detail);
+        console.log(this.nomControleur + " - Code: 1980 - handleStateUpdate - Received selection:", selection, "numericAttributes:", numericAttributes, "numericData:", numericData);
 
         // Si aucun attribut numérique n'est fourni, on masque la barre et on réinitialise tout.
         // CORRECTION : On vérifie si c'est un tableau non vide.
@@ -81,6 +81,7 @@ export default class extends Controller {
      * @private
      */
     updateAttributeSelector(attributes) {
+        console.log(this.nomControleur + " - Code:1980 - updateAttributeSelector - Attributes for selector:", attributes);
         // On vide les options existantes
         this.attributeSelectorTarget.innerHTML = '<option value="">-- Choisir --</option>';
 
@@ -131,6 +132,7 @@ export default class extends Controller {
      * @private
      */
     displayTotals(globalTotal, selectionTotal) {
+        console.log(this.nomControleur + " - Code: 1980 - displayTotals - Global Total:", globalTotal, "Selection Total:", selectionTotal);
         this.globalTotalTarget.textContent = this.formatCurrency(globalTotal);
         this.selectionTotalTarget.textContent = this.formatCurrency(selectionTotal);
     }
