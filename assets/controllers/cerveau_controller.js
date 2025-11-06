@@ -24,8 +24,7 @@ export default class extends Controller {
         // --- NOUVELLE ARCHITECTURE : Le Cerveau devient la source de vérité pour la sélection ---
         this.selectionState = []; // Tableau des objets "selecto"
         this.selectionIds = new Set(); // Pour une recherche rapide des IDs
-        this.numericData = {}; // Données numériques de la liste active
-        this.numericAttributes = {}; // Description des attributs numériques
+        this.numericAttributesAndValues = {}; // Stocke l'objet complet {colonnes, valeurs}
         this.currentIdEntreprise = null;
         this.currentIdInvite = null;
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
@@ -136,12 +135,10 @@ export default class extends Controller {
             
             // NOUVEAU : La liste a chargé ses données, on stocke les infos numériques.
             case 'app:list.data-loaded':
-                this.numericData = payload.numericData || {};
-                this.numericAttributes = payload.numericAttributes || {};
+                this.numericAttributesAndValues = payload.numericAttributesAndValues || {};
                 // --- AJOUT DU LOG ---
                 console.log("🧠 [Cerveau] Données numériques reçues:", { 
-                    attributes: this.numericAttributes, 
-                    data: this.numericData 
+                    numericAttributesAndValues: this.numericAttributesAndValues
                 });
                 break;
 
@@ -254,11 +251,10 @@ export default class extends Controller {
      */
     publishSelection() {
         // --- NOUVELLE ARCHITECTURE ---
-        console.log(this.nomControleur + " - Code: 1980 - Publication de l'état de sélection mis à jour. Selection:", this.selectionState, "Numeric Data:", this.numericData, "Numeric Attributes:", this.numericAttributes);
+        console.log(this.nomControleur + " - Code: 1980 - Publication de l'état de sélection mis à jour. Selection:", this.selectionState, "NumericAttributesAndValues:", this.numericAttributesAndValues);
         this.broadcast('ui:selection.changed', {
             selection: this.selectionState,
-            numericData: this.numericData,
-            numericAttributes: this.numericAttributes
+            numericAttributesAndValues: this.numericAttributesAndValues
         });
     }
 

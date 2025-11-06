@@ -48,6 +48,11 @@ export default class extends Controller {
         this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
         
+        // On notifie le cerveau avec les données numériques initiales
+        this.notifyCerveau('app:list.data-loaded', {
+            numericAttributesAndValues: this.numericAttributesAndValuesValue
+        });
+
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
@@ -172,7 +177,7 @@ export default class extends Controller {
 
         } catch (error) {
             this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
-            this.notifyCerveau(ListManagerController.EVENTS.APP_ERROR_API, { error: error.message });
+            this.notifyCerveau("app:error.api", { error: error.message });
         }
     }
 
@@ -272,10 +277,11 @@ export default class extends Controller {
      */
     _postDataLoadActions() {
         this.resetSelection();
-        this.notifyCerveau(ListManagerController.EVENTS.UI_STATUS_NOTIFY, { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
-        const numericDataPayload = this._extractNumericDataFromResponse();
-        this.notifyCerveau(ListManagerController.EVENTS.LIST_DATA_LOADED, { ...numericDataPayload });
-        this.notifyCerveau(ListManagerController.EVENTS.LIST_REFRESHED, {});
+        this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
+        const numericDataPayload = this._extractNumericDataFromResponse(); // Renvoie { numericAttributesAndValues: {...} }
+        // On envoie le payload tel quel au cerveau
+        this.notifyCerveau('app:list.data-loaded', numericDataPayload);
+        this.notifyCerveau('app:list.refreshed', {});
     }
 
     /**
@@ -285,18 +291,15 @@ export default class extends Controller {
      */
     _extractNumericDataFromResponse() {
         const responseContainer = this.donneesTarget.querySelector('[data-numeric-attributes-and-values]');
-        let extractedNumericData = {};
-        let extractedNumericAttributesDefinitions = []; // This will be the 'colonnes' array
+        let numericAttributesAndValues = {};
 
         if (responseContainer) {
-            const rawData = JSON.parse(responseContainer.dataset.numericAttributesAndValues || '{}');
-            extractedNumericData = rawData.valeurs || {};
-            extractedNumericAttributesDefinitions = rawData.colonnes || [];
+            numericAttributesAndValues = JSON.parse(responseContainer.dataset.numericAttributesAndValues || '{}');
         } else {
-            // Fallback: If no new data is found in the AJAX response, use the initial definitions from the full page load.
-            extractedNumericAttributesDefinitions = this.numericAttributesValue.colonnes || [];
+            // Fallback: Si aucune nouvelle donnée n'est trouvée dans la réponse AJAX, on utilise les données initiales.
+            numericAttributesAndValues = this.numericAttributesAndValuesValue;
         }
-        const payload = { numericData: extractedNumericData, numericAttributes: extractedNumericAttributesDefinitions };
+        const payload = { numericAttributesAndValues: numericAttributesAndValues };
         console.log(this.nomControleur + " - Code: 1980 - _extractNumericDataFromResponse - Extracted payload for Cerveau:", payload);
         return payload;
     }
