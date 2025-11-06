@@ -254,7 +254,7 @@ export default class extends Controller {
      */
     publishSelection() {
         // --- NOUVELLE ARCHITECTURE ---
-        console.log("-> ACTION: Publication de l'état de sélection mis à jour.", this.selectionState);
+        console.log(this.nomControleur + " - Code: 1980 - Publication de l'état de sélection mis à jour. Selection:", this.selectionState, "Numeric Data:", this.numericData, "Numeric Attributes:", this.numericAttributes);
         this.broadcast('ui:selection.changed', {
             selection: this.selectionState,
             numericData: this.numericData,

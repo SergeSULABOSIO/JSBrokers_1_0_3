@@ -220,7 +220,7 @@ trait ControllerUtilsTrait
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
-            'numericAttributes' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data),
+            'numericAttributesAndValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // Pass for dynamic queries
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,
         ];

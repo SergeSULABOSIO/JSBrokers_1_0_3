@@ -22,7 +22,7 @@
         data-list-manager-id-entreprise-value="{{ idEntreprise }}" 
         data-list-manager-id-invite-value="{{ idInvite }}"  
         data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
-        data-list-manager-numeric-attributes-value='{{ numericAttributes|default({})|json_encode|e('html_attr') }}' 
+        data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}' 
     > 
         <div class="table-scroll-wrapper flex-grow-1">
             {% if data is not empty %}
