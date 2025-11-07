@@ -1,7 +1,6 @@
 // assets/controllers/search-bar_controller.js
 import { Controller } from '@hotwired/stimulus';
 import { Toast } from 'bootstrap';
-import { buildCustomEventForElement } from './base_controller.js';
 
 export default class extends Controller {
     static targets = [
