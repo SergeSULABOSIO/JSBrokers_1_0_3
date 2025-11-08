@@ -22,15 +22,18 @@ export default class extends BaseController {
     connect() {
         this.nomControleur = "SEARCH_BAR";
         this.modal = new Modal(this.advancedSearchModalTarget);
-
+        this.boundAdjustZIndex = this.adjustZIndex.bind(this);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
+        // Écoute l'événement 'shown.bs.modal' pour ajuster le z-index après l'affichage
+        this.advancedSearchModalTarget.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
 
         this.initializeCriteria(); // NOUVEAU : On initialise les critères directement
     }
 
     disconnect() {
+        this.advancedSearchModalTarget.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
         document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
     }
 
@@ -122,6 +125,31 @@ export default class extends BaseController {
     }
 
     // --- Méthodes existantes (inchangées) ---
+
+    /**
+     * Ajuste le `z-index` de la modale pour s'assurer qu'elle apparaît
+     * au-dessus des autres modales déjà ouvertes. Essentiel pour les dialogues imbriqués.
+     * @private
+     */
+    adjustZIndex() {
+        // Récupère tous les backdrops visibles.
+        const backdrops = document.querySelectorAll('.modal-backdrop.show');
+
+        // S'il n'y a aucun backdrop, il n'y a rien à faire.
+        if (backdrops.length === 0) {
+            return;
+        }
+
+        // Trouve le z-index le plus élevé parmi tous les backdrops.
+        // La valeur par défaut de Bootstrap est 1050.
+        const maxBackdropZIndex = Math.max(...Array.from(backdrops).map(backdrop => {
+            return parseInt(window.getComputedStyle(backdrop).zIndex, 10) || 1050;
+        }));
+
+        // Positionne notre modale juste au-dessus du backdrop le plus élevé.
+        // Le z-index d'une modale est généralement celui de son backdrop + 1.
+        this.advancedSearchModalTarget.style.zIndex = maxBackdropZIndex + 1;
+    }
 
     /**
      * NOUVEAU : Fusion de la logique de search-criteria_controller.
