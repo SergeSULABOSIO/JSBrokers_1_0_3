@@ -142,7 +142,7 @@ export default class extends BaseController {
             // 1. On cherche le z-index le plus élevé parmi TOUTES les autres modales.
             modals.forEach(modal => {
                 if (modal !== this.advancedSearchModalTarget) {
-                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex, 10) || 1055;
+                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
                     if (zIndex > maxZIndex) {
                         maxZIndex = zIndex;
                     }
@@ -157,20 +157,6 @@ export default class extends BaseController {
             //    et celui de notre modale pour être au-dessus de son propre backdrop.
             myBackdrop.style.zIndex = maxZIndex + 1;
             myModal.style.zIndex = maxZIndex + 2;
-        } else if (backdrops.length > 1) {
-            // Cas de secours : si plusieurs backdrops sont présents mais une seule modale,
-            // on s'assure que notre backdrop est au-dessus des autres.
-            const myBackdrop = backdrops[backdrops.length - 1];
-            myBackdrop.style.zIndex = parseInt(window.getComputedStyle(backdrops[backdrops.length - 2]).zIndex, 10) + 2;
-            this.advancedSearchModalTarget.style.zIndex = parseInt(myBackdrop.style.zIndex, 10) + 1;
-        } else {
-            // Si c'est la seule modale, on s'assure qu'elle a un z-index de base correct
-            // au cas où d'autres éléments non-modaux auraient un z-index élevé.
-            const backdrop = this.advancedSearchModalTarget.nextElementSibling;
-            if (backdrop && backdrop.classList.contains('modal-backdrop')) {
-                backdrop.style.zIndex = '1060';
-                this.advancedSearchModalTarget.style.zIndex = '1061';
-            }
         }
     }
 
@@ -181,7 +167,7 @@ export default class extends BaseController {
      */
     initializeCriteria() {
         console.log(`${this.nomControleur} - Initializing criteria for entity: ${this.nomEntiteValue}`);
-        
+
         // La logique de `provideCriteria` est maintenant ici.
         // À l'avenir, cette section pourrait être remplacée par un appel API
         // pour récupérer les critères dynamiquement depuis le serveur.
@@ -354,7 +340,7 @@ export default class extends BaseController {
      */
     handleExternalRefresh(event) {
         console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
-        
+
         this.dispatchSearchEvent();
     }
 
