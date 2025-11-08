@@ -13,7 +13,8 @@ export default class extends BaseController {
 
     static values = {
         criteria: Array,
-        defaultCriterion: Object
+        defaultCriterion: Object,
+        nomEntite: String // NOUVEAU : pour recevoir le nom de l'entité
     }
 
     activeFilters = {};
@@ -21,20 +22,16 @@ export default class extends BaseController {
     connect() {
         this.nomControleur = "SEARCH_BAR";
         this.toast = new Toast(this.advancedSearchToastTarget);
-        
-        this.boundhandleCriteriaDefined = this.handleCriteriaDefined.bind(this);
+
         this.boundUpdateToastPosition = this.updateToastPosition.bind(this);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
-        // Écoute l'événement relayé par le Cerveau
-        document.addEventListener('search:criteria.defined', this.boundhandleCriteriaDefined);
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
 
-        this.handleRequestCriteres();
+        this.initializeCriteria(); // NOUVEAU : On initialise les critères directement
     }
 
     disconnect() {
-        document.removeEventListener('search:criteria.defined', this.boundhandleCriteriaDefined);
         document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
     }
 
@@ -156,13 +153,68 @@ export default class extends BaseController {
 
     // --- Méthodes existantes (inchangées) ---
 
-    handleRequestCriteres() {
-        // Notifie le Cerveau pour qu'il demande les critères au fournisseur
-        this.notifyCerveau('app:search.provide-criteria');
-    }
+    /**
+     * NOUVEAU : Fusion de la logique de search-criteria_controller.
+     * Définit les critères de recherche en fonction du nom de l'entité
+     * et initialise la barre de recherche.
+     */
+    initializeCriteria() {
+        console.log(`${this.nomControleur} - Initializing criteria for entity: ${this.nomEntiteValue}`);
+        
+        // La logique de `provideCriteria` est maintenant ici.
+        // À l'avenir, cette section pourrait être remplacée par un appel API
+        // pour récupérer les critères dynamiquement depuis le serveur.
+        let criteriaDefinition = [];
 
-    handleCriteriaDefined(event) {
-        this.criteriaValue = event.detail.criteria;
+        if (this.nomEntiteValue === 'NotificationSinistre') {
+            criteriaDefinition = [
+                {
+                    Nom: 'descriptionDeFait',
+                    Display: "Description des faits",
+                    Type: 'Text',
+                    Valeur: '',
+                    isDefault: true
+                },
+                {
+                    Nom: 'notifiedAt',
+                    Display: "Date de notification",
+                    Type: 'DateTimeRange',
+                    Valeur: { from: '', to: '' },
+                    isDefault: false
+                },
+                {
+                    Nom: 'referenceSinistre',
+                    Display: "Référence du sinistre",
+                    Type: 'Text',
+                    Valeur: '',
+                    isDefault: false
+                },
+                {
+                    Nom: 'referencePolice',
+                    Display: "Référence de la police",
+                    Type: 'Text',
+                    Valeur: '',
+                    isDefault: false
+                },
+                {
+                    Nom: 'dommage',
+                    Display: "Dommage",
+                    Type: 'Number',
+                    Valeur: 0,
+                    isDefault: false
+                },
+                {
+                    Nom: 'assure.nom',
+                    Display: "Client (assuré)",
+                    Type: 'Text',
+                    Valeur: '',
+                    isDefault: false
+                }
+            ];
+        }
+        // On pourrait ajouter d'autres `else if (this.nomEntiteValue === '...')` pour d'autres entités.
+
+        this.criteriaValue = criteriaDefinition;
         const defaultCriterion = this.criteriaValue.find(c => c.isDefault === true);
         if (defaultCriterion) {
             this.defaultCriterionValue = defaultCriterion;

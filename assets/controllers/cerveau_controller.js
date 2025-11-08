@@ -73,16 +73,6 @@ export default class extends Controller {
             case 'app:error.api':
                 this._showNotification('Une erreur serveur est survenue. Veuillez réessayer.', 'error');
                 break;
-            
-            // --- NOUVEAU : Logique de recherche ---
-            case 'app:search.provide-criteria':
-                // Relaie la demande du search-bar vers le search-criteria-provider
-                this.broadcast('app:search.provide-criteria', payload);
-                break;
-            case 'search:criteria.provided':
-                // Relaie les critères définis vers le search-bar
-                this.broadcast('search:criteria.defined', payload);
-                break;
 
             case 'ui:list-row.selection-changed':
                 this.updateSelectionState(payload);
