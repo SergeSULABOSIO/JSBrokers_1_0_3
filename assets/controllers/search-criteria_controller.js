@@ -1,14 +1,14 @@
-import { Controller } from '@hotwired/stimulus';
+import BaseController from './base_controller.js';
 
 /**
  * @class SearchCriteriaProviderController
- * @extends Controller
+ * @extends BaseController
  * @description Ce contrôleur agit comme un "configurateur" pour une rubrique spécifique.
  * Son rôle principal est de détenir la définition des critères de recherche
  * et de la fournir au Cerveau lorsque celui-ci en fait la demande.
  * Il ne gère pas la recherche elle-même, mais seulement sa configuration.
  */
-export default class extends Controller {
+export default class extends BaseController {
     /**
      * @property {StringValue} nomValue - Le nom de la rubrique, utilisé pour l'identification.
      */
@@ -111,18 +111,7 @@ export default class extends Controller {
         ];
 
         // --- MODIFICATION : Notifie le Cerveau avec les critères définis ---
-        this.notifyCerveau('ui:search.criteria-provided', { criteria: criteriaDefinition });
-    }
-
-    /**
-     * Méthode centralisée pour envoyer un événement au Cerveau.
-     * @param {string} type - Le type d'événement pour le Cerveau (ex: 'ui:rubrique.criteria-provided').
-     * @param {object} payload - Données additionnelles à envoyer.
-     */
-    notifyCerveau(type, payload = {}) {
-        const event = new CustomEvent('cerveau:event', {
-            bubbles: true, detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
-        });
-        this.element.dispatchEvent(event);
+        // Le nom de l'événement est spécifique et clair pour le Cerveau.
+        this.notifyCerveau('search:criteria.provided', { criteria: criteriaDefinition });
     }
 }
