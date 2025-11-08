@@ -73,6 +73,16 @@ export default class extends Controller {
             case 'app:error.api':
                 this._showNotification('Une erreur serveur est survenue. Veuillez réessayer.', 'error');
                 break;
+            
+            // --- NOUVEAU : Logique de recherche ---
+            case 'app:search.provide-criteria':
+                // Relaie la demande du search-bar vers le search-criteria-provider
+                this.broadcast('app:search.provide-criteria', payload);
+                break;
+            case 'search:criteria.provided':
+                // Relaie les critères définis vers le search-bar
+                this.broadcast('search:criteria.defined', payload);
+                break;
 
             case 'ui:list-row.selection-changed':
                 this.updateSelectionState(payload);
@@ -121,6 +131,11 @@ export default class extends Controller {
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
 
+            // --- NOUVEAU : Relais de la requête de recherche vers le list-manager ---
+            case 'app:base-données:sélection-request':
+                this.broadcast('app:base-données:sélection-request', payload);
+                break;
+
             case 'ui:toolbar.refresh-request':
                 // On notifie le début du chargement pour que la barre de progression s'affiche
                 this.broadcast('app:loading.start');
@@ -130,7 +145,10 @@ export default class extends Controller {
             // NOUVEAU : La liste a terminé son actualisation.
             case 'app:list.refreshed':
                 this._setSelectionState([]); // On réinitialise la sélection
-                this.broadcast('app:loading.stop'); // On notifie la fin pour masquer la barre de progression
+                // On notifie la fin pour masquer la barre de progression
+                this.broadcast('app:loading.stop'); 
+                this._setSelectionState([]); // On réinitialise la sélection
+                this.broadcast('app:loading.stop');
                 break;
             
             // NOUVEAU : La liste a chargé ses données, on stocke les infos numériques.

@@ -1,8 +1,22 @@
 import { Controller } from '@hotwired/stimulus';
 
-
+/**
+ * @class BaseController
+ * @extends Controller
+ * @description Un contrôleur de base qui fournit des méthodes utilitaires partagées,
+ * notamment pour la communication avec le Cerveau.
+ */
 export default class extends Controller {
-    connect() {
+    /**
+     * Notifie le Cerveau en envoyant un événement personnalisé.
+     * @param {string} type - Le type d'événement pour le Cerveau (ex: 'ui:selection.updated').
+     * @param {object} [payload={}] - Données additionnelles à envoyer.
+     */
+    notifyCerveau(type, payload = {}) {
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true, detail: { type, source: this.nomControleur || 'Unknown', payload, timestamp: Date.now() }
+        });
+        this.element.dispatchEvent(event);
     }
 }
 
@@ -47,12 +61,8 @@ export function downloadIcone(elementHtml, texteAAjouter, inAction, icone, taill
         .then(htmlData => {
             updatTabIcones(url, htmlData);
             elementHtml.innerHTML = htmlData + texteAAjouter;
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement du fragment:', error);
         });
 }
-
 
 /**
  * 

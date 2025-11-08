@@ -1,8 +1,8 @@
 // assets/controllers/search-bar_controller.js
-import { Controller } from '@hotwired/stimulus';
+import BaseController from './base_controller.js';
 import { Toast } from 'bootstrap';
 
-export default class extends Controller {
+export default class extends BaseController {
     static targets = [
         "simpleSearchInput",
         "advancedSearchToast",
@@ -26,16 +26,15 @@ export default class extends Controller {
         this.boundUpdateToastPosition = this.updateToastPosition.bind(this);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
-        // --- MODIFICATION : Écoute les nouveaux événements ---
-        document.addEventListener('ui:search.criteria-provided', this.boundhandleCriteriaDefined);
+        // Écoute l'événement relayé par le Cerveau
+        document.addEventListener('search:criteria.defined', this.boundhandleCriteriaDefined);
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
 
         this.handleRequestCriteres();
     }
 
     disconnect() {
-        // --- MODIFICATION : Nettoie les nouveaux écouteurs ---
-        document.removeEventListener('ui:search.criteria-provided', this.boundhandleCriteriaDefined);
+        document.removeEventListener('search:criteria.defined', this.boundhandleCriteriaDefined);
         document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
     }
 
@@ -122,7 +121,7 @@ export default class extends Controller {
         }
 
         this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
-        // this.dispatchSearchEvent();
+        this.dispatchSearchEvent(); // Décommenté
     }
 
     reset() {
@@ -130,13 +129,11 @@ export default class extends Controller {
         this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
         this.activeFilters = {};
         this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
-        // this.dispatchSearchEvent();
+        this.dispatchSearchEvent(); // Décommenté
     }
 
     handlePublisheSelection(event) {
         console.log(this.nomControleur + " - handlePublishSelection", event.detail);
-        // const { selection } = event.detail; // Récupère les données de l'événement
-        // this.dispatchSearchEvent();
     }
 
     // --- Nouvelle méthode pour la position ---
@@ -160,7 +157,8 @@ export default class extends Controller {
     // --- Méthodes existantes (inchangées) ---
 
     handleRequestCriteres() {
-        this.dispatch('app:search.provide-criteria');
+        // Notifie le Cerveau pour qu'il demande les critères au fournisseur
+        this.notifyCerveau('app:search.provide-criteria');
     }
 
     handleCriteriaDefined(event) {
@@ -261,7 +259,7 @@ export default class extends Controller {
         } else {
             delete this.activeFilters[key];
         }
-        // this.dispatchSearchEvent();
+        this.dispatchSearchEvent(); // Décommenté
     }
 
     removeFilter(event) {
@@ -273,7 +271,7 @@ export default class extends Controller {
             const inputToClear = this.advancedFormContainerTarget.querySelector(`[data-criterion-name="${keyToRemove}"]`);
             if (inputToClear) inputToClear.value = '';
         }
-        // this.dispatchSearchEvent();
+        this.dispatchSearchEvent(); // Décommenté
     }
 
     /**
@@ -284,12 +282,15 @@ export default class extends Controller {
     handleExternalRefresh(event) {
         console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
         
-        // On réutilise simplement la fonction existante pour lancer la recherche
-        // this.dispatchSearchEvent();
+        this.dispatchSearchEvent();
     }
 
     dispatchSearchEvent() {
-        this.dispatch('app:base-données:sélection-request', { criteria: this.activeFilters });
+        // Notifie le cerveau pour démarrer la barre de progression
+        this.notifyCerveau('app:loading.start');
+        // Notifie le cerveau pour lancer la recherche
+        this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
+        // Met à jour le résumé des filtres actifs
         this.updateSummary();
     }
 
@@ -347,9 +348,5 @@ export default class extends Controller {
         `;
         });
         this.summaryTarget.innerHTML = summaryHtml;
-    }
-
-    dispatch(name, detail = {}) {
-        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 }
