@@ -132,23 +132,46 @@ export default class extends BaseController {
      * @private
      */
     adjustZIndex() {
-        // Récupère tous les backdrops visibles.
+        // Trouve toutes les modales et tous les backdrops visibles.
+        const modals = document.querySelectorAll('.modal.show');
         const backdrops = document.querySelectorAll('.modal-backdrop.show');
 
-        // S'il n'y a aucun backdrop, il n'y a rien à faire.
-        if (backdrops.length === 0) {
-            return;
+        // S'il y a plus d'une modale affichée, un ajustement est nécessaire pour la superposition.
+        if (modals.length > 1) {
+            let maxZIndex = 0;
+            // 1. On cherche le z-index le plus élevé parmi TOUTES les autres modales.
+            modals.forEach(modal => {
+                if (modal !== this.advancedSearchModalTarget) {
+                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex, 10) || 1055;
+                    if (zIndex > maxZIndex) {
+                        maxZIndex = zIndex;
+                    }
+                }
+            });
+
+            // 2. On récupère notre modale et son backdrop (c'est toujours le dernier ajouté au DOM).
+            const myModal = this.advancedSearchModalTarget;
+            const myBackdrop = backdrops[backdrops.length - 1];
+
+            // 3. On définit le z-index de notre backdrop pour être juste au-dessus du maximum trouvé,
+            //    et celui de notre modale pour être au-dessus de son propre backdrop.
+            myBackdrop.style.zIndex = maxZIndex + 1;
+            myModal.style.zIndex = maxZIndex + 2;
+        } else if (backdrops.length > 1) {
+            // Cas de secours : si plusieurs backdrops sont présents mais une seule modale,
+            // on s'assure que notre backdrop est au-dessus des autres.
+            const myBackdrop = backdrops[backdrops.length - 1];
+            myBackdrop.style.zIndex = parseInt(window.getComputedStyle(backdrops[backdrops.length - 2]).zIndex, 10) + 2;
+            this.advancedSearchModalTarget.style.zIndex = parseInt(myBackdrop.style.zIndex, 10) + 1;
+        } else {
+            // Si c'est la seule modale, on s'assure qu'elle a un z-index de base correct
+            // au cas où d'autres éléments non-modaux auraient un z-index élevé.
+            const backdrop = this.advancedSearchModalTarget.nextElementSibling;
+            if (backdrop && backdrop.classList.contains('modal-backdrop')) {
+                backdrop.style.zIndex = '1060';
+                this.advancedSearchModalTarget.style.zIndex = '1061';
+            }
         }
-
-        // Trouve le z-index le plus élevé parmi tous les backdrops.
-        // La valeur par défaut de Bootstrap est 1050.
-        const maxBackdropZIndex = Math.max(...Array.from(backdrops).map(backdrop => {
-            return parseInt(window.getComputedStyle(backdrop).zIndex, 10) || 1050;
-        }));
-
-        // Positionne notre modale juste au-dessus du backdrop le plus élevé.
-        // Le z-index d'une modale est généralement celui de son backdrop + 1.
-        this.advancedSearchModalTarget.style.zIndex = maxBackdropZIndex + 1;
     }
 
     /**
