@@ -1,11 +1,11 @@
 // assets/controllers/search-bar_controller.js
 import BaseController from './base_controller.js';
-import { Toast } from 'bootstrap';
+import { Modal } from 'bootstrap';
 
 export default class extends BaseController {
     static targets = [
         "simpleSearchInput",
-        "advancedSearchToast",
+        "advancedSearchModal",
         "advancedFormContainer",
         "summaryContainer",
         "summary"
@@ -21,9 +21,8 @@ export default class extends BaseController {
 
     connect() {
         this.nomControleur = "SEARCH_BAR";
-        this.toast = new Toast(this.advancedSearchToastTarget);
+        this.modal = new Modal(this.advancedSearchModalTarget);
 
-        this.boundUpdateToastPosition = this.updateToastPosition.bind(this);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
@@ -38,20 +37,13 @@ export default class extends BaseController {
     // --- Actions de l'utilisateur (logique mise à jour) ---
 
     openAdvancedSearch() {
-        // Nouvelle méthode : Mettre à jour la position avant d'afficher
-        this.updateToastPosition();
-        this.toast.show();
-        // Nouvelle méthode : Écouter le scroll et le redimensionnement pour garder le toast aligné
-        // window.addEventListener('scroll', this.boundUpdateToastPosition, { passive: true });
-        // window.addEventListener('resize', this.boundUpdateToastPosition);
+        this.modal.show();
     }
 
     cancelAdvancedSearch() {
-        this.toast.hide();
-        // Nouvelle méthode : Arrêter d'écouter les événements pour ne pas impacter les performances
-        // window.removeEventListener('scroll', this.boundUpdateToastPosition);
-        // window.removeEventListener('resize', this.boundUpdateToastPosition);
-        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
+        this.modal.hide();
+        // On ne réinitialise pas les champs pour que l'utilisateur retrouve ses critères
+        // s'il ferme la modale par erreur. La réinitialisation se fait via le bouton "reset".
     }
 
     submitAdvancedSearch(event) {
@@ -117,7 +109,7 @@ export default class extends BaseController {
             }
         }
 
-        this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
+        this.modal.hide();
         this.dispatchSearchEvent(); // Décommenté
     }
 
@@ -125,30 +117,8 @@ export default class extends BaseController {
         this.simpleSearchInputTarget.value = '';
         this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
         this.activeFilters = {};
-        this.toast.hide(); // Le listener 'hide.bs.toast' s'occupera du nettoyage
+        this.modal.hide();
         this.dispatchSearchEvent(); // Décommenté
-    }
-
-    handlePublisheSelection(event) {
-        console.log(this.nomControleur + " - handlePublishSelection", event.detail);
-    }
-
-    // --- Nouvelle méthode pour la position ---
-
-    /**
-     * Calcule et met à jour la position du toast de recherche avancée
-     * pour qu'il s'aligne juste en dessous de la barre de recherche.
-     */
-    updateToastPosition() {
-        if (!this.element.isConnected) return;
-
-        const rect = this.element.getBoundingClientRect();
-        const toastEl = this.advancedSearchToastTarget;
-
-        toastEl.style.position = 'fixed';
-        toastEl.style.top = `${rect.bottom + 5}px`; // 5px de marge en dessous
-        toastEl.style.left = `${rect.left}px`;
-        toastEl.style.width = `${rect.width}px`;
     }
 
     // --- Méthodes existantes (inchangées) ---

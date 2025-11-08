@@ -32,22 +32,29 @@
         </div>
     </div>
 
-    <div class="toast position-fixed bg-white" role="alert" aria-live="assertive" aria-atomic="true" data-search-bar-target="advancedSearchToast" style="z-index: 1100;"> 
-    {# max-width: 400px; min-width: 400p; #}
-        <div class="toast-header">
-            <twig:ux:icon name="lucide:sliders-horizontal" class="me-2 search-summary-icon" />
-            <strong class="me-auto">Recherche Avancée</strong>
-            <button type="button" class="btn-close" data-action="click->search-bar#cancelAdvancedSearch" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-            <form data-action="keydown.enter->search-bar#submitAdvancedSearch">
-                <div data-search-bar-target="advancedFormContainer" class="form-scrollable-content">
+    {# NOUVEAU : Remplacement du Toast par une Modale Bootstrap #}
+    <div class="modal fade app-dialog" data-search-bar-target="advancedSearchModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center">
+                        <twig:ux:icon name="lucide:sliders-horizontal" class="me-2" />
+                        Recherche Avancée
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-action="click->search-bar#cancelAdvancedSearch" aria-label="Close"></button>
                 </div>
-                <div class="d-flex justify-content-end mt-3">
-                    <button type="button" class="btn btn-secondary btn-sm me-2" data-action="click->search-bar#cancelAdvancedSearch">Annuler</button>
-                    <button type="button" class="btn btn-primary btn-sm" data-action="click->search-bar#submitAdvancedSearch">Rechercher</button>
+                <div class="modal-body">
+                    <form data-action="keydown.enter->search-bar#submitAdvancedSearch">
+                        <div data-search-bar-target="advancedFormContainer">
+                            {# Le contenu du formulaire sera injecté ici par le contrôleur JS #}
+                        </div>
+                        <div class="d-flex justify-content-end mt-4 border-top pt-3">
+                            <button type="button" class="btn btn-secondary me-2" data-action="click->search-bar#cancelAdvancedSearch">Annuler</button>
+                            <button type="button" class="btn btn-primary" data-action="click->search-bar#submitAdvancedSearch">Rechercher</button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
