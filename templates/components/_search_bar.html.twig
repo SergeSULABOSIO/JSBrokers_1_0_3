@@ -33,7 +33,13 @@
     </div>
 
     {# NOUVEAU : Remplacement du Toast par une Modale Bootstrap #}
-    <div class="modal fade app-dialog" data-search-bar-target="advancedSearchModal" tabindex="-1">
+    <div 
+        class="modal fade app-dialog" 
+        data-search-bar-target="advancedSearchModal" 
+        tabindex="-1"
+        data-bs-backdrop="static"
+        data-bs-keyboard="false"
+    >
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
