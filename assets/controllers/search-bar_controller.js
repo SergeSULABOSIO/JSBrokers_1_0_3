@@ -215,26 +215,30 @@ export default class extends BaseController {
 
     buildAdvancedForm() {
         let html = '';
-        const advancedCriteria = this.criteriaValue.filter(c => !c.isDefault);
+        const advancedCriteria = this.criteriaValue.filter(c => !c.isDefault); // [c.isDefault !== true]
         advancedCriteria.forEach(criterion => {
             const criterionId = `criterion_${criterion.Nom.replace(/\s+/g, '_')}`;
             // html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Nom}</label>`;
             html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Display}</label>`;
             switch (criterion.Type) {
                 case 'Text':
-                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm">`;
+                    const textValue = this.activeFilters[criterion.Nom] || '';
+                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}">`;
                     break;
                 case 'Number':
+                    const numberFilter = this.activeFilters[criterion.Nom] || {};
+                    const numberValue = numberFilter.value || '';
+                    const numberOperator = numberFilter.operator || '=';
                     html += `<div class="input-group input-group-sm">
                                 <select class="form-select" style="max-width: 150px; min-width: 150px;" data-criterion-operator-for="${criterion.Nom}">
-                                    <option value="=">Égal à</option>
-                                    <option value="!=">Différent de</option>
-                                    <option value=">">Sup à</option>
-                                    <option value=">=">Sup ou égal à</option>
-                                    <option value="<">Inf à</option>
-                                    <option value="<=">Inf ou égal à</option>
+                                    <option value="=" ${numberOperator === '=' ? 'selected' : ''}>Égal à</option>
+                                    <option value="!=" ${numberOperator === '!=' ? 'selected' : ''}>Différent de</option>
+                                    <option value=">" ${numberOperator === '>' ? 'selected' : ''}>Sup à</option>
+                                    <option value=">=" ${numberOperator === '>=' ? 'selected' : ''}>Sup ou égal à</option>
+                                    <option value="<" ${numberOperator === '<' ? 'selected' : ''}>Inf à</option>
+                                    <option value="<=" ${numberOperator === '<=' ? 'selected' : ''}>Inf ou égal à</option>
                                 </select>
-                                <input type="number" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm">
+                                <input type="number" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${numberValue}">
                             </div>`;
                     break;
 
@@ -248,6 +252,10 @@ export default class extends BaseController {
                     const day = String(today.getDate()).padStart(2, '0');
                     const defaultDate = `${year}-${month}-${day}`;
 
+                    const dateFilter = this.activeFilters[criterion.Nom] || {};
+                    const fromValue = dateFilter.from || defaultDate;
+                    const toValue = dateFilter.to || defaultDate;
+
                     // Pour une plage de dates, nous aurons deux champs de date.
                     // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.
                     html += `<div class="input-group input-group-sm">
@@ -257,13 +265,13 @@ export default class extends BaseController {
                            data-criterion-name="${criterion.Nom}" 
                            data-criterion-part="from" 
                            class="form-control form-control-sm"
-                           value="${defaultDate}"  
+                           value="${fromValue}"  
                            placeholder="Date de début">
                     <span class="input-group-text">et</span>
                     <input type="date" 
                            id="${criterionId}_to" 
                            data-criterion-name="${criterion.Nom}" 
-                           value="${defaultDate}"  
+                           value="${toValue}"  
                            data-criterion-part="to" 
                            class="form-control form-control-sm"
                            placeholder="Date de fin">
@@ -271,10 +279,12 @@ export default class extends BaseController {
                     break;
                 // -----------------------------------
                 case 'Options':
+                    const optionValue = this.activeFilters[criterion.Nom] || '';
                     html += `<select id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-select form-select-sm">`;
                     html += `<option value="">Tout</option>`;
                     for (const [key, value] of Object.entries(criterion.Valeur)) {
-                        html += `<option value="${key}" title="${value}">${value}</option>`;
+                        const isSelected = key === optionValue ? 'selected' : '';
+                        html += `<option value="${key}" title="${value}" ${isSelected}>${value}</option>`;
                     }
                     html += `</select>`;
                     break;
@@ -310,10 +320,9 @@ export default class extends BaseController {
         if (keyToRemove === this.defaultCriterionValue.Nom) {
             this.simpleSearchInputTarget.value = '';
         } else {
-            const inputToClear = this.advancedFormContainerTarget.querySelector(`[data-criterion-name="${keyToRemove}"]`);
-            if (inputToClear) inputToClear.value = '';
+            // Plus besoin de nettoyer le formulaire ici, car il est dans un autre contrôleur.
         }
-        this.dispatchSearchEvent(); // Décommenté
+        this.dispatchSearchEvent();
     }
 
     /**
@@ -356,10 +365,10 @@ export default class extends BaseController {
             const criterionDef = this.criteriaValue.find(c => c.Nom === key);
             const displayName = criterionDef ? criterionDef.Display : key; // Utilise Display ou le Nom si non trouvé
 
-            if (typeof val === 'object' && val.operator === 'BETWEEN' && typeof val.value === 'object' && (val.value.from || val.value.to)) {
-                // Cas du DateTimeRange
-                let from = val.value.from;
-                let to = val.value.to;
+            if (typeof val === 'object' && (val.from || val.to) && criterionDef.Type === 'DateTimeRange') {
+                // Cas spécifique pour DateTimeRange
+                let from = val.from;
+                let to = val.to;
 
                 if (from && to) {
                     text = `${displayName}: du ${from} au ${to}`;
@@ -368,8 +377,8 @@ export default class extends BaseController {
                 } else if (to) {
                     text = `${displayName}: jusqu'au ${to}`;
                 }
-            } else if (typeof val === 'object' && val.operator && val.value) {
-                // Cas des nombres ou dates uniques (si vous les gardez)
+            } else if (typeof val === 'object' && val.operator) {
+                // Cas des nombres
                 text = `${displayName} ${val.operator} ${val.value}`;
             } else {
                 // Cas des textes et options
