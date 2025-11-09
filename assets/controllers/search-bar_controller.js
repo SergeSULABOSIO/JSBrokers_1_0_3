@@ -124,6 +124,7 @@ export default class extends BaseController {
         this.dispatchSearchEvent(); // Décommenté
     }
 
+    
 
 
     
