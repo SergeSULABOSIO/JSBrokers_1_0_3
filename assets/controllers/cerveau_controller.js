@@ -87,6 +87,16 @@ export default class extends Controller {
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
 
+            // --- NOUVEAU : Communication pour la recherche avancée ---
+            case 'dialog:search.open-request':
+                // La barre de recherche demande l'ouverture du dialogue
+                this.broadcast('dialog:search.open-request', payload);
+                break;
+            case 'search:advanced.submitted':
+                // Le dialogue a soumis les critères, on les envoie à la barre de recherche
+                this.broadcast('search:advanced.submitted', payload);
+                break;
+
             case 'dialog:boite-dialogue:init-request':
                 this.broadcast('app:loading.start');
                 this.openDialogBox(payload);

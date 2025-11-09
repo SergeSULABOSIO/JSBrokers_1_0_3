@@ -1,6 +1,7 @@
 <div 
     class="modal fade app-dialog" 
-    data-search-bar-target="advancedSearchModal" 
+    data-controller="search-bar-dialog"
+    data-search-bar-dialog-target="advancedSearchModal"
     tabindex="-1"
     data-bs-backdrop="static"
     data-bs-keyboard="false"
@@ -12,14 +13,14 @@
                     <twig:ux:icon name="lucide:sliders-horizontal" class="me-2" style="width: 28px; height: 28px;" />
                     Recherche Avancée
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-action="click->search-bar#cancelAdvancedSearch" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-action="click->search-bar-dialog#cancel" aria-label="Close"></button>
             </div>
             <div class="modal-body bg-white">
-                <form data-action="keydown.enter->search-bar#submitAdvancedSearch">
-                    <div data-search-bar-target="advancedFormContainer" class="form-scrollable-content"></div>
+                <form data-action="keydown.enter->search-bar-dialog#submitAdvancedSearch">
+                    <div data-search-bar-dialog-target="advancedFormContainer" class="form-scrollable-content"></div>
                     <div class="d-flex justify-content-end mt-4 border-top pt-3">
-                        <button type="button" class="btn btn-secondary me-2" data-action="click->search-bar#cancelAdvancedSearch">Annuler</button>
-                        <button type="button" class="btn btn-primary" data-action="click->search-bar#submitAdvancedSearch">Rechercher</button>
+                        <button type="button" class="btn btn-secondary me-2" data-action="click->search-bar-dialog#resetForm">Réinitialiser</button>
+                        <button type="button" class="btn btn-primary" data-action="click->search-bar-dialog#submitAdvancedSearch">Rechercher</button>
                     </div>
                 </form>
             </div>
