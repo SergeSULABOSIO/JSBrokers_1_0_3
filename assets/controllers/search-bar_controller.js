@@ -132,27 +132,16 @@ export default class extends BaseController {
      * @private
      */
     adjustZIndex() {
-        // Trouve toutes les modales et tous les backdrops visibles.
-        const modals = document.querySelectorAll('.modal.show');
+        // Trouve tous les backdrops visibles
         const backdrops = document.querySelectorAll('.modal-backdrop.show');
-        console.log(this.nomControleur + " - adjustZIndex - Code: 100 - modals:", modals, "backdrops:", backdrops);
-        const myModal = this.advancedSearchModalTarget;
 
-        modals.forEach(modal => {
-            console.log(this.nomControleur + " - adjustZIndex - Code: 100 - modal:", modal, "zIndex (modal):", modal.style.zIndex);
-        });
-
-        backdrops.forEach(backdrop => {
-            console.log(this.nomControleur + " - adjustZIndex - Code: 100 - backdrop:", backdrop, "zIndex (backdrop):", backdrop.style.zIndex);
-        });
-
-
-
-        let maxZIndex = 0;
-        // S'il y a plus d'une modale affichée, un ajustement est nécessaire pour la superposition.
-        if (modals.length > 1) {
-            // 1. On cherche le z-index le plus élevé parmi TOUTES les autres modales.
+        // S'il y a plus d'un backdrop, cela signifie que nous superposons les modales
+        if (backdrops.length > 1) {
+            // Trouve le z-index le plus élevé parmi TOUTES les modales actuellement visibles
+            const modals = document.querySelectorAll('.modal.show');
+            let maxZIndex = 0;
             modals.forEach(modal => {
+                // On s'assure de ne pas nous comparer à nous-même
                 if (modal !== this.advancedSearchModalTarget) {
                     const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
                     if (zIndex > maxZIndex) {
@@ -160,18 +149,16 @@ export default class extends BaseController {
                     }
                 }
             });
-            lengthMoinsUn = backdrops.length - 1;
+
+            // On récupère notre modale et son backdrop (c'est toujours le dernier ajouté)
+            const myModal = this.advancedSearchModalTarget;
+            const myBackdrop = backdrops[backdrops.length - 1];
+
+            // On définit le z-index de notre backdrop pour être au-dessus du maximum trouvé,
+            // et celui de notre modale pour être au-dessus de son propre backdrop.
+            myBackdrop.style.zIndex = maxZIndex + 1;
+            myModal.style.zIndex = maxZIndex + 2;
         }
-
-        // 2. On récupère notre modale et son backdrop (c'est toujours le dernier ajouté au DOM).
-        // console.log(this.nomControleur + " - adjustZIndex - Code: 100 - myModal", myModal, "backdrops:", backdrops[0]);
-        console.log(this.nomControleur + " - adjustZIndex - Code: 100 - backdrops[0].style.zIndex", backdrops[0].style.zIndex);
-        myModal.style.zIndex = maxZIndex + 1;
-
-        // backdrops[0].style.zIndex = -5;
-        // myBackdrop.style.zIndex = myModal.style.zIndex - 1;
-        // myBackdrop.style.zIndex = maxZIndex + 1;
-        // myModal.style.zIndex = myModal.style.zIndex + 2;
     }
 
     /**
