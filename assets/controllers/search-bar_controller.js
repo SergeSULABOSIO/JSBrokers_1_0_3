@@ -22,18 +22,14 @@ export default class extends BaseController {
     connect() {
         this.nomControleur = "SEARCH_BAR";
         this.modal = new Modal(this.advancedSearchModalTarget);
-        this.boundAdjustZIndex = this.adjustZIndex.bind(this);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
 
-        // Écoute l'événement 'shown.bs.modal' pour ajuster le z-index après l'affichage
-        this.advancedSearchModalTarget.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
 
         this.initializeCriteria(); // NOUVEAU : On initialise les critères directement
     }
 
     disconnect() {
-        this.advancedSearchModalTarget.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
         document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
     }
 
@@ -124,44 +120,8 @@ export default class extends BaseController {
         this.dispatchSearchEvent(); // Décommenté
     }
 
-    
 
 
-    
-    /**
-     * Ajuste le `z-index` de la modale pour s'assurer qu'elle apparaît
-     * au-dessus des autres modales déjà ouvertes. Essentiel pour les dialogues imbriqués.
-     * @private
-     */
-    adjustZIndex() {
-        // Trouve tous les backdrops visibles
-        const backdrops = document.querySelectorAll('.modal-backdrop.show');
-
-        // S'il y a plus d'un backdrop, cela signifie que nous superposons les modales
-        if (backdrops.length > 1) {
-            // Trouve le z-index le plus élevé parmi TOUTES les modales actuellement visibles
-            const modals = document.querySelectorAll('.modal.show');
-            let maxZIndex = 0;
-            modals.forEach(modal => {
-                // On s'assure de ne pas nous comparer à nous-même
-                if (modal !== this.advancedSearchModalTarget) {
-                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
-                    if (zIndex > maxZIndex) {
-                        maxZIndex = zIndex;
-                    }
-                }
-            });
-
-            // On récupère notre modale et son backdrop (c'est toujours le dernier ajouté)
-            const myModal = this.advancedSearchModalTarget;
-            const myBackdrop = backdrops[backdrops.length - 1];
-
-            // On définit le z-index de notre backdrop pour être au-dessus du maximum trouvé,
-            // et celui de notre modale pour être au-dessus de son propre backdrop.
-            myBackdrop.style.zIndex = maxZIndex + 1;
-            myModal.style.zIndex = maxZIndex + 2;
-        }
-    }
 
     /**
      * NOUVEAU : Fusion de la logique de search-criteria_controller.
