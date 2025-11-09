@@ -124,8 +124,9 @@ export default class extends BaseController {
         this.dispatchSearchEvent(); // Décommenté
     }
 
-    // --- Méthodes existantes (inchangées) ---
 
+
+    
     /**
      * Ajuste le `z-index` de la modale pour s'assurer qu'elle apparaît
      * au-dessus des autres modales déjà ouvertes. Essentiel pour les dialogues imbriqués.
