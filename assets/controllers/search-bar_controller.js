@@ -5,8 +5,6 @@ import { Modal } from 'bootstrap';
 export default class extends BaseController {
     static targets = [
         "simpleSearchInput",
-        "advancedSearchModal",
-        "advancedFormContainer",
         "summaryContainer",
         "summary"
     ];
@@ -21,28 +19,28 @@ export default class extends BaseController {
 
     connect() {
         this.nomControleur = "SEARCH_BAR";
-        this.modal = new Modal(this.advancedSearchModalTarget);
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
+        this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
+        this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
 
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
+        document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
+        document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
 
         this.initializeCriteria(); // NOUVEAU : On initialise les critères directement
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
+        document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
+        document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
     }
 
     // --- Actions de l'utilisateur (logique mise à jour) ---
 
     openAdvancedSearch() {
-        this.modal.show();
-    }
-
-    cancelAdvancedSearch() {
-        this.modal.hide();
-        // On ne réinitialise pas les champs pour que l'utilisateur retrouve ses critères
-        // s'il ferme la modale par erreur. La réinitialisation se fait via le bouton "reset".
+        const formHtml = this.buildAdvancedForm();
+        this.notifyCerveau('dialog:search.open-request', { formHtml });
     }
 
     submitAdvancedSearch(event) {
@@ -112,12 +110,34 @@ export default class extends BaseController {
         this.dispatchSearchEvent(); // Décommenté
     }
 
-    reset() {
+    /**
+     * Gère la réception des critères depuis la boîte de dialogue.
+     * @param {CustomEvent} event 
+     */
+    handleAdvancedSearchData(event) {
+        const { criteria } = event.detail;
+        
+        // On fusionne les nouveaux critères avancés avec les filtres simples existants
+        const simpleFilterKey = this.defaultCriterionValue.Nom;
+        const simpleFilterValue = this.activeFilters[simpleFilterKey];
+
+        this.activeFilters = {}; // On réinitialise
+        if (simpleFilterValue) {
+            this.activeFilters[simpleFilterKey] = simpleFilterValue;
+        }
+
+        // On ajoute les critères avancés
+        for (const [key, value] of Object.entries(criteria)) {
+            this.activeFilters[key] = value;
+        }
+
+        this.dispatchSearchEvent();
+    }
+
+    handleAdvancedSearchReset() {
         this.simpleSearchInputTarget.value = '';
-        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
         this.activeFilters = {};
-        this.modal.hide();
-        this.dispatchSearchEvent(); // Décommenté
+        this.dispatchSearchEvent();
     }
 
 
@@ -195,7 +215,7 @@ export default class extends BaseController {
 
     buildAdvancedForm() {
         let html = '';
-        const advancedCriteria = this.criteriaValue.filter(c => c.isDefault !== true);
+        const advancedCriteria = this.criteriaValue.filter(c => !c.isDefault);
         advancedCriteria.forEach(criterion => {
             const criterionId = `criterion_${criterion.Nom.replace(/\s+/g, '_')}`;
             // html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Nom}</label>`;
@@ -261,7 +281,7 @@ export default class extends BaseController {
             }
             html += `</div>`;
         });
-        this.advancedFormContainerTarget.innerHTML = html;
+        return html;
     }
 
     submitSimpleSearch(event) {
