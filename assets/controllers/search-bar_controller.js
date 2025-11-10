@@ -235,12 +235,16 @@ export default class extends BaseController {
         const advancedCriteria = this.criteriaValue.filter(c => !c.isDefault); // [c.isDefault !== true]
         advancedCriteria.forEach(criterion => {
             const criterionId = `criterion_${criterion.Nom.replace(/\s+/g, '_')}`;
-            // html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Nom}</label>`;
-            html += `<div class="mb-3"><label for="${criterionId}" class="form-label">${criterion.Display}</label>`;
+
+            // NOUVEAU : Début du bloc visuel pour un critère
+            html += `<div class="criterion-block">`;
+            html += `<div class="criterion-header">${criterion.Display}</div>`;
+            html += `<div class="p-3">`; // Conteneur pour le champ de formulaire
+
             switch (criterion.Type) {
                 case 'Text':
                     const textValue = this.activeFilters[criterion.Nom] || '';
-                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir ${criterion.Display.toLowerCase()}...">`;
+                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir une valeur...">`;
                     break;
                 case 'Number':
                     // On s'assure que activeFilters[criterion.Nom] est un objet
@@ -311,7 +315,9 @@ export default class extends BaseController {
                     html += `</select>`;
                     break;
             }
-            html += `</div>`;
+
+            html += `</div>`; // Fin du conteneur de champ
+            html += `</div>`; // Fin du bloc de critère
         });
         return html;
     }
