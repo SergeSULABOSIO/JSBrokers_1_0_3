@@ -220,8 +220,21 @@ class JSBDynamicSearchService
                             return;
                         }
                     } else {
-                        $exprMethod = $qb->expr()->{strtolower($operator)}($currentAlias . '.' . $actualField, ':' . $parameterName);
-                        $qb->andWhere($exprMethod);
+                        // NOUVEAU : Table de correspondance pour les opérateurs
+                        $operatorMap = [
+                            '=' => 'eq',
+                            '!=' => 'neq',
+                            '>' => 'gt',
+                            '>=' => 'gte',
+                            '<' => 'lt',
+                            '<=' => 'lte',
+                            'LIKE' => 'like',
+                        ];
+
+                        $doctrineOperator = $operatorMap[strtoupper($operator)] ?? null;
+                        if (!$doctrineOperator) continue; // Ignore les opérateurs inconnus
+
+                        $qb->andWhere($qb->expr()->{$doctrineOperator}($currentAlias . '.' . $actualField, ':' . $parameterName));
                         $paramValue = ($operator === 'LIKE') ? '%' . $filterValue . '%' : $filterValue;
                         $qb->setParameter($parameterName, $paramValue);
                     }
