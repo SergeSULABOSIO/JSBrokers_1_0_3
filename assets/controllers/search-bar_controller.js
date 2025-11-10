@@ -418,7 +418,7 @@ export default class extends BaseController {
                 ${text}
                 <button type="button" 
                     class="btn-close btn-close-white ms-2"
-                    style="font-size: 0.6em;"
+                    style="font-size: 0.9em;"
                     aria-label="Remove filter" 
                     data-action="click->search-bar#removeFilter"
                     data-filter-key="${key}">

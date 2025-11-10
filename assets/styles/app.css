@@ -156,27 +156,27 @@ a:active {
     height: 1.1em;
 }
 
-/* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (non utilisé par les dialogues) */
+/* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
 .form-scrollable-content {
-    max-height: 200px;
+    max-height: 45vh; /* Hauteur augmentée pour plus de confort */
     overflow-y: auto;
-    padding-right: 15px;
+    padding-right: 10px; /* Padding ajusté */
     scrollbar-width: thin;
-    scrollbar-color: #888 #f1f1f1;
+    scrollbar-color: #adb5bd #f8f9fa; /* Couleurs pour Firefox, assorties au thème */
 }
 .form-scrollable-content::-webkit-scrollbar {
     width: 8px;
 }
 .form-scrollable-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
+    background: transparent; /* Le fond de la piste est transparent */
 }
 .form-scrollable-content::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
+    background-color: #adb5bd; /* Couleur du curseur, gris moyen */
+    border-radius: 4px;
+    border: 2px solid #f8f9fa; /* Crée un effet de "flottement" avec la couleur de fond */
 }
 .form-scrollable-content::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background-color: #495057; /* Plus foncé au survol */
 }
 
 /* STYLES POUR LES TABLEAUX */
