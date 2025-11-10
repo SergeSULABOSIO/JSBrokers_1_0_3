@@ -223,10 +223,13 @@ export default class extends BaseController {
             switch (criterion.Type) {
                 case 'Text':
                     const textValue = this.activeFilters[criterion.Nom] || '';
-                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}">`;
+                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir ${criterion.Display.toLowerCase()}...">`;
                     break;
                 case 'Number':
-                    const numberFilter = this.activeFilters[criterion.Nom] || {};
+                    // On s'assure que activeFilters[criterion.Nom] est un objet
+                    const numberFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
+                        ? this.activeFilters[criterion.Nom]
+                        : {};
                     const numberValue = numberFilter.value || '';
                     const numberOperator = numberFilter.operator || '=';
                     html += `<div class="input-group input-group-sm">
@@ -238,7 +241,7 @@ export default class extends BaseController {
                                     <option value="<" ${numberOperator === '<' ? 'selected' : ''}>Inf à</option>
                                     <option value="<=" ${numberOperator === '<=' ? 'selected' : ''}>Inf ou égal à</option>
                                 </select>
-                                <input type="number" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${numberValue}">
+                                <input type="number" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${numberValue}" placeholder="Saisir une valeur...">
                             </div>`;
                     break;
 
@@ -252,9 +255,11 @@ export default class extends BaseController {
                     const day = String(today.getDate()).padStart(2, '0');
                     const defaultDate = `${year}-${month}-${day}`;
 
-                    const dateFilter = this.activeFilters[criterion.Nom] || {};
-                    const fromValue = dateFilter.from || defaultDate;
-                    const toValue = dateFilter.to || defaultDate;
+                    const dateFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
+                        ? this.activeFilters[criterion.Nom]
+                        : {};
+                    const fromValue = dateFilter.from || '';
+                    const toValue = dateFilter.to || '';
 
                     // Pour une plage de dates, nous aurons deux champs de date.
                     // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.
@@ -265,13 +270,13 @@ export default class extends BaseController {
                            data-criterion-name="${criterion.Nom}" 
                            data-criterion-part="from" 
                            class="form-control form-control-sm"
-                           value="${fromValue}"  
+                           value="${fromValue}"
                            placeholder="Date de début">
                     <span class="input-group-text">et</span>
                     <input type="date" 
                            id="${criterionId}_to" 
                            data-criterion-name="${criterion.Nom}" 
-                           value="${toValue}"  
+                           value="${toValue}"
                            data-criterion-part="to" 
                            class="form-control form-control-sm"
                            placeholder="Date de fin">
