@@ -88,49 +88,8 @@ export default class extends BaseController {
      * Réinitialise le formulaire et notifie le Cerveau.
      */
     resetForm() {
-        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
-        this.notifyCerveau('search:advanced.reset');
-        this.modal.hide();
-    }
-
-    /**
-     * Ferme simplement la modale sans soumettre.
-     */
-    cancel() {
-        this.modal.hide();
-    }
-
-    /**
-     * Ajuste le z-index pour s'assurer que cette modale apparaît au-dessus des autres.
-     */
-    adjustZIndex() {
-        const backdrops = document.querySelectorAll('.modal-backdrop.show');
-        if (backdrops.length > 1) {
-            const modals = document.querySelectorAll('.modal.show');
-            let maxZIndex = 0;
-            modals.forEach(modal => {
-                if (modal !== this.advancedSearchModalTarget) {
-                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
-                    if (zIndex > maxZIndex) {
-                        maxZIndex = zIndex;
-                    }
-                }
-            });
-
-            const myModal = this.advancedSearchModalTarget;
-            const myBackdrop = backdrops[backdrops.length - 1];
-
-            myBackdrop.style.zIndex = maxZIndex + 1;
-            myModal.style.zIndex = maxZIndex + 2;
-        }
-    }
-
-
-    /**
-     * Réinitialise le formulaire et notifie le Cerveau.
-     */
-    resetForm() {
-        this.advancedFormContainerTarget.querySelectorAll('input, select').forEach(el => el.value = '');
+        // Ne fait plus de manipulation du DOM ici.
+        // Notifie simplement le cerveau de l'intention de réinitialiser.
         this.notifyCerveau('search:advanced.reset');
         this.modal.hide();
     }

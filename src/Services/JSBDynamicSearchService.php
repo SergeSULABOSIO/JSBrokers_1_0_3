@@ -158,7 +158,21 @@ class JSBDynamicSearchService
                 $currentAlias = $joinedEntities[$relationAlias];
             }
 
-            if (is_array($value) && isset($value['operator']) && (isset($value['value']) && $value['value'] !== '')) {
+            // NOUVEAU : Gestion spécifique pour les plages de dates (ex: {from: '...', to: '...'})
+            if (is_array($value) && (isset($value['from']) || isset($value['to'])) && !isset($value['operator'])) {
+                $from = $value['from'] ?? null;
+                $to = $value['to'] ?? null;
+
+                if ($from) {
+                    $qb->andWhere("{$currentAlias}.{$actualField} >= :{$parameterName}_from")
+                       ->setParameter("{$parameterName}_from", (new \DateTime($from))->format('Y-m-d 00:00:00'));
+                }
+                if ($to) {
+                    $qb->andWhere("{$currentAlias}.{$actualField} <= :{$parameterName}_to")
+                       ->setParameter("{$parameterName}_to", (new \DateTime($to))->format('Y-m-d 23:59:59'));
+                }
+            }
+            else if (is_array($value) && isset($value['operator']) && (isset($value['value']) && $value['value'] !== '')) {
                 $operator = strtoupper($value['operator']);
                 $filterValue = $value['value'];
 
