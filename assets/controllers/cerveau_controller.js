@@ -96,6 +96,10 @@ export default class extends Controller {
                 // Le dialogue a soumis les critères, on les envoie à la barre de recherche
                 this.broadcast('search:advanced.submitted', payload);
                 break;
+            case 'search:advanced.reset':
+                // Le dialogue demande une réinitialisation, on le transmet à la barre de recherche
+                this.broadcast('search:advanced.reset', payload);
+                break;
 
             case 'dialog:boite-dialogue:init-request':
                 this.broadcast('app:loading.start');

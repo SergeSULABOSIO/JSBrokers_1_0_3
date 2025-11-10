@@ -135,8 +135,25 @@ export default class extends BaseController {
     }
 
     handleAdvancedSearchReset() {
+        // Vide la recherche simple
         this.simpleSearchInputTarget.value = '';
+        // Réinitialise complètement les filtres
         this.activeFilters = {};
+
+        // NOUVELLE LOGIQUE : Applique le filtre de date par défaut (mois en cours)
+        const dateCriterion = this.criteriaValue.find(c => c.Type === 'DateTimeRange');
+        if (dateCriterion) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            
+            const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
+            const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+            this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
+        }
+
+        // Lance la recherche avec les filtres réinitialisés (contenant uniquement la date)
         this.dispatchSearchEvent();
     }
 
