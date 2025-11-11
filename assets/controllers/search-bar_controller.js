@@ -246,7 +246,6 @@ export default class extends BaseController {
             switch (criterion.Type) {
                 case 'Text':
                     const textValue = this.activeFilters[criterion.Nom] || '';
-                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir une valeur...">`;
                     html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir ${criterion.Display.toLowerCase()}...">`;
                     break;
                 case 'Number':
