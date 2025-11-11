@@ -147,8 +147,8 @@ export default class extends BaseController {
             const year = today.getFullYear();
             const month = today.getMonth();
             
-            const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
-            const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+            const firstDay = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
+            const lastDay = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
 
             this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
         }
@@ -272,9 +272,9 @@ export default class extends BaseController {
                     const year = today.getFullYear();
                     const month = today.getMonth();
 
-                    // NOUVEAU : Définir les valeurs par défaut pour le premier et le dernier jour du mois en cours
-                    const defaultFrom = new Date(year, month, 1).toISOString().split('T')[0];
-                    const defaultTo = new Date(year, month + 1, 0).toISOString().split('T')[0];
+                    // Définir les valeurs par défaut pour le premier et le dernier jour du mois en cours en UTC
+                    const defaultFrom = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
+                    const defaultTo = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
 
                     const dateFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
                         ? this.activeFilters[criterion.Nom]
