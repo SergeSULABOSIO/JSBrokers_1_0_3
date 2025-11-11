@@ -69,7 +69,10 @@ export default class extends BaseController {
             if (operatorSelect) { // Cas d'un critère numérique avec opérateur
                 const valueInput = currentInputs.find(i => i.type === 'number');
                 const value = valueInput ? valueInput.value.trim() : '';
-                criteria[name] = { operator: operatorSelect.value, value: value };
+                // NOUVEAU : On n'ajoute le critère que si une valeur a été saisie.
+                if (value) {
+                    criteria[name] = { operator: operatorSelect.value, value: value };
+                }
             } else if (currentInputs.length > 1 && currentInputs.some(i => i.dataset.criterionPart)) { // Cas d'une plage de dates
                 const from = currentInputs.find(i => i.dataset.criterionPart === 'from')?.value.trim() || '';
                 const to = currentInputs.find(i => i.dataset.criterionPart === 'to')?.value.trim() || '';
