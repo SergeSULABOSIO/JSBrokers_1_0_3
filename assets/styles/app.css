@@ -156,6 +156,11 @@ a:active {
     height: 1.1em;
 }
 
+/* NOUVEAU : Classe utilitaire pour un alignement vertical parfait dans un conteneur flex */
+.align-middle-flex-item {
+    vertical-align: middle;
+}
+
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
 .form-scrollable-content {
     max-height: 45vh; /* Hauteur augmentée pour plus de confort */
