@@ -1040,22 +1040,52 @@ textarea:hover,
 /* ================================================================== */
 
 .criterion-block {
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
+    border: 1px solid #e9ecef; /* Bordure gris clair, comme les tables */
+    border-radius: 0.375rem;   /* Bords arrondis standards de Bootstrap */
     margin-bottom: 1rem;
-    background-color: #f8f9fa;
-    /* NOUVEAU : Bordure gauche par défaut (inactive) */
-    border-left: 5px solid #adb5bd; /* Gris moyen */
-    transition: border-left-color 0.3s ease-in-out; /* Transition douce */
+    background-color: #f8f9fa; /* Fond très légèrement grisé pour le bloc */
 }
 
-/* NOUVEAU : Style pour un critère actif */
-.criterion-block.is-active {
-    border-left-color: #198754; /* Vert "success" de Bootstrap */
-}
 .criterion-block .criterion-header {
     padding: 0.5rem 1rem;
     background-color: #e9ecef; /* Fond de l'en-tête un peu plus foncé */
     border-bottom: 1px solid #dee2e6;
     font-weight: 600; /* Police semi-bold pour le titre */
+}
+
+/* ================================================================== */
+/* NOUVEAU : Styles pour les boutons de la boîte de dialogue de recherche avancée */
+/* ================================================================== */
+
+.modal-footer .btn {
+    transition: all 0.2s ease-in-out; /* Transition douce pour tous les changements */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Ombre légère par défaut */
+}
+
+/* Style pour le bouton "Réinitialiser" (btn-secondary) */
+.modal-footer .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: #fff;
+}
+
+.modal-footer .btn-secondary:hover,
+.modal-footer .btn-secondary:focus {
+    background-color: #5a6268; /* Gris légèrement plus foncé au survol */
+    border-color: #545b62;
+    transform: translateY(-1px); /* Léger soulèvement */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Ombre plus prononcée */
+}
+
+/* Style pour le bouton "Rechercher" (btn-primary) */
+.modal-footer .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+.modal-footer .btn-primary:hover,
+.modal-footer .btn-primary:focus {
+    background-color: #0b5ed7; /* Bleu légèrement plus foncé au survol */
+    border-color: #0a58ca;
+    transform: translateY(-1px); /* Léger soulèvement */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Ombre plus prononcée */
 }

@@ -41,6 +41,8 @@ export default class extends BaseController {
         const { formHtml } = event.detail;
         this.advancedFormContainerTarget.innerHTML = formHtml;
         this.modal.show();
+        // NOUVEAU : Attacher les écouteurs d'événements pour la mise à jour dynamique
+        this.addDynamicStyleListeners();
     }
 
     /**
@@ -127,5 +129,41 @@ export default class extends BaseController {
             myBackdrop.style.zIndex = maxZIndex + 1;
             myModal.style.zIndex = maxZIndex + 2;
         }
+    }
+
+    /**
+     * NOUVEAU : Ajoute des écouteurs sur les champs pour mettre à jour le style des blocs.
+     */
+    addDynamicStyleListeners() {
+        const inputs = this.advancedFormContainerTarget.querySelectorAll('[data-criterion-name]');
+        inputs.forEach(input => {
+            input.addEventListener('input', this.updateCriterionBlockStyle.bind(this));
+        });
+    }
+
+    /**
+     * NOUVEAU : Met à jour la classe 'is-active' du bloc parent d'un champ.
+     * @param {Event} event L'événement 'input'
+     */
+    updateCriterionBlockStyle(event) {
+        const input = event.currentTarget;
+        const criterionName = input.dataset.criterionName;
+        const block = input.closest('.criterion-block');
+        if (!block) return;
+
+        let isActive = false;
+        const relatedInputs = this.advancedFormContainerTarget.querySelectorAll(`[data-criterion-name="${criterionName}"]`);
+
+        if (relatedInputs.length > 1) { // Cas des plages (date, nombre)
+            // Pour une plage, on vérifie si au moins un des champs a une valeur
+            isActive = Array.from(relatedInputs).some(relatedInput => {
+                // Pour les select, la valeur n'est jamais vide, on ignore l'opérateur
+                return relatedInput.tagName !== 'SELECT' && relatedInput.value.trim() !== '';
+            });
+        } else { // Cas simple (texte, select)
+            isActive = input.value.trim() !== '';
+        }
+
+        block.classList.toggle('is-active', isActive);
     }
 }
