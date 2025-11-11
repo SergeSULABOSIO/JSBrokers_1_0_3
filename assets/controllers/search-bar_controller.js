@@ -149,6 +149,8 @@ export default class extends BaseController {
             
             const firstDay = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
             const lastDay = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
+            // const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
+            // const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
 
             this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
         }
@@ -233,18 +235,19 @@ export default class extends BaseController {
     buildAdvancedForm() {
         let html = '';
         const advancedCriteria = this.criteriaValue.filter(c => !c.isDefault); // [c.isDefault !== true]
-        advancedCriteria.forEach(criterion => {
+        advancedCriteria.forEach(criterion => {            
             const criterionId = `criterion_${criterion.Nom.replace(/\s+/g, '_')}`;
+            const activeClass = this.isCriterionActive(criterion) ? 'is-active' : '';
 
             // NOUVEAU : Début du bloc visuel pour un critère
-            html += `<div class="criterion-block">`;
+            html += `<div class="criterion-block ${activeClass}">`;
             html += `<div class="criterion-header">${criterion.Display}</div>`;
             html += `<div class="p-3">`; // Conteneur pour le champ de formulaire
-
             switch (criterion.Type) {
                 case 'Text':
                     const textValue = this.activeFilters[criterion.Nom] || '';
                     html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir une valeur...">`;
+                    html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir ${criterion.Display.toLowerCase()}...">`;
                     break;
                 case 'Number':
                     // On s'assure que activeFilters[criterion.Nom] est un objet
@@ -268,9 +271,14 @@ export default class extends BaseController {
 
                 // --- NOUVEAU CASE POUR DATETIME RANGE ---
                 case 'DateTimeRange':
+                    // Obtenir la date du jour au format YYYY-MM-DD
+                    // Cela garantit que la date est formatée correctement pour un input type="date"
                     const today = new Date();
                     const year = today.getFullYear();
                     const month = today.getMonth();
+                    // const month = String(today.getMonth() + 1).padStart(2, '0'); // Mois commence à 0
+                    // const day = String(today.getDate()).padStart(2, '0');
+                    // const defaultDate = `${year}-${month}-${day}`;
 
                     // Définir les valeurs par défaut pour le premier et le dernier jour du mois en cours en UTC
                     const defaultFrom = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
@@ -281,6 +289,8 @@ export default class extends BaseController {
                         : {};
                     const fromValue = dateFilter.from || defaultFrom;
                     const toValue = dateFilter.to || defaultTo;
+                    // const fromValue = dateFilter.from || '';
+                    // const toValue = dateFilter.to || '';
 
                     // Pour une plage de dates, nous aurons deux champs de date.
                     // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.
@@ -321,6 +331,30 @@ export default class extends BaseController {
         });
         return html;
     }
+
+    /**
+     * NOUVEAU : Vérifie si un critère a une valeur active dans les filtres.
+     * @param {object} criterion La définition du critère.
+     * @returns {boolean}
+     */
+    isCriterionActive(criterion) {
+        const filter = this.activeFilters[criterion.Nom];
+        if (filter === undefined || filter === null) return false;
+
+        switch (criterion.Type) {
+            case 'Text':
+            case 'Options':
+                return filter !== '';
+            case 'Number':
+                // Actif si une valeur est saisie, même 0.
+                return filter.value !== undefined && filter.value !== '';
+            case 'DateTimeRange':
+                // Actif si au moins une des deux dates est renseignée.
+                return (filter.from && filter.from !== '') || (filter.to && filter.to !== '');
+            default:
+                return false;
+        }
+    }   
 
     submitSimpleSearch(event) {
         event.preventDefault();
@@ -419,6 +453,7 @@ export default class extends BaseController {
                 <button type="button" 
                     class="btn-close btn-close-white ms-2"
                     style="font-size: 0.9em;"
+                    style="font-size: 0.6em;"
                     aria-label="Remove filter" 
                     data-action="click->search-bar#removeFilter"
                     data-filter-key="${key}">
