@@ -268,19 +268,19 @@ export default class extends BaseController {
 
                 // --- NOUVEAU CASE POUR DATETIME RANGE ---
                 case 'DateTimeRange':
-                    // Obtenir la date du jour au format YYYY-MM-DD
-                    // Cela garantit que la date est formatée correctement pour un input type="date"
                     const today = new Date();
                     const year = today.getFullYear();
-                    const month = String(today.getMonth() + 1).padStart(2, '0'); // Mois commence à 0
-                    const day = String(today.getDate()).padStart(2, '0');
-                    const defaultDate = `${year}-${month}-${day}`;
+                    const month = today.getMonth();
+
+                    // NOUVEAU : Définir les valeurs par défaut pour le premier et le dernier jour du mois en cours
+                    const defaultFrom = new Date(year, month, 1).toISOString().split('T')[0];
+                    const defaultTo = new Date(year, month + 1, 0).toISOString().split('T')[0];
 
                     const dateFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
                         ? this.activeFilters[criterion.Nom]
                         : {};
-                    const fromValue = dateFilter.from || '';
-                    const toValue = dateFilter.to || '';
+                    const fromValue = dateFilter.from || defaultFrom;
+                    const toValue = dateFilter.to || defaultTo;
 
                     // Pour une plage de dates, nous aurons deux champs de date.
                     // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.
