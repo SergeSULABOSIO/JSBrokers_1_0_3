@@ -19,8 +19,14 @@
                 <form>
                     <div data-search-bar-dialog-target="advancedFormContainer" class="form-scrollable-content"></div>
                     <div class="d-flex justify-content-end mt-4 border-top pt-3">
-                        <button type="button" class="btn btn-secondary me-2" data-action="click->search-bar-dialog#resetForm">Réinitialiser</button>
-                        <button type="button" class="btn btn-primary" data-action="click->search-bar-dialog#submitAdvancedSearch">Rechercher</button>
+                        <button type="button" class="btn btn-secondary me-2" data-action="click->search-bar-dialog#resetForm">
+                            <twig:ux:icon name="lucide:rotate-cw" class="me-1" style="width: 24px; height: 24px;" />
+                            Réinitialiser
+                        </button>
+                        <button type="button" class="btn btn-primary" data-action="click->search-bar-dialog#submitAdvancedSearch">
+                            <twig:ux:icon name="lucide:search" class="me-1" style="width: 24px; height: 24px;" />
+                            Rechercher
+                        </button>
                     </div>
                 </form>
             </div>
