@@ -39,6 +39,18 @@ export default class extends BaseController {
     // --- Actions de l'utilisateur (logique mise à jour) ---
 
     openAdvancedSearch() {
+        // NOUVEAU : Si aucun filtre DateTimeRange n'est actif, pré-remplir avec le mois en cours
+        const dateCriterion = this.criteriaValue.find(c => c.Type === 'DateTimeRange');
+        if (dateCriterion && !this.activeFilters[dateCriterion.Nom]) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            
+            const firstDay = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
+            const lastDay = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
+            this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
+        }
+
         const formHtml = this.buildAdvancedForm();
         this.notifyCerveau('dialog:search.open-request', { formHtml });
     }
@@ -270,26 +282,14 @@ export default class extends BaseController {
 
                 // --- NOUVEAU CASE POUR DATETIME RANGE ---
                 case 'DateTimeRange':
-                    // Obtenir la date du jour au format YYYY-MM-DD
-                    // Cela garantit que la date est formatée correctement pour un input type="date"
-                    const today = new Date();
-                    const year = today.getFullYear();
-                    const month = today.getMonth();
-                    // const month = String(today.getMonth() + 1).padStart(2, '0'); // Mois commence à 0
-                    // const day = String(today.getDate()).padStart(2, '0');
-                    // const defaultDate = `${year}-${month}-${day}`;
-
-                    // Définir les valeurs par défaut pour le premier et le dernier jour du mois en cours en UTC
-                    const defaultFrom = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
-                    const defaultTo = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
-
+                    // Les valeurs par défaut sont maintenant définies dans openAdvancedSearch ou handleAdvancedSearchReset
+                    // si aucun filtre n'est actif pour ce critère.
+                    // Nous récupérons donc simplement les valeurs de activeFilters.
                     const dateFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
                         ? this.activeFilters[criterion.Nom]
                         : {};
-                    const fromValue = dateFilter.from || defaultFrom;
-                    const toValue = dateFilter.to || defaultTo;
-                    // const fromValue = dateFilter.from || '';
-                    // const toValue = dateFilter.to || '';
+                    const fromValue = dateFilter.from || ''; // Devrait déjà être défini si nécessaire
+                    const toValue = dateFilter.to || '';     // Devrait déjà être défini si nécessaire
 
                     // Pour une plage de dates, nous aurons deux champs de date.
                     // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.

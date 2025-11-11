@@ -1045,7 +1045,7 @@ textarea:hover,
     margin-bottom: 1rem;
     background-color: #f8f9fa;
     /* NOUVEAU : Bordure gauche par défaut (inactive) */
-    border-left: 5px solid #adb5bd; /* Gris moyen */
+    border-left: 6px solid #adb5bd; /* Gris moyen */
     transition: border-left-color 0.3s ease-in-out; /* Transition douce */
 }
 
