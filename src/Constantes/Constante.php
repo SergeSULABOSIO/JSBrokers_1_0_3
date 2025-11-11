@@ -6187,6 +6187,77 @@ class Constante
     }
 
 
+    /**
+     * Construit le "canevas de recherche" pour une entité donnée.
+     * Ce canevas définit les critères disponibles pour la recherche simple et avancée,
+     * en s'inspirant de la structure utilisée par le contrôleur Stimulus `search-bar`.
+     *
+     * @param string $entityClassName Le FQCN (Fully Qualified Class Name) de l'entité.
+     * @return array Un tableau de définitions de critères.
+     */
+    public function getSearchCanvas(string $entityClassName): array
+    {
+        $searchCriteria = [];
+        $entityCanvas = $this->getEntityCanvas($entityClassName);
+        $hasSetDefault = false;
+
+        // Si aucun canevas n'est défini pour cette entité, on ne peut rien faire.
+        if (empty($entityCanvas) || !isset($entityCanvas['liste'])) {
+            return [];
+        }
+
+        foreach ($entityCanvas['liste'] as $field) {
+            // On ignore les collections car elles ne sont pas des champs de recherche directs.
+            if ($field['type'] === 'Collection') {
+                continue;
+            }
+
+            $criterion = [
+                'Nom' => $field['code'],
+                'Display' => $field['intitule'],
+                'isDefault' => false, // Par défaut, aucun n'est le critère simple.
+            ];
+
+            // Mappage des types PHP vers les types attendus par le JavaScript
+            switch ($field['type']) {
+                case 'Texte':
+                case 'Relation': // Les relations sont souvent recherchées via un champ texte.
+                    $criterion['Type'] = 'Text';
+                    $criterion['Valeur'] = '';
+                    // Le premier champ texte trouvé devient le critère de recherche simple par défaut.
+                    if (!$hasSetDefault) {
+                        $criterion['isDefault'] = true;
+                        $hasSetDefault = true;
+                    }
+                    break;
+
+                case 'Nombre':
+                case 'Entier':
+                    $criterion['Type'] = 'Number';
+                    $criterion['Valeur'] = 0;
+                    break;
+
+                case 'Date':
+                    // Un champ de date unique est transformé en une plage de dates pour la recherche.
+                    $criterion['Type'] = 'DateTimeRange';
+                    $criterion['Valeur'] = ['from' => '', 'to' => ''];
+                    break;
+
+                case 'Booleen':
+                    $criterion['Type'] = 'Options'; // Un booléen peut être représenté par des options "Oui/Non".
+                    $criterion['Valeur'] = [
+                        '1' => 'Oui',
+                        '0' => 'Non',
+                    ];
+                    break;
+
+                default:
+                    continue 2; // On saute ce champ si son type n'est pas géré.
+            }
+            $searchCriteria[] = $criterion;
+        }
+        return $searchCriteria;
+    }
 
     public function getListeCanvas($entityClassName): array
     {
@@ -7507,39 +7578,6 @@ class Constante
     }
 
 
-    // public function getNumericAttributesAndValues($object): array
-    // {
-    //     if ($object instanceof NotificationSinistre) {
-    //         return [
-    //             "dommage-avant-evaluation" => [
-    //                 "description" => "la somme des dommages avant évaluation",
-    //                 "value" => $object->getDommage() * 100,
-    //             ],
-    //             'dommage-apres-evaluation' => [
-    //                 "description" => "la somme des dommages après évaluation",
-    //                 "value" => $object->getEvaluationChiffree() * 100,
-    //             ],
-    //             'franchise' => [
-    //                 "description" => "la somme des franchises",
-    //                 "value" => $this->Notification_Sinistre_getFranchise($object) * 100,
-    //             ],
-    //             "compensation-totale" => [
-    //                 "description" => "la somme des compensations totales",
-    //                 "value" => $this->Notification_Sinistre_getCompensation($object) * 100,
-    //             ],
-    //             "compensation-versee" => [
-    //                 "description" => "la somme des compensations versées",
-    //                 "value" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
-    //             ],
-    //             "compensation-due" => [
-    //                 "description" => "la somme des compensations dues",
-    //                 "value" => $this->Notification_Sinistre_getCompensationVersee($object) * 100,
-    //             ],
-    //         ];
-    //     }
-
-    //     return [];
-    // }
 
 
     public function getNumericAttributesAndValues($object): array
