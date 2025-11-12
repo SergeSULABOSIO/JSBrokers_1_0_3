@@ -6193,13 +6193,13 @@ class Constante
      * en s'inspirant de la structure utilisée par le contrôleur Stimulus `search-bar`.
      *
      * @param string $entityClassName Le FQCN (Fully Qualified Class Name) de l'entité.
+     * @param string|null $defaultFieldName Le nom de l'attribut à utiliser comme critère de recherche simple par défaut.
      * @return array Un tableau de définitions de critères.
      */
-    public function getSearchCanvas(string $entityClassName): array
+    public function getSearchCanvas(string $entityClassName, ?string $defaultFieldName = null): array
     {
         $searchCriteria = [];
         $entityCanvas = $this->getEntityCanvas($entityClassName);
-        $hasSetDefault = false;
 
         // Si aucun canevas n'est défini pour cette entité, on ne peut rien faire.
         if (empty($entityCanvas) || !isset($entityCanvas['liste'])) {
@@ -6214,7 +6214,7 @@ class Constante
 
             $criterion = [
                 'Nom' => $field['code'],
-                'Display' => $field['intitule'],
+                'Display' => $field['intitule'], 
                 'isDefault' => false, // Par défaut, aucun n'est le critère simple.
             ];
 
@@ -6224,11 +6224,10 @@ class Constante
                 case 'Relation': // Les relations sont souvent recherchées via un champ texte.
                     $criterion['Type'] = 'Text';
                     $criterion['Valeur'] = '';
-                    // Le premier champ texte trouvé devient le critère de recherche simple par défaut.
-                    if (!$hasSetDefault) {
+                    // NOUVEAU : Le critère par défaut est celui dont le nom correspond au paramètre.
+                    if ($defaultFieldName !== null && $field['code'] === $defaultFieldName) {
                         $criterion['isDefault'] = true;
-                        $hasSetDefault = true;
-                    }
+                    } 
                     break;
 
                 case 'Nombre':
@@ -6259,7 +6258,7 @@ class Constante
         return $searchCriteria;
     }
 
-    public function getListeCanvas($entityClassName): array
+    public function getListeCanvas(string $entityClassName): array
     {
         switch ($entityClassName) {
             case NotificationSinistre::class:

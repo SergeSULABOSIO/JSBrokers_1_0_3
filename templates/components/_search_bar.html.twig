@@ -2,6 +2,7 @@
 <div 
     data-controller="search-bar"
     data-search-bar-nom-entite-value="{{ entite_nom|default('') }}"
+    data-search-bar-criteria-value="{{ searchCanvas|json_encode|e('html_attr') }}"
 >
     <div class="search-bar-row-1 p-2 d-flex align-items-center bg-white rounded-top shadow">
         <div class="input-group flex-grow-1">
