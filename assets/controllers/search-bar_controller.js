@@ -37,7 +37,11 @@ export default class extends BaseController {
             console.log(`${this.nomControleur} - Filtres chargés depuis sessionStorage:`, this.activeFilters);
         }
 
-        this.initializeCriteria(); // NOUVEAU : On initialise les critères directement
+        this.initializeCriteria();
+
+        // NOUVEAU : Déclencher la recherche initiale au chargement de la page.
+        // Ceci garantit que la barre de recherche est la seule source de vérité pour le chargement des données.
+        this.dispatchSearchEvent();
     }
 
     disconnect() {
