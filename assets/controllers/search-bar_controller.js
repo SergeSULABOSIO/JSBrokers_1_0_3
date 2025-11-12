@@ -28,6 +28,15 @@ export default class extends BaseController {
         document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
 
+        // NOUVEAU : Charger les filtres depuis sessionStorage au démarrage.
+        const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
+        const savedFilters = sessionStorage.getItem(storageKey);
+
+        if (savedFilters) {
+            this.activeFilters = JSON.parse(savedFilters);
+            console.log(`${this.nomControleur} - Filtres chargés depuis sessionStorage:`, this.activeFilters);
+        }
+
         this.initializeCriteria(); // NOUVEAU : On initialise les critères directement
     }
 
@@ -197,6 +206,14 @@ export default class extends BaseController {
         // NOUVEAU : On peuple le sélecteur de critère simple
         this.populateSimpleSearchSelector();
         this.updateSimpleSearchPlaceholder();
+
+        // NOUVEAU : Mettre à jour l'UI avec les filtres chargés depuis sessionStorage
+        const simpleSearchKey = this.simpleSearchCriterionTarget.value;
+        if (this.activeFilters[simpleSearchKey]) {
+            this.simpleSearchInputTarget.value = this.activeFilters[simpleSearchKey];
+        }
+        this.updateSummary(); // Mettre à jour le résumé des filtres
+
         this.buildAdvancedForm();
     }
 
@@ -367,6 +384,10 @@ export default class extends BaseController {
      * @param {CustomEvent} event L'événement reçu.
      */
     handleExternalRefresh(event) {
+        // Si des filtres sont déjà actifs (potentiellement depuis sessionStorage), on les applique.
+        if (Object.keys(this.activeFilters).length > 0) {
+            this.dispatchSearchEvent();
+        }
         console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
 
         this.dispatchSearchEvent();
@@ -374,6 +395,10 @@ export default class extends BaseController {
 
     dispatchSearchEvent() {
         // Notifie le cerveau pour démarrer la barre de progression
+        // NOUVEAU : Sauvegarder les filtres actifs dans sessionStorage à chaque recherche.
+        const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
+        sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters));
+
         this.notifyCerveau('app:loading.start');
         // Notifie le cerveau pour lancer la recherche
         this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
