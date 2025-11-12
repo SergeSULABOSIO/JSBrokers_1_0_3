@@ -45,7 +45,6 @@ export default class extends Controller {
 
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
-        this.boundHandleGlobalRefresh = this.handleGlobalRefresh.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
         
         // On notifie le cerveau avec les données numériques initiales
@@ -56,7 +55,6 @@ export default class extends Controller {
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
-        document.addEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
     }
 
@@ -67,7 +65,6 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.removeEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
-        document.removeEventListener('app:list.refresh-request', this.boundHandleGlobalRefresh);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
     }
 
@@ -178,30 +175,6 @@ export default class extends Controller {
         } catch (error) {
             this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
             this.notifyCerveau("app:error.api", { error: error.message });
-        }
-    }
-
-    /**
-     * Gère une demande de rafraîchissement globale.
-     */
-    handleGlobalRefresh(event) {
-        const { originatorId, idEntreprise, idInvite } = event.detail;
-
-        // Le list-manager doit se rafraîchir si :
-        // 1. L'originatorId est null ou undefined (rafraîchissement global, ex: depuis la toolbar principale ou un save général).
-        // 2. L'originatorId correspond à l'ID de ce list-manager (rafraîchissement ciblé).
-        // De plus, s'assurer que ce list-manager est bien celui de la vue principale (pas une collection imbriquée).
-        const isMainListManager = this.element.closest('[data-controller="view-manager"]') !== null;
-
-        if (isMainListManager && (originatorId === null || originatorId === undefined || originatorId === this.element.id)) {
-            console.log(`${this.nomControleur} - Demande de rafraîchissement reçue.`, event.detail);
-            this.handleDBRequest({
-                detail: {
-                    criteria: {},
-                    idEntreprise: idEntreprise,
-                    idInvite: idInvite
-                }
-            });
         }
     }
 
