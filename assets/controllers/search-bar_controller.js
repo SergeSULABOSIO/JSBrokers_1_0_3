@@ -39,17 +39,19 @@ export default class extends BaseController {
     // --- Actions de l'utilisateur (logique mise à jour) ---
 
     openAdvancedSearch() {
-        // NOUVEAU : Si aucun filtre DateTimeRange n'est actif, pré-remplir avec le mois en cours
-        const dateCriterion = this.criteriaValue.find(c => c.Type === 'DateTimeRange');
-        if (dateCriterion && !this.activeFilters[dateCriterion.Nom]) {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth();
-            
-            const firstDay = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
-            const lastDay = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
-            this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
-        }
+        // MODIFIÉ : Pré-remplir TOUS les filtres DateTimeRange non actifs avec le mois en cours.
+        const dateCriteria = this.criteriaValue.filter(c => c.Type === 'DateTimeRange');
+        dateCriteria.forEach(dateCriterion => {
+            if (dateCriterion && !this.activeFilters[dateCriterion.Nom]) {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = today.getMonth();
+                
+                const firstDay = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
+                const lastDay = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
+                this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
+            }
+        });
 
         const formHtml = this.buildAdvancedForm();
         this.notifyCerveau('dialog:search.open-request', { formHtml });

@@ -6212,6 +6212,11 @@ class Constante
                 continue;
             }
 
+            // NOUVEAU : On ignore le champ 'id' qui n'est pas un critère de recherche pertinent.
+            if ($field['code'] === 'id') {
+                continue;
+            }
+
             $criterion = [
                 'Nom' => $field['code'],
                 'Display' => $field['intitule'], 

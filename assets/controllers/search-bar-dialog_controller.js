@@ -78,7 +78,10 @@ export default class extends BaseController {
             } else if (currentInputs.length > 1 && currentInputs.some(i => i.dataset.criterionPart)) { // Cas d'une plage de dates
                 const from = currentInputs.find(i => i.dataset.criterionPart === 'from')?.value.trim() || '';
                 const to = currentInputs.find(i => i.dataset.criterionPart === 'to')?.value.trim() || '';
-                criteria[name] = { from, to };
+                // NOUVEAU : On n'ajoute le critère que si au moins une des deux dates est renseignée.
+                if (from || to) {
+                    criteria[name] = { from, to };
+                }
             } else { // Cas simple (texte, options)
                 const value = currentInputs[0].value.trim();
                 if (value) criteria[name] = value;
