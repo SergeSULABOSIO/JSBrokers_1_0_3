@@ -6225,9 +6225,13 @@ class Constante
             // Mappage des types PHP vers les types attendus par le JavaScript
             switch ($field['type']) {
                 case 'Texte':
-                case 'Relation': // Les relations sont souvent recherchées via un champ texte.
                     $criterion['Type'] = 'Text';
                     $criterion['Valeur'] = '';
+                    break;
+                case 'Relation': // Les relations sont souvent recherchées via un champ texte.
+                    $criterion['Type'] = 'Text'; // Pour le frontend, c'est un champ texte.
+                    $criterion['Valeur'] = '';
+                    $criterion['targetField'] = $field['displayField'] ?? 'nom'; // On spécifie sur quel champ de la relation chercher.
                     break;
 
                 case 'Nombre':

@@ -254,9 +254,21 @@ class JSBDynamicSearchService
                     }
                 }
             } else {
-                if (is_string($value) && $value !== '') {
-                    $qb->andWhere($qb->expr()->like($currentAlias . '.' . $actualField, ':' . $parameterName))
-                       ->setParameter($parameterName, '%' . $value . '%');
+                // MODIFIÉ : Gestion des champs texte simples et des relations.
+                if (is_string($value) && $value !== '') { 
+                    $metadata = $this->em->getClassMetadata($qb->getRootEntities()[0]);
+                    // On vérifie si le champ est une association (ex: 'assure')
+                    if ($metadata->hasAssociation($actualField)) {
+                        $relationAlias = $actualField . $suffix;
+                        $qb->leftJoin("{$currentAlias}.{$actualField}", $relationAlias);
+                        // On utilise le 'targetField' fourni par le critère (ex: 'nom') pour la recherche.
+                        $targetField = $criteria[$field]['targetField'] ?? 'nom'; // 'nom' par défaut
+                        $qb->andWhere($qb->expr()->like("{$relationAlias}.{$targetField}", ':' . $parameterName))
+                           ->setParameter($parameterName, '%' . $value . '%');
+                    } else { // C'est un champ texte simple sur l'entité principale.
+                        $qb->andWhere($qb->expr()->like("{$currentAlias}.{$actualField}", ':' . $parameterName))
+                           ->setParameter($parameterName, '%' . $value . '%');
+                    }
                 }
             }
         }
