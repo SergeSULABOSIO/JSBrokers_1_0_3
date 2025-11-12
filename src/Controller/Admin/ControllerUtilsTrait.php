@@ -197,15 +197,13 @@ trait ControllerUtilsTrait
 
         if ($isQueryResult) {
             $requestData = json_decode($request->getContent(), true) ?? [];
-            // The searchService is expected to handle sorting, filtering, and pagination.
-            // The user's requirement to sort by most recent should be configured in the search criteria sent by the frontend.
             $reponseData = $this->searchService->search($requestData);
             $data = $reponseData["data"];
             $template = 'components/_list_content.html.twig';
         } else {
-            $repository = $this->em->getRepository($entityClass);
-            // For initial load, sort by ID DESC to show most recent first.
-            $data = $repository->findBy([], ['id' => 'DESC']);
+            // NOUVEAU : On ne charge plus les données lors de l'affichage initial.
+            // La barre de recherche déclenchera le premier chargement.
+            $data = [];
             $template = 'components/_view_manager.html.twig';
         }
 
