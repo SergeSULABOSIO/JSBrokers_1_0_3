@@ -384,13 +384,8 @@ export default class extends BaseController {
      * @param {CustomEvent} event L'événement reçu.
      */
     handleExternalRefresh(event) {
-        // Si des filtres sont déjà actifs (potentiellement depuis sessionStorage), on les applique.
-        if (Object.keys(this.activeFilters).length > 0) {
-            this.dispatchSearchEvent();
-        }
         console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
-
-        this.dispatchSearchEvent();
+        this.dispatchSearchEvent(); // Relance simplement la recherche avec les filtres courants.
     }
 
     dispatchSearchEvent() {
