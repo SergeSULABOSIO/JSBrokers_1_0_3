@@ -180,62 +180,17 @@ export default class extends BaseController {
      * et initialise la barre de recherche.
      */
     initializeCriteria() {
-        console.log(`${this.nomControleur} - Initializing criteria for entity: ${this.nomEntiteValue}`);
+        // NOUVELLE LOGIQUE : Les critères sont maintenant passés directement par le serveur
+        // via la `value` Stimulus `criteria`. Il n'y a plus besoin de les construire ici.
+        console.log(`${this.nomControleur} - Initializing with criteria from server:`, this.criteriaValue);
 
-        // La logique de `provideCriteria` est maintenant ici.
-        // À l'avenir, cette section pourrait être remplacée par un appel API
-        // pour récupérer les critères dynamiquement depuis le serveur.
-        let criteriaDefinition = [];
-
-        if (this.nomEntiteValue === 'NotificationSinistre') {
-            criteriaDefinition = [
-                {
-                    Nom: 'descriptionDeFait',
-                    Display: "Description des faits",
-                    Type: 'Text',
-                    Valeur: '',
-                    isDefault: true
-                },
-                {
-                    Nom: 'notifiedAt',
-                    Display: "Date de notification",
-                    Type: 'DateTimeRange',
-                    Valeur: { from: '', to: '' },
-                    isDefault: false
-                },
-                {
-                    Nom: 'referenceSinistre',
-                    Display: "Référence du sinistre",
-                    Type: 'Text',
-                    Valeur: '',
-                    isDefault: false
-                },
-                {
-                    Nom: 'referencePolice',
-                    Display: "Référence de la police",
-                    Type: 'Text',
-                    Valeur: '',
-                    isDefault: false
-                },
-                {
-                    Nom: 'dommage',
-                    Display: "Dommage",
-                    Type: 'Number',
-                    Valeur: 0,
-                    isDefault: false
-                },
-                {
-                    Nom: 'assure.nom',
-                    Display: "Client (assuré)",
-                    Type: 'Text',
-                    Valeur: '',
-                    isDefault: false
-                }
-            ];
+        // On s'assure que la valeur a bien été chargée.
+        if (!this.hasCriteriaValue || this.criteriaValue.length === 0) {
+            console.warn("Aucune directive de recherche (searchCanvas) n'a été fournie par le serveur.");
+            return;
         }
-        // On pourrait ajouter d'autres `else if (this.nomEntiteValue === '...')` pour d'autres entités.
 
-        this.criteriaValue = criteriaDefinition;
+        // Le reste de la logique reste identique.
         const defaultCriterion = this.criteriaValue.find(c => c.isDefault === true);
         if (defaultCriterion) {
             this.defaultCriterionValue = defaultCriterion;

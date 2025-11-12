@@ -220,7 +220,7 @@ trait ControllerUtilsTrait
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
-            'searchCanvas' => $this->constante->getSearchCanvas($entityClass),
+            'searchCanvas' => $this->constante->getSearchCanvas($entityClass, "descriptionDeFait"),
             'numericAttributesAndValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // Pass for dynamic queries
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,
@@ -230,7 +230,7 @@ trait ControllerUtilsTrait
             $parameters['status'] = $reponseData["status"];
             $parameters['totalItems'] = $reponseData["totalItems"];
         }
-        dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);
+        // dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);
         return $this->render($template, $parameters);
     }
 
