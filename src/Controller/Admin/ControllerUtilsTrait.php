@@ -219,8 +219,8 @@ trait ControllerUtilsTrait
             'constante' => $this->constante,
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
-            'searchCanvas' => $this->constante->getSearchCanvas($entityClass, "descriptionDeFait"),
+            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise), 
+            'searchCanvas' => $this->constante->getSearchCanvas($entityClass),
             'numericAttributesAndValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // Pass for dynamic queries
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,

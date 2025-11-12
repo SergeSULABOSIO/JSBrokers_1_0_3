@@ -15,6 +15,12 @@
                    data-action="keydown.enter->search-bar#submitSimpleSearch"
                    placeholder="Rechercher...">
         </div>
+        {# NOUVEAU : Sélecteur pour le critère de recherche simple #}
+        <select 
+            class="form-select form-select-sm border-0 bg-light ms-2" 
+            style="max-width: 200px;"
+            data-search-bar-target="simpleSearchCriterion"
+            data-action="change->search-bar#updateSimpleSearchPlaceholder"></select>
 
         <div class="ms-3 d-flex align-items-center">
             <button class="btn btn-sm btn-light" title="Recherche avancée" data-action="click->search-bar#openAdvancedSearch">
