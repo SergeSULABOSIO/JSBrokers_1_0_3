@@ -5,7 +5,8 @@ import { Modal } from 'bootstrap';
 export default class extends BaseController {
     static targets = [
         "simpleSearchInput",
-        "summaryContainer",
+        "simpleSearchCriterion", // NOUVEAU
+        "summaryContainer", 
         "summary"
     ];
 
@@ -193,12 +194,35 @@ export default class extends BaseController {
         }
 
         // Le reste de la logique reste identique.
-        const defaultCriterion = this.criteriaValue.find(c => c.isDefault === true);
-        if (defaultCriterion) {
-            this.defaultCriterionValue = defaultCriterion;
-            this.simpleSearchInputTarget.placeholder = "Tapez du texte pour filtrer dans l'attribut '" + defaultCriterion.Display + "'.";
-        }
+        // NOUVEAU : On peuple le sélecteur de critère simple
+        this.populateSimpleSearchSelector();
+        this.updateSimpleSearchPlaceholder();
         this.buildAdvancedForm();
+    }
+
+    /**
+     * NOUVEAU : Remplit le sélecteur de recherche simple avec les critères de type 'Text'.
+     */
+    populateSimpleSearchSelector() {
+        const textCriteria = this.criteriaValue.filter(c => c.Type === 'Text');
+        this.simpleSearchCriterionTarget.innerHTML = ''; // On vide le sélecteur
+
+        textCriteria.forEach(criterion => {
+            const option = document.createElement('option');
+            option.value = criterion.Nom;
+            option.textContent = criterion.Display;
+            this.simpleSearchCriterionTarget.appendChild(option);
+        });
+    }
+
+    /**
+     * NOUVEAU : Met à jour le placeholder du champ de recherche simple.
+     */
+    updateSimpleSearchPlaceholder() {
+        const selectedOption = this.simpleSearchCriterionTarget.options[this.simpleSearchCriterionTarget.selectedIndex];
+        if (selectedOption) {
+            this.simpleSearchInputTarget.placeholder = `Rechercher dans "${selectedOption.textContent}"...`;
+        }
     }
 
     buildAdvancedForm() {
@@ -315,14 +339,8 @@ export default class extends BaseController {
     submitSimpleSearch(event) {
         event.preventDefault();
 
-        // Empêche l'erreur si le critère par défaut n'est pas encore chargé
-        if (!this.hasDefaultCriterionValue) {
-            console.warn("Recherche annulée : le critère par défaut n'est pas encore défini.");
-            return;
-        }
-
         const value = this.simpleSearchInputTarget.value.trim();
-        const key = this.defaultCriterionValue.Nom;
+        const key = this.simpleSearchCriterionTarget.value; // NOUVEAU : On utilise le critère sélectionné
 
         if (value) {
             this.activeFilters[key] = value;
@@ -334,8 +352,8 @@ export default class extends BaseController {
 
     removeFilter(event) {
         const keyToRemove = event.currentTarget.dataset.filterKey;
-        delete this.activeFilters[keyToRemove];
-        if (keyToRemove === this.defaultCriterionValue.Nom) {
+        delete this.activeFilters[keyToRemove]; 
+        if (keyToRemove === this.simpleSearchCriterionTarget.value) {
             this.simpleSearchInputTarget.value = '';
         } else {
             // Plus besoin de nettoyer le formulaire ici, car il est dans un autre contrôleur.

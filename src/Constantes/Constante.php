@@ -6193,10 +6193,9 @@ class Constante
      * en s'inspirant de la structure utilisée par le contrôleur Stimulus `search-bar`.
      *
      * @param string $entityClassName Le FQCN (Fully Qualified Class Name) de l'entité.
-     * @param string|null $defaultFieldName Le nom de l'attribut à utiliser comme critère de recherche simple par défaut.
      * @return array Un tableau de définitions de critères.
      */
-    public function getSearchCanvas(string $entityClassName, ?string $defaultFieldName = null): array
+    public function getSearchCanvas(string $entityClassName): array
     {
         $searchCriteria = [];
         $entityCanvas = $this->getEntityCanvas($entityClassName);
@@ -6229,10 +6228,6 @@ class Constante
                 case 'Relation': // Les relations sont souvent recherchées via un champ texte.
                     $criterion['Type'] = 'Text';
                     $criterion['Valeur'] = '';
-                    // NOUVEAU : Le critère par défaut est celui dont le nom correspond au paramètre.
-                    if ($defaultFieldName !== null && $field['code'] === $defaultFieldName) {
-                        $criterion['isDefault'] = true;
-                    } 
                     break;
 
                 case 'Nombre':
