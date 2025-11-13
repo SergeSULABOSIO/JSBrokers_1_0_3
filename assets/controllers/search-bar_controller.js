@@ -139,11 +139,22 @@ export default class extends BaseController {
         this.populateSimpleSearchSelector();
         this.updateSimpleSearchPlaceholder();
 
-        // NOUVEAU : Mettre à jour l'UI avec les filtres chargés depuis sessionStorage
-        const simpleSearchKey = this.simpleSearchCriterionTarget.value;
-        if (this.activeFilters[simpleSearchKey]) {
-            this.simpleSearchInputTarget.value = this.activeFilters[simpleSearchKey];
+        // CORRECTION : Logique de synchronisation de l'UI avec les filtres restaurés.
+        // On parcourt les filtres actifs pour voir si l'un d'eux est un critère simple.
+        const simpleCriteriaNames = this.criteriaValue.filter(c => c.Type === 'Text').map(c => c.Nom);
+        
+        for (const filterKey in this.activeFilters) {
+            if (simpleCriteriaNames.includes(filterKey)) {
+                const filterValue = this.activeFilters[filterKey];
+                // On a trouvé un filtre simple actif. On met à jour l'UI.
+                console.log(`${this.nomControleur} - Restauration de l'UI pour le critère simple :`, { key: filterKey, value: filterValue.value });
+                this.simpleSearchCriterionTarget.value = filterKey; // Sélectionne le bon critère dans le <select>
+                this.simpleSearchInputTarget.value = filterValue.value; // Remplit le champ <input>
+                this.updateSimpleSearchPlaceholder(); // Met à jour le placeholder pour correspondre
+                break; // On a trouvé notre critère simple, on peut arrêter la boucle.
+            }
         }
+
         this.updateSummary(); // Mettre à jour le résumé des filtres
 
         this.buildAdvancedForm();
