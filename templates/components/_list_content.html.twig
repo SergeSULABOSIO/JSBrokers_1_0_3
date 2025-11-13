@@ -11,17 +11,10 @@
     - `listeCanvas`: La configuration d'affichage de la liste, passée au sous-template `_list_row.html.twig`.
 #}
 <div
-    data-controller="api-response-notifier"
-    {% if numericAttributesAndValues is defined %}
-        data-numeric-attributes-and-values='{{ numericAttributesAndValues|json_encode|e('html_attr') }}'
-    {% endif %}
->
-    {% if data|length == 0 %}
-        {# L'état vide est maintenant géré par _generic_list_component.html.twig, mais on garde une sécurité ici. #}
-        <tr><td colspan="100%" class="text-center p-4">Aucune information trouvée pour les critères actuels.</td></tr>
-    {% else %}
-        {% for entity in data %}
-            {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas }) }}
-        {% endfor %}
-    {% endif %}
+    data-role="response-metadata"
+    data-numeric-attributes-and-values='{{ numericAttributesAndValues|json_encode(constant('JSON_FORCE_OBJECT'))|e('html_attr') }}'
+></div>
+{% for entity in data %}
+    {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas }) }}
+{% endfor %}
 </div>

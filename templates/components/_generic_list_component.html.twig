@@ -24,50 +24,41 @@
         data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
         data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}' 
     > 
-        <div class="table-scroll-wrapper flex-grow-1">
-            {% if data is not empty %}
-                <table class="table table-hover table-sm table-enhanced">
-                    <thead class="table-light sticky-header">
-                        <tr class="text-center">
-                            <th scope="col" style="width: 80px;">
-                                <div class="form-check m-2 justify-content-start">
-                                    <input class="form-check-input" type="checkbox" data-action="change->list-manager#toggleAll" data-list-manager-target="selectAllCheckbox">
-                                    <label class="text-secondary">Id.</label>
-                                </div>
+        <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
+            <table class="table table-hover table-sm table-enhanced">
+                <thead class="table-light sticky-header">
+                    <tr class="text-center">
+                        <th scope="col" style="width: 80px;">
+                            <div class="form-check m-2 justify-content-start">
+                                <input class="form-check-input" type="checkbox" data-action="change->list-manager#toggleAll" data-list-manager-target="selectAllCheckbox">
+                                <label class="text-secondary">Id.</label>
+                            </div>
+                        </th>
+                        {% if listeCanvas.colonne_principale is defined %}
+                            <th scope="col">
+                                <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
                             </th>
-                            {% if listeCanvas.colonne_principale is defined %}
-                                <th scope="col">
-                                    <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
-                                </th>
-                            {% endif %}
-                            {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
-                                <th scope="col" style="width:150px">
-                                    <div class='d-flex justify-content-end text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
-                                </th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody class="table-group-divider context-target" data-list-manager-target="donnees">
-                        {{ include('components/_list_content.html.twig', {
-                        'data': data,
-                        'entityCanvas': entityCanvas,
-                        'listeCanvas': listeCanvas,
-                        'entite_nom': entite_nom,
-                        'serverRootName': serverRootName,
-                    }) }}
-                    </tbody>
-                </table>
-            {% else %}
-                <div data-list-manager-target="donnees">
-                    {{ include('components/_empty_state.html.twig', {
-                        title: "Votre liste " ~ entite_nom|lower ~ " est vide",
-                        description: "Commencez par ajouter un " ~ entite_nom|lower ~ " pour organiser vos données.",
-                        button_text: "Ajouter un " ~ entite_nom|lower,
-                        button_action: customAddAction|default("click->list-manager#handleAddRequest"),
-                        icon_name: entityCanvas.parametres.icone | default('lucide:inbox')
-                    }) }}
-                </div>
-            {% endif %}
+                        {% endif %}
+                        {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
+                            <th scope="col" style="width:150px">
+                                <div class='d-flex justify-content-end text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="table-group-divider context-target" data-list-manager-target="donnees">
+                    {# Le contenu sera injecté ici par le contrôleur #}
+                </tbody>
+            </table>
+        </div>
+        <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
+            {{ include('components/_empty_state.html.twig', {
+                title: "Aucun " ~ entite_nom|lower ~ " ne correspond à votre recherche",
+                description: "Essayez de modifier ou de réinitialiser vos critères de recherche.",
+                button_text: "Réinitialiser la recherche",
+                button_action: "click->list-manager#resetSearch",
+                icon_name: entityCanvas.parametres.icone | default('lucide:search-x')
+            }) }}
         </div>
     </div>
 </div>

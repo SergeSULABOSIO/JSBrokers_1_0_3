@@ -71,118 +71,34 @@ export default class extends BaseController {
         this.notifyCerveau('dialog:search.open-request', { formHtml });
     }
 
-    submitAdvancedSearch(event) {
-        event.preventDefault();
-        const inputs = this.advancedFormContainerTarget.querySelectorAll('[data-criterion-name]');
-
-        // Réinitialiser activeFilters pour s'assurer que les plages sont bien re-traitées
-        this.activeFilters = {};
-
-        // Pour gérer les plages, nous allons regrouper les inputs par leur data-criterion-name
-        const groupedInputs = {};
-        inputs.forEach(input => {
-            const name = input.dataset.criterionName;
-            if (!groupedInputs[name]) {
-                groupedInputs[name] = [];
-            }
-            groupedInputs[name].push(input);
-        });
-
-        for (const name in groupedInputs) {
-            if (groupedInputs.hasOwnProperty(name)) {
-                const currentInputs = groupedInputs[name];
-
-                // Cherchons la définition du critère pour déterminer son type
-                const criterionDef = this.criteriaValue.find(c => c.Nom === name);
-
-                if (!criterionDef) {
-                    console.warn(`Definition for criterion "${name}" not found.`);
-                    continue; // Skip if no definition
-                }
-
-                if (criterionDef.Type === 'DateTimeRange') {
-                    const fromInput = currentInputs.find(input => input.dataset.criterionPart === 'from');
-                    const toInput = currentInputs.find(input => input.dataset.criterionPart === 'to');
-
-                    const fromValue = fromInput ? fromInput.value.trim() : '';
-                    const toValue = toInput ? toInput.value.trim() : '';
-
-                    if (fromValue || toValue) { // Si au moins une des deux dates est renseignée
-                        this.activeFilters[name] = {
-                            operator: 'BETWEEN', // L'opérateur est implicite
-                            value: { from: fromValue, to: toValue }
-                        };
-                    } else {
-                        delete this.activeFilters[name]; // Si les deux sont vides, supprimer le filtre
-                    }
-                } else {
-                    // Logique existante pour les autres types (Text, Number, Options)
-                    const input = currentInputs[0]; // Pour les types non-plage, il n'y a qu'un seul input par nom
-                    const value = input.value.trim();
-
-                    if (value) {
-                        if (input.type === 'number' || input.type === 'date') {
-                            const operatorSelect = this.advancedFormContainerTarget.querySelector(`[data-criterion-operator-for="${name}"]`);
-                            this.activeFilters[name] = { operator: operatorSelect.value, value: value };
-                        } else {
-                            this.activeFilters[name] = value;
-                        }
-                    } else {
-                        delete this.activeFilters[name];
-                    }
-                }
-            }
-        }
-
-        this.modal.hide();
-        this.dispatchSearchEvent(); // Décommenté
-    }
-
     /**
      * Gère la réception des critères depuis la boîte de dialogue.
      * @param {CustomEvent} event 
      */
     handleAdvancedSearchData(event) {
-        const { criteria } = event.detail;
-        
-        // On fusionne les nouveaux critères avancés avec les filtres simples existants
-        const simpleFilterKey = this.defaultCriterionValue.Nom;
-        const simpleFilterValue = this.activeFilters[simpleFilterKey];
+        const advancedCriteria = event.detail.criteria;
 
-        this.activeFilters = {}; // On réinitialise
-        if (simpleFilterValue) {
-            this.activeFilters[simpleFilterKey] = simpleFilterValue;
-        }
+        // On récupère le filtre simple s'il existe
+        const simpleSearchKey = this.simpleSearchCriterionTarget.value;
+        const simpleFilter = this.activeFilters[simpleSearchKey];
 
-        // On ajoute les critères avancés
-        for (const [key, value] of Object.entries(criteria)) {
-            this.activeFilters[key] = value;
+        // On écrase les filtres avec les nouveaux critères avancés
+        this.activeFilters = advancedCriteria;
+
+        // On ré-applique le filtre simple s'il existait, pour ne pas le perdre
+        if (simpleFilter) {
+            this.activeFilters[simpleSearchKey] = simpleFilter;
         }
 
         this.dispatchSearchEvent();
     }
 
     handleAdvancedSearchReset() {
-        // Vide la recherche simple
         this.simpleSearchInputTarget.value = '';
         // Réinitialise complètement les filtres
         this.activeFilters = {};
-
-        // NOUVELLE LOGIQUE : Applique le filtre de date par défaut (mois en cours)
-        const dateCriterion = this.criteriaValue.find(c => c.Type === 'DateTimeRange');
-        if (dateCriterion) {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth();
-            
-            const firstDay = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
-            const lastDay = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
-            // const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
-            // const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
-
-            this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
-        }
-
+        // La logique de pré-remplissage des dates est maintenant gérée uniquement
+        // à l'ouverture du dialogue de recherche avancée.
         // Lance la recherche avec les filtres réinitialisés (contenant uniquement la date)
         this.dispatchSearchEvent();
     }
@@ -360,15 +276,25 @@ export default class extends BaseController {
     submitSimpleSearch(event) {
         event.preventDefault();
 
-        const value = this.simpleSearchInputTarget.value.trim();
-        const key = this.simpleSearchCriterionTarget.value; // NOUVEAU : On utilise le critère sélectionné
+        const inputValue = this.simpleSearchInputTarget.value.trim();
+        const criterionName = this.simpleSearchCriterionTarget.value;
+        const criterionDef = this.criteriaValue.find(c => c.Nom === criterionName);
 
-        if (value) {
-            this.activeFilters[key] = value;
+        if (!criterionDef) return;
+
+        if (inputValue) {
+            // On construit le filtre avec la structure attendue par le backend
+            const filter = {
+                operator: 'LIKE',
+                value: inputValue,
+                // On ajoute le targetField si c'est une relation
+                ...(criterionDef.targetField && { targetField: criterionDef.targetField })
+            };
+            this.activeFilters[criterionName] = filter;
         } else {
-            delete this.activeFilters[key];
+            delete this.activeFilters[criterionName];
         }
-        this.dispatchSearchEvent(); // Décommenté
+        this.dispatchSearchEvent();
     }
 
     removeFilter(event) {
