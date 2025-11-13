@@ -198,6 +198,11 @@ export default class extends Controller {
                 this.broadcast('app:list.toggle-all-request');
                 break;
 
+            // NOUVEAU : La rubrique est chargée, on le signale à tout le monde.
+            case 'app:navigation-rubrique:openned':
+                this.broadcast('app:navigation-rubrique:openned', payload);
+                break;
+
             // NOUVEAU : La liste a terminé une opération de sélection de masse.
             case 'ui:list.selection-completed':
                 this._setSelectionState(payload.selectos || []);
