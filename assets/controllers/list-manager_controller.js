@@ -173,8 +173,11 @@ export default class extends Controller {
             // Log pour débogage : voir la réponse brute du serveur
             console.log("LIST-MANAGER - Réponse HTML brute du serveur:", html);
 
+            // CORRECTION : On enveloppe le HTML dans une structure de tableau valide
+            // pour que le DOMParser interprète correctement les balises <tr>.
+            const validHtml = `<table><tbody>${html}</tbody></table>`;
             const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
+            const doc = parser.parseFromString(validHtml, 'text/html');
             
             // CORRECTION : On ne sélectionne que les lignes de données réelles (celles avec un data-id)
             const dataRows = Array.from(doc.body.querySelectorAll('tr[data-id]'));
