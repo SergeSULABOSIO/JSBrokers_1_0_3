@@ -15,6 +15,7 @@
 <tr
     id="liste_row_{{ entity.id }}"
     data-controller="list-row"
+    data-id="{{ entity.id }}" {# CORRECTION : Ajout de l'attribut data-id #}
     data-list-row-idobjet-value="{{ entity.id }}"
     class="element-a-encadrer parent-a-options context-target align-middle"
     data-action="click->list-row#toggleSelection"
