@@ -170,19 +170,27 @@ export default class extends Controller {
             const html = await response.text();
             if (!response.ok) throw new Error(html || 'Erreur serveur');
 
-            // NOUVEAU : Logique d'affichage améliorée
+            // Log pour débogage : voir la réponse brute du serveur
+            console.log("LIST-MANAGER - Réponse HTML brute du serveur:", html);
+
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
-            const rows = doc.body.querySelectorAll('tr');
+            
+            // CORRECTION : On ne sélectionne que les lignes de données réelles (celles avec un data-id)
+            const dataRows = Array.from(doc.body.querySelectorAll('tr[data-id]'));
+            console.log(`LIST-MANAGER - ${dataRows.length} ligne(s) de données trouvée(s) dans la réponse.`);
 
-            if (rows.length > 0) {
+            if (dataRows.length > 0) {
                 this.listContainerTarget.classList.remove('d-none');
                 this.emptyStateContainerTarget.classList.add('d-none');
-                this.donneesTarget.innerHTML = doc.body.innerHTML;
+                // CORRECTION : On injecte uniquement les lignes de données dans le tbody
+                this.donneesTarget.innerHTML = dataRows.map(row => row.outerHTML).join('');
+                console.log("LIST-MANAGER - Affichage de la liste avec les résultats.");
             } else {
                 this.listContainerTarget.classList.add('d-none');
                 this.emptyStateContainerTarget.classList.remove('d-none');
                 this.donneesTarget.innerHTML = ''; // Vider le tbody
+                console.log("LIST-MANAGER - Affichage de l'état vide (aucun résultat).");
             }
 
             this._postDataLoadActions(doc);
