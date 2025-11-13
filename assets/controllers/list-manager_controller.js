@@ -31,7 +31,7 @@ export default class extends Controller {
         idEntreprise: Number,
         idInvite: Number,
         entityFormCanvas: Object,
-        numericAttributesAndValues: Object, // Correction: Changed from Array to Object
+        numericAttributesAndValues: String, // MODIFIÉ : On reçoit maintenant une chaîne JSON
     };
 
     /**
@@ -49,7 +49,7 @@ export default class extends Controller {
         
         // On notifie le cerveau avec les données numériques initiales
         this.notifyCerveau('app:list.data-loaded', {
-            numericAttributesAndValues: this.numericAttributesAndValuesValue
+            numericAttributesAndValues: JSON.parse(this.numericAttributesAndValuesValue || '{}')
         });
 
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);

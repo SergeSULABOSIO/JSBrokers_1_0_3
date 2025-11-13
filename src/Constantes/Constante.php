@@ -7648,6 +7648,12 @@ class Constante
     public function getNumericAttributesAndValuesForTotalsBar($data): array
     {
         $numericValues = [];
+        // NOUVEAU : Si les données sont vides, on retourne un objet vide (et non un tableau)
+        // pour éviter une erreur de type dans le contrôleur Stimulus `list-manager`.
+        if (empty($data)) {
+            return $numericValues; // On retourne un tableau vide pour respecter le type de retour "array".
+        }
+
         foreach ($data as $entity) {
             $numericValues[$entity->getId()] = $this->getNumericAttributesAndValues($entity);
         }
