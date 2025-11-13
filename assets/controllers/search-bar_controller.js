@@ -23,12 +23,16 @@ export default class extends BaseController {
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
         this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
         this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
+        // NOUVEAU : Lier le gestionnaire pour l'événement de rubrique ouverte.
+        this.boundHandleRubriqueOpened = this.handleRubriqueOpened.bind(this);
 
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
+        // NOUVEAU : Écouter l'événement qui signale que la vue est prête.
+        document.addEventListener('app:navigation-rubrique:openned', this.boundHandleRubriqueOpened);
 
-        // NOUVEAU : Charger les filtres depuis sessionStorage au démarrage.
+        // Charger les filtres depuis sessionStorage au démarrage.
         const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
         const savedFilters = sessionStorage.getItem(storageKey);
 
@@ -39,17 +43,25 @@ export default class extends BaseController {
 
         this.initializeCriteria();
 
-        // NOUVEAU : Déclencher la recherche initiale au chargement de la page.
-        // Ceci garantit que la barre de recherche est la seule source de vérité pour le chargement des données.
-        this.dispatchSearchEvent();
+        // SUPPRIMÉ : La recherche initiale ne sera plus déclenchée ici,
+        // mais par le nouvel écouteur d'événement.
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
+        // NOUVEAU : Nettoyer le nouvel écouteur.
+        document.removeEventListener('app:navigation-rubrique:openned', this.boundHandleRubriqueOpened);
     }
 
+    /**
+     * NOUVEAU : Déclenche la recherche initiale lorsque la rubrique est complètement chargée.
+     */
+    handleRubriqueOpened() {
+        console.log(`${this.nomControleur} - Rubrique ouverte, déclenchement de la recherche initiale.`);
+        this.dispatchSearchEvent();
+    }
     // --- Actions de l'utilisateur (logique mise à jour) ---
 
     openAdvancedSearch() {
