@@ -16,6 +16,8 @@ export default class extends Controller {
     static targets = [
         'donnees',
         'selectAllCheckbox',
+        'listContainer', // NOUVEAU
+        'emptyStateContainer', // NOUVEAU
         'rowCheckbox',
     ];
 
@@ -168,12 +170,26 @@ export default class extends Controller {
             const html = await response.text();
             if (!response.ok) throw new Error(html || 'Erreur serveur');
 
-            // Affiche les résultats et met à jour l'état
-            this.donneesTarget.innerHTML = html;
-            this._postDataLoadActions();
+            // NOUVEAU : Logique d'affichage améliorée
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const rows = doc.body.querySelectorAll('tr');
+
+            if (rows.length > 0) {
+                this.listContainerTarget.classList.remove('d-none');
+                this.emptyStateContainerTarget.classList.add('d-none');
+                this.donneesTarget.innerHTML = doc.body.innerHTML;
+            } else {
+                this.listContainerTarget.classList.add('d-none');
+                this.emptyStateContainerTarget.classList.remove('d-none');
+                this.donneesTarget.innerHTML = ''; // Vider le tbody
+            }
+
+            this._postDataLoadActions(doc);
 
         } catch (error) {
-            this.donneesTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
+            this.listContainerTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
+            this.emptyStateContainerTarget.classList.add('d-none');
             this.notifyCerveau("app:error.api", { error: error.message });
         }
     }
@@ -186,6 +202,14 @@ export default class extends Controller {
         this.updateSelectAllCheckboxState(); // Met à jour l'état de la case "tout cocher"
         // La publication est maintenant gérée par le Cerveau
     }
+
+    /**
+     * NOUVEAU : Notifie la barre de recherche pour réinitialiser la recherche.
+     */
+    resetSearch() {
+        this.notifyCerveau('search:advanced.reset');
+    }
+
 
     // --- COMMUNICATION ---
 
@@ -248,10 +272,10 @@ export default class extends Controller {
      * Exécute les actions post-chargement des données.
      * @private
      */
-    _postDataLoadActions() {
+    _postDataLoadActions(doc) {
         this.resetSelection();
         this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
-        const numericDataPayload = this._extractNumericDataFromResponse(); // Renvoie { numericAttributesAndValues: {...} }
+        const numericDataPayload = this._extractNumericDataFromResponse(doc); // Renvoie { numericAttributesAndValues: {...} }
         // On envoie le payload tel quel au cerveau
         this.notifyCerveau('app:list.data-loaded', numericDataPayload);
         this.notifyCerveau('app:list.refreshed', {});
@@ -262,11 +286,11 @@ export default class extends Controller {
      * @returns {{numericData: object, numericAttributes: array}}
      * @private
      */
-    _extractNumericDataFromResponse() {
-        const responseContainer = this.donneesTarget.querySelector('[data-numeric-attributes-and-values]');
+    _extractNumericDataFromResponse(doc) {
+        const responseContainer = doc.querySelector('[data-role="response-metadata"]');
         let numericAttributesAndValues = {};
 
-        if (responseContainer) {
+        if (responseContainer && responseContainer.dataset.numericAttributesAndValues) {
             numericAttributesAndValues = JSON.parse(responseContainer.dataset.numericAttributesAndValues || '{}');
         } else {
             // Fallback: Si aucune nouvelle donnée n'est trouvée dans la réponse AJAX, on utilise les données initiales.
