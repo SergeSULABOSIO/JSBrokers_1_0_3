@@ -145,130 +145,57 @@ class JSBDynamicSearchService
             $currentAlias = $rootAlias;
             $actualField = $field;
 
-            $fieldParts = explode('.', $field);
-            if (count($fieldParts) > 1) {
-                $relationName = $fieldParts[0];
-                $actualField = $fieldParts[1];
-                $relationAlias = $relationName . $suffix;
-
-                if (!isset($joinedEntities[$relationAlias])) {
-                    $qb->leftJoin("{$currentAlias}.{$relationName}", $relationAlias);
-                    $joinedEntities[$relationAlias] = $relationAlias;
-                }
-                $currentAlias = $joinedEntities[$relationAlias];
-            }
-
-            // NOUVEAU : Gestion spécifique pour les plages de dates (ex: {from: '...', to: '...'})
+            // CAS 1 : C'est une plage de dates (recherche avancée pour les champs de type DateTimeRange).
+            // La valeur est un tableau comme { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }.
             if (is_array($value) && (isset($value['from']) || isset($value['to'])) && !isset($value['operator'])) {
                 $from = $value['from'] ?? null;
                 $to = $value['to'] ?? null;
 
                 if ($from) {
                     $qb->andWhere("{$currentAlias}.{$actualField} >= :{$parameterName}_from")
-                       ->setParameter("{$parameterName}_from", (new \DateTime($from))->format('Y-m-d 00:00:00'));
+                        ->setParameter("{$parameterName}_from", (new \DateTime($from))->format('Y-m-d 00:00:00'));
                 }
                 if ($to) {
                     $qb->andWhere("{$currentAlias}.{$actualField} <= :{$parameterName}_to")
-                       ->setParameter("{$parameterName}_to", (new \DateTime($to))->format('Y-m-d 23:59:59'));
+                        ->setParameter("{$parameterName}_to", (new \DateTime($to))->format('Y-m-d 23:59:59'));
                 }
             }
-            else if (is_array($value) && isset($value['operator']) && (isset($value['value']) && $value['value'] !== '')) {
+            // CAS 2 : C'est un critère structuré (recherche simple ou avancée pour les champs Texte, Nombre, etc.).
+            // La valeur est un objet comme { operator: 'LIKE', value: '...', targetField: '...' }.
+            elseif (is_array($value) && isset($value['operator']) && isset($value['value']) && $value['value'] !== '') {
                 $operator = strtoupper($value['operator']);
                 $filterValue = $value['value'];
 
                 if (!in_array($operator, $this->allowedOperators, true)) {
                     $status = ["error" => "Opérateur non autorisé.", "code" => 403, "message" => "Opérateur '{$operator}' non autorisé."];
-                    return; // Stop processing if operator is invalid
+                    return;
                 }
 
-                if ($operator === 'BETWEEN') {
-                    $from = $filterValue['from'] ?? null;
-                    $to = $filterValue['to'] ?? null;
+                $metadata = $this->em->getClassMetadata($qb->getRootEntities()[0]);
 
-                    if ($from && $to) {
-                        $qb->andWhere("{$currentAlias}.{$actualField} BETWEEN :{$parameterName}_from AND :{$parameterName}_to")
-                           ->setParameter("{$parameterName}_from", (new \DateTime($from))->format('Y-m-d 00:00:00'))
-                           ->setParameter("{$parameterName}_to", (new \DateTime($to))->format('Y-m-d 23:59:59'));
-                    } elseif ($from) {
-                        $qb->andWhere("{$currentAlias}.{$actualField} >= :{$parameterName}_from")
-                           ->setParameter("{$parameterName}_from", (new \DateTime($from))->format('Y-m-d 00:00:00'));
-                    } elseif ($to) {
-                        $qb->andWhere("{$currentAlias}.{$actualField} <= :{$parameterName}_to")
-                           ->setParameter("{$parameterName}_to", (new \DateTime($to))->format('Y-m-d 23:59:59'));
-                    }
-                } else {
-                    $metadata = $this->em->getClassMetadata($qb->getRootEntities()[0]);
-                    if ($metadata->hasField($actualField) && in_array($metadata->getTypeOfField($actualField), ['datetime', 'datetime_immutable', 'date', 'date_immutable'])) {
-                        try {
-                            $dateObj = new \DateTime($filterValue);
-                            switch ($operator) {
-                                case '=':
-                                    $qb->andWhere("{$currentAlias}.{$actualField} BETWEEN :{$parameterName}_start AND :{$parameterName}_end")
-                                       ->setParameter("{$parameterName}_start", $dateObj->format('Y-m-d 00:00:00'))
-                                       ->setParameter("{$parameterName}_end", $dateObj->format('Y-m-d 23:59:59'));
-                                    break;
-                                case '!=':
-                                    $qb->andWhere("{$currentAlias}.{$actualField} NOT BETWEEN :{$parameterName}_start AND :{$parameterName}_end")
-                                       ->setParameter("{$parameterName}_start", $dateObj->format('Y-m-d 00:00:00'))
-                                       ->setParameter("{$parameterName}_end", $dateObj->format('Y-m-d 23:59:59'));
-                                    break;
-                                case '>':
-                                    $qb->andWhere("{$currentAlias}.{$actualField} > :{$parameterName}")
-                                       ->setParameter($parameterName, $dateObj->format('Y-m-d 23:59:59'));
-                                    break;
-                                case '>=':
-                                    $qb->andWhere("{$currentAlias}.{$actualField} >= :{$parameterName}")
-                                       ->setParameter($parameterName, $dateObj->format('Y-m-d 00:00:00'));
-                                    break;
-                                case '<':
-                                    $qb->andWhere("{$currentAlias}.{$actualField} < :{$parameterName}")
-                                       ->setParameter($parameterName, $dateObj->format('Y-m-d 00:00:00'));
-                                    break;
-                                case '<=':
-                                    $qb->andWhere("{$currentAlias}.{$actualField} <= :{$parameterName}")
-                                       ->setParameter($parameterName, $dateObj->format('Y-m-d 23:59:59'));
-                                    break;
-                            }
-                        } catch (\Exception $e) {
-                            $status = ["error" => "Format de date invalide.", "code" => 400, "message" => "Format de date invalide pour '{$field}'."];
-                            return;
-                        }
-                    } else {
-                        // NOUVEAU : Table de correspondance pour les opérateurs
-                        $operatorMap = [
-                            '=' => 'eq',
-                            '!=' => 'neq',
-                            '>' => 'gt',
-                            '>=' => 'gte',
-                            '<' => 'lt',
-                            '<=' => 'lte',
-                            'LIKE' => 'like',
-                        ];
+                // SOUS-CAS 2.1 : Le champ est une relation (ex: 'assure').
+                if ($metadata->hasAssociation($actualField)) {
+                    $relationAlias = $actualField . $suffix;
+                    $qb->leftJoin("{$currentAlias}.{$actualField}", $relationAlias);
 
-                        $doctrineOperator = $operatorMap[strtoupper($operator)] ?? null;
-                        if (!$doctrineOperator) continue; // Ignore les opérateurs inconnus
+                    // Le champ cible sur lequel chercher (ex: 'nom') est fourni dans le critère.
+                    $targetField = $value['targetField'] ?? 'nom';
 
-                        $qb->andWhere($qb->expr()->{$doctrineOperator}($currentAlias . '.' . $actualField, ':' . $parameterName));
-                        $paramValue = ($operator === 'LIKE') ? '%' . $filterValue . '%' : $filterValue;
-                        $qb->setParameter($parameterName, $paramValue);
-                    }
+                    $qb->andWhere($qb->expr()->like("{$relationAlias}.{$targetField}", ':' . $parameterName))
+                        ->setParameter($parameterName, '%' . $filterValue . '%');
                 }
-            } else {
-                // MODIFIÉ : Gestion des champs texte simples et des relations.
-                if (is_string($value) && $value !== '') { 
-                    $metadata = $this->em->getClassMetadata($qb->getRootEntities()[0]);
-                    // On vérifie si le champ est une association (ex: 'assure')
-                    if ($metadata->hasAssociation($actualField)) {
-                        $relationAlias = $actualField . $suffix;
-                        $qb->leftJoin("{$currentAlias}.{$actualField}", $relationAlias);
-                        // On utilise le 'targetField' fourni par le critère (ex: 'nom') pour la recherche.
-                        $targetField = $criteria[$field]['targetField'] ?? 'nom'; // 'nom' par défaut
-                        $qb->andWhere($qb->expr()->like("{$relationAlias}.{$targetField}", ':' . $parameterName))
-                           ->setParameter($parameterName, '%' . $value . '%');
-                    } else { // C'est un champ texte simple sur l'entité principale.
-                        $qb->andWhere($qb->expr()->like("{$currentAlias}.{$actualField}", ':' . $parameterName))
-                           ->setParameter($parameterName, '%' . $value . '%');
-                    }
+                // SOUS-CAS 2.2 : Le champ est un attribut simple (texte, nombre, etc.).
+                else {
+                    $operatorMap = [
+                        '=' => 'eq', '!=' => 'neq', '>' => 'gt', '>=' => 'gte',
+                        '<' => 'lt', '<=' => 'lte', 'LIKE' => 'like',
+                    ];
+                    $doctrineOperator = $operatorMap[$operator] ?? null;
+                    if (!$doctrineOperator) continue;
+
+                    $qb->andWhere($qb->expr()->{$doctrineOperator}($currentAlias . '.' . $actualField, ':' . $parameterName));
+                    $paramValue = ($operator === 'LIKE') ? '%' . $filterValue . '%' : $filterValue;
+                    $qb->setParameter($parameterName, $paramValue);
                 }
             }
         }
