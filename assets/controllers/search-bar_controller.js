@@ -23,14 +23,10 @@ export default class extends BaseController {
         this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
         this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
         this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
-        // NOUVEAU : Lier le gestionnaire pour l'événement de rubrique ouverte.
-        this.boundHandleRubriqueOpened = this.handleRubriqueOpened.bind(this);
 
         document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
-        // NOUVEAU : Écouter l'événement qui signale que la vue est prête.
-        document.addEventListener('app:navigation-rubrique:openned', this.boundHandleRubriqueOpened);
 
         // Charger les filtres depuis sessionStorage au démarrage.
         const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
@@ -43,25 +39,17 @@ export default class extends BaseController {
 
         this.initializeCriteria();
 
-        // SUPPRIMÉ : La recherche initiale ne sera plus déclenchée ici,
-        // mais par le nouvel écouteur d'événement.
+        // La recherche initiale n'est plus déclenchée au rechargement.
+        // La liste affichera son contenu par défaut, et la barre de recherche
+        // affichera les filtres précédemment utilisés.
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
-        // NOUVEAU : Nettoyer le nouvel écouteur.
-        document.removeEventListener('app:navigation-rubrique:openned', this.boundHandleRubriqueOpened);
     }
 
-    /**
-     * NOUVEAU : Déclenche la recherche initiale lorsque la rubrique est complètement chargée.
-     */
-    handleRubriqueOpened() {
-        console.log(`${this.nomControleur} - Rubrique ouverte, déclenchement de la recherche initiale.`);
-        this.dispatchSearchEvent();
-    }
     // --- Actions de l'utilisateur (logique mise à jour) ---
 
     openAdvancedSearch() {
@@ -343,9 +331,10 @@ export default class extends BaseController {
 
     dispatchSearchEvent() {
         // Notifie le cerveau pour démarrer la barre de progression
-        // NOUVEAU : Sauvegarder les filtres actifs dans sessionStorage à chaque recherche.
+        // CORRECTION : La sauvegarde se fait ici pour capturer TOUS les changements de filtres.
         const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
         sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters));
+        console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters);
 
         this.notifyCerveau('app:loading.start');
         // Notifie le cerveau pour lancer la recherche

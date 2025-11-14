@@ -41,6 +41,11 @@ export default class extends Controller {
          * @private
          */
         this.collectionTabsParentId = null;
+        /**
+         * @property {object|null} parentEntityCanvas - Le canvas de l'entité parente sélectionnée.
+         * @private
+         */
+        this.parentEntityCanvas = null;
 
         // NOUVEAU : Notifier le cerveau du contexte initial de la rubrique, y compris l'ID de l'entreprise.
         this.notifyCerveau('app:context.initialized', {
@@ -55,6 +60,9 @@ export default class extends Controller {
         // --- CORRECTION : Écoute les événements diffusés par le Cerveau ---
         document.addEventListener('ui:selection.changed', this.boundHandleSelection);
         document.addEventListener('app:status.updated', this.boundHandleStatusUpdate);
+
+        // Tente de restaurer l'état précédent (onglet actif, etc.)
+        this._restoreState();
     }
 
     /**
@@ -110,18 +118,25 @@ export default class extends Controller {
         const newParentId = isSingleSelection ? entities[0].id : null;
 
         // On ne met à jour les onglets que si on est sur l'onglet principal
-        // et que l'ID de l'entité parente a changé.
+        // et que l'ID de l'entité parente a changé. [cite: 1]
         if (this.activeTabId !== 'principal' || newParentId === this.collectionTabsParentId) {
+            this._saveState(); // Sauvegarde même si l'onglet n'est pas principal pour mémoriser la sélection
             return;
         }
 
         this.collectionTabsParentId = newParentId;
+        // NOUVEAU : Mémoriser le canvas de l'entité parente pour la restauration
+        this.parentEntityCanvas = isSingleSelection ? canvas : null;
+
         this._removeCollectionTabs();
 
         if (isSingleSelection) {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
         }
+
+        // Sauvegarder l'état après modification des onglets
+        this._saveState();
     }
 
     /**
@@ -167,6 +182,9 @@ export default class extends Controller {
             selectos: savedSelectos,
             formCanvas: formCanvas // On envoie le canvas du formulaire de l'onglet.
         });
+
+        // Sauvegarder l'état après un changement d'onglet
+        this._saveState();
     }
 
     /**
@@ -250,5 +268,56 @@ export default class extends Controller {
      */
     dispatch(name, detail = {}) {
         document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    }
+
+    /**
+     * NOUVEAU : Sauvegarde l'état actuel du gestionnaire de vue dans sessionStorage.
+     * @private
+     */
+    _saveState() {
+        const state = {
+            activeTabId: this.activeTabId,
+            collectionTabsParentId: this.collectionTabsParentId,
+            parentEntityCanvas: this.parentEntityCanvas,
+            tabStates: this.tabStates
+        };
+        // Utilise le chemin de l'URL pour une clé unique par rubrique
+        const storageKey = `viewManagerState_${window.location.pathname}`;
+        sessionStorage.setItem(storageKey, JSON.stringify(state));
+    }
+
+    /**
+     * NOUVEAU : Restaure l'état du gestionnaire de vue depuis sessionStorage.
+     * @private
+     */
+    _restoreState() {
+        const storageKey = `viewManagerState_${window.location.pathname}`;
+        const savedStateJSON = sessionStorage.getItem(storageKey);
+
+        if (!savedStateJSON) return;
+
+        const savedState = JSON.parse(savedStateJSON);
+
+        this.activeTabId = savedState.activeTabId || 'principal';
+        this.collectionTabsParentId = savedState.collectionTabsParentId || null;
+        this.parentEntityCanvas = savedState.parentEntityCanvas || null;
+        this.tabStates = savedState.tabStates || {};
+
+        // Si un parent était sélectionné, on recrée les onglets de collection
+        if (this.collectionTabsParentId && this.parentEntityCanvas) {
+            const parentEntity = { id: this.collectionTabsParentId }; // On a juste besoin de l'ID
+            const parentEntityType = this.parentEntityCanvas.parametres.type;
+            const collections = this._findCollectionsInCanvas(this.parentEntityCanvas);
+            collections.forEach(collectionInfo => this._createTab(collectionInfo, parentEntity, parentEntityType));
+        }
+
+        // On active l'onglet qui était actif
+        const tabToActivate = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
+        if (tabToActivate) {
+            // On utilise requestAnimationFrame pour s'assurer que le DOM est prêt
+            requestAnimationFrame(() => {
+                tabToActivate.click();
+            });
+        }
     }
 }
