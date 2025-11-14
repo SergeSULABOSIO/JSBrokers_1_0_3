@@ -171,7 +171,7 @@ export default class extends Controller {
             if (!response.ok) throw new Error(html || 'Erreur serveur');
 
             // Log pour débogage : voir la réponse brute du serveur
-            console.log("LIST-MANAGER - Réponse HTML brute du serveur:", html);
+            // console.log("LIST-MANAGER - Réponse HTML brute du serveur:", html);
 
             // CORRECTION : On enveloppe le HTML dans une structure de tableau valide
             // pour que le DOMParser interprète correctement les balises <tr>.
