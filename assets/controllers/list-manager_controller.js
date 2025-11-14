@@ -33,6 +33,7 @@ export default class extends Controller {
         idEntreprise: Number,
         idInvite: Number,
         entityFormCanvas: Object,
+        listUrl: String, // NOUVEAU : URL unique servant de clé pour le stockage
         numericAttributesAndValues: String, // MODIFIÉ : On reçoit maintenant une chaîne JSON
     };
 
@@ -46,6 +47,7 @@ export default class extends Controller {
         this.urlAPIDynamicQuery = `/admin/${this.serverRootNameValue}/api/dynamic-query/${this.idInviteValue}/${this.idEntrepriseValue}`;
 
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
+        this.selectedIds = new Set(); // NOUVEAU : Mémorise les IDs sélectionnés pour cette instance de liste.
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
         
@@ -58,6 +60,12 @@ export default class extends Controller {
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
+
+        // NOUVEAU : Tente de restaurer l'état de la liste depuis sessionStorage.
+        if (!this._restoreState()) {
+            // Si la restauration échoue (pas d'état sauvegardé), on ne fait rien.
+            // On attendra une demande de recherche pour peupler la liste.
+        }
     }
 
     /**
@@ -132,12 +140,16 @@ export default class extends Controller {
      */
     handleGlobalSelectionUpdate(event) {
         const selectos = event.detail.selection || [];
+        this.selectedIds = new Set(selectos.map(s => String(s.id))); // NOUVEAU : Mettre à jour notre état de sélection interne.
         const selectionIds = new Set(selectos.map(s => String(s.id)));
         this.rowCheckboxTargets.forEach(checkbox => {
             const checkboxId = String(checkbox.dataset.listRowIdobjetValue);
             checkbox.checked = selectionIds.has(checkboxId);
             checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
         });
+
+        // NOUVEAU : Sauvegarder l'état chaque fois que la sélection change.
+        this._saveState();
     }
 
     // --- GESTION DES DONNÉES ---
@@ -188,11 +200,16 @@ export default class extends Controller {
                 this.emptyStateContainerTarget.classList.add('d-none');
                 // CORRECTION : On injecte uniquement les lignes de données dans le tbody
                 this.donneesTarget.innerHTML = dataRows.map(row => row.outerHTML).join('');
+                const newContent = dataRows.map(row => row.outerHTML).join('');
+                this.donneesTarget.innerHTML = newContent;
                 console.log("LIST-MANAGER - Affichage de la liste avec les résultats.");
+                // CORRECTION : Sauvegarder l'état après une recherche réussie
+                this._saveState();
             } else {
                 this.listContainerTarget.classList.add('d-none');
                 this.emptyStateContainerTarget.classList.remove('d-none');
                 this.donneesTarget.innerHTML = ''; // Vider le tbody
+                this._saveState(); // Sauvegarder l'état vide également
                 console.log("LIST-MANAGER - Affichage de l'état vide (aucun résultat).");
             }
 
@@ -320,5 +337,71 @@ export default class extends Controller {
      */
     _logDebug(message, data = null) {
         console.log(`${this.nomControleur} - ${message}`, data);
+    }
+
+    /**
+     * NOUVEAU : Sauvegarde le contenu HTML actuel de la liste dans sessionStorage.
+     * @private
+     */
+    _saveState() {
+        if (!this.listUrlValue) return; // Ne rien faire si l'URL n'est pas définie
+        const storageKey = `listContent_${this.listUrlValue}`;
+        const state = {
+            html: this.donneesTarget.innerHTML,
+            selectedIds: Array.from(this.selectedIds)
+        };
+
+        try {
+            sessionStorage.setItem(storageKey, JSON.stringify(state));
+            this._logDebug(`État de la liste sauvegardé pour la clé : ${storageKey}`);
+        } catch (e) {
+            console.error("Erreur lors de la sauvegarde de l'état de la liste dans sessionStorage:", e);
+        }
+    }
+
+    /**
+     * NOUVEAU : Restaure le contenu de la liste depuis sessionStorage.
+     * @returns {boolean} True si la restauration a réussi, sinon false.
+     * @private
+     */
+    _restoreState() {
+        if (!this.listUrlValue) return false;
+        const storageKey = `listContent_${this.listUrlValue}`;
+        const savedStateJSON = sessionStorage.getItem(storageKey);
+
+        if (savedStateJSON) {
+            const savedState = JSON.parse(savedStateJSON);
+            const { html, selectedIds = [] } = savedState;
+
+            this._logDebug(`Restauration de l'état depuis la clé : ${storageKey}`);
+            this.donneesTarget.innerHTML = html;
+            
+            const hasContent = html.trim() !== '';
+            this.listContainerTarget.classList.toggle('d-none', !hasContent);
+            this.emptyStateContainerTarget.classList.toggle('d-none', hasContent);
+
+            // NOUVEAU : Restaurer la sélection visuelle et notifier le cerveau.
+            const restoredSelectos = [];
+            const selectedIdsSet = new Set(selectedIds);
+            this.rowCheckboxTargets.forEach(checkbox => {
+                const rowId = String(checkbox.dataset.listRowIdobjetValue);
+                const isSelected = selectedIdsSet.has(rowId);
+                checkbox.checked = isSelected;
+                checkbox.closest('tr')?.classList.toggle('row-selected', isSelected);
+                if (isSelected) {
+                    const listRowController = this.application.getControllerForElementAndIdentifier(checkbox.closest('[data-controller="list-row"]'), 'list-row');
+                    if (listRowController) {
+                        restoredSelectos.push(listRowController.buildSelectoPayload());
+                    }
+                }
+            });
+            this.notifyCerveau('ui:list.selection-completed', { selectos: restoredSelectos });
+
+            // On simule le post-chargement pour notifier le cerveau et mettre à jour les sélections/totaux
+            const doc = new DOMParser().parseFromString(`<table><tbody>${html}</tbody></table>`, 'text/html');
+            this._postDataLoadActions(doc);
+            return true;
+        }
+        return false;
     }
 }
