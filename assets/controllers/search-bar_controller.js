@@ -186,7 +186,9 @@ export default class extends BaseController {
             html += `<div class="p-3">`; // Conteneur pour le champ de formulaire
             switch (criterion.Type) {
                 case 'Text':
-                    const textValue = this.activeFilters[criterion.Nom] || '';
+                    // CORRECTION : Gérer la structure objet {value: '...'} pour les filtres texte.
+                    const textFilter = this.activeFilters[criterion.Nom];
+                    const textValue = (typeof textFilter === 'object' && textFilter !== null) ? textFilter.value : (textFilter || '');
                     html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir ${criterion.Display.toLowerCase()}...">`;
                     break;
                 case 'Number':
@@ -243,11 +245,12 @@ export default class extends BaseController {
                     break;
                 // -----------------------------------
                 case 'Options':
-                    const optionValue = this.activeFilters[criterion.Nom] || '';
+                    const optionFilter = this.activeFilters[criterion.Nom];
+                    const optionValue = (typeof optionFilter === 'object' && optionFilter !== null) ? optionFilter.value : (optionFilter || '');
                     html += `<select id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-select form-select-sm">`;
                     html += `<option value="">Tout</option>`;
                     for (const [key, value] of Object.entries(criterion.Valeur)) {
-                        const isSelected = key === optionValue ? 'selected' : '';
+                        const isSelected = String(key) === String(optionValue) ? 'selected' : '';
                         html += `<option value="${key}" title="${value}" ${isSelected}>${value}</option>`;
                     }
                     html += `</select>`;
@@ -272,7 +275,10 @@ export default class extends BaseController {
         switch (criterion.Type) {
             case 'Text':
             case 'Options':
-                return filter !== '';
+                // CORRECTION : Gérer la structure objet {value: '...'}
+                const value = (typeof filter === 'object' && filter !== null) ? filter.value : filter;
+                return value !== '' && value !== undefined;
+
             case 'Number':
                 // Actif si une valeur est saisie, même 0.
                 return filter.value !== undefined && filter.value !== '';
@@ -379,8 +385,9 @@ export default class extends BaseController {
                 // Cas des nombres
                 text = `${displayName} ${val.operator} ${val.value}`;
             } else {
-                // Cas des textes et options
-                text = `${displayName}: "${val}"`;
+                // CORRECTION : Gérer la structure objet {value: '...'} pour les textes et options
+                const displayValue = (typeof val === 'object' && val !== null) ? val.value : val;
+                text = `${displayName}: "${displayValue}"`;
             }
 
             summaryHtml += `
