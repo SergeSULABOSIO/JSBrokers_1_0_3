@@ -344,6 +344,8 @@ export default class extends Controller {
      * @private
      */
     _saveState() {
+        console.log(this.nomControleur + " - Code: 1986 - _saveState: Sauvegarde de l'état de la liste." + this.listUrlValue);
+        
         if (!this.listUrlValue) return; // Ne rien faire si l'URL n'est pas définie
         const storageKey = `listContent_${this.listUrlValue}`;
         const state = {
@@ -365,6 +367,7 @@ export default class extends Controller {
      * @private
      */
     _restoreState() {
+        console.log(this.nomControleur + " - Code: 1986 - _restoreState: Restauration de l'état de la liste." + this.listUrlValue);
         if (!this.listUrlValue) return false;
         const storageKey = `listContent_${this.listUrlValue}`;
         const savedStateJSON = sessionStorage.getItem(storageKey);

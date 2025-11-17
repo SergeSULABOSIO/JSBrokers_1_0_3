@@ -46,6 +46,11 @@ export default class extends Controller {
          * @private
          */
         this.parentEntityCanvas = null;
+        /**
+         * @property {string|null} parentEntityType - Le type de l'entité parente sélectionnée.
+         * @private
+         */
+        this.parentEntityType = null;
 
         // NOUVEAU : Notifier le cerveau du contexte initial de la rubrique, y compris l'ID de l'entreprise.
         this.notifyCerveau('app:context.initialized', {
@@ -127,6 +132,8 @@ export default class extends Controller {
         this.collectionTabsParentId = newParentId;
         // NOUVEAU : Mémoriser le canvas de l'entité parente pour la restauration
         this.parentEntityCanvas = isSingleSelection ? canvas : null;
+        // NOUVEAU : Mémoriser le type de l'entité parente pour la restauration
+        this.parentEntityType = isSingleSelection ? entityType : null;
 
         this._removeCollectionTabs();
 
@@ -279,6 +286,7 @@ export default class extends Controller {
             activeTabId: this.activeTabId,
             collectionTabsParentId: this.collectionTabsParentId,
             parentEntityCanvas: this.parentEntityCanvas,
+            parentEntityType: this.parentEntityType, // Sauvegarde du type
             tabStates: this.tabStates
         };
         // Utilise le chemin de l'URL pour une clé unique par rubrique
@@ -301,12 +309,13 @@ export default class extends Controller {
         this.activeTabId = savedState.activeTabId || 'principal';
         this.collectionTabsParentId = savedState.collectionTabsParentId || null;
         this.parentEntityCanvas = savedState.parentEntityCanvas || null;
+        this.parentEntityType = savedState.parentEntityType || null; // Restauration du type
         this.tabStates = savedState.tabStates || {};
 
         // Si un parent était sélectionné, on recrée les onglets de collection
-        if (this.collectionTabsParentId && this.parentEntityCanvas) {
+        if (this.collectionTabsParentId && this.parentEntityCanvas && this.parentEntityType) {
             const parentEntity = { id: this.collectionTabsParentId }; // On a juste besoin de l'ID
-            const parentEntityType = this.parentEntityCanvas.parametres.type;
+            const parentEntityType = this.parentEntityType; // On utilise le type restauré
             const collections = this._findCollectionsInCanvas(this.parentEntityCanvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, parentEntity, parentEntityType));
         }

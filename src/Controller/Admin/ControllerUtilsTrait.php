@@ -210,6 +210,10 @@ trait ControllerUtilsTrait
         $entityCanvas = $this->constante->getEntityCanvas($entityClass);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
 
+        // NOUVEAU : Construire l'URL de la liste principale pour la persistance de l'état.
+        // C'est l'URL que le list-manager utilisera pour s'identifier.
+        $mainListUrl = $this->generateUrl($this->getServerRootName($entityClass) . '_query', ['idInvite' => $idInvite, 'idEntreprise' => $idEntreprise]);
+
         $parameters = [
             'data' => $data,
             'entite_nom' => $this->getEntityName($entityClass),
@@ -222,6 +226,7 @@ trait ControllerUtilsTrait
             'numericAttributesAndValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // Pass for dynamic queries
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,
+            'mainListUrl' => $mainListUrl, // On passe l'URL au template
         ];
 
         if ($isQueryResult && $reponseData) {

@@ -22,7 +22,8 @@
         data-list-manager-id-entreprise-value="{{ idEntreprise }}" 
         data-list-manager-id-invite-value="{{ idInvite }}"  
         data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
-        data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}' 
+        data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}'
+        data-list-manager-list-url-value="{{ listUrl | default('') }}" {# CORRECTION : Ajout de l'URL unique pour la persistance #}
     > 
         <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
             <table class="table table-hover table-sm table-enhanced">
