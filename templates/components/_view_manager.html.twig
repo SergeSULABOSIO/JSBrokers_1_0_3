@@ -52,7 +52,7 @@
             data-can-add="true"
         >
             {# On utilise notre nouveau composant générique pour la liste principale #}
-            {{ include('components/_generic_list_component.html.twig', {
+            {{ include('components/_list_manager.html.twig', {
                 'data': [],
                 'entite_nom': entite_nom,
                 'serverRootName': serverRootName,
@@ -62,7 +62,7 @@
                 'numericAttributesAndValues': numericAttributesAndValues|json_encode(constant('JSON_FORCE_OBJECT'))|e('html_attr'),
                 'idEntreprise': idEntreprise,
                 'idInvite': idInvite,
-                'listUrl': mainListUrl,
+                'listUrl': mainListUrl
             }) }}
         </div>
     </div>
