@@ -135,6 +135,11 @@ export default class extends Controller {
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
 
+            // NOUVEAU : Relais de la requête de recherche vers le list-manager.
+            case 'app:base-données:sélection-request':
+                this.broadcast('app:base-données:sélection-request', payload);
+                break;
+
             case 'ui:toolbar.refresh-request':
                 // On notifie le début du chargement pour que la barre de progression s'affiche
                 this.broadcast('app:loading.start');
