@@ -208,6 +208,15 @@ export default class extends Controller {
                 this._setSelectionState(payload.selectos || []);
                 break;
 
+            // NOUVEAU : Relais pour les indicateurs de chargement
+            case 'app:loading.start':
+                this.broadcast('app:loading.start', payload);
+                break;
+
+            case 'app:loading.stop':
+                this.broadcast('app:loading.stop', payload);
+                break;
+
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }
