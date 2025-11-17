@@ -212,7 +212,7 @@ trait ControllerUtilsTrait
 
         // NOUVEAU : Construire l'URL de la liste principale pour la persistance de l'état.
         // C'est l'URL que le list-manager utilisera pour s'identifier.
-        $mainListUrl = $this->generateUrl($this->getServerRootName($entityClass) . '_query', ['idInvite' => $idInvite, 'idEntreprise' => $idEntreprise]);
+        $mainListUrl = $this->generateUrl('admin.' . $this->getServerRootName($entityClass) . '.app_dynamic_query', ['idInvite' => $idInvite, 'idEntreprise' => $idEntreprise]);
 
         $parameters = [
             'data' => $data,
