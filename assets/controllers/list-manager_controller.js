@@ -58,7 +58,7 @@ export default class extends Controller {
 
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.addEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
+        document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
 
         // NOUVEAU : Tente de restaurer l'état de la liste depuis sessionStorage.
@@ -74,7 +74,7 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.removeEventListener('app:base-données:sélection-request', this.boundHandleDBRequest);
+        document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
     }
 
