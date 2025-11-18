@@ -150,8 +150,6 @@ export default class extends Controller {
             case 'app:list.refreshed':
                 this._setSelectionState([]); // On réinitialise la sélection
                 // On notifie la fin pour masquer la barre de progression
-                this.broadcast('app:loading.stop'); 
-                this._setSelectionState([]); // On réinitialise la sélection
                 this.broadcast('app:loading.stop');
                 break;
             

@@ -342,7 +342,7 @@ export default class extends BaseController {
         sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters));
         console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters);
 
-        // this.notifyCerveau('app:loading.start');
+        this.notifyCerveau('app:loading.start');
         // Notifie le cerveau pour lancer la recherche
         this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
         // Met à jour le résumé des filtres actifs
