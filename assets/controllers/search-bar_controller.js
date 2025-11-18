@@ -20,11 +20,11 @@ export default class extends BaseController {
 
     connect() {
         this.nomControleur = "SEARCH_BAR";
-        this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
+        // this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
         this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
         this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
 
-        document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
+        // document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
 
@@ -45,7 +45,7 @@ export default class extends BaseController {
     }
 
     disconnect() {
-        document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
+        // document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
     }
@@ -325,15 +325,15 @@ export default class extends BaseController {
         this.dispatchSearchEvent();
     }
 
-    /**
-     * NOUVELLE MÉTHODE
-     * Gère une demande d'actualisation externe.
-     * @param {CustomEvent} event L'événement reçu.
-     */
-    handleExternalRefresh(event) {
-        console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
-        this.dispatchSearchEvent(); // Relance simplement la recherche avec les filtres courants.
-    }
+    // /**
+    //  * NOUVELLE MÉTHODE
+    //  * Gère une demande d'actualisation externe.
+    //  * @param {CustomEvent} event L'événement reçu.
+    //  */
+    // handleExternalRefresh(event) {
+    //     console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
+    //     this.dispatchSearchEvent(); // Relance simplement la recherche avec les filtres courants.
+    // }
 
     dispatchSearchEvent() {
         // Notifie le cerveau pour démarrer la barre de progression
@@ -342,7 +342,7 @@ export default class extends BaseController {
         sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters));
         console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters);
 
-        this.notifyCerveau('app:loading.start');
+        // this.notifyCerveau('app:loading.start');
         // Notifie le cerveau pour lancer la recherche
         this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
         // Met à jour le résumé des filtres actifs

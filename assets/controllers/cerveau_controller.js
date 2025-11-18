@@ -136,6 +136,7 @@ export default class extends Controller {
                 break;
 
             case 'app:base-données:sélection-request':
+                console.log(this.nomControleur + " - Code: 1986 - Recherche", payload);
                 this.broadcast('app:list.refresh-request', payload);
                 break;
 
