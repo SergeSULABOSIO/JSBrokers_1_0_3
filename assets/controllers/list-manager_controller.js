@@ -159,6 +159,8 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:base-données:sélection-request`.
      */
     async handleDBRequest(event) {
+        console.log(this.nomControleur + " - Code: 1986 - Recherche", event.detail);
+        
         this._logDebug("Demande de chargement reçue.", event.detail);
 
         const { idEntreprise, idInvite } = this._getIdsFromEventOrValues(event.detail);
