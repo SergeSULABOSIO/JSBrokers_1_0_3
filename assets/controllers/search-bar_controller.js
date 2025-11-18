@@ -94,11 +94,12 @@ export default class extends BaseController {
     }
 
     handleAdvancedSearchReset() {
+        // CORRECTION : Cette méthode réinitialise uniquement l'état et l'UI de la barre de recherche.
+        // Elle est appelée par le Cerveau (via l'événement 'search:advanced.reset')
+        // et ne doit PAS renvoyer d'événement pour éviter une boucle infinie.
         this.simpleSearchInputTarget.value = '';
-        // Réinitialise complètement les filtres
         this.activeFilters = {};
-        // Le cerveau se chargera de vider les filtres et de relancer la recherche par défaut.
-        this.notifyCerveau('ui:search.reset-request', this.activeFilters);
+        this.updateSummary();
     }
 
 

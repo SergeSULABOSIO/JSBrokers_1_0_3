@@ -98,7 +98,8 @@ export default class extends BaseController {
     resetForm() {
         // Ne fait plus de manipulation du DOM ici.
         // Notifie simplement le cerveau de l'intention de réinitialiser.
-        this.notifyCerveau('search:advanced.reset');
+        // CORRECTION : On utilise l'événement de réinitialisation globale.
+        this.notifyCerveau('ui:search.reset-request', {});
         this.modal.hide();
     }
 

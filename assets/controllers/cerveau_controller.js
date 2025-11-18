@@ -87,6 +87,7 @@ export default class extends Controller {
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
 
+
             // --- NOUVEAU : Communication pour la recherche avancée ---
             case 'dialog:search.open-request':
                 // La barre de recherche demande l'ouverture du dialogue
@@ -101,9 +102,13 @@ export default class extends Controller {
                 this.broadcast('search:advanced.reset', payload);
                 break;
             // NOUVEAU : La barre de recherche demande une réinitialisation complète.
+            // CORRECTION : Cet événement est maintenant le point d'entrée unique pour une réinitialisation globale.
             case 'ui:search.reset-request':
                 this.broadcast('search:advanced.reset', {}); // Ordonne à la barre de recherche de vider son UI et ses filtres.
-                this._requestListRefresh(); // Lance une recherche avec des critères vides (par défaut).
+                // Lance une recherche avec des critères vides (par défaut) pour rafraîchir la liste.
+                // CORRECTION : On passe l'ID de l'onglet actif pour cibler la bonne liste.
+                const activeTabId = this.getActiveTabId();
+                this._requestListRefresh(activeTabId, { criteria: {} });
                 break;
 
             case 'dialog:boite-dialogue:init-request':
@@ -150,7 +155,7 @@ export default class extends Controller {
             case 'ui:toolbar.refresh-request':
                 // On notifie le début du chargement pour que la barre de progression s'affiche
                 this.broadcast('app:loading.start');
-                this._requestListRefresh();
+                this._requestListRefresh(this.getActiveTabId());
                 break;
 
             // NOUVEAU : La liste a terminé son actualisation.
@@ -409,16 +414,31 @@ export default class extends Controller {
     }
 
     /**
-     * Diffuse une demande de rafraîchissement de la liste.
-     * @param {string|null} [originatorId=null] - L'ID du composant qui a initié la demande, pour un rafraîchissement ciblé.
+     * Récupère l'ID de l'onglet actuellement actif depuis le view-manager.
+     * @returns {string|null}
      * @private
      */
-    _requestListRefresh(originatorId = null) {
+    getActiveTabId() {
+        const viewManagerEl = document.querySelector('[data-controller="view-manager"]');
+        if (viewManagerEl && this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager')) {
+            return this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager').activeTabId;
+        }
+        return 'principal'; // Fallback sur la liste principale
+    }
+
+    /**
+     * Diffuse une demande de rafraîchissement de la liste.
+     * @param {string|null} [originatorId=null] - L'ID du composant qui a initié la demande, pour un rafraîchissement ciblé.
+     * @param {object} [criteriaPayload={}] - Le payload contenant les critères de recherche.
+     * @private
+     */
+    _requestListRefresh(originatorId = null, criteriaPayload = {}) {
         const payload = {
+            ...criteriaPayload, // Fusionne les critères passés
             idEntreprise: this.currentIdEntreprise,
             idInvite: this.currentIdInvite,
+            originatorId: originatorId // On ajoute l'ID de la liste à rafraîchir
         };
-        if (originatorId) payload.originatorId = originatorId;
         this.broadcast('app:list.refresh-request', payload);
     }
 

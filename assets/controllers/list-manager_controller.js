@@ -160,6 +160,13 @@ export default class extends Controller {
      */
     async handleDBRequest(event) {
         console.log(this.nomControleur + " - Code: 1986 - Recherche", event.detail);
+
+        // CORRECTION : On vérifie si la demande de rafraîchissement nous est destinée.
+        // L'ID de l'élément du list-manager doit correspondre à l'originatorId envoyé par le cerveau.
+        if (event.detail.originatorId && event.detail.originatorId !== this.element.id) {
+            this._logDebug("Demande de rafraîchissement ignorée (non destinée à cette liste).", { myId: this.element.id, originatorId: event.detail.originatorId });
+            return;
+        }
         
         this._logDebug("Demande de chargement reçue.", event.detail);
 
@@ -237,7 +244,9 @@ export default class extends Controller {
      * NOUVEAU : Notifie la barre de recherche pour réinitialiser la recherche.
      */
     resetSearch() {
-        this.notifyCerveau('search:advanced.reset');
+        // CORRECTION : On notifie le cerveau d'une intention de réinitialisation globale.
+        // Le cerveau saura quelle est la liste active et ciblera la réinitialisation.
+        this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
     }
 
 
