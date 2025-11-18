@@ -100,6 +100,11 @@ export default class extends Controller {
                 // Le dialogue demande une réinitialisation, on le transmet à la barre de recherche
                 this.broadcast('search:advanced.reset', payload);
                 break;
+            // NOUVEAU : La barre de recherche demande une réinitialisation complète.
+            case 'ui:search.reset-request':
+                this.broadcast('search:advanced.reset', {}); // Ordonne à la barre de recherche de vider son UI et ses filtres.
+                this._requestListRefresh(); // Lance une recherche avec des critères vides (par défaut).
+                break;
 
             case 'dialog:boite-dialogue:init-request':
                 this.broadcast('app:loading.start');
@@ -137,6 +142,8 @@ export default class extends Controller {
 
             case 'app:base-données:sélection-request':
                 console.log(this.nomControleur + " - Code: 1986 - Recherche", payload);
+                // CORRECTION : Le cerveau déclenche systématiquement le chargement.
+                this.broadcast('app:loading.start');
                 this.broadcast('app:list.refresh-request', payload);
                 break;
 
