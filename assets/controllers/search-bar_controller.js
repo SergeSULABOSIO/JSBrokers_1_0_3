@@ -97,10 +97,8 @@ export default class extends BaseController {
         this.simpleSearchInputTarget.value = '';
         // Réinitialise complètement les filtres
         this.activeFilters = {};
-        // La logique de pré-remplissage des dates est maintenant gérée uniquement
-        // à l'ouverture du dialogue de recherche avancée.
-        // Lance la recherche avec les filtres réinitialisés (contenant uniquement la date)
-        this.dispatchSearchEvent();
+        // Le cerveau se chargera de vider les filtres et de relancer la recherche par défaut.
+        this.notifyCerveau('ui:search.reset-request', this.activeFilters);
     }
 
 
@@ -336,13 +334,11 @@ export default class extends BaseController {
     // }
 
     dispatchSearchEvent() {
-        // Notifie le cerveau pour démarrer la barre de progression
         // CORRECTION : La sauvegarde se fait ici pour capturer TOUS les changements de filtres.
         const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
         sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters));
         console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters);
 
-        this.notifyCerveau('app:loading.start');
         // Notifie le cerveau pour lancer la recherche
         this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
         // Met à jour le résumé des filtres actifs
