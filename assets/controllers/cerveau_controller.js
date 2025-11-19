@@ -93,6 +93,7 @@ export default class extends Controller {
 
             case 'ui:tab.context-changed':
                 this._setSelectionState(payload.selectos || []);
+                this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
 
@@ -122,26 +123,31 @@ export default class extends Controller {
 
             case 'dialog:boite-dialogue:init-request':
                 this.broadcast('app:loading.start');
+                this._publishDisplayStatus('Initialisation du dialogue...');
                 this.openDialogBox(payload);
                 break;
 
             case 'ui:boite-dialogue:add-collection-item-request':
                 this.broadcast('app:loading.start');
+                this._publishDisplayStatus('Ouverture du formulaire de collection...');
                 this.openDialogBox(payload);
                 break;
 
             case 'ui:toolbar.add-request':
                 this.broadcast('app:loading.start');
+                this._publishDisplayStatus('Ouverture du formulaire de création...');
                 this.openDialogBox(payload);
                 break;
             
             case 'ui:toolbar.edit-request':
                 this.broadcast('app:loading.start');
+                this._publishDisplayStatus(`Modification de l'élément...`);
                 this.openDialogBox(payload);
                 break;
 
             // NOUVEAU : Le dialogue est complètement chargé et affiché.
             case 'ui:dialog.opened':
+                this._publishDisplayStatus(payload.mode === 'creation' ? 'Formulaire prêt pour la saisie.' : 'Formulaire prêt pour modification.');
                 this.broadcast('app:loading.stop');
                 break;
 
@@ -151,6 +157,7 @@ export default class extends Controller {
                 break;
 
             case 'app:form.validation-error':
+                this._publishDisplayStatus('Erreur de validation. Veuillez corriger le formulaire.');
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
 
@@ -196,10 +203,12 @@ export default class extends Controller {
                 break;
 
             case 'app:api.delete-request':
+                this._publishDisplayStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);
                 break;
 
             case 'dialog:confirmation.request':
+                this._publishDisplayStatus('Attente de confirmation...');
                 this._requestDeleteConfirmation(payload);
                 break;
 
@@ -213,6 +222,7 @@ export default class extends Controller {
 
             case 'ui:toolbar.open-request':
                 this.broadcast('app:loading.start');
+                this._publishDisplayStatus('Ouverture de la vue détaillée...');
                 this._handleOpenRequest(payload);
                 break;
 
@@ -242,6 +252,11 @@ export default class extends Controller {
 
             case 'app:loading.stop':
                 this.broadcast('app:loading.stop', payload);
+                break;
+
+            // NOUVEAU : Gère la fermeture d'un dialogue
+            case 'ui:dialog.closed':
+                this._publishDisplayStatus('Formulaire fermé.');
                 break;
 
             default:
