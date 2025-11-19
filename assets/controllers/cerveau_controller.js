@@ -92,8 +92,14 @@ export default class extends Controller {
                 break;
 
             case 'ui:tab.context-changed':
+                // On met à jour l'état de la sélection interne du cerveau
                 this._setSelectionState(payload.selectos || []);
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
+                
+                // CORRECTION : On orchestre la réinitialisation et le rafraîchissement du nouveau contexte.
+                this.broadcast('search:advanced.reset', {}); // 1. Ordonne à la barre de recherche de vider son UI et ses filtres.
+                this._requestListRefresh(payload.tabId, { criteria: {} }); // 2. Lance une recherche par défaut ciblée sur le nouvel onglet.
+
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
 
