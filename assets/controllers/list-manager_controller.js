@@ -63,8 +63,13 @@ export default class extends Controller {
 
         // NOUVEAU : Tente de restaurer l'état de la liste depuis sessionStorage.
         if (!this._restoreState()) {
-            // Si la restauration échoue (pas d'état sauvegardé), on ne fait rien.
-            // On attendra une demande de recherche pour peupler la liste.
+            // CORRECTION : Si la restauration échoue, on vérifie l'état initial.
+            // Si la liste a été rendue vide par le serveur, on affiche l'état vide.
+            if (this.nbElementsValue === 0) {
+                this.listContainerTarget.classList.add('d-none');
+                this.emptyStateContainerTarget.classList.remove('d-none');
+                this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
+            }
         }
     }
 
