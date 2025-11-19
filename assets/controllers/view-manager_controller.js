@@ -61,10 +61,12 @@ export default class extends Controller {
 
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleStatusUpdate = this.handleStatusUpdate.bind(this);
+        this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this); // NOUVEAU
 
         // --- CORRECTION : Écoute les événements diffusés par le Cerveau ---
         document.addEventListener('ui:selection.changed', this.boundHandleSelection);
         document.addEventListener('app:status.updated', this.boundHandleStatusUpdate);
+        document.addEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
 
         // Tente de restaurer l'état précédent (onglet actif, etc.)
         this._restoreState();
@@ -77,6 +79,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('ui:selection.changed', this.boundHandleSelection);
         document.removeEventListener('app:status.updated', this.boundHandleStatusUpdate);
+        document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
     }
 
     /**
@@ -84,9 +87,20 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:status.updated`.
      */
     handleStatusUpdate(event) {
-        if (this.hasDisplayTarget) {
-            this.displayTarget.innerHTML = event.detail.titre || 'Prêt.';
-        }
+        // Cette méthode peut être conservée pour d'autres types de statuts
+        // ou dépréciée au profit du nouveau système.
+        // Pour l'instant, on la laisse pour ne pas créer de régression.
+    }
+
+    /**
+     * NOUVEAU : Met à jour la barre de statut principale avec le contenu HTML fourni par le cerveau.
+     * @param {CustomEvent} event - L'événement `app:display.update`.
+     */
+    handleDisplayUpdate(event) {
+        const { html } = event.detail;
+        if (!this.hasDisplayTarget || !html) return;
+
+        this.displayTarget.innerHTML = html;
     }
 
     /**
@@ -106,18 +120,7 @@ export default class extends Controller {
         const entities = selectos.map(s => s.entity);
         const canvas = selectos.length > 0 ? selectos[0].entityCanvas : null;
         const entityType = selectos.length > 0 ? selectos[0].entityType : null;
-
-        // --- CORRECTION : Mettre à jour le display avec le statut de la sélection ---
-        if (this.hasDisplayTarget) {
-            const selectionCount = selection ? selection.length : 0;
-            if (selectionCount === 0) {
-                this.displayTarget.innerHTML = 'Prêt.';
-            } else if (selectionCount === 1) {
-                this.displayTarget.innerHTML = '1 élément sélectionné.';
-            } else {
-                this.displayTarget.innerHTML = `${selectionCount} éléments sélectionnés.`;
-            }
-        }
+        // La mise à jour du display est maintenant gérée par le cerveau via handleDisplayUpdate
 
         const isSingleSelection = entities && entities.length === 1;
         const newParentId = isSingleSelection ? entities[0].id : null;

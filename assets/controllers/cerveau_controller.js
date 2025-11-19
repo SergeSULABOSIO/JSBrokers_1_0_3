@@ -26,6 +26,13 @@ export default class extends Controller {
         this.selectionIds = new Set(); // Pour une recherche rapide des IDs
         this.numericAttributesAndValues = {}; // Stocke l'objet complet {colonnes, valeurs}
         this.currentIdEntreprise = null;
+        // NOUVEAU : État pour le "display"
+        this.displayState = {
+            rubricName: 'Tableau de bord',
+            action: 'Initialisation',
+            result: 'Prêt',
+            selectionCount: 0
+        };
         this.currentIdInvite = null;
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
         // --- CORRECTION : Lier la fonction une seule fois et stocker la référence ---
@@ -63,6 +70,8 @@ export default class extends Controller {
 
         switch (type) {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
+                this.displayState.rubricName = payload.entityName || 'Inconnu';
+                this._publishDisplayStatus('Chargement de la rubrique...');
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 break;
 
@@ -147,12 +156,18 @@ export default class extends Controller {
 
             case 'app:base-données:sélection-request':
                 console.log(this.nomControleur + " - Code: 1986 - Recherche", payload);
+                const criteriaText = Object.keys(payload.criteria || {}).length > 0 
+                    ? `Filtre actif` 
+                    : 'Recherche par défaut';
+                this._publishDisplayStatus(criteriaText);
                 // CORRECTION : Le cerveau déclenche systématiquement le chargement.
                 this.broadcast('app:loading.start');
                 this.broadcast('app:list.refresh-request', payload);
                 break;
 
             case 'ui:toolbar.refresh-request':
+                this.displayState.action = 'Rafraîchissement manuel';
+                this._publishDisplayStatus('Rafraîchissement en cours...');
                 // On notifie le début du chargement pour que la barre de progression s'affiche
                 this.broadcast('app:loading.start');
                 this._requestListRefresh(this.getActiveTabId());
@@ -161,6 +176,8 @@ export default class extends Controller {
             // NOUVEAU : La liste a terminé son actualisation.
             case 'app:list.refreshed':
                 this._setSelectionState([]); // On réinitialise la sélection
+                const itemCount = payload.itemCount ?? 'N/A';
+                this._publishDisplayStatus(`Liste chargée : ${itemCount} élément(s)`);
                 // On notifie la fin pour masquer la barre de progression
                 this.broadcast('app:loading.stop');
                 break;
@@ -296,6 +313,8 @@ export default class extends Controller {
      * @private
      */
     publishSelection() {
+        this.displayState.selectionCount = this.selectionState.length;
+        this._publishDisplayStatus(); // Met à jour le display avec le nouveau compte de sélection
         // --- NOUVELLE ARCHITECTURE ---
         console.log(this.nomControleur + " - Code: 1980 - Publication de l'état de sélection mis à jour. Selection:", this.selectionState, "NumericAttributesAndValues:", this.numericAttributesAndValues);
         this.broadcast('ui:selection.changed', {
@@ -452,6 +471,27 @@ export default class extends Controller {
         this.broadcast('app:notification.show', { text, type });
     }
 
+    /**
+     * NOUVEAU : Formate et diffuse le message de statut pour le display.
+     * @param {string|null} [action=null] - La nouvelle action à afficher. Si null, l'action précédente est conservée.
+     * @private
+     */
+    _publishDisplayStatus(action = null) {
+        if (action) {
+            this.displayState.action = action;
+        }
+
+        const timestamp = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        
+        const messageHtml = `
+            <span class="fw-bold text-dark">${this.displayState.rubricName}</span>
+            <span class="mx-2 text-muted">›</span>
+            <span>${this.displayState.action}</span>
+            <span class="mx-2 text-muted">|</span>
+            <span class="fw-bold">${this.displayState.selectionCount}</span> sélection(s)
+        `;
+        this.broadcast('app:display.update', { html: messageHtml });
+    }
 
 
     /**

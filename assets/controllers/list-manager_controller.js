@@ -317,7 +317,7 @@ export default class extends Controller {
         const numericDataPayload = this._extractNumericDataFromResponse(doc); // Renvoie { numericAttributesAndValues: {...} }
         // On envoie le payload tel quel au cerveau
         this.notifyCerveau('app:list.data-loaded', numericDataPayload);
-        this.notifyCerveau('app:list.refreshed', {});
+        this.notifyCerveau('app:list.refreshed', { itemCount: this.rowCheckboxTargets.length });
     }
 
     /**
