@@ -155,8 +155,10 @@ trait ControllerUtilsTrait
         $entityCanvas = $this->constante->getEntityCanvas($entityClass);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
         $entityFormCanvas = $this->constante->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
-
-        $template = "components/_" . $usage . "_list_component.html.twig";
+        
+        // CORRECTION : Le template a été renommé '_list_manager.html.twig'.
+        // On utilise directement le nom correct au lieu de le construire dynamiquement.
+        $template = "components/_list_manager.html.twig";
         $parameters = [
             'data' => $data,
             'entite_nom' => $this->getEntityName($entityClass),
