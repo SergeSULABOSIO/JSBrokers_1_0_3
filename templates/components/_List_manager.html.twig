@@ -14,7 +14,7 @@
     - `numericAttributes` (optionnel): Attributs numériques pour les totaux.
 #}
 <div 
-        id="list-controller-{{ random() }}" {# ID unique pour chaque instance de liste #} 
+        id="{{ listId | default('list-controller-' ~ random()) }}" {# CORRECTION : Utiliser un ID prédictible ou un fallback aléatoire. #}
         data-controller="list-manager" 
         data-list-manager-nbelements-value="{{ data|length }}" 
         data-list-manager-entite-value="{{ entite_nom }}" 
