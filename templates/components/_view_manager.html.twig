@@ -53,6 +53,7 @@
         >
             {# On utilise notre nouveau composant générique pour la liste principale #}
             {{ include('components/_list_manager.html.twig', {
+                'listId': 'principal', 
                 'data': [],
                 'entite_nom': entite_nom,
                 'serverRootName': serverRootName,
