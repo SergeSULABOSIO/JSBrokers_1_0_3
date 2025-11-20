@@ -59,6 +59,7 @@ export default class extends Controller {
         this.entity = detail.entity;
         this.isCreateMode = !(this.entity && this.entity.id);
         this.context = detail.context || {};
+        this.parentContext = detail.parentContext || null; // NOUVEAU : On récupère le contexte du parent.
         this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
         this._logState('start', '1986', detail);
 
@@ -297,6 +298,12 @@ export default class extends Controller {
                 formData.append(key, valueToAppend);
             }
         }
+        // NOUVEAU : On ajoute le parent s'il a été fourni par le cerveau.
+        // Cela est utilisé pour lier un contact à une notification, par exemple.
+        if (this.parentContext && this.parentContext.id && this.parentContext.fieldName) {
+            formData.append(this.parentContext.fieldName, this.parentContext.id);
+        }
+        
         // console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
         // console.log(this.nomControlleur + " - Submit vers le serveur: " + this.entityFormCanvas.parametres.endpoint_submit_url, this.context);
         try {

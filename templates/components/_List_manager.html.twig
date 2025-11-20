@@ -54,18 +54,18 @@
         </div>
         <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
             {% set emptyStateParams = {
-                title: "Aucun " ~ entite_nom|lower ~ " trouvé",
-                description: "Essayez de modifier vos critères ou d'ajouter un nouvel élément.",
+                title: "Aucun élément trouvé",
+                description: "Essayez de réinitialiser vos critères ou d'ajouter un nouvel élément.",
                 icon_name: entityCanvas.parametres.icone | default('lucide:search-x'),
                 
-                button_2_text: "Réinitialiser la recherche",
+                button_2_text: "Réinitialiser",
                 button_2_action: "click->list-manager#resetSearch",
                 button_2_icon: "lucide:rotate-cw"
             } %}
 
             {# On n'ajoute le bouton "Ajouter" que si la liste le permet #}
             {% if can_add | default(false) %}
-                {% set emptyStateParams = emptyStateParams|merge({ button_text: "Ajouter " ~ entite_nom, button_action: "click->list-manager#requestAddItem" }) %}
+                {% set emptyStateParams = emptyStateParams|merge({ button_text: "Ajouter", button_action: "click->list-manager#requestAddItem", button_icon: "lucide:plus-circle" }) %}
             {% endif %}
 
             {{ include('components/_empty_state.html.twig', emptyStateParams) }}

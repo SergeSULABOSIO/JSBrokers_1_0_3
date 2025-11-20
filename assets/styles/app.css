@@ -986,7 +986,8 @@ textarea:hover,
 }
 
 /* Le bouton utilise déjà les styles .btn-primary de Bootstrap, qui correspondent à votre --primary-cobalt-blue */
-.empty-state-button {
+/* CORRECTION : Style pour les boutons avec icône et texte */
+.empty-state-button, .empty-state-button-secondary {
   display: inline-flex; /* Permet d'aligner l'icône et le texte */
   align-items: center;
   gap: 0.5rem;
@@ -1001,28 +1002,19 @@ textarea:hover,
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Ombre plus prononcée */
 }
 
-/* NOUVEAU : Style pour le bouton secondaire dans l'état vide */
-.empty-state-button-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1.25rem;
-    border-radius: 8px !important;
-    background-color: #6c757d; /* Gris "secondary" de Bootstrap */
-    border-color: #6c757d;
-    color: white;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-}
-
 .empty-state-button-secondary:hover {
+    transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
     background-color: #5a6268; /* Gris plus foncé au survol */
     border-color: #545b62;
 }
 
 /* Cible l'icône SVG à l'intérieur du bouton */
-.empty-state-button svg {
-  width: 26px !important;
-  height: 26px !important;
+/* CORRECTION : Assure que les icônes font exactement 24px */
+.empty-state-button .me-2,
+.empty-state-button-secondary .me-2 {
+    width: 24px !important;
+    height: 24px !important;
 }
 
 /*
