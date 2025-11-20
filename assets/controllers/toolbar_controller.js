@@ -180,7 +180,7 @@ export default class extends Controller {
 
         let payload = {};
         // Enrichit le payload en fonction de l'action demandée
-        if (eventName === 'ui:toolbar.delete-request') {
+        if (eventName === 'app:delete-request') { // Renommé
             // Pour la suppression, on envoie les IDs et la configuration de l'action
             // (URL de base) pour que le Cerveau puisse construire la requête API.
             payload = {

@@ -108,6 +108,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleSelection(event) {
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleSelection - Code: 100 - Données:`, event.detail);
         // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
         const selectos = event.detail.selection || [];
 
@@ -157,6 +158,7 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     async switchTab(event) {
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données:`, { tabId: event.currentTarget.dataset.tabId });
         event.preventDefault();
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
@@ -192,7 +194,11 @@ export default class extends Controller {
             // On envoie l'état de sélection sauvegardé pour ce nouvel onglet.
             selectos: savedSelectos, 
             parentId: this.collectionTabsParentId,
-            formCanvas: null // Le formCanvas sera maintenant envoyé par le list-manager lui-même.
+            // Pour les onglets de collection, le formCanvas est fourni par le list-manager lui-même
+            // via l'événement 'app:list.context-ready'.
+            // Pour l'onglet 'principal', on peut potentiellement le fournir ici si nécessaire.
+            // Pour l'instant, on laisse le list-manager gérer la notification du formCanvas.
+            // formCanvas: (this.activeTabId === 'principal' && this.entityCanvasValue) ? this.entityCanvasValue : undefined
         });
 
         // Sauvegarder l'état après un changement d'onglet
@@ -207,7 +213,7 @@ export default class extends Controller {
      * @private
      */
     notifyCerveau(type, payload = {}) {
-        console.log(`${this.nomControleur} - Notification du Cerveau sur le changement de contexte.`);
+        console.log(`[${++window.logSequence}] ${this.nomControleur} - Notification du Cerveau sur le changement de contexte.`);
 
         this.dispatch('cerveau:event', {
             type: type,
@@ -252,6 +258,7 @@ export default class extends Controller {
     }
 
     async _loadTabContent(tabElement) {
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - _loadTabContent - Code: 100 - Données:`, { url: tabElement.dataset.collectionUrl });
         const content = document.createElement('div');
         Object.assign(content.dataset, {
             contentId: tabElement.dataset.tabId,
