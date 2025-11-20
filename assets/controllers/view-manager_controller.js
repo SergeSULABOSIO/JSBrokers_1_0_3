@@ -126,8 +126,11 @@ export default class extends Controller {
         const newParentId = isSingleSelection ? entities[0].id : null;
 
         // On ne met à jour les onglets que si on est sur l'onglet principal
-        // et que l'ID de l'entité parente a changé. [cite: 1]
-        if (this.activeTabId !== 'principal' || newParentId === this.collectionTabsParentId) {
+        // et que l'ID de l'entité parente a changé.
+        // CORRECTION : On ignore les changements de sélection qui ne proviennent pas de l'onglet principal.
+        // Cela empêche un rafraîchissement de liste dans un onglet de collection de réinitialiser toute l'interface.
+        // La condition `event.detail.originatorId !== 'principal'` est la clé.
+        if (this.activeTabId !== 'principal' || (event.detail.originatorId && event.detail.originatorId !== 'principal')) {
             this._saveState(); // Sauvegarde même si l'onglet n'est pas principal pour mémoriser la sélection
             return;
         }

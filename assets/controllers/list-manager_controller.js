@@ -433,7 +433,6 @@ export default class extends Controller {
                     }
                 }
             });
-            this.notifyCerveau('ui:list.selection-completed', { selectos: restoredSelectos });
 
             // On simule le post-chargement pour notifier le cerveau et mettre à jour les sélections/totaux
             const doc = new DOMParser().parseFromString(`<table><tbody>${html}</tbody></table>`, 'text/html');

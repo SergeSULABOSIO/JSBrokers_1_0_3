@@ -103,17 +103,14 @@ export default class extends Controller {
     handleTabChange(event) {
         const { tabId, formCanvas } = event.detail;
 
-        // Si le Cerveau fournit un formCanvas dans l'événement, on l'utilise.
+        // CORRECTION : On ne met à jour que si un formCanvas VALIDE est fourni.
+        // On ignore les événements avec un formCanvas nul pour éviter de réinitialiser
+        // l'état prématurément pendant le chargement d'un onglet.
         if (formCanvas) {
-            // CORRECTION : On met à jour à la fois la propriété interne ET la "value" Stimulus.
-            // C'est la "value" qui est lue lors de la notification au cerveau.
             this.activeFormCanvas = formCanvas;
             this.entityFormCanvasValue = formCanvas;
-        } else {
-            // Sinon (cas de l'onglet principal vide), on revient à la valeur par défaut.
-            this.activeFormCanvas = this.entityFormCanvasValue;
+            console.log(`${this.nomControleur} - Contexte de formulaire mis à jour pour l'onglet '${tabId}'.`);
         }
-        console.log(`${this.nomControleur} - Contexte de formulaire mis à jour pour l'onglet '${tabId}'.`);
     }
 
     /**
