@@ -71,6 +71,13 @@ export default class extends Controller {
                 this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
             }
         }
+
+        // NOUVEAU : Notifier le cerveau que ce contexte de liste est prêt.
+        // Cela permet au cerveau de mettre à jour la barre d'outils avec le bon formCanvas.
+        if (this.element.id !== 'principal') {
+            console.log(`${this.nomControleur} - Notification de contexte prêt pour l'onglet: ${this.element.id}`);
+            this.notifyCerveau('app:list.context-ready', { tabId: this.element.id, formCanvas: this.entityFormCanvasValue });
+        }
     }
 
     /**

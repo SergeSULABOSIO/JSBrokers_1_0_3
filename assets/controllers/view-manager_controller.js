@@ -183,15 +183,13 @@ export default class extends Controller {
 
         // On restaure l'état de la sélection pour cet onglet et on notifie le Cerveau.
         const savedSelectos = this.tabStates[this.activeTabId] || [];
-        const listManager = newContent ? newContent.querySelector('[data-controller="list-manager"]') : null;
-        const formCanvas = listManager ? JSON.parse(listManager.dataset.listManagerEntityFormCanvasValue || 'null') : null;
 
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
             // On envoie l'état de sélection sauvegardé pour ce nouvel onglet.
             selectos: savedSelectos, 
-            parentId: this.collectionTabsParentId, // NOUVEAU : On transmet l'ID du parent.
-            formCanvas: formCanvas // On envoie le canvas du formulaire de l'onglet.
+            parentId: this.collectionTabsParentId,
+            formCanvas: null // Le formCanvas sera maintenant envoyé par le list-manager lui-même.
         });
 
         // Sauvegarder l'état après un changement d'onglet
