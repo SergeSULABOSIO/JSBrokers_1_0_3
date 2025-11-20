@@ -105,7 +105,10 @@ export default class extends Controller {
 
         // Si le Cerveau fournit un formCanvas dans l'événement, on l'utilise.
         if (formCanvas) {
+            // CORRECTION : On met à jour à la fois la propriété interne ET la "value" Stimulus.
+            // C'est la "value" qui est lue lors de la notification au cerveau.
             this.activeFormCanvas = formCanvas;
+            this.entityFormCanvasValue = formCanvas;
         } else {
             // Sinon (cas de l'onglet principal vide), on revient à la valeur par défaut.
             this.activeFormCanvas = this.entityFormCanvasValue;

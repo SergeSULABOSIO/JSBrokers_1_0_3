@@ -104,6 +104,12 @@ export default class extends Controller {
 
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
+            
+            // NOUVEAU : Un list-manager (d'un onglet) notifie qu'il est prêt.
+            case 'app:list.context-ready':
+                console.log("🧠 [Cerveau] Contexte de liste reçu, mise à jour de la barre d'outils.", payload);
+                this.broadcast('ui:tab.context-changed', { tabId: payload.tabId, formCanvas: payload.formCanvas });
+                break;
 
 
             // --- NOUVEAU : Communication pour la recherche avancée ---
