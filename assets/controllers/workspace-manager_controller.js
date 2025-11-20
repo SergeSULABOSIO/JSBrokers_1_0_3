@@ -556,6 +556,13 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     async loadComponent(event) {
+        console.log(
+            `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
+            { 
+                componentName: event.currentTarget.dataset.workspaceManagerComponentNameParam,
+                entityName: event.currentTarget.dataset.workspaceManagerEntityNameParam
+            }
+        );
         const clickedElement = event.currentTarget;
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
         const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
@@ -601,6 +608,7 @@ export default class extends Controller {
      * @param {CustomEvent} event 
      */
     handleComponentLoaded(event) {
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleComponentLoaded - Code: 100 - Données:`, event.detail);
         const { html, error } = event.detail;
 
         if (error) {

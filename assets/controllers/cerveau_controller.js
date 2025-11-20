@@ -20,6 +20,7 @@ export default class extends Controller {
      * Met en place l'écouteur d'événement principal `cerveau:event`.
      */
     connect() {
+        window.logSequence = window.logSequence || 0; // Initialise le compteur de log global
         this.nomControleur = "Cerveau";
         // --- NOUVELLE ARCHITECTURE : Le Cerveau devient la source de vérité pour la sélection ---
         this.selectionState = []; // Tableau des objets "selecto"
@@ -35,7 +36,7 @@ export default class extends Controller {
         };
         this.currentIdInvite = null;
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
-        console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
+        console.log(`[${++window.logSequence}] ${this.nomControleur} 🧠 Cerveau prêt à orchestrer.`);
         // --- CORRECTION : Lier la fonction une seule fois et stocker la référence ---
         this.boundHandleEvent = this.handleEvent.bind(this);
         document.addEventListener('cerveau:event', this.boundHandleEvent);
@@ -62,6 +63,7 @@ export default class extends Controller {
      */
     handleEvent(event) {
         const { type, source, payload, timestamp } = event.detail;
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleEvent - Code: 100 - Données:`, { type, source, payload });
 
         // Validation de base de l'événement
         if (!type || !source || !payload || !timestamp) {
@@ -98,16 +100,18 @@ export default class extends Controller {
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
-                // CORRECTION : On orchestre la réinitialisation et le rafraîchissement du nouveau contexte.
-                this.broadcast('search:advanced.reset', {}); // 1. Ordonne à la barre de recherche de vider son UI et ses filtres.
-                this._requestListRefresh(payload.tabId, { criteria: {} }); // 2. Lance une recherche par défaut ciblée sur le nouvel onglet.
+                // --- SOLUTION : On ne rafraîchit plus systématiquement la liste au changement d'onglet ---
+                // Le rafraîchissement automatique entraînait la perte de la sélection restaurée.
+                // La liste est déjà chargée, soit par le serveur initialement, soit par un chargement AJAX précédent.
+                // this.broadcast('search:advanced.reset', {}); // On peut aussi commenter cette ligne si on veut conserver les filtres entre les onglets.
+                // this._requestListRefresh(payload.tabId, { criteria: {} }); // LIGNE PROBLÉMATIQUE SUPPRIMÉE
 
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
             
             // NOUVEAU : Un list-manager (d'un onglet) notifie qu'il est prêt.
             case 'app:list.context-ready':
-                console.log("🧠 [Cerveau] Contexte de liste reçu, mise à jour de la barre d'outils.", payload);
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de liste reçu, mise à jour de la barre d'outils.`, payload);
                 this.broadcast('ui:tab.context-changed', { tabId: payload.tabId, formCanvas: payload.formCanvas });
                 break;
 
@@ -176,7 +180,7 @@ export default class extends Controller {
                 break;
 
             case 'app:base-données:sélection-request':
-                console.log(this.nomControleur + " - Code: 1986 - Recherche", payload);
+                console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, payload);
                 const criteriaText = Object.keys(payload.criteria || {}).length > 0 
                     ? `Filtre actif` 
                     : 'Recherche par défaut';
@@ -207,7 +211,7 @@ export default class extends Controller {
             case 'app:list.data-loaded':
                 this.numericAttributesAndValues = payload.numericAttributesAndValues || {};
                 // --- AJOUT DU LOG ---
-                console.log("🧠 [Cerveau] Données numériques reçues:", { 
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues:`, { 
                     numericAttributesAndValues: this.numericAttributesAndValues
                 });
                 break;
@@ -297,7 +301,7 @@ export default class extends Controller {
 
 
     openDialogBox(payload) {
-        console.groupCollapsed(`${this.nomControleur} - handleEvent - EDITDIAL(1)`);
+        console.groupCollapsed(`[${++window.logSequence}] ${this.nomControleur} - handleEvent - EDITDIAL(1)`);
         console.log(`| Mode: ${payload.isCreationMode ? 'Création' : 'Édition'}`);
         console.log('| Entité:', payload.entity);
         console.log('| Canvas:', payload.entityFormCanvas);
@@ -347,10 +351,10 @@ export default class extends Controller {
      * @private
      */
     publishSelection() {
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - publishSelection - Code: 100 - Données:`, { selection: this.selectionState });
         this.displayState.selectionCount = this.selectionState.length;
         this._publishDisplayStatus(); // Met à jour le display avec le nouveau compte de sélection
         // --- NOUVELLE ARCHITECTURE ---
-        console.log(this.nomControleur + " - Code: 1980 - Publication de l'état de sélection mis à jour. Selection:", this.selectionState, "NumericAttributesAndValues:", this.numericAttributesAndValues);
         this.broadcast('ui:selection.changed', {
             selection: this.selectionState,
             numericAttributesAndValues: this.numericAttributesAndValues
@@ -395,7 +399,7 @@ export default class extends Controller {
         }
 
         // LOG: Vérifier l'URL finale avant l'appel fetch
-        console.log(`[Cerveau] Appel fetch vers l'URL: ${url}`);
+        console.log(`[${++window.logSequence}] [Cerveau] Appel fetch vers l'URL: ${url}`);
 
         try {
             const response = await fetch(url);
@@ -461,8 +465,9 @@ export default class extends Controller {
             })
             .catch(error => {
                 console.error("-> ERREUR: Échec de la suppression API.", error);
-                this.broadcast('app:error.api', { error: error.message || "La suppression a échoué." });
-                this.broadcast('ui:confirmation.close'); // Ferme aussi la modale en cas d'erreur.
+                // Notifie la boîte de dialogue de confirmation de l'erreur pour qu'elle l'affiche.
+                this.broadcast('ui:confirmation.error', { error: error.message || "La suppression a échoué." });
+                // La boîte de dialogue de confirmation gérera sa propre fermeture après affichage de l'erreur.
             });
     }
 

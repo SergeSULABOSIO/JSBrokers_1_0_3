@@ -350,14 +350,27 @@ export default class extends Controller {
      * @private
      */
     _extractNumericDataFromResponse(doc) {
-        const responseContainer = doc.querySelector('[data-role="response-metadata"]');
+        // On cherche d'abord dans la réponse AJAX
+        let responseContainer = doc.querySelector('[data-role="response-metadata"]');
         let numericAttributesAndValues = {};
 
         if (responseContainer && responseContainer.dataset.numericAttributesAndValues) {
-            numericAttributesAndValues = JSON.parse(responseContainer.dataset.numericAttributesAndValues || '{}');
+            // On s'assure de parser la chaîne JSON
+            try {
+                numericAttributesAndValues = JSON.parse(responseContainer.dataset.numericAttributesAndValues);
+            } catch (e) {
+                console.error("Erreur de parsing des données numériques depuis la réponse AJAX:", e);
+                numericAttributesAndValues = {};
+            }
         } else {
             // Fallback: Si aucune nouvelle donnée n'est trouvée dans la réponse AJAX, on utilise les données initiales.
-            numericAttributesAndValues = this.numericAttributesAndValuesValue;
+            // SOLUTION : On s'assure que la valeur initiale est aussi parsée correctement.
+            try {
+                numericAttributesAndValues = JSON.parse(this.numericAttributesAndValuesValue || '{}');
+            } catch (e) {
+                console.error("Erreur de parsing des données numériques initiales:", e);
+                numericAttributesAndValues = {};
+            }
         }
         const payload = { numericAttributesAndValues: numericAttributesAndValues };
         console.log(this.nomControleur + " - Code: 1980 - _extractNumericDataFromResponse - Extracted payload for Cerveau:", payload);

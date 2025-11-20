@@ -115,6 +115,7 @@ export default class extends Controller {
             return; // On arrête l'exécution ici.
         }
 
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleCheckboxChange - Code: 100 - Données:`, payload);
         this.dispatch('cerveau:event', {
             type: 'ui:list-row.selection-changed',
             source: this.nomControleur,

@@ -295,7 +295,7 @@ export default class extends Controller {
         console.log(this.nomControleur + " (0) - deleteItem(): " + itemId);
 
         // CORRECTION : On utilise le même événement que la toolbar pour la cohérence.
-        this.notifyCerveau('ui:toolbar.delete-request', {
+        this.notifyCerveau('app:delete-request', { // Renommé
             title: 'Confirmation de suppression',
             body: `Êtes-vous sûr de vouloir supprimer cet élément ?`, // Message personnalisé
             selection: [itemId], // On passe l'ID dans un tableau pour être compatible avec le cerveau

@@ -191,7 +191,7 @@ export default class extends Controller {
         } else if (eventName === 'ui:toolbar.open-request') {
             // Pour "Ouvrir", on envoie le tableau complet des "selectos".
             payload = { entities: this.entities };
-        } else if (eventName === 'ui:toolbar.delete-request') {
+        } else if (eventName === 'app:delete-request') { // Renommé
             // Pour la suppression, on envoie les IDs et la configuration de l'action
             payload = { selection: this.selection, actionConfig: { url: this.entityFormCanvas?.parametres?.endpoint_delete_url, originatorId: null } };
         }

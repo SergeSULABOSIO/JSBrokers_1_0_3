@@ -19,6 +19,7 @@ export default class extends Controller {
         // Centralisation des écouteurs d'événements via le Cerveau
         this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
         document.addEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
+        document.addEventListener('ui:confirmation.error', this.boundHandleCerveauEvent); // NOUVEAU
 
         this.boundClose = this.close.bind(this);
         document.addEventListener('ui:confirmation.close', this.boundClose);
@@ -31,6 +32,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
         document.removeEventListener('ui:confirmation.close', this.boundClose);
+        document.removeEventListener('ui:confirmation.error', this.boundHandleCerveauEvent); // NOUVEAU
         this.element.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
@@ -54,6 +56,9 @@ export default class extends Controller {
                 if (this.confirmButtonTarget.disabled) {
                     this.handleError(event.detail);
                 }
+                break;
+            case 'ui:confirmation.error': // NOUVEAU : Gère l'erreur spécifique de confirmation
+                this.handleError(event.detail);
                 break;
         }
     }
