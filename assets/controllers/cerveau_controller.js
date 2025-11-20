@@ -303,14 +303,6 @@ export default class extends Controller {
         console.log('| Canvas:', payload.entityFormCanvas);
         console.groupEnd();
 
-        var activeParentContext = null;
-        if (this.activeParentId) {
-            activeParentContext = {
-                id: this.activeParentId,
-                fieldName: payload.entityFormCanvas?.parametres?.parent_entity_field_name
-            }
-        }
-
         this.broadcast('app:boite-dialogue:init-request', {
             entity: payload.entity, // Entité vide pour le mode création
             entityFormCanvas: payload.entityFormCanvas,
@@ -319,8 +311,12 @@ export default class extends Controller {
                 ...payload.context,
                 idEntreprise: this.currentIdEntreprise, // CORRECTION : Utiliser la propriété correcte
                 idInvite: this.currentIdInvite       // CORRECTION : Utiliser la propriété correcte
-            },
-            parentContext: activeParentContext
+            }, // CORRECTION : Ajout de la virgule manquante.
+            // NOUVEAU : On ajoute le contexte du parent si on est dans un onglet de collection.
+            parentContext: this.activeParentId ? {
+                id: this.activeParentId,
+                fieldName: payload.entityFormCanvas && payload.entityFormCanvas.parametres && payload.entityFormCanvas.parametres.parent_entity_field_name
+            } : null
         });
     }
 
