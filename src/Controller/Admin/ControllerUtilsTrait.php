@@ -160,6 +160,7 @@ trait ControllerUtilsTrait
         // On utilise directement le nom correct au lieu de le construire dynamiquement.
         $template = "components/_list_manager.html.twig";
         $parameters = [
+            'can_add' => true, // On autorise l'ajout pour les listes de collection
             'data' => $data,
             'entite_nom' => $this->getEntityName($entityClass),
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),

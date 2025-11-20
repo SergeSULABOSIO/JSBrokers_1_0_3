@@ -22,13 +22,28 @@
             <p class="empty-state-description">{{ description }}</p>
         {% endif %}
 
-        {% if button_text is defined and button_text and button_action is defined and button_action %}
-            <button type="button" class="btn btn-primary empty-state-button" data-action="{{ button_action }}">
-                {% if button_text %}
-                    <twig:UX:Icon name="bi:plus-circle-fill" class="me-2" />
-                {% endif %}
-                {{ button_text }}
-            </button>
-        {% endif %}
+        <div class="d-flex justify-content-center gap-2 mt-4">
+            {# NOUVEAU : Bouton d'action secondaire (ex: Réinitialiser) #}
+            {% if button_2_text is defined and button_2_text and button_2_action is defined and button_2_action %}
+                <button type="button" class="btn btn-secondary empty-state-button-secondary" data-action="{{ button_2_action }}">
+                    {% if button_2_icon is defined and button_2_icon %}
+                        <twig:UX:Icon name="{{ button_2_icon }}" class="me-2" />
+                    {% endif %}
+                    {{ button_2_text }}
+                </button>
+            {% endif %}
+
+            {# Bouton d'action principal (ex: Ajouter) #}
+            {% if button_text is defined and button_text and button_action is defined and button_action %}
+                <button type="button" class="btn btn-primary empty-state-button" data-action="{{ button_action }}">
+                    {% if button_icon is defined and button_icon %}
+                        <twig:UX:Icon name="{{ button_icon }}" class="me-2" />
+                    {% else %}
+                        <twig:UX:Icon name="bi:plus-circle-fill" class="me-2" />
+                    {% endif %}
+                    {{ button_text }}
+                </button>
+            {% endif %}
+        </div>
     </div>
 </div>

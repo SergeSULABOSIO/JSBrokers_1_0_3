@@ -254,6 +254,18 @@ export default class extends Controller {
         this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
     }
 
+    /**
+     * NOUVEAU : Demande au cerveau d'ouvrir le formulaire d'ajout pour l'entité de cette liste.
+     */
+    requestAddItem() {
+        this.notifyCerveau('ui:toolbar.add-request', {
+            entityFormCanvas: this.entityFormCanvasValue,
+            isCreationMode: true,
+            context: {
+                originatorId: this.element.id // Pour savoir quelle liste rafraîchir après l'ajout
+            }
+        });
+    }
 
     // --- COMMUNICATION ---
 
