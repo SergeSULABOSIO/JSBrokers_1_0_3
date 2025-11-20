@@ -55,6 +55,7 @@
             {# On utilise notre nouveau composant générique pour la liste principale #}
             {{ include('components/_list_manager.html.twig', {
                 'listId': 'principal', 
+                'can_add': true, 
                 'data': [],
                 'entite_nom': entite_nom,
                 'serverRootName': serverRootName,
