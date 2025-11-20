@@ -34,6 +34,7 @@ export default class extends Controller {
             selectionCount: 0
         };
         this.currentIdInvite = null;
+        this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
         console.log(this.nomControleur + "🧠 Cerveau prêt à orchestrer.");
         // --- CORRECTION : Lier la fonction une seule fois et stocker la référence ---
         this.boundHandleEvent = this.handleEvent.bind(this);
@@ -96,6 +97,7 @@ export default class extends Controller {
                 this._setSelectionState(payload.selectos || []);
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 
+                this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
                 // CORRECTION : On orchestre la réinitialisation et le rafraîchissement du nouveau contexte.
                 this.broadcast('search:advanced.reset', {}); // 1. Ordonne à la barre de recherche de vider son UI et ses filtres.
                 this._requestListRefresh(payload.tabId, { criteria: {} }); // 2. Lance une recherche par défaut ciblée sur le nouvel onglet.
@@ -295,15 +297,24 @@ export default class extends Controller {
         console.log('| Canvas:', payload.entityFormCanvas);
         console.groupEnd();
 
+        var activeParentContext = null;
+        if (this.activeParentId) {
+            activeParentContext = {
+                id: this.activeParentId,
+                fieldName: payload.entityFormCanvas?.parametres?.parent_entity_field_name
+            }
+        }
+
         this.broadcast('app:boite-dialogue:init-request', {
             entity: payload.entity, // Entité vide pour le mode création
             entityFormCanvas: payload.entityFormCanvas,
             isCreationMode: payload.isCreationMode, // Correction: isCreationMode au lieu de isCreateMode
             context: {
                 ...payload.context,
-                idEntreprise: this.idEntreprise,
-                idInvite: this.idInvite
-            }
+                idEntreprise: this.currentIdEntreprise, // CORRECTION : Utiliser la propriété correcte
+                idInvite: this.currentIdInvite       // CORRECTION : Utiliser la propriété correcte
+            },
+            parentContext: activeParentContext
         });
     }
 

@@ -189,7 +189,8 @@ export default class extends Controller {
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
             // On envoie l'état de sélection sauvegardé pour ce nouvel onglet.
-            selectos: savedSelectos,
+            selectos: savedSelectos, 
+            parentId: this.collectionTabsParentId, // NOUVEAU : On transmet l'ID du parent.
             formCanvas: formCanvas // On envoie le canvas du formulaire de l'onglet.
         });
 
