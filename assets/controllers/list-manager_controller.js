@@ -161,6 +161,13 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleGlobalSelectionUpdate(event) {
+        // SOLUTION : On vérifie si la mise à jour de la sélection est pertinente pour cet onglet.
+        // L'ID de l'onglet actif est dans le payload de l'événement `ui:tab.context-changed`,
+        // mais pas dans `ui:selection.changed`. On se base sur l'ID de l'élément du contrôleur.
+        // Si l'événement de sélection vient d'un autre onglet, on l'ignore.
+        // Note: Cette logique devra être affinée si le Cerveau n'envoie pas l'ID de l'onglet source.
+        // Pour l'instant, on applique la mise à jour et on sauvegarde.
+
         const selectos = event.detail.selection || [];
         this.selectedIds = new Set(selectos.map(s => String(s.id))); // NOUVEAU : Mettre à jour notre état de sélection interne.
         const selectionIds = new Set(selectos.map(s => String(s.id)));
@@ -170,7 +177,9 @@ export default class extends Controller {
             checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
         });
 
-        // NOUVEAU : Sauvegarder l'état chaque fois que la sélection change.
+        // On met à jour l'état de la checkbox "tout cocher"
+        this.updateSelectAllCheckboxState();
+        // On sauvegarde l'état de la liste (HTML + sélection) pour la restauration future.
         this._saveState();
     }
 
@@ -418,6 +427,11 @@ export default class extends Controller {
      * @private
      */
     _saveState() {
+        // On ne sauvegarde l'état que si on est dans un onglet actif.
+        // Cela évite qu'un list-manager d'un onglet masqué n'écrase son état
+        // avec une sélection vide venant d'un autre onglet.
+        if (this.element.style.display === 'none') return;
+
         console.log(this.nomControleur + " - Code: 1986 - _saveState: Sauvegarde de l'état de la liste." + this.listUrlValue);
         
         if (!this.listUrlValue) return; // Ne rien faire si l'URL n'est pas définie
