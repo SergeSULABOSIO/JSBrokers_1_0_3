@@ -95,8 +95,10 @@ export default class extends Controller {
                 break;
 
             case 'ui:tab.context-changed':
-                // On met à jour l'état de la sélection interne du cerveau
-                this._setSelectionState(payload.selectos || []);
+                // SOLUTION : On réinitialise TOUJOURS la sélection au changement d'onglet.
+                // C'est la première action à faire pour garantir un contexte propre.
+                this._setSelectionState([]);
+
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
@@ -106,6 +108,9 @@ export default class extends Controller {
                 // this.broadcast('search:advanced.reset', {}); // On peut aussi commenter cette ligne si on veut conserver les filtres entre les onglets.
                 // this._requestListRefresh(payload.tabId, { criteria: {} }); // LIGNE PROBLÉMATIQUE SUPPRIMÉE
 
+                // On relaie l'événement aux autres composants. Le payload contient la sélection
+                // restaurée que le `list-manager` utilisera pour cocher les bonnes cases,
+                // mais l'état central du Cerveau est maintenant propre (vide).
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
             
