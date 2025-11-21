@@ -52,8 +52,16 @@ export default class extends Controller {
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
         
         // On notifie le cerveau avec les données numériques initiales
+        // SOLUTION : On initialise une variable, on la remplit dans le try...catch, puis on l'utilise.
+        let initialNumericData = {};
+        try {
+            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue);
+            initialNumericData = JSON.parse(decodedInitialData || '{}');
+        } catch (e) {
+            console.error(`${this.nomControleur} - Erreur de parsing des données numériques initiales.`, { raw: this.numericAttributesAndValuesValue, error: e });
+        }
         this.notifyCerveau('app:list.data-loaded', {
-            numericAttributesAndValues: JSON.parse(this.numericAttributesAndValuesValue || '{}')
+            numericAttributesAndValues: initialNumericData
         });
 
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
@@ -356,25 +364,41 @@ export default class extends Controller {
 
         if (responseContainer && responseContainer.dataset.numericAttributesAndValues) {
             // On s'assure de parser la chaîne JSON
+            // SOLUTION : On décode la chaîne avant de la parser
+            const decodedAjaxData = this._decodeHtmlEntities(responseContainer.dataset.numericAttributesAndValues);
             try {
-                numericAttributesAndValues = JSON.parse(responseContainer.dataset.numericAttributesAndValues);
+                numericAttributesAndValues = JSON.parse(decodedAjaxData);
             } catch (e) {
-                console.error("Erreur de parsing des données numériques depuis la réponse AJAX:", e);
+                console.error("Erreur de parsing des données numériques depuis la réponse AJAX après décodage:", { raw: responseContainer.dataset.numericAttributesAndValues, decoded: decodedAjaxData, error: e });
                 numericAttributesAndValues = {};
             }
         } else {
             // Fallback: Si aucune nouvelle donnée n'est trouvée dans la réponse AJAX, on utilise les données initiales.
-            // SOLUTION : On s'assure que la valeur initiale est aussi parsée correctement.
+            // SOLUTION : On décode et on parse la valeur initiale.
+            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue);
             try {
-                numericAttributesAndValues = JSON.parse(this.numericAttributesAndValuesValue || '{}');
+                numericAttributesAndValues = JSON.parse(decodedInitialData || '{}');
             } catch (e) {
-                console.error("Erreur de parsing des données numériques initiales:", e);
+                console.error("Erreur de parsing des données numériques initiales (fallback):", { raw: this.numericAttributesAndValuesValue, decoded: decodedInitialData, error: e });
                 numericAttributesAndValues = {};
             }
         }
         const payload = { numericAttributesAndValues: numericAttributesAndValues };
         console.log(this.nomControleur + " - Code: 1980 - _extractNumericDataFromResponse - Extracted payload for Cerveau:", payload);
         return payload;
+    }
+
+    /**
+     * NOUVEAU : Décode les entités HTML d'une chaîne de caractères.
+     * @param {string} str La chaîne à décoder.
+     * @returns {string} La chaîne décodée.
+     * @private
+     */
+    _decodeHtmlEntities(str) {
+        if (!str) return str;
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = str;
+        return textarea.value;
     }
 
     /**
