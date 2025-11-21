@@ -126,21 +126,21 @@ export default class extends Controller {
             return;
         }
 
-        let globalTotal = 0;
-        let selectionTotal = 0;
+        // --- SOLUTION DÉFINITIVE ---
+        // On utilise des méthodes fonctionnelles pour un code plus clair et moins sujet aux erreurs.
+        const allValues = Object.values(this.numericData);
 
-        for (const id in this.numericData) {
-            const itemData = this.numericData[id];
-            // CORRECTION : La valeur est directement dans itemData[attribute], pas dans un sous-objet .value
-            if (itemData && itemData[attribute] && typeof itemData[attribute].value === 'number') { // Vérifie que la structure est correcte
-                const value = itemData[attribute].value; // La valeur est en centimes
-                globalTotal += value;
+        // Calcul du total global
+        const globalTotal = allValues
+            .map(item => item[attribute]?.value || 0) // Extrait la valeur de l'attribut, ou 0 si non trouvée
+            .reduce((sum, value) => sum + value, 0); // Somme toutes les valeurs
 
-                if (this.selectedIds.has(parseInt(id, 10))) {
-                    selectionTotal += value;
-                }
-            }
-        }
+        // Calcul du total de la sélection
+        const selectionTotal = Object.entries(this.numericData)
+            .filter(([id, item]) => this.selectedIds.has(parseInt(id, 10))) // Garde uniquement les éléments sélectionnés
+            .map(([id, item]) => item[attribute]?.value || 0) // Extrait leur valeur
+            .reduce((sum, value) => sum + value, 0); // Somme les valeurs de la sélection
+
         this.displayTotals(globalTotal, selectionTotal);
     }
 
@@ -164,7 +164,7 @@ export default class extends Controller {
      * @private
      */
     formatCurrency(valueInCents) {
-        // Note : La devise 'USD' est utilisée comme exemple, à adapter si nécessaire.
+        // Note : La devise 'USD' est utilisée comme exemple plus pertinent. À rendre dynamique si besoin.
         return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(valueInCents / 100);
     }
 }

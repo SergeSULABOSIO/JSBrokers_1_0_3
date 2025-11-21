@@ -67,6 +67,7 @@ export default class extends Controller {
      *                                   Doit contenir `entityFormCanvas` et `entity`.
      */
     open(event) {
+        console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [open] - Code: 99 - Début - Données:`, event.detail);
         const detail = event.detail;
         console.groupCollapsed(`${this.nomControlleur} - open - EDITDIAL(2)`);
         console.log(`| Mode: ${detail.isCreationMode ? 'Création' : 'Édition'}`);
@@ -91,6 +92,7 @@ export default class extends Controller {
 
         // On ajoute l'élément au body. Stimulus va maintenant le détecter et connecter le contrôleur.
         document.body.appendChild(modalElement);
+        console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [open] - Code: 99 - Fin - Données:`, event.detail);
     }
 
     /**
