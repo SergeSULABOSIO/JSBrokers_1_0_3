@@ -95,9 +95,13 @@ export default class extends Controller {
                 break;
 
             case 'ui:tab.context-changed':
-                // SOLUTION : On réinitialise TOUJOURS la sélection au changement d'onglet.
-                // C'est la première action à faire pour garantir un contexte propre.
-                this._setSelectionState([]);
+                // --- SOLUTION FINALE ---
+                // On fait confiance au ViewManager. Il est la source de vérité pour l'état de sélection
+                // lors d'un changement d'onglet. S'il envoie un tableau de `selectos`, on l'utilise.
+                // S'il envoie un tableau vide (ou rien), la sélection est réinitialisée.
+                // Cette simple ligne corrige le problème de perte de sélection au retour sur un onglet
+                // tout en conservant le comportement de réinitialisation pour les nouveaux onglets.
+                this._setSelectionState(payload.selectos || []);
 
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 
@@ -106,11 +110,6 @@ export default class extends Controller {
                 // Le rafraîchissement automatique entraînait la perte de la sélection restaurée.
                 // La liste est déjà chargée, soit par le serveur initialement, soit par un chargement AJAX précédent.
                 // this.broadcast('search:advanced.reset', {}); // On peut aussi commenter cette ligne si on veut conserver les filtres entre les onglets.
-                // this._requestListRefresh(payload.tabId, { criteria: {} }); // LIGNE PROBLÉMATIQUE SUPPRIMÉE
-
-                // On relaie l'événement aux autres composants. Le payload contient la sélection
-                // restaurée que le `list-manager` utilisera pour cocher les bonnes cases,
-                // mais l'état central du Cerveau est maintenant propre (vide).
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
             
