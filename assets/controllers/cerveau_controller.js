@@ -113,9 +113,11 @@ export default class extends Controller {
                 this.broadcast('ui:tab.context-changed', { ...payload });
                 break;
             
-            // NOUVEAU : Un list-manager (d'un onglet) notifie qu'il est prêt.
+            // SOLUTION : Un list-manager (d'un onglet) notifie qu'il est prêt avec son propre contexte.
             case 'app:list.context-ready':
-                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de liste reçu, mise à jour de la barre d'outils.`, payload);
+                // Le Cerveau relaie cette information via un événement que la toolbar écoute déjà.
+                // C'est la clé pour que le bouton "Ajouter" ait le bon contexte de formulaire.
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'. Diffusion...`, payload);
                 this.broadcast('ui:tab.context-changed', { tabId: payload.tabId, formCanvas: payload.formCanvas });
                 break;
 

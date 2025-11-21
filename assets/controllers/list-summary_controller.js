@@ -56,29 +56,27 @@ export default class extends Controller {
         const { selection, numericAttributesAndValues } = event.detail;
         console.log(this.nomControleur + " - Code: 1980 - handleStateUpdate - Received selection:", selection, "numericAttributesAndValues:", numericAttributesAndValues);
 
-        // On décompose l'objet ici, dans le contrôleur consommateur
+        // --- SOLUTION : On traite l'objet `numericAttributesAndValues` directement ---
         let numericAttributes = [];
         let numericData = {};
 
-        // Récupérer le premier élément (ID) de numericAttributesAndValues pour extraire les noms des attributs
+        // On s'assure que `numericAttributesAndValues` est bien un objet.
         if (numericAttributesAndValues && Object.keys(numericAttributesAndValues).length > 0) {
             const firstKey = Object.keys(numericAttributesAndValues)[0];
             const firstElement = numericAttributesAndValues[firstKey];
     
-            // Vérifier si firstElement est un objet et contient des propriétés avec une description
+            // On extrait la liste des attributs (leurs noms et descriptions) depuis le premier élément.
             if (typeof firstElement === 'object' && firstElement !== null) {
                 numericAttributes = Object.entries(firstElement).map(([attribut_code, details]) => ({
-                    attribut_code: attribut_code,
-                    titre_colonne: details.description // Extraire le titre de chaque colonne
+                    attribut_code: attribut_code, // ex: "montant"
+                    titre_colonne: details.description // ex: "Montant de la prime"
                 }));
             }
+            // Les données numériques sont l'objet `numericAttributesAndValues` lui-même.
             numericData = numericAttributesAndValues;
         }
 
-        
         // Si aucun attribut numérique n'est fourni, on masque la barre et on réinitialise tout.
-
-
         if (!Array.isArray(numericAttributes) || numericAttributes.length === 0) {
             this.element.style.display = 'none';
             this.numericData = {};
