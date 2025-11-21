@@ -145,12 +145,9 @@ export default class extends Controller {
                 this._requestListRefresh(activeTabId, { criteria: {} });
                 break;
 
+            // FUSION DE LOGIQUE : On traite une demande d'init de dialogue comme une demande d'ajout.
+            // Cela garantit que le payload est toujours enrichi avec le contexte nécessaire (formCanvas).
             case 'dialog:boite-dialogue:init-request':
-                this.broadcast('app:loading.start');
-                this._publishDisplayStatus('Initialisation du dialogue...');
-                this.openDialogBox(payload);
-                break;
-
             case 'ui:boite-dialogue:add-collection-item-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture du formulaire de collection...');
