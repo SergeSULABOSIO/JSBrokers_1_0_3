@@ -52,13 +52,15 @@ export default class extends Controller {
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
         
         // On notifie le cerveau avec les données numériques initiales
-        // SOLUTION : On initialise une variable, on la remplit dans le try...catch, puis on l'utilise.
+        // SOLUTION : On décode et on parse les données numériques initiales avant de les envoyer au Cerveau.
         let initialNumericData = {};
         try {
             const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue);
             initialNumericData = JSON.parse(decodedInitialData || '{}');
         } catch (e) {
             console.error(`${this.nomControleur} - Erreur de parsing des données numériques initiales.`, { raw: this.numericAttributesAndValuesValue, error: e });
+            // En cas d'erreur, on s'assure que la valeur reste un objet vide.
+            initialNumericData = {};
         }
         this.notifyCerveau('app:list.data-loaded', {
             numericAttributesAndValues: initialNumericData
