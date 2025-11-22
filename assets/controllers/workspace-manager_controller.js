@@ -604,6 +604,26 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Vide les clés de sessionStorage liées aux composants de l'espace de travail.
+     * C'est une étape cruciale pour s'assurer qu'une nouvelle rubrique est chargée
+     * dans un état propre, sans hériter de l'état de la rubrique précédente.
+     * @private
+     */
+    _clearWorkspaceComponentStates() {
+        console.log(`[${this.nomControleur}] Nettoyage des états des composants en session.`);
+        // On cible les clés que l'on sait être utilisées par nos composants.
+        // Il est important de ne PAS supprimer 'lastActiveState' qui gère la restauration globale.
+        const keysToClear = ['viewManagerState', 'listContent', 'searchBarState']; // Adaptez si d'autres clés sont utilisées
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (keysToClear.some(prefix => key.startsWith(prefix))) {
+                sessionStorage.removeItem(key);
+                console.log(` -> Clé supprimée : ${key}`);
+            }
+        }
+    }
+
+    /**
      * Gère la réception du HTML du composant chargé par le Cerveau.
      * @param {CustomEvent} event 
      */
@@ -626,6 +646,9 @@ export default class extends Controller {
      * Affiche la barre de progression lors d'une demande d'actualisation de liste.
      */
     handleLoadingStart() {
+        // On ne nettoie PAS l'état ici, car un 'loading start' peut aussi signifier
+        // une simple actualisation de liste, où l'on veut conserver l'état.
+        // Le nettoyage se fait uniquement dans loadComponent.
         console.log(this.nomControleur + " - Demande d'actualisation détectée, affichage de la barre de progression.");
         this.progressBarTarget.style.display = 'block';
     }
