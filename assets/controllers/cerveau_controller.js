@@ -403,7 +403,8 @@ export default class extends Controller {
 
         // LOG: Vérifier l'URL finale avant l'appel fetch
         console.log(`[${++window.logSequence}] [Cerveau] Appel fetch vers l'URL: ${url}`);
-
+        console.log( `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, url);
+        
         try {
             const response = await fetch(url);
             if (!response.ok) {

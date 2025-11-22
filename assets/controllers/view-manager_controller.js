@@ -52,11 +52,11 @@ export default class extends Controller {
          */
         this.parentEntityType = null;
 
-        // NOUVEAU : Notifier le cerveau du contexte initial de la rubrique, y compris l'ID de l'entreprise.
+        // MODIFIÉ : On ne notifie que le contexte global (ID entreprise/invité),
+        // sans le formCanvas. C'est le list-manager qui sera responsable de notifier son propre contexte de formulaire.
         this.notifyCerveau('app:context.initialized', {
             idEntreprise: this.idEntrepriseValue,
-            idInvite: this.idInviteValue,
-            formCanvas: this.entityCanvasValue
+            idInvite: this.idInviteValue
         });
 
         this.boundHandleSelection = this.handleSelection.bind(this);
