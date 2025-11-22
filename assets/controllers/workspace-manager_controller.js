@@ -60,7 +60,7 @@ export default class extends Controller {
      * Restaure la dernière vue active en se basant sur les informations stockées en session.
      */
     restoreLastState() {
-        const savedStateJSON = sessionStorage.getItem('lastActiveState');
+        const savedStateJSON = sessionStorage.getItem(`lastActiveState_${this.idEntrepriseValue}`);
         if (!savedStateJSON) {
             this.loadDefaultComponent();
             return;
@@ -76,12 +76,12 @@ export default class extends Controller {
                 groupElement.click();
 
                 requestAnimationFrame(() => {
-                    // CORRECTION : On cherche la rubrique en utilisant à la fois le composant ET le nom de l'entité.
+                    // On cherche la rubrique en utilisant à la fois le composant ET le nom de l'entité.
                     const selector = `[data-workspace-manager-component-name-param='${savedState.component}'][data-workspace-manager-entity-name-param='${savedState.entity}']`;
                     const rubriqueElement = this.contentZoneTarget.querySelector(selector);
 
                     if (rubriqueElement) {
-                        rubriqueElement.click();
+                        this.loadComponent({ currentTarget: rubriqueElement }, { isRestoration: true });
                     } else {
                         console.error("WorkspaceManager: Rubrique non trouvée pour la restauration.", savedState);
                         this.loadDefaultComponent(); // Sécurité si la rubrique n'est pas trouvée
@@ -95,7 +95,7 @@ export default class extends Controller {
         else if (savedState.component) {
             const elementToClick = this.element.querySelector(`[data-workspace-manager-component-name-param='${savedState.component}']`);
             if (elementToClick) {
-                elementToClick.click();
+                this.loadComponent({ currentTarget: elementToClick }, { isRestoration: true });
             } else {
                 this.loadDefaultComponent();
             }
@@ -555,15 +555,23 @@ export default class extends Controller {
      * Notifie le Cerveau de la demande de chargement.
      * @param {MouseEvent} event
      */
-    async loadComponent(event) {
+    async loadComponent(event, options = {}) {
+        const { isRestoration = false } = options;
         console.log(
             `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
             { 
                 componentName: event.currentTarget.dataset.workspaceManagerComponentNameParam,
-                entityName: event.currentTarget.dataset.workspaceManagerEntityNameParam
+                entityName: event.currentTarget.dataset.workspaceManagerEntityNameParam,
+                isRestoration: isRestoration
             }
         );
         const clickedElement = event.currentTarget;
+
+        // Si ce n'est PAS une restauration, on nettoie l'état.
+        if (!isRestoration) {
+            this._clearWorkspaceComponentStates();
+        }
+
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
         const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
 
@@ -590,7 +598,7 @@ export default class extends Controller {
                 group: groupName || null,
                 entity: entityName || null // CORRECTION : Ajouter l'entityName à l'état sauvegardé
             };
-            sessionStorage.setItem('lastActiveState', JSON.stringify(stateToSave));
+            sessionStorage.setItem(`lastActiveState_${this.idEntrepriseValue}`, JSON.stringify(stateToSave));
         }
 
         // Cet événement est spécifiquement destiné au Cerveau pour charger le composant
@@ -612,11 +620,13 @@ export default class extends Controller {
     _clearWorkspaceComponentStates() {
         console.log(`[${this.nomControleur}] Nettoyage des états des composants en session.`);
         // On cible les clés que l'on sait être utilisées par nos composants.
-        // Il est important de ne PAS supprimer 'lastActiveState' qui gère la restauration globale.
-        const keysToClear = ['viewManagerState', 'listContent', 'searchBarState']; // Adaptez si d'autres clés sont utilisées
+        const prefixesToClear = ['viewManagerState_', 'listContent_', `lastSearchCriteria_`];
         for (let i = 0; i < sessionStorage.length; i++) {
             const key = sessionStorage.key(i);
-            if (keysToClear.some(prefix => key.startsWith(prefix))) {
+            // On ne supprime PAS la clé de l'état actif global
+            if (key.startsWith(`lastActiveState_`)) continue;
+
+            if (prefixesToClear.some(prefix => key.startsWith(prefix))) {
                 sessionStorage.removeItem(key);
                 console.log(` -> Clé supprimée : ${key}`);
             }
@@ -646,9 +656,6 @@ export default class extends Controller {
      * Affiche la barre de progression lors d'une demande d'actualisation de liste.
      */
     handleLoadingStart() {
-        // On ne nettoie PAS l'état ici, car un 'loading start' peut aussi signifier
-        // une simple actualisation de liste, où l'on veut conserver l'état.
-        // Le nettoyage se fait uniquement dans loadComponent.
         console.log(this.nomControleur + " - Demande d'actualisation détectée, affichage de la barre de progression.");
         this.progressBarTarget.style.display = 'block';
     }
