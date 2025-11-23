@@ -557,6 +557,9 @@ export default class extends Controller {
      */
     async loadComponent(event, options = {}) {
         const { isRestoration = false } = options;
+        // Affiche immédiatement le squelette pour une meilleure UX
+        this._showWorkspaceSkeleton();
+
         console.log(
             `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
             { 

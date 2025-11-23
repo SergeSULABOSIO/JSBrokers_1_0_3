@@ -1047,6 +1047,38 @@ textarea:hover,
     border-color: #545b62;
 }
 
+/*
+===================================================================
+ SECTION: SQUELETTE DE CHARGEMENT GÉNÉRIQUE POUR L'ESPACE DE TRAVAIL
+===================================================================
+*/
+
+.workspace-skeleton {
+    padding: 1.5rem;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.workspace-skeleton .skeleton-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.workspace-skeleton .skeleton-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #e9ecef;
+    border-radius: 8px;
+}
+
+.workspace-skeleton .skeleton-line {
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
 /* Cible l'icône SVG à l'intérieur du bouton */
 /* CORRECTION : Assure que les icônes font exactement 24px */
 .empty-state-button .me-2,
