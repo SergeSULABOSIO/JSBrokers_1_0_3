@@ -557,6 +557,12 @@ export default class extends Controller {
      */
     async loadComponent(event, options = {}) {
         const { isRestoration = false } = options;
+        if (!isRestoration) {
+            this._clearWorkspaceComponentStates();
+        }
+
+        this._showWorkspaceSkeleton();
+        
         console.log(
             `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
             { 
@@ -568,9 +574,7 @@ export default class extends Controller {
         const clickedElement = event.currentTarget;
 
         // Si ce n'est PAS une restauration, on nettoie l'état.
-        if (!isRestoration) {
-            this._clearWorkspaceComponentStates();
-        }
+        
 
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
         const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
