@@ -619,7 +619,7 @@ textarea:hover,
 
 .skeleton-row {
     height: 50px; /* Hauteur approximative d'une ligne */
-    background-color: #e9ecef; /* Fond gris clair */
+    background-color: #dee2e6; /* Fond gris un peu plus foncé */
     border-radius: 4px;
     position: relative;
     overflow: hidden; /* Important pour l'animation */
@@ -1068,13 +1068,13 @@ textarea:hover,
 .workspace-skeleton .skeleton-icon {
     width: 40px;
     height: 40px;
-    background-color: #e9ecef;
+    background-color: #dee2e6; /* Fond gris un peu plus foncé */
     border-radius: 8px;
 }
 
 .workspace-skeleton .skeleton-line {
     height: 20px;
-    background-color: #e9ecef;
+    background-color: #dee2e6; /* Fond gris un peu plus foncé */
     border-radius: 4px;
     margin-bottom: 10px;
 }

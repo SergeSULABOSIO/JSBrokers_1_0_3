@@ -84,9 +84,20 @@
 
         {# COLONNE 3 : Espace de travail #}
         <div class="menu-col-3" data-workspace-manager-target="workspace">
-            {# Le composant Twig chargé apparaîtra ici #}
-            <div class="workspace-placeholder">
-                <p>Sélectionnez un élément dans le menu pour commencer.</p>
+            {# NOUVEAU : On affiche directement le squelette au chargement initial. #}
+            {# Il sera remplacé par le composant chargé ou restauré. #}
+            <div class="workspace-skeleton">
+                <div class="skeleton-header">
+                    <div class="skeleton-icon"></div>
+                    <div style="flex-grow: 1;">
+                        <div class="skeleton-line" style="width: 40%; height: 24px;"></div>
+                        <div class="skeleton-line" style="width: 80%; margin-top: 10px;"></div>
+                    </div>
+                </div>
+                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                <div class="skeleton-row" style="height: 300px;"></div>
             </div>
         </div>
 
