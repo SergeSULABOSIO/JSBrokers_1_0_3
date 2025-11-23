@@ -618,10 +618,9 @@ textarea:hover,
 */
 
 .skeleton-row {
-    height: 60px; /* Hauteur approximative d'une ligne */
+    height: 50px; /* Hauteur approximative d'une ligne */
     background-color: #e9ecef; /* Fond gris clair */
     border-radius: 4px;
-    margin-bottom: 8px;
     position: relative;
     overflow: hidden; /* Important pour l'animation */
 }
@@ -631,19 +630,21 @@ textarea:hover,
     content: '';
     position: absolute;
     top: 0;
-    left: -150%; /* Commence en dehors de l'écran à gauche */
+    left: 0; /* On le positionne au début de la ligne */
     width: 150%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    animation: skeleton-sweep 1.5s infinite;
+    /* On remplace l'animation 'left' par une animation 'transform' */
+    animation: skeleton-sweep-transform 1.5s infinite;
 }
 
-@keyframes skeleton-sweep {
+/* NOUVELLE animation qui utilise transform */
+@keyframes skeleton-sweep-transform {
     0% {
-        left: -150%;
+        transform: translateX(-100%); /* Commence complètement à gauche de la ligne */
     }
     100% {
-        left: 150%;
+        transform: translateX(100%); /* Termine complètement à droite de la ligne */
     }
 }
 

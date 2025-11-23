@@ -7,7 +7,7 @@ import { Controller } from '@hotwired/stimulus';
  * et la communication de l'état de la liste au reste de l'application via le Cerveau.
  */
 export default class extends Controller {
-    
+
     /**
      * @property {HTMLElement[]} donneesTargets - Le conteneur (<tbody>) où les lignes de données sont affichées.
      * @property {HTMLInputElement[]} selectAllCheckboxTargets - La case à cocher dans l'en-tête pour tout sélectionner.
@@ -50,7 +50,7 @@ export default class extends Controller {
         this.selectedIds = new Set(); // NOUVEAU : Mémorise les IDs sélectionnés pour cette instance de liste.
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
-        
+
         // On notifie le cerveau avec les données numériques initiales
         // SOLUTION : On décode et on parse les données numériques initiales avant de les envoyer au Cerveau.
         let initialNumericData = {};
@@ -80,7 +80,7 @@ export default class extends Controller {
                 this.emptyStateContainerTarget.classList.remove('d-none');
                 this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
             }
-            
+
             // NOUVEAU : Notifier le cerveau que ce contexte de liste est prêt.
             // Cela permet au cerveau de mettre à jour la barre d'outils avec le bon formCanvas.
             if (this.element.id !== 'principal') {
@@ -192,7 +192,7 @@ export default class extends Controller {
             this._logDebug("Demande de rafraîchissement ignorée (non destinée à cette liste).", { myId: this.element.id, originatorId: event.detail.originatorId });
             return;
         }
-        
+
         this._logDebug("Demande de chargement reçue.", event.detail);
 
         const { idEntreprise, idInvite } = this._getIdsFromEventOrValues(event.detail);
@@ -222,7 +222,7 @@ export default class extends Controller {
             const validHtml = `<table><tbody>${html}</tbody></table>`;
             const parser = new DOMParser();
             const doc = parser.parseFromString(validHtml, 'text/html');
-            
+
             // CORRECTION : On ne sélectionne que les lignes de données réelles (celles avec un data-id)
             const dataRows = Array.from(doc.body.querySelectorAll('tr[data-id]'));
             console.log(`LIST-MANAGER - ${dataRows.length} ligne(s) de données trouvée(s) dans la réponse.`);
@@ -334,9 +334,14 @@ export default class extends Controller {
     _showSkeleton() {
         this.listContainerTarget.classList.remove('d-none');
         this.emptyStateContainerTarget.classList.add('d-none');
+        const columnCount = this.element.querySelector('thead tr')?.childElementCount || 1;
         let skeletonHtml = '';
-        for (let i = 0; i < 10; i++) { // Affiche 10 lignes de squelette
-            skeletonHtml += '<div class="skeleton-row mx-3"></div>';
+        for (let i = 0; i < 6; i++) { // Affiche 6 lignes de squelette
+            skeletonHtml += `
+                <tr>
+                    ${'<td><div class="skeleton-row"></div></td>'.repeat(columnCount)}
+                </tr>
+            `;
         }
         this.donneesTarget.innerHTML = skeletonHtml;
     }
@@ -444,7 +449,7 @@ export default class extends Controller {
         if (this.element.closest('.tab-pane:not(.active)')) return;
 
         console.log(this.nomControleur + " - Code: 1986 - _saveState: Sauvegarde de l'état de la liste." + this.listUrlValue);
-        
+
         if (!this.listUrlValue) return; // Ne rien faire si l'URL n'est pas définie
         const storageKey = `listContent_${this.listUrlValue}`;
         const state = {
@@ -480,7 +485,7 @@ export default class extends Controller {
 
             this._logDebug(`Restauration de l'état depuis la clé : ${storageKey}`);
             this.donneesTarget.innerHTML = html;
-            
+
             const hasContent = html.trim() !== '';
             this.listContainerTarget.classList.toggle('d-none', !hasContent);
             this.emptyStateContainerTarget.classList.toggle('d-none', hasContent);
