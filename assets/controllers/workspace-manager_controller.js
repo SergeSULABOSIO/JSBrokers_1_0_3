@@ -557,9 +557,6 @@ export default class extends Controller {
      */
     async loadComponent(event, options = {}) {
         const { isRestoration = false } = options;
-        // Affiche immédiatement le squelette pour une meilleure UX
-        this._showWorkspaceSkeleton();
-
         console.log(
             `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
             { 
@@ -615,6 +612,28 @@ export default class extends Controller {
     }
 
     /**
+     * Affiche un squelette de chargement dans la zone de travail.
+     * @private
+     */
+    _showWorkspaceSkeleton() {
+        const skeletonHtml = `
+            <div class="workspace-skeleton">
+                <div class="skeleton-header">
+                    <div class="skeleton-icon"></div>
+                    <div style="flex-grow: 1;">
+                        <div class="skeleton-line" style="width: 40%; height: 24px;"></div>
+                        <div class="skeleton-line" style="width: 80%; margin-top: 10px;"></div>
+                    </div>
+                </div>
+                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                <div class="skeleton-row" style="height: 300px;"></div>
+            </div>
+        `;
+        this.workspaceTarget.innerHTML = skeletonHtml;
+    }
+
+    /**
      * NOUVEAU : Vide les clés de sessionStorage liées aux composants de l'espace de travail.
      * C'est une étape cruciale pour s'assurer qu'une nouvelle rubrique est chargée
      * dans un état propre, sans hériter de l'état de la rubrique précédente.
@@ -645,6 +664,9 @@ export default class extends Controller {
         const { html, error } = event.detail;
 
         if (error) {
+            // En cas d'erreur, on ne laisse pas le squelette affiché.
+            // On pourrait aussi afficher un message d'erreur plus élaboré.
+            this.workspaceTarget.innerHTML = '';
             console.error("Erreur lors du chargement du composant via le Cerveau:", error);
             this.workspaceTarget.innerHTML = `<div class="p-8 text-red-500">Impossible de charger le contenu : ${error}</div>`;
         } else {
