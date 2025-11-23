@@ -181,6 +181,9 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:base-données:sélection-request`.
      */
     async handleDBRequest(event) {
+        // NOUVEAU : Afficher le squelette AVANT toute autre action.
+        this._showSkeleton();
+
         console.log(this.nomControleur + " - Code: 1986 - Recherche", event.detail);
 
         // CORRECTION : On vérifie si la demande de rafraîchissement nous est destinée.
@@ -200,8 +203,6 @@ export default class extends Controller {
 
         const url = this._buildDynamicQueryUrl(idInvite, idEntreprise);
         this._logDebug("URL de requête:", url);
-
-        this._showLoadingSpinner();
 
         try {
             const response = await fetch(url, {
@@ -327,10 +328,25 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Affiche un squelette de chargement.
+     * @private
+     */
+    _showSkeleton() {
+        this.listContainerTarget.classList.remove('d-none');
+        this.emptyStateContainerTarget.classList.add('d-none');
+        let skeletonHtml = '';
+        for (let i = 0; i < 10; i++) { // Affiche 10 lignes de squelette
+            skeletonHtml += '<div class="skeleton-row mx-3"></div>';
+        }
+        this.donneesTarget.innerHTML = skeletonHtml;
+    }
+
+    /**
      * Affiche un spinner de chargement dans le tableau.
      * @private
      */
     _showLoadingSpinner() {
+        // DÉPRÉCIÉ : Remplacé par _showSkeleton()
         const columnCount = this.element.querySelector('thead tr')?.childElementCount || 1;
         this.donneesTarget.innerHTML = `
             <tr>
@@ -365,11 +381,13 @@ export default class extends Controller {
         let numericAttributesAndValues = {};
 
         if (responseContainer && responseContainer.dataset.numericAttributesAndValues) {
-            // On s'assure de parser la chaîne JSON
-            // SOLUTION : On décode la chaîne avant de la parser
+            // SOLUTION : On décode la chaîne avant de la parser pour gérer les &quot; etc.
             const decodedAjaxData = this._decodeHtmlEntities(responseContainer.dataset.numericAttributesAndValues);
             try {
-                numericAttributesAndValues = JSON.parse(decodedAjaxData);
+                // On s'assure que la chaîne n'est pas vide avant de parser
+                if (decodedAjaxData.trim()) {
+                    numericAttributesAndValues = JSON.parse(decodedAjaxData);
+                }
             } catch (e) {
                 console.error("Erreur de parsing des données numériques depuis la réponse AJAX après décodage:", { raw: responseContainer.dataset.numericAttributesAndValues, decoded: decodedAjaxData, error: e });
                 numericAttributesAndValues = {};
@@ -377,9 +395,11 @@ export default class extends Controller {
         } else {
             // Fallback: Si aucune nouvelle donnée n'est trouvée dans la réponse AJAX, on utilise les données initiales.
             // SOLUTION : On décode et on parse la valeur initiale.
-            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue);
+            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue || '{}');
             try {
-                numericAttributesAndValues = JSON.parse(decodedInitialData || '{}');
+                if (decodedInitialData.trim()) {
+                    numericAttributesAndValues = JSON.parse(decodedInitialData);
+                }
             } catch (e) {
                 console.error("Erreur de parsing des données numériques initiales (fallback):", { raw: this.numericAttributesAndValuesValue, decoded: decodedInitialData, error: e });
                 numericAttributesAndValues = {};
@@ -446,6 +466,9 @@ export default class extends Controller {
      * @private
      */
     _restoreState() {
+        // NOUVEAU : Afficher le squelette pendant la restauration
+        this._showSkeleton();
+
         console.log(this.nomControleur + " - Code: 1986 - _restoreState: Restauration de l'état de la liste." + this.listUrlValue);
         if (!this.listUrlValue) return false;
         const storageKey = `listContent_${this.listUrlValue}`;
@@ -480,8 +503,16 @@ export default class extends Controller {
 
             // On simule le post-chargement pour notifier le cerveau et mettre à jour les sélections/totaux
             const doc = new DOMParser().parseFromString(`<table><tbody>${html}</tbody></table>`, 'text/html');
-            this._postDataLoadActions(doc);
-            return true;
+
+            // CORRECTION POUR F5 : On utilise requestAnimationFrame pour s'assurer que le DOM est prêt
+            // avant de notifier le cerveau.
+            requestAnimationFrame(() => {
+                // C'est la pièce manquante pour que la toolbar et les lignes se synchronisent.
+                this.notifyCerveau('ui:list.selection-completed', { selectos: restoredSelectos });
+                this._postDataLoadActions(doc);
+            });
+
+            return true; // La restauration a été initiée
         }
         return false;
     }
