@@ -95,6 +95,9 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
+        // CORRECTION : On ne sauvegarde PLUS l'état à la déconnexion.
+        // Cela empêche la "race condition" où l'ancien état est sauvegardé
+        // juste après qu'on ait demandé sa réinitialisation.
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);

@@ -556,7 +556,11 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     async loadComponent(event, options = {}) {
-        const { isRestoration = false } = options;
+        const { isRestoration } = options;
+
+        // CORRECTION : On nettoie l'état des composants enfants si ce n'est PAS une restauration.
+        // Le `isRestoration` est `false` (ou `undefined`) lors d'un clic, ce qui déclenche le nettoyage.
+        // Il est `true` lors d'un F5, ce qui préserve l'état.
         if (!isRestoration) {
             this._clearWorkspaceComponentStates();
         }
