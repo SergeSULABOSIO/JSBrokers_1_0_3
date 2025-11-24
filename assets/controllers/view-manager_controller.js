@@ -77,6 +77,10 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
+        // CORRECTION DÉFINITIVE : On ne sauvegarde PLUS l'état à la déconnexion.
+        // C'est cette sauvegarde "zombie" qui restaurait une ancienne sélection
+        // et déclenchait par effet domino la sauvegarde de l'ancien état de la liste,
+        // annulant ainsi le nettoyage du workspace-manager.
         document.removeEventListener('ui:selection.changed', this.boundHandleSelection);
         document.removeEventListener('app:status.updated', this.boundHandleStatusUpdate);
         document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
