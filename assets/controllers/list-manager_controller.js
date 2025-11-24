@@ -504,33 +504,35 @@ export default class extends Controller {
             this.listContainerTarget.classList.toggle('d-none', !hasContent);
             this.emptyStateContainerTarget.classList.toggle('d-none', hasContent);
 
-            // NOUVEAU : Restaurer la sélection visuelle et notifier le cerveau.
-            const restoredSelectos = [];
-            const selectedIdsSet = new Set(selectedIds);
-            this.rowCheckboxTargets.forEach(checkbox => {
-                const rowId = String(checkbox.dataset.listRowIdobjetValue);
-                const isSelected = selectedIdsSet.has(rowId);
-                checkbox.checked = isSelected;
-                checkbox.closest('tr')?.classList.toggle('row-selected', isSelected);
-                if (isSelected) {
-                    const listRowController = this.application.getControllerForElementAndIdentifier(checkbox.closest('[data-controller="list-row"]'), 'list-row');
-                    if (listRowController) {
-                        restoredSelectos.push(listRowController.buildSelectoPayload());
-                    }
-                }
-            });
-
             // On simule le post-chargement pour notifier le cerveau et mettre à jour les sélections/totaux
             const doc = new DOMParser().parseFromString(`<table><tbody>${html}</tbody></table>`, 'text/html');
 
-            // CORRECTION POUR F5 : On utilise requestAnimationFrame pour s'assurer que le DOM est prêt
-            // avant de notifier le cerveau.
             // --- CORRECTION FINALE : On utilise un drapeau pour bloquer la sauvegarde ---
             this.isRestoring = true;
             requestAnimationFrame(() => {
-                // C'est la pièce manquante pour que la toolbar et les lignes se synchronisent.
+                // --- CORRECTION : On déplace la logique de restauration de la sélection ICI ---
+                // À ce stade, Stimulus a eu le temps de connecter les contrôleurs `list-row`.
+                const restoredSelectos = [];
+                const selectedIdsSet = new Set(selectedIds);
+                this.rowCheckboxTargets.forEach(checkbox => {
+                    const rowId = String(checkbox.dataset.listRowIdobjetValue);
+                    const isSelected = selectedIdsSet.has(rowId);
+                    checkbox.checked = isSelected;
+                    checkbox.closest('tr')?.classList.toggle('row-selected', isSelected);
+                    if (isSelected) {
+                        const listRowController = this.application.getControllerForElementAndIdentifier(checkbox.closest('[data-controller="list-row"]'), 'list-row');
+                        if (listRowController) {
+                            restoredSelectos.push(listRowController.buildSelectoPayload());
+                        }
+                    }
+                });
+
+                // Maintenant que la sélection visuelle est correcte, on peut notifier le cerveau.
                 this.notifyCerveau('ui:list.selection-completed', { selectos: restoredSelectos });
                 this._postDataLoadActions(doc);
+
+                // On met à jour l'état de la case "Tout cocher" pour refléter la sélection restaurée.
+                this.updateSelectAllCheckboxState();
 
                 // On remet le drapeau à false après le cycle de mise à jour,
                 // pour que les prochaines sélections de l'utilisateur soient bien sauvegardées.
