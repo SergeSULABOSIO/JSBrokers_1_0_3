@@ -451,21 +451,21 @@ export default class extends Controller {
         // avec une sélection vide venant d'un autre onglet.
         if (this.element.closest('.tab-pane:not(.active)')) return;
 
-        console.log(this.nomControleur + " - Code: 1986 - _saveState: Sauvegarde de l'état de la liste." + this.listUrlValue);
-
+        
         if (!this.listUrlValue) return; // Ne rien faire si l'URL n'est pas définie
         const storageKey = `listContent_${this.listUrlValue}`;
         const state = {
             html: this.donneesTarget.innerHTML,
             selectedIds: Array.from(this.selectedIds)
         };
-
+        
         try {
             sessionStorage.setItem(storageKey, JSON.stringify(state));
             this._logDebug(`État de la liste sauvegardé pour la clé : ${storageKey}`);
         } catch (e) {
             console.error("Erreur lors de la sauvegarde de l'état de la liste dans sessionStorage:", e);
         }
+        console.log(this.nomControleur + " - Code: 1986 - sessionStorage _saveState: Sauvegarde de l'état de la liste.", "Key:", storageKey, "State:", state);
     }
 
     /**
@@ -519,9 +519,10 @@ export default class extends Controller {
                 this.notifyCerveau('ui:list.selection-completed', { selectos: restoredSelectos });
                 this._postDataLoadActions(doc);
             });
-
+            console.log(this.nomControleur + " - Code: 1986 - sessionStorage _restoreState: Restauration de l'état de la liste.", "Key:", storageKey, "State:", savedState);
             return true; // La restauration a été initiée
         }
+        
         return false;
     }
 }
