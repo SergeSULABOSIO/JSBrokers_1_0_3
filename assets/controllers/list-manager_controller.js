@@ -173,8 +173,9 @@ export default class extends Controller {
             checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
         });
 
-        // NOUVEAU : Sauvegarder l'état chaque fois que la sélection change.
-        this._saveState();
+        // CORRECTION : On ne sauvegarde plus l'état ici.
+        // Cette méthode ne fait que synchroniser l'état visuel avec ce que le Cerveau dicte.
+        // La sauvegarde est maintenant gérée uniquement par _saveState() qui est appelé après une action directe ou un chargement.
     }
 
     // --- GESTION DES DONNÉES ---
