@@ -101,6 +101,13 @@ export default class extends Controller {
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
+
+        
+        // --- CORRECTION : On réintroduit la sauvegarde, mais de manière contrôlée ---
+        /**
+         * @property {boolean} isRestoring - Un drapeau pour éviter la sauvegarde pendant la restauration.
+         */
+        this.isRestoring = false;
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -173,9 +180,12 @@ export default class extends Controller {
             checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
         });
 
-        // CORRECTION : On ne sauvegarde plus l'état ici.
-        // Cette méthode ne fait que synchroniser l'état visuel avec ce que le Cerveau dicte.
-        // La sauvegarde est maintenant gérée uniquement par _saveState() qui est appelé après une action directe ou un chargement.
+        // --- CORRECTION FINALE ---
+        // On sauvegarde l'état, SAUF si on est en train de restaurer.
+        // Le drapeau `isRestoring` est géré par la méthode `_restoreState`.
+        if (!this.isRestoring) {
+            this._saveState();
+        }
     }
 
     // --- GESTION DES DONNÉES ---
@@ -515,10 +525,18 @@ export default class extends Controller {
 
             // CORRECTION POUR F5 : On utilise requestAnimationFrame pour s'assurer que le DOM est prêt
             // avant de notifier le cerveau.
+            // --- CORRECTION FINALE : On utilise un drapeau pour bloquer la sauvegarde ---
+            this.isRestoring = true;
             requestAnimationFrame(() => {
                 // C'est la pièce manquante pour que la toolbar et les lignes se synchronisent.
                 this.notifyCerveau('ui:list.selection-completed', { selectos: restoredSelectos });
                 this._postDataLoadActions(doc);
+
+                // On remet le drapeau à false après le cycle de mise à jour,
+                // pour que les prochaines sélections de l'utilisateur soient bien sauvegardées.
+                requestAnimationFrame(() => {
+                    this.isRestoring = false;
+                });
             });
             console.log(this.nomControleur + " - Code: 1986 - sessionStorage _restoreState: Restauration de l'état de la liste.", "Key:", storageKey, "State:", savedState);
             return true; // La restauration a été initiée
