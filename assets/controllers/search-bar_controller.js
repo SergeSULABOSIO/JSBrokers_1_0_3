@@ -27,10 +27,19 @@ export default class extends BaseController {
         // document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
+        document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData); // Événement interne du Cerveau
+        document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset); // Événement interne du Cerveau
+        document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte
 
         // Charger les filtres depuis sessionStorage au démarrage.
         const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
         const savedFilters = sessionStorage.getItem(storageKey);
+        // const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`; // Désactivé: La gestion de l'état est centralisée par le Cerveau.
+        // const savedFilters = sessionStorage.getItem(storageKey); // Désactivé
+        // if (savedFilters) { // Désactivé
+        //     this.activeFilters = JSON.parse(savedFilters); // Désactivé
+        //     console.log(`${this.nomControleur} - Filtres chargés depuis sessionStorage:`, this.activeFilters); // Désactivé
+        // }
 
         if (savedFilters) {
             this.activeFilters = JSON.parse(savedFilters);
@@ -48,6 +57,7 @@ export default class extends BaseController {
         // document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
         document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
         document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
+        document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
     }
 
     // --- Actions de l'utilisateur (logique mise à jour) ---
@@ -147,6 +157,11 @@ export default class extends BaseController {
         this.buildAdvancedForm();
     }
 
+    handleContextChanged() {
+        // NOUVEAU : Réinitialise la barre de recherche à chaque changement de contexte.
+        this.handleAdvancedSearchReset();
+    }
+
     /**
      * NOUVEAU : Remplit le sélecteur de recherche simple avec les critères de type 'Text'.
      */
@@ -196,6 +211,7 @@ export default class extends BaseController {
                         ? this.activeFilters[criterion.Nom]
                         : {};
                     const numberValue = numberFilter.value || '';
+                    const numberValue = numberFilter.value !== undefined ? numberFilter.value : ''; // Gère le cas où la valeur est 0
                     const numberOperator = numberFilter.operator || '=';
                     html += `<div class="input-group input-group-sm">
                                 <select class="form-select" style="max-width: 150px; min-width: 150px;" data-criterion-operator-for="${criterion.Nom}">
@@ -339,6 +355,9 @@ export default class extends BaseController {
         const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
         sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters));
         console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters);
+        // const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`; // Désactivé: La gestion de l'état est centralisée par le Cerveau.
+        // sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters)); // Désactivé
+        // console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters); // Désactivé
 
         // Notifie le cerveau pour lancer la recherche
         this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });

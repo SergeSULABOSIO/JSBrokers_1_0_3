@@ -69,7 +69,7 @@ export default class extends Controller {
         document.addEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
 
         // Tente de restaurer l'état précédent (onglet actif, etc.)
-        this._restoreState();
+        // this._restoreState(); // Désactivé: La restauration d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
     }
 
     /**
@@ -118,7 +118,7 @@ export default class extends Controller {
 
         // On mémorise l'état de sélection pour l'onglet actuellement actif.
         if (this.activeTabId) {
-            this.tabStates[this.activeTabId] = selectos;
+            // this.tabStates[this.activeTabId] = selectos; // Désactivé: La gestion de l'état de sélection est centralisée par le Cerveau.
         }
 
         const selection = selectos.map(s => s.id);
@@ -154,7 +154,7 @@ export default class extends Controller {
         }
 
         // Sauvegarder l'état après modification des onglets
-        this._saveState();
+        // this._saveState(); // Désactivé: La sauvegarde d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
     }
 
     /**
@@ -206,7 +206,7 @@ export default class extends Controller {
         });
 
         // Sauvegarder l'état après un changement d'onglet
-        this._saveState();
+        // this._saveState(); // Désactivé: La sauvegarde d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
     }
 
     /**
@@ -308,52 +308,47 @@ export default class extends Controller {
      * NOUVEAU : Sauvegarde l'état actuel du gestionnaire de vue dans sessionStorage.
      * @private
      */
-    _saveState() {
-        const state = {
-            activeTabId: this.activeTabId,
-            collectionTabsParentId: this.collectionTabsParentId,
-            parentEntityCanvas: this.parentEntityCanvas,
-            parentEntityType: this.parentEntityType, // Sauvegarde du type
-            tabStates: this.tabStates
-        };
-        // Utilise le chemin de l'URL pour une clé unique par rubrique
-        const storageKey = `viewManagerState_${window.location.pathname}`;
-        sessionStorage.setItem(storageKey, JSON.stringify(state));
-    }
+    // _saveState() { // Désactivé: La sauvegarde d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
+    //     const state = {
+    //         activeTabId: this.activeTabId,
+    //         collectionTabsParentId: this.collectionTabsParentId,
+    //         parentEntityCanvas: this.parentEntityCanvas,
+    //         parentEntityType: this.parentEntityType, // Sauvegarde du type
+    //         tabStates: this.tabStates
+    //     };
+    //     // Utilise le chemin de l'URL pour une clé unique par rubrique
+    //     const storageKey = `viewManagerState_${window.location.pathname}`;
+    //     sessionStorage.setItem(storageKey, JSON.stringify(state));
+    // }
 
     /**
      * NOUVEAU : Restaure l'état du gestionnaire de vue depuis sessionStorage.
      * @private
      */
-    _restoreState() {
-        const storageKey = `viewManagerState_${window.location.pathname}`;
-        const savedStateJSON = sessionStorage.getItem(storageKey);
-
-        if (!savedStateJSON) return;
-
-        const savedState = JSON.parse(savedStateJSON);
-
-        this.activeTabId = savedState.activeTabId || 'principal';
-        this.collectionTabsParentId = savedState.collectionTabsParentId || null;
-        this.parentEntityCanvas = savedState.parentEntityCanvas || null;
-        this.parentEntityType = savedState.parentEntityType || null; // Restauration du type
-        this.tabStates = savedState.tabStates || {};
-
-        // Si un parent était sélectionné, on recrée les onglets de collection
-        if (this.collectionTabsParentId && this.parentEntityCanvas && this.parentEntityType) {
-            const parentEntity = { id: this.collectionTabsParentId }; // On a juste besoin de l'ID
-            const parentEntityType = this.parentEntityType; // On utilise le type restauré
-            const collections = this._findCollectionsInCanvas(this.parentEntityCanvas);
-            collections.forEach(collectionInfo => this._createTab(collectionInfo, parentEntity, parentEntityType));
-        }
-
-        // On active l'onglet qui était actif
-        const tabToActivate = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
-        if (tabToActivate) {
-            // On utilise requestAnimationFrame pour s'assurer que le DOM est prêt
-            requestAnimationFrame(() => {
-                tabToActivate.click();
-            });
-        }
-    }
+    // _restoreState() { // Désactivé: La restauration d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
+    //     const storageKey = `viewManagerState_${window.location.pathname}`;
+    //     const savedStateJSON = sessionStorage.getItem(storageKey);
+    //     if (!savedStateJSON) return;
+    //     const savedState = JSON.parse(savedStateJSON);
+    //     this.activeTabId = savedState.activeTabId || 'principal';
+    //     this.collectionTabsParentId = savedState.collectionTabsParentId || null;
+    //     this.parentEntityCanvas = savedState.parentEntityCanvas || null;
+    //     this.parentEntityType = savedState.parentEntityType || null; // Restauration du type
+    //     this.tabStates = savedState.tabStates || {};
+    //     // Si un parent était sélectionné, on recrée les onglets de collection
+    //     if (this.collectionTabsParentId && this.parentEntityCanvas && this.parentEntityType) {
+    //         const parentEntity = { id: this.collectionTabsParentId }; // On a juste besoin de l'ID
+    //         const parentEntityType = this.parentEntityType; // On utilise le type restauré
+    //         const collections = this._findCollectionsInCanvas(this.parentEntityCanvas);
+    //         collections.forEach(collectionInfo => this._createTab(collectionInfo, parentEntity, parentEntityType));
+    //     }
+    //     // On active l'onglet qui était actif
+    //     const tabToActivate = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
+    //     if (tabToActivate) {
+    //         // On utilise requestAnimationFrame pour s'assurer que le DOM est prêt
+    //         requestAnimationFrame(() => {
+    //             tabToActivate.click();
+    //         });
+    //     }
+    // }
 }

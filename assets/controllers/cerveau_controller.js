@@ -26,6 +26,7 @@ export default class extends Controller {
         this.selectionState = []; // Tableau des objets "selecto"
         this.selectionIds = new Set(); // Pour une recherche rapide des IDs
         this.numericAttributesAndValues = {}; // Stocke l'objet complet {colonnes, valeurs}
+        this.activeTabFormCanvas = null; // NOUVEAU : Pour stocker le formCanvas de l'onglet actif.
         this.currentIdEntreprise = null;
         // NOUVEAU : État pour le "display"
         this.displayState = {
@@ -103,6 +104,7 @@ export default class extends Controller {
                 // tout en conservant le comportement de réinitialisation pour les nouveaux onglets.
                 this._setSelectionState(payload.selectos || []);
 
+                this._setSelectionState(payload.selectos || []); // Réinitialise la sélection
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
@@ -111,6 +113,17 @@ export default class extends Controller {
                 // La liste est déjà chargée, soit par le serveur initialement, soit par un chargement AJAX précédent.
                 // this.broadcast('search:advanced.reset', {}); // On peut aussi commenter cette ligne si on veut conserver les filtres entre les onglets.
                 this.broadcast('ui:tab.context-changed', { ...payload });
+                this.activeTabFormCanvas = null; // Réinitialise le formCanvas, il sera fourni par le list-manager
+
+                // NOUVEAU : Diffuse un événement de changement de contexte initial.
+                // Les composants périphériques doivent écouter cet événement.
+                this.broadcast('app:context.changed', {
+                    tabId: payload.tabId,
+                    parentId: this.activeParentId,
+                    formCanvas: this.activeTabFormCanvas, // Sera null initialement pour les collections
+                    selection: this.selectionState, // Inclut la sélection actuelle
+                    numericAttributesAndValues: this.numericAttributesAndValues // Inclut les données numériques
+                });
                 break;
             
             // SOLUTION : Un list-manager (d'un onglet) notifie qu'il est prêt avec son propre contexte.
@@ -119,6 +132,13 @@ export default class extends Controller {
                 // C'est la clé pour que le bouton "Ajouter" ait le bon contexte de formulaire.
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'. Diffusion...`, payload);
                 // this.broadcast('ui:tab.context-changed', { tabId: payload.tabId, formCanvas: payload.formCanvas });
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
+                this.activeTabFormCanvas = payload.formCanvas; // Met à jour le formCanvas actif
+                // NOUVEAU : Diffuse un événement plus spécifique pour la mise à jour du formCanvas.
+                this.broadcast('app:form-canvas.updated', {
+                    tabId: payload.tabId,
+                    formCanvas: this.activeTabFormCanvas
+                });
                 break;
 
 
