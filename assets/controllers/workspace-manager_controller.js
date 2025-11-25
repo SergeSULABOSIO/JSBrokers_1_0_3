@@ -562,10 +562,12 @@ export default class extends Controller {
         // Le `isRestoration` est `false` (ou `undefined`) lors d'un clic, ce qui déclenche le nettoyage.
         // Il est `true` lors d'un F5, ce qui préserve l'état.
         if (!isRestoration) {
+            // NOUVEAU : On affiche le squelette uniquement lors d'un clic, pas lors de la restauration initiale.
+            this._showWorkspaceSkeleton();
             this._clearWorkspaceComponentStates();
         }
 
-        // this._showWorkspaceSkeleton(); // SUPPRIMÉ : L'appel est redondant car le squelette est déjà présent dans le template Twig initial.
+        // this._showWorkspaceSkeleton(); // DÉPLACÉ : L'appel est maintenant conditionnel (voir ci-dessus).
         
         console.log(
             `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
