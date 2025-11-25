@@ -162,7 +162,7 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     async switchTab(event) {
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données:`, { tabId: event.currentTarget.dataset.tabId });
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données:`, { tabId: event.currentTarget.dataset });
         event.preventDefault();
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
