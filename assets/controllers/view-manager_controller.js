@@ -270,7 +270,18 @@ export default class extends Controller {
             canAdd: 'true'
         });
         content.style.display = 'block';
-        content.innerHTML = '<div class="spinner-container"><div class="custom-spinner"></div></div>';
+        // NOUVEAU : On remplace le simple spinner par un squelette de tableau statique.
+        // Ce squelette est une représentation simple d'une liste de collection à une seule colonne,
+        // ce qui est plus informatif et visuellement plus agréable pour l'utilisateur.
+        content.innerHTML = `
+            <div class="table-scroll-wrapper flex-grow-1">
+                <table class="table table-hover table-sm table-enhanced">
+                    <tbody>
+                        ${'<tr><td><div class="skeleton-row"></div></td></tr>'.repeat(6)}
+                    </tbody>
+                </table>
+            </div>
+        `;
 
         try {
             const response = await fetch(tabElement.dataset.collectionUrl);
