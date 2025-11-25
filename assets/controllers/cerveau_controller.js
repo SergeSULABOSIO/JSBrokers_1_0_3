@@ -118,7 +118,7 @@ export default class extends Controller {
                 // Le Cerveau relaie cette information via un événement que la toolbar écoute déjà.
                 // C'est la clé pour que le bouton "Ajouter" ait le bon contexte de formulaire.
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'. Diffusion...`, payload);
-                this.broadcast('ui:tab.context-changed', { tabId: payload.tabId, formCanvas: payload.formCanvas });
+                // this.broadcast('ui:tab.context-changed', { tabId: payload.tabId, formCanvas: payload.formCanvas });
                 break;
 
 
