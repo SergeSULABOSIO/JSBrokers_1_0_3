@@ -565,7 +565,7 @@ export default class extends Controller {
             this._clearWorkspaceComponentStates();
         }
 
-        this._showWorkspaceSkeleton();
+        // this._showWorkspaceSkeleton(); // SUPPRIMÉ : L'appel est redondant car le squelette est déjà présent dans le template Twig initial.
         
         console.log(
             `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
