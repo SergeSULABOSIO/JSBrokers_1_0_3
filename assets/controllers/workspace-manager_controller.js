@@ -637,6 +637,7 @@ export default class extends Controller {
                 </div>
                 <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
                 <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
                 <div class="skeleton-row" style="height: 300px;"></div>
             </div>
         `;
