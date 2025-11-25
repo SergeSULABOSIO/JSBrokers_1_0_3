@@ -71,23 +71,16 @@ export default class extends Controller {
         document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
 
-        // DÉSACTIVÉ : La restauration de l'état de la liste est désactivée.
-        // if (!this._restoreState()) {
-        // CORRECTION : Si la restauration échoue, on vérifie l'état initial.
-        // Si la liste a été rendue vide par le serveur, on affiche l'état vide.
         if (this.nbElementsValue === 0) {
             this.listContainerTarget.classList.add('d-none');
             this.emptyStateContainerTarget.classList.remove('d-none');
             this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
         }
 
-        // NOUVEAU : Notifier le cerveau que ce contexte de liste est prêt.
-        // Cela permet au cerveau de mettre à jour la barre d'outils avec le bon formCanvas.
         if (this.element.id !== 'principal') {
             console.log(`${this.nomControleur} - Notification de contexte prêt pour l'onglet: ${this.element.id}`, { formCanvas: this.entityFormCanvasValue });
             this.notifyCerveau('app:list.context-ready', { tabId: this.element.id, formCanvas: this.entityFormCanvasValue });
         }
-        // }
     }
 
     /**
@@ -101,13 +94,6 @@ export default class extends Controller {
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
-
-        
-        // --- CORRECTION : On réintroduit la sauvegarde, mais de manière contrôlée ---
-        /**
-         * @property {boolean} isRestoring - Un drapeau pour éviter la sauvegarde pendant la restauration.
-         */
-        this.isRestoring = false;
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -180,12 +166,6 @@ export default class extends Controller {
             checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
         });
 
-        // --- CORRECTION FINALE ---
-        // On sauvegarde l'état, SAUF si on est en train de restaurer.
-        // Le drapeau `isRestoring` est géré par la méthode `_restoreState`.
-        // if (!this.isRestoring) {
-        //     this._saveState();
-        // }
     }
 
     // --- GESTION DES DONNÉES ---
@@ -228,11 +208,6 @@ export default class extends Controller {
             const html = await response.text();
             if (!response.ok) throw new Error(html || 'Erreur serveur');
 
-            // Log pour débogage : voir la réponse brute du serveur
-            // console.log("LIST-MANAGER - Réponse HTML brute du serveur:", html);
-
-            // CORRECTION : On enveloppe le HTML dans une structure de tableau valide
-            // pour que le DOMParser interprète correctement les balises <tr>.
             const validHtml = `<table><tbody>${html}</tbody></table>`;
             const parser = new DOMParser();
             const doc = parser.parseFromString(validHtml, 'text/html');
@@ -249,13 +224,10 @@ export default class extends Controller {
                 const newContent = dataRows.map(row => row.outerHTML).join('');
                 this.donneesTarget.innerHTML = newContent;
                 console.log("LIST-MANAGER - Affichage de la liste avec les résultats.");
-                // CORRECTION : Sauvegarder l'état après une recherche réussie
-                // this._saveState();
             } else {
                 this.listContainerTarget.classList.add('d-none');
                 this.emptyStateContainerTarget.classList.remove('d-none');
                 this.donneesTarget.innerHTML = ''; // Vider le tbody
-                // this._saveState(); // Sauvegarder l'état vide également
                 console.log("LIST-MANAGER - Affichage de l'état vide (aucun résultat).");
             }
 
@@ -274,15 +246,12 @@ export default class extends Controller {
      */
     resetSelection() {
         this.updateSelectAllCheckboxState(); // Met à jour l'état de la case "tout cocher"
-        // La publication est maintenant gérée par le Cerveau
     }
 
     /**
      * NOUVEAU : Notifie la barre de recherche pour réinitialiser la recherche.
      */
     resetSearch() {
-        // CORRECTION : On notifie le cerveau d'une intention de réinitialisation globale.
-        // Le cerveau saura quelle est la liste active et ciblera la réinitialisation.
         this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
     }
 
@@ -299,7 +268,6 @@ export default class extends Controller {
         });
     }
 
-    // --- COMMUNICATION ---
 
     /**
      * Méthode centralisée pour envoyer un événement au Cerveau.
@@ -315,7 +283,7 @@ export default class extends Controller {
         this.element.dispatchEvent(event);
     }
 
-    // --- MÉTHODES PRIVÉES DE REFACTORISATION ---
+
 
     /**
      * Récupère les IDs d'entreprise et d'invité depuis l'événement ou les valeurs du contrôleur.
@@ -358,22 +326,6 @@ export default class extends Controller {
             `;
         }
         this.donneesTarget.innerHTML = skeletonHtml;
-    }
-
-    /**
-     * Affiche un spinner de chargement dans le tableau.
-     * @private
-     */
-    _showLoadingSpinner() {
-        // DÉPRÉCIÉ : Remplacé par _showSkeleton()
-        const columnCount = this.element.querySelector('thead tr')?.childElementCount || 1;
-        this.donneesTarget.innerHTML = `
-            <tr>
-                <td colspan="${columnCount}" class="text-center py-5">
-                    <div class="spinner-container d-flex justify-content-center align-items-center"><div class="custom-spinner"></div></div>
-                </td>
-            </tr>
-        `;
     }
 
     /**
@@ -450,100 +402,5 @@ export default class extends Controller {
      */
     _logDebug(message, data = null) {
         console.log(`${this.nomControleur} - ${message}`, data);
-    }
-
-    /**
-     * NOUVEAU : Sauvegarde le contenu HTML actuel de la liste dans sessionStorage.
-     * @private
-     */
-    _saveState() {
-        // // On ne sauvegarde l'état que si on est dans un onglet actif.
-        // // Cela évite qu'un list-manager d'un onglet masqué n'écrase son état
-        // // avec une sélection vide venant d'un autre onglet.
-        // if (this.element.closest('.tab-pane:not(.active)')) return;
-
-        
-        // if (!this.listUrlValue) return; // Ne rien faire si l'URL n'est pas définie
-        // const storageKey = `listContent_${this.listUrlValue}`;
-        // const state = {
-        //     html: this.donneesTarget.innerHTML,
-        //     selectedIds: Array.from(this.selectedIds)
-        // };
-        
-        // try {
-        //     sessionStorage.setItem(storageKey, JSON.stringify(state));
-        //     this._logDebug(`État de la liste sauvegardé pour la clé : ${storageKey}`);
-        // } catch (e) {
-        //     console.error("Erreur lors de la sauvegarde de l'état de la liste dans sessionStorage:", e);
-        // }
-        // console.log(this.nomControleur + " - Code: 1986 - sessionStorage _saveState: Sauvegarde de l'état de la liste.", "Key:", storageKey, "State:", state);
-    }
-
-    /**
-     * NOUVEAU : Restaure le contenu de la liste depuis sessionStorage.
-     * @returns {boolean} True si la restauration a réussi, sinon false.
-     * @private
-     */
-    _restoreState() {
-        // // NOUVEAU : Afficher le squelette pendant la restauration
-        // this._showSkeleton();
-
-        // console.log(this.nomControleur + " - Code: 1986 - _restoreState: Restauration de l'état de la liste." + this.listUrlValue);
-        // if (!this.listUrlValue) return false;
-        // const storageKey = `listContent_${this.listUrlValue}`;
-        // const savedStateJSON = sessionStorage.getItem(storageKey);
-
-        // if (savedStateJSON) {
-        //     const savedState = JSON.parse(savedStateJSON);
-        //     const { html, selectedIds = [] } = savedState;
-
-        //     this._logDebug(`Restauration de l'état depuis la clé : ${storageKey}`);
-        //     this.donneesTarget.innerHTML = html;
-
-        //     const hasContent = html.trim() !== '';
-        //     this.listContainerTarget.classList.toggle('d-none', !hasContent);
-        //     this.emptyStateContainerTarget.classList.toggle('d-none', hasContent);
-
-        //     // On simule le post-chargement pour notifier le cerveau et mettre à jour les sélections/totaux
-        //     const doc = new DOMParser().parseFromString(`<table><tbody>${html}</tbody></table>`, 'text/html');
-
-        //     // --- CORRECTION FINALE : On utilise un drapeau pour bloquer la sauvegarde ---
-        //     this.isRestoring = true;
-        //     requestAnimationFrame(() => {
-        //         // --- CORRECTION : On déplace la logique de restauration de la sélection ICI ---
-        //         // À ce stade, Stimulus a eu le temps de connecter les contrôleurs `list-row`.
-        //         const restoredSelectos = [];
-        //         const selectedIdsSet = new Set(selectedIds);
-        //         this.rowCheckboxTargets.forEach(checkbox => {
-        //             const rowId = String(checkbox.dataset.listRowIdobjetValue);
-        //             const isSelected = selectedIdsSet.has(rowId);
-        //             checkbox.checked = isSelected;
-        //             checkbox.closest('tr')?.classList.toggle('row-selected', isSelected);
-        //             if (isSelected) {
-        //                 const listRowController = this.application.getControllerForElementAndIdentifier(checkbox.closest('[data-controller="list-row"]'), 'list-row');
-        //                 if (listRowController) {
-        //                     restoredSelectos.push(listRowController.buildSelectoPayload());
-        //                 }
-        //             }
-        //         });
-
-        //         // Maintenant que la sélection visuelle est correcte, on peut notifier le cerveau.
-        //         this.notifyCerveau('ui:list.selection-completed', { selectos: restoredSelectos });
-        //         this._postDataLoadActions(doc);
-
-        //         // On met à jour l'état de la case "Tout cocher" pour refléter la sélection restaurée.
-        //         this.updateSelectAllCheckboxState();
-
-        //         // On remet le drapeau à false après le cycle de mise à jour,
-        //         // pour que les prochaines sélections de l'utilisateur soient bien sauvegardées.
-        //         requestAnimationFrame(() => {
-        //             this.isRestoring = false;
-        //         });
-        //     });
-        //     console.log(this.nomControleur + " - Code: 1986 - sessionStorage _restoreState: Restauration de l'état de la liste.", "Key:", storageKey, "State:", savedState);
-        //     return true; // La restauration a été initiée
-        // }
-        
-        return false;
     }
 }
