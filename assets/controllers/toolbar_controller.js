@@ -74,6 +74,9 @@ export default class extends Controller {
         console.log(`${this.nomControleur} - Activation des écouteurs d'événements`);
         document.addEventListener('ui:selection.changed', this.boundHandleContextUpdate);
         document.addEventListener('ui:tab.context-changed', this.boundHandleTabChange);
+        document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
+        document.addEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate); // NOUVEAU : Écoute la mise à jour du formCanvas
+        // document.addEventListener('ui:tab.context-changed', this.boundHandleTabChange); // ANCIEN : Remplacé par app:context.changed et app:form-canvas.updated
     }
 
     /**
@@ -84,6 +87,9 @@ export default class extends Controller {
         console.log(`${this.nomControleur} - Déconnecté - Suppression d'écouteurs.`);
         document.removeEventListener('ui:selection.changed', this.boundHandleContextUpdate);
         document.removeEventListener('ui:tab.context-changed', this.boundHandleTabChange);
+        document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
+        document.removeEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate);
+        // document.removeEventListener('ui:tab.context-changed', this.boundHandleTabChange); // ANCIEN : Remplacé
     }
 
     /**
@@ -93,12 +99,21 @@ export default class extends Controller {
     handleContextUpdate(event) {
         // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
         this.selectos = event.detail.selection || [];
+        // NOUVEAU : Le payload de 'app:context.changed' contient la sélection et le formCanvas initial.
+        const { selection, formCanvas } = event.detail;
+        this.selectos = selection || [];
+        if (formCanvas) { // Le formCanvas peut être null initialement pour les collections
+            this.activeFormCanvas = formCanvas;
+            this.entityFormCanvasValue = formCanvas;
+        }
         this.organizeButtons();
     }
 
     /**
      * Gère le changement d'onglet pour mettre à jour le canvas de formulaire actif.
      * @param {CustomEvent} event - L'événement `ui:tab.context-changed`.
+     * NOUVEAU : Gère la mise à jour du formCanvas actif.
+     * @param {CustomEvent} event - L'événement `app:form-canvas.updated`.
      */
     handleTabChange(event) {
         const { tabId, formCanvas } = event.detail;
@@ -106,11 +121,16 @@ export default class extends Controller {
         // CORRECTION : On ne met à jour que si un formCanvas VALIDE est fourni.
         // On ignore les événements avec un formCanvas nul pour éviter de réinitialiser
         // l'état prématurément pendant le chargement d'un onglet.
+    handleFormCanvasUpdate(event) {
+        const { formCanvas } = event.detail;
         if (formCanvas) {
             this.activeFormCanvas = formCanvas;
             this.entityFormCanvasValue = formCanvas;
             console.log(`${this.nomControleur} - Contexte de formulaire mis à jour pour l'onglet '${tabId}'.`);
+            console.log(`${this.nomControleur} - Contexte de formulaire mis à jour.`);
         }
+        // On réorganise les boutons au cas où la disponibilité des actions change avec le nouveau formCanvas.
+        this.organizeButtons();
     }
 
     /**
