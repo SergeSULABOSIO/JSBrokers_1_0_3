@@ -25,26 +25,17 @@ export default class extends BaseController {
         this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
 
         // document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
-        document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
-        document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
         document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData); // Événement interne du Cerveau
         document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset); // Événement interne du Cerveau
         document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte
 
         // Charger les filtres depuis sessionStorage au démarrage.
-        const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
-        const savedFilters = sessionStorage.getItem(storageKey);
         // const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`; // Désactivé: La gestion de l'état est centralisée par le Cerveau.
         // const savedFilters = sessionStorage.getItem(storageKey); // Désactivé
         // if (savedFilters) { // Désactivé
         //     this.activeFilters = JSON.parse(savedFilters); // Désactivé
         //     console.log(`${this.nomControleur} - Filtres chargés depuis sessionStorage:`, this.activeFilters); // Désactivé
         // }
-
-        if (savedFilters) {
-            this.activeFilters = JSON.parse(savedFilters);
-            console.log(`${this.nomControleur} - Filtres chargés depuis sessionStorage:`, this.activeFilters);
-        }
 
         this.initializeCriteria();
 
@@ -210,7 +201,6 @@ export default class extends BaseController {
                     const numberFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
                         ? this.activeFilters[criterion.Nom]
                         : {};
-                    const numberValue = numberFilter.value || '';
                     const numberValue = numberFilter.value !== undefined ? numberFilter.value : ''; // Gère le cas où la valeur est 0
                     const numberOperator = numberFilter.operator || '=';
                     html += `<div class="input-group input-group-sm">
@@ -352,9 +342,6 @@ export default class extends BaseController {
 
     dispatchSearchEvent() {
         // CORRECTION : La sauvegarde se fait ici pour capturer TOUS les changements de filtres.
-        const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
-        sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters));
-        console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters);
         // const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`; // Désactivé: La gestion de l'état est centralisée par le Cerveau.
         // sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters)); // Désactivé
         // console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters); // Désactivé
