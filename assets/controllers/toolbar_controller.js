@@ -59,23 +59,11 @@ export default class extends Controller {
         // Le canvas de formulaire est initialisé avec celui de la rubrique principale, puis mis à jour au changement d'onglet.
         this.activeFormCanvas = this.entityFormCanvasValue; // Initialisation avec la valeur du contexte principal.
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
-        // this.boundHandleTabChange = this.handleTabChange.bind(this); // SUPPRIMÉ : La méthode handleTabChange n'existe plus.
 
         this.initializeToolbarState();
         this.setupEventListeners();
     }
 
-    /**
-     * Met en place les écouteurs d'événements globaux.
-     * La barre d'outils écoute uniquement le Cerveau pour ajuster son état.
-     * @private
-     */
-    setupEventListeners() {
-        // console.log(`${this.nomControleur} - Activation des écouteurs d'événements`);
-        // document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
-        // document.addEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate); // NOUVEAU : Écoute la mise à jour du formCanvas
-        // document.addEventListener('ui:tab.context-changed', this.boundHandleTabChange); // ANCIEN : Remplacé par app:context.changed et app:form-canvas.updated
-    }
 
     /**
      * Méthode du cycle de vie de Stimulus.
@@ -83,40 +71,7 @@ export default class extends Controller {
      */
     disconnect() {
         console.log(`${this.nomControleur} - Déconnecté - Suppression d'écouteurs.`);
-        // document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
-        // document.removeEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate);
-        // document.removeEventListener('ui:tab.context-changed', this.boundHandleTabChange); // ANCIEN : Remplacé
     }
-
-    /**
-     * Gère la mise à jour du contexte reçue du Cerveau (sélection, onglet actif, etc.).
-     * @param {CustomEvent} event - L'événement `ui:selection.changed`.
-     */
-    // handleContextUpdate(event) {
-    //     // NOUVEAU : Le payload de 'app:context.changed' contient la sélection et le formCanvas initial.
-    //     const { selection, formCanvas } = event.detail;
-    //     this.selectos = selection || [];
-    //     if (formCanvas) { // Le formCanvas peut être null initialement pour les collections
-    //         this.activeFormCanvas = formCanvas;
-    //         this.entityFormCanvasValue = formCanvas;
-    //     }
-    //     this.organizeButtons();
-    // }
-
-    /**
-     * NOUVEAU : Gère la mise à jour du formCanvas actif.
-     * @param {CustomEvent} event - L'événement `app:form-canvas.updated`.
-     */
-    // handleFormCanvasUpdate(event) {
-    //     const { formCanvas } = event.detail;
-    //     if (formCanvas) {
-    //         this.activeFormCanvas = formCanvas;
-    //         this.entityFormCanvasValue = formCanvas;
-    //         console.log(`${this.nomControleur} - Contexte de formulaire mis à jour.`);
-    //     }
-    //     // On réorganise les boutons au cas où la disponibilité des actions change avec le nouveau formCanvas.
-    //     this.organizeButtons();
-    // }
 
     /**
      * Affiche ou masque les boutons contextuels en fonction de la sélection actuelle.
@@ -186,8 +141,6 @@ export default class extends Controller {
         let payload = {};
         // Enrichit le payload en fonction de l'action demandée
         if (eventName === 'app:delete-request') { // Renommé
-            // Pour la suppression, on envoie les IDs et la configuration de l'action
-            // (URL de base) pour que le Cerveau puisse construire la requête API.
             payload = {
                 selection: this.selectos.map(s => s.id),
                 actionConfig: {
@@ -197,16 +150,13 @@ export default class extends Controller {
                 }
             };
             console.log(this.nomControleur + " - Code: 1986 - Suppression", payload);
-            // La suppression n'a besoin que des IDs.
         } else if (eventName === 'ui:toolbar.add-request') {
-            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
             payload = {
                 entity: {},
                 entityFormCanvas: this.activeFormCanvas,
                 isCreationMode: true,
             };
         } else if (eventName === 'ui:toolbar.edit-request') {
-            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
             payload = {
                 // On envoie l'entité elle-même, pas l'objet selecto complet
                 entity: this.selectos[0].entity, 
@@ -214,13 +164,11 @@ export default class extends Controller {
                 isCreationMode: false,
             };
         } else if (eventName === 'ui:toolbar.open-request') {
-            // Pour "Ouvrir" ou "Modifier", on envoie le tableau complet des "selectos".
             console.log(this.nomControleur + " - Ouverture", this.selectos);
             payload = {
                 entities: this.selectos
             };
         }
-        // this.notifyCerveau(eventName, payload);
     }
 
     /**

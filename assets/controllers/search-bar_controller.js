@@ -23,38 +23,14 @@ export default class extends BaseController {
         // this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
         this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
         this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
-
-        // // document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
-        // document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData); // Événement interne du Cerveau
-        // document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset); // Événement interne du Cerveau
-        // document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte
-
-        // DÉSACTIVÉ : Le chargement des filtres depuis sessionStorage est mis en commentaire.
-        // const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
-        // const savedFilters = sessionStorage.getItem(storageKey);
-        // if (savedFilters) {
-        //     this.activeFilters = JSON.parse(savedFilters);
-        //     console.log(`${this.nomControleur} - Filtres chargés depuis sessionStorage:`, this.activeFilters);
-        // }
-
         this.initializeCriteria();
-
-        // La recherche initiale n'est plus déclenchée au rechargement.
-        // La liste affichera son contenu par défaut, et la barre de recherche
-        // affichera les filtres précédemment utilisés.
     }
 
     disconnect() {
-        // document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
-        // document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
-        // document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
-        // document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
+        
     }
 
-    // --- Actions de l'utilisateur (logique mise à jour) ---
-
     openAdvancedSearch() {
-        // MODIFIÉ : Pré-remplir TOUS les filtres DateTimeRange non actifs avec le mois en cours.
         const dateCriteria = this.criteriaValue.filter(c => c.Type === 'DateTimeRange');
         dateCriteria.forEach(dateCriterion => {
             if (dateCriterion && !this.activeFilters[dateCriterion.Nom]) {
@@ -69,7 +45,6 @@ export default class extends BaseController {
         });
 
         const formHtml = this.buildAdvancedForm();
-        // this.notifyCerveau('dialog:search.open-request', { formHtml });
     }
 
     /**
@@ -95,9 +70,6 @@ export default class extends BaseController {
     }
 
     handleAdvancedSearchReset() {
-        // CORRECTION : Cette méthode réinitialise uniquement l'état et l'UI de la barre de recherche.
-        // Elle est appelée par le Cerveau (via l'événement 'search:advanced.reset')
-        // et ne doit PAS renvoyer d'événement pour éviter une boucle infinie.
         this.simpleSearchInputTarget.value = '';
         this.activeFilters = {};
         this.updateSummary();
@@ -112,8 +84,6 @@ export default class extends BaseController {
      * et initialise la barre de recherche.
      */
     initializeCriteria() {
-        // NOUVELLE LOGIQUE : Les critères sont maintenant passés directement par le serveur
-        // via la `value` Stimulus `criteria`. Il n'y a plus besoin de les construire ici.
         console.log(`${this.nomControleur} - Initializing with criteria from server:`, this.criteriaValue);
 
         // On s'assure que la valeur a bien été chargée.
@@ -122,13 +92,9 @@ export default class extends BaseController {
             return;
         }
 
-        // Le reste de la logique reste identique.
-        // NOUVEAU : On peuple le sélecteur de critère simple
         this.populateSimpleSearchSelector();
         this.updateSimpleSearchPlaceholder();
 
-        // CORRECTION : Logique de synchronisation de l'UI avec les filtres restaurés.
-        // On parcourt les filtres actifs pour voir si l'un d'eux est un critère simple.
         const simpleCriteriaNames = this.criteriaValue.filter(c => c.Type === 'Text').map(c => c.Nom);
         
         for (const filterKey in this.activeFilters) {
@@ -218,17 +184,12 @@ export default class extends BaseController {
 
                 // --- NOUVEAU CASE POUR DATETIME RANGE ---
                 case 'DateTimeRange':
-                    // Les valeurs par défaut sont maintenant définies dans openAdvancedSearch ou handleAdvancedSearchReset
-                    // si aucun filtre n'est actif pour ce critère.
-                    // Nous récupérons donc simplement les valeurs de activeFilters.
                     const dateFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
                         ? this.activeFilters[criterion.Nom]
                         : {};
                     const fromValue = dateFilter.from || ''; // Devrait déjà être défini si nécessaire
                     const toValue = dateFilter.to || '';     // Devrait déjà être défini si nécessaire
 
-                    // Pour une plage de dates, nous aurons deux champs de date.
-                    // L'opérateur sera implicitement "Entre" (BETWEEN) côté backend.
                     html += `<div class="input-group input-group-sm">
                     <span class="input-group-text">Entre</span>
                     <input type="date" 
@@ -283,7 +244,6 @@ export default class extends BaseController {
                 // CORRECTION : Gérer la structure objet {value: '...'}
                 const value = (typeof filter === 'object' && filter !== null) ? filter.value : filter;
                 return value !== '' && value !== undefined;
-
             case 'Number':
                 // Actif si une valeur est saisie, même 0.
                 return filter.value !== undefined && filter.value !== '';
@@ -330,25 +290,7 @@ export default class extends BaseController {
         this.dispatchSearchEvent();
     }
 
-    // /**
-    //  * NOUVELLE MÉTHODE
-    //  * Gère une demande d'actualisation externe.
-    //  * @param {CustomEvent} event L'événement reçu.
-    //  */
-    // handleExternalRefresh(event) {
-    //     console.log(this.nomControleur + " - Événement de rafraîchissement reçu, relance de la recherche.");
-    //     this.dispatchSearchEvent(); // Relance simplement la recherche avec les filtres courants.
-    // }
-
     dispatchSearchEvent() {
-        // CORRECTION : La sauvegarde se fait ici pour capturer TOUS les changements de filtres.
-        // const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`; // Désactivé: La gestion de l'état est centralisée par le Cerveau.
-        // sessionStorage.setItem(storageKey, JSON.stringify(this.activeFilters)); // Désactivé
-        // console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters); // Désactivé
-
-        // Notifie le cerveau pour lancer la recherche
-        // this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
-        // Met à jour le résumé des filtres actifs
         this.updateSummary();
     }
 

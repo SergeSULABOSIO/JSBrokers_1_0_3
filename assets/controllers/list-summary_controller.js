@@ -36,7 +36,6 @@ export default class extends Controller {
 
         // --- CORRECTION : Lier et activer l'écouteur d'événement ---
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
-        // document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte global
     }
 
     /**
@@ -44,7 +43,7 @@ export default class extends Controller {
      * Nettoie l'écouteur d'événement pour éviter les fuites de mémoire.
      */
     disconnect() {
-        // document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
+        
     }
 
     /**

@@ -62,25 +62,14 @@ export default class extends Controller {
             // En cas d'erreur, on s'assure que la valeur reste un objet vide.
             initialNumericData = {};
         }
-        // this.notifyCerveau('app:list.data-loaded', {
-        //     numericAttributesAndValues: initialNumericData
-        // });
 
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
-        // document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        // document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
-        // document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
 
         if (this.nbElementsValue === 0) {
             this.listContainerTarget.classList.add('d-none');
             this.emptyStateContainerTarget.classList.remove('d-none');
             this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
         }
-
-        // if (this.element.id !== 'principal') {
-        //     console.log(`${this.nomControleur} - Notification de contexte prêt pour l'onglet: ${this.element.id}`, { formCanvas: this.entityFormCanvasValue });
-        //     this.notifyCerveau('app:list.context-ready', { tabId: this.element.id, formCanvas: this.entityFormCanvasValue });
-        // }
     }
 
     /**
@@ -88,12 +77,7 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-        // CORRECTION DÉFINITIVE : On ne sauvegarde PLUS l'état à la déconnexion.
-        // C'est cette action qui causait la "race condition" en ré-écrivant l'état
-        // que le workspace-manager venait de nettoyer.
-        // document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        // document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
-        // document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
+
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -103,8 +87,6 @@ export default class extends Controller {
      * Coche ou décoche toutes les cases de la liste et notifie le Cerveau avec l'état final.
      */
     toggleAll(event) {
-        // Si l'événement vient de la case à cocher de l'en-tête, on utilise son état.
-        // Sinon (demande du Cerveau), on détermine s'il faut cocher ou décocher.
         const isTriggeredByUser = event && this.hasSelectAllCheckboxTarget && event.currentTarget === this.selectAllCheckboxTarget;
         const totalRows = this.rowCheckboxTargets.length; // Utilise la propriété Stimulus
         const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length; // Utilise la propriété Stimulus
@@ -126,7 +108,6 @@ export default class extends Controller {
         });
 
         // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
-        // this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos }); // Cet événement est spécifique à la complétion de la sélection
         this.updateSelectAllCheckboxState();
     }
 
@@ -175,13 +156,10 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:base-données:sélection-request`.
      */
     async handleDBRequest(event) {
-        // NOUVEAU : Afficher le squelette AVANT toute autre action.
         this._showSkeleton();
 
         console.log(this.nomControleur + " - Code: 1986 - Recherche", event.detail);
 
-        // CORRECTION : On vérifie si la demande de rafraîchissement nous est destinée.
-        // L'ID de l'élément du list-manager doit correspondre à l'originatorId envoyé par le cerveau.
         if (event.detail.originatorId && event.detail.originatorId !== this.element.id) {
             this._logDebug("Demande de rafraîchissement ignorée (non destinée à cette liste).", { myId: this.element.id, originatorId: event.detail.originatorId });
             return;
@@ -236,7 +214,6 @@ export default class extends Controller {
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
             this.emptyStateContainerTarget.classList.add('d-none');
-            // this.notifyCerveau("app:error.api", { error: error.message });
         }
     }
 
@@ -247,42 +224,6 @@ export default class extends Controller {
     resetSelection() {
         this.updateSelectAllCheckboxState(); // Met à jour l'état de la case "tout cocher"
     }
-
-    /**
-     * NOUVEAU : Notifie la barre de recherche pour réinitialiser la recherche.
-     */
-    resetSearch() {
-        // this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
-    }
-
-    /**
-     * NOUVEAU : Demande au cerveau d'ouvrir le formulaire d'ajout pour l'entité de cette liste.
-     */
-    requestAddItem() {
-        // this.notifyCerveau('ui:toolbar.add-request', {
-        //     entityFormCanvas: this.entityFormCanvasValue,
-        //     isCreationMode: true,
-        //     context: {
-        //         originatorId: this.element.id // Pour savoir quelle liste rafraîchir après l'ajout
-        //     }
-        // });
-    }
-
-
-    /**
-     * Méthode centralisée pour envoyer un événement au Cerveau.
-     * @param {string} type - Le type d'événement pour le Cerveau (ex: 'ui:selection.updated').
-     * @param {object} [payload={}] - Données additionnelles à envoyer.
-     * @private
-     */
-    notifyCerveau(type, payload = {}) {
-        const event = new CustomEvent('cerveau:event', {
-            bubbles: true,
-            detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
-        });
-        this.element.dispatchEvent(event);
-    }
-
 
 
     /**
@@ -334,11 +275,7 @@ export default class extends Controller {
      */
     _postDataLoadActions(doc) {
         this.resetSelection();
-        // this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
         const numericDataPayload = this._extractNumericDataFromResponse(doc); // Renvoie { numericAttributesAndValues: {...} }
-        // On envoie le payload tel quel au cerveau
-        // this.notifyCerveau('app:list.data-loaded', numericDataPayload);
-        // this.notifyCerveau('app:list.refreshed', { itemCount: this.rowCheckboxTargets.length });
     }
 
     /**
