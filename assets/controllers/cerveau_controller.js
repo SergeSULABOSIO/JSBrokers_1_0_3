@@ -80,7 +80,15 @@ export default class extends Controller {
             case 'app:error.api':
                 this._showNotification('Une erreur serveur est survenue. Veuillez réessayer.', 'error');
                 break;
+            case 'ui:list-row.selection-changed':
+                this.updateSelectionState(payload);
+                break;
+            case 'ui:toolbar.close-request':
+                this.broadcast('app:workspace.load-default');
+                break;
             case 'ui:tab.context-changed':
+                this._setSelectionState([]); // Réinitialise la sélection
+                this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 this.tabId = payload.tabId;
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
                 this.broadcast('app:context.changed', {
@@ -88,15 +96,54 @@ export default class extends Controller {
                     parentId: this.activeParentId,
                 });
                 break;
+            case 'app:list.context-ready':
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
+                this.activeTabFormCanvas = payload.formCanvas; // Met à jour le formCanvas actif
+                this.broadcast('app:form-canvas.updated', {
+                    tabId: payload.tabId,
+                    formCanvas: this.activeTabFormCanvas
+                });
+                break;
+            case 'dialog:search.open-request':
+                this.broadcast('dialog:search.open-request', payload);
+                break;
+            case 'search:advanced.submitted':
+                this.broadcast('search:advanced.submitted', payload);
+                break;
+            case 'search:advanced.reset':
+                this.broadcast('search:advanced.reset', payload);
+                break;
+            case 'ui:search.reset-request':
+                this.broadcast('search:advanced.reset', {}); // Ordonne à la barre de recherche de vider son UI et ses filtres.
+                const activeTabId = this.getActiveTabId();
+                this._requestListRefresh(activeTabId, { criteria: {} });
+                break;
             case 'dialog:boite-dialogue:init-request':
             case 'ui:boite-dialogue:add-collection-item-request':
                 this.broadcast('app:loading.start');
+                this._publishDisplayStatus('Ouverture du formulaire de collection...');
+                this.openDialogBox(payload);
+                break;
+            case 'ui:toolbar.add-request':
+                this.broadcast('app:loading.start');
+                this._publishDisplayStatus('Ouverture du formulaire de création...');
+                this.openDialogBox(payload);
+                break;
+            case 'ui:toolbar.edit-request':
+                this.broadcast('app:loading.start');
+                this._publishDisplayStatus(`Modification de l'élément...`);
                 this.openDialogBox(payload);
                 break;
             case 'ui:dialog.opened':
+                this._publishDisplayStatus(payload.mode === 'creation' ? 'Formulaire prêt pour la saisie.' : 'Formulaire prêt pour modification.');
                 this.broadcast('app:loading.stop');
                 break;
+            case 'app:entity.saved':
+                this._requestListRefresh(payload.originatorId);
+                this._showNotification('Enregistrement réussi !', 'success');
+                break;
             case 'app:form.validation-error':
+                this._publishDisplayStatus('Erreur de validation. Veuillez corriger le formulaire.');
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
             case 'app:base-données:sélection-request':
@@ -107,15 +154,52 @@ export default class extends Controller {
                 this.broadcast('app:loading.start');
                 this.broadcast('app:list.refresh-request', payload);
                 break;
+            case 'ui:toolbar.refresh-request':
+                this.displayState.action = 'Rafraîchissement manuel';
+                this._publishDisplayStatus('Rafraîchissement en cours...');
+                this.broadcast('app:loading.start');
+                this._requestListRefresh(this.getActiveTabId());
+                break;
+            case 'app:list.refreshed':
+                this._setSelectionState([]); // On réinitialise la sélection
+                const itemCount = payload.itemCount ?? 'N/A';
+                this._publishDisplayStatus(`Liste chargée : ${itemCount} élément(s)`);
+                this.broadcast('app:loading.stop');
+                break;
+            case 'app:list.data-loaded':
+                this.numericAttributesAndValues = payload.numericAttributesAndValues || {}; // Met à jour les données numériques
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues. Rediffusion du contexte...`, { 
+                    numericAttributesAndValues: this.numericAttributesAndValues
+                });
+                // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques)
+                break;
             case 'ui:context-menu.request':
                 this.broadcast('app:context-menu.show', payload);
                 break;
+            case 'app:api.delete-request':
+                this._publishDisplayStatus('Suppression en cours...');
+                this._handleApiDeleteRequest(payload);
+                break;
             case 'dialog:confirmation.request':
+                this._publishDisplayStatus('Attente de confirmation...');
                 this._requestDeleteConfirmation(payload);
+                break;
+            case 'ui:toolbar.delete-request':
+                this._handleToolbarDeleteRequest(payload);
+                break;
+            case 'ui:status.notify':
+                this.broadcast('app:status.updated', payload);
                 break;
             case 'ui:toolbar.open-request':
                 this.broadcast('app:loading.start');
+                this._publishDisplayStatus('Ouverture de la vue détaillée...');
                 this._handleOpenRequest(payload);
+                break;
+            case 'app:tab.opened':
+                this.broadcast('app:loading.stop');
+                break;
+            case 'ui:toolbar.select-all-request':
+                this.broadcast('app:list.toggle-all-request');
                 break;
             case 'app:navigation-rubrique:openned':
                 this.broadcast('app:navigation-rubrique:openned', payload);

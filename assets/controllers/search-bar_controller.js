@@ -23,11 +23,19 @@ export default class extends BaseController {
         // this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
         this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
         this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
+        this.boundHandleContextChanged = this.handleContextChanged.bind(this);
+
+        document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData); // Événement interne du Cerveau
+        document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset); // Événement interne du Cerveau
+        document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte
+
         this.initializeCriteria();
     }
 
     disconnect() {
-        
+        document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
+        document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
+        document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
     }
 
     openAdvancedSearch() {
@@ -45,6 +53,7 @@ export default class extends BaseController {
         });
 
         const formHtml = this.buildAdvancedForm();
+        this.notifyCerveau('dialog:search.open-request', { formHtml });
     }
 
     /**
@@ -292,6 +301,7 @@ export default class extends BaseController {
 
     dispatchSearchEvent() {
         this.updateSummary();
+        this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
     }
 
     updateSummary() {
