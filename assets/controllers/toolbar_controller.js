@@ -59,7 +59,7 @@ export default class extends Controller {
         // Le canvas de formulaire est initialisé avec celui de la rubrique principale, puis mis à jour au changement d'onglet.
         this.activeFormCanvas = this.entityFormCanvasValue; // Initialisation avec la valeur du contexte principal.
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
-        this.boundHandleTabChange = this.handleTabChange.bind(this);
+        // this.boundHandleTabChange = this.handleTabChange.bind(this); // SUPPRIMÉ : La méthode handleTabChange n'existe plus.
 
         this.initializeToolbarState();
         this.setupEventListeners();
