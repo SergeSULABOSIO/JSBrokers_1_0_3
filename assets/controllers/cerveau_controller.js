@@ -93,14 +93,11 @@ export default class extends Controller {
             case 'ui:tab.context-changed':
                 this._setSelectionState([]); // Réinitialise la sélection
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
+                this.tabId = payload.tabId;
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
-                // this.activeTabFormCanvas = null; // Réinitialise le formCanvas, il sera fourni par le list-manager
                 this.broadcast('app:context.changed', {
-                    tabId: payload.tabId,
+                    tabId: this.tabId,
                     parentId: this.activeParentId,
-                    // formCanvas: this.activeTabFormCanvas, // Sera null initialement pour les collections
-                    // selection: this.selectionState, // Inclut la sélection actuelle
-                    // numericAttributesAndValues: this.numericAttributesAndValues // Inclut les données numériques
                 });
                 break;
             case 'app:list.context-ready':
@@ -180,7 +177,6 @@ export default class extends Controller {
                     numericAttributesAndValues: this.numericAttributesAndValues
                 });
                 // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques)
-                this.publishContext();
                 break;
             case 'ui:context-menu.request':
                 this.broadcast('app:context-menu.show', payload);
@@ -291,23 +287,6 @@ export default class extends Controller {
                 this.selectionIds.delete(id);
             }
         }
-        this.publishContext();
-    }
-
-    /**
-     * CORRIGÉ : Diffuse l'état de CONTEXTE actuel (sélection + données numériques) à toute l'application.
-     * @private
-     */
-    publishContext() {
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - publishContext - Code: 100 - Données:`, { selection: this.selectionState, numeric: this.numericAttributesAndValues });
-        this.displayState.selectionCount = this.selectionState.length;
-        this._publishDisplayStatus(); // Met à jour le display avec le nouveau compte de sélection
-        
-        // CORRECTION : On diffuse 'app:context.changed' au lieu de l'ancien 'ui:selection.changed'.
-        this.broadcast('app:context.changed', {
-            selection: this.selectionState,
-            numericAttributesAndValues: this.numericAttributesAndValues // On inclut les données numériques.
-        });
     }
 
     /**
@@ -318,7 +297,7 @@ export default class extends Controller {
     _setSelectionState(selectos = []) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
-        this.publishContext();
+        // this.publishContext();
     }
 
     /**
