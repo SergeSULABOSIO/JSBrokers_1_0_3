@@ -297,7 +297,6 @@ export default class extends Controller {
     _setSelectionState(selectos = []) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
-        // this.publishContext();
     }
 
     /**
