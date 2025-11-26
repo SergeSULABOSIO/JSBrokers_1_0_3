@@ -64,7 +64,7 @@ export default class extends Controller {
         this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this); // NOUVEAU
 
         // --- CORRECTION : Écoute les événements diffusés par le Cerveau ---
-        document.addEventListener('ui:selection.changed', this.boundHandleSelection);
+        document.addEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On écoute le nouvel événement de contexte global.
         document.addEventListener('app:status.updated', this.boundHandleStatusUpdate);
         document.addEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
 
@@ -81,7 +81,7 @@ export default class extends Controller {
         // C'est cette sauvegarde "zombie" qui restaurait une ancienne sélection
         // et déclenchait par effet domino la sauvegarde de l'ancien état de la liste,
         // annulant ainsi le nettoyage du workspace-manager.
-        document.removeEventListener('ui:selection.changed', this.boundHandleSelection);
+        document.removeEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On supprime l'écouteur pour le bon événement.
         document.removeEventListener('app:status.updated', this.boundHandleStatusUpdate);
         document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
     }
