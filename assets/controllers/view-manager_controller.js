@@ -136,7 +136,7 @@ export default class extends Controller {
         // Cela empêche un rafraîchissement de liste dans un onglet de collection de réinitialiser toute l'interface.
         // La condition `event.detail.originatorId !== 'principal'` est la clé.
         if (this.activeTabId !== 'principal' || (event.detail.originatorId && event.detail.originatorId !== 'principal')) {
-            this._saveState(); // Sauvegarde même si l'onglet n'est pas principal pour mémoriser la sélection
+            // this._saveState(); // Désactivé: La sauvegarde d'état est gérée globalement ou non souhaitée pour l'instant.
             return;
         }
 
