@@ -88,7 +88,9 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-
+        document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
+        document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -119,7 +121,7 @@ export default class extends Controller {
         });
 
         // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
-        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos }); // Cet événement est spécifique à la complétion de la sélection
+        this.updateSelectAllCheckboxState();
     }
 
     /**
@@ -225,6 +227,7 @@ export default class extends Controller {
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
             this.emptyStateContainerTarget.classList.add('d-none');
+            this.notifyCerveau("app:error.api", { error: error.message });
         }
     }
 
@@ -234,6 +237,26 @@ export default class extends Controller {
      */
     resetSelection() {
         this.updateSelectAllCheckboxState(); // Met à jour l'état de la case "tout cocher"
+    }
+
+    /**
+     * NOUVEAU : Notifie la barre de recherche pour réinitialiser la recherche.
+     */
+    resetSearch() {
+        this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
+    }
+
+    /**
+     * NOUVEAU : Demande au cerveau d'ouvrir le formulaire d'ajout pour l'entité de cette liste.
+     */
+    requestAddItem() {
+        this.notifyCerveau('ui:toolbar.add-request', {
+            entityFormCanvas: this.entityFormCanvasValue,
+            isCreationMode: true,
+            context: {
+                originatorId: this.element.id // Pour savoir quelle liste rafraîchir après l'ajout
+            }
+        });
     }
 
 
