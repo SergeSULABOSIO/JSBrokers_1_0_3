@@ -123,9 +123,6 @@ export default class extends Controller {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
         }
-
-        // Sauvegarder l'état après modification des onglets
-        // this._saveState(); // Désactivé: La sauvegarde d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
     }
 
     /**
