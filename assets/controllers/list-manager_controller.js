@@ -62,14 +62,14 @@ export default class extends Controller {
             // En cas d'erreur, on s'assure que la valeur reste un objet vide.
             initialNumericData = {};
         }
-        this.notifyCerveau('app:list.data-loaded', {
-            numericAttributesAndValues: initialNumericData
-        });
+        // this.notifyCerveau('app:list.data-loaded', {
+        //     numericAttributesAndValues: initialNumericData
+        // });
 
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
-        document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
-        document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
+        // document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        // document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
+        // document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
 
         if (this.nbElementsValue === 0) {
             this.listContainerTarget.classList.add('d-none');
@@ -77,10 +77,10 @@ export default class extends Controller {
             this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
         }
 
-        if (this.element.id !== 'principal') {
-            console.log(`${this.nomControleur} - Notification de contexte prêt pour l'onglet: ${this.element.id}`, { formCanvas: this.entityFormCanvasValue });
-            this.notifyCerveau('app:list.context-ready', { tabId: this.element.id, formCanvas: this.entityFormCanvasValue });
-        }
+        // if (this.element.id !== 'principal') {
+        //     console.log(`${this.nomControleur} - Notification de contexte prêt pour l'onglet: ${this.element.id}`, { formCanvas: this.entityFormCanvasValue });
+        //     this.notifyCerveau('app:list.context-ready', { tabId: this.element.id, formCanvas: this.entityFormCanvasValue });
+        // }
     }
 
     /**
@@ -91,9 +91,9 @@ export default class extends Controller {
         // CORRECTION DÉFINITIVE : On ne sauvegarde PLUS l'état à la déconnexion.
         // C'est cette action qui causait la "race condition" en ré-écrivant l'état
         // que le workspace-manager venait de nettoyer.
-        document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
-        document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
+        // document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        // document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
+        // document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -126,7 +126,7 @@ export default class extends Controller {
         });
 
         // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
-        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos }); // Cet événement est spécifique à la complétion de la sélection
+        // this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos }); // Cet événement est spécifique à la complétion de la sélection
         this.updateSelectAllCheckboxState();
     }
 
@@ -236,7 +236,7 @@ export default class extends Controller {
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
             this.emptyStateContainerTarget.classList.add('d-none');
-            this.notifyCerveau("app:error.api", { error: error.message });
+            // this.notifyCerveau("app:error.api", { error: error.message });
         }
     }
 
@@ -252,20 +252,20 @@ export default class extends Controller {
      * NOUVEAU : Notifie la barre de recherche pour réinitialiser la recherche.
      */
     resetSearch() {
-        this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
+        // this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
     }
 
     /**
      * NOUVEAU : Demande au cerveau d'ouvrir le formulaire d'ajout pour l'entité de cette liste.
      */
     requestAddItem() {
-        this.notifyCerveau('ui:toolbar.add-request', {
-            entityFormCanvas: this.entityFormCanvasValue,
-            isCreationMode: true,
-            context: {
-                originatorId: this.element.id // Pour savoir quelle liste rafraîchir après l'ajout
-            }
-        });
+        // this.notifyCerveau('ui:toolbar.add-request', {
+        //     entityFormCanvas: this.entityFormCanvasValue,
+        //     isCreationMode: true,
+        //     context: {
+        //         originatorId: this.element.id // Pour savoir quelle liste rafraîchir après l'ajout
+        //     }
+        // });
     }
 
 
@@ -334,11 +334,11 @@ export default class extends Controller {
      */
     _postDataLoadActions(doc) {
         this.resetSelection();
-        this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
+        // this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
         const numericDataPayload = this._extractNumericDataFromResponse(doc); // Renvoie { numericAttributesAndValues: {...} }
         // On envoie le payload tel quel au cerveau
-        this.notifyCerveau('app:list.data-loaded', numericDataPayload);
-        this.notifyCerveau('app:list.refreshed', { itemCount: this.rowCheckboxTargets.length });
+        // this.notifyCerveau('app:list.data-loaded', numericDataPayload);
+        // this.notifyCerveau('app:list.refreshed', { itemCount: this.rowCheckboxTargets.length });
     }
 
     /**

@@ -24,10 +24,10 @@ export default class extends BaseController {
         this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
         this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
 
-        // document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
-        document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData); // Événement interne du Cerveau
-        document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset); // Événement interne du Cerveau
-        document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte
+        // // document.addEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
+        // document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData); // Événement interne du Cerveau
+        // document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset); // Événement interne du Cerveau
+        // document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte
 
         // DÉSACTIVÉ : Le chargement des filtres depuis sessionStorage est mis en commentaire.
         // const storageKey = `lastSearchCriteria_${this.nomEntiteValue}`;
@@ -46,9 +46,9 @@ export default class extends BaseController {
 
     disconnect() {
         // document.removeEventListener('app:list.refresh-request', this.boundHandleExternalRefresh);
-        document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
-        document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
-        document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
+        // document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
+        // document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
+        // document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
     }
 
     // --- Actions de l'utilisateur (logique mise à jour) ---
@@ -69,7 +69,7 @@ export default class extends BaseController {
         });
 
         const formHtml = this.buildAdvancedForm();
-        this.notifyCerveau('dialog:search.open-request', { formHtml });
+        // this.notifyCerveau('dialog:search.open-request', { formHtml });
     }
 
     /**
@@ -347,7 +347,7 @@ export default class extends BaseController {
         // console.log(`${this.nomControleur} - Filtres sauvegardés dans sessionStorage:`, this.activeFilters); // Désactivé
 
         // Notifie le cerveau pour lancer la recherche
-        this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
+        // this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
         // Met à jour le résumé des filtres actifs
         this.updateSummary();
     }

@@ -71,9 +71,9 @@ export default class extends Controller {
      * @private
      */
     setupEventListeners() {
-        console.log(`${this.nomControleur} - Activation des écouteurs d'événements`);
-        document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
-        document.addEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate); // NOUVEAU : Écoute la mise à jour du formCanvas
+        // console.log(`${this.nomControleur} - Activation des écouteurs d'événements`);
+        // document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
+        // document.addEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate); // NOUVEAU : Écoute la mise à jour du formCanvas
         // document.addEventListener('ui:tab.context-changed', this.boundHandleTabChange); // ANCIEN : Remplacé par app:context.changed et app:form-canvas.updated
     }
 
@@ -83,8 +83,8 @@ export default class extends Controller {
      */
     disconnect() {
         console.log(`${this.nomControleur} - Déconnecté - Suppression d'écouteurs.`);
-        document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
-        document.removeEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate);
+        // document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
+        // document.removeEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate);
         // document.removeEventListener('ui:tab.context-changed', this.boundHandleTabChange); // ANCIEN : Remplacé
     }
 
@@ -92,31 +92,31 @@ export default class extends Controller {
      * Gère la mise à jour du contexte reçue du Cerveau (sélection, onglet actif, etc.).
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
-    handleContextUpdate(event) {
-        // NOUVEAU : Le payload de 'app:context.changed' contient la sélection et le formCanvas initial.
-        const { selection, formCanvas } = event.detail;
-        this.selectos = selection || [];
-        if (formCanvas) { // Le formCanvas peut être null initialement pour les collections
-            this.activeFormCanvas = formCanvas;
-            this.entityFormCanvasValue = formCanvas;
-        }
-        this.organizeButtons();
-    }
+    // handleContextUpdate(event) {
+    //     // NOUVEAU : Le payload de 'app:context.changed' contient la sélection et le formCanvas initial.
+    //     const { selection, formCanvas } = event.detail;
+    //     this.selectos = selection || [];
+    //     if (formCanvas) { // Le formCanvas peut être null initialement pour les collections
+    //         this.activeFormCanvas = formCanvas;
+    //         this.entityFormCanvasValue = formCanvas;
+    //     }
+    //     this.organizeButtons();
+    // }
 
     /**
      * NOUVEAU : Gère la mise à jour du formCanvas actif.
      * @param {CustomEvent} event - L'événement `app:form-canvas.updated`.
      */
-    handleFormCanvasUpdate(event) {
-        const { formCanvas } = event.detail;
-        if (formCanvas) {
-            this.activeFormCanvas = formCanvas;
-            this.entityFormCanvasValue = formCanvas;
-            console.log(`${this.nomControleur} - Contexte de formulaire mis à jour.`);
-        }
-        // On réorganise les boutons au cas où la disponibilité des actions change avec le nouveau formCanvas.
-        this.organizeButtons();
-    }
+    // handleFormCanvasUpdate(event) {
+    //     const { formCanvas } = event.detail;
+    //     if (formCanvas) {
+    //         this.activeFormCanvas = formCanvas;
+    //         this.entityFormCanvasValue = formCanvas;
+    //         console.log(`${this.nomControleur} - Contexte de formulaire mis à jour.`);
+    //     }
+    //     // On réorganise les boutons au cas où la disponibilité des actions change avec le nouveau formCanvas.
+    //     this.organizeButtons();
+    // }
 
     /**
      * Affiche ou masque les boutons contextuels en fonction de la sélection actuelle.
@@ -220,7 +220,7 @@ export default class extends Controller {
                 entities: this.selectos
             };
         }
-        this.notifyCerveau(eventName, payload);
+        // this.notifyCerveau(eventName, payload);
     }
 
     /**
