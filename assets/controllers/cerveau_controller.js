@@ -175,10 +175,12 @@ export default class extends Controller {
                 this.broadcast('app:loading.stop');
                 break;
             case 'app:list.data-loaded':
-                this.numericAttributesAndValues = payload.numericAttributesAndValues || {};
-                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues:`, { 
+                this.numericAttributesAndValues = payload.numericAttributesAndValues || {}; // Met à jour les données numériques
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues. Rediffusion du contexte...`, { 
                     numericAttributesAndValues: this.numericAttributesAndValues
                 });
+                // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques)
+                this.publishContext();
                 break;
             case 'ui:context-menu.request':
                 this.broadcast('app:context-menu.show', payload);
@@ -289,21 +291,22 @@ export default class extends Controller {
                 this.selectionIds.delete(id);
             }
         }
-        this.publishSelection();
+        this.publishContext();
     }
 
     /**
-     * Diffuse l'état de sélection actuel à toute l'application.
+     * CORRIGÉ : Diffuse l'état de CONTEXTE actuel (sélection + données numériques) à toute l'application.
      * @private
      */
-    publishSelection() {
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - publishSelection - Code: 100 - Données:`, { selection: this.selectionState });
+    publishContext() {
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - publishContext - Code: 100 - Données:`, { selection: this.selectionState, numeric: this.numericAttributesAndValues });
         this.displayState.selectionCount = this.selectionState.length;
         this._publishDisplayStatus(); // Met à jour le display avec le nouveau compte de sélection
-        // --- NOUVELLE ARCHITECTURE ---
-        this.broadcast('ui:selection.changed', {
+        
+        // CORRECTION : On diffuse 'app:context.changed' au lieu de l'ancien 'ui:selection.changed'.
+        this.broadcast('app:context.changed', {
             selection: this.selectionState,
-            numericAttributesAndValues: this.numericAttributesAndValues
+            numericAttributesAndValues: this.numericAttributesAndValues // On inclut les données numériques.
         });
     }
 
@@ -315,7 +318,7 @@ export default class extends Controller {
     _setSelectionState(selectos = []) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
-        this.publishSelection();
+        this.publishContext();
     }
 
     /**
