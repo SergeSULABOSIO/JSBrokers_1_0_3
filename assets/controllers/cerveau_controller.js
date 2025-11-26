@@ -91,16 +91,16 @@ export default class extends Controller {
                 this.broadcast('app:workspace.load-default');
                 break;
             case 'ui:tab.context-changed':
-                this._setSelectionState(payload.selectos || []); // Réinitialise la sélection
+                this._setSelectionState([]); // Réinitialise la sélection
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
-                this.activeTabFormCanvas = null; // Réinitialise le formCanvas, il sera fourni par le list-manager
+                // this.activeTabFormCanvas = null; // Réinitialise le formCanvas, il sera fourni par le list-manager
                 this.broadcast('app:context.changed', {
                     tabId: payload.tabId,
                     parentId: this.activeParentId,
-                    formCanvas: this.activeTabFormCanvas, // Sera null initialement pour les collections
-                    selection: this.selectionState, // Inclut la sélection actuelle
-                    numericAttributesAndValues: this.numericAttributesAndValues // Inclut les données numériques
+                    // formCanvas: this.activeTabFormCanvas, // Sera null initialement pour les collections
+                    // selection: this.selectionState, // Inclut la sélection actuelle
+                    // numericAttributesAndValues: this.numericAttributesAndValues // Inclut les données numériques
                 });
                 break;
             case 'app:list.context-ready':
