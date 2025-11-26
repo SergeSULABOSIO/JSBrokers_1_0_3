@@ -78,45 +78,23 @@ export default class extends Controller {
                 this._publishDisplayStatus('Chargement de la rubrique...');
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 break;
-
             case 'app:context.initialized':
                 this._setApplicationContext(payload);
                 break;
-
             case 'app:error.api':
                 this._showNotification('Une erreur serveur est survenue. Veuillez réessayer.', 'error');
                 break;
-
             case 'ui:list-row.selection-changed':
                 this.updateSelectionState(payload);
                 break;
-
             case 'ui:toolbar.close-request':
                 this.broadcast('app:workspace.load-default');
                 break;
-
             case 'ui:tab.context-changed':
-                // --- SOLUTION FINALE ---
-                // On fait confiance au ViewManager. Il est la source de vérité pour l'état de sélection
-                // lors d'un changement d'onglet. S'il envoie un tableau de `selectos`, on l'utilise.
-                // S'il envoie un tableau vide (ou rien), la sélection est réinitialisée.
-                // Cette simple ligne corrige le problème de perte de sélection au retour sur un onglet
-                // tout en conservant le comportement de réinitialisation pour les nouveaux onglets.
-                this._setSelectionState(payload.selectos || []);
-
                 this._setSelectionState(payload.selectos || []); // Réinitialise la sélection
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
-                
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
-                // --- SOLUTION : On ne rafraîchit plus systématiquement la liste au changement d'onglet ---
-                // Le rafraîchissement automatique entraînait la perte de la sélection restaurée.
-                // La liste est déjà chargée, soit par le serveur initialement, soit par un chargement AJAX précédent.
-                // this.broadcast('search:advanced.reset', {}); // On peut aussi commenter cette ligne si on veut conserver les filtres entre les onglets.
-                this.broadcast('ui:tab.context-changed', { ...payload });
                 this.activeTabFormCanvas = null; // Réinitialise le formCanvas, il sera fourni par le list-manager
-
-                // NOUVEAU : Diffuse un événement de changement de contexte initial.
-                // Les composants périphériques doivent écouter cet événement.
                 this.broadcast('app:context.changed', {
                     tabId: payload.tabId,
                     parentId: this.activeParentId,
@@ -125,181 +103,126 @@ export default class extends Controller {
                     numericAttributesAndValues: this.numericAttributesAndValues // Inclut les données numériques
                 });
                 break;
-            
-            // SOLUTION : Un list-manager (d'un onglet) notifie qu'il est prêt avec son propre contexte.
             case 'app:list.context-ready':
-                // Le Cerveau relaie cette information via un événement que la toolbar écoute déjà.
-                // C'est la clé pour que le bouton "Ajouter" ait le bon contexte de formulaire.
-                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'. Diffusion...`, payload);
-                // this.broadcast('ui:tab.context-changed', { tabId: payload.tabId, formCanvas: payload.formCanvas });
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
                 this.activeTabFormCanvas = payload.formCanvas; // Met à jour le formCanvas actif
-                // NOUVEAU : Diffuse un événement plus spécifique pour la mise à jour du formCanvas.
                 this.broadcast('app:form-canvas.updated', {
                     tabId: payload.tabId,
                     formCanvas: this.activeTabFormCanvas
                 });
                 break;
-
-
-            // --- NOUVEAU : Communication pour la recherche avancée ---
             case 'dialog:search.open-request':
-                // La barre de recherche demande l'ouverture du dialogue
                 this.broadcast('dialog:search.open-request', payload);
                 break;
             case 'search:advanced.submitted':
-                // Le dialogue a soumis les critères, on les envoie à la barre de recherche
                 this.broadcast('search:advanced.submitted', payload);
                 break;
             case 'search:advanced.reset':
-                // Le dialogue demande une réinitialisation, on le transmet à la barre de recherche
                 this.broadcast('search:advanced.reset', payload);
                 break;
-            // NOUVEAU : La barre de recherche demande une réinitialisation complète.
-            // CORRECTION : Cet événement est maintenant le point d'entrée unique pour une réinitialisation globale.
             case 'ui:search.reset-request':
                 this.broadcast('search:advanced.reset', {}); // Ordonne à la barre de recherche de vider son UI et ses filtres.
-                // Lance une recherche avec des critères vides (par défaut) pour rafraîchir la liste.
-                // CORRECTION : On passe l'ID de l'onglet actif pour cibler la bonne liste.
                 const activeTabId = this.getActiveTabId();
                 this._requestListRefresh(activeTabId, { criteria: {} });
                 break;
-
-            // FUSION DE LOGIQUE : On traite une demande d'init de dialogue comme une demande d'ajout.
-            // Cela garantit que le payload est toujours enrichi avec le contexte nécessaire (formCanvas).
             case 'dialog:boite-dialogue:init-request':
             case 'ui:boite-dialogue:add-collection-item-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture du formulaire de collection...');
                 this.openDialogBox(payload);
                 break;
-
             case 'ui:toolbar.add-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture du formulaire de création...');
                 this.openDialogBox(payload);
                 break;
-            
             case 'ui:toolbar.edit-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus(`Modification de l'élément...`);
                 this.openDialogBox(payload);
                 break;
-
-            // NOUVEAU : Le dialogue est complètement chargé et affiché.
             case 'ui:dialog.opened':
                 this._publishDisplayStatus(payload.mode === 'creation' ? 'Formulaire prêt pour la saisie.' : 'Formulaire prêt pour modification.');
                 this.broadcast('app:loading.stop');
                 break;
-
             case 'app:entity.saved':
                 this._requestListRefresh(payload.originatorId);
                 this._showNotification('Enregistrement réussi !', 'success');
                 break;
-
             case 'app:form.validation-error':
                 this._publishDisplayStatus('Erreur de validation. Veuillez corriger le formulaire.');
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
-
             case 'app:base-données:sélection-request':
                 console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, payload);
                 const criteriaText = Object.keys(payload.criteria || {}).length > 0 
                     ? `Filtre actif` 
                     : 'Recherche par défaut';
                 this._publishDisplayStatus(criteriaText);
-                // CORRECTION : Le cerveau déclenche systématiquement le chargement.
                 this.broadcast('app:loading.start');
                 this.broadcast('app:list.refresh-request', payload);
                 break;
-
             case 'ui:toolbar.refresh-request':
                 this.displayState.action = 'Rafraîchissement manuel';
                 this._publishDisplayStatus('Rafraîchissement en cours...');
-                // On notifie le début du chargement pour que la barre de progression s'affiche
                 this.broadcast('app:loading.start');
                 this._requestListRefresh(this.getActiveTabId());
                 break;
-
-            // NOUVEAU : La liste a terminé son actualisation.
             case 'app:list.refreshed':
                 this._setSelectionState([]); // On réinitialise la sélection
                 const itemCount = payload.itemCount ?? 'N/A';
                 this._publishDisplayStatus(`Liste chargée : ${itemCount} élément(s)`);
-                // On notifie la fin pour masquer la barre de progression
                 this.broadcast('app:loading.stop');
                 break;
-            
-            // NOUVEAU : La liste a chargé ses données, on stocke les infos numériques.
             case 'app:list.data-loaded':
                 this.numericAttributesAndValues = payload.numericAttributesAndValues || {};
-                // --- AJOUT DU LOG ---
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues:`, { 
                     numericAttributesAndValues: this.numericAttributesAndValues
                 });
                 break;
-
             case 'ui:context-menu.request':
                 this.broadcast('app:context-menu.show', payload);
                 break;
-
             case 'app:api.delete-request':
                 this._publishDisplayStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);
                 break;
-
             case 'dialog:confirmation.request':
                 this._publishDisplayStatus('Attente de confirmation...');
                 this._requestDeleteConfirmation(payload);
                 break;
-
             case 'ui:toolbar.delete-request':
                 this._handleToolbarDeleteRequest(payload);
                 break;
-
             case 'ui:status.notify':
                 this.broadcast('app:status.updated', payload);
                 break;
-
             case 'ui:toolbar.open-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture de la vue détaillée...');
                 this._handleOpenRequest(payload);
                 break;
-
-            // NOUVEAU : Un onglet a été ouvert avec succès dans la colonne de visualisation.
             case 'app:tab.opened':
                 this.broadcast('app:loading.stop');
                 break;
-
             case 'ui:toolbar.select-all-request':
                 this.broadcast('app:list.toggle-all-request');
                 break;
-
-            // NOUVEAU : La rubrique est chargée, on le signale à tout le monde.
             case 'app:navigation-rubrique:openned':
                 this.broadcast('app:navigation-rubrique:openned', payload);
                 break;
-
-            // NOUVEAU : La liste a terminé une opération de sélection de masse.
             case 'ui:list.selection-completed':
                 this._setSelectionState(payload.selectos || []);
                 break;
-
-            // NOUVEAU : Relais pour les indicateurs de chargement
             case 'app:loading.start':
                 this.broadcast('app:loading.start', payload);
                 break;
-
             case 'app:loading.stop':
                 this.broadcast('app:loading.stop', payload);
                 break;
-
-            // NOUVEAU : Gère la fermeture d'un dialogue
             case 'ui:dialog.closed':
                 this._publishDisplayStatus('Formulaire fermé.');
                 break;
-
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }
@@ -404,7 +327,7 @@ export default class extends Controller {
         this.currentIdEntreprise = payload.idEntreprise;
         this.currentIdInvite = payload.idInvite;
         // On relaie l'événement pour que les composants comme la toolbar puissent se mettre à jour.
-        this.broadcast('ui:tab.context-changed', payload);
+        // this.broadcast('ui:tab.context-changed', payload); // Désactivé: Le contexte est maintenant diffusé via 'app:context.changed'
     }
 
     /**
