@@ -72,7 +72,6 @@ export default class extends Controller {
         switch (type) {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
                 this.displayState.rubricName = payload.entityName || 'Inconnu';
-                this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 break;
             case 'app:context.initialized':
                 this._setApplicationContext(payload);
