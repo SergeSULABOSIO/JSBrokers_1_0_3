@@ -186,6 +186,18 @@ export default class extends Controller {
     }
 
     /**
+     * Définit le contexte principal de l'application (entreprise et invité) et le diffuse.
+     * @param {object} payload - Le payload contenant idEntreprise et idInvite.
+     * @private
+     */
+    _setApplicationContext(payload) {
+        this.currentIdEntreprise = payload.idEntreprise;
+        this.currentIdInvite = payload.idInvite;
+        // On relaie l'événement pour que les composants comme la toolbar puissent se mettre à jour.
+        // this.broadcast('ui:tab.context-changed', payload); // Désactivé: Le contexte est maintenant diffusé via 'app:context.changed'
+    }
+
+    /**
      * Charge le contenu HTML d'un composant pour l'espace de travail et diffuse le résultat.
      * @param {string} componentName Le nom du fichier de template du composant.
      * @fires workspace:component.loaded
@@ -226,5 +238,66 @@ export default class extends Controller {
      */
     broadcast(eventName, detail) {
         document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
+    }
+
+    /**
+     * Récupère l'ID de l'onglet actuellement actif depuis le view-manager.
+     * @returns {string|null}
+     * @private
+     */
+    getActiveTabId() {
+        const viewManagerEl = document.querySelector('[data-controller="view-manager"]');
+        if (viewManagerEl && this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager')) {
+            return this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager').activeTabId;
+        }
+        return 'principal'; // Fallback sur la liste principale
+    }
+
+    /**
+     * Diffuse une demande de rafraîchissement de la liste.
+     * @param {string|null} [originatorId=null] - L'ID du composant qui a initié la demande, pour un rafraîchissement ciblé.
+     * @param {object} [criteriaPayload={}] - Le payload contenant les critères de recherche.
+     * @private
+     */
+    _requestListRefresh(originatorId = null, criteriaPayload = {}) {
+        const payload = {
+            ...criteriaPayload, // Fusionne les critères passés
+            idEntreprise: this.currentIdEntreprise,
+            idInvite: this.currentIdInvite,
+            originatorId: originatorId // On ajoute l'ID de la liste à rafraîchir
+        };
+        this.broadcast('app:list.refresh-request', payload);
+    }
+
+    /**
+     * Diffuse une demande pour afficher une notification (toast).
+     * @param {string} text - Le message à afficher.
+     * @param {'success'|'error'|'info'|'warning'} [type='info'] - Le type de notification.
+     * @private
+     */
+    _showNotification(text, type = 'info') {
+        this.broadcast('app:notification.show', { text, type });
+    }
+
+    /**
+     * NOUVEAU : Formate et diffuse le message de statut pour le display.
+     * @param {string|null} [action=null] - La nouvelle action à afficher. Si null, l'action précédente est conservée.
+     * @private
+     */
+    _publishDisplayStatus(action = null) {
+        if (action) {
+            this.displayState.action = action;
+        }
+
+        const timestamp = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        
+        const messageHtml = `
+            <span class="fw-bold text-dark">${this.displayState.rubricName}</span>
+            <span class="mx-2 text-muted">›</span>
+            <span>${this.displayState.action}</span>
+            <span class="mx-2 text-muted">|</span>
+            <span class="fw-bold">${this.displayState.selectionCount}</span> sélection(s)
+        `;
+        this.broadcast('app:display.update', { html: messageHtml });
     }
 }
