@@ -35,8 +35,8 @@ export default class extends Controller {
         this.selectedIds = new Set();
 
         // --- CORRECTION : Lier et activer l'écouteur d'événement ---
-        this.boundHandleStateUpdate = this.handleStateUpdate.bind(this);
-        document.addEventListener('ui:selection.changed', this.boundHandleStateUpdate);
+        this.boundHandleContextChanged = this.handleContextChanged.bind(this);
+        document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte global
     }
 
     /**
@@ -44,17 +44,17 @@ export default class extends Controller {
      * Nettoie l'écouteur d'événement pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener('ui:selection.changed', this.boundHandleStateUpdate);
+        document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
     }
 
     /**
      * Gère la mise à jour de l'état reçue du Cerveau.
      * Met à jour les données internes et déclenche un recalcul.
-     * @param {CustomEvent} event - L'événement `ui:selection.changed`.
+     * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
-    handleStateUpdate(event) {
-        const { selection, numericAttributesAndValues } = event.detail;
-        console.log(this.nomControleur + " - Code: 1980 - handleStateUpdate - Received selection:", selection, "numericAttributesAndValues:", numericAttributesAndValues);
+    handleContextChanged(event) {
+        const { selection, numericAttributesAndValues } = event.detail; // Le payload de 'app:context.changed' contient ces infos.
+        console.log(this.nomControleur + " - Code: 1980 - handleContextChanged - Received selection:", selection, "numericAttributesAndValues:", numericAttributesAndValues);
 
         // --- SOLUTION : On traite l'objet `numericAttributesAndValues` directement ---
         let numericAttributes = [];
