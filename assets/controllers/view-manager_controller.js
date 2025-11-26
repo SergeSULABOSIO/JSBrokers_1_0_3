@@ -60,16 +60,10 @@ export default class extends Controller {
         });
 
         this.boundHandleSelection = this.handleSelection.bind(this);
-        this.boundHandleStatusUpdate = this.handleStatusUpdate.bind(this);
         this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this); // NOUVEAU
 
-        // --- CORRECTION : Écoute les événements diffusés par le Cerveau ---
         document.addEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On écoute le nouvel événement de contexte global.
-        document.addEventListener('app:status.updated', this.boundHandleStatusUpdate);
         document.addEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
-
-        // Tente de restaurer l'état précédent (onglet actif, etc.)
-        // this._restoreState(); // Désactivé: La restauration d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
     }
 
     /**
@@ -77,24 +71,10 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-        // CORRECTION DÉFINITIVE : On ne sauvegarde PLUS l'état à la déconnexion.
-        // C'est cette sauvegarde "zombie" qui restaurait une ancienne sélection
-        // et déclenchait par effet domino la sauvegarde de l'ancien état de la liste,
-        // annulant ainsi le nettoyage du workspace-manager.
         document.removeEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On supprime l'écouteur pour le bon événement.
-        document.removeEventListener('app:status.updated', this.boundHandleStatusUpdate);
         document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
     }
 
-    /**
-     * Met à jour la barre de statut lorsqu'un événement est reçu du Cerveau.
-     * @param {CustomEvent} event - L'événement `app:status.updated`.
-     */
-    handleStatusUpdate(event) {
-        // Cette méthode peut être conservée pour d'autres types de statuts
-        // ou dépréciée au profit du nouveau système.
-        // Pour l'instant, on la laisse pour ne pas créer de régression.
-    }
 
     /**
      * NOUVEAU : Met à jour la barre de statut principale avec le contenu HTML fourni par le cerveau.
@@ -116,10 +96,6 @@ export default class extends Controller {
         // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
         const selectos = event.detail.selection || [];
 
-        // On mémorise l'état de sélection pour l'onglet actuellement actif.
-        if (this.activeTabId) {
-            // this.tabStates[this.activeTabId] = selectos; // Désactivé: La gestion de l'état de sélection est centralisée par le Cerveau.
-        }
 
         const selection = selectos.map(s => s.id);
         const entities = selectos.map(s => s.entity);
@@ -130,11 +106,6 @@ export default class extends Controller {
         const isSingleSelection = entities && entities.length === 1;
         const newParentId = isSingleSelection ? entities[0].id : null;
 
-        // On ne met à jour les onglets que si on est sur l'onglet principal
-        // et que l'ID de l'entité parente a changé.
-        // CORRECTION : On ignore les changements de sélection qui ne proviennent pas de l'onglet principal.
-        // Cela empêche un rafraîchissement de liste dans un onglet de collection de réinitialiser toute l'interface.
-        // La condition `event.detail.originatorId !== 'principal'` est la clé.
         if (this.activeTabId !== 'principal' || (event.detail.originatorId && event.detail.originatorId !== 'principal')) {
             // this._saveState(); // Désactivé: La sauvegarde d'état est gérée globalement ou non souhaitée pour l'instant.
             return;
@@ -233,8 +204,6 @@ export default class extends Controller {
         const tabId = `${collectionInfo.code}-for-${parentEntity.id}`;
         const tab = document.createElement('button');
         tab.className = 'list-tab';
-        // CORRECTION : On ajoute le paramètre 'usage' qui est attendu par le contrôleur PHP.
-        // Pour un onglet, l'usage est 'generic'.
         const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}/generic`;
 
         Object.assign(tab.dataset, {
@@ -257,9 +226,6 @@ export default class extends Controller {
             canAdd: 'true'
         });
         content.style.display = 'block';
-        // NOUVEAU : On remplace le simple spinner par un squelette de tableau statique.
-        // Ce squelette est une représentation simple d'une liste de collection à une seule colonne,
-        // ce qui est plus informatif et visuellement plus agréable pour l'utilisateur.
         content.innerHTML = `
             <div class="table-scroll-wrapper flex-grow-1">
                 <table class="table table-hover table-sm table-enhanced">
@@ -290,52 +256,4 @@ export default class extends Controller {
     dispatch(name, detail = {}) {
         document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
-
-    /**
-     * NOUVEAU : Sauvegarde l'état actuel du gestionnaire de vue dans sessionStorage.
-     * @private
-     */
-    // _saveState() { // Désactivé: La sauvegarde d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
-    //     const state = {
-    //         activeTabId: this.activeTabId,
-    //         collectionTabsParentId: this.collectionTabsParentId,
-    //         parentEntityCanvas: this.parentEntityCanvas,
-    //         parentEntityType: this.parentEntityType, // Sauvegarde du type
-    //         tabStates: this.tabStates
-    //     };
-    //     // Utilise le chemin de l'URL pour une clé unique par rubrique
-    //     const storageKey = `viewManagerState_${window.location.pathname}`;
-    //     sessionStorage.setItem(storageKey, JSON.stringify(state));
-    // }
-
-    /**
-     * NOUVEAU : Restaure l'état du gestionnaire de vue depuis sessionStorage.
-     * @private
-     */
-    // _restoreState() { // Désactivé: La restauration d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
-    //     const storageKey = `viewManagerState_${window.location.pathname}`;
-    //     const savedStateJSON = sessionStorage.getItem(storageKey);
-    //     if (!savedStateJSON) return;
-    //     const savedState = JSON.parse(savedStateJSON);
-    //     this.activeTabId = savedState.activeTabId || 'principal';
-    //     this.collectionTabsParentId = savedState.collectionTabsParentId || null;
-    //     this.parentEntityCanvas = savedState.parentEntityCanvas || null;
-    //     this.parentEntityType = savedState.parentEntityType || null; // Restauration du type
-    //     this.tabStates = savedState.tabStates || {};
-    //     // Si un parent était sélectionné, on recrée les onglets de collection
-    //     if (this.collectionTabsParentId && this.parentEntityCanvas && this.parentEntityType) {
-    //         const parentEntity = { id: this.collectionTabsParentId }; // On a juste besoin de l'ID
-    //         const parentEntityType = this.parentEntityType; // On utilise le type restauré
-    //         const collections = this._findCollectionsInCanvas(this.parentEntityCanvas);
-    //         collections.forEach(collectionInfo => this._createTab(collectionInfo, parentEntity, parentEntityType));
-    //     }
-    //     // On active l'onglet qui était actif
-    //     const tabToActivate = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
-    //     if (tabToActivate) {
-    //         // On utilise requestAnimationFrame pour s'assurer que le DOM est prêt
-    //         requestAnimationFrame(() => {
-    //             tabToActivate.click();
-    //         });
-    //     }
-    // }
 }
