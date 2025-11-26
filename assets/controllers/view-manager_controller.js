@@ -190,19 +190,12 @@ export default class extends Controller {
             this.tabContentContainerTarget.appendChild(newContent);
         }
 
-        // On restaure l'état de la sélection pour cet onglet et on notifie le Cerveau.
-        const savedSelectos = this.tabStates[this.activeTabId] || [];
-
+        // CORRECTION : On notifie simplement le Cerveau du changement d'onglet.
+        // On n'envoie PLUS de 'selectos' vide qui réinitialisait à tort l'état de sélection global.
+        // Le Cerveau, en recevant cet événement, rediffusera le contexte actuel (y compris la sélection qu'il a déjà mémorisée).
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
-            // On envoie l'état de sélection sauvegardé pour ce nouvel onglet.
-            selectos: savedSelectos, 
             parentId: this.collectionTabsParentId,
-            // Pour les onglets de collection, le formCanvas est fourni par le list-manager lui-même
-            // via l'événement 'app:list.context-ready'.
-            // Pour l'onglet 'principal', on peut potentiellement le fournir ici si nécessaire.
-            // Pour l'instant, on laisse le list-manager gérer la notification du formCanvas.
-            // formCanvas: (this.activeTabId === 'principal' && this.entityCanvasValue) ? this.entityCanvasValue : undefined
         });
 
         // Sauvegarder l'état après un changement d'onglet
