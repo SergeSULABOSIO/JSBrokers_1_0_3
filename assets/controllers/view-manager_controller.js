@@ -190,16 +190,10 @@ export default class extends Controller {
             this.tabContentContainerTarget.appendChild(newContent);
         }
 
-        // CORRECTION : On notifie simplement le Cerveau du changement d'onglet.
-        // On n'envoie PLUS de 'selectos' vide qui réinitialisait à tort l'état de sélection global.
-        // Le Cerveau, en recevant cet événement, rediffusera le contexte actuel (y compris la sélection qu'il a déjà mémorisée).
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
             parentId: this.collectionTabsParentId,
         });
-
-        // Sauvegarder l'état après un changement d'onglet
-        // this._saveState(); // Désactivé: La sauvegarde d'état est gérée globalement par le workspace-manager ou non souhaitée pour l'instant.
     }
 
     /**
