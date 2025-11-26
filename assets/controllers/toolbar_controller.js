@@ -58,15 +58,46 @@ export default class extends Controller {
         this.selectos = [];
         // Le canvas de formulaire est initialisé avec celui de la rubrique principale, puis mis à jour au changement d'onglet.
         this.activeFormCanvas = this.entityFormCanvasValue; // Initialisation avec la valeur du contexte principal.
+        this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
+        this.boundHandleFormCanvasUpdate = this.handleFormCanvasUpdate.bind(this);
 
         this.initializeToolbarState();
+        this.setupEventListeners();
+    }
+
+    /**
+     * Met en place les écouteurs d'événements globaux.
+     * La barre d'outils écoute uniquement le Cerveau pour ajuster son état.
+     * @private
+     */
+    setupEventListeners() {
+        document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
+        document.addEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate); // NOUVEAU : Écoute la mise à jour du formCanvas
+    }
+
+    /**
+     * Gère la mise à jour du contexte reçue du Cerveau (sélection, onglet actif, etc.).
+     * @param {CustomEvent} event - L'événement `ui:selection.changed`.
+     */
+    handleContextUpdate(event) {
+        // NOUVEAU : Le payload de 'app:context.changed' contient la sélection et le formCanvas initial.
+        const { selection, formCanvas } = event.detail;
+        this.selectos = selection || [];
+        if (formCanvas) { // Le formCanvas peut être null initialement pour les collections
+            this.activeFormCanvas = formCanvas;
+            this.entityFormCanvasValue = formCanvas;
+        }
+        this.organizeButtons();
     }
 
     /**
      * Méthode du cycle de vie de Stimulus.
      * Nettoie les écouteurs pour éviter les fuites de mémoire lors de la déconnexion.
      */
-    disconnect() {}
+    disconnect() {
+        document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
+        document.removeEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate);
+    }
 
     /**
      * Affiche ou masque les boutons contextuels en fonction de la sélection actuelle.
@@ -171,5 +202,20 @@ export default class extends Controller {
                 entities: this.selectos
             };
         }
+        this.notifyCerveau(eventName, payload);
+    }
+
+    /**
+     * Méthode centralisée pour envoyer un événement au Cerveau.
+     * @param {string} type Le type d'événement pour le Cerveau (ex: 'ui:toolbar.add-request').
+     * @param {object} [payload={}] - Données additionnelles à envoyer.
+     * @private
+     */
+    notifyCerveau(type, payload = {}) {
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
+        });
+        this.element.dispatchEvent(event);
     }
 }

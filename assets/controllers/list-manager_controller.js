@@ -62,13 +62,24 @@ export default class extends Controller {
             // En cas d'erreur, on s'assure que la valeur reste un objet vide.
             initialNumericData = {};
         }
+        this.notifyCerveau('app:list.data-loaded', {
+            numericAttributesAndValues: initialNumericData
+        });
 
         console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
+        document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
+        document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
+        document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
 
         if (this.nbElementsValue === 0) {
             this.listContainerTarget.classList.add('d-none');
             this.emptyStateContainerTarget.classList.remove('d-none');
             this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
+        }
+
+        if (this.element.id !== 'principal') {
+            console.log(`${this.nomControleur} - Notification de contexte prêt pour l'onglet: ${this.element.id}`, { formCanvas: this.entityFormCanvasValue });
+            this.notifyCerveau('app:list.context-ready', { tabId: this.element.id, formCanvas: this.entityFormCanvasValue });
         }
     }
 
@@ -108,7 +119,7 @@ export default class extends Controller {
         });
 
         // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
-        this.updateSelectAllCheckboxState();
+        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos }); // Cet événement est spécifique à la complétion de la sélection
     }
 
     /**
@@ -275,7 +286,11 @@ export default class extends Controller {
      */
     _postDataLoadActions(doc) {
         this.resetSelection();
+        this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
         const numericDataPayload = this._extractNumericDataFromResponse(doc); // Renvoie { numericAttributesAndValues: {...} }
+        // On envoie le payload tel quel au cerveau
+        this.notifyCerveau('app:list.data-loaded', numericDataPayload);
+        this.notifyCerveau('app:list.refreshed', { itemCount: this.rowCheckboxTargets.length });
     }
 
     /**
