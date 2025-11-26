@@ -72,7 +72,6 @@ export default class extends Controller {
         switch (type) {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
                 this.displayState.rubricName = payload.entityName || 'Inconnu';
-                this._publishDisplayStatus('Chargement de la rubrique...');
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 break;
             case 'app:context.initialized':
@@ -92,15 +91,12 @@ export default class extends Controller {
             case 'dialog:boite-dialogue:init-request':
             case 'ui:boite-dialogue:add-collection-item-request':
                 this.broadcast('app:loading.start');
-                this._publishDisplayStatus('Ouverture du formulaire de collection...');
                 this.openDialogBox(payload);
                 break;
             case 'ui:dialog.opened':
-                this._publishDisplayStatus(payload.mode === 'creation' ? 'Formulaire prêt pour la saisie.' : 'Formulaire prêt pour modification.');
                 this.broadcast('app:loading.stop');
                 break;
             case 'app:form.validation-error':
-                this._publishDisplayStatus('Erreur de validation. Veuillez corriger le formulaire.');
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
             case 'app:base-données:sélection-request':
@@ -108,7 +104,6 @@ export default class extends Controller {
                 const criteriaText = Object.keys(payload.criteria || {}).length > 0 
                     ? `Filtre actif` 
                     : 'Recherche par défaut';
-                this._publishDisplayStatus(criteriaText);
                 this.broadcast('app:loading.start');
                 this.broadcast('app:list.refresh-request', payload);
                 break;
@@ -116,12 +111,10 @@ export default class extends Controller {
                 this.broadcast('app:context-menu.show', payload);
                 break;
             case 'dialog:confirmation.request':
-                this._publishDisplayStatus('Attente de confirmation...');
                 this._requestDeleteConfirmation(payload);
                 break;
             case 'ui:toolbar.open-request':
                 this.broadcast('app:loading.start');
-                this._publishDisplayStatus('Ouverture de la vue détaillée...');
                 this._handleOpenRequest(payload);
                 break;
             case 'app:navigation-rubrique:openned':
@@ -137,7 +130,6 @@ export default class extends Controller {
                 this.broadcast('app:loading.stop', payload);
                 break;
             case 'ui:dialog.closed':
-                this._publishDisplayStatus('Formulaire fermé.');
                 break;
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
