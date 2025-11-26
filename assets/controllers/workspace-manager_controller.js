@@ -612,7 +612,7 @@ export default class extends Controller {
         }
 
         // Cet événement est spécifiquement destiné au Cerveau pour charger le composant
-        this.notifyCerveau('ui:component.load', { 
+        this.notifyCerveau('ui:component.load', {
             componentName: componentName,
             entityName: entityName, // NOUVEAU : Envoyer le nom de l'entité
             idEntreprise: this.idEntrepriseValue,

@@ -71,6 +71,7 @@ export default class extends Controller {
 
         switch (type) {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
+                this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 this.displayState.rubricName = payload.entityName || 'Inconnu';
                 break;
             case 'app:context.initialized':
@@ -182,5 +183,48 @@ export default class extends Controller {
     _setSelectionState(selectos = []) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
+    }
+
+    /**
+     * Charge le contenu HTML d'un composant pour l'espace de travail et diffuse le résultat.
+     * @param {string} componentName Le nom du fichier de template du composant.
+     * @fires workspace:component.loaded
+     * @private
+     */
+    async loadWorkspaceComponent(componentName, entityName, idEntreprise, idInvite) {
+        // On construit l'URL avec les IDs dans le chemin, comme défini par la route Symfony
+        let url = `/espacedetravail/api/load-component/${idInvite}/${idEntreprise}?component=${componentName}`;
+        // On ajoute le paramètre 'entity' s'il est fourni
+        if (entityName) {
+            url += `&entity=${entityName}`;
+        }
+
+        // LOG: Vérifier l'URL finale avant l'appel fetch
+        console.log(`[${++window.logSequence}] [Cerveau] Appel fetch vers l'URL: ${url}`);
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Erreur serveur (${response.status}): ${response.statusText}`);
+            }
+            const html = await response.text();
+
+            // On diffuse le HTML aux contrôleurs qui écoutent (ex: espace-de-travail)
+            this.broadcast('workspace:component.loaded', { html: html, error: null });
+
+        } catch (error) {
+            console.error(`[Cerveau] Échec du chargement du composant '${componentName}':`, error);
+            this.broadcast('workspace:component.loaded', { html: null, error: error.message });
+        }
+    }
+
+    /**
+     * Méthode utilitaire pour diffuser un événement à l'échelle de l'application.
+     * @param {string} eventName - Le nom de l'événement à diffuser.
+     * @param {object} [detail={}] - Le payload à inclure dans `event.detail`.
+     * @private
+     */
+    broadcast(eventName, detail) {
+        document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
     }
 }
