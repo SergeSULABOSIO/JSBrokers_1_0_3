@@ -22,13 +22,11 @@ export default class extends Controller {
     connect() {
         window.logSequence = window.logSequence || 0; // Initialise le compteur de log global
         this.nomControleur = "Cerveau";
-        // --- NOUVELLE ARCHITECTURE : Le Cerveau devient la source de vérité pour la sélection ---
         this.selectionState = []; // Tableau des objets "selecto"
         this.selectionIds = new Set(); // Pour une recherche rapide des IDs
         this.numericAttributesAndValues = {}; // Stocke l'objet complet {colonnes, valeurs}
         this.activeTabFormCanvas = null; // NOUVEAU : Pour stocker le formCanvas de l'onglet actif.
         this.currentIdEntreprise = null;
-        // NOUVEAU : État pour le "display"
         this.displayState = {
             rubricName: 'Tableau de bord',
             action: 'Initialisation',
@@ -38,7 +36,6 @@ export default class extends Controller {
         this.currentIdInvite = null;
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
         console.log(`[${++window.logSequence}] ${this.nomControleur} 🧠 Cerveau prêt à orchestrer.`);
-        // --- CORRECTION : Lier la fonction une seule fois et stocker la référence ---
         this.boundHandleEvent = this.handleEvent.bind(this);
         document.addEventListener('cerveau:event', this.boundHandleEvent);
     }
@@ -84,15 +81,7 @@ export default class extends Controller {
             case 'app:error.api':
                 this._showNotification('Une erreur serveur est survenue. Veuillez réessayer.', 'error');
                 break;
-            // case 'ui:list-row.selection-changed':
-            //     this.updateSelectionState(payload);
-            //     break;
-            // case 'ui:toolbar.close-request':
-            //     this.broadcast('app:workspace.load-default');
-            //     break;
             case 'ui:tab.context-changed':
-                // this._setSelectionState([]); // Réinitialise la sélection
-                // this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 this.tabId = payload.tabId;
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
                 this.broadcast('app:context.changed', {
@@ -100,52 +89,16 @@ export default class extends Controller {
                     parentId: this.activeParentId,
                 });
                 break;
-            // case 'app:list.context-ready':
-            //     console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
-            //     this.activeTabFormCanvas = payload.formCanvas; // Met à jour le formCanvas actif
-            //     this.broadcast('app:form-canvas.updated', {
-            //         tabId: payload.tabId,
-            //         formCanvas: this.activeTabFormCanvas
-            //     });
-            //     break;
-            // case 'dialog:search.open-request':
-            //     this.broadcast('dialog:search.open-request', payload);
-            //     break;
-            // case 'search:advanced.submitted':
-            //     this.broadcast('search:advanced.submitted', payload);
-            //     break;
-            // case 'search:advanced.reset':
-            //     this.broadcast('search:advanced.reset', payload);
-            //     break;
-            // case 'ui:search.reset-request':
-            //     this.broadcast('search:advanced.reset', {}); // Ordonne à la barre de recherche de vider son UI et ses filtres.
-            //     const activeTabId = this.getActiveTabId();
-            //     this._requestListRefresh(activeTabId, { criteria: {} });
-            //     break;
             case 'dialog:boite-dialogue:init-request':
             case 'ui:boite-dialogue:add-collection-item-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture du formulaire de collection...');
                 this.openDialogBox(payload);
                 break;
-            // case 'ui:toolbar.add-request':
-            //     this.broadcast('app:loading.start');
-            //     this._publishDisplayStatus('Ouverture du formulaire de création...');
-            //     this.openDialogBox(payload);
-            //     break;
-            // case 'ui:toolbar.edit-request':
-            //     this.broadcast('app:loading.start');
-            //     this._publishDisplayStatus(`Modification de l'élément...`);
-            //     this.openDialogBox(payload);
-            //     break;
             case 'ui:dialog.opened':
                 this._publishDisplayStatus(payload.mode === 'creation' ? 'Formulaire prêt pour la saisie.' : 'Formulaire prêt pour modification.');
                 this.broadcast('app:loading.stop');
                 break;
-            // case 'app:entity.saved':
-            //     this._requestListRefresh(payload.originatorId);
-            //     this._showNotification('Enregistrement réussi !', 'success');
-            //     break;
             case 'app:form.validation-error':
                 this._publishDisplayStatus('Erreur de validation. Veuillez corriger le formulaire.');
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
@@ -159,53 +112,18 @@ export default class extends Controller {
                 this.broadcast('app:loading.start');
                 this.broadcast('app:list.refresh-request', payload);
                 break;
-            // case 'ui:toolbar.refresh-request':
-            //     this.displayState.action = 'Rafraîchissement manuel';
-            //     this._publishDisplayStatus('Rafraîchissement en cours...');
-            //     this.broadcast('app:loading.start');
-            //     this._requestListRefresh(this.getActiveTabId());
-            //     break;
-            // case 'app:list.refreshed':
-            //     this._setSelectionState([]); // On réinitialise la sélection
-            //     const itemCount = payload.itemCount ?? 'N/A';
-            //     this._publishDisplayStatus(`Liste chargée : ${itemCount} élément(s)`);
-            //     this.broadcast('app:loading.stop');
-            //     break;
-            // case 'app:list.data-loaded':
-            //     this.numericAttributesAndValues = payload.numericAttributesAndValues || {}; // Met à jour les données numériques
-            //     console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues. Rediffusion du contexte...`, { 
-            //         numericAttributesAndValues: this.numericAttributesAndValues
-            //     });
-            //     // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques)
-            //     break;
             case 'ui:context-menu.request':
                 this.broadcast('app:context-menu.show', payload);
                 break;
-            // case 'app:api.delete-request':
-            //     this._publishDisplayStatus('Suppression en cours...');
-            //     this._handleApiDeleteRequest(payload);
-            //     break;
             case 'dialog:confirmation.request':
                 this._publishDisplayStatus('Attente de confirmation...');
                 this._requestDeleteConfirmation(payload);
                 break;
-            // case 'ui:toolbar.delete-request':
-            //     this._handleToolbarDeleteRequest(payload);
-            //     break;
-            // case 'ui:status.notify':
-            //     this.broadcast('app:status.updated', payload);
-            //     break;
             case 'ui:toolbar.open-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture de la vue détaillée...');
                 this._handleOpenRequest(payload);
                 break;
-            // case 'app:tab.opened':
-            //     this.broadcast('app:loading.stop');
-            //     break;
-            // case 'ui:toolbar.select-all-request':
-            //     this.broadcast('app:list.toggle-all-request');
-            //     break;
             case 'app:navigation-rubrique:openned':
                 this.broadcast('app:navigation-rubrique:openned', payload);
                 break;
@@ -236,8 +154,6 @@ export default class extends Controller {
     _handleOpenRequest(payload) {
         if (payload.entities && payload.entities.length > 0) {
             payload.entities.forEach(selecto => {
-                // Le Cerveau relaie l'objet "selecto" complet.
-                // Le workspace-manager est responsable de l'interpréter.
                 this.broadcast('app:liste-element:openned', selecto);
             });
         }
@@ -259,8 +175,7 @@ export default class extends Controller {
                 ...payload.context,
                 idEntreprise: this.currentIdEntreprise, // CORRECTION : Utiliser la propriété correcte
                 idInvite: this.currentIdInvite       // CORRECTION : Utiliser la propriété correcte
-            }, // CORRECTION : Ajout de la virgule manquante.
-            // NOUVEAU : On ajoute le contexte du parent si on est dans un onglet de collection.
+            }, 
             parentContext: this.activeParentId ? {
                 id: this.activeParentId,
                 fieldName: payload.entityFormCanvas && payload.entityFormCanvas.parametres && payload.entityFormCanvas.parametres.parent_entity_field_name
@@ -269,234 +184,12 @@ export default class extends Controller {
     }
 
     /**
-     * Met à jour l'état de la sélection et publie le changement.
-     * @param {object} selecto - L'objet de sélection d'une ligne.
-     * @private
-     */
-    // updateSelectionState(selecto) {
-    //     const { id, isChecked } = selecto;
-
-    //     if (isChecked) {
-    //         if (!this.selectionIds.has(id)) {
-    //             this.selectionState.push(selecto);
-    //             this.selectionIds.add(id);
-    //         }
-    //     } else {
-    //         if (this.selectionIds.has(id)) {
-    //             this.selectionState = this.selectionState.filter(item => item.id !== id);
-    //             this.selectionIds.delete(id);
-    //         }
-    //     }
-    // }
-
-    /**
      * Définit un nouvel état de sélection complet et le publie.
      * @param {Array} [selectos=[]] - Le nouveau tableau d'objets "selecto".
      * @private
      */
     _setSelectionState(selectos = []) {
-        // this.selectionState = selectos;
-        // this.selectionIds = new Set(this.selectionState.map(s => s.id));
+        this.selectionState = selectos;
+        this.selectionIds = new Set(this.selectionState.map(s => s.id));
     }
-    
-    /**
-     * Définit le contexte principal de l'application (entreprise et invité) et le diffuse.
-     * @param {object} payload - Le payload contenant idEntreprise et idInvite.
-     * @private
-     */
-    _setApplicationContext(payload) {
-        this.currentIdEntreprise = payload.idEntreprise;
-        this.currentIdInvite = payload.idInvite;
-        // On relaie l'événement pour que les composants comme la toolbar puissent se mettre à jour.
-        // this.broadcast('ui:tab.context-changed', payload); // Désactivé: Le contexte est maintenant diffusé via 'app:context.changed'
-    }
-
-    /**
-     * Charge le contenu HTML d'un composant pour l'espace de travail et diffuse le résultat.
-     * @param {string} componentName Le nom du fichier de template du composant.
-     * @fires workspace:component.loaded
-     * @private
-     */
-    async loadWorkspaceComponent(componentName, entityName, idEntreprise, idInvite) {
-        // On construit l'URL avec les IDs dans le chemin, comme défini par la route Symfony
-        let url = `/espacedetravail/api/load-component/${idInvite}/${idEntreprise}?component=${componentName}`;
-        // On ajoute le paramètre 'entity' s'il est fourni
-        if (entityName) {
-            url += `&entity=${entityName}`;
-        }
-
-        // LOG: Vérifier l'URL finale avant l'appel fetch
-        console.log(`[${++window.logSequence}] [Cerveau] Appel fetch vers l'URL: ${url}`);
-        console.log( `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, url);
-        
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Erreur serveur (${response.status}): ${response.statusText}`);
-            }
-            const html = await response.text();
-
-            // On diffuse le HTML aux contrôleurs qui écoutent (ex: espace-de-travail)
-            this.broadcast('workspace:component.loaded', { html: html, error: null });
-
-        } catch (error) {
-            console.error(`[Cerveau] Échec du chargement du composant '${componentName}':`, error);
-            this.broadcast('workspace:component.loaded', { html: null, error: error.message });
-        }
-    }
-
-    /**
-     * Méthode utilitaire pour diffuser un événement à l'échelle de l'application.
-     * @param {string} eventName - Le nom de l'événement à diffuser.
-     * @param {object} [detail={}] - Le payload à inclure dans `event.detail`.
-     * @private
-     */
-    broadcast(eventName, detail) {
-        document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
-    }
-
-
-    
-
-    /**
-     * Gère la logique de suppression d'éléments via l'API en exécutant plusieurs requêtes en parallèle.
-     * Notifie le reste de l'application en cas de succès ou d'échec.
-     * @param {object} payload - Le payload contenant les IDs, l'URL et l'originatorId.
-     * @param {number[]} payload.ids - Tableau des IDs des entités à supprimer.
-     * @param {string} payload.url - L'URL de base de l'API de suppression.
-     * @param {string} [payload.originatorId] - L'ID du composant qui a initié la demande (pour un rafraîchissement ciblé).
-     * @private
-     */
-    // _handleApiDeleteRequest(payload) {
-    //     const { ids, url, originatorId } = payload;
-
-    //     // On crée un tableau de promesses, une pour chaque requête de suppression.
-    //     const deletePromises = ids.map(id => {
-    //         const deleteUrl = `${url}/${id}`; // Construit l'URL finale pour chaque ID.
-    //         return fetch(deleteUrl, { method: 'DELETE' })
-    //             .then(response => {
-    //                 if (!response.ok) throw new Error(`Erreur lors de la suppression de l'élément ${id}.`);
-    //                 return response.json();
-    //             });
-    //     });
-
-    //     // On attend que toutes les promesses de suppression soient résolues.
-    //     Promise.all(deletePromises)
-    //         .then(results => {
-    //             const message = results.length > 1 ? `${results.length} éléments supprimés avec succès.` : 'Élément supprimé avec succès.';
-    //             console.log(`${this.nomControleur} - SUCCÈS: Suppression(s) réussie(s).`, results);
-    //             this._showNotification(message, 'success');
-    //             // On réinitialise l'état de la sélection et on notifie tout le monde (toolbar, etc.)
-    //             this._setSelectionState([]);
-    //             this._requestListRefresh(originatorId);
-    //             this.broadcast('ui:confirmation.close');
-    //         })
-    //         .catch(error => {
-    //             console.error("-> ERREUR: Échec de la suppression API.", error);
-    //             // Notifie la boîte de dialogue de confirmation de l'erreur pour qu'elle l'affiche.
-    //             this.broadcast('ui:confirmation.error', { error: error.message || "La suppression a échoué." });
-    //             // La boîte de dialogue de confirmation gérera sa propre fermeture après affichage de l'erreur.
-    //         });
-    // }
-
-    /**
-     * Récupère l'ID de l'onglet actuellement actif depuis le view-manager.
-     * @returns {string|null}
-     * @private
-     */
-    getActiveTabId() {
-        const viewManagerEl = document.querySelector('[data-controller="view-manager"]');
-        if (viewManagerEl && this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager')) {
-            return this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager').activeTabId;
-        }
-        return 'principal'; // Fallback sur la liste principale
-    }
-
-    /**
-     * Diffuse une demande de rafraîchissement de la liste.
-     * @param {string|null} [originatorId=null] - L'ID du composant qui a initié la demande, pour un rafraîchissement ciblé.
-     * @param {object} [criteriaPayload={}] - Le payload contenant les critères de recherche.
-     * @private
-     */
-    _requestListRefresh(originatorId = null, criteriaPayload = {}) {
-        const payload = {
-            ...criteriaPayload, // Fusionne les critères passés
-            idEntreprise: this.currentIdEntreprise,
-            idInvite: this.currentIdInvite,
-            originatorId: originatorId // On ajoute l'ID de la liste à rafraîchir
-        };
-        this.broadcast('app:list.refresh-request', payload);
-    }
-
-    /**
-     * Diffuse une demande pour afficher une notification (toast).
-     * @param {string} text - Le message à afficher.
-     * @param {'success'|'error'|'info'|'warning'} [type='info'] - Le type de notification.
-     * @private
-     */
-    _showNotification(text, type = 'info') {
-        this.broadcast('app:notification.show', { text, type });
-    }
-
-    /**
-     * NOUVEAU : Formate et diffuse le message de statut pour le display.
-     * @param {string|null} [action=null] - La nouvelle action à afficher. Si null, l'action précédente est conservée.
-     * @private
-     */
-    _publishDisplayStatus(action = null) {
-        if (action) {
-            this.displayState.action = action;
-        }
-
-        const timestamp = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        
-        const messageHtml = `
-            <span class="fw-bold text-dark">${this.displayState.rubricName}</span>
-            <span class="mx-2 text-muted">›</span>
-            <span>${this.displayState.action}</span>
-            <span class="mx-2 text-muted">|</span>
-            <span class="fw-bold">${this.displayState.selectionCount}</span> sélection(s)
-        `;
-        this.broadcast('app:display.update', { html: messageHtml });
-    }
-
-
-    /**
-     * Encapsule la logique de diffusion d'une demande de confirmation de suppression.
-     * @param {object} payload - Le payload de l'événement d'origine, doit contenir `selection`.
-     * @private
-     */
-    _requestDeleteConfirmation(payload) {
-        const itemCount = payload.selection ? payload.selection.length : 0;
-        if (itemCount === 0) return; // Ne rien faire si la sélection est vide.
-
-        this.broadcast('ui:confirmation.request', {
-            title: 'Confirmation de suppression',
-            body: `Êtes-vous sûr de vouloir supprimer ${itemCount} élément(s) ?`,
-            onConfirm: { type: 'app:api.delete-request', payload: payload }
-        });
-    }
-
-
-    
-    /**
-     * Gère une demande de suppression provenant de la barre d'outils en construisant
-     * et en diffusant une demande de confirmation.
-     * @param {object} payload - Le payload de l'événement, contenant `selection` et `actionConfig`.
-     * @private
-     */
-    // _handleToolbarDeleteRequest(payload) {
-    //     this.broadcast('ui:confirmation.request', {
-    //         title: payload.title || 'Confirmation de suppression',
-    //         body: payload.body || `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
-    //         onConfirm: {
-    //             type: 'app:api.delete-request',
-    //             payload: {
-    //                 ids: payload.selection, // Les IDs à supprimer
-    //                 url: payload.actionConfig.url, // L'URL de base pour la suppression
-    //                 originatorId: payload.actionConfig?.originatorId // L'ID de la collection à rafraîchir (optionnel)
-    //             }
-    //         }
-    //     });
-    // }
 }
