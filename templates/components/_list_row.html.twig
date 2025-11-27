@@ -35,6 +35,7 @@
                 class="form-check-input"
                 data-list-manager-target="rowCheckbox" {# Cible pour le contrôleur de liste (tout cocher) #}
                 data-list-row-target="checkbox" {# Cible pour le contrôleur de ligne #}
+                data-action="change->list-manager#handleRowSelection" {# NOUVEAU : Notifie le parent list-manager #}
                 data-list-row-idobjet-value="{{ entity.id }}" {# CORRECTION: Utiliser le bon nom d'attribut pour l'ID #}
                 {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
                 data-entity-type="{{entite_nom}}" 

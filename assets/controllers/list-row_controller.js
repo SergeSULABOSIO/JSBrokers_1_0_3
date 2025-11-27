@@ -106,22 +106,9 @@ export default class extends Controller {
      * @fires cerveau:event
      */
     handleCheckboxChange(event) {
-        const checkbox = this.checkboxTarget;
-        this.element.classList.toggle('row-selected', checkbox.checked);
-
-        const payload = this.buildSelectoPayload();
-
-        if (!payload) {
-            return; // On arrête l'exécution ici.
-        }
-
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleCheckboxChange - Code: 100 - Données:`, payload);
-        this.dispatch('cerveau:event', {
-            type: 'ui:list-row.selection-changed',
-            source: this.nomControleur,
-            payload: payload,
-            timestamp: Date.now()
-        });
+        // La logique de notification est maintenant entièrement déléguée au list-manager
+        // via l'action 'change->list-manager#handleRowSelection' dans le template.
+        this.element.classList.toggle('row-selected', this.checkboxTarget.checked);
     }
 
     /**
