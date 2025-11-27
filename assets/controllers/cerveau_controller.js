@@ -80,9 +80,6 @@ export default class extends Controller {
             case 'app:error.api':
                 this._showNotification('Une erreur serveur est survenue. Veuillez réessayer.', 'error');
                 break;
-            case 'ui:list-row.selection-changed':
-                this.updateSelectionState(payload);
-                break;
             case 'ui:toolbar.close-request':
                 this.broadcast('app:workspace.load-default');
                 break;
@@ -296,6 +293,12 @@ export default class extends Controller {
     _setSelectionState(selectos = []) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
+        // NOUVEAU : On diffuse immédiatement le contexte mis à jour.
+        // C'est ce qui permet à la toolbar et à la barre des totaux de se mettre à jour.
+        this.broadcast('app:context.changed', {
+            selection: this.selectionState,
+            numericAttributesAndValues: this.numericAttributesAndValues
+        });
     }
 
     /**

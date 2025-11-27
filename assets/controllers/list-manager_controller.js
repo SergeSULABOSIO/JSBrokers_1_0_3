@@ -96,6 +96,33 @@ export default class extends BaseController {
     // --- GESTION DE LA SÉLECTION ---
 
     /**
+     * NOUVEAU : Gère le clic sur une case à cocher d'une ligne enfant.
+     * Met à jour l'état de sélection interne et notifie le cerveau avec l'état complet.
+     * @param {Event} event
+     */
+    handleRowSelection(event) {
+        // On met à jour l'état visuel de la case "Tout cocher"
+        this.updateSelectAllCheckboxState();
+
+        // On reconstruit l'état complet de la sélection
+        const allSelectos = [];
+        this.rowCheckboxTargets.forEach(checkbox => {
+            if (checkbox.checked) {
+                const listRowController = this.application.getControllerForElementAndIdentifier(checkbox.closest('[data-controller="list-row"]'), 'list-row');
+                if (listRowController) {
+                    const selecto = listRowController.buildSelectoPayload();
+                    if (selecto) {
+                        allSelectos.push(selecto);
+                    }
+                }
+            }
+        });
+
+        // On notifie le cerveau UNE SEULE FOIS avec la liste complète.
+        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos });
+    }
+
+    /**
      * Gère le clic sur la case "Tout cocher" ou une demande externe du Cerveau.
      * Coche ou décoche toutes les cases de la liste et notifie le Cerveau avec l'état final.
      */
@@ -122,7 +149,6 @@ export default class extends BaseController {
 
         // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
         this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos });
-        // this.updateSelectAllCheckboxState(); // La mise à jour est maintenant déclenchée par handleGlobalSelectionUpdate
     }
 
     /**
