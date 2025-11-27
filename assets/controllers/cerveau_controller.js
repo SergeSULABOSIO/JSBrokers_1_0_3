@@ -171,7 +171,12 @@ export default class extends Controller {
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues. Rediffusion du contexte...`, { 
                     numericAttributesAndValues: this.numericAttributesAndValues
                 });
-                // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques)
+                // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques).
+                // C'est ce qui permet à la barre des totaux de se mettre à jour.
+                this.broadcast('app:context.changed', {
+                    selection: this.selectionState,
+                    numericAttributesAndValues: this.numericAttributesAndValues
+                });
                 break;
             case 'ui:context-menu.request':
                 this.broadcast('app:context-menu.show', payload);
@@ -383,5 +388,88 @@ export default class extends Controller {
             <span class="fw-bold">${this.displayState.selectionCount}</span> sélection(s)
         `;
         this.broadcast('app:display.update', { html: messageHtml });
+    }
+
+    /**
+     * Gère la logique de suppression d'éléments via l'API en exécutant plusieurs requêtes en parallèle.
+     * Notifie le reste de l'application en cas de succès ou d'échec.
+     * @param {object} payload - Le payload contenant les IDs, l'URL et l'originatorId.
+     * @param {number[]} payload.ids - Tableau des IDs des entités à supprimer.
+     * @param {string} payload.url - L'URL de base de l'API de suppression.
+     * @param {string} [payload.originatorId] - L'ID du composant qui a initié la demande (pour un rafraîchissement ciblé).
+     * @private
+     */
+    _handleApiDeleteRequest(payload) {
+        const { ids, url, originatorId } = payload;
+
+        // On crée un tableau de promesses, une pour chaque requête de suppression.
+        const deletePromises = ids.map(id => {
+            const deleteUrl = `${url}/${id}`; // Construit l'URL finale pour chaque ID.
+            return fetch(deleteUrl, { method: 'DELETE' })
+                .then(response => {
+                    if (!response.ok) throw new Error(`Erreur lors de la suppression de l'élément ${id}.`);
+                    return response.json();
+                });
+        });
+
+        // On attend que toutes les promesses de suppression soient résolues.
+        Promise.all(deletePromises)
+            .then(results => {
+                const message = results.length > 1 ? `${results.length} éléments supprimés avec succès.` : 'Élément supprimé avec succès.';
+                console.log(`${this.nomControleur} - SUCCÈS: Suppression(s) réussie(s).`, results);
+                this._showNotification(message, 'success');
+                // On réinitialise l'état de la sélection et on notifie tout le monde (toolbar, etc.)
+                this._setSelectionState([]);
+                this._requestListRefresh(originatorId);
+                this.broadcast('ui:confirmation.close');
+            })
+            .catch(error => {
+                console.error("-> ERREUR: Échec de la suppression API.", error);
+                // Notifie la boîte de dialogue de confirmation de l'erreur pour qu'elle l'affiche.
+                this.broadcast('ui:confirmation.error', { error: error.message || "La suppression a échoué." });
+                // La boîte de dialogue de confirmation gérera sa propre fermeture après affichage de l'erreur.
+            });
+    }
+
+    /**
+     * Met à jour l'état de la sélection en ajoutant ou retirant un élément.
+     * @param {object} selecto - L'objet de sélection d'une ligne.
+     * @private
+     */
+    updateSelectionState(selecto) {
+        const { id, isChecked } = selecto;
+
+        if (isChecked) {
+            if (!this.selectionIds.has(id)) {
+                this.selectionState.push(selecto);
+                this.selectionIds.add(id);
+            }
+        } else {
+            if (this.selectionIds.has(id)) {
+                this.selectionState = this.selectionState.filter(item => item.id !== id);
+                this.selectionIds.delete(id);
+            }
+        }
+    }
+
+    /**
+     * Gère une demande de suppression provenant de la barre d'outils en construisant
+     * et en diffusant une demande de confirmation.
+     * @param {object} payload - Le payload de l'événement, contenant `selection` et `actionConfig`.
+     * @private
+     */
+    _handleToolbarDeleteRequest(payload) {
+        this.broadcast('ui:confirmation.request', {
+            title: payload.title || 'Confirmation de suppression',
+            body: payload.body || `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
+            onConfirm: {
+                type: 'app:api.delete-request',
+                payload: {
+                    ids: payload.selection, // Les IDs à supprimer
+                    url: payload.actionConfig.url, // L'URL de base pour la suppression
+                    originatorId: payload.actionConfig?.originatorId // L'ID de la collection à rafraîchir (optionnel)
+                }
+            }
+        });
     }
 }

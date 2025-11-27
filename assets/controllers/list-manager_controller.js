@@ -1,4 +1,4 @@
-import { Controller } from '@hotwired/stimulus';
+import BaseController from './base_controller.js';
 
 /**
  * @class ListManagerController
@@ -6,7 +6,7 @@ import { Controller } from '@hotwired/stimulus';
  * @description Gère une liste de données, y compris la sélection, la récupération des données
  * et la communication de l'état de la liste au reste de l'application via le Cerveau.
  */
-export default class extends Controller {
+export default class extends BaseController {
 
     /**
      * @property {HTMLElement[]} donneesTargets - Le conteneur (<tbody>) où les lignes de données sont affichées.
