@@ -71,7 +71,6 @@ export default class extends Controller {
      */
     setupEventListeners() {
         document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
-        document.addEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate); // NOUVEAU : Écoute la mise à jour du formCanvas
     }
 
     /**
@@ -95,7 +94,6 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
-        document.removeEventListener('app:form-canvas.updated', this.boundHandleFormCanvasUpdate);
     }
 
     /**
@@ -164,43 +162,14 @@ export default class extends Controller {
             return;
         }
 
-        let payload = {};
-        // Enrichit le payload en fonction de l'action demandée
-        if (eventName === 'app:delete-request') { // Renommé
-            // Pour la suppression, on envoie les IDs et la configuration de l'action
-            // (URL de base) pour que le Cerveau puisse construire la requête API.
-            payload = {
-                selection: this.selectos.map(s => s.id),
-                actionConfig: {
-                    // On récupère l'URL de base pour la suppression depuis le canvas du formulaire actif.
-                    url: this.activeFormCanvas.parametres.endpoint_delete_url,
-                    originatorId: null, // Indique que la requête vient de la barre d'outils principale, pour un rafraîchissement global.
-                }
-            };
-            console.log(this.nomControleur + " - Code: 1986 - Suppression", payload);
-            // La suppression n'a besoin que des IDs.
-        } else if (eventName === 'ui:toolbar.add-request') {
-            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
-            payload = {
-                entity: {},
-                entityFormCanvas: this.activeFormCanvas,
-                isCreationMode: true,
-            };
-        } else if (eventName === 'ui:toolbar.edit-request') {
-            // Pour l'ajout, on envoie le canvas du formulaire de l'onglet ACTIF.
-            payload = {
-                // On envoie l'entité elle-même, pas l'objet selecto complet
-                entity: this.selectos[0].entity, 
-                entityFormCanvas: this.activeFormCanvas,
-                isCreationMode: false,
-            };
-        } else if (eventName === 'ui:toolbar.open-request') {
-            // Pour "Ouvrir" ou "Modifier", on envoie le tableau complet des "selectos".
-            console.log(this.nomControleur + " - Ouverture", this.selectos);
-            payload = {
-                entities: this.selectos
-            };
-        }
+        // Le payload est maintenant générique. Il contient tout le contexte dont le cerveau pourrait avoir besoin.
+        // C'est au cerveau de décider quelles informations utiliser.
+        const payload = {
+            selection: this.selectos, // Envoie la sélection complète (objets selecto)
+            formCanvas: this.activeFormCanvas, // Envoie le contexte du formulaire actif
+            // On pourrait ajouter ici d'autres éléments de contexte si nécessaire
+        };
+
         this.notifyCerveau(eventName, payload);
     }
 
