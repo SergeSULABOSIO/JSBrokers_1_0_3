@@ -293,6 +293,11 @@ export default class extends Controller {
     _setSelectionState(selectos = []) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
+
+        // NOUVEAU : Mettre à jour le displayStatus avec le nouveau nombre de sélections.
+        this.displayState.selectionCount = this.selectionState.length;
+        this._publishDisplayStatus('Sélection mise à jour');
+
         // NOUVEAU : On diffuse immédiatement le contexte mis à jour.
         // C'est ce qui permet à la toolbar et à la barre des totaux de se mettre à jour.
         this.broadcast('app:context.changed', {
