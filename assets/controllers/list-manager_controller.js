@@ -122,6 +122,8 @@ export default class extends BaseController {
 
         // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
         this.updateSelectAllCheckboxState();
+        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos });
+        // this.updateSelectAllCheckboxState(); // La mise à jour est maintenant déclenchée par handleGlobalSelectionUpdate
     }
 
     /**
