@@ -128,7 +128,6 @@ export default class extends Controller {
                 // LOGIQUE DÉPLACÉE : Le cerveau reçoit une demande simple et la transforme en appel complexe.
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture du formulaire de création...');
-                this.openDialogBox(payload);
                 this.openDialogBox({
                     entity: {},
                     entityFormCanvas: payload.formCanvas,
@@ -140,7 +139,6 @@ export default class extends Controller {
                 // LOGIQUE DÉPLACÉE : Le cerveau gère la sélection unique et prépare le dialogue.
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus(`Modification de l'élément...`);
-                this.openDialogBox(payload);
                 this.openDialogBox({
                     entity: payload.selection[0].entity, // On prend la première (et unique) entité
                     entityFormCanvas: payload.formCanvas,
@@ -206,8 +204,6 @@ export default class extends Controller {
             case 'app:delete-request': // ANCIENNE ACTION DE LA TOOLBAR, maintenant renommée et gérée ici.
                 // LOGIQUE DÉPLACÉE : Le cerveau reçoit la demande de suppression et la transforme en demande de confirmation.
                 const deletePayload = {
-                    title: 'Confirmation de suppression',
-                    body: `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
                     onConfirm: {
                         type: 'app:api.delete-request',
                         payload: {
@@ -216,8 +212,9 @@ export default class extends Controller {
                             originatorId: null, // La requête vient de la toolbar principale
                         }
                     },
+                    title: 'Confirmation de suppression',
+                    body: `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`
                 };
-                // CORRECTION : On appelle la méthode de confirmation avec le payload qu'on vient de construire.
                 this._requestDeleteConfirmation(deletePayload);
                 break;
             case 'ui:status.notify':
@@ -226,8 +223,7 @@ export default class extends Controller {
             case 'ui:toolbar.open-request':
                 this.broadcast('app:loading.start');
                 this._publishDisplayStatus('Ouverture de la vue détaillée...');
-                this._handleOpenRequest(payload);
-                this._handleOpenRequest(payload.selection); // On passe directement la sélection
+                this._handleOpenRequest(payload.selection);
                 break;
             case 'app:tab.opened':
                 this.broadcast('app:loading.stop');
@@ -257,14 +253,12 @@ export default class extends Controller {
 
     /**
      * Gère une demande d'ouverture d'éléments en diffusant un événement pour chaque entité sélectionnée.
-     * @param {object} payload - Le payload contenant le tableau `entities`.
-     * @param {Array} payload.entities - Tableau d'objets "selecto".
-     * @param {Array} selectos - Le tableau d'objets "selecto" à ouvrir.
+     * @param {Array} selection - Le tableau d'objets "selecto" à ouvrir.
      * @private
      */
-    _handleOpenRequest(selectos) {
-        if (selectos && selectos.length > 0) {
-            selectos.forEach(selecto => {
+    _handleOpenRequest(selection) {
+        if (selection && selection.length > 0) {
+            selection.forEach(selecto => {
                 this.broadcast('app:liste-element:openned', selecto);
             });
         }
@@ -488,24 +482,16 @@ export default class extends Controller {
      * @param {object} payload - Le payload de l'événement, contenant `selection` et `actionConfig`.
      * @private
      */
-    _handleToolbarDeleteRequest(payload) {
-        // La toolbar envoie maintenant un payload simple : { selection, formCanvas }
-        const { selection, formCanvas } = payload;
-        const selectionIds = selection.map(s => s.id);
-
+    _requestDeleteConfirmation(payload) {
+        // Cette méthode reçoit maintenant un payload déjà formaté.
+        // Son seul rôle est de diffuser la demande d'affichage du dialogue.
+        const itemCount = payload.onConfirm?.payload?.ids?.length || 0;
+        if (itemCount === 0) return;
+    
         this.broadcast('ui:confirmation.request', {
-            title: payload.title || 'Confirmation de suppression',
-            body: payload.body || `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`,
-            title: 'Confirmation de suppression',
-            body: `Êtes-vous sûr de vouloir supprimer ${selection.length} élément(s) ?`,
-            onConfirm: {
-                type: 'app:api.delete-request',
-                payload: {
-                    ids: selectionIds,
-                    url: formCanvas.parametres.endpoint_delete_url, // On utilise le canvas fourni
-                    originatorId: null
-                }
-            }
+            title: payload.title,
+            body: payload.body,
+            onConfirm: payload.onConfirm
         });
     }
 }
