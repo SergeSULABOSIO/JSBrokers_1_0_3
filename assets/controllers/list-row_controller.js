@@ -64,9 +64,10 @@ export default class extends Controller {
         // mette à jour l'état de la sélection et notifie le cerveau.
         this.checkboxTarget.dispatchEvent(new Event('change', { bubbles: true }));
 
-        // On demande l'ouverture du menu contextuel.
+        // CORRECTION : On ne demande plus l'ouverture directement.
+        // On notifie le cerveau de l'intention, qui se chargera de la séquence.
         this.dispatch('cerveau:event', {
-            type: 'ui:context-menu.request',
+            type: 'app:context-menu.request', // Nouvel événement pour le cerveau
             source: this.nomControleur,
             payload: { menuX: event.clientX, menuY: event.clientY },
             timestamp: Date.now()
