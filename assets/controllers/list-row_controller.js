@@ -59,17 +59,16 @@ export default class extends Controller {
         event.preventDefault();
         event.stopPropagation();
         // S'assure que la ligne est cochée.
-        if (!this.checkboxTarget.checked) {
-            this.checkboxTarget.checked = true;
-            // On notifie le changement de sélection pour que le Cerveau mette à jour son état.
-            this.handleCheckboxChange(event);
-        }
+        this.checkboxTarget.checked = true;
+        // On déclenche manuellement l'événement 'change' pour que le list-manager
+        // mette à jour l'état de la sélection et notifie le cerveau.
+        this.checkboxTarget.dispatchEvent(new Event('change', { bubbles: true }));
+
         // On demande l'ouverture du menu contextuel.
-        // Le Cerveau a maintenant le bon état de sélection.
         this.dispatch('cerveau:event', {
             type: 'ui:context-menu.request',
             source: this.nomControleur,
-            payload: { menuX: event.clientX, menuY: event.clientY }, // CORRECTION: Le payload ne doit contenir que les données.
+            payload: { menuX: event.clientX, menuY: event.clientY },
             timestamp: Date.now()
         });
     }
