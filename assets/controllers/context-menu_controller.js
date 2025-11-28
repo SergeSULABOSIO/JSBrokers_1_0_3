@@ -38,14 +38,14 @@ export default class extends Controller {
 
         // --- CORRECTION : Lier les méthodes une seule fois pour un nettoyage correct ---
         this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
-        this.boundHandleSelectionUpdate = this.handleSelectionUpdate.bind(this);
+        this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
         this.boundHandleKeyboardShortcuts = this.handleKeyboardShortcuts.bind(this);
 
         this.menuTarget.style.display = 'none';
         document.addEventListener('click', this.boundHideContextMenu, false);
         document.addEventListener('app:context-menu.show', this.boundHandleContextMenuRequest);
-        document.addEventListener('ui:selection.changed', this.boundHandleSelectionUpdate);
+        document.addEventListener('app:context.changed', this.boundHandleContextUpdate);
     }
 
     /**
@@ -55,7 +55,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('click', this.boundHideContextMenu, false);
         document.removeEventListener('app:context-menu.show', this.boundHandleContextMenuRequest);
-        document.removeEventListener('ui:selection.changed', this.boundHandleSelectionUpdate);
+        document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
         document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
@@ -91,15 +91,13 @@ export default class extends Controller {
      * Met à jour l'état interne du contrôleur avec la sélection actuelle de l'application.
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
-    handleSelectionUpdate(event) {
-        // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
+    handleContextUpdate(event) {
         const selectos = event.detail.selection || [];
-        this.selection = selectos.map(s => s.id);
         this.entities = selectos;
         this.entityFormCanvas = selectos.length > 0 ? selectos[0].entityFormCanvas : null;
         // Met à jour les boutons si le menu est déjà visible
         if (this.menuTarget.style.display === 'block') {
-            this.organizeButtons(this.selection);
+            this.organizeButtons(this.entities);
         }
     }
 
@@ -108,9 +106,9 @@ export default class extends Controller {
      * @param {Array<string>} selection - Le tableau des IDs sélectionnés.
      * @private
      */
-    organizeButtons(selection) {
-        const hasSelection = selection.length > 0;
-        const isSingleSelection = selection.length === 1;
+    organizeButtons(selectos) {
+        const hasSelection = selectos.length > 0;
+        const isSingleSelection = selectos.length === 1;
 
         if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection ? "block" : "none";
         if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = isSingleSelection ? "block" : "none";
@@ -181,20 +179,12 @@ export default class extends Controller {
             return;
         }
 
-        let payload = {};
-        // Enrichit le payload en fonction de l'action demandée
-        if (eventName === 'ui:toolbar.add-request') {
-            payload = { entity: {}, entityFormCanvas: this.entityFormCanvas, isCreationMode: true };
-        } else if (eventName === 'ui:toolbar.edit-request') {
-            // Pour l'édition, on envoie la première entité sélectionnée
-            payload = { entity: this.entities.length > 0 ? this.entities[0].entity : {}, entityFormCanvas: this.entityFormCanvas, isCreationMode: false };
-        } else if (eventName === 'ui:toolbar.open-request') {
-            // Pour "Ouvrir", on envoie le tableau complet des "selectos".
-            payload = { entities: this.entities };
-        } else if (eventName === 'app:delete-request') { // Renommé
-            // Pour la suppression, on envoie les IDs et la configuration de l'action
-            payload = { selection: this.selection, actionConfig: { url: this.entityFormCanvas?.parametres?.endpoint_delete_url, originatorId: null } };
-        }
+        // Le payload est maintenant générique, comme pour la barre d'outils.
+        // C'est au cerveau de l'interpréter.
+        const payload = {
+            selection: this.entities, // Envoie la sélection complète (objets selecto)
+            formCanvas: this.entityFormCanvas, // Envoie le contexte du formulaire actif
+        };
 
         this.notifyCerveau(eventName, payload);
     }
