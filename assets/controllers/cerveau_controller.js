@@ -421,7 +421,8 @@ export default class extends Controller {
         const selectionCount = this.displayState.selectionCount;
 
         const messageHtml = `
-            <span class="text-muted small me-2">[${timestamp}]</span> 
+            <span class="fw-bold text-dark">${timestamp}</span>
+            <span class="mx-2 text-muted">›</span>
             <span class="fw-bold text-dark">${this.displayState.rubricName}</span>
             <span class="mx-2 text-muted">›</span>
             <span>${this.displayState.action}</span>
