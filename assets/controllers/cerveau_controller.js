@@ -31,7 +31,8 @@ export default class extends Controller {
             rubricName: 'Tableau de bord',
             action: 'Initialisation',
             result: 'Prêt',
-            selectionCount: 0
+            selectionCount: 0,
+            timestamp: null // NOUVEAU : Ajout du timestamp à l'état
         };
         this.currentIdInvite = null;
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
@@ -293,12 +294,15 @@ export default class extends Controller {
     _setSelectionState(selectos = []) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
-
-        // NOUVEAU : Mettre à jour le displayStatus avec le nouveau nombre de sélections.
+        
+        // CORRECTION : On met à jour l'état du display AVANT de le publier.
         this.displayState.selectionCount = this.selectionState.length;
-        this._publishDisplayStatus('Sélection mise à jour');
-
-        // NOUVEAU : On diffuse immédiatement le contexte mis à jour.
+        this.displayState.timestamp = new Date(); // On met à jour l'heure.
+        
+        // On publie le statut avec une action claire.
+        this._publishDisplayStatus(this.displayState.selectionCount > 0 ? `${this.displayState.selectionCount} élément(s) sélectionné(s)` : 'Aucune sélection');
+        
+        // On diffuse le contexte mis à jour pour les autres composants (toolbar, etc.).
         // C'est ce qui permet à la toolbar et à la barre des totaux de se mettre à jour.
         this.broadcast('app:context.changed', {
             selection: this.selectionState,
@@ -406,18 +410,23 @@ export default class extends Controller {
      * @private
      */
     _publishDisplayStatus(action = null) {
+        // On met à jour l'action et le timestamp à chaque publication
         if (action) {
             this.displayState.action = action;
         }
-
-        const timestamp = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        this.displayState.timestamp = new Date();
         
+        // On lit les valeurs directement depuis l'objet d'état `displayState`
+        const timestamp = this.displayState.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const selectionCount = this.displayState.selectionCount;
+
         const messageHtml = `
+            <span class="text-muted small me-2">[${timestamp}]</span> 
             <span class="fw-bold text-dark">${this.displayState.rubricName}</span>
             <span class="mx-2 text-muted">›</span>
             <span>${this.displayState.action}</span>
             <span class="mx-2 text-muted">|</span>
-            <span class="fw-bold">${this.displayState.selectionCount}</span> sélection(s)
+            <span class="fw-bold">${selectionCount}</span> sélection(s)
         `;
         this.broadcast('app:display.update', { html: messageHtml });
     }
