@@ -928,6 +928,14 @@ textarea:hover,
 .toolbar-icon {
     width: 24px;
     height: 24px;
+    color: #6c757d; /* Gris par défaut pour les icônes */
+    transition: color 0.2s ease-in-out; /* Animation douce pour la couleur */
+}
+
+/* NOUVEAU : Au survol du bouton, l'icône devient noire */
+.context-toolbar .btn:hover .toolbar-icon {
+    /* On ne change pas la couleur pour les boutons de danger */
+    color: black;
 }
 
 
