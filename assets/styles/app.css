@@ -896,34 +896,40 @@ textarea:hover,
 .context-toolbar {
     display: flex;
     align-items: center;
-    gap: 4px;
-    background-color: #F0F0F0;
-    border-radius: 25px;
-    padding: 4px 8px;
+    gap: 0.5rem; /* Espacement légèrement augmenté pour plus de clarté */
+    padding: 0.25rem;
     width: fit-content;
+    /* Le fond est maintenant transparent, on se fie aux boutons */
 }
 
 .context-toolbar .btn {
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    /* On supprime les dimensions fixes pour laisser Bootstrap gérer la taille */
+    border-radius: 8px; /* Coins légèrement arrondis pour un look moderne */
     border: none;
-    background-color: transparent;
-    color: #495057;
+    padding: 0.5rem; /* Padding uniforme */
+    line-height: 1; /* Assure un bon alignement vertical de l'icône */
+    transition: all 0.2s ease-in-out; /* Animation douce pour toutes les propriétés */
 }
 
-.context-toolbar .btn:hover { background-color: rgba(0,0,0,0.05); }
+.context-toolbar .btn:hover { 
+    transform: translateY(-1px); /* Léger effet de soulèvement */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Ombre douce */
+}
+
 .context-toolbar .btn:disabled { color: #adb5bd; }
-.context-toolbar .btn.btn-icon-danger { color: #dc3545; }
+
 .toolbar-separator {
     width: 1px;
     height: 20px;
     background-color: #ced4da;
-    margin: 0 8px;
+    margin: 0 0.25rem; /* Marge réduite pour un look plus compact */
 }
+
+.toolbar-icon {
+    width: 24px;
+    height: 24px;
+}
+
 
 /* ================================================================== */
 /* SECTION : ADAPTATION DU MENU CONTEXTUEL (MODE SOMBRE)              */
