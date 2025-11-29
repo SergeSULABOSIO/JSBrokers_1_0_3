@@ -19,61 +19,62 @@
         <li 
             data-context-menu-target="btAjouter"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.add-request"
+            data-context-menu-event-name-param="ui:toolbar.add-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/add.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Ajouter</span>
-            <span class="text-muted small">A</span>
+            <span class="context-menu-shortcut">A</span>
         </li>
         {# Option "Ouvrir" #}
         <li 
             data-context-menu-target="btOuvrir"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.open-request"
+            data-context-menu-event-name-param="ui:toolbar.open-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/open.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Ouvrir</span>
-            <span class="text-muted small">O</span>
+            <span class="context-menu-shortcut">O</span>
         </li>
         {# Option "Modifier" #}
         <li 
             data-context-menu-target="btModifier" 
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.edit-request"
+            data-context-menu-event-name-param="ui:toolbar.edit-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/edit.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/edit.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Modifier</span>
-            <span class="text-muted small">M</span>
+            <span class="context-menu-shortcut">M</span>
         </li>
         {# Option "Tout Cocher" #}
         <li 
             data-context-menu-target="btToutCocher" 
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.select-all-request"
+            data-context-menu-event-name-param="ui:toolbar.select-all-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/check.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/check.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Tout Cocher</span>
+            <span class="context-menu-shortcut"></span>
         </li>
         {# Option "Actualiser" #}
         <li 
             data-context-menu-target="btActualiser" 
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.refresh-request"
+            data-context-menu-event-name-param="ui:toolbar.refresh-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/reload.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/reload.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Actualiser</span>
-            <span class="text-muted small">R</span>
+            <span class="context-menu-shortcut">R</span>
         </li>
 
         {# Option "Supprimer" #}
         <li
             data-context-menu-target="btSupprimer"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.delete-request"
+            data-context-menu-event-name-param="app:delete-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/delete.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/delete.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Supprimer</span>
-            <span class="text-muted small">S</span>
+            <span class="context-menu-shortcut">S</span>
         </li>
 
         {# Option "Séparateur" #}
@@ -83,21 +84,22 @@
         <li 
             data-context-menu-target="btParametrer" 
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.settings-request"
+            data-context-menu-event-name-param="ui:toolbar.settings-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/settings.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/settings.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Paramètres</span>
+            <span class="context-menu-shortcut"></span>
         </li>
 
         {# Option "Quitter" #}
         <li 
             data-context-menu-target="btQuitter" 
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.close-request"
+            data-context-menu-event-name-param="ui:toolbar.close-request" class="d-flex align-items-center gap-3"
         >
-            {{ include('segments/icones/actions/exit.html.twig', {size:'20px'}) }}
+            <span class="context-menu-icon">{{ include('segments/icones/actions/exit.html.twig', {size:'20px'}) }}</span>
             <span class="flex-grow-1">Quitter</span>
-            <span class="text-muted small">Q</span>
+            <span class="context-menu-shortcut">Q</span>
         </li>
     </ul>
 </nav>
