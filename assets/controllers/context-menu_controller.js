@@ -114,8 +114,16 @@ export default class extends Controller {
 
         console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos, "Length:", selectos.length, "Single:", isSingleSelection, "Has:", hasSelection);
 
+        // --- CORRECTION : Logique exhaustive ---
+        // 1. On affiche toujours les boutons non contextuels.
+        if (this.hasBtAjouterTarget) this.btAjouterTarget.style.display = 'flex';
+        if (this.hasBtToutCocherTarget) this.btToutCocherTarget.style.display = 'flex';
+        if (this.hasBtActualiserTarget) this.btActualiserTarget.style.display = 'flex';
+        if (this.hasBtParametrerTarget) this.btParametrerTarget.style.display = 'flex';
+        if (this.hasBtQuitterTarget) this.btQuitterTarget.style.display = 'flex';
+
+        // 2. On gère la visibilité des boutons contextuels en fonction de la sélection.
         if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection ? "block" : "none";
-        // CORRECTION : "Ouvrir" doit être visible dès qu'il y a une sélection, pas seulement une sélection unique.
         if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection ? "block" : "none";
         if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection ? "block" : "none";
     }
