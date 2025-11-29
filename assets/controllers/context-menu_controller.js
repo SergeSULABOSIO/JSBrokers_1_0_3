@@ -36,17 +36,15 @@ export default class extends Controller {
         this.entities = [];
         this.entityFormCanvas = null;
 
-        // NOUVEAU : Mémorise la position demandée pour le menu.
-        this.pendingPosition = null;
-
-        this.boundPrepareContextMenu = this.prepareContextMenu.bind(this);
+        this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
         this.boundHandleKeyboardShortcuts = this.handleKeyboardShortcuts.bind(this);
 
         this.menuTarget.style.display = 'none';
         document.addEventListener('click', this.boundHideContextMenu, false);
-        document.addEventListener('app:context-menu.prepare', this.boundPrepareContextMenu);
+        // CORRECTION : On écoute l'ordre d'affichage direct.
+        document.addEventListener('app:context-menu.show', this.boundHandleContextMenuRequest);
         document.addEventListener('app:context.changed', this.boundHandleContextUpdate);
     }
 
@@ -56,29 +54,26 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('click', this.boundHideContextMenu, false);
-        document.removeEventListener('app:context-menu.prepare', this.boundPrepareContextMenu);
+        document.removeEventListener('app:context-menu.show', this.boundHandleContextMenuRequest);
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
         document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
     /**
-     * NOUVEAU : Mémorise la position où le menu doit s'afficher.
-     * @param {CustomEvent} event 
+     * Gère la demande d'ouverture du menu contextuel.
+     * Positionne et affiche le menu.
+     * @param {CustomEvent} event - L'événement `app:context-menu.show`.
      */
-    prepareContextMenu(event) {
+    handleContextMenuRequest(event) {
         event.preventDefault();
-        this.pendingPosition = { x: event.detail.menuX, y: event.detail.menuY };
-    }
-
-    _displayMenu() {
         // Positionne le menu
         const menuWidth = this.menuTarget.offsetWidth;
         const menuHeight = this.menuTarget.offsetHeight;
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
 
-        let left = (this.pendingPosition.x + menuWidth > windowWidth) ? windowWidth - menuWidth - 5 : this.pendingPosition.x;
-        let top = (this.pendingPosition.y + menuHeight > windowHeight) ? windowHeight - menuHeight - 5 : this.pendingPosition.y;
+        let left = (event.detail.menuX + menuWidth > windowWidth) ? windowWidth - menuWidth - 5 : event.detail.menuX;
+        let top = (event.detail.menuY + menuHeight > windowHeight) ? windowHeight - menuHeight - 5 : event.detail.menuY;
 
         this.menuTarget.style.left = `${left}px`;
         this.menuTarget.style.top = `${top}px`;
@@ -99,13 +94,8 @@ export default class extends Controller {
         this.entities = selectos;
         this.entityFormCanvas = selectos.length > 0 ? selectos[0].entityFormCanvas : null;
 
-        // CORRECTION : C'est ici qu'on déclenche l'affichage.
-        // Si une position est en attente, on affiche le menu.
-        if (this.pendingPosition) {
-            this._displayMenu();
-            this.pendingPosition = null; // On réinitialise pour le prochain clic.
-        } else if (this.menuTarget.style.display === 'block') {
-            // Si le menu est déjà visible (ex: sélection avec Ctrl+clic), on le réorganise.
+        // Si le menu est déjà visible (ex: sélection avec Ctrl+clic), on le réorganise.
+        if (this.menuTarget.style.display === 'block') {
             this.organizeButtons(this.entities);
         }
     }
