@@ -35,6 +35,9 @@ export default class extends Controller {
             timestamp: null // NOUVEAU : Ajout du timestamp à l'état
         };
         this.currentIdInvite = null;
+        // NOUVEAU : Mémorise une demande d'affichage du menu contextuel.
+        this.pendingContextMenuRequest = null;
+
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
         console.log(`[${++window.logSequence}] ${this.nomControleur} 🧠 Cerveau prêt à orchestrer.`);
         this.boundHandleEvent = this.handleEvent.bind(this);
@@ -189,8 +192,8 @@ export default class extends Controller {
                 });
                 break;
             case 'app:context-menu.request':
-                // CORRECTION : On ne diffuse plus un ordre d'affichage, mais une intention.
-                this.broadcast('app:context-menu.prepare', payload);
+                // NOUVEAU : On mémorise la demande, elle sera traitée après la mise à jour de la sélection.
+                this.pendingContextMenuRequest = payload;
                 break;
             case 'app:api.delete-request':
                 this._publishDisplayStatus('Suppression en cours...');
@@ -235,6 +238,12 @@ export default class extends Controller {
                 break;
             case 'ui:list.selection-completed':
                 this._setSelectionState(payload.selectos || []);
+                // NOUVEAU : On vérifie s'il y a une demande de menu en attente.
+                if (this.pendingContextMenuRequest) {
+                    // On diffuse l'ordre d'affichage MAINTENANT, après que la sélection a été mise à jour.
+                    this.broadcast('app:context-menu.show', this.pendingContextMenuRequest);
+                    this.pendingContextMenuRequest = null; // On réinitialise la demande.
+                }
                 break;
             case 'app:loading.start':
                 this.broadcast('app:loading.start', payload);
