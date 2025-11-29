@@ -189,14 +189,8 @@ export default class extends Controller {
                 });
                 break;
             case 'app:context-menu.request':
-                // On attend la fin du cycle de rendu actuel pour s'assurer que
-                // l'événement 'app:context.changed' a bien été traité par tous les composants.
-                requestAnimationFrame(() => {
-                    this.broadcast('app:context-menu.show', payload);
-                });
-                break;
-            case 'ui:context-menu.request':
-                this.broadcast('app:context-menu.show', payload);
+                // CORRECTION : On ne diffuse plus un ordre d'affichage, mais une intention.
+                this.broadcast('app:context-menu.prepare', payload);
                 break;
             case 'app:api.delete-request':
                 this._publishDisplayStatus('Suppression en cours...');
