@@ -82,6 +82,7 @@ export default class extends Controller {
 
         // Met à jour et affiche le menu
         // CORRECTION : On utilise `this.entities` qui est la source de vérité mise à jour par `handleContextUpdate`.
+        console.log(this.nomControleur + " - handleContextMenuRequest - Code: 8888 - Selection:", this.entities);
         this.organizeButtons(this.entities);
         this.menuTarget.style.display = 'block';
         // Active l'écoute des raccourcis clavier uniquement quand le menu est visible
@@ -110,6 +111,8 @@ export default class extends Controller {
     organizeButtons(selectos) {
         const hasSelection = selectos.length > 0;
         const isSingleSelection = selectos.length === 1;
+
+        console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos);
 
         if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection ? "block" : "none";
         if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = isSingleSelection ? "block" : "none";

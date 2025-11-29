@@ -10,7 +10,7 @@
       (ex: activer/désactiver les boutons "Modifier", "Supprimer" en fonction du nombre d'éléments sélectionnés).
 #}
 <div 
-  class="context-toolbar" 
+  class="context-toolbar d-flex align-items-center gap-1" 
   role="toolbar"
   data-controller="toolbar"
   data-toolbar-entity-form-canvas-value="{{ entityFormCanvas|json_encode }}"
@@ -19,8 +19,8 @@
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.close-request"
         data-toolbar-target="btquitter" 
-        class="btn btn-sm btn-icon-danger" 
-        title="Quitter" style="width: 22px; height: 22px; padding: 1px;">
+        class="btn btn-sm btn-icon-danger"
+        title="Quitter">
         <twig:UX:Icon name="hugeicons:logout-04" />
     </button>
     <div class="toolbar-separator"></div>
@@ -28,16 +28,16 @@
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.add-request"
         data-toolbar-target="btajouter" 
-        class="btn btn-sm" 
-        title="Ajouter" style="width: 22px; height: 22px; padding: 1px;">
+        class="btn btn-sm btn-light"
+        title="Ajouter">
         <twig:UX:Icon name="gridicons:add" />
     </button>
     <button 
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.edit-request"
         data-toolbar-target="btmodifier" 
-        class="btn btn-sm" 
-        title="Modifier" style="display:none; width: 22px; height: 22px; padding: 1px;">
+        class="btn btn-sm btn-light"
+        title="Modifier" style="display:none;">
         <twig:UX:Icon name="tabler:edit" />
     </button>
     {# NOUVEAU : Ajout du bouton Ouvrir #}
@@ -45,16 +45,16 @@
         data-action="click->toolbar#notify"
         data-toolbar-event-name-param="ui:toolbar.open-request"
         data-toolbar-target="btouvrir"
-        class="btn btn-sm" 
-        title="Ouvrir" style="display:none; width: 22px; height: 22px; padding: 1px;">
+        class="btn btn-sm btn-light"
+        title="Ouvrir" style="display:none;">
         <twig:UX:Icon name="fad:open" />
     </button>
     <button 
         data-action="click->toolbar#notify" 
-        data-toolbar-event-name-param="ui:toolbar.delete-request"
+        data-toolbar-event-name-param="app:delete-request"
         data-toolbar-target="btsupprimer" 
-        class="btn btn-sm btn-icon-danger" 
-        title="Supprimer" style="display:none; width: 22px; height: 22px; padding: 1px;">
+        class="btn btn-sm btn-icon-danger"
+        title="Supprimer" style="display:none;">
         <twig:UX:Icon name="fluent:delete-20-filled" />
     </button>
     <div class="toolbar-separator"></div>
@@ -62,25 +62,25 @@
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.select-all-request"
         data-toolbar-target="bttoutcocher" 
-        class="btn btn-sm" 
-        title="Sélectionner tout" style="width: 22px; height: 22px; padding: 1px;">
+        class="btn btn-sm btn-light"
+        title="Sélectionner tout">
         <twig:UX:Icon name="material-symbols:check-box" />
     </button>
     <button 
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.refresh-request"
-        data-toolbar-target="btrecharger" 
-        class="btn btn-sm" 
-        title="Actualiser" style="width: 22px; height: 22px; padding: 1px;">
+        data-toolbar-target="btrecharger"
+        class="btn btn-sm btn-light"
+        title="Actualiser">
         <twig:UX:Icon name="ci:arrows-reload-01" />
     </button>
     <div class="toolbar-separator"></div>
     <button 
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.settings-request"
-        data-toolbar-target="btparametres" 
-        class="btn btn-sm" 
-        title="Paramètres" style="width: 22px; height: 22px; padding: 1px;">
+        data-toolbar-target="btparametres"
+        class="btn btn-sm btn-light"
+        title="Paramètres">
         <twig:UX:Icon name="material-symbols:settings" />
     </button>
 </div>
