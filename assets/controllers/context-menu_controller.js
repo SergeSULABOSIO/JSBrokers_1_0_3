@@ -112,10 +112,11 @@ export default class extends Controller {
         const hasSelection = selectos.length > 0;
         const isSingleSelection = selectos.length === 1;
 
-        console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos);
+        console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos, "Length:", selectos.length, "Single:", isSingleSelection, "Has:", hasSelection);
 
         if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection ? "block" : "none";
-        if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = isSingleSelection ? "block" : "none";
+        // CORRECTION : "Ouvrir" doit être visible dès qu'il y a une sélection, pas seulement une sélection unique.
+        if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection ? "block" : "none";
         if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection ? "block" : "none";
     }
 
