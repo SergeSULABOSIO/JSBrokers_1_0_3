@@ -82,7 +82,7 @@ export default class extends Controller {
 
         // Met à jour et affiche le menu
         // CORRECTION : On utilise `this.entities` qui est la source de vérité mise à jour par `handleContextUpdate`.
-        console.log(this.nomControleur + " - handleContextMenuRequest - Code: 8888 - Selection:", this.entities);
+        // console.log(this.nomControleur + " - handleContextMenuRequest - Code: 8888 - Selection:", this.entities);
         this.organizeButtons(this.entities);
         this.menuTarget.style.display = 'block';
         // Active l'écoute des raccourcis clavier uniquement quand le menu est visible
