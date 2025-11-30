@@ -49,7 +49,9 @@ export default class extends BaseController {
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.selectedIds = new Set(); // NOUVEAU : Mémorise les IDs sélectionnés pour cette instance de liste.
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
-        this.boundToggleAll = this.toggleAll.bind(this); // Lier la méthode toggleAll
+        this.boundToggleAll = this.toggleAll.bind(this);
+        // NOUVEAU : Écouteur pour la nouvelle logique "B"
+        this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
 
         // On notifie le cerveau avec les données numériques initiales.
         // On décode et on parse les données numériques initiales avant de les envoyer au Cerveau.
@@ -70,6 +72,7 @@ export default class extends BaseController {
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
+        this.element.addEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
 
         if (this.nbElementsValue === 0) {
             this.listContainerTarget.classList.add('d-none');
@@ -91,6 +94,7 @@ export default class extends BaseController {
         document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
+        this.element.removeEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -102,8 +106,55 @@ export default class extends BaseController {
      */
     handleRowSelection(event) {
         // On met à jour l'état visuel de la case "Tout cocher"
-        this.updateSelectAllCheckboxState();
+        this._notifySelectionChange();
+    }
 
+    /**
+     * NOUVEAU : Gère la demande de menu contextuel venant d'une ligne.
+     * C'est le point de départ de la séquence garantie.
+     * @param {CustomEvent} event
+     */
+    handleContextMenuRequest(event) {
+        const { selecto, menuX, menuY } = event.detail;
+
+        // 1. On s'assure que la ligne cliquée est bien sélectionnée.
+        const checkbox = this.element.querySelector(`#check_${selecto.id}`);
+        if (checkbox && !checkbox.checked) {
+            checkbox.checked = true;
+            // On met à jour l'état visuel de la ligne.
+            checkbox.closest('tr')?.classList.add('row-selected');
+        }
+
+        // 2. On notifie le cerveau avec la sélection complète ET la position de la souris.
+        this._notifySelectionChange({ contextMenuPosition: { menuX, menuY } });
+    }
+
+    /**
+     * Gère le clic sur la case "Tout cocher" ou une demande externe du Cerveau.
+     * Coche ou décoche toutes les cases de la liste et notifie le Cerveau avec l'état final.
+     */
+    toggleAll(event) {
+        const isTriggeredByUser = event && this.hasSelectAllCheckboxTarget && event.currentTarget === this.selectAllCheckboxTarget;
+        const totalRows = this.rowCheckboxTargets.length;
+        const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length;
+
+        const shouldCheck = isTriggeredByUser ? this.selectAllCheckboxTarget.checked : checkedRows < totalRows;
+
+        this.rowCheckboxTargets.forEach(checkbox => {
+            checkbox.checked = shouldCheck;
+            checkbox.closest('tr')?.classList.toggle('row-selected', shouldCheck);
+        });
+
+        this._notifySelectionChange();
+    }
+
+    /**
+     * NOUVEAU : Centralise la logique de collecte et de notification de la sélection au cerveau.
+     * @param {object} [extraPayload={}] - Données additionnelles à envoyer (ex: contextMenuPosition).
+     * @private
+     */
+    _notifySelectionChange(extraPayload = {}) {
+        this.updateSelectAllCheckboxState();
         // On reconstruit l'état complet de la sélection
         const allSelectos = [];
         this.rowCheckboxTargets.forEach(checkbox => {
@@ -118,37 +169,11 @@ export default class extends BaseController {
             }
         });
 
-        // On notifie le cerveau UNE SEULE FOIS avec la liste complète.
-        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos });
-    }
-
-    /**
-     * Gère le clic sur la case "Tout cocher" ou une demande externe du Cerveau.
-     * Coche ou décoche toutes les cases de la liste et notifie le Cerveau avec l'état final.
-     */
-    toggleAll(event) {
-        const isTriggeredByUser = event && this.hasSelectAllCheckboxTarget && event.currentTarget === this.selectAllCheckboxTarget;
-        const totalRows = this.rowCheckboxTargets.length; // Utilise la propriété Stimulus
-        const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length; // Utilise la propriété Stimulus
-
-        // Détermine l'action : si tout est déjà coché, on décoche. Sinon, on coche.
-        const shouldCheck = isTriggeredByUser ? this.selectAllCheckboxTarget.checked : checkedRows < totalRows;
-
-        const allSelectos = [];
-        this.rowCheckboxTargets.forEach(checkbox => {
-            checkbox.checked = shouldCheck;
-            checkbox.closest('tr')?.classList.toggle('row-selected', shouldCheck);
-            if (shouldCheck) {
-                // Construit et ajoute le "selecto" à la liste
-                const listRowController = this.application.getControllerForElementAndIdentifier(checkbox.closest('[data-controller="list-row"]'), 'list-row');
-                if (listRowController) {
-                    allSelectos.push(listRowController.buildSelectoPayload());
-                }
-            }
+        // On notifie le cerveau avec la liste complète et les données additionnelles.
+        this.notifyCerveau('ui:list.selection-completed', {
+            selectos: allSelectos,
+            ...extraPayload // Ajoute contextMenuPosition si présent
         });
-
-        // Notifie le Cerveau UNE SEULE FOIS avec la liste complète des sélections.
-        this.notifyCerveau('ui:list.selection-completed', { selectos: allSelectos });
     }
 
     /**

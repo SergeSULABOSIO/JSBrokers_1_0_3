@@ -35,8 +35,6 @@ export default class extends Controller {
             timestamp: null // NOUVEAU : Ajout du timestamp à l'état
         };
         this.currentIdInvite = null;
-        // NOUVEAU : Mémorise une demande d'affichage du menu contextuel.
-        this.pendingContextMenuRequest = null;
 
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
         console.log(`[${++window.logSequence}] ${this.nomControleur} 🧠 Cerveau prêt à orchestrer.`);
@@ -191,10 +189,6 @@ export default class extends Controller {
                     numericAttributesAndValues: this.numericAttributesAndValues
                 });
                 break;
-            case 'app:context-menu.request':
-                // NOUVEAU : On mémorise la demande, elle sera traitée après la mise à jour de la sélection.
-                this.pendingContextMenuRequest = payload;
-                break;
             case 'app:api.delete-request':
                 this._publishDisplayStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);
@@ -237,13 +231,8 @@ export default class extends Controller {
                 this.broadcast('app:navigation-rubrique:openned', payload);
                 break;
             case 'ui:list.selection-completed':
-                this._setSelectionState(payload.selectos || []);
-                // NOUVEAU : On vérifie s'il y a une demande de menu en attente.
-                if (this.pendingContextMenuRequest) {
-                    // On diffuse l'ordre d'affichage MAINTENANT, après que la sélection a été mise à jour.
-                    this.broadcast('app:context-menu.show', this.pendingContextMenuRequest);
-                    this.pendingContextMenuRequest = null; // On réinitialise la demande.
-                }
+                // La logique de menu contextuel est maintenant gérée ici.
+                this._setSelectionState(payload.selectos || [], payload.contextMenuPosition || null);
                 break;
             case 'app:loading.start':
                 this.broadcast('app:loading.start', payload);
@@ -299,9 +288,10 @@ export default class extends Controller {
     /**
      * Définit un nouvel état de sélection complet et le publie.
      * @param {Array} [selectos=[]] - Le nouveau tableau d'objets "selecto".
+     * @param {object|null} [contextMenuPosition=null] - Les coordonnées pour le menu contextuel.
      * @private
      */
-    _setSelectionState(selectos = []) {
+    _setSelectionState(selectos = [], contextMenuPosition = null) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
         
@@ -315,7 +305,8 @@ export default class extends Controller {
         // C'est ce qui permet à la toolbar et à la barre des totaux de se mettre à jour.
         this.broadcast('app:context.changed', {
             selection: this.selectionState,
-            numericAttributesAndValues: this.numericAttributesAndValues
+            numericAttributesAndValues: this.numericAttributesAndValues,
+            contextMenuPosition: contextMenuPosition // On passe la position (ou null)
         });
     }
 
