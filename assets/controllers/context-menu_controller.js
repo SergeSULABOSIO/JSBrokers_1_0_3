@@ -119,9 +119,10 @@ export default class extends Controller {
         if (this.hasBtQuitterTarget) this.btQuitterTarget.style.display = 'flex';
 
         // 2. On gère la visibilité des boutons contextuels en fonction de la sélection.
-        if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection ? "block" : "none";
-        if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection ? "block" : "none";
-        if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection ? "block" : "none";
+        if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection === true? "flex" : "none";
+        if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection === true? "flex" : "none";
+        if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection === true? "flex" : "none";
+        // this.btModifierTarget.style.display = "none";
     }
 
     /**
