@@ -58,19 +58,14 @@ export default class extends Controller {
     handleContextMenu(event) {
         event.preventDefault();
         event.stopPropagation();
-        // S'assure que la ligne est cochée.
-        this.checkboxTarget.checked = true;
-        // On déclenche manuellement l'événement 'change' pour que le list-manager
-        // mette à jour l'état de la sélection et notifie le cerveau.
-        this.checkboxTarget.dispatchEvent(new Event('change', { bubbles: true }));
 
-        // CORRECTION : On ne demande plus l'ouverture directement.
-        // On notifie le cerveau de l'intention, qui se chargera de la séquence.
-        this.dispatch('cerveau:event', {
-            type: 'app:context-menu.request', // Nouvel événement pour le cerveau
-            source: this.nomControleur,
-            payload: { menuX: event.clientX, menuY: event.clientY },
-            timestamp: Date.now()
+        // NOUVELLE LOGIQUE "B" : On notifie le list-manager d'une demande de menu contextuel.
+        // On passe notre propre payload "selecto" pour qu'il sache quelle ligne sélectionner,
+        // ainsi que les coordonnées de la souris.
+        this.dispatch('list-manager:context-menu-requested', {
+            selecto: this.buildSelectoPayload(),
+            menuX: event.clientX,
+            menuY: event.clientY
         });
     }
 
