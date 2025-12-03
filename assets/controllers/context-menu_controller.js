@@ -66,12 +66,12 @@ export default class extends Controller {
         this.entityFormCanvas = selectos.length > 0 ? selectos[0].entityFormCanvas : null;
 
         // On réorganise toujours les boutons, même si le menu est caché.
-        this.organizeButtons(this.entities);
         console.log(this.nomControleur + " - handleContextUpdate - Code: 8888 - contextMenuPosition:", contextMenuPosition);
-
+        
         // Si le payload contient la position du menu, on l'affiche.
         if (contextMenuPosition) {
             this._displayMenu(contextMenuPosition);
+            this.organizeButtons(this.entities);
         } else {
             // S'il n'y a pas de position, on s'assure que le menu est caché (cas d'un clic gauche).
             this.hideContextMenu();
