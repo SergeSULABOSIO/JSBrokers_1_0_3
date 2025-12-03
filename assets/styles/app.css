@@ -895,41 +895,21 @@ textarea:hover,
 /* SECTION : ADAPTATION DU MENU CONTEXTUEL (MODE SOMBRE)              */
 /* ================================================================== */
 /* On surcharge les styles existants de votre fichier interactive-menu.css */
+.context-target {
+    cursor: context-menu;
+    user-select: none;
+}
+
 .context-menu {
-    background-color: #212529 !important; /* Fond sombre */
-    color: #f8f9fa !important; /* Texte clair */
-    border: 1px solid #495057 !important; /* Bordure grise foncée */
-}
-
-.context-menu ul li {
-    color: #f8f9fa !important;
-}
-
-.context-menu ul li:hover {
-    background-color: #495057 !important; /* Fond de survol plus clair */
-}
-
-/* CORRECTION : Assure la visibilité du texte des raccourcis en mode sombre */
-.context-menu ul li .text-muted {
-    color: rgba(248, 249, 250, 0.65) !important; /* Texte clair mais moins prononcé que l'option principale */
-}
-
-.context-menu ul li.separator {
-    border-top: 1px solid #495057 !important;
-}
-
-.context-menu-icon {
-    width: 20px; /* Largeur fixe pour l'alignement des icônes */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.context-menu-shortcut {
-    width: 20px; /* Largeur fixe pour l'alignement des raccourcis */
-    text-align: right;
-    color: #6c757d; /* text-muted */
-    font-size: 0.875em; /* small */
+    display: none;
+    position: fixed;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    min-width: 180px;
+    z-index: 1000;
+    border-radius: 4px;
+    padding: 5px 0;
 }
 
 
