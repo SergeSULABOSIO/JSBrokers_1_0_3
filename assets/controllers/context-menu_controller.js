@@ -122,7 +122,7 @@ export default class extends Controller {
         console.log(this.nomControleur + " - organizeButtons - Code: 8888 - hasBtAjouterTarget:", this.hasBtAjouterTarget);
         if (this.hasBtAjouterTarget == true) {
             console.log(this.nomControleur + " - organizeButtons - Code: 8888 - this.btAjouterTarget.style.display:", this.btAjouterTarget.style.display);
-            // this.btAjouterTarget.style.display = 'flex';
+            this.btAjouterTarget.style.display = 'none';
         }
 
 
