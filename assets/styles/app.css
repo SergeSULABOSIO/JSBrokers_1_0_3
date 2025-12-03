@@ -903,8 +903,9 @@ textarea:hover,
 .context-menu {
     display: none;
     position: fixed;
-    background-color: #fff;
-    border: 1px solid #ccc;
+    background-color: #212529;
+    color: #f8f9fa;
+    border: 1px solid #495057;
     box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
     min-width: 180px;
     z-index: 1000;
@@ -912,6 +913,67 @@ textarea:hover,
     padding: 5px 0;
 }
 
+.context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.context-menu li {
+    padding: 8px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.context-menu li:hover {
+    background-color: #f0f0f0;
+    /* font-weight: bold; */
+    color: black;
+}
+
+.context-menu li.separator {
+    border-top: 1px solid #eee;
+    margin: 5px 0;
+    padding: 0;
+}
+
+.context-menu .menu-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px; /* Remplace la propriété 'gap' pour un meilleur contrôle */
+}
+
+.context-menu ul li {
+    color: #f8f9fa;
+}
+
+.context-menu ul li:hover {
+    background-color: #495057; /* Fond de survol plus clair */
+    color: #f8f9fa;
+}
+
+/* CORRECTION : Assure la visibilité du texte des raccourcis en mode sombre */
+.context-menu ul li .text-muted {
+    color: rgba(248, 249, 250, 0.65); /* Texte clair mais moins prononcé que l'option principale */
+}
+.context-menu ul li.separator {
+    border-top: 1px solid #495057;
+}
+
+.context-menu-icon {
+    width: 20px; /* Largeur fixe pour l'alignement des icônes */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.context-menu-shortcut {
+    width: 20px; /* Largeur fixe pour l'alignement des raccourcis */
+    text-align: right;
+    color: #6c757d; /* text-muted */
+    font-size: 0.875em; /* small */
+}
 
 /* --- NOUVEAU : Style pour le conteneur du spinner --- */
 .spinner-container {
