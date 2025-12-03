@@ -901,7 +901,6 @@ textarea:hover,
 }
 
 .context-menu {
-    display: none;
     position: fixed;
     background-color: #212529;
     color: #f8f9fa;
@@ -922,13 +921,11 @@ textarea:hover,
 .context-menu li {
     padding: 8px 15px;
     cursor: pointer;
-    display: flex;
     align-items: center;
 }
 
 .context-menu li:hover {
     background-color: #f0f0f0;
-    /* font-weight: bold; */
     color: black;
 }
 
