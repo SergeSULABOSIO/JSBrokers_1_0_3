@@ -65,9 +65,6 @@ export default class extends Controller {
         this.entities = selectos;
         this.entityFormCanvas = selectos.length > 0 ? selectos[0].entityFormCanvas : null;
 
-        // On réorganise toujours les boutons, même si le menu est caché.
-        console.log(this.nomControleur + " - handleContextUpdate - Code: 8888 - contextMenuPosition:", contextMenuPosition);
-        
         // Si le payload contient la position du menu, on l'affiche.
         if (contextMenuPosition) {
             this._displayMenu(contextMenuPosition);
@@ -110,26 +107,35 @@ export default class extends Controller {
         const isSingleSelection = selectos.length === 1;
 
         console.log(this.nomControleur + " - organizeButtons - Code: 8888 - Selection:", selectos, "Length:", selectos.length, "Single:", isSingleSelection, "Has:", hasSelection);
-
-        // --- CORRECTION : Logique exhaustive ---
-        // 1. On affiche toujours les boutons non contextuels.
-        // if (this.hasBtAjouterTarget) this.btAjouterTarget.style.display = 'flex';
-        // if (this.hasBtToutCocherTarget) this.btToutCocherTarget.style.display = 'flex';
-        // if (this.hasBtActualiserTarget) this.btActualiserTarget.style.display = 'flex';
-        // if (this.hasBtParametrerTarget) this.btParametrerTarget.style.display = 'flex';
-        // if (this.hasBtQuitterTarget) this.btQuitterTarget.style.display = 'flex';
         
-        console.log(this.nomControleur + " - organizeButtons - Code: 8888 - hasBtAjouterTarget:", this.hasBtAjouterTarget);
-        if (this.hasBtAjouterTarget == true) {
-            console.log(this.nomControleur + " - organizeButtons - Code: 8888 - this.btAjouterTarget.style.display:", this.btAjouterTarget.style.display);
-            this.btAjouterTarget.style.display = 'none';
+        // console.log(this.nomControleur + " - organizeButtons - Code: 8888 - hasBtModifierTarget:", this.hasBtModifierTarget);
+        if (this.hasBtModifierTarget) {
+            if (isSingleSelection) {
+                this.btModifierTarget.classList.add("d-flex");
+                this.btModifierTarget.style.display = 'flex';
+            } else {
+                this.btModifierTarget.classList.remove("d-flex");
+                this.btModifierTarget.style.display = 'none';
+            }
         }
-
-
-        // // 2. On gère la visibilité des boutons contextuels en fonction de la sélection.
-        // if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection === true? "flex" : "none";
-        // if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection === true? "flex" : "none";
-        // if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection === true? "flex" : "none";
+        if (this.hasBtouvrirTarget) {
+            if (hasSelection) {
+                this.btOuvrirTarget.classList.add("d-flex");
+                this.btOuvrirTarget.style.display = 'flex';
+            } else {
+                this.btOuvrirTarget.classList.remove("d-flex");
+                this.btOuvrirTarget.style.display = 'none';
+            }
+        }
+        if (this.hasBtsupprimerTarget) {
+            if (hasSelection) {
+                this.btSupprimerTarget.classList.add("d-flex");
+                this.btSupprimerTarget.style.display = 'flex';
+            } else {
+                this.btSupprimerTarget.classList.remove("d-flex");
+                this.btSupprimerTarget.style.display = 'none';
+            }
+        }
     }
 
     /**
