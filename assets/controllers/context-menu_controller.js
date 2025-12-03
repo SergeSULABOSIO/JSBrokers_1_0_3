@@ -67,6 +67,7 @@ export default class extends Controller {
 
         // On réorganise toujours les boutons, même si le menu est caché.
         this.organizeButtons(this.entities);
+        console.log(this.nomControleur + " - handleContextUpdate - Code: 8888 - contextMenuPosition:", contextMenuPosition);
 
         // Si le payload contient la position du menu, on l'affiche.
         if (contextMenuPosition) {
@@ -112,17 +113,23 @@ export default class extends Controller {
 
         // --- CORRECTION : Logique exhaustive ---
         // 1. On affiche toujours les boutons non contextuels.
-        if (this.hasBtAjouterTarget) this.btAjouterTarget.style.display = 'flex';
-        if (this.hasBtToutCocherTarget) this.btToutCocherTarget.style.display = 'flex';
-        if (this.hasBtActualiserTarget) this.btActualiserTarget.style.display = 'flex';
-        if (this.hasBtParametrerTarget) this.btParametrerTarget.style.display = 'flex';
-        if (this.hasBtQuitterTarget) this.btQuitterTarget.style.display = 'flex';
+        // if (this.hasBtAjouterTarget) this.btAjouterTarget.style.display = 'flex';
+        // if (this.hasBtToutCocherTarget) this.btToutCocherTarget.style.display = 'flex';
+        // if (this.hasBtActualiserTarget) this.btActualiserTarget.style.display = 'flex';
+        // if (this.hasBtParametrerTarget) this.btParametrerTarget.style.display = 'flex';
+        // if (this.hasBtQuitterTarget) this.btQuitterTarget.style.display = 'flex';
+        
+        console.log(this.nomControleur + " - organizeButtons - Code: 8888 - hasBtAjouterTarget:", this.hasBtAjouterTarget);
+        if (this.hasBtAjouterTarget == true) {
+            console.log(this.nomControleur + " - organizeButtons - Code: 8888 - this.btAjouterTarget.style.display:", this.btAjouterTarget.style.display);
+            // this.btAjouterTarget.style.display = 'flex';
+        }
 
-        // 2. On gère la visibilité des boutons contextuels en fonction de la sélection.
-        if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection === true? "flex" : "none";
-        if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection === true? "flex" : "none";
-        if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection === true? "flex" : "none";
-        // this.btModifierTarget.style.display = "none";
+
+        // // 2. On gère la visibilité des boutons contextuels en fonction de la sélection.
+        // if (this.hasBtModifierTarget) this.btModifierTarget.style.display = isSingleSelection === true? "flex" : "none";
+        // if (this.hasBtouvrirTarget) this.btOuvrirTarget.style.display = hasSelection === true? "flex" : "none";
+        // if (this.hasBtsupprimerTarget) this.btSupprimerTarget.style.display = hasSelection === true? "flex" : "none";
     }
 
     /**
