@@ -159,12 +159,17 @@ trait ControllerUtilsTrait
         // CORRECTION : Le template a été renommé '_list_manager.html.twig'.
         // On utilise directement le nom correct au lieu de le construire dynamiquement.
         $template = "components/_list_manager.html.twig";
+        // NOUVEAU : On génère un ID unique et prédictible pour la liste de l'onglet.
+        $listId = 'collection-' . $collectionFieldName . '-for-' . $parentId;
+
         $parameters = [
+            'listId' => $listId, // NOUVEAU : ID unique pour le contrôleur list-manager.
             'can_add' => true, // On autorise l'ajout pour les listes de collection
             'data' => $data,
             'entite_nom' => $this->getEntityName($entityClass),
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
+            'numericAttributesAndValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // NOUVEAU : Pour la barre des totaux.
             'entityFormCanvas' => $entityFormCanvas,
             'serverRootName' => $this->getServerRootName($entityClass),
             'idInvite' => $this->getInvite()->getId(),
