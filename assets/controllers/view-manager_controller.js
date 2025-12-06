@@ -11,12 +11,15 @@ export default class extends Controller {
      * @property {HTMLElement[]} tabsContainerTargets - Le conteneur pour les boutons d'onglets.
      * @property {HTMLElement[]} tabContentContainerTargets - Le conteneur pour le contenu des onglets.
      * @property {HTMLElement[]} displayTargets - L'élément où afficher les messages de statut.
+     * @property {HTMLTemplateElement} collectionTabTemplateTarget - Le template pour un onglet de collection.
      */
-    static targets = ["tabsContainer", "tabContentContainer", "display"];
+    static targets = ["tabsContainer", "tabContentContainer", "display", "collectionTabTemplate"];
     
     static values = {
         idEntreprise: Number,
-        idInvite: Number
+        idInvite: Number,
+        // NOUVEAU : Pour stocker l'état de chargement d'un onglet
+        isLoading: Boolean 
     }
 
     /**
@@ -25,6 +28,7 @@ export default class extends Controller {
      */
     connect() {
         console.log("ViewManager connecté avec idEntreprise:", this.idEntrepriseValue, "et idInvite:", this.idInviteValue);
+        this.isLoadingValue = false; // Initialisation de l'état de chargement
         this.nomControleur = "VIEW-MANAGER";
         /**
          * @property {string} activeTabId - L'ID de l'onglet actuellement actif.
@@ -61,9 +65,12 @@ export default class extends Controller {
 
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this); // NOUVEAU
+        // NOUVEAU : Écouteur pour la réponse du cerveau avec le contenu de l'onglet
+        this.boundHandleTabContentLoaded = this.handleTabContentLoaded.bind(this);
 
         document.addEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On écoute le nouvel événement de contexte global.
         document.addEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
+        document.addEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded); // NOUVEAU
     }
 
     /**
@@ -73,6 +80,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On supprime l'écouteur pour le bon événement.
         document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
+        document.removeEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded); // NOUVEAU
     }
 
 
@@ -130,11 +138,18 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     async switchTab(event) {
+        // NOUVEAU : Empêche de changer d'onglet si un chargement est déjà en cours.
+        if (this.isLoadingValue) {
+            console.warn(`[${this.nomControleur}] Tentative de changement d'onglet pendant un chargement. Action ignorée.`);
+            return;
+        }
+
         console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données:`, { tabId: event.currentTarget.dataset });
         event.preventDefault();
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
         if (newTabId === this.activeTabId) return;
+        this.isLoadingValue = true; // Verrouille le changement d'onglet
 
         // Désactivation de l'ancien onglet
         const oldTab = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
@@ -149,19 +164,37 @@ export default class extends Controller {
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
 
-        let newContent = this.tabContentContainerTarget.querySelector(`[data-content-id="${this.activeTabId}"]`);
+        let newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
 
         if (newContent) {
+            // Le contenu existe déjà, on l'affiche simplement
             newContent.style.display = 'block';
+            this.isLoadingValue = false; // Libère le verrou
         } else {
-            newContent = await this._loadTabContent(clickedTab);
-            this.tabContentContainerTarget.appendChild(newContent);
+            // Le contenu n'existe pas, on le demande au cerveau
+            this._requestTabContent(clickedTab);
         }
 
+        // On notifie le cerveau du changement de contexte d'onglet
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
             parentId: this.collectionTabsParentId,
         });
+    }
+    
+    /**
+     * NOUVEAU : Gère la réception du contenu HTML de l'onglet chargé par le cerveau.
+     * @param {CustomEvent} event 
+     */
+    handleTabContentLoaded(event) {
+        const { tabId, html } = event.detail;
+
+        // On cherche le conteneur préparé par _createTab
+        const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
+        if (contentContainer) {
+            contentContainer.innerHTML = html;
+        }
+        this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
     }
 
     /**
@@ -198,7 +231,7 @@ export default class extends Controller {
     }
 
     _createTab(collectionInfo, parentEntity, parentEntityType) {
-        const tabId = `${collectionInfo.code}-for-${parentEntity.id}`;
+        const tabId = `collection-${collectionInfo.code}-for-${parentEntity.id}`;
         const tab = document.createElement('button');
         tab.className = 'list-tab';
         const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}/generic`;
@@ -207,41 +240,35 @@ export default class extends Controller {
             tabId: tabId,
             tabType: 'collection',
             action: 'click->view-manager#switchTab',
-            collectionUrl: collectionUrl,
+            collectionUrl: collectionUrl, // L'URL est maintenant une donnée pour le cerveau
             entityName: collectionInfo.targetEntity
         });
         tab.textContent = collectionInfo.intitule;
         this.tabsContainerTarget.appendChild(tab);
+
+        // NOUVEAU : On prépare le conteneur de contenu en clonant le template
+        const contentContainer = this.collectionTabTemplateTarget.content.cloneNode(true).firstElementChild;
+        contentContainer.id = tabId; // On lui donne l'ID correspondant à l'onglet
+        contentContainer.style.display = 'none'; // On le cache par défaut
+        this.tabContentContainerTarget.appendChild(contentContainer);
     }
 
-    async _loadTabContent(tabElement) {
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - _loadTabContent - Code: 100 - Données:`, { url: tabElement.dataset.collectionUrl });
-        const content = document.createElement('div');
-        Object.assign(content.dataset, {
-            contentId: tabElement.dataset.tabId,
-            entityName: tabElement.dataset.entityName,
-            canAdd: 'true'
-        });
-        content.style.display = 'block';
-        content.innerHTML = `
-            <div class="table-scroll-wrapper flex-grow-1">
-                <table class="table table-hover table-sm table-enhanced">
-                    <tbody>
-                        ${'<tr><td><div class="skeleton-row"></div></td></tr>'.repeat(6)}
-                    </tbody>
-                </table>
-            </div>
-        `;
+    /**
+     * NOUVEAU : Demande au cerveau de charger le contenu d'un onglet.
+     * @param {HTMLElement} tabElement 
+     */
+    _requestTabContent(tabElement) {
+        const { tabId, collectionUrl } = tabElement.dataset;
 
-        try {
-            const response = await fetch(tabElement.dataset.collectionUrl);
-            if (!response.ok) throw new Error('Échec du chargement des données.');
-            content.innerHTML = await response.text();
-        } catch (error) {
-            console.error("Erreur de chargement du contenu de l'onglet:", error);
-            content.innerHTML = `<div class="alert alert-danger m-3">${error.message}</div>`;
+        // Affiche un squelette de chargement
+        const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
+        if (contentContainer) {
+            contentContainer.style.display = 'block'; // On le rend visible
+            contentContainer.innerHTML = '<div class="spinner-container"><div class="custom-spinner"></div></div>';
         }
-        return content;
+
+        // Notifie le cerveau pour qu'il fasse le fetch
+        this.notifyCerveau('app:tab-content.load-request', { tabId, url: collectionUrl });
     }
 
     /**

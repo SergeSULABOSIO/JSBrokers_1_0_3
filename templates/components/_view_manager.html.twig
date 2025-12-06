@@ -47,7 +47,6 @@
     <div class="flex-grow-1" style="overflow-y: auto;" data-view-manager-target="tabContentContainer">
         <div 
             id="principal" {# CORRECTION: L'ID doit être 'principal' pour correspondre à l'onglet et aux commandes du cerveau. #}
-            data-content-id="principal" 
             data-entity-name="{{ entite_nom }}" 
             data-server-root-name="{{ serverRootName }}" 
             data-can-add="true"
@@ -68,6 +67,23 @@
                 'listUrl': mainListUrl
             }) }}
         </div>
+
+        {# ================================================================== #}
+        {# SECTION 3 : MODÈLE POUR LES ONGLETS DE COLLECTION (CONTEXTUELS)    #}
+        {# ================================================================== #}
+        <template data-view-manager-target="collectionTabTemplate">
+            <div 
+                id="" {# L'ID sera défini dynamiquement par le contrôleur #}
+                data-entity-name="" {# Défini dynamiquement #}
+                data-server-root-name="{{ serverRootName }}" 
+                data-can-add="true"
+                class="h-100"
+            >
+                {# Le contenu (le composant _list_manager) sera chargé ici de manière asynchrone
+                   par le contrôleur Stimulus lors du changement d'onglet.
+                   Cela évite de charger toutes les collections en même temps. #}
+            </div>
+        </template>
     </div>
     {{ include('components/_context_menu.html.twig') }}
     {# Le dialogue de recherche est inclus ici pour être à la racine et éviter les problèmes de z-index #}

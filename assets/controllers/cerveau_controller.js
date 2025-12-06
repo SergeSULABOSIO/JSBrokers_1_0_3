@@ -240,6 +240,10 @@ export default class extends Controller {
             case 'app:loading.stop':
                 this.broadcast('app:loading.stop', payload);
                 break;
+            // NOUVEAU : Gère la demande de chargement du contenu d'un onglet
+            case 'app:tab-content.load-request':
+                this._loadTabContent(payload);
+                break;
             case 'ui:dialog.closed':
                 break;
             default:
@@ -247,6 +251,28 @@ export default class extends Controller {
         }
     }
 
+
+    /**
+     * NOUVEAU : Charge le contenu HTML pour un onglet de collection et le diffuse.
+     * @param {object} payload 
+     * @param {string} payload.tabId - L'ID de l'onglet pour la réponse.
+     * @param {string} payload.url - L'URL à appeler pour obtenir le contenu.
+     * @private
+     */
+    async _loadTabContent(payload) {
+        const { tabId, url } = payload;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Échec du chargement du contenu de l'onglet (statut ${response.status}).`);
+            }
+            const html = await response.text();
+            this.broadcast('view-manager:tab-content.loaded', { tabId, html });
+        } catch (error) {
+            console.error(`[Cerveau] Erreur lors du chargement du contenu pour l'onglet ${tabId}:`, error);
+            this.broadcast('view-manager:tab-content.loaded', { tabId, html: `<div class="alert alert-danger m-3">${error.message}</div>` });
+        }
+    }
 
     /**
      * Gère une demande d'ouverture d'éléments en diffusant un événement pour chaque entité sélectionnée.
