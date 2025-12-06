@@ -86,7 +86,6 @@ export default class extends Controller {
                 this.broadcast('app:workspace.load-default');
                 break;
             case 'ui:tab.context-changed':
-                this._setSelectionState([]); // Réinitialise la sélection
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 this.activeTabId = payload.tabId; // Utiliser une propriété dédiée comme activeTabId
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
