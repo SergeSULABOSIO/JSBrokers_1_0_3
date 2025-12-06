@@ -88,12 +88,8 @@ export default class extends Controller {
             case 'ui:tab.context-changed':
                 this._setSelectionState([]); // Réinitialise la sélection
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
-                this.tabId = payload.tabId;
+                this.activeTabId = payload.tabId; // Utiliser une propriété dédiée comme activeTabId
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
-                this.broadcast('app:context.changed', {
-                    tabId: this.tabId,
-                    parentId: this.activeParentId,
-                });
                 break;
             case 'app:list.context-ready':
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
