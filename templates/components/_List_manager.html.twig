@@ -26,6 +26,7 @@
         data-list-manager-list-url-value="{{ listUrl | default('') }}" {# CORRECTION : Ajout de l'URL unique pour la persistance #}
     > 
         <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
+        <div class="table-scroll-wrapper flex-grow-1 {{ data is empty ? 'd-none' : '' }}" data-list-manager-target="listContainer">
             <table class="table table-hover table-sm table-enhanced">
                 <thead class="table-light sticky-header">
                     <tr class="text-center">
@@ -53,6 +54,7 @@
             </table>
         </div>
         <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
+        <div data-list-manager-target="emptyStateContainer" class="{{ data is not empty ? 'd-none' : '' }} h-100">
             {% set emptyStateParams = {
                 title: "Aucun élément trouvé",
                 description: "Essayez de réinitialiser vos critères ou d'ajouter un nouvel élément.",
