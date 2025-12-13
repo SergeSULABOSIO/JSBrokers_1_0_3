@@ -144,7 +144,7 @@ export default class extends Controller {
             return;
         }
 
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données:`, { tabId: event.currentTarget.dataset });
+        // console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données:`, { tabId: event.currentTarget.dataset });
         event.preventDefault();
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
@@ -168,16 +168,22 @@ export default class extends Controller {
 
         if (newContent) {
             // Le contenu existe déjà, on l'affiche simplement
+            console.log(this.nomControleur + " - switchTab - Code: 123 - Onglet existant:", newContent, "Tab id:", this.activeTabId);
             newContent.style.display = 'block';
             this.isLoadingValue = false; // Libère le verrou
         } else {
-            // Le contenu n'existe pas, on le demande au cerveau
             this._requestTabContent(clickedTab);
         }
 
-        // On notifie le cerveau du changement de contexte d'onglet
+        // On publie le contexte fonctionnel (formulaire, etc.) de l'onglet.
+        // Si l'onglet est nouveau, cette fonction ne trouvera rien, et le contexte sera publié
+        // plus tard par handleTabContentLoaded.
+        this._publishTabContext(newTabId);
+
+        // On notifie le cerveau du changement d'onglet pour la mise à jour de l'affichage (display).
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
+            tabName: clickedTab.textContent,
             parentId: this.collectionTabsParentId,
         });
     }
@@ -193,17 +199,7 @@ export default class extends Controller {
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
-            // NOUVEAU : On vérifie si le HTML injecté contient un contrôleur de liste
-            // et si ce contrôleur a des données à charger (nbElements > 0).
-            const listManagerElement = contentContainer.querySelector('[data-controller="list-manager"]');
-            if (listManagerElement && parseInt(listManagerElement.dataset.listManagerNbelementsValue, 10) > 0) {
-                // Si oui, on demande au cerveau de déclencher une recherche par défaut
-                // pour remplir cette nouvelle liste. L'originatorId garantit que
-                // seule cette liste sera rafraîchie.
-                this.notifyCerveau('app:list.refresh-request', {
-                    originatorId: tabId
-                });
-            }
+            this._publishTabContext(tabId);
         }
         this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
     }
@@ -265,21 +261,50 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU: Affiche un squelette de chargement pour une liste.
+     * @returns {string} Le HTML du squelette.
+     * @private
+     */
+    _getListSkeletonHtml() {
+        // On ne peut pas connaître le nombre exact de colonnes à ce stade,
+        // on utilise donc une approximation (ex: 3) pour le visuel.
+        const columnCount = 3;
+        let skeletonTbody = '';
+        for (let i = 0; i < 8; i++) { // 8 lignes pour un bon effet visuel
+            skeletonTbody += `
+                <tr>
+                    ${'<td><div class="skeleton-row"></div></td>'.repeat(columnCount)}
+                </tr>
+            `;
+        }
+
+        // On enveloppe le corps du tableau dans la structure de base pour la cohérence.
+        return `
+            <div class="table-scroll-wrapper flex-grow-1 h-100">
+                <table class="table table-hover table-sm table-enhanced">
+                    <tbody>
+                        ${skeletonTbody}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    /**
      * NOUVEAU : Demande au cerveau de charger le contenu d'un onglet.
      * @param {HTMLElement} tabElement 
      */
     _requestTabContent(tabElement) {
         const { tabId, collectionUrl } = tabElement.dataset;
 
-        // Affiche un squelette de chargement
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.style.display = 'block'; // On le rend visible
-            contentContainer.innerHTML = '<div class="spinner-container"><div class="custom-spinner"></div></div>';
+            contentContainer.innerHTML = this._getListSkeletonHtml();
         }
 
         // Notifie le cerveau pour qu'il fasse le fetch
-        this.notifyCerveau('app:tab-content.load-request', { tabId, url: collectionUrl });
+        // this.notifyCerveau('app:tab-content.load-request', { tabId, url: collectionUrl });
     }
 
     /**
@@ -290,5 +315,27 @@ export default class extends Controller {
      */
     dispatch(name, detail = {}) {
         document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    }
+
+    /**
+     * NOUVEAU : Trouve le contexte (formCanvas) de l'onglet actif et le notifie au cerveau.
+     * Cela permet de mettre à jour les composants comme la barre d'outils.
+     * @param {string} tabId L'ID de l'onglet dont il faut publier le contexte.
+     * @private
+     */
+    _publishTabContext(tabId) {
+        const contentEl = this.tabContentContainerTarget.querySelector(`#${tabId}`);
+        if (!contentEl) return;
+
+        const listManagerEl = contentEl.querySelector('[data-controller="list-manager"]');
+        if (!listManagerEl) return;
+
+        // On utilise `this.application.getControllerForElementAndIdentifier` pour obtenir l'instance du contrôleur.
+        const listManager = this.application.getControllerForElementAndIdentifier(listManagerEl, 'list-manager');
+        if (listManager && listManager.hasEntityFormCanvasValue) {
+            this.notifyCerveau('ui:context.reset', {
+                formCanvas: listManager.entityFormCanvasValue
+            });
+        }
     }
 }

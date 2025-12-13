@@ -30,6 +30,7 @@ export default class extends Controller {
         this.displayState = {
             rubricName: 'Tableau de bord',
             action: 'Initialisation',
+            activeTabName: 'Principal', // NOUVEAU
             result: 'Prêt',
             selectionCount: 0,
             timestamp: null // NOUVEAU : Ajout du timestamp à l'état
@@ -88,7 +89,17 @@ export default class extends Controller {
             case 'ui:tab.context-changed':
                 this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
                 this.activeTabId = payload.tabId; // Utiliser une propriété dédiée comme activeTabId
+                // Met à jour l'état d'affichage et le publie.
+                this.displayState.activeTabName = payload.tabName;
+                this._publishDisplayStatus();
+
+                // Met à jour l'état interne du cerveau.
+                this.activeTabId = payload.tabId; 
                 this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
+                break;
+            case 'ui:context.reset':
+                this.activeTabFormCanvas = payload.formCanvas;
+                this._setSelectionState([]); // Réinitialise la sélection et publie le contexte.
                 break;
             case 'app:list.context-ready':
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
