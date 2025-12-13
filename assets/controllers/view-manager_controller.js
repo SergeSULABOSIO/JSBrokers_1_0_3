@@ -193,6 +193,17 @@ export default class extends Controller {
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
+            // NOUVEAU : On vérifie si le HTML injecté contient un contrôleur de liste
+            // et si ce contrôleur a des données à charger (nbElements > 0).
+            const listManagerElement = contentContainer.querySelector('[data-controller="list-manager"]');
+            if (listManagerElement && parseInt(listManagerElement.dataset.listManagerNbelementsValue, 10) > 0) {
+                // Si oui, on demande au cerveau de déclencher une recherche par défaut
+                // pour remplir cette nouvelle liste. L'originatorId garantit que
+                // seule cette liste sera rafraîchie.
+                this.notifyCerveau('app:list.refresh-request', {
+                    originatorId: tabId
+                });
+            }
         }
         this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
     }

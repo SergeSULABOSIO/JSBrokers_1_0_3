@@ -26,7 +26,6 @@
         data-list-manager-list-url-value="{{ listUrl | default('') }}" {# CORRECTION : Ajout de l'URL unique pour la persistance #}
     > 
         <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
-        <div class="table-scroll-wrapper flex-grow-1 {{ data is empty ? 'd-none' : '' }}" data-list-manager-target="listContainer">
             <table class="table table-hover table-sm table-enhanced">
                 <thead class="table-light sticky-header">
                     <tr class="text-center">
@@ -49,12 +48,15 @@
                     </tr>
                 </thead>
                 <tbody class="table-group-divider context-target" data-list-manager-target="donnees">
-                    {# Le contenu sera injecté ici par le contrôleur #}
+                    {# MODIFICATION : On rend les lignes directement côté serveur si des données sont passées.
+                       Le contrôleur JS ne chargera les données que lors d'une recherche/refresh. #}
+                    {% for entity in data %}
+                        {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas, 'entite_nom': entite_nom, 'entityCanvas': entityCanvas }) }}
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
         <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
-        <div data-list-manager-target="emptyStateContainer" class="{{ data is not empty ? 'd-none' : '' }} h-100">
             {% set emptyStateParams = {
                 title: "Aucun élément trouvé",
                 description: "Essayez de réinitialiser vos critères ou d'ajouter un nouvel élément.",
