@@ -87,8 +87,6 @@ export default class extends Controller {
                 this.broadcast('app:workspace.load-default');
                 break;
             case 'ui:tab.context-changed':
-                this._publishDisplayStatus(`Navigation vers l'onglet '${payload.tabId}'`);
-                this.activeTabId = payload.tabId; // Utiliser une propriété dédiée comme activeTabId
                 // Met à jour l'état d'affichage et le publie.
                 this.displayState.activeTabName = payload.tabName;
                 this._publishDisplayStatus();
@@ -471,14 +469,21 @@ export default class extends Controller {
     _publishSelectionStatus() {
         const timestamp = this.displayState.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const selectionCount = this.displayState.selectionCount;
+        const rubricName = this.displayState.rubricName;
+        const tabName = this.displayState.activeTabName;
 
-        const messageHtml = `
-            <span class="fw-bold text-dark">${timestamp}</span>
-            <span class="mx-2 text-muted">›</span>
-            <span class="fw-bold text-dark">${this.displayState.rubricName}</span>
-            <span class="mx-2 text-muted">›</span>
-            <span class="fw-bold">${selectionCount}</span> sélection(s)
-        `;
+        let messageParts = [
+            `<span class="fw-bold text-dark">${timestamp}</span>`,
+            `<span class="fw-bold text-dark">${rubricName}</span>`
+        ];
+
+        if (tabName && tabName.toLowerCase() !== 'principal') {
+            messageParts.push(`<span class="fw-bold text-dark">${tabName}</span>`);
+        }
+
+        messageParts.push(`<span>${selectionCount} sélection(s)</span>`);
+
+        const messageHtml = messageParts.join('<span class="mx-2 text-muted">›</span>');
         this.broadcast('app:display.update', { html: messageHtml });
     }
 
