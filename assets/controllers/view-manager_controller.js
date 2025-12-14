@@ -193,6 +193,7 @@ export default class extends Controller {
      */
     handleTabContentLoaded(event) {
         const { tabId, html } = event.detail;
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleTabContentLoaded - Code: 100 - Données:`, { tabId, html });
 
         // On cherche le conteneur préparé par _createTab
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
