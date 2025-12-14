@@ -200,11 +200,9 @@ export default class extends Controller {
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
- 
             // L'initialisation de l'état est maintenant déléguée au contrôleur `list-manager`
             // qui se connecte lorsque le `html` est injecté.
-            // On publie toujours le contexte pour s'assurer que la sélection est réinitialisée visuellement.
-            this._publishTabContext(tabId);
+            // Il n'y a plus rien à faire ici, car le `list-manager` notifiera le cerveau lors de sa connexion.
         }
         this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
     }
@@ -322,25 +320,4 @@ export default class extends Controller {
         document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 
-    /**
-     * NOUVEAU : Trouve le contexte (formCanvas) de l'onglet actif et le notifie au cerveau.
-     * Cela permet de mettre à jour les composants comme la barre d'outils.
-     * @param {string} tabId L'ID de l'onglet dont il faut publier le contexte.
-     * @private
-     */
-    _publishTabContext(tabId) {
-        const contentEl = this.tabContentContainerTarget.querySelector(`#${tabId}`);
-        if (!contentEl) return;
-
-        const listManagerEl = contentEl.querySelector('[data-controller="list-manager"]');
-        if (!listManagerEl) return;
-
-        // On utilise `this.application.getControllerForElementAndIdentifier` pour obtenir l'instance du contrôleur.
-        const listManager = this.application.getControllerForElementAndIdentifier(listManagerEl, 'list-manager');
-        if (listManager && listManager.hasEntityFormCanvasValue) {
-            this.notifyCerveau('ui:context.reset', {
-                formCanvas: listManager.entityFormCanvasValue
-            });
-        }
-    }
 }
