@@ -162,10 +162,12 @@ export default class extends Controller {
         let newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
 
         if (newContent) {
+            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données existantes:`, { newContent });
             newContent.style.display = 'block';
             this.isLoadingValue = false; // Libère le verrou
         } else {
             // REFACTORING : La logique de demande de contenu est maintenant ici.
+            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données nouvelles:`, { newContent });
             const { tabId, collectionUrl } = clickedTab.dataset;
             const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
             if (contentContainer) {
