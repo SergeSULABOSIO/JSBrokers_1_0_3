@@ -172,6 +172,7 @@ export default class extends Controller {
             newContent.style.display = 'block';
             this.isLoadingValue = false; // Libère le verrou
         } else {
+            console.log(this.nomControleur + " - switchTab - Code: 123 - Onglet nouveau:", newContent, "Tab id:", this.activeTabId);
             this._requestTabContent(clickedTab);
         }
 
