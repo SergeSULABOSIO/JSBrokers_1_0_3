@@ -167,21 +167,22 @@ export default class extends Controller {
         let newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
 
         if (newContent) {
-            // Le contenu existe déjà, on l'affiche simplement
-            console.log(this.nomControleur + " - switchTab - Code: 123 - Onglet existant:", newContent, "Tab id:", this.activeTabId);
             newContent.style.display = 'block';
             this.isLoadingValue = false; // Libère le verrou
         } else {
-            console.log(this.nomControleur + " - switchTab - Code: 123 - Onglet nouveau:", newContent, "Tab id:", this.activeTabId);
-            this._requestTabContent(clickedTab);
+            // REFACTORING : La logique de demande de contenu est maintenant ici.
+            const { tabId, collectionUrl } = clickedTab.dataset;
+            const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
+            if (contentContainer) {
+                contentContainer.style.display = 'block'; // On le rend visible
+                contentContainer.innerHTML = this._getListSkeletonHtml();
+            }
+            // On notifie le cerveau pour qu'il fasse le fetch.
+            this.notifyCerveau('app:tab-content.load-request', { tabId, url: collectionUrl });
         }
 
-        // On publie le contexte fonctionnel (formulaire, etc.) de l'onglet.
-        // Si l'onglet est nouveau, cette fonction ne trouvera rien, et le contexte sera publié
-        // plus tard par handleTabContentLoaded.
-        // this._publishTabContext(newTabId);
-
-        // On notifie le cerveau du changement d'onglet pour la mise à jour de l'affichage (display).
+        // ESSENTIEL : On notifie le cerveau du changement d'onglet pour la mise à jour du contexte global.
+        // C'est ce qui déclenche la restauration de l'état ou la préparation d'un état neuf.
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
             tabName: clickedTab.textContent,
@@ -291,23 +292,6 @@ export default class extends Controller {
                 </table>
             </div>
         `;
-    }
-
-    /**
-     * NOUVEAU : Demande au cerveau de charger le contenu d'un onglet.
-     * @param {HTMLElement} tabElement 
-     */
-    _requestTabContent(tabElement) {
-        const { tabId, collectionUrl } = tabElement.dataset;
-
-        const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
-        if (contentContainer) {
-            contentContainer.style.display = 'block'; // On le rend visible
-            contentContainer.innerHTML = this._getListSkeletonHtml();
-        }
-
-        // Notifie le cerveau pour qu'il fasse le fetch
-        // this.notifyCerveau('app:tab-content.load-request', { tabId, url: collectionUrl });
     }
 
     /**
