@@ -100,34 +100,32 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleSelection(event) {
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleSelection - Code: 100 - Données:`, event.detail);
-        // CORRECTION : Le payload est maintenant un objet. On extrait la propriété 'selection'.
+        // RÔLE : Cette fonction est le "constructeur d'onglets de collection".
+        // Elle ne s'exécute que si une sélection a lieu sur l'onglet principal.
+        if (this.activeTabId !== 'principal') {
+            return;
+        }
+
         const selectos = event.detail.selection || [];
-
-
-        const selection = selectos.map(s => s.id);
         const entities = selectos.map(s => s.entity);
         const canvas = selectos.length > 0 ? selectos[0].entityCanvas : null;
         const entityType = selectos.length > 0 ? selectos[0].entityType : null;
-        // La mise à jour du display est maintenant gérée par le cerveau via handleDisplayUpdate
 
         const isSingleSelection = entities && entities.length === 1;
         const newParentId = isSingleSelection ? entities[0].id : null;
 
-        if (this.activeTabId !== 'principal' || (event.detail.originatorId && event.detail.originatorId !== 'principal')) {
-            // this._saveState(); // Désactivé: La sauvegarde d'état est gérée globalement ou non souhaitée pour l'instant.
-            return;
-        }
+        // OPTIMISATION : Si l'ID du parent sélectionné n'a pas changé, il n'y a rien à faire.
+        // Cela évite de redessiner les onglets inutilement.
+        if (newParentId === this.collectionTabsParentId) return;
 
+        // On met à jour l'état du parent et on reconstruit les onglets.
         this.collectionTabsParentId = newParentId;
-        // NOUVEAU : Mémoriser le canvas de l'entité parente pour la restauration
         this.parentEntityCanvas = isSingleSelection ? canvas : null;
-        // NOUVEAU : Mémoriser le type de l'entité parente pour la restauration
         this.parentEntityType = isSingleSelection ? entityType : null;
 
         this._removeCollectionTabs();
 
-        if (isSingleSelection) {
+        if (isSingleSelection && canvas) {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
         }
