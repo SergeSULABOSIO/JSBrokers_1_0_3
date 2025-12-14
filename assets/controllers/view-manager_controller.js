@@ -138,13 +138,10 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     async switchTab(event) {
-        // NOUVEAU : Empêche de changer d'onglet si un chargement est déjà en cours.
         if (this.isLoadingValue) {
             console.warn(`[${this.nomControleur}] Tentative de changement d'onglet pendant un chargement. Action ignorée.`);
             return;
         }
-
-        // console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données:`, { tabId: event.currentTarget.dataset });
         event.preventDefault();
         const clickedTab = event.currentTarget;
         const newTabId = clickedTab.dataset.tabId;
