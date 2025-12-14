@@ -53,22 +53,9 @@ export default class extends BaseController {
         // NOUVEAU : Écouteur pour la nouvelle logique "B"
         this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
 
-        // On notifie le cerveau avec les données numériques initiales.
-        // On décode et on parse les données numériques initiales avant de les envoyer au Cerveau.
-        let initialNumericData = {};
-        try {
-            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue);
-            initialNumericData = JSON.parse(decodedInitialData || '{}');
-        } catch (e) {
-            console.error(`${this.nomControleur} - Erreur de parsing des données numériques initiales.`, { raw: this.numericAttributesAndValuesValue, error: e });
-            // En cas d'erreur, on s'assure que la valeur reste un objet vide.
-            initialNumericData = {};
-        }
-        this.notifyCerveau('app:list.data-loaded', {
-            numericAttributesAndValues: initialNumericData
-        });
+        // NOUVEAU : Centralise la notification de l'état initial au cerveau.
+        this._initializeAndNotifyState();
 
-        console.log("LIST-MANAGER - connect - Code:1980 - numericAttributesAndValuesValue (initial from generic component):", this.numericAttributesAndValuesValue);
         document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
@@ -78,11 +65,6 @@ export default class extends BaseController {
             this.listContainerTarget.classList.add('d-none');
             this.emptyStateContainerTarget.classList.remove('d-none');
             this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
-        }
-
-        if (this.element.id !== 'principal') {
-            console.log(`${this.nomControleur} - Notification de contexte prêt pour l'onglet: ${this.element.id}`, { formCanvas: this.entityFormCanvasValue });
-            this.notifyCerveau('app:list.context-ready', { tabId: this.element.id, formCanvas: this.entityFormCanvasValue });
         }
     }
 
@@ -95,6 +77,38 @@ export default class extends BaseController {
         document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.removeEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
+    }
+
+    /**
+     * NOUVEAU : Construit l'état initial de la liste et le notifie au cerveau.
+     * Cette méthode est appelée à la connexion du contrôleur et agit comme le
+     * point de départ pour l'enregistrement et la publication de l'état d'un onglet.
+     * @private
+     */
+    _initializeAndNotifyState() {
+        // 1. Décode les données numériques initiales.
+        let initialNumericData = {};
+        try {
+            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue);
+            initialNumericData = JSON.parse(decodedInitialData || '{}');
+        } catch (e) {
+            console.error(`${this.nomControleur} - Erreur de parsing des données numériques initiales.`, { raw: this.numericAttributesAndValuesValue, error: e });
+            initialNumericData = {};
+        }
+
+        // 2. Construit l'objet d'état complet.
+        const initialState = {
+            selectionState: [],
+            selectionIds: new Set(),
+            numericAttributesAndValues: initialNumericData,
+            activeTabFormCanvas: this.entityFormCanvasValue
+        };
+
+        // 3. Notifie le cerveau avec l'état initial.
+        this.notifyCerveau('ui:tab.initialized', { 
+            tabId: this.element.id, 
+            state: initialState 
+        });
     }
 
     // --- GESTION DE LA SÉLECTION ---

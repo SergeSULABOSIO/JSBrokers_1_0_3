@@ -281,9 +281,28 @@ export default class extends Controller {
             // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
             case 'ui:tab.initialized':
                 const { tabId, state } = payload;
+                // On stocke l'état pour une restauration future.
                 if (!this.tabsState[tabId]) {
                     this.tabsState[tabId] = state;
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] État initialisé et stocké pour le nouvel onglet '${tabId}'.`, this.tabsState[tabId]);
+                }
+
+                // Si l'onglet qui vient d'être initialisé est l'onglet actuellement actif,
+                // cela signifie qu'un nouvel onglet vient d'être chargé.
+                // On met donc à jour le contexte courant de l'application avec cet état initial.
+                if (this.activeTabId === tabId) {
+                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] L'onglet initialisé '${tabId}' est actif. Mise à jour du contexte courant.`);
+                    this.selectionState = state.selectionState;
+                    this.selectionIds = state.selectionIds;
+                    this.numericAttributesAndValues = state.numericAttributesAndValues;
+                    this.activeTabFormCanvas = state.activeTabFormCanvas;
+
+                    // On publie le nouveau contexte pour que la toolbar et la barre des totaux se mettent à jour.
+                    this.broadcast('app:context.changed', {
+                        selection: this.selectionState,
+                        numericAttributesAndValues: this.numericAttributesAndValues,
+                        formCanvas: this.activeTabFormCanvas
+                    });
                 }
                 break;
             case 'ui:dialog.closed':
