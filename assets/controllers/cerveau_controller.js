@@ -107,7 +107,7 @@ export default class extends Controller {
             case 'ui:tab.context-changed':
                 // Met à jour l'état d'affichage et le publie.
                 this.displayState.activeTabName = payload.tabName;
-                this._publishDisplayStatus();
+                this._publishSelectionStatus(); // CORRECTION : Utiliser la bonne fonction pour afficher le nom de l'onglet.
 
                 // Met à jour l'état interne du cerveau.
                 this.activeTabId = payload.tabId; 
@@ -157,13 +157,13 @@ export default class extends Controller {
             case 'dialog:boite-dialogue:init-request':
             case 'ui:boite-dialogue:add-collection-item-request':
                 this.broadcast('app:loading.start');
-                this._publishDisplayStatus('Ouverture du formulaire de collection...');
+                this._publishSelectionStatus('Ouverture du formulaire de collection...');
                 this.openDialogBox(payload);
                 break;
             case 'ui:toolbar.add-request':
                 // LOGIQUE DÉPLACÉE : Le cerveau reçoit une demande simple et la transforme en appel complexe.
                 this.broadcast('app:loading.start');
-                this._publishDisplayStatus('Ouverture du formulaire de création...');
+                this._publishSelectionStatus('Ouverture du formulaire de création...');
                 this.openDialogBox({
                     entity: {},
                     entityFormCanvas: payload.formCanvas,
@@ -174,7 +174,7 @@ export default class extends Controller {
             case 'ui:toolbar.edit-request':
                 // LOGIQUE DÉPLACÉE : Le cerveau gère la sélection unique et prépare le dialogue.
                 this.broadcast('app:loading.start');
-                this._publishDisplayStatus(`Modification de l'élément...`);
+                this._publishSelectionStatus(`Modification de l'élément...`);
                 this.openDialogBox({
                     entity: payload.selection[0].entity, // On prend la première (et unique) entité
                     entityFormCanvas: payload.formCanvas,
@@ -183,7 +183,7 @@ export default class extends Controller {
                 });
                 break;
             case 'ui:dialog.opened':
-                this._publishDisplayStatus(payload.mode === 'creation' ? 'Formulaire prêt pour la saisie.' : 'Formulaire prêt pour modification.');
+                this._publishSelectionStatus(payload.mode === 'creation' ? 'Formulaire prêt pour la saisie.' : 'Formulaire prêt pour modification.');
                 this.broadcast('app:loading.stop');
                 break;
             case 'app:entity.saved':
@@ -191,7 +191,7 @@ export default class extends Controller {
                 this._showNotification('Enregistrement réussi !', 'success');
                 break;
             case 'app:form.validation-error':
-                this._publishDisplayStatus('Erreur de validation. Veuillez corriger le formulaire.');
+                this._publishSelectionStatus('Erreur de validation. Veuillez corriger le formulaire.');
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
             case 'app:base-données:sélection-request':
@@ -204,14 +204,14 @@ export default class extends Controller {
                 break;
             case 'ui:toolbar.refresh-request':
                 this.displayState.action = 'Rafraîchissement manuel';
-                this._publishDisplayStatus('Rafraîchissement en cours...');
+                this._publishSelectionStatus('Rafraîchissement en cours...');
                 this.broadcast('app:loading.start');
                 this._requestListRefresh(this.getActiveTabId());
                 break;
             case 'app:list.refreshed':
                 this._setSelectionState([]); // On réinitialise la sélection
                 const itemCount = payload.itemCount ?? 'N/A';
-                this._publishDisplayStatus(`Liste chargée : ${itemCount} élément(s)`);
+                this._publishSelectionStatus(`Liste chargée : ${itemCount} élément(s)`);
                 this.broadcast('app:loading.stop');
                 break;
             case 'app:list.data-loaded':                
@@ -228,11 +228,11 @@ export default class extends Controller {
                 });
                 break;
             case 'app:api.delete-request':
-                this._publishDisplayStatus('Suppression en cours...');
+                this._publishSelectionStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);
                 break;
             case 'dialog:confirmation.request':
-                this._publishDisplayStatus('Attente de confirmation...');
+                this._publishSelectionStatus('Attente de confirmation...');
                 this._requestDeleteConfirmation(payload);
                 break;
             case 'app:delete-request': // ANCIENNE ACTION DE LA TOOLBAR, maintenant renommée et gérée ici.
@@ -256,7 +256,7 @@ export default class extends Controller {
                 break;
             case 'ui:toolbar.open-request':
                 this.broadcast('app:loading.start');
-                this._publishDisplayStatus('Ouverture de la vue détaillée...');
+                this._publishSelectionStatus('Ouverture de la vue détaillée...');
                 this._handleOpenRequest(payload.selection);
                 break;
             case 'app:tab.opened':
@@ -515,37 +515,18 @@ export default class extends Controller {
 
     /**
      * NOUVEAU : Formate et diffuse le message de statut pour le display.
+     * Cette fonction est la seule source de vérité pour l'affichage du statut.
+     * Elle peut afficher un message d'action temporaire ou l'état de la sélection.
      * @param {string|null} [action=null] - La nouvelle action à afficher. Si null, l'action précédente est conservée.
      * @private
      */
-    _publishDisplayStatus(action = null) {
+    _publishSelectionStatus(action = null) {
         // On met à jour l'action et le timestamp à chaque publication
         if (action) {
             this.displayState.action = action;
         }
         this.displayState.timestamp = new Date();
-        
-        // On lit les valeurs directement depuis l'objet d'état `displayState`
-        const timestamp = this.displayState.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        const selectionCount = this.displayState.selectionCount;
 
-        const messageHtml = `
-            <span class="fw-bold text-dark">${timestamp}</span>
-            <span class="mx-2 text-muted">›</span>
-            <span class="fw-bold text-dark">${this.displayState.rubricName}</span>
-            <span class="mx-2 text-muted">›</span>
-            <span>${this.displayState.action}</span>
-            <span class="mx-2 text-muted">|</span>
-            <span class="fw-bold">${selectionCount}</span> sélection(s)
-        `;
-        this.broadcast('app:display.update', { html: messageHtml });
-    }
-
-    /**
-     * NOUVEAU : Formate et diffuse un message de statut spécifique à la sélection.
-     * @private
-     */
-    _publishSelectionStatus() {
         const timestamp = this.displayState.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const selectionCount = this.displayState.selectionCount;
         const rubricName = this.displayState.rubricName;
@@ -560,7 +541,12 @@ export default class extends Controller {
             messageParts.push(`<span class="fw-bold text-dark">${tabName}</span>`);
         }
 
-        messageParts.push(`<span>${selectionCount} sélection(s)</span>`);
+        // Si une action est fournie, elle est affichée. Sinon, on affiche le nombre de sélections.
+        if (action) {
+            messageParts.push(`<span>${action}</span>`);
+        } else {
+            messageParts.push(`<span>${selectionCount} sélection(s)</span>`);
+        }
 
         const messageHtml = messageParts.join('<span class="mx-2 text-muted">›</span>');
         this.broadcast('app:display.update', { html: messageHtml });
