@@ -34,7 +34,9 @@ export default class extends Controller {
             result: 'Prêt',
             selectionCount: 0,
             timestamp: null // NOUVEAU : Ajout du timestamp à l'état
-        };
+        }; // Stocke l'état de chaque onglet (clé: tabId, valeur: état)
+        this.tabsState = {};
+
         this.currentIdInvite = null;
 
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
@@ -74,6 +76,7 @@ export default class extends Controller {
 
         switch (type) {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
+                this.tabsState = {}; // On vide la mémoire des onglets lors du chargement d'une nouvelle rubrique
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 this.displayState.rubricName = payload.entityName || 'Inconnu';
                 break;
@@ -93,7 +96,30 @@ export default class extends Controller {
 
                 // Met à jour l'état interne du cerveau.
                 this.activeTabId = payload.tabId; 
-                this.activeParentId = payload.parentId || null; // NOUVEAU : Mémoriser l'ID du parent.
+                this.activeParentId = payload.parentId || null;
+
+                // NOUVEAU : Restaurer l'état de l'onglet
+                const storedState = this.tabsState[this.activeTabId];
+                if (storedState) {
+                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Restauration de l'état pour l'onglet existant '${this.activeTabId}'.`, storedState);
+                    // On met à jour l'état courant du cerveau avec l'état de l'onglet
+                    this.selectionState = storedState.selectionState;
+                    this.selectionIds = storedState.selectionIds;
+                    this.numericAttributesAndValues = storedState.numericAttributesAndValues;
+                    this.activeTabFormCanvas = storedState.activeTabFormCanvas;
+
+                    // On publie le contexte restauré pour que tous les composants se mettent à jour
+                    this.broadcast('app:context.changed', {
+                        selection: this.selectionState,
+                        numericAttributesAndValues: this.numericAttributesAndValues,
+                        formCanvas: this.activeTabFormCanvas
+                    });
+                } else {
+                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Pas d'état trouvé pour l'onglet '${this.activeTabId}'. Initialisation d'un état vide.`);
+                    // C'est un nouvel onglet (ou le principal), on réinitialise le contexte.
+                    // L'état sera créé par 'ui:tab.initialized' plus tard.
+                    this._setSelectionState([]); // Ceci va aussi publier le contexte vide.
+                }
                 break;
             case 'ui:context.reset':
                 this.activeTabFormCanvas = payload.formCanvas;
@@ -181,7 +207,11 @@ export default class extends Controller {
                 this._publishDisplayStatus(`Liste chargée : ${itemCount} élément(s)`);
                 this.broadcast('app:loading.stop');
                 break;
-            case 'app:list.data-loaded':
+            case 'app:list.data-loaded':                
+                // NOUVEAU : Mettre à jour l'état de l'onglet actif dans le store
+                if (this.activeTabId && this.tabsState[this.activeTabId]) {
+                    this.tabsState[this.activeTabId].numericAttributesAndValues = payload.numericAttributesAndValues || {};
+                }
                 this.numericAttributesAndValues = payload.numericAttributesAndValues || {}; // Met à jour les données numériques
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues. Rediffusion du contexte...`, { 
                     numericAttributesAndValues: this.numericAttributesAndValues
@@ -247,6 +277,14 @@ export default class extends Controller {
             // NOUVEAU : Gère la demande de chargement du contenu d'un onglet
             case 'app:tab-content.load-request':
                 this._loadTabContent(payload);
+                break;
+            // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
+            case 'ui:tab.initialized':
+                const { tabId, state } = payload;
+                if (!this.tabsState[tabId]) {
+                    this.tabsState[tabId] = state;
+                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] État initialisé et stocké pour le nouvel onglet '${tabId}'.`, this.tabsState[tabId]);
+                }
                 break;
             case 'ui:dialog.closed':
                 break;
@@ -324,6 +362,12 @@ export default class extends Controller {
     _setSelectionState(selectos = [], contextMenuPosition = null) {
         this.selectionState = selectos;
         this.selectionIds = new Set(this.selectionState.map(s => s.id));
+
+        // NOUVEAU : Mettre à jour l'état de l'onglet actif dans le store
+        if (this.activeTabId && this.tabsState[this.activeTabId]) {
+            this.tabsState[this.activeTabId].selectionState = this.selectionState;
+            this.tabsState[this.activeTabId].selectionIds = this.selectionIds;
+        }
         
         // CORRECTION : On met à jour l'état du display AVANT de le publier.
         this.displayState.selectionCount = this.selectionState.length;
