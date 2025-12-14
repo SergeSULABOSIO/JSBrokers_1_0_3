@@ -22,10 +22,6 @@ export default class extends Controller {
     connect() {
         window.logSequence = window.logSequence || 0; // Initialise le compteur de log global
         this.nomControleur = "Cerveau";
-        this.selectionState = []; // Tableau des objets "selecto"
-        this.selectionIds = new Set(); // Pour une recherche rapide des IDs
-        this.numericAttributesAndValues = {}; // Stocke l'objet complet {colonnes, valeurs}
-        this.activeTabFormCanvas = null; // NOUVEAU : Pour stocker le formCanvas de l'onglet actif.
         this.currentIdEntreprise = null;
         this.displayState = {
             rubricName: 'Tableau de bord',
@@ -34,8 +30,27 @@ export default class extends Controller {
             result: 'Prêt',
             selectionCount: 0,
             timestamp: null // NOUVEAU : Ajout du timestamp à l'état
-        }; // Stocke l'état de chaque onglet (clé: tabId, valeur: état)
+        };
+        /**
+         * @property {Object<string, {selectionState: Array, selectionIds: Set, numericAttributesAndValues: Object, activeTabFormCanvas: Object}>} tabsState
+         * @description La mémoire à court terme du cerveau.
+         * Stocke l'état de chaque onglet (principal et contextuel).
+         * La clé est l'ID de l'onglet (ex: 'principal', 'collection-contacts-for-1'),
+         * et la valeur est un objet contenant l'état de cet onglet.
+         */
         this.tabsState = {};
+
+        /**
+         * @property {Object} _tabStateTemplate
+         * @description Un modèle pour l'état initial d'un nouvel onglet, utilisé pour la documentation et l'initialisation.
+         * @private
+         */
+        this._tabStateTemplate = {
+            selectionState: [],
+            selectionIds: new Set(),
+            numericAttributesAndValues: {},
+            activeTabFormCanvas: null
+        };
 
         this.currentIdInvite = null;
 
@@ -101,18 +116,13 @@ export default class extends Controller {
                 // NOUVEAU : Restaurer l'état de l'onglet
                 const storedState = this.tabsState[this.activeTabId];
                 if (storedState) {
-                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Restauration de l'état pour l'onglet existant '${this.activeTabId}'.`, storedState);
-                    // On met à jour l'état courant du cerveau avec l'état de l'onglet
-                    this.selectionState = storedState.selectionState;
-                    this.selectionIds = storedState.selectionIds;
-                    this.numericAttributesAndValues = storedState.numericAttributesAndValues;
-                    this.activeTabFormCanvas = storedState.activeTabFormCanvas;
+                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Restauration de l'état pour l'onglet existant '${this.activeTabId}'.`, { ...storedState });
 
                     // On publie le contexte restauré pour que tous les composants se mettent à jour
                     this.broadcast('app:context.changed', {
-                        selection: this.selectionState,
-                        numericAttributesAndValues: this.numericAttributesAndValues,
-                        formCanvas: this.activeTabFormCanvas
+                        selection: storedState.selectionState,
+                        numericAttributesAndValues: storedState.numericAttributesAndValues,
+                        formCanvas: storedState.activeTabFormCanvas
                     });
                 } else {
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] Pas d'état trouvé pour l'onglet '${this.activeTabId}'. Initialisation d'un état vide.`);
@@ -122,16 +132,13 @@ export default class extends Controller {
                 }
                 break;
             case 'ui:context.reset':
-                this.activeTabFormCanvas = payload.formCanvas;
+                this._getActiveTabState().activeTabFormCanvas = payload.formCanvas;
                 this._setSelectionState([]); // Réinitialise la sélection et publie le contexte.
                 break;
             case 'app:list.context-ready':
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
-                this.activeTabFormCanvas = payload.formCanvas; // Met à jour le formCanvas actif
-                this.broadcast('app:form-canvas.updated', {
-                    tabId: payload.tabId,
-                    formCanvas: this.activeTabFormCanvas
-                });
+                this._getActiveTabState().activeTabFormCanvas = payload.formCanvas;
+                this.broadcast('app:form-canvas.updated', { tabId: payload.tabId, formCanvas: payload.formCanvas });
                 break;
             case 'dialog:search.open-request':
                 this.broadcast('dialog:search.open-request', payload);
@@ -209,18 +216,15 @@ export default class extends Controller {
                 break;
             case 'app:list.data-loaded':                
                 // NOUVEAU : Mettre à jour l'état de l'onglet actif dans le store
-                if (this.activeTabId && this.tabsState[this.activeTabId]) {
-                    this.tabsState[this.activeTabId].numericAttributesAndValues = payload.numericAttributesAndValues || {};
-                }
-                this.numericAttributesAndValues = payload.numericAttributesAndValues || {}; // Met à jour les données numériques
+                this._getActiveTabState().numericAttributesAndValues = payload.numericAttributesAndValues || {};
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues. Rediffusion du contexte...`, { 
-                    numericAttributesAndValues: this.numericAttributesAndValues
+                    numericAttributesAndValues: this._getActiveTabState().numericAttributesAndValues
                 });
                 // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques).
                 // C'est ce qui permet à la barre des totaux de se mettre à jour.
                 this.broadcast('app:context.changed', {
-                    selection: this.selectionState,
-                    numericAttributesAndValues: this.numericAttributesAndValues
+                    selection: this._getActiveTabState().selectionState,
+                    numericAttributesAndValues: this._getActiveTabState().numericAttributesAndValues
                 });
                 break;
             case 'app:api.delete-request':
@@ -292,16 +296,12 @@ export default class extends Controller {
                 // On met donc à jour le contexte courant de l'application avec cet état initial.
                 if (this.activeTabId === tabId) {
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] L'onglet initialisé '${tabId}' est actif. Mise à jour du contexte courant.`);
-                    this.selectionState = state.selectionState;
-                    this.selectionIds = state.selectionIds;
-                    this.numericAttributesAndValues = state.numericAttributesAndValues;
-                    this.activeTabFormCanvas = state.activeTabFormCanvas;
-
+                    const activeTabState = this._getActiveTabState();
                     // On publie le nouveau contexte pour que la toolbar et la barre des totaux se mettent à jour.
                     this.broadcast('app:context.changed', {
-                        selection: this.selectionState,
-                        numericAttributesAndValues: this.numericAttributesAndValues,
-                        formCanvas: this.activeTabFormCanvas
+                        selection: activeTabState.selectionState,
+                        numericAttributesAndValues: activeTabState.numericAttributesAndValues,
+                        formCanvas: activeTabState.activeTabFormCanvas
                     });
                 }
                 break;
@@ -310,6 +310,27 @@ export default class extends Controller {
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }
+    }
+
+    /**
+     * NOUVEAU : Récupère l'état de l'onglet actif.
+     * Si l'onglet n'a pas encore d'état, il en initialise un vide.
+     * C'est la seule source de vérité pour l'état d'un onglet.
+     * @returns {{selectionState: Array, selectionIds: Set, numericAttributesAndValues: Object, activeTabFormCanvas: Object}}
+     * @private
+     */
+    _getActiveTabState() {
+        if (!this.activeTabId) {
+            // Fallback au cas où aucun onglet n'est actif, bien que cela ne devrait pas arriver en fonctionnement normal.
+            console.warn("🧠 [Cerveau] _getActiveTabState a été appelé sans onglet actif. Retour d'un état vide temporaire.");
+            return { ...this._tabStateTemplate, selectionIds: new Set() }; // Retourne une nouvelle copie
+        }
+        if (!this.tabsState[this.activeTabId]) {
+            console.log(`[${++window.logSequence}] 🧠 [Cerveau] Initialisation à la volée de l'état pour l'onglet '${this.activeTabId}'.`);
+            // Crée une copie profonde du template pour éviter les références partagées, surtout pour le Set.
+            this.tabsState[this.activeTabId] = { ...this._tabStateTemplate, selectionIds: new Set() };
+        }
+        return this.tabsState[this.activeTabId];
     }
 
 
@@ -379,17 +400,12 @@ export default class extends Controller {
      * @private
      */
     _setSelectionState(selectos = [], contextMenuPosition = null) {
-        this.selectionState = selectos;
-        this.selectionIds = new Set(this.selectionState.map(s => s.id));
-
-        // NOUVEAU : Mettre à jour l'état de l'onglet actif dans le store
-        if (this.activeTabId && this.tabsState[this.activeTabId]) {
-            this.tabsState[this.activeTabId].selectionState = this.selectionState;
-            this.tabsState[this.activeTabId].selectionIds = this.selectionIds;
-        }
+        const activeTabState = this._getActiveTabState();
+        activeTabState.selectionState = selectos;
+        activeTabState.selectionIds = new Set(selectos.map(s => s.id));
         
         // CORRECTION : On met à jour l'état du display AVANT de le publier.
-        this.displayState.selectionCount = this.selectionState.length;
+        this.displayState.selectionCount = activeTabState.selectionState.length;
         this.displayState.timestamp = new Date(); // On met à jour l'heure.
         
         // NOUVEAU : On appelle la méthode dédiée pour l'affichage de la sélection.
@@ -397,8 +413,8 @@ export default class extends Controller {
 
         // C'est ce qui permet à la toolbar et à la barre des totaux de se mettre à jour.
         this.broadcast('app:context.changed', {
-            selection: this.selectionState,
-            numericAttributesAndValues: this.numericAttributesAndValues,
+            selection: activeTabState.selectionState,
+            numericAttributesAndValues: activeTabState.numericAttributesAndValues,
             contextMenuPosition: contextMenuPosition // On passe la position (ou null)
         });
     }

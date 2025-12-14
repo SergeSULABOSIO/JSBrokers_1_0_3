@@ -200,27 +200,10 @@ export default class extends Controller {
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
-
-            // NOUVEAU : Une fois le contenu chargé, on initialise son état dans le cerveau
-            const listManagerEl = contentContainer.querySelector('[data-controller="list-manager"]');
-            if (listManagerEl) {
-                const listManager = this.application.getControllerForElementAndIdentifier(listManagerEl, 'list-manager');
-                if (listManager) {
-                    // On décode les données numériques comme le fait le list-manager
-                    const textarea = document.createElement('textarea');
-                    textarea.innerHTML = listManager.numericAttributesAndValuesValue;
-                    const decodedNumericData = textarea.value;
-
-                    const initialState = {
-                        selectionState: [],
-                        selectionIds: new Set(),
-                        numericAttributesAndValues: JSON.parse(decodedNumericData || '{}'),
-                        activeTabFormCanvas: listManager.entityFormCanvasValue
-                    };
-                    this.notifyCerveau('ui:tab.initialized', { tabId: tabId, state: initialState });
-                }
-            }
-
+ 
+            // L'initialisation de l'état est maintenant déléguée au contrôleur `list-manager`
+            // qui se connecte lorsque le `html` est injecté.
+            // On publie toujours le contexte pour s'assurer que la sélection est réinitialisée visuellement.
             this._publishTabContext(tabId);
         }
         this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
