@@ -179,7 +179,7 @@ export default class extends Controller {
         // On publie le contexte fonctionnel (formulaire, etc.) de l'onglet.
         // Si l'onglet est nouveau, cette fonction ne trouvera rien, et le contexte sera publié
         // plus tard par handleTabContentLoaded.
-        this._publishTabContext(newTabId);
+        // this._publishTabContext(newTabId);
 
         // On notifie le cerveau du changement d'onglet pour la mise à jour de l'affichage (display).
         this.notifyCerveau('ui:tab.context-changed', {
