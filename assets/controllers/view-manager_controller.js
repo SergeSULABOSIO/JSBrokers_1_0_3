@@ -161,18 +161,21 @@ export default class extends Controller {
 
         let newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
 
-        if (newContent) {
-            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données existantes:`, { newContent });
+        // CORRECTION : On vérifie si le contenu a déjà été chargé (n'est pas vide), pas seulement si le conteneur existe.
+        const isContentLoaded = newContent && newContent.innerHTML.trim() !== '';
+
+        if (isContentLoaded) {
+            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Contenu existant, affichage.`, { tabId: this.activeTabId });
             newContent.style.display = 'block';
             this.isLoadingValue = false; // Libère le verrou
         } else {
-            // REFACTORING : La logique de demande de contenu est maintenant ici.
-            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Code: 100 - Données nouvelles:`, { newContent });
+            // Le contenu n'a pas encore été chargé.
+            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Contenu vide, demande de chargement.`, { tabId: this.activeTabId });
             const { tabId, collectionUrl } = clickedTab.dataset;
-            const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
-            if (contentContainer) {
-                contentContainer.style.display = 'block'; // On le rend visible
-                contentContainer.innerHTML = this._getListSkeletonHtml();
+            // On s'assure que le conteneur (même vide) existe.
+            if (newContent) {
+                newContent.style.display = 'block'; // On le rend visible
+                newContent.innerHTML = this._getListSkeletonHtml(); // On y met un squelette de chargement
             }
             // On notifie le cerveau pour qu'il fasse le fetch.
             this.notifyCerveau('app:tab-content.load-request', { tabId, url: collectionUrl });
