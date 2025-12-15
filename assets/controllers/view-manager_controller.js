@@ -166,6 +166,12 @@ export default class extends Controller {
             console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Affichage de l'onglet principal.`);
             newContent.style.display = 'block';
             this.isLoadingValue = false;
+            // Le contenu est déjà là, on peut notifier le changement de contexte immédiatement.
+            this.notifyCerveau('ui:tab.context-changed', {
+                tabId: this.activeTabId,
+                tabName: clickedTab.textContent,
+                parentId: this.collectionTabsParentId,
+            });
         } else {
             // Pour tout autre onglet (collection), on force le rechargement du contenu.
             console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Rechargement forcé pour l'onglet '${newTabId}'.`);
@@ -174,21 +180,21 @@ export default class extends Controller {
             if (newContent && collectionUrl) {
                 newContent.style.display = 'block'; // On le rend visible
                 newContent.innerHTML = this._getListSkeletonHtml(); // On y met un squelette de chargement
-                // On notifie le cerveau pour qu'il fasse le fetch.
-                this.notifyCerveau('app:tab-content.load-request', { tabId, url: collectionUrl });
+                // On notifie le cerveau pour qu'il fasse le fetch, en passant le nom de l'onglet pour plus tard.
+                this.notifyCerveau('app:tab-content.load-request', { 
+                    tabId, 
+                    url: collectionUrl, 
+                    tabName: clickedTab.textContent 
+                });
             } else {
                 console.error(`[${this.nomControleur}] - Impossible de recharger l'onglet: conteneur ou URL manquant.`, { tabId, hasContent: !!newContent, hasUrl: !!collectionUrl });
                 this.isLoadingValue = false; // On libère le verrou en cas d'erreur.
             }
         }
 
-        // ESSENTIEL : On notifie le cerveau du changement d'onglet pour la mise à jour du contexte global.
-        // C'est ce qui déclenche la restauration de l'état ou la préparation d'un état neuf.
-        this.notifyCerveau('ui:tab.context-changed', {
-            tabId: this.activeTabId,
-            tabName: clickedTab.textContent,
-            parentId: this.collectionTabsParentId,
-        });
+        // La notification 'ui:tab.context-changed' est maintenant déplacée.
+        // - Pour l'onglet 'principal', elle est envoyée immédiatement ci-dessus.
+        // - Pour les onglets de collection, elle sera envoyée dans 'handleTabContentLoaded' une fois le contenu chargé.
     }
     
     /**
@@ -196,8 +202,8 @@ export default class extends Controller {
      * @param {CustomEvent} event 
      */
     handleTabContentLoaded(event) {
-        const { tabId, html } = event.detail;
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleTabContentLoaded - Code: 100 - Données:`, { tabId, html });
+        const { tabId, html, tabName } = event.detail;
+        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleTabContentLoaded - Code: 100 - Données:`, { tabId, html, tabName });
 
         // On cherche le conteneur préparé par _createTab
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
@@ -206,6 +212,12 @@ export default class extends Controller {
             // L'initialisation de l'état est maintenant déléguée au contrôleur `list-manager`
             // qui se connecte lorsque le `html` est injecté.
             // Il n'y a plus rien à faire ici, car le `list-manager` notifiera le cerveau lors de sa connexion.
+            // Le contenu est chargé, on peut maintenant notifier le cerveau du changement de contexte.
+            this.notifyCerveau('ui:tab.context-changed', {
+                tabId: tabId,
+                tabName: tabName,
+                parentId: this.collectionTabsParentId,
+            });
         }
         this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
     }

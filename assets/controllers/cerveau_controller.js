@@ -105,9 +105,7 @@ export default class extends Controller {
                 this.broadcast('app:workspace.load-default');
                 break;
             case 'ui:tab.context-changed':
-                // Met à jour l'état d'affichage et le publie.
                 this.displayState.activeTabName = payload.tabName;
-                this._publishSelectionStatus(); // CORRECTION : Utiliser la bonne fonction pour afficher le nom de l'onglet.
 
                 // Met à jour l'état interne du cerveau.
                 this.activeTabId = payload.tabId; 
@@ -117,6 +115,12 @@ export default class extends Controller {
                 const storedState = this.tabsState[this.activeTabId];
                 if (storedState) {
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] Restauration de l'état pour l'onglet existant '${this.activeTabId}'.`, { ...storedState });
+
+                    // CORRECTION : Mettre à jour l'état d'affichage AVANT de le publier.
+                    this.displayState.selectionCount = storedState.selectionState.length;
+                    
+                    // On publie maintenant le statut correct.
+                    this._publishSelectionStatus();
 
                     // On publie le contexte restauré pour que tous les composants se mettent à jour
                     this.broadcast('app:context.changed', {
@@ -128,7 +132,7 @@ export default class extends Controller {
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] Pas d'état trouvé pour l'onglet '${this.activeTabId}'. Initialisation d'un état vide.`);
                     // C'est un nouvel onglet (ou le principal), on réinitialise le contexte.
                     // L'état sera créé par 'ui:tab.initialized' plus tard.
-                    this._setSelectionState([]); // Ceci va aussi publier le contexte vide.
+                    this._setSelectionState([]); // Ceci met à jour l'état d'affichage et le publie.
                 }
                 break;
             case 'ui:context.reset':
@@ -342,17 +346,17 @@ export default class extends Controller {
      * @private
      */
     async _loadTabContent(payload) {
-        const { tabId, url } = payload;
+        const { tabId, url, tabName } = payload;
         try {
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Échec du chargement du contenu de l'onglet (statut ${response.status}).`);
             }
             const html = await response.text();
-            this.broadcast('view-manager:tab-content.loaded', { tabId, html });
+            this.broadcast('view-manager:tab-content.loaded', { tabId, html, tabName });
         } catch (error) {
             console.error(`[Cerveau] Erreur lors du chargement du contenu pour l'onglet ${tabId}:`, error);
-            this.broadcast('view-manager:tab-content.loaded', { tabId, html: `<div class="alert alert-danger m-3">${error.message}</div>` });
+            this.broadcast('view-manager:tab-content.loaded', { tabId, html: `<div class="alert alert-danger m-3">${error.message}</div>`, tabName });
         }
     }
 
