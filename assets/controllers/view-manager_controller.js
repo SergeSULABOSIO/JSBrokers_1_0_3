@@ -209,9 +209,6 @@ export default class extends Controller {
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
-            // L'initialisation de l'état est maintenant déléguée au contrôleur `list-manager`
-            // qui se connecte lorsque le `html` est injecté.
-            // Il n'y a plus rien à faire ici, car le `list-manager` notifiera le cerveau lors de sa connexion.
             // Le contenu est chargé, on peut maintenant notifier le cerveau du changement de contexte.
             this.notifyCerveau('ui:tab.context-changed', {
                 tabId: tabId,
