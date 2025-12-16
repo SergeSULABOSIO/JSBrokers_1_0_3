@@ -49,7 +49,8 @@ export default class extends Controller {
             selectionState: [],
             selectionIds: new Set(),
             numericAttributesAndValues: {},
-            activeTabFormCanvas: null
+            activeTabFormCanvas: null,
+            searchCriteria: {}
         };
 
         this.currentIdInvite = null;
@@ -128,7 +129,8 @@ export default class extends Controller {
                         selection: storedState.selectionState,
                         numericAttributesAndValues: storedState.numericAttributesAndValues,
                         formCanvas: storedState.activeTabFormCanvas,
-                        isTabSwitch: true
+                        isTabSwitch: true,
+                        searchCriteria: storedState.searchCriteria || {}
                     });
                 } else {
                     // CAS 2 : C'est un nouvel onglet. On ne diffuse RIEN pour éviter une race condition.
@@ -149,13 +151,14 @@ export default class extends Controller {
                 this.broadcast('app:form-canvas.updated', { tabId: payload.tabId, formCanvas: payload.formCanvas });
                 break;
             case 'dialog:search.open-request':
-                this.broadcast('dialog:search.open-request', payload);
+                this.broadcast('dialog:search.open-request', payload); // Relay to search-bar-dialog
                 break;
-            case 'search:advanced.submitted':
-                this.broadcast('search:advanced.submitted', payload);
-                break;
-            case 'search:advanced.reset':
-                this.broadcast('search:advanced.reset', payload);
+            case 'ui:search.submitted': // NOUVEAU : Point d'entrée unique pour toute soumission de recherche
+                const activeState = this._getActiveTabState();
+                activeState.searchCriteria = payload.criteria || {};
+                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Critères de recherche mis à jour pour '${this.activeTabId}'.`, activeState.searchCriteria);
+                // On rafraîchit la liste avec les nouveaux critères. Le rafraîchissement déclenchera une mise à jour du contexte.
+                this._requestListRefresh(this.activeTabId, { criteria: activeState.searchCriteria });
                 break;
             case 'ui:search.reset-request':
                 this.broadcast('search:advanced.reset', {}); // Ordonne à la barre de recherche de vider son UI et ses filtres.
@@ -232,7 +235,9 @@ export default class extends Controller {
                 // C'est ce qui permet à la barre des totaux de se mettre à jour.
                 this.broadcast('app:context.changed', {
                     selection: this._getActiveTabState().selectionState,
-                    numericAttributesAndValues: this._getActiveTabState().numericAttributesAndValues
+                    numericAttributesAndValues: this._getActiveTabState().numericAttributesAndValues,
+                    searchCriteria: this._getActiveTabState().searchCriteria,
+                    formCanvas: this._getActiveTabState().activeTabFormCanvas
                 });
                 break;
             case 'app:api.delete-request':
@@ -316,7 +321,8 @@ export default class extends Controller {
                         selection: activeTabState.selectionState,
                         numericAttributesAndValues: activeTabState.numericAttributesAndValues,
                         formCanvas: activeTabState.activeTabFormCanvas,
-                        isTabSwitch: true // On signale que c'est un changement d'onglet
+                        isTabSwitch: true, // On signale que c'est un changement d'onglet
+                        searchCriteria: activeTabState.searchCriteria
                     });
                 }
                 break;
@@ -342,8 +348,8 @@ export default class extends Controller {
         }
         if (!this.tabsState[this.activeTabId]) {
             console.log(`[${++window.logSequence}] 🧠 [Cerveau] Initialisation à la volée de l'état pour l'onglet '${this.activeTabId}'.`);
-            // Crée une copie profonde du template pour éviter les références partagées, surtout pour le Set.
-            this.tabsState[this.activeTabId] = { ...this._tabStateTemplate, selectionIds: new Set() };
+            // Crée une copie du template.
+            this.tabsState[this.activeTabId] = { ...this._tabStateTemplate, selectionIds: new Set(), searchCriteria: {} };
         }
         return this.tabsState[this.activeTabId];
     }
@@ -414,7 +420,7 @@ export default class extends Controller {
      * @param {object|null} [contextMenuPosition=null] - Les coordonnées pour le menu contextuel.
      * @private
      */
-    _setSelectionState(selectos = [], contextMenuPosition = null) {
+    _setSelectionState(selectos = [], contextMenuPosition = null, isTabSwitch = false) {
         const activeTabState = this._getActiveTabState();
         activeTabState.selectionState = selectos;
         activeTabState.selectionIds = new Set(selectos.map(s => s.id));
@@ -430,7 +436,10 @@ export default class extends Controller {
         this.broadcast('app:context.changed', {
             selection: activeTabState.selectionState,
             numericAttributesAndValues: activeTabState.numericAttributesAndValues,
-            contextMenuPosition: contextMenuPosition // On passe la position (ou null)
+            contextMenuPosition: contextMenuPosition, // On passe la position (ou null)
+            isTabSwitch: isTabSwitch,
+            searchCriteria: activeTabState.searchCriteria,
+            formCanvas: activeTabState.activeTabFormCanvas
         });
     }
 
