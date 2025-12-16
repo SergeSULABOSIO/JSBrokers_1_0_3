@@ -83,7 +83,7 @@ export default class extends Controller {
         const { type, source, payload, timestamp } = event.detail;
 
         // NOUVEAU : Logging élégant et groupé pour les événements entrants.
-        console.groupCollapsed(`[${++window.logSequence}] 🧠 Cerveau Reçoit 📥`, `"${type}"`);
+        console.groupCollapsed(`[${++window.logSequence}] - Code: 1986 - 🧠 Cerveau Reçoit 📥`, `"${type}"`);
         console.log(`| Source:`, source);
         console.log(`| Payload:`, payload);
         console.groupEnd();
@@ -135,9 +135,11 @@ export default class extends Controller {
                     });
                 } else {
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] Pas d'état trouvé pour l'onglet '${this.activeTabId}'. Initialisation d'un état vide.`);
-                    // C'est un nouvel onglet (ou le principal), on réinitialise le contexte.
-                    // L'état sera créé par 'ui:tab.initialized' plus tard.
-                    this._setSelectionState([]); // Ceci met à jour l'état d'affichage et le publie.
+                    // C'est un nouvel onglet. On ne diffuse PAS de contexte vide pour éviter une race condition.
+                    // On se contente de mettre à jour l'affichage pour indiquer le chargement et on attend
+                    // que l'événement 'ui:tab.initialized' arrive pour ce même onglet.
+                    this.displayState.selectionCount = 0;
+                    this._publishSelectionStatus('Chargement...');
                 }
                 break;
             case 'ui:context.reset':
@@ -204,7 +206,6 @@ export default class extends Controller {
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
             case 'app:base-données:sélection-request':
-                console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, payload);
                 const criteriaText = Object.keys(payload.criteria || {}).length > 0 
                     ? `Filtre actif` 
                     : 'Recherche par défaut';
@@ -305,7 +306,12 @@ export default class extends Controller {
                 // On met donc à jour le contexte courant de l'application avec cet état initial.
                 if (this.activeTabId === tabId) {
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] L'onglet initialisé '${tabId}' est actif. Mise à jour du contexte courant.`);
+                    // L'onglet attendu est prêt. On peut maintenant publier son état initial.
                     const activeTabState = this._getActiveTabState();
+                    // On met à jour l'état du display avec le nouvel état (qui est vide au début)
+                    this.displayState.selectionCount = activeTabState.selectionState.length;
+                    this._publishSelectionStatus(); // Affiche "0 sélection(s)"
+
                     // On publie le nouveau contexte pour que la toolbar et la barre des totaux se mettent à jour.
                     this.broadcast('app:context.changed', {
                         selection: activeTabState.selectionState,
@@ -481,7 +487,7 @@ export default class extends Controller {
      */
     broadcast(eventName, detail) {
         // NOUVEAU : Logging élégant et groupé pour les événements sortants.
-        console.groupCollapsed(`[${++window.logSequence}] 🧠 Cerveau Émet 📤`, `"${eventName}"`);
+        console.groupCollapsed(`[${++window.logSequence}] - Code: 1986 - 🧠 Cerveau Émet 📤`, `"${eventName}"`);
         console.log(`| Detail:`, detail);
         console.groupEnd();
 

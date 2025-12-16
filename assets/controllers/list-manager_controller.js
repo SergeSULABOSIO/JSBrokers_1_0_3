@@ -237,8 +237,6 @@ export default class extends BaseController {
     async handleDBRequest(event) {
         this._showSkeleton();
 
-        console.log(this.nomControleur + " - Code: 1986 - Recherche", event.detail);
-
         if (event.detail.originatorId && event.detail.originatorId !== this.element.id) {
             this._logDebug("Demande de rafraîchissement ignorée (non destinée à cette liste).", { myId: this.element.id, originatorId: event.detail.originatorId });
             return;
