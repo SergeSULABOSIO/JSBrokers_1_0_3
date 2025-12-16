@@ -1,6 +1,5 @@
 // assets/controllers/search-bar_controller.js
 import BaseController from './base_controller.js';
-import { Modal } from 'bootstrap';
 
 export default class extends BaseController {
     static targets = [
@@ -16,116 +15,52 @@ export default class extends BaseController {
         nomEntite: String // NOUVEAU : pour recevoir le nom de l'entité
     }
 
-    activeFilters = {};
+    // La barre de recherche devient "stateless". Elle ne stocke que l'état actuel reçu du cerveau pour le rendu.
+    currentCriteria = {};
 
     connect() {
         this.nomControleur = "SEARCH_BAR";
-        // this.boundHandleExternalRefresh = this.handleExternalRefresh.bind(this);
-        this.boundHandleAdvancedSearchData = this.handleAdvancedSearchData.bind(this);
-        this.boundHandleAdvancedSearchReset = this.handleAdvancedSearchReset.bind(this);
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
 
-        document.addEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData); // Événement interne du Cerveau
-        document.addEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset); // Événement interne du Cerveau
-        document.addEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU : Écoute le changement de contexte
+        document.addEventListener('app:context.changed', this.boundHandleContextChanged);
 
-        this.initializeCriteria();
+        // L'initialisation est minimale. Le rendu se fait via handleContextChanged.
+        this.populateSimpleSearchSelector();
+        this.updateSimpleSearchPlaceholder();
     }
 
     disconnect() {
-        document.removeEventListener('search:advanced.submitted', this.boundHandleAdvancedSearchData);
-        document.removeEventListener('search:advanced.reset', this.boundHandleAdvancedSearchReset);
-        document.removeEventListener('app:context.changed', this.boundHandleContextChanged); // NOUVEAU
+        document.removeEventListener('app:context.changed', this.boundHandleContextChanged);
     }
 
     openAdvancedSearch() {
-        const dateCriteria = this.criteriaValue.filter(c => c.Type === 'DateTimeRange');
-        dateCriteria.forEach(dateCriterion => {
-            if (dateCriterion && !this.activeFilters[dateCriterion.Nom]) {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = today.getMonth();
-                
-                const firstDay = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0];
-                const lastDay = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0];
-                this.activeFilters[dateCriterion.Nom] = { from: firstDay, to: lastDay };
-            }
-        });
-
-        const formHtml = this.buildAdvancedForm();
+        // On construit le formulaire avancé en se basant sur les critères actuels pour le pré-remplissage.
+        const formHtml = this.buildAdvancedForm(this.currentCriteria);
         this.notifyCerveau('dialog:search.open-request', { formHtml });
     }
 
     /**
-     * Gère la réception des critères depuis la boîte de dialogue.
+     * NOUVEAU : Point d'entrée unique pour la mise à jour de l'UI de la barre de recherche.
+     * Est appelé à chaque fois que le contexte de l'application (et donc les filtres) change.
      * @param {CustomEvent} event 
      */
-    handleAdvancedSearchData(event) {
-        const advancedCriteria = event.detail.criteria;
+    handleContextChanged(event) {
+        const { searchCriteria, isTabSwitch } = event.detail;
 
-        // On récupère le filtre simple s'il existe
-        const simpleSearchKey = this.simpleSearchCriterionTarget.value;
-        const simpleFilter = this.activeFilters[simpleSearchKey];
+        // On met à jour notre copie locale des critères
+        this.currentCriteria = searchCriteria || {};
 
-        // On écrase les filtres avec les nouveaux critères avancés
-        this.activeFilters = advancedCriteria;
-
-        // On ré-applique le filtre simple s'il existait, pour ne pas le perdre
-        if (simpleFilter) {
-            this.activeFilters[simpleSearchKey] = simpleFilter;
-        }
-
-        this.dispatchSearchEvent();
-    }
-
-    handleAdvancedSearchReset() {
-        this.simpleSearchInputTarget.value = '';
-        this.activeFilters = {};
-        this.updateSummary();
-    }
-
-
-
-
-    /**
-     * NOUVEAU : Fusion de la logique de search-criteria_controller.
-     * Définit les critères de recherche en fonction du nom de l'entité
-     * et initialise la barre de recherche.
-     */
-    initializeCriteria() {
-        console.log(`${this.nomControleur} - Initializing with criteria from server:`, this.criteriaValue);
-
-        // On s'assure que la valeur a bien été chargée.
-        if (!this.hasCriteriaValue || this.criteriaValue.length === 0) {
-            console.warn("Aucune directive de recherche (searchCanvas) n'a été fournie par le serveur.");
-            return;
-        }
-
-        this.populateSimpleSearchSelector();
-        this.updateSimpleSearchPlaceholder();
-
-        const simpleCriteriaNames = this.criteriaValue.filter(c => c.Type === 'Text').map(c => c.Nom);
-        
-        for (const filterKey in this.activeFilters) {
-            if (simpleCriteriaNames.includes(filterKey)) {
-                const filterValue = this.activeFilters[filterKey];
-                // On a trouvé un filtre simple actif. On met à jour l'UI.
-                console.log(`${this.nomControleur} - Restauration de l'UI pour le critère simple :`, { key: filterKey, value: filterValue.value });
-                this.simpleSearchCriterionTarget.value = filterKey; // Sélectionne le bon critère dans le <select>
-                this.simpleSearchInputTarget.value = filterValue.value; // Remplit le champ <input>
-                this.updateSimpleSearchPlaceholder(); // Met à jour le placeholder pour correspondre
-                break; // On a trouvé notre critère simple, on peut arrêter la boucle.
+        // On met à jour l'UI pour refléter l'état reçu du cerveau.
+        // Si c'est un changement d'onglet, on s'assure que le critère simple est bien synchronisé.
+        if (isTabSwitch) {
+            const simpleSearchKey = this.simpleSearchCriterionTarget.value;
+            if (this.currentCriteria[simpleSearchKey] && this.currentCriteria[simpleSearchKey].value) {
+                this.simpleSearchInputTarget.value = this.currentCriteria[simpleSearchKey].value;
+            } else {
+                this.simpleSearchInputTarget.value = '';
             }
         }
-
-        this.updateSummary(); // Mettre à jour le résumé des filtres
-
-        this.buildAdvancedForm();
-    }
-
-    handleContextChanged() {
-        // NOUVEAU : Réinitialise la barre de recherche à chaque changement de contexte.
-        this.handleAdvancedSearchReset();
+        this.updateSummary(this.currentCriteria);
     }
 
     /**
@@ -153,12 +88,12 @@ export default class extends BaseController {
         }
     }
 
-    buildAdvancedForm() {
+    buildAdvancedForm(activeFilters) {
         let html = '';
         const advancedCriteria = this.criteriaValue.filter(c => !c.isDefault); // [c.isDefault !== true]
         advancedCriteria.forEach(criterion => {            
             const criterionId = `criterion_${criterion.Nom.replace(/\s+/g, '_')}`;
-            const activeClass = this.isCriterionActive(criterion) ? 'is-active' : '';
+            const activeClass = this.isCriterionActive(criterion, activeFilters) ? 'is-active' : '';
 
             // NOUVEAU : Début du bloc visuel pour un critère
             html += `<div class="criterion-block ${activeClass}">`;
@@ -167,14 +102,14 @@ export default class extends BaseController {
             switch (criterion.Type) {
                 case 'Text':
                     // CORRECTION : Gérer la structure objet {value: '...'} pour les filtres texte.
-                    const textFilter = this.activeFilters[criterion.Nom];
+                    const textFilter = activeFilters[criterion.Nom];
                     const textValue = (typeof textFilter === 'object' && textFilter !== null) ? textFilter.value : (textFilter || '');
                     html += `<input type="text" id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-control form-control-sm" value="${textValue}" placeholder="Saisir ${criterion.Display.toLowerCase()}...">`;
                     break;
                 case 'Number':
                     // On s'assure que activeFilters[criterion.Nom] est un objet
-                    const numberFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
-                        ? this.activeFilters[criterion.Nom]
+                    const numberFilter = (typeof activeFilters[criterion.Nom] === 'object' && activeFilters[criterion.Nom] !== null)
+                        ? activeFilters[criterion.Nom]
                         : {};
                     const numberValue = numberFilter.value !== undefined ? numberFilter.value : ''; // Gère le cas où la valeur est 0
                     const numberOperator = numberFilter.operator || '=';
@@ -193,8 +128,8 @@ export default class extends BaseController {
 
                 // --- NOUVEAU CASE POUR DATETIME RANGE ---
                 case 'DateTimeRange':
-                    const dateFilter = (typeof this.activeFilters[criterion.Nom] === 'object' && this.activeFilters[criterion.Nom] !== null)
-                        ? this.activeFilters[criterion.Nom]
+                    const dateFilter = (typeof activeFilters[criterion.Nom] === 'object' && activeFilters[criterion.Nom] !== null)
+                        ? activeFilters[criterion.Nom]
                         : {};
                     const fromValue = dateFilter.from || ''; // Devrait déjà être défini si nécessaire
                     const toValue = dateFilter.to || '';     // Devrait déjà être défini si nécessaire
@@ -220,7 +155,7 @@ export default class extends BaseController {
                     break;
                 // -----------------------------------
                 case 'Options':
-                    const optionFilter = this.activeFilters[criterion.Nom];
+                    const optionFilter = activeFilters[criterion.Nom];
                     const optionValue = (typeof optionFilter === 'object' && optionFilter !== null) ? optionFilter.value : (optionFilter || '');
                     html += `<select id="${criterionId}" data-criterion-name="${criterion.Nom}" class="form-select form-select-sm">`;
                     html += `<option value="">Tout</option>`;
@@ -243,8 +178,8 @@ export default class extends BaseController {
      * @param {object} criterion La définition du critère.
      * @returns {boolean}
      */
-    isCriterionActive(criterion) {
-        const filter = this.activeFilters[criterion.Nom];
+    isCriterionActive(criterion, activeFilters) {
+        const filter = activeFilters[criterion.Nom];
         if (filter === undefined || filter === null) return false;
 
         switch (criterion.Type) {
@@ -264,6 +199,14 @@ export default class extends BaseController {
         }
     }   
 
+    /**
+     * NOUVEAU : Réinitialise tous les filtres et notifie le cerveau.
+     */
+    resetAllFilters() {
+        this.simpleSearchInputTarget.value = '';
+        this.notifyCerveau('ui:search.submitted', { criteria: {} });
+    }
+
     submitSimpleSearch(event) {
         event.preventDefault();
 
@@ -273,6 +216,9 @@ export default class extends BaseController {
 
         if (!criterionDef) return;
 
+        // On part d'une copie des filtres actuels pour ne pas écraser les filtres avancés
+        const newCriteria = { ...this.currentCriteria };
+
         if (inputValue) {
             // On construit le filtre avec la structure attendue par le backend
             const filter = {
@@ -281,31 +227,24 @@ export default class extends BaseController {
                 // On ajoute le targetField si c'est une relation
                 ...(criterionDef.targetField && { targetField: criterionDef.targetField })
             };
-            this.activeFilters[criterionName] = filter;
+            newCriteria[criterionName] = filter;
         } else {
-            delete this.activeFilters[criterionName];
+            delete newCriteria[criterionName];
         }
-        this.dispatchSearchEvent();
+        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria });
     }
 
     removeFilter(event) {
         const keyToRemove = event.currentTarget.dataset.filterKey;
-        delete this.activeFilters[keyToRemove]; 
-        if (keyToRemove === this.simpleSearchCriterionTarget.value) {
-            this.simpleSearchInputTarget.value = '';
-        } else {
-            // Plus besoin de nettoyer le formulaire ici, car il est dans un autre contrôleur.
-        }
-        this.dispatchSearchEvent();
+        
+        const newCriteria = { ...this.currentCriteria };
+        delete newCriteria[keyToRemove];
+
+        this.notifyCerveau('ui:search.submitted', { criteria: newCriteria });
     }
 
-    dispatchSearchEvent() {
-        this.updateSummary();
-        this.notifyCerveau('app:base-données:sélection-request', { criteria: this.activeFilters });
-    }
-
-    updateSummary() {
-        const activeCriteria = Object.entries(this.activeFilters);
+    updateSummary(criteria) {
+        const activeCriteria = Object.entries(criteria);
 
         if (activeCriteria.length === 0) {
             this.summaryTarget.innerHTML = '<span>Recherche simple activée.</span>';

@@ -88,7 +88,8 @@ export default class extends BaseController {
             }
         }
     
-        this.notifyCerveau('search:advanced.submitted', { criteria });
+        // NOUVEAU : On notifie le cerveau avec l'événement standard de soumission de recherche.
+        this.notifyCerveau('ui:search.submitted', { criteria });
         this.modal.hide();
     }
 
@@ -96,10 +97,8 @@ export default class extends BaseController {
      * Réinitialise le formulaire et notifie le Cerveau.
      */
     resetForm() {
-        // Ne fait plus de manipulation du DOM ici.
-        // Notifie simplement le cerveau de l'intention de réinitialiser.
-        // CORRECTION : On utilise l'événement de réinitialisation globale.
-        this.notifyCerveau('ui:search.reset-request', {});
+        // Notifie le cerveau qu'il faut soumettre une recherche avec des critères vides.
+        this.notifyCerveau('ui:search.submitted', { criteria: {} });
         this.modal.hide();
     }
 

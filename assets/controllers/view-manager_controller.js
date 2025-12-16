@@ -226,7 +226,7 @@ export default class extends Controller {
      */
     notifyCerveau(type, payload = {}) {
         console.log(`[${++window.logSequence}] ${this.nomControleur} - Notification du Cerveau sur le changement de contexte.`);
-
+        
         this.dispatch('cerveau:event', {
             type: type,
             source: this.nomControleur,
