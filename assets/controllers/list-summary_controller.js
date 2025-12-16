@@ -53,31 +53,16 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
     handleContextChanged(event) {
-        const { selection, numericAttributesAndValues } = event.detail; // Le payload de 'app:context.changed' contient ces infos.
-        console.log(this.nomControleur + " - Code: 1980 - handleContextChanged - Received selection:", selection, "numericAttributesAndValues:", numericAttributesAndValues);
+        const { selection, numericAttributesAndValues, formCanvas } = event.detail;
+        console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues, formCanvas });
 
-        // --- SOLUTION : On traite l'objet `numericAttributesAndValues` directement ---
-        let numericAttributes = [];
-        let numericData = {};
+        // On dérive la liste des attributs numériques directement depuis le canvas, notre source de vérité.
+        const numericAttributes = formCanvas?.liste?.filter(
+            attr => ['Nombre', 'Entier', 'Calcul'].includes(attr.type)
+        ) || [];
 
-        // On s'assure que `numericAttributesAndValues` est bien un objet.
-        if (numericAttributesAndValues && Object.keys(numericAttributesAndValues).length > 0) {
-            const firstKey = Object.keys(numericAttributesAndValues)[0];
-            const firstElement = numericAttributesAndValues[firstKey];
-    
-            // On extrait la liste des attributs (leurs noms et descriptions) depuis le premier élément.
-            if (typeof firstElement === 'object' && firstElement !== null) {
-                numericAttributes = Object.entries(firstElement).map(([attribut_code, details]) => ({
-                    attribut_code: attribut_code, // ex: "montant"
-                    titre_colonne: details.description // ex: "Montant de la prime"
-                }));
-            }
-            // Les données numériques sont l'objet `numericAttributesAndValues` lui-même.
-            numericData = numericAttributesAndValues;
-        }
-
-        // Si aucun attribut numérique n'est fourni, on masque la barre et on réinitialise tout.
-        if (!Array.isArray(numericAttributes) || numericAttributes.length === 0) {
+        // Si le canvas ne définit aucun attribut numérique, on masque la barre et on réinitialise.
+        if (numericAttributes.length === 0) {
             this.element.style.display = 'none';
             this.numericData = {};
             this.selectedIds.clear();
@@ -86,9 +71,9 @@ export default class extends Controller {
             return;
         }
 
-        // Sinon, on s'assure que la barre est visible et on met à jour les données.
+        // La barre est utile, on s'assure qu'elle est visible et on met à jour l'état interne.
         this.element.style.display = 'flex';
-        this.numericData = numericData || {};
+        this.numericData = numericAttributesAndValues || {};
         this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
         this.updateAttributeSelector(numericAttributes);
         this.recalculate();
@@ -100,19 +85,17 @@ export default class extends Controller {
      * @private
      */
     updateAttributeSelector(attributes) {
-        console.log(this.nomControleur + " - Code:1980 - updateAttributeSelector - Attributes for selector:", attributes);
-        // On vide les options existantes
+        const currentValue = this.attributeSelectorTarget.value;
         this.attributeSelectorTarget.innerHTML = '<option value="">-- Choisir --</option>';
-
-        // On vérifie que les attributs sont bien un tableau (format attendu de `colonnes_numeriques`)
-        if (!Array.isArray(attributes) || attributes.length === 0) {
-            return;
-        }
 
         // On itère sur le tableau d'objets pour créer les options
         for (const attr of attributes) {
-            this.attributeSelectorTarget.appendChild(new Option(attr.titre_colonne, attr.attribut_code));
+            // On utilise `intitule` et `code` comme standard, provenant du canvas.
+            this.attributeSelectorTarget.appendChild(new Option(attr.intitule, attr.code));
         }
+
+        // On essaie de restaurer la sélection précédente si l'option existe toujours.
+        this.attributeSelectorTarget.value = currentValue;
     }
 
     /**
@@ -126,7 +109,6 @@ export default class extends Controller {
             return;
         }
 
-        // --- SOLUTION DÉFINITIVE ---
         // On utilise des méthodes fonctionnelles pour un code plus clair et moins sujet aux erreurs.
         const allValues = Object.values(this.numericData);
 
