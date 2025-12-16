@@ -116,28 +116,25 @@ export default class extends Controller {
                 this.activeTabId = payload.tabId; 
                 this.activeParentId = payload.parentId || null;
 
-                // NOUVEAU : Restaurer l'état de l'onglet
                 const storedState = this.tabsState[this.activeTabId];
                 if (storedState) {
+                    // CAS 1 : L'onglet est connu. On restaure son état immédiatement.
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] Restauration de l'état pour l'onglet existant '${this.activeTabId}'.`, { ...storedState });
 
-                    // CORRECTION : Mettre à jour l'état d'affichage AVANT de le publier.
                     this.displayState.selectionCount = storedState.selectionState.length;
-                    
-                    // On publie maintenant le statut correct.
                     this._publishSelectionStatus();
 
-                    // On publie le contexte restauré pour que tous les composants se mettent à jour
                     this.broadcast('app:context.changed', {
                         selection: storedState.selectionState,
                         numericAttributesAndValues: storedState.numericAttributesAndValues,
-                        formCanvas: storedState.activeTabFormCanvas
+                        formCanvas: storedState.activeTabFormCanvas,
+                        isTabSwitch: true
                     });
                 } else {
-                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Pas d'état trouvé pour l'onglet '${this.activeTabId}'. Initialisation d'un état vide.`);
-                    // C'est un nouvel onglet. On ne diffuse PAS de contexte vide pour éviter une race condition.
+                    // CAS 2 : C'est un nouvel onglet. On ne diffuse RIEN pour éviter une race condition.
                     // On se contente de mettre à jour l'affichage pour indiquer le chargement et on attend
-                    // que l'événement 'ui:tab.initialized' arrive pour ce même onglet.
+                    // patiemment que l'événement 'ui:tab.initialized' arrive pour ce même onglet.
+                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Pas d'état trouvé pour l'onglet '${this.activeTabId}'. Initialisation d'un état vide.`);
                     this.displayState.selectionCount = 0;
                     this._publishSelectionStatus('Chargement...');
                 }
@@ -206,6 +203,7 @@ export default class extends Controller {
                 this._showNotification(payload.message || 'Erreur de validation.', 'error');
                 break;
             case 'app:base-données:sélection-request':
+                console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, payload);
                 const criteriaText = Object.keys(payload.criteria || {}).length > 0 
                     ? `Filtre actif` 
                     : 'Recherche par défaut';
@@ -306,17 +304,19 @@ export default class extends Controller {
                 // On met donc à jour le contexte courant de l'application avec cet état initial.
                 if (this.activeTabId === tabId) {
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] L'onglet initialisé '${tabId}' est actif. Mise à jour du contexte courant.`);
-                    // L'onglet attendu est prêt. On peut maintenant publier son état initial.
+                    // L'onglet que nous attendions est enfin prêt.
+                    // On peut maintenant publier son état initial (vide) en toute sécurité.
                     const activeTabState = this._getActiveTabState();
-                    // On met à jour l'état du display avec le nouvel état (qui est vide au début)
+
                     this.displayState.selectionCount = activeTabState.selectionState.length;
                     this._publishSelectionStatus(); // Affiche "0 sélection(s)"
 
-                    // On publie le nouveau contexte pour que la toolbar et la barre des totaux se mettent à jour.
+                    // On publie le nouveau contexte pour que la toolbar, la barre des totaux et la barre de recherche se mettent à jour.
                     this.broadcast('app:context.changed', {
                         selection: activeTabState.selectionState,
                         numericAttributesAndValues: activeTabState.numericAttributesAndValues,
-                        formCanvas: activeTabState.activeTabFormCanvas
+                        formCanvas: activeTabState.activeTabFormCanvas,
+                        isTabSwitch: true // On signale que c'est un changement d'onglet
                     });
                 }
                 break;
