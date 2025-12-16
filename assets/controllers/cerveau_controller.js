@@ -161,9 +161,11 @@ export default class extends Controller {
                 this._requestListRefresh(this.activeTabId, { criteria: activeState.searchCriteria });
                 break;
             case 'ui:search.reset-request':
-                this.broadcast('search:advanced.reset', {}); // Ordonne à la barre de recherche de vider son UI et ses filtres.
-                const activeTabId = this.getActiveTabId();
-                this._requestListRefresh(activeTabId, { criteria: {} });
+                // NOUVELLE LOGIQUE : On soumet simplement une recherche avec des critères vides.
+                // La barre de recherche se mettra à jour en écoutant le 'app:context.changed' qui en résultera.
+                const activeStateToReset = this._getActiveTabState();
+                activeStateToReset.searchCriteria = {};
+                this._requestListRefresh(this.activeTabId, { criteria: {} });
                 break;
             case 'dialog:boite-dialogue:init-request':
             case 'ui:boite-dialogue:add-collection-item-request':
@@ -218,12 +220,6 @@ export default class extends Controller {
                 this._publishSelectionStatus('Rafraîchissement en cours...');
                 this.broadcast('app:loading.start');
                 this._requestListRefresh(this.getActiveTabId());
-                break;
-            case 'app:list.refreshed':
-                this._setSelectionState([]); // On réinitialise la sélection
-                const itemCount = payload.itemCount ?? 'N/A';
-                this._publishSelectionStatus(`Liste chargée : ${itemCount} élément(s)`);
-                this.broadcast('app:loading.stop');
                 break;
             case 'app:list.data-loaded':                
                 // NOUVEAU : Mettre à jour l'état de l'onglet actif dans le store
@@ -523,13 +519,27 @@ export default class extends Controller {
      * @private
      */
     _requestListRefresh(originatorId = null, criteriaPayload = {}) {
-        const payload = {
-            ...criteriaPayload, // Fusionne les critères passés
-            idEntreprise: this.currentIdEntreprise,
-            idInvite: this.currentIdInvite,
-            originatorId: originatorId // On ajoute l'ID de la liste à rafraîchir
-        };
-        this.broadcast('app:list.refresh-request', payload);
+        // La logique de fetch est maintenant directement dans le cerveau.
+        const url = this._buildDynamicQueryUrl(originatorId);
+        if (!url) {
+            console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", originatorId);
+            return;
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, // On attend du JSON
+            body: JSON.stringify(criteriaPayload.criteria || {}),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // On diffuse les données reçues (html + numeric) au list-manager concerné.
+            this.broadcast('app:list.refreshed', { ...data, originatorId });
+        })
+        .catch(error => {
+            this.broadcast('app:error.api', { error: `Échec du rafraîchissement de la liste: ${error.message}` });
+        })
+        .finally(() => this.broadcast('app:loading.stop'));
     }
 
     /**

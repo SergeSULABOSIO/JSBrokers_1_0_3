@@ -146,7 +146,8 @@ export default class extends Controller {
      * @private
      */
     formatCurrency(valueInCents) {
-        // Note : La devise 'USD' est utilisée comme exemple plus pertinent. À rendre dynamique si besoin.
-        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(valueInCents / 100);
+        // Note : La devise 'EUR' est utilisée par défaut pour un contexte francophone.
+        // Ceci pourrait être rendu dynamique via une configuration globale.
+        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(valueInCents / 100);
     }
 }
