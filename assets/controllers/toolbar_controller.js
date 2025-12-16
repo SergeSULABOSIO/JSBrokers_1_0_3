@@ -102,19 +102,26 @@ export default class extends Controller {
      * @private
      */
     organizeButtons() {
-        const selectionCount = this.selectos.length;
-        const hasSelection = selectionCount > 0;
-        const isSingleSelection = selectionCount === 1;
+        const selectionCount = this.selectos?.length || 0;
+        const canvasParams = this.activeFormCanvas?.parametres || {};
 
-        
+        // Conditions de visibilité basées sur la sélection ET les permissions du canvas.
+        const canAdd = !!canvasParams.endpoint_submit_url;
+        const canEdit = selectionCount === 1 && !!canvasParams.endpoint_submit_url;
+        const canDelete = selectionCount > 0 && !!canvasParams.endpoint_delete_url;
+        const canOpen = selectionCount > 0; // L'ouverture est généralement toujours possible si sélection.
+
+        // Règle : "Ajouter" est visible si le canvas le permet.
+        this.toggleButton(this.btajouterTarget, canAdd);
+
         // Règle : "Modifier" est visible uniquement pour une sélection unique.
-        this.toggleButton(this.btmodifierTarget, isSingleSelection);
+        this.toggleButton(this.btmodifierTarget, canEdit);
 
         // Règle : "Ouvrir" est visible dès qu'il y a au moins une sélection (unique ou multiple).
-        this.toggleButton(this.btouvrirTarget, hasSelection);
+        this.toggleButton(this.btouvrirTarget, canOpen);
 
         // Règle : "Supprimer" est visible dès qu'il y a au moins une sélection (unique ou multiple).
-        this.toggleButton(this.btsupprimerTarget, hasSelection);
+        this.toggleButton(this.btsupprimerTarget, canDelete);
     }
 
     /**
@@ -135,13 +142,13 @@ export default class extends Controller {
      */
     initializeToolbarState() {
         // Ces boutons doivent toujours rester actifs et visibles.
-        if (this.hasBtquitterTarget) this.btquitterTarget.style.display = "block";
-        if (this.hasBtparametresTarget) this.btparametresTarget.style.display = "block";
-        if (this.hasBtajouterTarget) this.btajouterTarget.style.display = "block";
-        if (this.hasBtrechargerTarget) this.btrechargerTarget.style.display = "block";
-        if (this.hasBttoutcocherTarget) this.bttoutcocherTarget.style.display = "block";
+        this.toggleButton(this.btquitterTarget, true);
+        this.toggleButton(this.btparametresTarget, true);
+        this.toggleButton(this.btrechargerTarget, true);
+        this.toggleButton(this.bttoutcocherTarget, true);
 
         // Les boutons contextuels sont cachés par défaut.
+        this.toggleButton(this.btajouterTarget, false); // Dépend maintenant du canvas
         this.toggleButton(this.btmodifierTarget, false);
         this.toggleButton(this.btouvrirTarget, false);
         this.toggleButton(this.btsupprimerTarget, false);

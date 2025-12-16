@@ -45,16 +45,15 @@ export default class extends BaseController {
         this.nomControleur = "LIST-MANAGER";
         this.urlAPIDynamicQuery = `/admin/${this.serverRootNameValue}/api/dynamic-query/${this.idInviteValue}/${this.idEntrepriseValue}`;
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
-        this.selectedIds = new Set(); // NOUVEAU : Mémorise les IDs sélectionnés pour cette instance de liste.
-        this.boundHandleDBRequest = this.handleDBRequest.bind(this);
+        this.boundHandleListRefreshed = this.handleListRefreshed.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this);
         this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
 
         // NOUVEAU : Centralise la notification de l'état initial au cerveau.
         this._initializeAndNotifyState();
 
-        document.addEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.addEventListener('app:list.refresh-request', this.boundHandleDBRequest); // CORRECTION : On écoute l'ordre du cerveau, pas la demande directe.
+        document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
+        document.addEventListener('app:list.refreshed', this.boundHandleListRefreshed);
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
         this.element.addEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
 
@@ -70,8 +69,8 @@ export default class extends BaseController {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener('ui:selection.changed', this.boundHandleGlobalSelectionUpdate);
-        document.removeEventListener('app:list.refresh-request', this.boundHandleDBRequest);
+        document.removeEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
+        document.removeEventListener('app:list.refreshed', this.boundHandleListRefreshed);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.removeEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
     }
@@ -215,7 +214,6 @@ export default class extends BaseController {
      */
     handleGlobalSelectionUpdate(event) {
         const selectos = event.detail.selection || [];
-        this.selectedIds = new Set(selectos.map(s => String(s.id))); // NOUVEAU : Mettre à jour notre état de sélection interne.
         const selectionIds = new Set(selectos.map(s => String(s.id)));
         this.rowCheckboxTargets.forEach(checkbox => {
             const checkboxId = String(checkbox.dataset.listRowIdobjetValue);
@@ -228,68 +226,25 @@ export default class extends BaseController {
     // --- GESTION DES DONNÉES ---
 
     /**
-     * Gère une demande de recherche de données.
-     * @param {CustomEvent} event - L'événement `app:base-données:sélection-request`.
+     * Gère la réception des nouvelles données de la liste envoyées par le cerveau.
+     * @param {CustomEvent} event - L'événement `app:list.refreshed`.
      */
-    async handleDBRequest(event) {
-        this._showSkeleton();
+    handleListRefreshed(event) {
+        const { html, numericAttributesAndValues, originatorId } = event.detail;
 
-        if (event.detail.originatorId && event.detail.originatorId !== this.element.id) {
+        if (originatorId && originatorId !== this.element.id) {
             this._logDebug("Demande de rafraîchissement ignorée (non destinée à cette liste).", { myId: this.element.id, originatorId: event.detail.originatorId });
             return;
         }
 
-        this._logDebug("Demande de chargement reçue.", event.detail);
+        this.donneesTarget.innerHTML = html;
 
-        const { idEntreprise, idInvite } = this._getIdsFromEventOrValues(event.detail);
-        const criteria = event.detail.criteria || {};
-        const entityName = this.entiteValue;
+        const hasRows = this.donneesTarget.querySelector('tr') !== null;
 
-        if (!entityName) return;
+        this.listContainerTarget.classList.toggle('d-none', !hasRows);
+        this.emptyStateContainerTarget.classList.toggle('d-none', hasRows);
 
-        const url = this._buildDynamicQueryUrl(idInvite, idEntreprise);
-        this._logDebug("URL de requête:", url);
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'text/html' },
-                body: JSON.stringify({ entityName, criteria, page: 1, limit: 100 }),
-            });
-
-            const html = await response.text();
-            if (!response.ok) throw new Error(html || 'Erreur serveur');
-
-            const validHtml = `<table><tbody>${html}</tbody></table>`;
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(validHtml, 'text/html');
-
-            // CORRECTION : On ne sélectionne que les lignes de données réelles (celles avec un data-id)
-            const dataRows = Array.from(doc.body.querySelectorAll('tr[data-id]'));
-            console.log(`LIST-MANAGER - ${dataRows.length} ligne(s) de données trouvée(s) dans la réponse.`);
-
-            if (dataRows.length > 0) {
-                this.listContainerTarget.classList.remove('d-none');
-                this.emptyStateContainerTarget.classList.add('d-none');
-                // CORRECTION : On injecte uniquement les lignes de données dans le tbody
-                this.donneesTarget.innerHTML = dataRows.map(row => row.outerHTML).join('');
-                const newContent = dataRows.map(row => row.outerHTML).join('');
-                this.donneesTarget.innerHTML = newContent;
-                console.log("LIST-MANAGER - Affichage de la liste avec les résultats.");
-            } else {
-                this.listContainerTarget.classList.add('d-none');
-                this.emptyStateContainerTarget.classList.remove('d-none');
-                this.donneesTarget.innerHTML = ''; // Vider le tbody
-                console.log("LIST-MANAGER - Affichage de l'état vide (aucun résultat).");
-            }
-
-            this._postDataLoadActions(doc);
-
-        } catch (error) {
-            this.listContainerTarget.innerHTML = `<div class="alert alert-danger m-3">Erreur de chargement: ${error.message}</div>`;
-            this.emptyStateContainerTarget.classList.add('d-none');
-            this.notifyCerveau("app:error.api", { error: error.message });
-        }
+        this._postDataLoadActions(numericAttributesAndValues);
     }
 
     /**
@@ -297,6 +252,8 @@ export default class extends BaseController {
      * @private
      */
     resetSelection() {
+        // On notifie le cerveau que la sélection est maintenant vide.
+        this._notifySelectionChange();
         this.updateSelectAllCheckboxState(); // Met à jour l'état de la case "tout cocher"
     }
 
@@ -382,40 +339,6 @@ export default class extends BaseController {
      * @returns {{numericData: object, numericAttributes: array}}
      * @private
      */
-    _extractNumericDataFromResponse(doc) {
-        // On cherche d'abord dans la réponse AJAX
-        let responseContainer = doc.querySelector('[data-role="response-metadata"]');
-        let numericAttributesAndValues = {};
-
-        if (responseContainer && responseContainer.dataset.numericAttributesAndValues) {
-            // SOLUTION : On décode la chaîne avant de la parser pour gérer les &quot; etc.
-            const decodedAjaxData = this._decodeHtmlEntities(responseContainer.dataset.numericAttributesAndValues);
-            try {
-                // On s'assure que la chaîne n'est pas vide avant de parser
-                if (decodedAjaxData.trim()) {
-                    numericAttributesAndValues = JSON.parse(decodedAjaxData);
-                }
-            } catch (e) {
-                console.error("Erreur de parsing des données numériques depuis la réponse AJAX après décodage:", { raw: responseContainer.dataset.numericAttributesAndValues, decoded: decodedAjaxData, error: e });
-                numericAttributesAndValues = {};
-            }
-        } else {
-            // Fallback: Si aucune nouvelle donnée n'est trouvée dans la réponse AJAX, on utilise les données initiales.
-            // SOLUTION : On décode et on parse la valeur initiale.
-            const decodedInitialData = this._decodeHtmlEntities(this.numericAttributesAndValuesValue || '{}');
-            try {
-                if (decodedInitialData.trim()) {
-                    numericAttributesAndValues = JSON.parse(decodedInitialData);
-                }
-            } catch (e) {
-                console.error("Erreur de parsing des données numériques initiales (fallback):", { raw: this.numericAttributesAndValuesValue, decoded: decodedInitialData, error: e });
-                numericAttributesAndValues = {};
-            }
-        }
-        const payload = { numericAttributesAndValues: numericAttributesAndValues };
-        console.log(this.nomControleur + " - Code: 1980 - _extractNumericDataFromResponse - Extracted payload for Cerveau:", payload);
-        return payload;
-    }
 
     /**
      * NOUVEAU : Décode les entités HTML d'une chaîne de caractères.
