@@ -81,7 +81,12 @@ export default class extends Controller {
      */
     handleEvent(event) {
         const { type, source, payload, timestamp } = event.detail;
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleEvent - Code: 100 - Données:`, { type, source, payload });
+
+        // NOUVEAU : Logging élégant et groupé pour les événements entrants.
+        console.groupCollapsed(`[${++window.logSequence}] 🧠 Cerveau Reçoit 📥`, `"${type}"`);
+        console.log(`| Source:`, source);
+        console.log(`| Payload:`, payload);
+        console.groupEnd();
 
         // Validation de base de l'événement
         if (!type || !source || !payload || !timestamp) {
@@ -475,6 +480,11 @@ export default class extends Controller {
      * @private
      */
     broadcast(eventName, detail) {
+        // NOUVEAU : Logging élégant et groupé pour les événements sortants.
+        console.groupCollapsed(`[${++window.logSequence}] 🧠 Cerveau Émet 📤`, `"${eventName}"`);
+        console.log(`| Detail:`, detail);
+        console.groupEnd();
+
         document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
     }
 
