@@ -204,8 +204,6 @@ export default class extends Controller {
     handleTabContentLoaded(event) {
         const { tabId, html, tabName } = event.detail;
         console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleTabContentLoaded - Code: 100 - Données:`, { tabId, html, tabName });
-
-        // On cherche le conteneur préparé par _createTab
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
