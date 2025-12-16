@@ -43,14 +43,11 @@ export default class extends BaseController {
      */
     connect() {
         this.nomControleur = "LIST-MANAGER";
-        // this.urlAPIDynamicQuery = `/admin/${this.controleurphpValue}/api/dynamic-query/${this.identrepriseValue}`;
         this.urlAPIDynamicQuery = `/admin/${this.serverRootNameValue}/api/dynamic-query/${this.idInviteValue}/${this.idEntrepriseValue}`;
-
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.selectedIds = new Set(); // NOUVEAU : Mémorise les IDs sélectionnés pour cette instance de liste.
         this.boundHandleDBRequest = this.handleDBRequest.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this);
-        // NOUVEAU : Écouteur pour la nouvelle logique "B"
         this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
 
         // NOUVEAU : Centralise la notification de l'état initial au cerveau.
