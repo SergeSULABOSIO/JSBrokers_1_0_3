@@ -56,7 +56,7 @@ export default class extends Controller {
         this.currentIdInvite = null;
 
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
-        console.log(`[${++window.logSequence}] ${this.nomControleur} 🧠 Cerveau prêt à orchestrer.`);
+        console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 -  🧠 Cerveau prêt à orchestrer.`);
         this.boundHandleEvent = this.handleEvent.bind(this);
         document.addEventListener('cerveau:event', this.boundHandleEvent);
     }
