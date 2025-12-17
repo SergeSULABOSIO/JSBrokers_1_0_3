@@ -52,7 +52,8 @@ export default class extends Controller {
             numericAttributesAndValues: {},
             activeTabFormCanvas: null,
             searchCriteria: {},
-            elementId: null
+            elementId: null,
+            serverRootName: null
         };
 
         this.currentIdInvite = null;
@@ -161,7 +162,7 @@ export default class extends Controller {
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Critères de recherche mis à jour pour '${this.activeTabId}'.`, activeState.searchCriteria);
                 // On rafraîchit la liste avec les nouveaux critères. Le rafraîchissement déclenchera une mise à jour du contexte.
                 // CORRECTION : On utilise l'elementId stocké pour le rafraîchissement.
-                this._requestListRefresh(activeState.elementId, { criteria: activeState.searchCriteria });
+                this._requestListRefresh(this.activeTabId, { criteria: activeState.searchCriteria });
                 break;
             case 'ui:search.reset-request':
                 // NOUVELLE LOGIQUE : On soumet simplement une recherche avec des critères vides.
@@ -294,10 +295,11 @@ export default class extends Controller {
                 break;
             // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
             case 'ui:tab.initialized':
-                const { tabId, state, elementId } = payload;
+                const { tabId, state, elementId, serverRootName } = payload;
                 // On stocke l'état pour une restauration future.
                 if (!this.tabsState[tabId]) {
                     state.elementId = elementId; // On mémorise l'ID de l'élément
+                    state.serverRootName = serverRootName; // On mémorise le nom racine pour l'URL
                     this.tabsState[tabId] = state;
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] État initialisé et stocké pour le nouvel onglet '${tabId}'.`, this.tabsState[tabId]);
                 }
@@ -520,11 +522,14 @@ export default class extends Controller {
      * @param {object} [criteriaPayload={}] - Le payload contenant les critères de recherche.
      * @private
      */
-    _requestListRefresh(originatorId = null, criteriaPayload = {}) {
+    _requestListRefresh(tabId = null, criteriaPayload = {}) {
+        const targetTabId = tabId || this.activeTabId;
+        const tabState = this.tabsState[targetTabId];
+
         // La logique de fetch est maintenant directement dans le cerveau.
-        const url = this._buildDynamicQueryUrl(originatorId);
+        const url = this._buildDynamicQueryUrl(tabState);
         if (!url) {
-            console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", originatorId);
+            console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", targetTabId);
             return;
         }
 
@@ -536,7 +541,7 @@ export default class extends Controller {
         .then(response => response.json())
         .then(data => {
             // On diffuse les données reçues (html + numeric) au list-manager concerné.
-            this.broadcast('app:list.refreshed', { ...data, originatorId });
+            this.broadcast('app:list.refreshed', { ...data, originatorId: tabState.elementId });
         })
         .catch(error => {
             this.broadcast('app:error.api', { error: `Échec du rafraîchissement de la liste: ${error.message}` });
@@ -546,26 +551,21 @@ export default class extends Controller {
 
     /**
      * NOUVEAU : Construit l'URL de requête dynamique pour un onglet donné.
-     * @param {string} originatorId - L'ID de l'élément du contrôleur list-manager.
+     * @param {object} tabState - L'objet d'état de l'onglet.
      * @returns {string|null} L'URL construite ou null si le contrôleur n'est pas trouvé.
      * @private
      */
-    _buildDynamicQueryUrl(originatorId) {
-        if (!originatorId) return null;
-
-        const listManagerEl = document.getElementById(originatorId);
-        if (!listManagerEl) return null;
-
-        const listManagerController = this.application.getControllerForElementAndIdentifier(listManagerEl, 'list-manager');
-        if (!listManagerController) return null;
-
-        const { serverRootNameValue, idInviteValue, idEntrepriseValue } = listManagerController;
-
-        if (!serverRootNameValue || !idInviteValue || !idEntrepriseValue) {
-            console.error("Le list-manager n'a pas les valeurs nécessaires pour construire l'URL.", { originatorId });
+    _buildDynamicQueryUrl(tabState) {
+        if (!tabState || !tabState.serverRootName) {
+            console.error("Impossible de construire l'URL : serverRootName manquant dans l'état de l'onglet.", { tabState });
             return null;
         }
-        return `/admin/${serverRootNameValue}/api/dynamic-query/${idInviteValue}/${idEntrepriseValue}`;
+
+        const { serverRootName } = tabState;
+        const idInvite = this.currentIdInvite;
+        const idEntreprise = this.currentIdEntreprise;
+
+        return `/admin/${serverRootName}/api/dynamic-query/${idInvite}/${idEntreprise}`;
     }
 
     /**

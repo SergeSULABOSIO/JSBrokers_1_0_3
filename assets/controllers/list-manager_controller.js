@@ -107,6 +107,7 @@ export default class extends BaseController {
         this.notifyCerveau('ui:tab.initialized', { 
             tabId: tabId, 
             elementId: this.element.id, // On ajoute l'ID de l'élément pour le cerveau
+            serverRootName: this.serverRootNameValue, // On fournit le nom racine pour l'URL
             state: initialState 
         });
     }
