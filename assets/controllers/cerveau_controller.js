@@ -538,7 +538,17 @@ export default class extends Controller {
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, // On attend du JSON
             body: JSON.stringify(criteriaPayload.criteria || {}),
         })
-        .then(response => response.json())
+        .then(response => {
+            // NOUVEAU : Gestion d'erreur robuste. On vérifie si la réponse est bien du JSON.
+            const contentType = response.headers.get("content-type");
+            if (response.ok && contentType && contentType.indexOf("application/json") !== -1) {
+                return response.json();
+            }
+            // Si ce n'est pas du JSON ou si le statut est une erreur, on traite comme une erreur.
+            return response.text().then(text => {
+                throw new Error(`Réponse inattendue du serveur (HTML/texte) : ${text.substring(0, 300)}...`);
+            });
+        })
         .then(data => {
             // On diffuse les données reçues (html + numeric) au list-manager concerné.
             this.broadcast('app:list.refreshed', { ...data, originatorId: tabState.elementId });
