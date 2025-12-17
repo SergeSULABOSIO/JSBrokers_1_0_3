@@ -115,16 +115,12 @@ export default class extends Controller {
                 break;
             case 'ui:tab.context-changed':
                 this.displayState.activeTabName = payload.tabName;
-
                 // Met à jour l'état interne du cerveau.
                 this.activeTabId = payload.tabId; 
                 this.activeParentId = payload.parentId || null;
 
                 const storedState = this.tabsState[this.activeTabId];
                 if (storedState) {
-                    // CAS 1 : L'onglet est connu. On restaure son état immédiatement.
-                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Restauration de l'état pour l'onglet existant '${this.activeTabId}'.`, { ...storedState });
-
                     this.displayState.selectionCount = storedState.selectionState.length;
                     this._publishSelectionStatus();
 
@@ -136,10 +132,7 @@ export default class extends Controller {
                         searchCriteria: storedState.searchCriteria || {}
                     });
                 } else {
-                    // CAS 2 : C'est un nouvel onglet. On ne diffuse RIEN pour éviter une race condition.
-                    // On se contente de mettre à jour l'affichage pour indiquer le chargement et on attend
                     // patiemment que l'événement 'ui:tab.initialized' arrive pour ce même onglet.
-                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] Pas d'état trouvé pour l'onglet '${this.activeTabId}'. Initialisation d'un état vide.`);
                     this.displayState.selectionCount = 0;
                     this._publishSelectionStatus('Chargement...');
                 }
@@ -149,7 +142,6 @@ export default class extends Controller {
                 this._setSelectionState([]); // Réinitialise la sélection et publie le contexte.
                 break;
             case 'app:list.context-ready':
-                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Contexte de formulaire reçu pour l'onglet '${payload.tabId}'.`);
                 this._getActiveTabState().activeTabFormCanvas = payload.formCanvas;
                 this.broadcast('app:form-canvas.updated', { tabId: payload.tabId, formCanvas: payload.formCanvas });
                 break;
@@ -159,9 +151,6 @@ export default class extends Controller {
             case 'ui:search.submitted': // NOUVEAU : Point d'entrée unique pour toute soumission de recherche
                 const activeState = this._getActiveTabState();
                 activeState.searchCriteria = payload.criteria || {};
-                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Critères de recherche mis à jour pour '${this.activeTabId}'.`, activeState.searchCriteria);
-                // On rafraîchit la liste avec les nouveaux critères. Le rafraîchissement déclenchera une mise à jour du contexte.
-                // CORRECTION : On utilise l'elementId stocké pour le rafraîchissement.
                 this._requestListRefresh(this.activeTabId, { criteria: activeState.searchCriteria });
                 break;
             case 'ui:search.reset-request':
@@ -526,8 +515,10 @@ export default class extends Controller {
         const targetTabId = tabId || this.activeTabId;
         const tabState = this.tabsState[targetTabId];
 
+        
         // La logique de fetch est maintenant directement dans le cerveau.
         const url = this._buildDynamicQueryUrl(tabState);
+        debugger;
         if (!url) {
             console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", targetTabId);
             return;
