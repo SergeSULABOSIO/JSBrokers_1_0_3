@@ -44,13 +44,15 @@ export default class extends Controller {
          * @property {Object} _tabStateTemplate
          * @description Un modèle pour l'état initial d'un nouvel onglet, utilisé pour la documentation et l'initialisation.
          * @private
+         * @property {string} elementId - L'ID de l'élément DOM du contrôleur list-manager associé.
          */
         this._tabStateTemplate = {
             selectionState: [],
             selectionIds: new Set(),
             numericAttributesAndValues: {},
             activeTabFormCanvas: null,
-            searchCriteria: {}
+            searchCriteria: {},
+            elementId: null
         };
 
         this.currentIdInvite = null;
@@ -158,7 +160,8 @@ export default class extends Controller {
                 activeState.searchCriteria = payload.criteria || {};
                 console.log(`[${++window.logSequence}] 🧠 [Cerveau] Critères de recherche mis à jour pour '${this.activeTabId}'.`, activeState.searchCriteria);
                 // On rafraîchit la liste avec les nouveaux critères. Le rafraîchissement déclenchera une mise à jour du contexte.
-                this._requestListRefresh(this.activeTabId, { criteria: activeState.searchCriteria });
+                // CORRECTION : On utilise l'elementId stocké pour le rafraîchissement.
+                this._requestListRefresh(activeState.elementId, { criteria: activeState.searchCriteria });
                 break;
             case 'ui:search.reset-request':
                 // NOUVELLE LOGIQUE : On soumet simplement une recherche avec des critères vides.
@@ -291,9 +294,10 @@ export default class extends Controller {
                 break;
             // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
             case 'ui:tab.initialized':
-                const { tabId, state } = payload;
+                const { tabId, state, elementId } = payload;
                 // On stocke l'état pour une restauration future.
                 if (!this.tabsState[tabId]) {
+                    state.elementId = elementId; // On mémorise l'ID de l'élément
                     this.tabsState[tabId] = state;
                     console.log(`[${++window.logSequence}] 🧠 [Cerveau] État initialisé et stocké pour le nouvel onglet '${tabId}'.`, this.tabsState[tabId]);
                 }
