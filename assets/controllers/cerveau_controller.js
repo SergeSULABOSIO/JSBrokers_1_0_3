@@ -551,19 +551,19 @@ export default class extends Controller {
      * @private
      */
     _buildDynamicQueryUrl(originatorId) {
-        if (!originatorId) return null;
+        // if (!originatorId) return null;
 
         const listManagerEl = document.getElementById(originatorId);
-        if (!listManagerEl) return null;
+        // if (!listManagerEl) return null;
 
         const listManagerController = this.application.getControllerForElementAndIdentifier(listManagerEl, 'list-manager');
-        if (!listManagerController) return null;
+        // if (!listManagerController) return null;
 
         const { serverRootNameValue, idInviteValue, idEntrepriseValue } = listManagerController;
 
         if (!serverRootNameValue || !idInviteValue || !idEntrepriseValue) {
             console.error("Le list-manager n'a pas les valeurs nécessaires pour construire l'URL.", { originatorId });
-            return null;
+            // return null;
         }
         return `/admin/${serverRootNameValue}/api/dynamic-query/${idInviteValue}/${idEntrepriseValue}`;
     }
