@@ -244,7 +244,7 @@ export default class extends Controller {
 
             }
             // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
-            this.notifyCerveau('ui:dialog.opened', {
+            this.notifyCerveau('app:dialog.opened', {
                 mode: this.isCreateMode ? 'creation' : 'edition',
                 entity: this.entity
             });
