@@ -63,6 +63,14 @@ export default class extends Controller {
             idInvite: this.idInviteValue
         });
 
+        // NOUVEAU : On notifie immédiatement le cerveau que le contexte initial est l'onglet principal.
+        // Ceci est crucial pour que le cerveau connaisse l'onglet actif dès le chargement.
+        this.notifyCerveau('ui:tab.context-changed', {
+            tabId: this.activeTabId,
+            tabName: 'Principal', // Le nom par défaut
+            parentId: null
+        });
+
         this.boundHandleSelection = this.handleSelection.bind(this);
         this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this); // NOUVEAU
         // NOUVEAU : Écouteur pour la réponse du cerveau avec le contenu de l'onglet
