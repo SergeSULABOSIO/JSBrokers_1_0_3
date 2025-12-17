@@ -101,6 +101,7 @@ export default class extends BaseController {
         // 3. Notifie le cerveau avec l'état initial.
         this.notifyCerveau('ui:tab.initialized', { 
             tabId: this.element.id, 
+            elementId: this.element.id, // On ajoute l'ID de l'élément pour le cerveau
             state: initialState 
         });
     }
