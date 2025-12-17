@@ -42,19 +42,17 @@ export default class extends BaseController {
      * S'exécute lorsque le contrôleur est connecté au DOM.
      */
     connect() {
-        this.nomControleur = "LIST-MANAGER";
-        this.urlAPIDynamicQuery = `/admin/${this.serverRootNameValue}/api/dynamic-query/${this.idInviteValue}/${this.idEntrepriseValue}`;
+        this.nomControleur = "LIST-MANAGER";        
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.boundHandleListRefreshed = this.handleListRefreshed.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this);
         this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
 
-        // NOUVEAU : Centralise la notification de l'état initial au cerveau.
         this._initializeAndNotifyState();
 
         document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:list.refreshed', this.boundHandleListRefreshed);
-        document.addEventListener('app:list.toggle-all-request', this.boundToggleAll); // Écouter l'ordre du Cerveau
+        document.addEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.addEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
 
         if (this.nbElementsValue === 0) {
@@ -187,28 +185,6 @@ export default class extends BaseController {
     }
 
     /**
-     * Met à jour l'état visuel de la case "Tout cocher" (cochée, décochée, ou indéterminée).
-     * @private
-     */
-    updateSelectAllCheckboxState() {
-        if (!this.hasSelectAllCheckboxTarget || this.rowCheckboxTargets.length === 0) return;
-
-        const total = this.rowCheckboxTargets.length;
-        const checkedCount = this.rowCheckboxTargets.filter(c => c.checked).length;
-
-        if (checkedCount === 0) {
-            this.selectAllCheckboxTarget.checked = false;
-            this.selectAllCheckboxTarget.indeterminate = false;
-        } else if (checkedCount === total) {
-            this.selectAllCheckboxTarget.checked = true;
-            this.selectAllCheckboxTarget.indeterminate = false;
-        } else {
-            this.selectAllCheckboxTarget.checked = false;
-            this.selectAllCheckboxTarget.indeterminate = true;
-        }
-    }
-
-    /**
      * Gère la mise à jour de la sélection globale venant d'un autre composant (ex: changement d'onglet).
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
@@ -221,6 +197,7 @@ export default class extends BaseController {
             checkbox.closest('tr')?.classList.toggle('row-selected', checkbox.checked);
         });
 
+        this.updateSelectAllCheckboxState();
     }
 
     // --- GESTION DES DONNÉES ---
@@ -258,87 +235,16 @@ export default class extends BaseController {
     }
 
     /**
-     * NOUVEAU : Notifie la barre de recherche pour réinitialiser la recherche.
-     */
-    resetSearch() {
-        this.notifyCerveau('ui:search.reset-request', { originatorId: this.element.id });
-    }
-
-    /**
-     * NOUVEAU : Demande au cerveau d'ouvrir le formulaire d'ajout pour l'entité de cette liste.
-     */
-    requestAddItem() {
-        this.notifyCerveau('ui:toolbar.add-request', {
-            entityFormCanvas: this.entityFormCanvasValue,
-            isCreationMode: true,
-            context: {
-                originatorId: this.element.id // Pour savoir quelle liste rafraîchir après l'ajout
-            }
-        });
-    }
-
-
-    /**
-     * Récupère les IDs d'entreprise et d'invité depuis l'événement ou les valeurs du contrôleur.
-     * @param {object} detail - Le détail de l'événement.
-     * @returns {{idEntreprise: number, idInvite: number}}
-     * @private
-     */
-    _getIdsFromEventOrValues(detail) {
-        return {
-            idEntreprise: detail.idEntreprise || this.idEntrepriseValue,
-            idInvite: detail.idInvite || this.idInviteValue,
-        };
-    }
-
-    /**
-     * Construit l'URL pour la requête de recherche dynamique.
-     * @param {number} idInvite
-     * @param {number} idEntreprise
-     * @returns {string}
-     * @private
-     */
-    _buildDynamicQueryUrl(idInvite, idEntreprise) {
-        return `/admin/${this.serverRootNameValue}/api/dynamic-query/${idInvite}/${idEntreprise}`;
-    }
-
-    /**
-     * NOUVEAU : Affiche un squelette de chargement.
-     * @private
-     */
-    _showSkeleton() {
-        this.listContainerTarget.classList.remove('d-none');
-        this.emptyStateContainerTarget.classList.add('d-none');
-        const columnCount = this.element.querySelector('thead tr')?.childElementCount || 1;
-        let skeletonHtml = '';
-        for (let i = 0; i < 6; i++) { // Affiche 6 lignes de squelette
-            skeletonHtml += `
-                <tr>
-                    ${'<td><div class="skeleton-row"></div></td>'.repeat(columnCount)}
-                </tr>
-            `;
-        }
-        this.donneesTarget.innerHTML = skeletonHtml;
-    }
-
-    /**
      * Exécute les actions post-chargement des données.
      * @private
      */
     _postDataLoadActions(doc) {
         this.resetSelection();
-        this.notifyCerveau('ui:status.notify', { titre: `Liste chargée. ${this.rowCheckboxTargets.length} éléments.` });
-        const numericDataPayload = this._extractNumericDataFromResponse(doc); // Renvoie { numericAttributesAndValues: {...} }
-        // On envoie le payload tel quel au cerveau
-        this.notifyCerveau('app:list.data-loaded', numericDataPayload);
-        this.notifyCerveau('app:list.refreshed', { itemCount: this.rowCheckboxTargets.length });
+        this.notifyCerveau('app:list.data-loaded', { numericAttributesAndValues: doc });
+        this.notifyCerveau('app:status.notify', { 
+            message: `Liste chargée : ${this.rowCheckboxTargets.length} élément(s)` 
+        });
     }
-
-    /**
-     * Extrait les données numériques (pour les totaux) du HTML de la réponse.
-     * @returns {{numericData: object, numericAttributes: array}}
-     * @private
-     */
 
     /**
      * NOUVEAU : Décode les entités HTML d'une chaîne de caractères.

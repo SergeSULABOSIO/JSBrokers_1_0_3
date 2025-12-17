@@ -167,10 +167,8 @@ export default class extends Controller {
                 activeStateToReset.searchCriteria = {};
                 this._requestListRefresh(this.activeTabId, { criteria: {} });
                 break;
-            case 'dialog:boite-dialogue:init-request':
-            case 'ui:boite-dialogue:add-collection-item-request':
+            case 'ui:dialog.open-request': // Événement unifié pour ouvrir un dialogue
                 this.broadcast('app:loading.start');
-                this._publishSelectionStatus('Ouverture du formulaire de collection...');
                 this.openDialogBox(payload);
                 break;
             case 'ui:toolbar.add-request':
@@ -540,6 +538,30 @@ export default class extends Controller {
             this.broadcast('app:error.api', { error: `Échec du rafraîchissement de la liste: ${error.message}` });
         })
         .finally(() => this.broadcast('app:loading.stop'));
+    }
+
+    /**
+     * NOUVEAU : Construit l'URL de requête dynamique pour un onglet donné.
+     * @param {string} originatorId - L'ID de l'élément du contrôleur list-manager.
+     * @returns {string|null} L'URL construite ou null si le contrôleur n'est pas trouvé.
+     * @private
+     */
+    _buildDynamicQueryUrl(originatorId) {
+        if (!originatorId) return null;
+
+        const listManagerEl = document.getElementById(originatorId);
+        if (!listManagerEl) return null;
+
+        const listManagerController = this.application.getControllerForElementAndIdentifier(listManagerEl, 'list-manager');
+        if (!listManagerController) return null;
+
+        const { serverRootNameValue, idInviteValue, idEntrepriseValue } = listManagerController;
+
+        if (!serverRootNameValue || !idInviteValue || !idEntrepriseValue) {
+            console.error("Le list-manager n'a pas les valeurs nécessaires pour construire l'URL.", { originatorId });
+            return null;
+        }
+        return `/admin/${serverRootNameValue}/api/dynamic-query/${idInviteValue}/${idEntrepriseValue}`;
     }
 
     /**
