@@ -98,9 +98,14 @@ export default class extends BaseController {
             activeTabFormCanvas: this.entityFormCanvasValue
         };
 
+        // CORRECTION : Pour l'onglet principal, le tabId logique est 'principal'.
+        // Pour les autres (collections), le tabId est l'ID de l'élément lui-même.
+        const isPrincipalTab = this.element.id.startsWith('list-manager-');
+        const tabId = isPrincipalTab ? 'principal' : this.element.id;
+
         // 3. Notifie le cerveau avec l'état initial.
         this.notifyCerveau('ui:tab.initialized', { 
-            tabId: this.element.id, 
+            tabId: tabId, 
             elementId: this.element.id, // On ajoute l'ID de l'élément pour le cerveau
             state: initialState 
         });
