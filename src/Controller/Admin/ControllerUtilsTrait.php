@@ -196,19 +196,41 @@ trait ControllerUtilsTrait
      * @param bool $isQueryResult If true, performs a search and renders only the list content.
      * @return Response
      */
-    private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false): Response
+    private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false, string $templateVarName = 'data'): Response
     {
         $idInvite = $request->attributes->get('idInvite');
         $idEntreprise = $request->attributes->get('idEntreprise');
         $data = [];
-        $reponseData = null;
 
+        // CAS 1: C'est une requête API pour rafraîchir la liste (recherche, etc.)
         if ($isQueryResult) {
-            $requestData = json_decode($request->getContent(), true) ?? [];
-            $reponseData = $this->searchService->search($requestData);
-            $data = $reponseData["data"];
-            $template = 'components/_list_content.html.twig';
-        } else {
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
+            if (!$entreprise) {
+                return new JsonResponse(['error' => 'Entreprise non trouvée.'], Response::HTTP_BAD_REQUEST);
+            }
+
+            $criteria = json_decode($request->getContent(), true) ?? [];
+            
+            // Appel du service de recherche refactorisé et sécurisé
+            $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise);
+            $data = $searchResult['data'];
+
+            // Extraction des données numériques et rendu du HTML partiel de la liste
+            $numericData = $this->constante->getNumericAttributesAndValuesForTotalsBar($data);
+            $html = $this->renderView('admin/' . $this->getServerRootName($entityClass) . '/_list.html.twig', [
+                $templateVarName => $data,
+                'entreprise' => $entreprise,
+                'invite' => $this->inviteRepository->find($idInvite),
+            ]);
+
+            // On retourne la réponse JSON structurée attendue par le Cerveau
+            return new JsonResponse([
+                'html' => $html,
+                'numericAttributesAndValues' => $numericData
+            ]);
+        } 
+        // CAS 2: C'est le chargement initial de la page, on rend le conteneur principal.
+        else {
             // NOUVEAU : On ne charge plus les données lors de l'affichage initial.
             // La barre de recherche déclenchera le premier chargement.
             $data = [];
@@ -237,10 +259,6 @@ trait ControllerUtilsTrait
             'mainListUrl' => $mainListUrl, // On passe l'URL au template
         ];
 
-        if ($isQueryResult && $reponseData) {
-            $parameters['status'] = $reponseData["status"];
-            $parameters['totalItems'] = $reponseData["totalItems"];
-        }
         // dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);
         return $this->render($template, $parameters);
     }

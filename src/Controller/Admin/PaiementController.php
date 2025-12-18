@@ -152,9 +152,11 @@ class PaiementController extends AbstractController
         ],
         methods: ['POST']
     )]
-    public function query(Request $request)
+    public function query(Request $request): Response
     {
-        return $this->renderViewOrListComponent(Paiement::class, $request, true);
+        // La logique de recherche et de rendu JSON est maintenant centralisée dans le trait.
+        // On lui passe le nom de la variable attendue par le template `_list.html.twig` ('paiements').
+        return $this->renderViewOrListComponent(Paiement::class, $request, true, 'paiements');
     }
 
 
