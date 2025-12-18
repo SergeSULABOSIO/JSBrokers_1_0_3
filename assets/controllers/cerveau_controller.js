@@ -538,7 +538,7 @@ export default class extends Controller {
             }
             // Si ce n'est pas du JSON ou si le statut est une erreur, on traite comme une erreur.
             return response.text().then(text => {
-                throw new Error(`Réponse inattendue du serveur (HTML/texte) : ${text.substring(0, 300)}...`);
+                throw new Error(text);
             });
         })
         .then(data => {
