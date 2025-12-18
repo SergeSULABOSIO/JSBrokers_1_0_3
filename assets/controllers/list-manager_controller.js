@@ -251,7 +251,7 @@ export default class extends BaseController {
         this.listContainerTarget.classList.toggle('d-none', !hasRows);
         this.emptyStateContainerTarget.classList.toggle('d-none', hasRows);
 
-        this._postDataLoadActions(numericAttributesAndValues);
+        this._postDataLoadActions();
     }
 
     /**
@@ -268,11 +268,11 @@ export default class extends BaseController {
      * Exécute les actions post-chargement des données.
      * @private
      */
-    _postDataLoadActions(doc) {
+    _postDataLoadActions() {
         this.resetSelection();
-        this.notifyCerveau('app:list.data-loaded', { numericAttributesAndValues: doc });
-        this.notifyCerveau('app:status.notify', { 
-            message: `Liste chargée : ${this.rowCheckboxTargets.length} élément(s)` 
+        // Notifie le cerveau que le rendu est terminé et fournit le nombre d'éléments.
+        this.notifyCerveau('app:list.rendered', { 
+            itemCount: this.rowCheckboxTargets.length 
         });
     }
 
