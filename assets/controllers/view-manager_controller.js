@@ -263,8 +263,11 @@ export default class extends Controller {
         const tab = document.createElement('button');
         tab.className = 'list-tab';
 
-        const collectionUrl = '/admin/' + parentEntityType.toLowerCase() + '/api/' + parentEntity.id + '/' + collectionInfo.code + '/generic';
-        
+        // CORRECTION : On passe l'ID comme paramètre de requête pour être compatible
+        // avec le typage strict (int) du contrôleur Symfony.
+        // L'URL passe de /api/123/contacts/generic à /api/contacts/generic?id=123
+        const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${collectionInfo.code}/generic?id=${parentEntity.id}`;
+
         Object.assign(tab.dataset, {
             tabId: tabId,
             tabType: 'collection',

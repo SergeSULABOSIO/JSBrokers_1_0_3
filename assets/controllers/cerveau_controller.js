@@ -518,7 +518,7 @@ export default class extends Controller {
         
         // La logique de fetch est maintenant directement dans le cerveau.
         const url = this._buildDynamicQueryUrl(tabState);
-        
+
         if (!url) {
             console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", targetTabId);
             return;
