@@ -3,6 +3,7 @@ namespace App\Services;
 
 
 
+use App\Entity\Entreprise;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -54,7 +55,7 @@ class JSBDynamicSearchService
      * La logique de votre ancienne fonction "chercher".
      * Elle ne dépend plus de l'objet Request, mais d'un simple tableau.
      */
-    public function search(array $data): array
+    public function search(string $entityClass, array $criteria, Entreprise $entreprise): array
     {
         $results = [];
         $status = [
@@ -66,11 +67,9 @@ class JSBDynamicSearchService
 
         // Note : le code ci-dessous est votre logique, simplement copiée ici.
         // Les références à "$this->" pointent maintenant vers les propriétés du service.
+        $entityName = (new \ReflectionClass($entityClass))->getShortName();
 
-        $entityName = $data['entityName'] ?? null;
-        $criteria = $data['criteria'] ?? [];
-
-        if (!$entityName || !in_array($entityName, self::$allowedEntities, true)) {
+        if (!in_array($entityName, self::$allowedEntities, true)) {
             $status = [
                 "error" => "Entité non autorisée.",
                 "code" => 403,
@@ -82,9 +81,16 @@ class JSBDynamicSearchService
         try {
             // Obtenir le repository de l'entité demandée pour construire la requête.
             // Le chemin complet de la classe est 'App\\Entity\\NomDeLEntite'.
-            $repository = $this->em->getRepository('App\\Entity\\' . $entityName);
+            $repository = $this->em->getRepository($entityClass);
             // 'e' est l'alias de notre entité principale dans la requête DQL (ex: SELECT e FROM App\Entity\NotificationSinistre e)
             $qb = $repository->createQueryBuilder('e');
+
+            // SÉCURITÉ : On s'assure que la recherche est bien limitée à l'entreprise courante.
+            // On vérifie si l'entité a une propriété 'entreprise' avant d'ajouter la condition.
+            if ($this->em->getClassMetadata($entityClass)->hasAssociation('entreprise')) {
+                $qb->andWhere('e.entreprise = :entrepriseId')
+                   ->setParameter('entrepriseId', $entreprise->getId());
+            }
 
             // AMÉLIORATION : On applique les filtres en utilisant la nouvelle méthode factorisée.
             $this->applyCriteriaToQueryBuilder($qb, $criteria, $status);
@@ -93,7 +99,7 @@ class JSBDynamicSearchService
             $qb->orderBy('e.id', 'DESC');
 
             // Exécuter la requête pour obtenir les résultats (objets Doctrine)
-            $results = $qb->getQuery()->getResult();
+            $results = $qb->getQuery()->getResult(); // Renommé pour clarté
 
             // --- AMÉLIORATION : Logique de comptage simplifiée ---
             $totalItemsQb = $repository->createQueryBuilder('e_count');

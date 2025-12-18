@@ -237,7 +237,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event - L'événement `app:list.refreshed`.
      */
     handleListRefreshed(event) {
-        const { html, numericAttributesAndValues, originatorId } = event.detail;
+        const { html, originatorId } = event.detail;
 
         if (originatorId && originatorId !== this.element.id) {
             this._logDebug("Demande de rafraîchissement ignorée (non destinée à cette liste).", { myId: this.element.id, originatorId: event.detail.originatorId });
