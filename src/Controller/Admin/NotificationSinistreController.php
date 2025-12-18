@@ -132,8 +132,7 @@ class NotificationSinistreController extends AbstractController
     public function query(Request $request): Response
     {
         // La logique de recherche et de rendu JSON est maintenant centralisée dans le trait.
-        // On lui passe le nom de la variable attendue par le template `_list.html.twig` ('notifications').
-        return $this->renderViewOrListComponent(NotificationSinistre::class, $request, true, 'notifications');
+        return $this->renderViewOrListComponent(NotificationSinistre::class, $request, true);
     }
 
 
