@@ -1,15 +1,3 @@
-{#
-    Ce template est responsable de l'affichage du contenu d'une liste, c'est-à-dire les lignes de données.
-    Il est conçu pour être inséré dynamiquement dans le `<tbody>` d'un tableau par le contrôleur `list-manager`.
-
-    Contrôleur Stimulus associé :
-    - `api-response-notifier`: Ce contrôleur n'a pas d'interaction visible. Son seul rôle est de notifier le "Cerveau"
-      des métadonnées de la réponse API (informations de pagination, statut) dès qu'il est chargé dans le DOM.
-      Le Cerveau relaie ensuite ces informations à d'autres composants, comme le gestionnaire de pagination.
-
-    Paramètres attendus :
-    - `listeCanvas`: La configuration d'affichage de la liste, passée au sous-template `_list_row.html.twig`.
-#}
 {% for entity in data %}
     {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas }) }}
 {% endfor %}
