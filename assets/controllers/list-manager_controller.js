@@ -261,7 +261,6 @@ export default class extends BaseController {
     resetSelection() {
         // On notifie le cerveau que la sélection est maintenant vide.
         this._notifySelectionChange();
-        this.updateSelectAllCheckboxState(); // Met à jour l'état de la case "tout cocher"
     }
 
     /**
