@@ -566,7 +566,7 @@ export default class extends Controller {
         const { serverRootName } = tabState;
         const idInvite = this.currentIdInvite;
         const idEntreprise = this.currentIdEntreprise;
-
+        
         return `/admin/${serverRootName}/api/dynamic-query/${idInvite}/${idEntreprise}`;
     }
 
