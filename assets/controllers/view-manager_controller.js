@@ -264,7 +264,7 @@ export default class extends Controller {
         tab.className = 'list-tab';
 
         const collectionUrl = '/admin/' + parentEntityType.toLowerCase() + '/api/' + parentEntity.id + '/' + collectionInfo.code + '/generic';
-
+        
         Object.assign(tab.dataset, {
             tabId: tabId,
             tabType: 'collection',
