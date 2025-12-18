@@ -208,7 +208,6 @@ trait ControllerUtilsTrait
             if (!$entreprise) {
                 return new JsonResponse(['error' => 'Entreprise non trouvée.'], Response::HTTP_BAD_REQUEST);
             }
-
             $criteria = json_decode($request->getContent(), true) ?? [];
             
             // Appel du service de recherche refactorisé et sécurisé
