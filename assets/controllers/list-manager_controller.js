@@ -207,6 +207,29 @@ export default class extends BaseController {
         this.updateSelectAllCheckboxState();
     }
 
+    /**
+     * Met à jour l'état visuel de la case "Tout cocher" (cochée, décochée, ou indéterminée).
+     * @private
+     */
+    updateSelectAllCheckboxState() {
+        if (!this.hasSelectAllCheckboxTarget) return;
+
+        const total = this.rowCheckboxTargets.length;
+        const checkedCount = this.rowCheckboxTargets.filter(c => c.checked).length;
+
+        if (total === 0 || checkedCount === 0) {
+            this.selectAllCheckboxTarget.checked = false;
+            this.selectAllCheckboxTarget.indeterminate = false;
+        } else if (checkedCount === total) {
+            this.selectAllCheckboxTarget.checked = true;
+            this.selectAllCheckboxTarget.indeterminate = false;
+        } else {
+            // Cas où certains, mais pas tous, sont cochés
+            this.selectAllCheckboxTarget.checked = false;
+            this.selectAllCheckboxTarget.indeterminate = true;
+        }
+    }
+
     // --- GESTION DES DONNÉES ---
 
     /**
