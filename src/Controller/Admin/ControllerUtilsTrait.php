@@ -196,7 +196,7 @@ trait ControllerUtilsTrait
      * @param bool $isQueryResult If true, performs a search and renders only the list content.
      * @return Response
      */
-    private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false, string $templateVarName = 'data'): Response
+    private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false): Response
     {
         $idInvite = $request->attributes->get('idInvite');
         $idEntreprise = $request->attributes->get('idEntreprise');
@@ -217,10 +217,10 @@ trait ControllerUtilsTrait
 
             // Extraction des données numériques et rendu du HTML partiel de la liste
             $numericData = $this->constante->getNumericAttributesAndValuesForTotalsBar($data);
-            $html = $this->renderView('admin/' . $this->getServerRootName($entityClass) . '/_list.html.twig', [
-                $templateVarName => $data,
-                'entreprise' => $entreprise,
-                'invite' => $this->inviteRepository->find($idInvite),
+            // OPTIMISATION : On ne passe au template que les variables strictement nécessaires.
+            $html = $this->renderView('components/_list_content.html.twig', [
+                'data' => $data,
+                'listeCanvas' => $this->constante->getListeCanvas($entityClass)
             ]);
 
             // On retourne la réponse JSON structurée attendue par le Cerveau

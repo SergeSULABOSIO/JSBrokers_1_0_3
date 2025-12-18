@@ -10,11 +10,6 @@
     Paramètres attendus :
     - `listeCanvas`: La configuration d'affichage de la liste, passée au sous-template `_list_row.html.twig`.
 #}
-<div
-    data-role="response-metadata"
-    data-numeric-attributes-and-values='{{ numericAttributesAndValues|json_encode(constant('JSON_FORCE_OBJECT'))|e('html_attr') }}'
-></div>
 {% for entity in data %}
     {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas }) }}
 {% endfor %}
-</div>
