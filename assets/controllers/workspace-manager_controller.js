@@ -700,7 +700,7 @@ export default class extends Controller {
      * Cache la barre de progression sur ordre du Cerveau.
      */
     handleLoadingStop() {
-        console.log(this.nomControleur + " - Fin du chargement des données, masquage de la barre de progression.");
+        // console.log(this.nomControleur + " - Fin du chargement des données, masquage de la barre de progression.");
         this.progressBarTarget.style.display = 'none';
     }
 
