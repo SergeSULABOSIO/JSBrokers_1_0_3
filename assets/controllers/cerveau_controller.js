@@ -212,21 +212,6 @@ export default class extends Controller {
                 this.broadcast('app:loading.start');
                 this._requestListRefresh(this.getActiveTabId());
                 break;
-            case 'app:list.data-loaded':                
-                // NOUVEAU : Mettre à jour l'état de l'onglet actif dans le store
-                this._getActiveTabState().numericAttributesAndValues = payload.numericAttributesAndValues || {};
-                console.log(`[${++window.logSequence}] 🧠 [Cerveau] Données numériques reçues. Rediffusion du contexte...`, { 
-                    numericAttributesAndValues: this._getActiveTabState().numericAttributesAndValues
-                });
-                // NOUVEAU : On rediffuse immédiatement le contexte complet (avec les nouvelles données numériques).
-                // C'est ce qui permet à la barre des totaux de se mettre à jour.
-                this.broadcast('app:context.changed', {
-                    selection: this._getActiveTabState().selectionState,
-                    numericAttributesAndValues: this._getActiveTabState().numericAttributesAndValues,
-                    searchCriteria: this._getActiveTabState().searchCriteria,
-                    formCanvas: this._getActiveTabState().activeTabFormCanvas
-                });
-                break;
             case 'app:api.delete-request':
                 this._publishSelectionStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);
@@ -282,6 +267,12 @@ export default class extends Controller {
             case 'app:tab-content.load-request':
                 this._loadTabContent(payload);
                 break;
+            // NOUVEAU : La liste a fini son rendu. C'est le signal final du rafraîchissement.
+            case 'app:list.rendered':
+                // Met à jour le statut et arrête l'indicateur de chargement.
+                this._publishSelectionStatus(`Liste chargée : ${payload.itemCount} élément(s)`);
+                this.broadcast('app:loading.stop');
+                break;
             // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
             case 'ui:tab.initialized':
                 const { tabId, state, elementId, serverRootName } = payload;
@@ -290,14 +281,14 @@ export default class extends Controller {
                     state.elementId = elementId; // On mémorise l'ID de l'élément
                     state.serverRootName = serverRootName; // On mémorise le nom racine pour l'URL
                     this.tabsState[tabId] = state;
-                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] État initialisé et stocké pour le nouvel onglet '${tabId}'.`, this.tabsState[tabId]);
+                    // console.log(`[${++window.logSequence}] 🧠 [Cerveau] État initialisé et stocké pour le nouvel onglet '${tabId}'.`, this.tabsState[tabId]);
                 }
 
                 // Si l'onglet qui vient d'être initialisé est l'onglet actuellement actif,
                 // cela signifie qu'un nouvel onglet vient d'être chargé.
                 // On met donc à jour le contexte courant de l'application avec cet état initial.
                 if (this.activeTabId === tabId) {
-                    console.log(`[${++window.logSequence}] 🧠 [Cerveau] L'onglet initialisé '${tabId}' est actif. Mise à jour du contexte courant.`);
+                    // console.log(`[${++window.logSequence}] 🧠 [Cerveau] L'onglet initialisé '${tabId}' est actif. Mise à jour du contexte courant.`);
                     // L'onglet que nous attendions est enfin prêt.
                     // On peut maintenant publier son état initial (vide) en toute sécurité.
                     const activeTabState = this._getActiveTabState();
@@ -336,7 +327,7 @@ export default class extends Controller {
             return { ...this._tabStateTemplate, selectionIds: new Set() }; // Retourne une nouvelle copie
         }
         if (!this.tabsState[this.activeTabId]) {
-            console.log(`[${++window.logSequence}] 🧠 [Cerveau] Initialisation à la volée de l'état pour l'onglet '${this.activeTabId}'.`);
+            // console.log(`[${++window.logSequence}] 🧠 [Cerveau] Initialisation à la volée de l'état pour l'onglet '${this.activeTabId}'.`);
             // Crée une copie du template.
             this.tabsState[this.activeTabId] = { ...this._tabStateTemplate, selectionIds: new Set(), searchCriteria: {} };
         }
@@ -529,22 +520,20 @@ export default class extends Controller {
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, // On attend du JSON
             body: JSON.stringify(criteriaPayload.criteria || {}),
         })
-        // .then(response => {
-        //     // console.log(this.nomControleur + " - Code: 1986 - response:", response);
-        //     // NOUVEAU : Gestion d'erreur robuste. On vérifie si la réponse est bien du JSON.
-        //     const contentType = response.headers.get("content-type");
-        //     if (response.ok && contentType && contentType.indexOf("application/json") !== -1) {
-        //         return response.json();
-        //     }
-        //     // Si ce n'est pas du JSON ou si le statut est une erreur, on traite comme une erreur.
-        //     return response.text().then(text => {
-        //         throw new Error(text);
-        //     });
-        // })
+        .then(response => {
+            const contentType = response.headers.get("content-type");
+            if (response.ok && contentType && contentType.includes("application/json")) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(`Réponse inattendue du serveur (HTML/texte) : ${text.substring(0, 500)}...`);
+            });
+        })
         .then(data => {
-            // console.log(this.nomControleur + " - Code: 1986 - data:", data);
-            // On diffuse les données reçues (html + numeric) au list-manager concerné.
-            this.broadcast('app:list.refreshed', { ...data, originatorId: tabState.elementId });
+            // Le cerveau met à jour son propre état avec les données numériques.
+            tabState.numericAttributesAndValues = data.numericAttributesAndValues || {};
+            // Il ne diffuse que le HTML dont le list-manager a besoin.
+            this.broadcast('app:list.refreshed', { html: data.html, originatorId: tabState.elementId });
         })
         .catch(error => {
             this.broadcast('app:error.api', { 
@@ -553,8 +542,9 @@ export default class extends Controller {
                 targetTabId: targetTabId,
                 criteriaPayload: criteriaPayload
            });
-        })
-        .finally(() => this.broadcast('app:loading.stop'));
+           // On arrête le chargement en cas d'erreur réseau ou serveur.
+           this.broadcast('app:loading.stop');
+        });
     }
 
     /**

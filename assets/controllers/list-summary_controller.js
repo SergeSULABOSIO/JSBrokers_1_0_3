@@ -133,7 +133,7 @@ export default class extends Controller {
      * @private
      */
     displayTotals(globalTotal, selectionTotal) {
-        console.log(this.nomControleur + " - Code: 1980 - displayTotals - Global Total:", globalTotal, "Selection Total:", selectionTotal);
+        // console.log(this.nomControleur + " - Code: 1980 - displayTotals - Global Total:", globalTotal, "Selection Total:", selectionTotal);
         this.globalTotalTarget.textContent = this.formatCurrency(globalTotal);
 
         this.selectionTotalTarget.textContent = this.formatCurrency(selectionTotal);
