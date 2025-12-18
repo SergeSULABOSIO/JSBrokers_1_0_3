@@ -563,10 +563,9 @@ export default class extends Controller {
         const idInvite = this.currentIdInvite;
         const idEntreprise = this.currentIdEntreprise;
 
-        // CORRECTION : On passe les IDs en paramètres de requête pour éviter les erreurs
-        // de typage (int vs string) côté serveur Symfony.
-        // L'URL passe de /api/dynamic-query/1/1 à /api/dynamic-query?idInvite=1&idEntreprise=1
-        return `/admin/${serverRootName}/api/dynamic-query?idInvite=${idInvite}&idEntreprise=${idEntreprise}`;
+        // CORRECTION : La route Symfony pour la recherche dynamique attend les IDs
+        // dans le chemin (path parameters), et non en paramètres de requête (query parameters).
+        return `/admin/${serverRootName}/api/dynamic-query/${idInvite}/${idEntreprise}`;
     }
 
     /**
