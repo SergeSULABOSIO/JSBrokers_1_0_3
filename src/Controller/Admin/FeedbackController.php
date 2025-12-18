@@ -22,6 +22,7 @@ use App\Repository\InviteRepository;
 use App\Repository\FeedbackRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -50,6 +51,7 @@ class FeedbackController extends AbstractController
         private InviteRepository $inviteRepository,
         private FeedbackRepository $feedbackRepository,
         private Constante $constante,
+        private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
     ) {}
 
@@ -116,6 +118,20 @@ class FeedbackController extends AbstractController
     public function deleteApi(Feedback $feedback): Response
     {
         return $this->handleDeleteApi($feedback);
+    }
+
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(Feedback::class, $request, true);
     }
 
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
