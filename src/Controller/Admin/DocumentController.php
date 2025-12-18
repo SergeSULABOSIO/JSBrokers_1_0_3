@@ -71,6 +71,7 @@ class DocumentController extends AbstractController
         private DocumentRepository $documentRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
+        private SerializerInterface $serializer,
     ) {}
 
     /**
