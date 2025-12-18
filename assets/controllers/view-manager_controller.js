@@ -262,7 +262,7 @@ export default class extends Controller {
         const tabId = `collection-${collectionInfo.code}-for-${parentEntity.id}`;
         const tab = document.createElement('button');
         tab.className = 'list-tab';
-        const collectionUrl = `/admin/${parentEntityType.toLowerCase()}/api/${parentEntity.id}/${collectionInfo.code}/generic`;
+        const collectionUrl = '/admin/' + parentEntityType.toLowerCase() + '/api/' + parentEntity.id + '/' + collectionInfo.code + '/generic';
 
         Object.assign(tab.dataset, {
             tabId: tabId,
