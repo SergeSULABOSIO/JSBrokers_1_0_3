@@ -54,7 +54,7 @@ export default class extends Controller {
      */
     handleContextChanged(event) {
         const { selection, numericAttributesAndValues, formCanvas } = event.detail;
-        console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues, formCanvas });
+        // console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues, formCanvas });
 
         // On dérive la liste des attributs numériques directement depuis le canvas, notre source de vérité.
         const numericAttributes = formCanvas?.liste?.filter(
