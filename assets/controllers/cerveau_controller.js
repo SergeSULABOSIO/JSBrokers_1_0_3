@@ -518,7 +518,6 @@ export default class extends Controller {
         
         // La logique de fetch est maintenant directement dans le cerveau.
         const url = this._buildDynamicQueryUrl(tabState);
-        debugger;
         if (!url) {
             console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", targetTabId);
             return;
@@ -530,6 +529,7 @@ export default class extends Controller {
             body: JSON.stringify(criteriaPayload.criteria || {}),
         })
         .then(response => {
+            console.log(this.nomControleur + " - Code: 1986 - response:", response);
             // NOUVEAU : Gestion d'erreur robuste. On vérifie si la réponse est bien du JSON.
             const contentType = response.headers.get("content-type");
             if (response.ok && contentType && contentType.indexOf("application/json") !== -1) {
@@ -541,6 +541,7 @@ export default class extends Controller {
             });
         })
         .then(data => {
+            console.log(this.nomControleur + " - Code: 1986 - data:", data);
             // On diffuse les données reçues (html + numeric) au list-manager concerné.
             this.broadcast('app:list.refreshed', { ...data, originatorId: tabState.elementId });
         })
