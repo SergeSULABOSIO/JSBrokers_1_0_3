@@ -145,7 +145,7 @@ class NotificationSinistreController extends AbstractController
      * @param string|null $usage Le contexte d'affichage ('generic' ou 'dialog').
      * @return Response
      */
-    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
         return $this->handleCollectionApiRequest($id, $collectionName, NotificationSinistre::class, $usage);

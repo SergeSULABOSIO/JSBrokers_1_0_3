@@ -159,7 +159,7 @@ class PaiementController extends AbstractController
     }
 
 
-    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
         return $this->handleCollectionApiRequest($id, $collectionName, Paiement::class, $usage);
