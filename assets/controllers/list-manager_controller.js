@@ -244,7 +244,12 @@ export default class extends BaseController {
         const { originatorId } = event.detail;
 
         // On ne réagit que si l'événement nous est destiné.
-        if (originatorId && originatorId !== this.element.id) {
+        if (originatorId) {
+            return;
+        }
+
+        // On ne réagit que si l'événement nous est destiné.
+        if (originatorId !== this.element.id) {
             return;
         }
 
