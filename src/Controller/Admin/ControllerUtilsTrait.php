@@ -219,7 +219,8 @@ trait ControllerUtilsTrait
             // OPTIMISATION : On ne passe au template que les variables strictement nécessaires.
             $html = $this->renderView('components/_list_content.html.twig', [
                 'data' => $data,
-                'listeCanvas' => $this->constante->getListeCanvas($entityClass)
+                'listeCanvas' => $this->constante->getListeCanvas($entityClass),
+                'entite_nom' => $this->getEntityName($entityClass) // CORRECTION : On passe le nom de l'entité
             ]);
 
             // On retourne la réponse JSON structurée attendue par le Cerveau
