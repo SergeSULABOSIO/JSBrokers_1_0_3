@@ -158,6 +158,8 @@ trait ControllerUtilsTrait
         // et non celui du parent, pour que la barre des totaux et la barre d'outils fonctionnent correctement.
         $entityFormCanvas = $this->constante->getEntityFormCanvas(new $entityClass(), $this->getEntreprise()->getId());
         
+        // dd($entityFormCanvas);
+
         // CORRECTION : Le template a été renommé '_list_manager.html.twig'.
         // On utilise directement le nom correct au lieu de le construire dynamiquement.
         $template = "components/_list_manager.html.twig";
