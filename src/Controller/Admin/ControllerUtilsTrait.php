@@ -154,7 +154,9 @@ trait ControllerUtilsTrait
     ): Response {
         $entityCanvas = $this->constante->getEntityCanvas($entityClass);
         $this->constante->loadCalculatedValue($entityCanvas, $data);
-        $entityFormCanvas = $this->constante->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
+        // CORRECTION : Le list-manager de la collection a besoin du formCanvas de l'entité qu'il gère (l'enfant),
+        // et non celui du parent, pour que la barre des totaux et la barre d'outils fonctionnent correctement.
+        $entityFormCanvas = $this->constante->getEntityFormCanvas(new $entityClass(), $this->getEntreprise()->getId());
         
         // CORRECTION : Le template a été renommé '_list_manager.html.twig'.
         // On utilise directement le nom correct au lieu de le construire dynamiquement.
