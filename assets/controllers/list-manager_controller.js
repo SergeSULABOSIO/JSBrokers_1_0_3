@@ -42,7 +42,7 @@ export default class extends BaseController {
      * S'exécute lorsque le contrôleur est connecté au DOM.
      */
     connect() {
-        this.nomControleur = "LIST-MANAGER";        
+        this.nomControleur = "LIST-MANAGER";
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.boundHandleListRefreshed = this.handleListRefreshed.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this);
@@ -108,11 +108,11 @@ export default class extends BaseController {
         const tabId = isPrincipalTab ? 'principal' : this.element.id;
 
         // 3. Notifie le cerveau avec l'état initial.
-        this.notifyCerveau('ui:tab.initialized', { 
-            tabId: tabId, 
+        this.notifyCerveau('ui:tab.initialized', {
+            tabId: tabId,
             elementId: this.element.id, // On ajoute l'ID de l'élément pour le cerveau
             serverRootName: this.serverRootNameValue, // On fournit le nom racine pour l'URL
-            state: initialState 
+            state: initialState
         });
     }
 
@@ -244,19 +244,12 @@ export default class extends BaseController {
         const { originatorId } = event.detail;
 
         // On ne réagit que si l'événement nous est destiné.
-        if (originatorId) {
-            return;
+        if (originatorId === this.element.id) {
+            this.donneesTarget.innerHTML = this._getListSkeletonHtml();
+            // On s'assure que le conteneur de la liste est visible et que le message d'état vide est caché.
+            this.listContainerTarget.classList.remove('d-none');
+            this.emptyStateContainerTarget.classList.add('d-none');
         }
-
-        // On ne réagit que si l'événement nous est destiné.
-        if (originatorId !== this.element.id) {
-            return;
-        }
-
-        this.donneesTarget.innerHTML = this._getListSkeletonHtml();
-        // On s'assure que le conteneur de la liste est visible et que le message d'état vide est caché.
-        this.listContainerTarget.classList.remove('d-none');
-        this.emptyStateContainerTarget.classList.add('d-none');
     }
 
     /**
@@ -318,8 +311,8 @@ export default class extends BaseController {
     _postDataLoadActions() {
         this.resetSelection();
         // Notifie le cerveau que le rendu est terminé et fournit le nombre d'éléments.
-        this.notifyCerveau('app:list.rendered', { 
-            itemCount: this.rowCheckboxTargets.length 
+        this.notifyCerveau('app:list.rendered', {
+            itemCount: this.rowCheckboxTargets.length
         });
     }
 
