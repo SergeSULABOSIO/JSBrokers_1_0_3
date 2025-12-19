@@ -47,6 +47,9 @@ export default class extends BaseController {
         this.boundHandleListRefreshed = this.handleListRefreshed.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this);
         this.boundHandleContextMenuRequest = this.handleContextMenuRequest.bind(this);
+        // REFACTORING : Écoute l'événement de chargement unifié 'app:loading.start'.
+        this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
+        document.addEventListener('app:loading.start', this.boundHandleLoadingStart);
 
         this._initializeAndNotifyState();
 
@@ -71,6 +74,7 @@ export default class extends BaseController {
         document.removeEventListener('app:list.refreshed', this.boundHandleListRefreshed);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.removeEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
+        document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
     }
 
     /**
@@ -231,6 +235,45 @@ export default class extends BaseController {
     }
 
     // --- GESTION DES DONNÉES ---
+
+    /**
+     * MISSION 2 : Affiche un squelette de chargement dans la liste lorsque le cerveau le demande.
+     * @param {CustomEvent} event
+     */
+    handleLoadingStart(event) {
+        const { originatorId } = event.detail;
+
+        // On ne réagit que si l'événement nous est destiné.
+        if (originatorId && originatorId !== this.element.id) {
+            return;
+        }
+
+        this.donneesTarget.innerHTML = this._getListSkeletonHtml();
+        // On s'assure que le conteneur de la liste est visible et que le message d'état vide est caché.
+        this.listContainerTarget.classList.remove('d-none');
+        this.emptyStateContainerTarget.classList.add('d-none');
+    }
+
+    /**
+     * MISSION 2 : Génère le HTML pour un squelette de chargement de liste.
+     * @returns {string} Le HTML des lignes du squelette.
+     * @private
+     */
+    _getListSkeletonHtml() {
+        // On essaie d'être intelligent en comptant les colonnes de l'en-tête pour un rendu plus fidèle.
+        const columnCount = this.element.querySelectorAll('thead th').length || 5; // Fallback à 5 colonnes si l'en-tête n'est pas trouvé.
+        let skeletonTbody = '';
+        // On génère 10 lignes pour un bon effet visuel.
+        for (let i = 0; i < 10; i++) {
+            skeletonTbody += `
+                <tr>
+                    ${'<td><div class="skeleton-row"></div></td>'.repeat(columnCount)}
+                </tr>
+            `;
+        }
+        return skeletonTbody;
+    }
+
 
     /**
      * Gère la réception des nouvelles données de la liste envoyées par le cerveau.

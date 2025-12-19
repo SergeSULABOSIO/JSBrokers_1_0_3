@@ -151,6 +151,11 @@ export default class extends Controller {
             case 'ui:search.submitted': // NOUVEAU : Point d'entrée unique pour toute soumission de recherche
                 const activeState = this._getActiveTabState();
                 activeState.searchCriteria = payload.criteria || {};
+
+                // REFACTORING : On fusionne les événements de chargement.
+                // 'app:loading.start' notifie maintenant à la fois la barre de progression globale et le list-manager (via originatorId).
+                this.broadcast('app:loading.start', { originatorId: activeState.elementId });
+
                 this._requestListRefresh(this.activeTabId, { criteria: activeState.searchCriteria });
                 break;
             case 'ui:search.reset-request':
