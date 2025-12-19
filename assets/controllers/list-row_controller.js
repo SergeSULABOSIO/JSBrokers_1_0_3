@@ -75,21 +75,20 @@ export default class extends Controller {
      * @returns {object|null} Le payload "selecto" ou null en cas d'erreur de validation.
      */
     buildSelectoPayload() {
+        // REFACTORING : Le payload est maintenant beaucoup plus léger.
+        // Il ne contient que des informations spécifiques à cette ligne.
+        // Les informations contextuelles comme formCanvas ou l'ensemble des données numériques
+        // sont déjà connues du Cerveau.
         const payload = {
             id: this.idobjetValue,
-            isChecked: this.checkboxTarget.checked,
             entity: JSON.parse(this.checkboxTarget.dataset.entity || 'null'),
             entityType: this.checkboxTarget.dataset.entityType,
             entityCanvas: JSON.parse(this.checkboxTarget.dataset.canvas || 'null'),
-            entityFormCanvas: JSON.parse(this.element.closest('[data-list-manager-entity-form-canvas-value]')?.dataset.listManagerEntityFormCanvasValue || 'null'),
-            // CORRECTION : Les données numériques sont directement sur l'élément de la ligne.
-            numericData: JSON.parse(this.element.dataset.numericData || '{}'),
-            numericAttributes: JSON.parse(this.element.dataset.numericAttributes || '[]'),
         };
 
         const invalidKeys = Object.entries(payload).filter(([key, value]) => value === null || value === undefined);
         if (invalidKeys.length > 0) {
-            console.error(`[${this.nomControleur}] Erreur de validation: Le payload contient des valeurs nulles ou non définies.`, { clesInvalides: invalidKeys.map(([key]) => key), payloadComplet: payload });
+            console.error(`[${this.nomControleur}] Erreur de validation: Le payload 'selecto' contient des valeurs nulles ou non définies.`, { clesInvalides: invalidKeys.map(([key]) => key), payloadComplet: payload });
             return null;
         }
         return payload;

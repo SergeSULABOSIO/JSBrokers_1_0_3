@@ -61,9 +61,11 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
     handleContextUpdate(event) {
-        const { selection: selectos, contextMenuPosition } = event.detail;
+        // REFACTORING : On récupère maintenant le formCanvas depuis le niveau supérieur de l'événement,
+        // car c'est un contexte partagé, et non plus spécifique à un élément sélectionné.
+        const { selection: selectos, contextMenuPosition, formCanvas } = event.detail;
         this.entities = selectos;
-        this.entityFormCanvas = selectos.length > 0 ? selectos[0].entityFormCanvas : null;
+        this.entityFormCanvas = formCanvas; // On utilise le formCanvas global
 
         // Si le payload contient la position du menu, on l'affiche.
         if (contextMenuPosition) {
