@@ -328,7 +328,7 @@ export default class extends Controller {
     _getActiveTabState() {
         if (!this.activeTabId) {
             // Fallback au cas où aucun onglet n'est actif, bien que cela ne devrait pas arriver en fonctionnement normal.
-            console.warn("🧠 [Cerveau] _getActiveTabState a été appelé sans onglet actif. Retour d'un état vide temporaire.");
+            // console.warn("🧠 [Cerveau] _getActiveTabState a été appelé sans onglet actif. Retour d'un état vide temporaire.");
             return { ...this._tabStateTemplate, selectionIds: new Set() }; // Retourne une nouvelle copie
         }
         if (!this.tabsState[this.activeTabId]) {
@@ -535,10 +535,25 @@ export default class extends Controller {
             });
         })
         .then(data => {
-            // Le cerveau met à jour son propre état avec les données numériques.
+            // CORRECTION : Le flux de mise à jour après un rafraîchissement a été corrigé.
+
+            // 1. On met à jour l'état interne du cerveau avec les nouvelles données.
             tabState.numericAttributesAndValues = data.numericAttributesAndValues || {};
-            // Il ne diffuse que le HTML dont le list-manager a besoin.
+            // La sélection est perdue après un rafraîchissement, on la réinitialise.
+            tabState.selectionState = [];
+            tabState.selectionIds.clear();
+
+            // 2. On diffuse l'événement pour que le list-manager mette à jour son contenu HTML.
             this.broadcast('app:list.refreshed', { html: data.html, originatorId: tabState.elementId });
+
+            // 3. CRUCIAL : On diffuse le nouveau contexte pour que la barre des totaux et la barre d'outils
+            // se mettent à jour avec les nouvelles informations (nouvelles données numériques et sélection vide).
+            this.broadcast('app:context.changed', {
+                selection: tabState.selectionState,
+                numericAttributesAndValues: tabState.numericAttributesAndValues,
+                formCanvas: tabState.activeTabFormCanvas,
+                searchCriteria: tabState.searchCriteria
+            });
         })
         .catch(error => {
             this.broadcast('app:error.api', { 
