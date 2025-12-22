@@ -113,6 +113,25 @@ a:active {
     vertical-align: middle;
 }
 
+/*
+===================================================================
+ SECTION: STYLE POUR LA BARRE DES TOTAUX
+===================================================================
+*/
+
+/* NOUVEAU : Style pour la barre des totaux désactivée */
+.list-summary.is-disabled {
+    opacity: 0.65;
+    background-color: #e9ecef; /* Un fond gris léger, comme pour les accordéons désactivés */
+    pointer-events: none; /* Bloque toutes les interactions (clics, survol) */
+    cursor: not-allowed;
+}
+
+/* On s'assure que le curseur est correct sur les éléments enfants aussi */
+.list-summary.is-disabled * {
+    cursor: not-allowed;
+}
+
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
 .form-scrollable-content {
     max-height: 45vh; /* Hauteur augmentée pour plus de confort */

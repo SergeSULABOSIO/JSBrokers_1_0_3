@@ -96,8 +96,10 @@ export default class extends Controller {
         if (attributes.length === 0) {
             this.attributeSelectorTarget.innerHTML = '<option value="">Aucune valeur numérique à calculer</option>';
             this.attributeSelectorTarget.disabled = true;
+            this.element.classList.add('is-disabled');
         } else {
             this.attributeSelectorTarget.disabled = false;
+            this.element.classList.remove('is-disabled');
             this.attributeSelectorTarget.innerHTML = '<option value="">-- Choisir --</option>';
             for (const attr of attributes) {
                 this.attributeSelectorTarget.appendChild(new Option(attr.intitule, attr.code));
