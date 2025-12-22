@@ -94,6 +94,13 @@ export default class extends BaseController {
             initialNumericData = {};
         }
 
+        // CORRECTION : Si la liste est initialisée sans aucun élément, on force les données numériques à être vides.
+        // Cela corrige le cas où le serveur envoie une "structure" de données numériques même pour une liste vide,
+        // ce qui faussait l'affichage initial de la barre des totaux.
+        if (this.nbElementsValue === 0) {
+            initialNumericData = {};
+        }
+
         // 2. Construit l'objet d'état complet.
         const initialState = {
             selectionState: [],
