@@ -120,7 +120,7 @@ a:active {
 */
 
 /* NOUVEAU : Style pour la barre des totaux désactivée */
-.list-summary.is-disabled {
+.sticky-header .list-summary.is-disabled {
     opacity: 0.65;
     background-color: #e9ecef; /* Un fond gris léger, comme pour les accordéons désactivés */
     pointer-events: none; /* Bloque toutes les interactions (clics, survol) */
@@ -128,7 +128,7 @@ a:active {
 }
 
 /* On s'assure que le curseur est correct sur les éléments enfants aussi */
-.list-summary.is-disabled * {
+.sticky-header .list-summary.is-disabled * {
     cursor: not-allowed;
 }
 
