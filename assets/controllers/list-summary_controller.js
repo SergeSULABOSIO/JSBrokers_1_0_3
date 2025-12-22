@@ -56,7 +56,11 @@ export default class extends Controller {
         const { selection, numericAttributesAndValues } = event.detail;
         console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues });
 
-        const hasNumericData = numericAttributesAndValues && Object.keys(numericAttributesAndValues).length > 0;
+        const data = numericAttributesAndValues || {};
+        const keys = Object.keys(data);
+        // CORRECTION : Une vérification plus robuste. On considère qu'il y a des données si l'objet n'est pas vide
+        // ET si ses clés sont des ID numériques (et non des chaînes comme "schema" ou des index de tableau).
+        const hasNumericData = keys.length > 0 && keys.every(key => !isNaN(parseInt(key, 10)));
         let numericAttributes = [];
 
         // La barre des totaux doit toujours être visible pour afficher un statut.
@@ -64,7 +68,7 @@ export default class extends Controller {
 
         if (hasNumericData) {
             // On prend le premier enregistrement comme modèle pour les en-têtes (options du sélecteur).
-            const attributesModel = Object.values(numericAttributesAndValues)[0];
+            const attributesModel = Object.values(data)[0];
             
             // On extrait les paires code/intitulé pour peupler le sélecteur.
             numericAttributes = Object.entries(attributesModel).map(([code, details]) => ({
@@ -74,7 +78,7 @@ export default class extends Controller {
         }
 
         // On met à jour l'état interne dans tous les cas.
-        this.numericData = numericAttributesAndValues || {};
+        this.numericData = data;
         this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
         
         // On met à jour le sélecteur avec les attributs trouvés (ou un message si vide).
