@@ -54,7 +54,7 @@ export default class extends Controller {
      */
     handleContextChanged(event) {
         const { selection, numericAttributesAndValues, formCanvas } = event.detail;
-        // console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues, formCanvas });
+        console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues, formCanvas });
 
         // On dérive la liste des attributs numériques directement depuis le canvas, notre source de vérité.
         const numericAttributes = formCanvas?.liste?.filter(
@@ -75,6 +75,7 @@ export default class extends Controller {
         this.element.style.display = 'flex';
         this.numericData = numericAttributesAndValues || {};
         this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
+        // CORRECTION : On passe les DÉFINITIONS d'attributs pour construire le menu.
         this.updateAttributeSelector(numericAttributes);
         this.recalculate();
     }

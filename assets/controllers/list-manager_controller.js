@@ -296,20 +296,10 @@ export default class extends BaseController {
     }
 
     /**
-     * Réinitialise l'état de la sélection après un rechargement des données.
-     * @private
-     */
-    resetSelection() {
-        // On notifie le cerveau que la sélection est maintenant vide.
-        this._notifySelectionChange();
-    }
-
-    /**
      * Exécute les actions post-chargement des données.
      * @private
      */
     _postDataLoadActions() {
-        this.resetSelection();
         // Notifie le cerveau que le rendu est terminé et fournit le nombre d'éléments.
         this.notifyCerveau('app:list.rendered', {
             itemCount: this.rowCheckboxTargets.length
