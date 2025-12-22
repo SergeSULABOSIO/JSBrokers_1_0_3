@@ -53,50 +53,58 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
     handleContextChanged(event) {
-        const { selection, numericAttributesAndValues, formCanvas } = event.detail;
-        console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues, formCanvas });
+        const { selection, numericAttributesAndValues } = event.detail;
+        console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues });
 
-        // On dérive la liste des attributs numériques directement depuis le canvas, notre source de vérité.
-        const numericAttributes = formCanvas?.liste?.filter(
-            attr => ['Nombre', 'Entier', 'Calcul'].includes(attr.type)
-        ) || [];
+        const hasNumericData = numericAttributesAndValues && Object.keys(numericAttributesAndValues).length > 0;
+        let numericAttributes = [];
 
-        // Si le canvas ne définit aucun attribut numérique, on masque la barre et on réinitialise.
-        if (numericAttributes.length === 0) {
-            this.element.style.display = 'none';
-            this.numericData = {};
-            this.selectedIds.clear();
-            this.updateAttributeSelector([]);
-            this.displayTotals(0, 0);
-            return;
+        // La barre des totaux doit toujours être visible pour afficher un statut.
+        this.element.style.display = 'flex';
+
+        if (hasNumericData) {
+            // On prend le premier enregistrement comme modèle pour les en-têtes (options du sélecteur).
+            const attributesModel = Object.values(numericAttributesAndValues)[0];
+            
+            // On extrait les paires code/intitulé pour peupler le sélecteur.
+            numericAttributes = Object.entries(attributesModel).map(([code, details]) => ({
+                code: code,
+                intitule: details.description
+            }));
         }
 
-        // La barre est utile, on s'assure qu'elle est visible et on met à jour l'état interne.
-        this.element.style.display = 'flex';
+        // On met à jour l'état interne dans tous les cas.
         this.numericData = numericAttributesAndValues || {};
         this.selectedIds = new Set((selection || []).map(s => parseInt(s.id, 10)));
-        // CORRECTION : On passe les DÉFINITIONS d'attributs pour construire le menu.
+        
+        // On met à jour le sélecteur avec les attributs trouvés (ou un message si vide).
         this.updateAttributeSelector(numericAttributes);
+
+        // On recalcule les totaux, ce qui mettra à jour l'affichage.
         this.recalculate();
     }
 
     /**
      * Met à jour les options du sélecteur d'attributs.
-     * @param {object} attributes - Un objet { clé: libellé } des attributs.
+     * @param {Array<object>} attributes - Un tableau d'objets { code, intitule }.
      * @private
      */
     updateAttributeSelector(attributes) {
         const currentValue = this.attributeSelectorTarget.value;
-        this.attributeSelectorTarget.innerHTML = '<option value="">-- Choisir --</option>';
+        this.attributeSelectorTarget.innerHTML = ''; // On vide complètement
 
-        // On itère sur le tableau d'objets pour créer les options
-        for (const attr of attributes) {
-            // On utilise `intitule` et `code` comme standard, provenant du canvas.
-            this.attributeSelectorTarget.appendChild(new Option(attr.intitule, attr.code));
+        if (attributes.length === 0) {
+            this.attributeSelectorTarget.innerHTML = '<option value="">Aucune valeur numérique à calculer</option>';
+            this.attributeSelectorTarget.disabled = true;
+        } else {
+            this.attributeSelectorTarget.disabled = false;
+            this.attributeSelectorTarget.innerHTML = '<option value="">-- Choisir --</option>';
+            for (const attr of attributes) {
+                this.attributeSelectorTarget.appendChild(new Option(attr.intitule, attr.code));
+            }
+            // On essaie de restaurer la sélection précédente si l'option existe toujours.
+            this.attributeSelectorTarget.value = currentValue;
         }
-
-        // On essaie de restaurer la sélection précédente si l'option existe toujours.
-        this.attributeSelectorTarget.value = currentValue;
     }
 
     /**
