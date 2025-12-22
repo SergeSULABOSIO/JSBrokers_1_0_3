@@ -58,9 +58,9 @@ export default class extends Controller {
 
         const data = numericAttributesAndValues || {};
         const keys = Object.keys(data);
-        // CORRECTION : Une vérification plus robuste. On considère qu'il y a des données si l'objet n'est pas vide
-        // ET si ses clés sont des ID numériques (et non des chaînes comme "schema" ou des index de tableau).
-        const hasNumericData = keys.length > 0 && keys.every(key => !isNaN(parseInt(key, 10)));
+        // CORRECTION : Vérification "bulletproof". On considère qu'il y a des données si l'objet n'est pas vide
+        // ET si ses clés sont des ID numériques valides (et non des index de tableau comme "0" provenant d'un schéma vide).
+        const hasNumericData = keys.length > 0 && keys.every(key => /^[1-9]\d*$/.test(key));
         let numericAttributes = [];
 
         // La barre des totaux doit toujours être visible pour afficher un statut.
