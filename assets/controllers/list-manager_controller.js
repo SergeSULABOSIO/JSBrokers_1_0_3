@@ -279,7 +279,6 @@ export default class extends BaseController {
         return skeletonTbody;
     }
 
-
     /**
      * Gère la réception des nouvelles données de la liste envoyées par le cerveau.
      * @param {CustomEvent} event - L'événement `app:list.refreshed`.
@@ -311,6 +310,30 @@ export default class extends BaseController {
         this.notifyCerveau('app:list.rendered', {
             itemCount: this.rowCheckboxTargets.length
         });
+    }
+
+    /**
+     * NOUVEAU : Gère la demande d'ajout d'un nouvel élément, typiquement depuis l'état vide.
+     * Notifie le cerveau en utilisant le même événement que la barre d'outils.
+     */
+    handleAddRequest() {
+        this._logDebug("Demande d'ajout reçue depuis l'état vide.");
+        this.notifyCerveau('ui:toolbar.add-request', {
+            formCanvas: this.entityFormCanvasValue,
+            // On ajoute le contexte du parent si on est dans une collection
+            context: {
+                originatorId: this.element.id
+            }
+        });
+    }
+
+    /**
+     * NOUVEAU : Gère la demande de réinitialisation de la recherche, typiquement depuis l'état vide.
+     * Notifie le cerveau.
+     */
+    handleResetSearchRequest() {
+        this._logDebug("Demande de réinitialisation de la recherche reçue depuis l'état vide.");
+        this.notifyCerveau('ui:search.reset-request', {});
     }
 
     /**
