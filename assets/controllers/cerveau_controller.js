@@ -156,13 +156,13 @@ export default class extends Controller {
                 // 'app:loading.start' notifie maintenant à la fois la barre de progression globale et le list-manager (via originatorId).
                 this.broadcast('app:loading.start', { originatorId: activeState.elementId });
 
-                // CORRECTION : On enrichit la requête avec le contexte complet du parent.
-                const parentFieldName = activeState.activeTabFormCanvas?.parametres?.parent_entity_field_name;
+                // CORRECTION : On enrichit la requête avec le contexte complet du parent, trouvé dynamiquement.
+                const parentFieldName = this._findParentFieldName(activeState.activeTabFormCanvas);
                 const refreshPayload = {
                     criteria: activeState.searchCriteria,
                     parentContext: this.activeParentId ? { 
                         id: this.activeParentId,
-                        fieldName: parentFieldName || null
+                        fieldName: parentFieldName
                     } : null
                 };
 
@@ -175,8 +175,8 @@ export default class extends Controller {
                 // NOUVEAU : On déclenche le squelette de chargement avant de lancer la requête.
                 this.broadcast('app:loading.start', { originatorId: activeStateToReset.elementId });
                 
-                // CORRECTION : On enrichit également la requête de réinitialisation avec le contexte complet du parent.
-                const parentFieldNameForReset = activeStateToReset.activeTabFormCanvas?.parametres?.parent_entity_field_name;
+                // CORRECTION : On enrichit la requête de réinitialisation avec le contexte complet du parent, trouvé dynamiquement.
+                const parentFieldNameForReset = this._findParentFieldName(activeStateToReset.activeTabFormCanvas);
                 this._requestListRefresh(this.activeTabId, { 
                     criteria: {}, 
                     parentContext: this.activeParentId ? { 
@@ -735,5 +735,30 @@ export default class extends Controller {
             body: payload.body,
             onConfirm: payload.onConfirm
         });
+    }
+    
+
+    /**
+     * NOUVEAU : Trouve le nom du champ parent en parcourant le canvas de formulaire.
+     * @param {object} formCanvas - Le canvas du formulaire à inspecter.
+     * @returns {string|null} Le nom du champ parent (ex: 'notificationSinistre') ou null.
+     * @private
+     */
+    _findParentFieldName(formCanvas) {
+        if (!formCanvas || !Array.isArray(formCanvas.form_layout)) {
+            return null;
+        }
+
+        for (const row of formCanvas.form_layout) {
+            for (const col of row.colonnes || []) {
+                for (const field of col.champs || []) {
+                    if (typeof field === 'object' && field.widget === 'collection' && field.options?.parentFieldName) {
+                        // On a trouvé la première collection, on retourne son champ parent.
+                        return field.options.parentFieldName;
+                    }
+                }
+            }
+        }
+        return null; // Pas de champ de collection trouvé.
     }
 }
