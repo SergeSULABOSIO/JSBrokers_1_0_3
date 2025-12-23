@@ -156,16 +156,23 @@ export default class extends Controller {
                 // 'app:loading.start' notifie maintenant à la fois la barre de progression globale et le list-manager (via originatorId).
                 this.broadcast('app:loading.start', { originatorId: activeState.elementId });
 
-                this._requestListRefresh(this.activeTabId, { criteria: activeState.searchCriteria });
+                // CORRECTION : On doit enrichir la requête avec le contexte du parent si on est dans une collection.
+                const refreshPayload = {
+                    criteria: activeState.searchCriteria,
+                    parentContext: this.activeParentId ? { id: this.activeParentId } : null
+                };
+
+                this._requestListRefresh(this.activeTabId, refreshPayload);
                 break;
             case 'ui:search.reset-request':
                 // NOUVELLE LOGIQUE : On soumet simplement une recherche avec des critères vides.
                 // La barre de recherche se mettra à jour en écoutant le 'app:context.changed' qui en résultera.
                 const activeStateToReset = this._getActiveTabState();
                 activeStateToReset.searchCriteria = {};
-            // NOUVEAU : On déclenche le squelette de chargement avant de lancer la requête.
-            this.broadcast('app:loading.start', { originatorId: activeStateToReset.elementId });
-                this._requestListRefresh(this.activeTabId, { criteria: {} });
+                // NOUVEAU : On déclenche le squelette de chargement avant de lancer la requête.
+                this.broadcast('app:loading.start', { originatorId: activeStateToReset.elementId });
+                // CORRECTION : On envoie un payload complet, même pour un reset, pour conserver le contexte parent.
+                this._requestListRefresh(this.activeTabId, { criteria: {}, parentContext: this.activeParentId ? { id: this.activeParentId } : null });
                 break;
             case 'ui:dialog.open-request': // Événement unifié pour ouvrir un dialogue
                 this.broadcast('app:loading.start');
@@ -509,14 +516,13 @@ export default class extends Controller {
      * @param {object} [criteriaPayload={}] - Le payload contenant les critères de recherche.
      * @private
      */
-    _requestListRefresh(tabId = null, criteriaPayload = {}) {
+    _requestListRefresh(tabId = null, payload = {}) {
         const targetTabId = tabId || this.activeTabId;
         const tabState = this.tabsState[targetTabId];
 
         
         // La logique de fetch est maintenant directement dans le cerveau.
         const url = this._buildDynamicQueryUrl(tabState);
-
         if (!url) {
             console.error("Impossible de rafraîchir la liste : URL non trouvée pour l'onglet", targetTabId);
             return;
@@ -525,7 +531,8 @@ export default class extends Controller {
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, // On attend du JSON
-            body: JSON.stringify(criteriaPayload.criteria || {}),
+            // CORRECTION : On envoie le payload complet (criteria + parentContext)
+            body: JSON.stringify(payload),
         })
         .then(response => {
             const contentType = response.headers.get("content-type");
@@ -561,8 +568,7 @@ export default class extends Controller {
             this.broadcast('app:error.api', { 
                 error: error.message,
                 url: url,
-                targetTabId: targetTabId,
-                criteriaPayload: criteriaPayload
+                targetTabId: targetTabId
            });
            // On arrête le chargement en cas d'erreur réseau ou serveur.
            this.broadcast('app:loading.stop');

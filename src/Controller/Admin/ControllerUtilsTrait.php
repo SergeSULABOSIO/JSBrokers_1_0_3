@@ -212,10 +212,14 @@ trait ControllerUtilsTrait
             if (!$entreprise) {
                 return new JsonResponse(['error' => 'Entreprise non trouvée.'], Response::HTTP_BAD_REQUEST);
             }
-            $criteria = json_decode($request->getContent(), true) ?? [];
+            // CORRECTION : Le payload contient maintenant 'criteria' et 'parentContext'.
+            $payload = json_decode($request->getContent(), true) ?? [];
+            $criteria = $payload['criteria'] ?? [];
+            $parentContext = $payload['parentContext'] ?? null;
             
             // Appel du service de recherche refactorisé et sécurisé
-            $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise);
+            // CORRECTION : On passe le contexte du parent au service de recherche.
+            $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext);
             $data = $searchResult['data'];
 
             // Extraction des données numériques et rendu du HTML partiel de la liste
