@@ -156,23 +156,34 @@ export default class extends Controller {
                 // 'app:loading.start' notifie maintenant à la fois la barre de progression globale et le list-manager (via originatorId).
                 this.broadcast('app:loading.start', { originatorId: activeState.elementId });
 
-                // CORRECTION : On doit enrichir la requête avec le contexte du parent si on est dans une collection.
+                // CORRECTION : On enrichit la requête avec le contexte complet du parent.
+                const parentFieldName = activeState.activeTabFormCanvas?.parametres?.parent_entity_field_name;
                 const refreshPayload = {
                     criteria: activeState.searchCriteria,
-                    parentContext: this.activeParentId ? { id: this.activeParentId } : null
+                    parentContext: this.activeParentId ? { 
+                        id: this.activeParentId,
+                        fieldName: parentFieldName || null
+                    } : null
                 };
 
                 this._requestListRefresh(this.activeTabId, refreshPayload);
                 break;
             case 'ui:search.reset-request':
-                // NOUVELLE LOGIQUE : On soumet simplement une recherche avec des critères vides.
-                // La barre de recherche se mettra à jour en écoutant le 'app:context.changed' qui en résultera.
+                // On soumet une recherche avec des critères vides, mais on conserve le contexte parent.
                 const activeStateToReset = this._getActiveTabState();
                 activeStateToReset.searchCriteria = {};
                 // NOUVEAU : On déclenche le squelette de chargement avant de lancer la requête.
                 this.broadcast('app:loading.start', { originatorId: activeStateToReset.elementId });
-                // CORRECTION : On envoie un payload complet, même pour un reset, pour conserver le contexte parent.
-                this._requestListRefresh(this.activeTabId, { criteria: {}, parentContext: this.activeParentId ? { id: this.activeParentId } : null });
+                
+                // CORRECTION : On enrichit également la requête de réinitialisation avec le contexte complet du parent.
+                const parentFieldNameForReset = activeStateToReset.activeTabFormCanvas?.parametres?.parent_entity_field_name;
+                this._requestListRefresh(this.activeTabId, { 
+                    criteria: {}, 
+                    parentContext: this.activeParentId ? { 
+                        id: this.activeParentId,
+                        fieldName: parentFieldNameForReset || null
+                    } : null 
+                });
                 break;
             case 'ui:dialog.open-request': // Événement unifié pour ouvrir un dialogue
                 this.broadcast('app:loading.start');
