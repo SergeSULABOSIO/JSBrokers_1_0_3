@@ -163,6 +163,8 @@ export default class extends Controller {
                 // La barre de recherche se mettra à jour en écoutant le 'app:context.changed' qui en résultera.
                 const activeStateToReset = this._getActiveTabState();
                 activeStateToReset.searchCriteria = {};
+            // NOUVEAU : On déclenche le squelette de chargement avant de lancer la requête.
+            this.broadcast('app:loading.start', { originatorId: activeStateToReset.elementId });
                 this._requestListRefresh(this.activeTabId, { criteria: {} });
                 break;
             case 'ui:dialog.open-request': // Événement unifié pour ouvrir un dialogue

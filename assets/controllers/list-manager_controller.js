@@ -248,8 +248,10 @@ export default class extends BaseController {
      * @param {CustomEvent} event
      */
     handleLoadingStart(event) {
-        const { originatorId } = event.detail;
-
+        // CORRECTION : On rend la fonction robuste en fournissant un objet vide par défaut
+        // si event.detail est null ou undefined. Cela évite un crash.
+        const { originatorId } = event.detail || {};
+        
         // On ne réagit que si l'événement nous est destiné.
         if (originatorId === this.element.id) {
             this.donneesTarget.innerHTML = this._getListSkeletonHtml();
