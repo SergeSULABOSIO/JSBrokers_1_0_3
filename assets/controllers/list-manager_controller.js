@@ -316,7 +316,7 @@ export default class extends BaseController {
      * NOUVEAU : Gère la demande d'ajout d'un nouvel élément, typiquement depuis l'état vide.
      * Notifie le cerveau en utilisant le même événement que la barre d'outils.
      */
-    handleAddRequest() {
+    requestAddItem() {
         this._logDebug("Demande d'ajout reçue depuis l'état vide.");
         this.notifyCerveau('ui:toolbar.add-request', {
             formCanvas: this.entityFormCanvasValue,
@@ -331,7 +331,7 @@ export default class extends BaseController {
      * NOUVEAU : Gère la demande de réinitialisation de la recherche, typiquement depuis l'état vide.
      * Notifie le cerveau.
      */
-    handleResetSearchRequest() {
+    resetSearch() {
         this._logDebug("Demande de réinitialisation de la recherche reçue depuis l'état vide.");
         this.notifyCerveau('ui:search.reset-request', {});
     }
