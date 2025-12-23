@@ -55,7 +55,7 @@ class JSBDynamicSearchService
      * La logique de votre ancienne fonction "chercher".
      * Elle ne dépend plus de l'objet Request, mais d'un simple tableau.
      */
-    public function search(string $entityClass, array $criteria, Entreprise $entreprise): array
+    public function search(string $entityClass, array $criteria, Entreprise $entreprise, ?array $parentContext = null): array
     {
         $results = [];
         $status = [
@@ -85,15 +85,8 @@ class JSBDynamicSearchService
             // 'e' est l'alias de notre entité principale dans la requête DQL (ex: SELECT e FROM App\Entity\NotificationSinistre e)
             $qb = $repository->createQueryBuilder('e');
 
-            // SÉCURITÉ : On s'assure que la recherche est bien limitée à l'entreprise courante.
-            // On vérifie si l'entité a une propriété 'entreprise' avant d'ajouter la condition.
-            if ($this->em->getClassMetadata($entityClass)->hasAssociation('entreprise')) {
-                $qb->andWhere('e.entreprise = :entrepriseId')
-                   ->setParameter('entrepriseId', $entreprise->getId());
-            }
-
             // AMÉLIORATION : On applique les filtres en utilisant la nouvelle méthode factorisée.
-            $this->applyCriteriaToQueryBuilder($qb, $criteria, $status);
+            $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
 
             // MISSION 2 : Trier les résultats par ID décroissant pour afficher les plus récents en premier.
             $qb->orderBy('e.id', 'DESC');
@@ -102,8 +95,8 @@ class JSBDynamicSearchService
             $results = $qb->getQuery()->getResult(); // Renommé pour clarté
 
             // --- AMÉLIORATION : Logique de comptage simplifiée ---
-            $totalItemsQb = $repository->createQueryBuilder('e_count');
-            $this->applyCriteriaToQueryBuilder($totalItemsQb, $criteria, $status, '_count');
+            $totalItemsQb = $repository->createQueryBuilder('e_count'); // Alias différent pour la requête de comptage
+            $this->applyCriteriaToQueryBuilder($totalItemsQb, $criteria, $entreprise, $parentContext, $status, '_count');
 
             // Sélectionner le COUNT de l'identifiant unique (généralement 'id') pour le comptage total.
             // On utilise l'alias de l'entité de comptage 'e_count'.
@@ -140,11 +133,28 @@ class JSBDynamicSearchService
      * @param array &$status Le tableau de statut pour y rapporter les erreurs.
      * @param string $suffix Un suffixe à ajouter aux alias et paramètres pour garantir leur unicité (utile pour les requêtes de comptage).
      */
-    private function applyCriteriaToQueryBuilder(QueryBuilder $qb, array $criteria, array &$status, string $suffix = ''): void
+    private function applyCriteriaToQueryBuilder(QueryBuilder $qb, array $criteria, Entreprise $entreprise, ?array $parentContext, array &$status, string $suffix = ''): void
     {
         $rootAlias = $qb->getRootAliases()[0];
+        $entityClass = $qb->getRootEntities()[0];
         $joinedEntities = [];
         $parameterIndex = 0;
+
+        // SÉCURITÉ : On s'assure que la recherche est bien limitée à l'entreprise courante.
+        if ($this->em->getClassMetadata($entityClass)->hasAssociation('entreprise')) {
+            $qb->andWhere("{$rootAlias}.entreprise = :entrepriseId{$suffix}")
+               ->setParameter("entrepriseId{$suffix}", $entreprise->getId());
+        }
+
+        // NOUVEAU : Filtrer par le parent si le contexte est fourni (recherche dans une collection).
+        if ($parentContext && !empty($parentContext['id']) && !empty($parentContext['fieldName'])) {
+            $fieldName = $parentContext['fieldName'];
+            // Sécurité : on vérifie que le champ de la relation existe bien sur l'entité.
+            if ($this->em->getClassMetadata($entityClass)->hasAssociation($fieldName)) {
+                $qb->andWhere("{$rootAlias}.{$fieldName} = :parentId{$suffix}")
+                   ->setParameter("parentId{$suffix}", $parentContext['id']);
+            }
+        }
 
         foreach ($criteria as $field => $value) {
             $parameterName = str_replace('.', '_', $field) . $suffix . '_' . $parameterIndex++;
