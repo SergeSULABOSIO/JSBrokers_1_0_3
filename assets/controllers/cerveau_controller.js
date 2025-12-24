@@ -161,7 +161,15 @@ export default class extends Controller {
                 const parentIdMatch = this.activeTabId.match(/-for-(\d+)$/);
                 const parentId = parentIdMatch ? parentIdMatch[1] : this.activeParentId;
 
-                const parentFieldName = this._findParentFieldName(activeState.activeTabFormCanvas);
+                let parentFieldName = null;
+                if (parentId) {
+                    // Si on est dans une collection, le 'parentFieldName' se trouve dans le formCanvas du PARENT (l'onglet principal).
+                    const principalState = this.tabsState['principal'];
+                    if (principalState) {
+                        parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas);
+                    }
+                }
+
                 const refreshPayload = {
                     criteria: activeState.searchCriteria,
                     parentContext: parentId ? { 
@@ -169,6 +177,7 @@ export default class extends Controller {
                         fieldName: parentFieldName
                     } : null
                 };
+                console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, { refreshPayload: refreshPayload });
 
                 this._requestListRefresh(this.activeTabId, refreshPayload);
                 break;
@@ -182,12 +191,20 @@ export default class extends Controller {
                 const parentIdMatchForReset = this.activeTabId.match(/-for-(\d+)$/);
                 const parentIdForReset = parentIdMatchForReset ? parentIdMatchForReset[1] : this.activeParentId;
 
-                const parentFieldNameForReset = this._findParentFieldName(activeStateToReset.activeTabFormCanvas);
+                let parentFieldNameForReset = null;
+                if (parentIdForReset) {
+                    // Si on est dans une collection, le 'parentFieldName' se trouve dans le formCanvas du PARENT (l'onglet principal).
+                    const principalState = this.tabsState['principal'];
+                    if (principalState) {
+                        parentFieldNameForReset = this._findParentFieldName(principalState.activeTabFormCanvas);
+                    }
+                }
+
                 this._requestListRefresh(this.activeTabId, { 
                     criteria: {}, 
                     parentContext: parentIdForReset ? { 
                         id: parentIdForReset,
-                        fieldName: parentFieldNameForReset || null
+                        fieldName: parentFieldNameForReset
                     } : null 
                 });
                 break;
