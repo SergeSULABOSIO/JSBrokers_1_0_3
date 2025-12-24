@@ -156,12 +156,16 @@ export default class extends Controller {
                 // 'app:loading.start' notifie maintenant à la fois la barre de progression globale et le list-manager (via originatorId).
                 this.broadcast('app:loading.start', { originatorId: activeState.elementId });
 
-                // CORRECTION : On enrichit la requête avec le contexte complet du parent, trouvé dynamiquement.
+                // CORRECTION : On s'assure que le contexte parent est toujours inclus pour les recherches
+                // dans les collections, en le déduisant de l'ID de l'onglet actif pour plus de robustesse.
+                const parentIdMatch = this.activeTabId.match(/-for-(\d+)$/);
+                const parentId = parentIdMatch ? parentIdMatch[1] : this.activeParentId;
+
                 const parentFieldName = this._findParentFieldName(activeState.activeTabFormCanvas);
                 const refreshPayload = {
                     criteria: activeState.searchCriteria,
-                    parentContext: this.activeParentId ? { 
-                        id: this.activeParentId,
+                    parentContext: parentId ? { 
+                        id: parentId,
                         fieldName: parentFieldName
                     } : null
                 };
@@ -169,18 +173,20 @@ export default class extends Controller {
                 this._requestListRefresh(this.activeTabId, refreshPayload);
                 break;
             case 'ui:search.reset-request':
-                // On soumet une recherche avec des critères vides, mais on conserve le contexte parent.
                 const activeStateToReset = this._getActiveTabState();
                 activeStateToReset.searchCriteria = {};
                 // NOUVEAU : On déclenche le squelette de chargement avant de lancer la requête.
                 this.broadcast('app:loading.start', { originatorId: activeStateToReset.elementId });
                 
-                // CORRECTION : On enrichit la requête de réinitialisation avec le contexte complet du parent, trouvé dynamiquement.
+                // CORRECTION : On s'assure que le contexte parent est conservé lors de la réinitialisation.
+                const parentIdMatchForReset = this.activeTabId.match(/-for-(\d+)$/);
+                const parentIdForReset = parentIdMatchForReset ? parentIdMatchForReset[1] : this.activeParentId;
+
                 const parentFieldNameForReset = this._findParentFieldName(activeStateToReset.activeTabFormCanvas);
                 this._requestListRefresh(this.activeTabId, { 
                     criteria: {}, 
-                    parentContext: this.activeParentId ? { 
-                        id: this.activeParentId,
+                    parentContext: parentIdForReset ? { 
+                        id: parentIdForReset,
                         fieldName: parentFieldNameForReset || null
                     } : null 
                 });
