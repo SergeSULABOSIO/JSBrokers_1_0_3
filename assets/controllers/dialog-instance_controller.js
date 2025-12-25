@@ -62,78 +62,26 @@ export default class extends Controller {
         this.parentContext = detail.parentContext || null; // NOUVEAU : On récupère le contexte du parent.
         this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
         this._logState('start', '1986', detail);
-
-        await this.buildAndShowShell();
-        await this.loadFormAndAttributes();
+        
+        // Affiche la coquille vide de la modale (qui contient un spinner par défaut)
+        this.modalNode = this.element.closest('.modal');
+        this.modal = new Modal(this.modalNode);
+        this.modal.show();
+        this.modalNode.addEventListener('hidden.bs.modal', () => { this.modalNode.remove(); });
+        this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
+        
+        // Charge le contenu complet depuis le serveur
+        await this.loadContent();
     }
 
     /**
-     * Construit et affiche la structure de base (coquille) de la modale Bootstrap,
-     * avec des indicateurs de chargement.
+     * Recharge la vue complète (titre, formulaire, attributs) après une création réussie
+     * pour passer en mode édition sans fermer la modale.
      * @private
      */
-    async buildAndShowShell() {
-        const title = this.isCreateMode
-            ? this.entityFormCanvas.parametres.titre_creation
-            : this.entityFormCanvas.parametres.titre_modification.replace('%id%', this.entity.id);
-
-        // --- MODIFICATION : On retire la balise <form> d'ici ---
-        // On met l'action de soumission sur l'élément racine du contrôleur
-        this.elementContenu.setAttribute('data-action', 'submit->dialog-instance#submitForm');
-
-
-        this.elementContenu.innerHTML = `
-            <div class="modal-header">
-                <h5 class="modal-title">${title}</h5>
-                <button type="button" class="btn-close btn-close-white" data-action="click->dialog-instance#close"></button>
-            </div>
-            <div class="dialog-progress-container" data-dialog-instance-target="progressBarContainer">
-                <div class="dialog-progress-bar" role="progressbar"></div>
-            </div>
-            <div class="modal-body-split">
-                <div class="calculated-attributes-column">
-                    <div class="text-center p-5">
-                        <div class="spinner-border text-light spinner-border-sm"></div>
-                    </div>
-                </div>
-                <div class="form-column">
-                    <div class="text-center p-5">
-                        <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">Chargement...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div class="feedback-container w-100 mb-2" data-dialog-instance-target="feedback">
-                    ${this.isCreateMode ? `
-                        <div class="alert alert-info d-flex align-items-center p-2" role="alert" style="font-size: 0.85rem; border-left: 5px solid #0dcaf0;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-info-circle-fill flex-shrink-0 me-2" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
-                            <div>Les champs de type collection (pièces jointes, tâches, etc.) seront éditables après le premier enregistrement.</div>
-                        </div>
-                    ` : ''}
-                </div>
-                <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
-                    <span>Fermer</span>
-                </button>
-                <button type="button" class="btn btn-primary" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton">
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                    <span class="button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg></span>
-                    <span class="button-text">Enregistrer</span>
-                </button>
-            </div>
-        `;
-
-        this.modalNode = this.elementContenu.closest('.modal');
-        this.modal = new Modal(this.modalNode);
-        this.modal.show();
-        // On ajoute la classe pour le mode édition si nécessaire
-        if (!this.isCreateMode) {
-            this.modalNode.classList.add('is-edit-mode');
-        }
-        this.modalNode.addEventListener('hidden.bs.modal', () => { this.modalNode.remove(); });
-        this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
+    async reloadView() {
+        this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
+        await this.loadContent(); // Recharge le formulaire et les attributs
     }
 
     /**
@@ -179,9 +127,9 @@ export default class extends Controller {
      * Notifie le cerveau une fois le chargement terminé.
      * @private
      */
-    async loadFormAndAttributes() {//loadFormBody() {
-        this._logState("loadFormAndAttributes", "1986", this.detail);
-        console.log(this.nomControlleur + " - loadFormAndAttributes() - Code:1986 - this.entity:", this.entity);
+    async loadContent() {
+        this._logState("loadContent", "1986", this.detail);
+        console.log(this.nomControlleur + " - loadContent() - Code:1986 - this.entity:", this.entity);
         try {
             // 1. On commence avec l'URL de base
             let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
@@ -213,48 +161,42 @@ export default class extends Controller {
             console.log(this.nomControlleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
 
             const response = await fetch(finalUrl);
-            if (!response.ok) throw new Error("Le formulaire n'a pas pu être chargé.");
+            if (!response.ok) throw new Error("Le contenu de la boîte de dialogue n'a pas pu être chargé.");
 
             const html = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
+            
+            // On remplace tout le contenu de la modale par le HTML reçu.
+            this.element.innerHTML = html;
 
-            const attributesContent = doc.querySelector('.calculated-attributes-column-content');
-            const formContent = doc.querySelector('.form-column-content');
+            // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
+            const form = this.element.querySelector('form');
+            if (form) {
+                form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
+            }
 
-            const attributesContainer = this.elementContenu.querySelector('.calculated-attributes-column');
-            const formContainer = this.elementContenu.querySelector('.form-column');
             const mainDialogElement = this.elementContenu.closest('.app-dialog');
 
-            //On redessine la colonne du formulaire
-            if (formContent && formContainer) {
-                formContainer.innerHTML = '';
-                formContainer.appendChild(formContent);
+            // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
+            const hasCalculatedAttrs = this.element.querySelector('.calculated-attributes-list li');
+            if (hasCalculatedAttrs) {
+                mainDialogElement.classList.add('has-attributes-column');
+            } else {
+                mainDialogElement.classList.remove('has-attributes-column');
             }
-            //On redessine la colonne des attributs calculables
-            if (attributesContent && attributesContainer) {
-                const hasCalculatedAttrs = attributesContent.querySelector('.calculated-attributes-list li');
-                if (hasCalculatedAttrs) {
-                    attributesContainer.innerHTML = '';
-                    attributesContainer.appendChild(attributesContent);
-                    mainDialogElement.classList.add('has-attributes-column');
-                } else {
-                    mainDialogElement.classList.remove('has-attributes-column');
-                }
 
-            }
             // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
             this.notifyCerveau('app:dialog.opened', {
                 mode: this.isCreateMode ? 'creation' : 'edition',
                 entity: this.entity
             });
+
             // On s'assure que la classe de mode édition est bien présente si nécessaire
             if (!this.isCreateMode) {
                 mainDialogElement.classList.add('is-edit-mode');
             }
         } catch (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
-            this.elementContenu.querySelector('.form-column').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
+            this.element.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
             // NOUVEAU : Notifier le cerveau de l'échec de chargement
             this.notifyCerveau('app:error.api', {
                 error: `Échec du chargement du formulaire: ${errorMessage}`
@@ -357,18 +299,6 @@ export default class extends Controller {
         }
     }
 
-
-    /**
-     * Recharge la vue complète (titre, formulaire, attributs) après une création réussie
-     * pour passer en mode édition sans fermer la modale.
-     * @private
-     */
-    async reloadView() {
-        this.updateTitle();
-        this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
-        await this.loadFormAndAttributes(); // Recharge le formulaire et les attributs
-    }
-
     /**
      * Affiche un message de feedback (succès, erreur) horodaté dans le pied de page de la modale.
      * @param {'success'|'error'|'warning'} type - Le type de message.
@@ -405,22 +335,6 @@ export default class extends Controller {
                 <span>${message}</span>
             </div>
         `;
-    }
-
-    /**
-     * Met à jour le titre de la boîte de dialogue, typiquement après être passé
-     * du mode création au mode édition.
-     * @private
-     */
-    updateTitle() {
-        const titleElement = this.elementContenu.querySelector('.modal-title');
-        console.log(this.nomControlleur + " - (1) updateTitle() - titleElement:", titleElement);
-        console.log(this.nomControlleur + " - (2) updateTitle() - this.entityFormCanvas.parametres:", this.entityFormCanvas.parametres);
-        console.log(this.nomControlleur + " - (3) updateTitle() - titre_modification:", this.entityFormCanvas.parametres.titre_modification);
-        if (titleElement) {
-            titleElement.textContent = this.entityFormCanvas.parametres.titre_modification.replace('%id%', this.entity.id);
-            console.log(this.nomControlleur + " - (4) updateTitle() - textContent:", titleElement.textContent);
-        }
     }
 
     /**
