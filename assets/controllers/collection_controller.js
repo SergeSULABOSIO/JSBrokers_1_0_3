@@ -215,20 +215,11 @@ export default class extends Controller {
             ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
 
-        console.groupCollapsed(`${this.nomControleur} - addItem() - Code: 1986`);
-        console.log(`| Mode: ${isCreationMode ? 'Création' : 'Édition'}`);
-        console.log('| Entité:', entity);
-        console.log('| Contexte:', context);
-        console.log('| Canvas:', entityFormCanvas);
-        console.groupEnd();
-
-        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
         // On utilise le même événement que la toolbar pour une logique unifiée dans le cerveau.
         this.notifyCerveau('ui:dialog.open-request', {
             entity: entity, // Entité vide pour la création
             isCreationMode: isCreationMode,
             entityFormCanvas: entityFormCanvas,
-            context: context
             context: context,
             // On passe le contexte du parent pour l'imbrication
             parentContext: {
@@ -243,8 +234,6 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     editItem(event) {
-        console.log(this.nomControleur + " - editItem() - Code:1986");
-
         // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
         const row = event.currentTarget.closest('tr');
         if (!row || !row.dataset.itemId) return;
@@ -275,20 +264,11 @@ export default class extends Controller {
             ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
 
-        console.groupCollapsed(`${this.nomControleur} - editItem() - Code:1986`);
-        console.log(`| Mode: ${isCreationMode ? 'Création' : 'Édition'}`);
-        console.log('| Entité:', entity);
-        console.log('| Contexte:', context);
-        console.log('| Canvas:', entityFormCanvas);
-        console.groupEnd();
-
-        this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
         // On utilise le même événement que la toolbar pour une logique unifiée dans le cerveau.
         this.notifyCerveau('ui:dialog.open-request', {
             entity: entity,
             isCreationMode: isCreationMode,
             entityFormCanvas: entityFormCanvas,
-            context: context
             context: context,
             parentContext: {
                 id: this.parentEntityIdValue,
@@ -307,17 +287,6 @@ export default class extends Controller {
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
 
-        console.log(this.nomControleur + " (0) - deleteItem(): " + itemId);
-
-        // CORRECTION : On utilise le même événement que la toolbar pour la cohérence.
-        this.notifyCerveau('app:delete-request', { // Renommé
-            title: 'Confirmation de suppression',
-            body: `Êtes-vous sûr de vouloir supprimer cet élément ?`, // Message personnalisé
-            selection: [itemId], // On passe l'ID dans un tableau pour être compatible avec le cerveau
-            // On passe les informations nécessaires à l'action de suppression
-            actionConfig: {
-                url: this.itemDeleteUrlValue,
-                originatorId: this.element.id // L'ID de la collection, pour le rafraîchissement
         // On notifie le cerveau avec une demande de suppression simple et claire.
         // C'est le cerveau qui construira la demande de confirmation complexe.
         this.notifyCerveau('ui:toolbar.delete-request', {
