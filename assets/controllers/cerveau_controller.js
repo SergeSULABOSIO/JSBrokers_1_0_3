@@ -149,65 +149,9 @@ export default class extends Controller {
                 this.broadcast('dialog:search.open-request', payload); // Relay to search-bar-dialog
                 break;
             case 'ui:search.submitted': // NOUVEAU : Point d'entrée unique pour toute soumission de recherche
-                const activeState = this._getActiveTabState();
-                activeState.searchCriteria = payload.criteria || {};
-
-                // REFACTORING : On fusionne les événements de chargement.
-                // 'app:loading.start' notifie maintenant à la fois la barre de progression globale et le list-manager (via originatorId).
-                this.broadcast('app:loading.start', { originatorId: activeState.elementId });
-
-                // CORRECTION : On s'assure que le contexte parent est toujours inclus pour les recherches
-                // dans les collections, en le déduisant de l'ID de l'onglet actif pour plus de robustesse.
-                const parentIdMatch = this.activeTabId.match(/-for-(\d+)$/);
-                const parentId = parentIdMatch ? parentIdMatch[1] : this.activeParentId;
-
-                let parentFieldName = null;
-                if (parentId) {
-                    // Si on est dans une collection, le 'parentFieldName' se trouve dans le formCanvas du PARENT (l'onglet principal).
-                    const principalState = this.tabsState['principal'];
-                    if (principalState) {
-                        parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas);
-                    }
-                }
-
-                const refreshPayload = {
-                    criteria: activeState.searchCriteria,
-                    parentContext: parentId ? { 
-                        id: parentId,
-                        fieldName: parentFieldName
-                    } : null
-                };
-                console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, { refreshPayload: refreshPayload });
-
-                this._requestListRefresh(this.activeTabId, refreshPayload);
                 this._handleSearchRequest(payload.criteria);
                 break;
             case 'ui:search.reset-request':
-                const activeStateToReset = this._getActiveTabState();
-                activeStateToReset.searchCriteria = {};
-                // NOUVEAU : On déclenche le squelette de chargement avant de lancer la requête.
-                this.broadcast('app:loading.start', { originatorId: activeStateToReset.elementId });
-                
-                // CORRECTION : On s'assure que le contexte parent est conservé lors de la réinitialisation.
-                const parentIdMatchForReset = this.activeTabId.match(/-for-(\d+)$/);
-                const parentIdForReset = parentIdMatchForReset ? parentIdMatchForReset[1] : this.activeParentId;
-
-                let parentFieldNameForReset = null;
-                if (parentIdForReset) {
-                    // Si on est dans une collection, le 'parentFieldName' se trouve dans le formCanvas du PARENT (l'onglet principal).
-                    const principalState = this.tabsState['principal'];
-                    if (principalState) {
-                        parentFieldNameForReset = this._findParentFieldName(principalState.activeTabFormCanvas);
-                    }
-                }
-
-                this._requestListRefresh(this.activeTabId, { 
-                    criteria: {}, 
-                    parentContext: parentIdForReset ? { 
-                        id: parentIdForReset,
-                        fieldName: parentFieldNameForReset
-                    } : null 
-                });
                 this._handleSearchRequest({}); // On passe un objet vide pour réinitialiser.
                 break;
             case 'ui:dialog.open-request': // Événement unifié pour ouvrir un dialogue
@@ -785,5 +729,46 @@ export default class extends Controller {
             }
         }
         return null; // Pas de champ de collection trouvé.
+    }
+
+    /**
+     * NOUVEAU : Gère la logique de recherche et de réinitialisation pour éviter la répétition de code (DRY).
+     * @param {object} [criteria={}] - Les critères de recherche. Un objet vide pour une réinitialisation.
+     * @private
+     */
+    _handleSearchRequest(criteria = {}) {
+        const activeState = this._getActiveTabState();
+        activeState.searchCriteria = criteria;
+
+        // Notifie le début du chargement pour afficher le squelette et la barre de progression.
+        this.broadcast('app:loading.start', { originatorId: activeState.elementId });
+
+        // Détermine le contexte parent de manière robuste, en se basant sur l'ID de l'onglet.
+        const parentIdMatch = this.activeTabId.match(/-for-(\d+)$/);
+        const parentId = parentIdMatch ? parentIdMatch[1] : this.activeParentId;
+
+        let parentFieldName = null;
+        if (parentId) {
+            // Pour une collection, le nom du champ liant au parent est dans le formCanvas de l'onglet principal.
+            const principalState = this.tabsState['principal'];
+            if (principalState) {
+                parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas);
+            }
+        }
+
+        // Construit le payload complet pour la requête.
+        const refreshPayload = {
+            criteria: activeState.searchCriteria,
+            parentContext: parentId ? { 
+                id: parentId,
+                fieldName: parentFieldName
+            } : null
+        };
+
+        // Log pour le débogage.
+        console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, { refreshPayload: refreshPayload });
+
+        // Lance la requête de rafraîchissement de la liste.
+        this._requestListRefresh(this.activeTabId, refreshPayload);
     }
 }
