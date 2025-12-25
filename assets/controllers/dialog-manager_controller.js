@@ -25,14 +25,17 @@ export default class extends Controller {
         <div 
             class="modal fade app-dialog" 
             tabindex="-1"
-            data-bs-backdrop="static"  {# Empêche la fermeture au clic sur le fond #}
-            data-bs-keyboard="false"   {# Empêche la fermeture avec la touche Echap #}
+            data-controller="modal"
+            data-bs-backdrop="static"
+            data-bs-keyboard="false"
         >
             <div class="modal-dialog modal-xl">
-                <div class="modal-content" data-controller="dialog-instance">
-                    <div class="modal-body text-center p-5">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                <div class="modal-content">
+                    <div data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
+                        <div class="modal-body text-center p-5">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                 </div>

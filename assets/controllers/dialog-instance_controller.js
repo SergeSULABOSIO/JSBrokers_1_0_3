@@ -17,6 +17,8 @@ import { buildCustomEventForElement } from './base_controller.js';
  * @description Gère une instance unique et éphémère de boîte de dialogue.
  */
 export default class extends Controller {
+    // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
+    static outlets = [ 'modal' ];
 
     /**
      * Méthode du cycle de vie de Stimulus.
@@ -28,23 +30,23 @@ export default class extends Controller {
         this.nomControlleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
         this.cetteApplication = this.application;
-        this.boundAdjustZIndex = this.adjustZIndex.bind(this);
         if (detail) {
-            this.start(detail);
+            // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
+            this.start(detail).catch(error => {
+                console.error(`[${this.nomControlleur}] Erreur critique lors du démarrage :`, error);
+                // Si une erreur se produit, on demande au contrôleur modal de se fermer et de se détruire.
+                if (this.hasModalOutlet) this.modalOutlet.hide();
+            });
         } else {
-            console.error("L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !");
+            console.error(`[${this.nomControlleur}] L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !`);
+            if (this.hasModalOutlet) this.modalOutlet.hide();
         }
     }
 
     /**
-     * Méthode du cycle de vie de Stimulus.
-     * Nettoie les écouteurs d'événements lorsque le contrôleur est retiré du DOM.
+     * La méthode disconnect est vide car le nettoyage est maintenant géré par le contrôleur 'modal'.
      */
-    disconnect() {
-        if (this.modalNode) {
-            this.modalNode.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
-        }
-    }
+    disconnect() { }
 
     /**
      * Point d'entrée principal. Initialise les propriétés, affiche la coquille de la modale,
@@ -58,56 +60,13 @@ export default class extends Controller {
         this.entity = detail.entity;
         this.isCreateMode = !(this.entity && this.entity.id);
         this.context = detail.context || {};
-        this.parentContext = detail.parentContext || null; // NOUVEAU : On récupère le contexte du parent.
-        this.formTemplateHTML = detail.formTemplateHTML || null; // Récupère le HTML pré-rendu si disponible
+        this.parentContext = detail.parentContext || null;
+        this.formTemplateHTML = detail.formTemplateHTML || null;
         this._logState('start', '1986', detail);
-        
-        // Affiche la coquille vide de la modale (qui contient un spinner par défaut)
-        this.modalNode = this.element.closest('.modal');
-        this.modal = new Modal(this.modalNode);
-        this.modal.show();
-        this.modalNode.addEventListener('hidden.bs.modal', () => { this.modalNode.remove(); });
-        this.modalNode.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
-        
+
         // Charge le contenu complet depuis le serveur
         await this.loadContent();
     }
-
-    /**
-     * Ajuste le `z-index` de la modale pour s'assurer qu'elle apparaît
-     * au-dessus des autres modales déjà ouvertes. Essentiel pour les dialogues imbriqués.
-     * @private
-     */
-    adjustZIndex() {
-        // Trouve tous les backdrops visibles
-        const backdrops = document.querySelectorAll('.modal-backdrop.show');
-
-        // S'il y a plus d'un backdrop, cela signifie que nous superposons les modales
-        if (backdrops.length > 1) {
-            // Trouve le z-index le plus élevé parmi TOUTES les modales actuellement visibles
-            const modals = document.querySelectorAll('.modal.show');
-            let maxZIndex = 0;
-            modals.forEach(modal => {
-                // On s'assure de ne pas nous comparer à nous-même si notre z-index est déjà très élevé
-            if (modal !== this.element.closest('.modal')) {
-                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
-                    if (zIndex > maxZIndex) {
-                        maxZIndex = zIndex;
-                    }
-                }
-            });
-
-            // On récupère notre modale et son backdrop (c'est toujours le dernier ajouté)
-        const myModal = this.element.closest('.modal');
-            const myBackdrop = backdrops[backdrops.length - 1];
-
-            // On définit le z-index de notre modale pour être au-dessus du maximum trouvé,
-            // et celui de son backdrop juste en dessous.
-            myModal.style.zIndex = maxZIndex + 2;
-            myBackdrop.style.zIndex = maxZIndex + 1;
-        }
-    }
-
 
 
     /**
@@ -117,6 +76,10 @@ export default class extends Controller {
      * @private
      */
     async loadContent() {
+        if (!this.hasModalOutlet) {
+            throw new Error("Le contrôleur 'dialog-instance' doit avoir un outlet vers un contrôleur 'modal'.");
+        }
+
         this._logState("loadContent", "1986", this.detail);
         console.log(this.nomControlleur + " - loadContent() - Code:1986 - this.entity:", this.entity);
         // NOUVEAU : On affiche le squelette de chargement pour une meilleure UX.
@@ -165,7 +128,7 @@ export default class extends Controller {
                 form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
             }
 
-            const mainDialogElement = this.element.closest('.app-dialog');
+            const mainDialogElement = this.modalOutlet.element;
 
             // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
             const hasCalculatedAttrs = this.element.querySelector('.calculated-attributes-list li');
@@ -201,7 +164,7 @@ export default class extends Controller {
      * @private
      */
     async reloadView() {
-        this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
+        this.modalOutlet.element.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         await this.loadContent(); // Recharge le formulaire et les attributs
     }
 
@@ -417,7 +380,7 @@ export default class extends Controller {
             mode: this.isCreateMode ? 'creation' : 'edition'
         });
         this.toggleProgressBar(false); // <-- CACHER LA BARRE avant de fermer
-        this.modal.hide();
+        this.modalOutlet.hide(); // On demande au contrôleur 'modal' de se fermer.
     }
 
     /**
