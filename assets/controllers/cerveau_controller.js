@@ -180,6 +180,7 @@ export default class extends Controller {
                 console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 - Recherche`, { refreshPayload: refreshPayload });
 
                 this._requestListRefresh(this.activeTabId, refreshPayload);
+                this._handleSearchRequest(payload.criteria);
                 break;
             case 'ui:search.reset-request':
                 const activeStateToReset = this._getActiveTabState();
@@ -207,6 +208,7 @@ export default class extends Controller {
                         fieldName: parentFieldNameForReset
                     } : null 
                 });
+                this._handleSearchRequest({}); // On passe un objet vide pour réinitialiser.
                 break;
             case 'ui:dialog.open-request': // Événement unifié pour ouvrir un dialogue
                 this.broadcast('app:loading.start');
