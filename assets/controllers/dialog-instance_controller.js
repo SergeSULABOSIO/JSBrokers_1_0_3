@@ -1,6 +1,4 @@
-import { Controller } from '@hotwired/stimulus';
-import { Modal } from 'bootstrap';
-import { buildCustomEventForElement } from './base_controller.js';
+import BaseController from './base_controller.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
@@ -16,7 +14,7 @@ import { buildCustomEventForElement } from './base_controller.js';
  * @extends Controller
  * @description Gère une instance unique et éphémère de boîte de dialogue.
  */
-export default class extends Controller {
+export default class extends BaseController {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = [ 'modal' ];
 
@@ -302,13 +300,13 @@ export default class extends Controller {
      * @param {string} message - Le message à afficher.
      */
     showFeedback(type, message) {
-        const feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        const feedbackContainer = this.element.querySelector('.feedback-container');
         if (!feedbackContainer) return;
 
         // On formate la date et l'heure actuelles [cite: 7, 8]
         const now = new Date();
         const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const timestamp = `Dernière mise à jour le ${date} à ${time} ::`;
 
         // On détermine la classe CSS à utiliser en fonction du type
@@ -436,21 +434,6 @@ export default class extends Controller {
         if (form) {
             form.requestSubmit();
         }
-    }
-
-    /**
-     * Méthode centralisée pour envoyer un événement au cerveau.
-     * @param {string} type - Le type d'événement pour le cerveau (ex: 'ui:dialog.opened').
-     * @param {object} payload - Données additionnelles à envoyer.
-     * @private
-     */
-    notifyCerveau(type, payload = {}) {
-        buildCustomEventForElement(document, 'cerveau:event', true, true, {
-            type: type,
-            source: this.nomControlleur,
-            payload: payload,
-            timestamp: Date.now()
-        });
     }
 
     /**
