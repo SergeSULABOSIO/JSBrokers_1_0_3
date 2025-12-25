@@ -223,10 +223,18 @@ export default class extends Controller {
         console.groupEnd();
 
         this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
+        // On utilise le même événement que la toolbar pour une logique unifiée dans le cerveau.
+        this.notifyCerveau('ui:dialog.open-request', {
             entity: entity, // Entité vide pour la création
             isCreationMode: isCreationMode,
             entityFormCanvas: entityFormCanvas,
             context: context
+            context: context,
+            // On passe le contexte du parent pour l'imbrication
+            parentContext: {
+                id: this.parentEntityIdValue,
+                fieldName: this.parentFieldNameValue
+            }
         });
     }
 
@@ -275,10 +283,17 @@ export default class extends Controller {
         console.groupEnd();
 
         this.notifyCerveau('ui:boite-dialogue:add-collection-item-request', {
+        // On utilise le même événement que la toolbar pour une logique unifiée dans le cerveau.
+        this.notifyCerveau('ui:dialog.open-request', {
             entity: entity,
             isCreationMode: isCreationMode,
             entityFormCanvas: entityFormCanvas,
             context: context
+            context: context,
+            parentContext: {
+                id: this.parentEntityIdValue,
+                fieldName: this.parentFieldNameValue
+            }
         });
     }
 
@@ -303,6 +318,15 @@ export default class extends Controller {
             actionConfig: {
                 url: this.itemDeleteUrlValue,
                 originatorId: this.element.id // L'ID de la collection, pour le rafraîchissement
+        // On notifie le cerveau avec une demande de suppression simple et claire.
+        // C'est le cerveau qui construira la demande de confirmation complexe.
+        this.notifyCerveau('ui:toolbar.delete-request', {
+            selection: [{ id: itemId }], // On simule un objet "selecto" pour être compatible avec la logique du cerveau
+            formCanvas: {
+                parametres: {
+                    // On fournit juste l'URL de suppression, c'est tout ce dont le cerveau a besoin.
+                    endpoint_delete_url: this.itemDeleteUrlValue,
+                }
             }
         });
     }

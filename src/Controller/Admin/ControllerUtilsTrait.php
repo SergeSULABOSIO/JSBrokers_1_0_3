@@ -303,11 +303,14 @@ trait ControllerUtilsTrait
         $form = $this->createForm($formTypeClass, $entity);
         $entityCanvas = $this->constante->getEntityCanvas($entityClass);
         $this->constante->loadCalculatedValue($entityCanvas, [$entity]);
+        $isCreationMode = ($entity->getId() === null);
 
-        return $this->render('components/_form_canvas.html.twig', [
+        return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas($entity, $entreprise->getId()),
+            'formCanvas' => $this->constante->getEntityFormCanvas($entity, $entreprise->getId()),
             'entityCanvas' => $entityCanvas,
+            'entity' => $entity,
+            'isCreationMode' => $isCreationMode,
             'idEntreprise' => $entreprise->getId(),
             'idInvite' => $invite->getId(),
         ]);
