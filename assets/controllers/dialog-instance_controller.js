@@ -27,7 +27,6 @@ export default class extends Controller {
     connect() {
         this.nomControlleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
-        this.elementContenu = this.element;
         this.cetteApplication = this.application;
         this.boundAdjustZIndex = this.adjustZIndex.bind(this);
         if (detail) {
@@ -90,7 +89,7 @@ export default class extends Controller {
             let maxZIndex = 0;
             modals.forEach(modal => {
                 // On s'assure de ne pas nous comparer à nous-même si notre z-index est déjà très élevé
-                if (modal !== this.elementContenu.closest('.modal')) {
+            if (modal !== this.element.closest('.modal')) {
                     const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
                     if (zIndex > maxZIndex) {
                         maxZIndex = zIndex;
@@ -99,7 +98,7 @@ export default class extends Controller {
             });
 
             // On récupère notre modale et son backdrop (c'est toujours le dernier ajouté)
-            const myModal = this.elementContenu.closest('.modal');
+        const myModal = this.element.closest('.modal');
             const myBackdrop = backdrops[backdrops.length - 1];
 
             // On définit le z-index de notre modale pour être au-dessus du maximum trouvé,
@@ -166,7 +165,7 @@ export default class extends Controller {
                 form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
             }
 
-            const mainDialogElement = this.elementContenu.closest('.app-dialog');
+            const mainDialogElement = this.element.closest('.app-dialog');
 
             // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
             const hasCalculatedAttrs = this.element.querySelector('.calculated-attributes-list li');
@@ -216,7 +215,7 @@ export default class extends Controller {
         this.toggleProgressBar(true);
         // this.clearErrors(); // On nettoie les anciennes erreurs
 
-        this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        this.feedbackContainer = this.element.querySelector('.feedback-container');
         if (this.feedbackContainer) {
             this.feedbackContainer.innerHTML = '';
         }
@@ -379,9 +378,9 @@ export default class extends Controller {
      */
     displayErrors(errors) {
         // --- CORRECTION : S'assurer que la cible du feedback est définie ---
-        this.feedbackContainer = this.elementContenu.querySelector('.feedback-container');
+        this.feedbackContainer = this.element.querySelector('.feedback-container');
 
-        const form = this.elementContenu.querySelector('form');
+        const form = this.element.querySelector('form');
         for (const [fieldName, messages] of Object.entries(errors)) {
             // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
             if (fieldName === '') {
@@ -427,8 +426,8 @@ export default class extends Controller {
      */
     toggleLoading(isLoading) {
         // On cherche le bouton manuellement juste quand on en a besoin
-        // const button = this.elementContenu.querySelector('button[type="submit"]');
-        const button = this.elementContenu.querySelector('[data-action*="#triggerSubmit"]');
+        // const button = this.element.querySelector('button[type="submit"]');
+        const button = this.element.querySelector('[data-action*="#triggerSubmit"]');
 
         if (!button) return;
         button.disabled = isLoading;
@@ -448,7 +447,7 @@ export default class extends Controller {
             text.textContent = 'Enregistrer';
         }
         // --- AJOUT : Gère les autres boutons (Fermer, X) ---
-        const closeButtons = this.elementContenu.querySelectorAll('[data-action*="#close"]');
+        const closeButtons = this.element.querySelectorAll('[data-action*="#close"]');
         closeButtons.forEach(btn => {
             btn.disabled = isLoading;
         });
@@ -460,7 +459,7 @@ export default class extends Controller {
      */
     toggleProgressBar(isLoading) {
         // On cherche le conteneur de la barre manuellement
-        const progressBarContainer = this.elementContenu.querySelector('.dialog-progress-container');
+        const progressBarContainer = this.element.querySelector('.dialog-progress-container');
         if (progressBarContainer) {
             progressBarContainer.classList.toggle('is-loading', isLoading);
         }
@@ -470,7 +469,7 @@ export default class extends Controller {
      * Déclenche manuellement la soumission du formulaire interne.
      */
     triggerSubmit() {
-        const form = this.elementContenu.querySelector('form');
+        const form = this.element.querySelector('form');
         if (form) {
             form.requestSubmit();
         }
