@@ -743,26 +743,11 @@ export default class extends Controller {
         // Notifie le début du chargement pour afficher le squelette et la barre de progression.
         this.broadcast('app:loading.start', { originatorId: activeState.elementId });
 
-        // Détermine le contexte parent de manière robuste, en se basant sur l'ID de l'onglet.
-        const parentIdMatch = this.activeTabId.match(/-for-(\d+)$/);
-        const parentId = parentIdMatch ? parentIdMatch[1] : this.activeParentId;
-
-        let parentFieldName = null;
-        if (parentId) {
-            // Pour une collection, le nom du champ liant au parent est dans le formCanvas de l'onglet principal.
-            const principalState = this.tabsState['principal'];
-            if (principalState) {
-                parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas);
-            }
-        }
-
         // Construit le payload complet pour la requête.
         const refreshPayload = {
             criteria: activeState.searchCriteria,
-            parentContext: parentId ? { 
-                id: parentId,
-                fieldName: parentFieldName
-            } : null
+            // NOUVEAU : La logique complexe de recherche du contexte est maintenant dans sa propre fonction.
+            parentContext: this._getParentContextForSearch()
         };
 
         // Log pour le débogage.
@@ -770,5 +755,32 @@ export default class extends Controller {
 
         // Lance la requête de rafraîchissement de la liste.
         this._requestListRefresh(this.activeTabId, refreshPayload);
+    }
+
+    /**
+     * NOUVEAU : Détermine et retourne le contexte parent pour une recherche.
+     * @returns {{id: string, fieldName: string}|null} L'objet de contexte parent ou null.
+     * @private
+     */
+    _getParentContextForSearch() {
+        // Détermine le contexte parent de manière robuste, en se basant sur l'ID de l'onglet.
+        const parentIdMatch = this.activeTabId.match(/-for-(\d+)$/);
+        const parentId = parentIdMatch ? parentIdMatch[1] : this.activeParentId;
+
+        if (!parentId) {
+            return null;
+        }
+
+        let parentFieldName = null;
+        // Pour une collection, le nom du champ liant au parent est dans le formCanvas de l'onglet principal.
+        const principalState = this.tabsState['principal'];
+        if (principalState) {
+            parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas);
+        }
+
+        return {
+            id: parentId,
+            fieldName: parentFieldName
+        };
     }
 }
