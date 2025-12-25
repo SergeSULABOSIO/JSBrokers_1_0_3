@@ -381,10 +381,10 @@ export default class extends Controller {
                 idEntreprise: this.currentIdEntreprise, // CORRECTION : Utiliser la propriété correcte
                 idInvite: this.currentIdInvite       // CORRECTION : Utiliser la propriété correcte
             }, 
-            parentContext: this.activeParentId ? {
-                id: this.activeParentId,
-                fieldName: payload.entityFormCanvas && payload.entityFormCanvas.parametres && payload.entityFormCanvas.parametres.parent_entity_field_name
-            } : null
+            // CORRECTION: On passe directement le contexte parent reçu dans le payload.
+            // C'est la responsabilité de l'appelant (toolbar, collection_controller) de le fournir correctement.
+            // La logique de calcul a été retirée car elle était incorrecte et redondante.
+            parentContext: payload.parentContext || null
         });
     }
 
