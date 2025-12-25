@@ -75,16 +75,6 @@ export default class extends Controller {
     }
 
     /**
-     * Recharge la vue complète (titre, formulaire, attributs) après une création réussie
-     * pour passer en mode édition sans fermer la modale.
-     * @private
-     */
-    async reloadView() {
-        this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
-        await this.loadContent(); // Recharge le formulaire et les attributs
-    }
-
-    /**
      * Ajuste le `z-index` de la modale pour s'assurer qu'elle apparaît
      * au-dessus des autres modales déjà ouvertes. Essentiel pour les dialogues imbriqués.
      * @private
@@ -130,6 +120,8 @@ export default class extends Controller {
     async loadContent() {
         this._logState("loadContent", "1986", this.detail);
         console.log(this.nomControlleur + " - loadContent() - Code:1986 - this.entity:", this.entity);
+        // NOUVEAU : On affiche le squelette de chargement pour une meilleure UX.
+        this.element.innerHTML = this._getSkeletonHtml();
         try {
             // 1. On commence avec l'URL de base
             let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
@@ -202,6 +194,16 @@ export default class extends Controller {
                 error: `Échec du chargement du formulaire: ${errorMessage}`
             });
         }
+    }
+
+    /**
+     * Recharge la vue complète (titre, formulaire, attributs) après une création réussie
+     * pour passer en mode édition sans fermer la modale.
+     * @private
+     */
+    async reloadView() {
+        this.modalNode.classList.add('is-edit-mode'); // Affiche la colonne de gauche
+        await this.loadContent(); // Recharge le formulaire et les attributs
     }
 
     /**
@@ -297,6 +299,39 @@ export default class extends Controller {
             this.toggleLoading(false);
             this.toggleProgressBar(false);
         }
+    }
+
+    /**
+     * NOUVEAU : Génère le HTML pour un squelette de chargement du formulaire.
+     * @returns {string} Le HTML du squelette.
+     * @private
+     */
+    _getSkeletonHtml() {
+        return `
+            <div class="modal-header">
+                <h5 class="modal-title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5>
+                <button type="button" class="btn-close btn-close-white" disabled></button>
+            </div>
+            <div class="dialog-progress-container is-loading">
+                <div class="dialog-progress-bar" role="progressbar"></div>
+            </div>
+            <div class="modal-body-split">
+                <div class="calculated-attributes-column">
+                    <div class="skeleton-line" style="width: 80%; margin-bottom: 1rem;"></div>
+                    <div class="skeleton-line" style="width: 60%;"></div>
+                </div>
+                <div class="form-column">
+                    <div class="skeleton-line" style="width: 90%; margin-bottom: 1.5rem;"></div>
+                    <div class="skeleton-line" style="width: 100%; margin-bottom: 1.5rem;"></div>
+                    <div class="skeleton-line" style="width: 70%; margin-bottom: 1.5rem;"></div>
+                    <div class="skeleton-line" style="width: 95%;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+            </div>
+        `;
     }
 
     /**
