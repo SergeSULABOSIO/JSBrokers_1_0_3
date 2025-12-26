@@ -162,15 +162,15 @@ export default class extends BaseController {
      * pour passer en mode édition sans fermer la modale.
      * @private
      */
-    async reloadView() {
+    reloadView() {
         this.modalOutlet.element.classList.add('is-edit-mode'); // Affiche la colonne de gauche
-        await this.loadContent(); // Recharge le formulaire et les attributs
+        this.loadContent(); // Recharge le formulaire et les attributs
     }
 
     /**
      * Gère la soumission du formulaire via AJAX.
      */
-    async submitForm(event) {
+    submitForm(event) {
         console.log(this.nomControlleur + " - submitForm() - Code:1986");
         event.preventDefault();
         this.toggleLoading(true);
@@ -212,11 +212,11 @@ export default class extends BaseController {
         // console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
         // console.log(this.nomControlleur + " - Submit vers le serveur: " + this.entityFormCanvas.parametres.endpoint_submit_url, this.context);
         try {
-            const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
+            const response = fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
                 method: 'POST',
                 body: formData // On envoie l'objet FormData directement.
             });
-            const result = await response.json();
+            const result = response.json();
             if (!response.ok) throw result;
 
             this.showFeedback('success', result.message);
@@ -231,7 +231,7 @@ export default class extends BaseController {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
 
-                await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
+                this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
             } else {
                 // Si on est déjà en mode édition, on rafraîchit juste les listes
                 // sans recharger toute la vue.
