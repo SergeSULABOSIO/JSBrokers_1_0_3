@@ -26,10 +26,10 @@ export default class extends BaseController {
      */
     connect() {
         this.nomControleur = "Dialog-Instance";
-        const detail = this.element.dialogDetail;
+        this.elementDialogInstance = this.element;
+        const detail = this.elementDialogInstance.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail);
         this.cetteApplication = this.application;
-        this.elementDialogInstance = this.element;
 
         this.boundHandleContentReady = this.handleContentReady.bind(this);
         document.addEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
@@ -299,7 +299,7 @@ export default class extends BaseController {
      * @param {string} message - Le message à afficher.
      */
     showFeedback(type, message) {
-        const feedbackContainer = this.element.querySelector('.feedback-container');
+        const feedbackContainer = this.elementDialogInstance.querySelector('.feedback-container');
         if (!feedbackContainer) return;
 
         // On formate la date et l'heure actuelles [cite: 7, 8]
@@ -338,9 +338,9 @@ export default class extends BaseController {
      */
     displayErrors(errors) {
         // --- CORRECTION : S'assurer que la cible du feedback est définie ---
-        this.feedbackContainer = this.element.querySelector('.feedback-container');
+        this.feedbackContainer = this.elementDialogInstance.querySelector('.feedback-container');
 
-        const form = this.element.querySelector('form');
+        const form = this.elementDialogInstance.querySelector('form');
         for (const [fieldName, messages] of Object.entries(errors)) {
             // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
             if (fieldName === '') {
@@ -387,7 +387,7 @@ export default class extends BaseController {
     toggleLoading(isLoading) {
         // On cherche le bouton manuellement juste quand on en a besoin
         // const button = this.element.querySelector('button[type="submit"]');
-        const button = this.element.querySelector('[data-action*="#triggerSubmit"]');
+        const button = this.elementDialogInstance.querySelector('[data-action*="#triggerSubmit"]');
 
         if (!button) return;
         button.disabled = isLoading;
@@ -407,7 +407,7 @@ export default class extends BaseController {
             text.textContent = 'Enregistrer';
         }
         // --- AJOUT : Gère les autres boutons (Fermer, X) ---
-        const closeButtons = this.element.querySelectorAll('[data-action*="#close"]');
+        const closeButtons = this.elementDialogInstance.querySelectorAll('[data-action*="#close"]');
         closeButtons.forEach(btn => {
             btn.disabled = isLoading;
         });
@@ -419,7 +419,7 @@ export default class extends BaseController {
      */
     toggleProgressBar(isLoading) {
         // On cherche le conteneur de la barre manuellement
-        const progressBarContainer = this.element.querySelector('.dialog-progress-container');
+        const progressBarContainer = this.elementDialogInstance.querySelector('.dialog-progress-container');
         if (progressBarContainer) {
             progressBarContainer.classList.toggle('is-loading', isLoading);
         }
@@ -429,7 +429,7 @@ export default class extends BaseController {
      * Déclenche manuellement la soumission du formulaire interne.
      */
     triggerSubmit() {
-        const form = this.element.querySelector('form');
+        const form = this.elementDialogInstance.querySelector('form');
         if (form) {
             form.requestSubmit();
         }
