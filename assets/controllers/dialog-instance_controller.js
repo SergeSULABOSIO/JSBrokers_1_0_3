@@ -74,7 +74,7 @@ export default class extends BaseController {
      * Notifie le cerveau une fois le chargement terminé.
      * @private
      */
-    async loadContent() {
+    loadContent() {
         if (!this.hasModalOutlet) {
             throw new Error("Le contrôleur 'dialog-instance' doit avoir un outlet vers un contrôleur 'modal'.");
         }
@@ -113,10 +113,10 @@ export default class extends BaseController {
             const finalUrl = url.pathname + url.search;
             console.log(this.nomControlleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
 
-            const response = await fetch(finalUrl);
+            const response = fetch(finalUrl);
             if (!response.ok) throw new Error("Le contenu de la boîte de dialogue n'a pas pu être chargé.");
 
-            const html = await response.text();
+            const html = response.text();
 
             // On remplace tout le contenu de la modale par le HTML reçu.
             this.element.innerHTML = html;
