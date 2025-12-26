@@ -269,7 +269,6 @@ export default class extends BaseController {
     _getSkeletonHtml() {
         return `
             <div class="modal-header">
-                <h5 class="modal-title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5>
                 <button type="button" class="btn-close btn-close-white" disabled></button>
             </div>
             <div class="dialog-progress-container is-loading">
@@ -277,19 +276,18 @@ export default class extends BaseController {
             </div>
             <div class="modal-body-split">
                 <div class="calculated-attributes-column">
-                    <div class="skeleton-line" style="width: 80%; margin-bottom: 1rem;"></div>
-                    <div class="skeleton-line" style="width: 60%;"></div>
+                    <div class="skeleton-line" style="width: 100%; height: 40px;"></div>
+                    <div class="skeleton-line" style="width: 100%; height: 40px;"></div>
                 </div>
                 <div class="form-column">
-                    <div class="skeleton-line" style="width: 90%; margin-bottom: 1.5rem;"></div>
-                    <div class="skeleton-line" style="width: 100%; margin-bottom: 1.5rem;"></div>
-                    <div class="skeleton-line" style="width: 70%; margin-bottom: 1.5rem;"></div>
-                    <div class="skeleton-line" style="width: 95%;"></div>
+                    <div class="skeleton-line" style="width: 100%; height: 40px; padding: 2px; margin: 2px;">Veuillez patienter svp...</div>
+                    <div class="skeleton-line" style="width: 100%; height: 40px; padding: 2px; margin: 2px;"></div>
+                    <div class="skeleton-line" style="width: 100%; height: 40px; padding: 2px; margin: 2px;"></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
-                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+                <div class="skeleton-line" style="width: 120px; height: 40px; border-radius: var(--bs-border-radius);"></div>
+                <div class="skeleton-line" style="width: 120px; height: 40px; border-radius: var(--bs-border-radius);"></div>
             </div>
         `;
     }
