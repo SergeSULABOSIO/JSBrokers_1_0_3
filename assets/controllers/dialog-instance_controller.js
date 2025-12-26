@@ -24,7 +24,7 @@ export default class extends BaseController {
      * Récupère les données d'initialisation et démarre le processus d'affichage du dialogue.
      * @throws {Error} Si les données d'initialisation (`dialogDetail`) ne sont pas trouvées.
      */
-    async connect() {
+    connect() {
         this.nomControleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail);
@@ -37,7 +37,7 @@ export default class extends BaseController {
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
             try {
-                await this.start(detail);
+                this.start(detail);
             } catch (error) {
                 console.error(`[${this.nomControleur}] Erreur critique lors du démarrage :`, error);
                 if (this.hasModalOutlet) this.modalOutlet.hide();
@@ -73,7 +73,7 @@ export default class extends BaseController {
         this._logState('start', '1986', detail);
 
         // Charge le contenu complet depuis le serveur
-        await this.loadContent();
+        this.loadContent();
     }
 
 
