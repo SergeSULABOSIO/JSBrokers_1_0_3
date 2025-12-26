@@ -301,7 +301,7 @@ export default class extends Controller {
                 }
                 break;
             case 'ui:dialog.content-request':
-                this.handleDialogContentRequest(detail);
+                this.handleDialogContentRequest(event.detail);
                 break;
             case 'ui:dialog.closed':
                 break;

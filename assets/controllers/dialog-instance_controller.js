@@ -1,4 +1,4 @@
-
+import { Controller } from '@hotwired/stimulus';
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
  * @description Ce contrôleur gère le cycle de vie et les interactions d'UNE SEULE instance de dialogue.
