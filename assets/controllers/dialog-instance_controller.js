@@ -24,7 +24,7 @@ export default class extends BaseController {
      * Récupère les données d'initialisation et démarre le processus d'affichage du dialogue.
      * @throws {Error} Si les données d'initialisation (`dialogDetail`) ne sont pas trouvées.
      */
-    connect() {
+    async connect() {
         this.nomControleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail);
@@ -32,14 +32,14 @@ export default class extends BaseController {
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
             try {
-                this.start(detail);
+                await this.start(detail);
             } catch (error) {
                 console.error(`[${this.nomControleur}] Erreur critique lors du démarrage :`, error);
                 if (this.hasModalOutlet) this.modalOutlet.hide();
             }
         } else {
-        //     console.error(`[${this.nomControleur}] L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !`);
-        //     if (this.hasModalOutlet) this.modalOutlet.hide();
+            console.error(`[${this.nomControleur}] L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !`);
+            if (this.hasModalOutlet) this.modalOutlet.hide();
         }
     }
 
@@ -55,7 +55,7 @@ export default class extends BaseController {
      * @param {object} detail.entityFormCanvas - La configuration (canvas) du formulaire.
      * @param {object} detail.entity - L'entité à éditer, ou un objet vide pour une création.
      */
-    start(detail) {
+    async start(detail) {
         this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.isCreateMode = !(this.entity && this.entity.id);
@@ -65,7 +65,7 @@ export default class extends BaseController {
         this._logState('start', '1986', detail);
 
         // Charge le contenu complet depuis le serveur
-        this.loadContent();
+        await this.loadContent();
     }
 
 
@@ -75,83 +75,83 @@ export default class extends BaseController {
      * Notifie le cerveau une fois le chargement terminé.
      * @private
      */
-    loadContent() {
+    async loadContent() {
         this._logState("loadContent", "1986", this.detail);
-        console.log(this.nomControlleur + " - loadContent() - Code:1986 - this.entity:", this.entity);
+        console.log(this.nomControleur + " - loadContent() - Code:1986 - this.entity:", this.entity);
         // NOUVEAU : On affiche le squelette de chargement pour une meilleure UX.
         this.element.innerHTML = this._getSkeletonHtml();
-        // try {
-        //     // 1. On commence avec l'URL de base
-        //     let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
+        try {
+            // 1. On commence avec l'URL de base
+            let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
 
-        //     // 2. Si c'est une édition, on ajoute l'ID à l'URL
-        //     if (this.entity && this.entity.id) {
-        //         urlString += `/${this.entity.id}`;
-        //     }
+            // 2. Si c'est une édition, on ajoute l'ID à l'URL
+            if (this.entity && this.entity.id) {
+                urlString += `/${this.entity.id}`;
+            }
 
-        //     // 3. On crée un objet URL pour gérer facilement les paramètres
-        //     const url = new URL(urlString, window.location.origin);
+            // 3. On crée un objet URL pour gérer facilement les paramètres
+            const url = new URL(urlString, window.location.origin);
 
-        //     // 4. Si une valeur par défaut a été passée dans le contexte, on l'ajoute
-        //     if (this.context.defaultValue) {
-        //         url.searchParams.set(`default_${this.context.defaultValue.target}`, this.context.defaultValue.value);
-        //     }
+            // 4. Si une valeur par défaut a été passée dans le contexte, on l'ajoute
+            if (this.context.defaultValue) {
+                url.searchParams.set(`default_${this.context.defaultValue.target}`, this.context.defaultValue.value);
+            }
 
-        //     // MISSION 3 : Ajouter idEntreprise et idInvite au chargement du formulaire
-        //     if (this.context.idEntreprise) {
-        //         url.searchParams.set('idEntreprise', this.context.idEntreprise);
-        //     }
-        //     if (this.context.idInvite) {
-        //         url.searchParams.set('idInvite', this.context.idInvite);
-        //     }
-        //     // Note : idInvite n'est pas toujours nécessaire ici, mais on peut l'ajouter par cohérence.
+            // MISSION 3 : Ajouter idEntreprise et idInvite au chargement du formulaire
+            if (this.context.idEntreprise) {
+                url.searchParams.set('idEntreprise', this.context.idEntreprise);
+            }
+            if (this.context.idInvite) {
+                url.searchParams.set('idInvite', this.context.idInvite);
+            }
+            // Note : idInvite n'est pas toujours nécessaire ici, mais on peut l'ajouter par cohérence.
 
-        //     // 5. On lance la requête avec l'URL finale correctement construite
-        //     const finalUrl = url.pathname + url.search;
-        //     console.log(this.nomControleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
+            // 5. On lance la requête avec l'URL finale correctement construite
+            const finalUrl = url.pathname + url.search;
+            console.log(this.nomControleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
 
-        //     const response = fetch(finalUrl);
-        //     if (!response.ok) throw new Error("Le contenu de la boîte de dialogue n'a pas pu être chargé.");
+            const response = await fetch(finalUrl);
+            if (!response.ok) throw new Error("Le contenu de la boîte de dialogue n'a pas pu être chargé.");
 
-        //     const html = response.text();
+            const html = await response.text();
 
-        //     // On remplace tout le contenu de la modale par le HTML reçu.
-        //     this.element.innerHTML = html;
+            // On remplace tout le contenu de la modale par le HTML reçu.
+            this.element.innerHTML = html;
 
-        //     // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
-        //     const form = this.element.querySelector('form');
-        //     if (form) {
-        //         form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
-        //     }
+            // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
+            const form = this.element.querySelector('form');
+            if (form) {
+                form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
+            }
 
-        //     const mainDialogElement = this.modalOutlet.element;
+            const mainDialogElement = this.modalOutlet.element;
 
-        //     // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
-        //     const hasCalculatedAttrs = this.element.querySelector('.calculated-attributes-list li');
-        //     if (hasCalculatedAttrs) {
-        //         mainDialogElement.classList.add('has-attributes-column');
-        //     } else {
-        //         mainDialogElement.classList.remove('has-attributes-column');
-        //     }
+            // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
+            const hasCalculatedAttrs = this.element.querySelector('.calculated-attributes-list li');
+            if (hasCalculatedAttrs) {
+                mainDialogElement.classList.add('has-attributes-column');
+            } else {
+                mainDialogElement.classList.remove('has-attributes-column');
+            }
 
-        //     // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
-        //     this.notifyCerveau('app:dialog.opened', {
-        //         mode: this.isCreateMode ? 'creation' : 'edition',
-        //         entity: this.entity
-        //     });
+            // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
+            this.notifyCerveau('ui:dialog.opened', {
+                mode: this.isCreateMode ? 'creation' : 'edition',
+                entity: this.entity
+            });
 
-        //     // On s'assure que la classe de mode édition est bien présente si nécessaire
-        //     if (!this.isCreateMode) {
-        //         mainDialogElement.classList.add('is-edit-mode');
-        //     }
-        // } catch (error) {
-        //     const errorMessage = error.message || "Une erreur inconnue est survenue.";
-        //     this.element.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
-        //     // NOUVEAU : Notifier le cerveau de l'échec de chargement
-        //     this.notifyCerveau('app:error.api', {
-        //         error: `Échec du chargement du formulaire: ${errorMessage}`
-        //     });
-        // }
+            // On s'assure que la classe de mode édition est bien présente si nécessaire
+            if (!this.isCreateMode) {
+                mainDialogElement.classList.add('is-edit-mode');
+            }
+        } catch (error) {
+            const errorMessage = error.message || "Une erreur inconnue est survenue.";
+            this.element.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
+            // NOUVEAU : Notifier le cerveau de l'échec de chargement
+            this.notifyCerveau('app:error.api', {
+                error: `Échec du chargement du formulaire: ${errorMessage}`
+            });
+        }
     }
 
     /**
@@ -159,9 +159,9 @@ export default class extends BaseController {
      * pour passer en mode édition sans fermer la modale.
      * @private
      */
-    reloadView() {
+    async reloadView() {
         this.modalOutlet.element.classList.add('is-edit-mode'); // Affiche la colonne de gauche
-        this.loadContent(); // Recharge le formulaire et les attributs
+        await this.loadContent(); // Recharge le formulaire et les attributs
     }
 
     /**
@@ -228,7 +228,7 @@ export default class extends BaseController {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
 
-                this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
+                await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
             } else {
                 // Si on est déjà en mode édition, on rafraîchit juste les listes
                 // sans recharger toute la vue.
