@@ -85,11 +85,6 @@ export default class extends Controller {
         }
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
         const modalElement = this.createModalElement();
-        // --- MODIFICATION MAJEURE ICI ---
-        // Au lieu d'essayer de récupérer le contrôleur, nous allons "cacher" les données
-        // de l'événement directement sur l'élément qui portera le contrôleur.
-        // C'est une astuce simple et efficace pour passer des données à un contrôleur
-        // qui n'existe pas encore.
         const instanceElement = modalElement.querySelector('[data-controller="dialog-instance"]');
         instanceElement.dialogDetail = event.detail; // On attache les données ici
 
