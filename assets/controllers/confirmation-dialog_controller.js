@@ -13,7 +13,7 @@ export default class extends Controller {
     static targets = ["title", "body", "confirmButton", "feedback", "progressBarContainer"];
 
     connect() {
-        this.nomControlleur = "ConfirmationDialog";
+        this.nomControleur = "ConfirmationDialog";
         this.modal = new Modal(this.element);
 
         // Centralisation des écouteurs d'événements via le Cerveau
@@ -42,7 +42,7 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     handleCerveauEvent(event) {
-        console.log(this.nomControlleur + " - Code: 1986 - handleCerveauEvent - ConfirmationDialogController", event.detail);
+        console.log(this.nomControleur + " - Code: 1986 - handleCerveauEvent - ConfirmationDialogController", event.detail);
         const { type } = event.detail.onConfirm;
         switch (type) {
             case 'app:api.delete-request':
@@ -188,7 +188,7 @@ export default class extends Controller {
     notifyCerveau(type, payload = {}) {
         const event = new CustomEvent('cerveau:event', {
             bubbles: true,
-            detail: { type, source: this.nomControlleur, payload, timestamp: Date.now() }
+            detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
         });
         this.element.dispatchEvent(event);
     }

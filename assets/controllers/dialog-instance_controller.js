@@ -24,20 +24,20 @@ export default class extends BaseController {
      * Récupère les données d'initialisation et démarre le processus d'affichage du dialogue.
      * @throws {Error} Si les données d'initialisation (`dialogDetail`) ne sont pas trouvées.
      */
-    connect() {
-        this.nomControlleur = "Dialog-Instance";
+    async connect() {
+        this.nomControleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
         this.cetteApplication = this.application;
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
             try {
-                this.start(detail);
+                await this.start(detail);
             } catch (error) {
-                console.error(`[${this.nomControlleur}] Erreur critique lors du démarrage :`, error);
+                console.error(`[${this.nomControleur}] Erreur critique lors du démarrage :`, error);
                 if (this.hasModalOutlet) this.modalOutlet.hide();
             }
         } else {
-            console.error(`[${this.nomControlleur}] L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !`);
+            console.error(`[${this.nomControleur}] L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !`);
             if (this.hasModalOutlet) this.modalOutlet.hide();
         }
     }
@@ -54,7 +54,7 @@ export default class extends BaseController {
      * @param {object} detail.entityFormCanvas - La configuration (canvas) du formulaire.
      * @param {object} detail.entity - L'entité à éditer, ou un objet vide pour une création.
      */
-    start(detail) {
+    async start(detail) {
         this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.isCreateMode = !(this.entity && this.entity.id);
@@ -64,7 +64,7 @@ export default class extends BaseController {
         this._logState('start', '1986', detail);
 
         // Charge le contenu complet depuis le serveur
-        this.loadContent();
+        await this.loadContent();
     }
 
 
@@ -111,12 +111,12 @@ export default class extends BaseController {
 
             // 5. On lance la requête avec l'URL finale correctement construite
             const finalUrl = url.pathname + url.search;
-            console.log(this.nomControlleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
+            console.log(this.nomControleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
 
-            const response = fetch(finalUrl);
+            const response = await fetch(finalUrl);
             if (!response.ok) throw new Error("Le contenu de la boîte de dialogue n'a pas pu être chargé.");
 
-            const html = response.text();
+            const html = await response.text();
 
             // On remplace tout le contenu de la modale par le HTML reçu.
             this.element.innerHTML = html;
@@ -170,8 +170,8 @@ export default class extends BaseController {
     /**
      * Gère la soumission du formulaire via AJAX.
      */
-    submitForm(event) {
-        console.log(this.nomControlleur + " - submitForm() - Code:1986");
+    async submitForm(event) {
+        console.log(this.nomControleur + " - submitForm() - Code:1986");
         event.preventDefault();
         this.toggleLoading(true);
         this.toggleProgressBar(true);
@@ -212,11 +212,11 @@ export default class extends BaseController {
         // console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
         // console.log(this.nomControlleur + " - Submit vers le serveur: " + this.entityFormCanvas.parametres.endpoint_submit_url, this.context);
         try {
-            const response = fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
+            const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
                 method: 'POST',
                 body: formData // On envoie l'objet FormData directement.
             });
-            const result = response.json();
+            const result = await response.json();
             if (!response.ok) throw result;
 
             this.showFeedback('success', result.message);
@@ -452,7 +452,7 @@ export default class extends BaseController {
                     isCreateMode = false;
                 }
             }
-            console.groupCollapsed(`${this.nomControlleur} - ${callingFunction}() - Code:${code}`);
+            console.groupCollapsed(`${this.nomControleur} - ${callingFunction}() - Code:${code}`);
             console.log(`| Mode:`, (isCreateMode) ? 'Création' : 'Édition');
             console.log(`| Entité:`, detail.entity);
             console.log(`| Contexte:`, detail.context);
