@@ -31,6 +31,9 @@ export default class extends BaseController {
         this.cetteApplication = this.application;
         this.elementDialogInstance = this.element;
 
+        this.boundHandleContentReady = this.handleContentReady.bind(this);
+        document.addEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
+
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
             try {
@@ -48,7 +51,9 @@ export default class extends BaseController {
     /**
      * La méthode disconnect est vide car le nettoyage est maintenant géré par le contrôleur 'modal'.
      */
-    disconnect() { }
+    disconnect() {
+        document.removeEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
+    }
 
     /**
      * Point d'entrée principal. Initialise les propriétés, affiche la coquille de la modale,
@@ -64,6 +69,7 @@ export default class extends BaseController {
         this.context = detail.context || {};
         this.parentContext = detail.parentContext || null;
         this.formTemplateHTML = detail.formTemplateHTML || null;
+        this.dialogId = detail.dialogId; // On stocke l'ID unique
         this._logState('start', '1986', detail);
 
         // Charge le contenu complet depuis le serveur
@@ -77,82 +83,76 @@ export default class extends BaseController {
      * Notifie le cerveau une fois le chargement terminé.
      * @private
      */
-    async loadContent() {
+    loadContent() {
         this._logState("loadContent", "1986", this.detail);
-        console.log(this.nomControleur + " - loadContent() - Code:1986 - this.entity:", this.entity);
+        console.log(`${this.nomControleur} - loadContent() - Demande de contenu pour ${this.dialogId}`);
         // NOUVEAU : On affiche le squelette de chargement pour une meilleure UX.
         this.elementDialogInstance.innerHTML = this._getSkeletonHtml();
-        try {
-            // 1. On commence avec l'URL de base
-            let urlString = this.entityFormCanvas.parametres.endpoint_form_url;
 
-            // 2. Si c'est une édition, on ajoute l'ID à l'URL
-            if (this.entity && this.entity.id) {
-                urlString += `/${this.entity.id}`;
-            }
+        // Prépare les informations pour la requête que le Cerveau va exécuter
+        const payload = {
+            dialogId: this.dialogId,
+            endpoint: this.entityFormCanvas.parametres.endpoint_form_url,
+            entity: this.entity,
+            context: this.context
+        };
 
-            // 3. On crée un objet URL pour gérer facilement les paramètres
-            const url = new URL(urlString, window.location.origin);
+        // Notifie le cerveau pour qu'il charge le contenu
+        this.notifyCerveau('ui:dialog.content-request', payload);
+    }
 
-            // 4. Si une valeur par défaut a été passée dans le contexte, on l'ajoute
-            if (this.context.defaultValue) {
-                url.searchParams.set(`default_${this.context.defaultValue.target}`, this.context.defaultValue.value);
-            }
+    /**
+     * NOUVEAU: Gère la réception du contenu HTML envoyé par le Cerveau.
+     * @param {CustomEvent} event 
+     */
+    handleContentReady(event) {
+        const { dialogId, html, error } = event.detail;
 
-            // MISSION 3 : Ajouter idEntreprise et idInvite au chargement du formulaire
-            if (this.context.idEntreprise) {
-                url.searchParams.set('idEntreprise', this.context.idEntreprise);
-            }
-            if (this.context.idInvite) {
-                url.searchParams.set('idInvite', this.context.idInvite);
-            }
-            // Note : idInvite n'est pas toujours nécessaire ici, mais on peut l'ajouter par cohérence.
+        // On s'assure que cet événement nous est bien destiné
+        if (dialogId !== this.dialogId) {
+            return;
+        }
 
-            // 5. On lance la requête avec l'URL finale correctement construite
-            const finalUrl = url.pathname + url.search;
-            console.log(this.nomControleur + " - Code: 1986 - URL de chargement du formulaire:" + finalUrl); // Pour débogage
+        console.log(`${this.nomControleur} - handleContentReady() - Contenu reçu pour ${this.dialogId}`);
 
-            const response = await fetch(finalUrl);
-            if (!response.ok) throw new Error("Le contenu de la boîte de dialogue n'a pas pu être chargé.");
-
-            const html = await response.text();
-
-            // On remplace tout le contenu de la modale par le HTML reçu.
-            this.elementDialogInstance.innerHTML = html;
-
-            // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
-            const form = this.elementDialogInstance.querySelector('form');
-            if (form) {
-                form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
-            }
-
-            const mainDialogElement = this.modalOutlet.element;
-
-            // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
-            const hasCalculatedAttrs = this.elementDialogInstance.querySelector('.calculated-attributes-list li');
-            if (hasCalculatedAttrs) {
-                mainDialogElement.classList.add('has-attributes-column');
-            } else {
-                mainDialogElement.classList.remove('has-attributes-column');
-            }
-
-            // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
-            this.notifyCerveau('ui:dialog.opened', {
-                mode: this.isCreateMode ? 'creation' : 'edition',
-                entity: this.entity
-            });
-
-            // On s'assure que la classe de mode édition est bien présente si nécessaire
-            if (!this.isCreateMode) {
-                mainDialogElement.classList.add('is-edit-mode');
-            }
-        } catch (error) {
+        if (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
             this.elementDialogInstance.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
-            // NOUVEAU : Notifier le cerveau de l'échec de chargement
+            // Notifier le cerveau de l'échec de chargement
             this.notifyCerveau('app:error.api', {
                 error: `Échec du chargement du formulaire: ${errorMessage}`
             });
+            return;
+        }
+
+        // On remplace tout le contenu de la modale par le HTML reçu.
+        this.elementDialogInstance.innerHTML = html;
+
+        // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
+        const form = this.elementDialogInstance.querySelector('form');
+        if (form) {
+            form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
+        }
+
+        const mainDialogElement = this.modalOutlet.element;
+
+        // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
+        const hasCalculatedAttrs = this.elementDialogInstance.querySelector('.calculated-attributes-list li');
+        if (hasCalculatedAttrs) {
+            mainDialogElement.classList.add('has-attributes-column');
+        } else {
+            mainDialogElement.classList.remove('has-attributes-column');
+        }
+
+        // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
+        this.notifyCerveau('ui:dialog.opened', {
+            mode: this.isCreateMode ? 'creation' : 'edition',
+            entity: this.entity
+        });
+
+        // On s'assure que la classe de mode édition est bien présente si nécessaire
+        if (!this.isCreateMode) {
+            mainDialogElement.classList.add('is-edit-mode');
         }
     }
 
@@ -161,9 +161,9 @@ export default class extends BaseController {
      * pour passer en mode édition sans fermer la modale.
      * @private
      */
-    async reloadView() {
+    reloadView() {
         this.modalOutlet.element.classList.add('is-edit-mode'); // Affiche la colonne de gauche
-        await this.loadContent(); // Recharge le formulaire et les attributs
+        this.loadContent(); // Redemande le contenu au Cerveau
     }
 
     /**

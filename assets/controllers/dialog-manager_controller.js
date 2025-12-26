@@ -72,6 +72,9 @@ export default class extends Controller {
     open(event) {
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [open] - Code: 99 - Début - Données:`, event.detail);
         const detail = event.detail;
+        // NOUVEAU: Générer un ID unique pour chaque instance de dialogue
+        detail.dialogId = `dialog-instance-${crypto.randomUUID()}`;
+
         console.groupCollapsed(`${this.nomControleur} - open - EDITDIAL(2)`);
         console.log(`| Mode: ${detail.isCreationMode ? 'Création' : 'Édition'}`);
         console.log('| Entité:', detail.entity);
@@ -86,6 +89,9 @@ export default class extends Controller {
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
         const modalElement = this.createModalElement();
         const instanceElement = modalElement.querySelector('[data-controller="dialog-instance"]');
+        // NOUVEAU: Assigner l'ID à l'élément pour un ciblage facile et pour le débogage
+        instanceElement.id = detail.dialogId;
+
         instanceElement.dialogDetail = event.detail; // On attache les données ici
 
         // On ajoute l'élément au body. Stimulus va maintenant le détecter et connecter le contrôleur.
