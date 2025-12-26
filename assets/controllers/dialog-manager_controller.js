@@ -48,7 +48,7 @@ export default class extends Controller {
      * Met en place l'écouteur d'événement global pour les demandes d'ouverture de dialogue.
      */
     connect() {
-        this.nomControlleur = "Dialogue-Manager";
+        this.nomControleur = "Dialogue-Manager";
         this.boundOpen = this.open.bind(this);
         // Écoute l'événement générique pour ouvrir N'IMPORTE QUEL dialogue
         document.addEventListener('app:boite-dialogue:init-request', this.boundOpen);
@@ -72,7 +72,7 @@ export default class extends Controller {
     open(event) {
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [open] - Code: 99 - Début - Données:`, event.detail);
         const detail = event.detail;
-        console.groupCollapsed(`${this.nomControlleur} - open - EDITDIAL(2)`);
+        console.groupCollapsed(`${this.nomControleur} - open - EDITDIAL(2)`);
         console.log(`| Mode: ${detail.isCreationMode ? 'Création' : 'Édition'}`);
         console.log('| Entité:', detail.entity);
         console.log('| Contexte:', detail.context);
@@ -80,7 +80,7 @@ export default class extends Controller {
         console.groupEnd();
 
         if (!detail || !detail.entityFormCanvas) {
-            console.error(`[${this.nomControlleur}] Échec de l'ouverture: le payload est invalide ou 'entityFormCanvas' est manquant.`, detail);
+            console.error(`[${this.nomControleur}] Échec de l'ouverture: le payload est invalide ou 'entityFormCanvas' est manquant.`, detail);
             return;
         }
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
