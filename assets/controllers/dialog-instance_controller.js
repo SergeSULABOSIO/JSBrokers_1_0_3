@@ -53,7 +53,7 @@ export default class extends BaseController {
      * @param {object} detail.entityFormCanvas - La configuration (canvas) du formulaire.
      * @param {object} detail.entity - L'entité à éditer, ou un objet vide pour une création.
      */
-    async start(detail) {
+    start(detail) {
         this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.isCreateMode = !(this.entity && this.entity.id);
@@ -63,7 +63,7 @@ export default class extends BaseController {
         this._logState('start', '1986', detail);
 
         // Charge le contenu complet depuis le serveur
-        await this.loadContent();
+        this.loadContent();
     }
 
 
