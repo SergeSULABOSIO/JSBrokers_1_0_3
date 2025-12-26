@@ -587,25 +587,30 @@ textarea:hover,
  SECTION: SQUELETTE DE CHARGEMENT POUR LES LISTES
 ===================================================================
 */
-
-.skeleton-row {
-    height: 50px; /* Hauteur approximative d'une ligne */
+ 
+/* --- NOUVEAU : Style de base pour tous les éléments squelette --- */
+.skeleton-row,
+.skeleton-line {
     background-color: #dee2e6; /* Fond gris un peu plus foncé */
     border-radius: 4px;
     position: relative;
     overflow: hidden; /* Important pour l'animation */
 }
 
-/* L'animation de balayage */
-.skeleton-row::after {
+.skeleton-row {
+    height: 50px; /* Hauteur approximative d'une ligne */
+}
+
+/* --- NOUVEAU : Animation de balayage appliquée à tous les squelettes --- */
+.skeleton-row::after,
+.skeleton-line::after {
     content: '';
     position: absolute;
     top: 0;
-    left: 0; /* On le positionne au début de la ligne */
+    left: 0;
     width: 150%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    /* On remplace l'animation 'left' par une animation 'transform' */
     animation: skeleton-sweep-transform 1.5s infinite;
 }
 
