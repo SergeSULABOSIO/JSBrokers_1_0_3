@@ -13,7 +13,7 @@
  * @extends Controller
  * @description Gère une instance unique et éphémère de boîte de dialogue.
  */
-export default class extends BaseController {
+export default class extends Controller {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = ['modal'];
 
