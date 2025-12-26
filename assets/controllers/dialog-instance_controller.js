@@ -16,7 +16,7 @@ import BaseController from './base_controller.js';
  */
 export default class extends BaseController {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
-    // static outlets = [ 'modal' ];
+    static outlets = [ 'modal' ];
 
     /**
      * Méthode du cycle de vie de Stimulus.
