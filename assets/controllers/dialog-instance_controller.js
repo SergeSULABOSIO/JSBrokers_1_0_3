@@ -1,4 +1,3 @@
-import BaseController from './base_controller.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'dialog-instance'.
@@ -164,6 +163,18 @@ export default class extends BaseController {
     reloadView() {
         this.modalOutlet.element.classList.add('is-edit-mode'); // Affiche la colonne de gauche
         this.loadContent(); // Redemande le contenu au Cerveau
+    }
+
+    /**
+     * Notifie le Cerveau en envoyant un événement personnalisé.
+     * @param {string} type - Le type d'événement pour le Cerveau (ex: 'ui:selection.updated').
+     * @param {object} [payload={}] - Données additionnelles à envoyer.
+     */
+    notifyCerveau(type, payload = {}) {
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true, detail: { type, source: this.nomControleur || 'Unknown', payload, timestamp: Date.now() }
+        });
+        this.elementDialogInstance.dispatchEvent(event);
     }
 
     /**
