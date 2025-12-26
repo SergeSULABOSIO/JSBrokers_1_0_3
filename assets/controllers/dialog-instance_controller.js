@@ -16,7 +16,7 @@ import BaseController from './base_controller.js';
  */
 export default class extends BaseController {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
-    static outlets = [ 'modal' ];
+    static outlets = ['modal'];
 
     /**
      * Méthode du cycle de vie de Stimulus.
@@ -30,11 +30,12 @@ export default class extends BaseController {
         this.cetteApplication = this.application;
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
-            this.start(detail).catch(error => {
+            try {
+                this.start(detail);
+            } catch (error) {
                 console.error(`[${this.nomControlleur}] Erreur critique lors du démarrage :`, error);
-                // Si une erreur se produit, on demande au contrôleur modal de se fermer et de se détruire.
                 if (this.hasModalOutlet) this.modalOutlet.hide();
-            });
+            }
         } else {
             console.error(`[${this.nomControlleur}] L'instance de dialogue s'est connectée sans recevoir de données d'initialisation !`);
             if (this.hasModalOutlet) this.modalOutlet.hide();
@@ -116,7 +117,7 @@ export default class extends BaseController {
             if (!response.ok) throw new Error("Le contenu de la boîte de dialogue n'a pas pu être chargé.");
 
             const html = await response.text();
-            
+
             // On remplace tout le contenu de la modale par le HTML reçu.
             this.element.innerHTML = html;
 
@@ -207,7 +208,7 @@ export default class extends BaseController {
         if (this.parentContext && this.parentContext.id && this.parentContext.fieldName) {
             formData.append(this.parentContext.fieldName, this.parentContext.id);
         }
-        
+
         // console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
         // console.log(this.nomControlleur + " - Submit vers le serveur: " + this.entityFormCanvas.parametres.endpoint_submit_url, this.context);
         try {
