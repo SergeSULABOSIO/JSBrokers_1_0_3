@@ -678,7 +678,6 @@ textarea:hover,
 .modal-body-split {
     display: flex;
     flex-grow: 1;
-    overflow: hidden;
     background-color: #f0f0f0;
 }
 
@@ -747,6 +746,49 @@ textarea:hover,
     flex-grow: 1;
     padding: 1.5rem;
     overflow-y: auto;
+}
+
+/*
+===================================================================
+ SECTION: STYLE POUR LES BARRES DE DÉFILEMENT DES COLONNES DE DIALOGUE
+===================================================================
+*/
+
+/* --- Pour Firefox --- */
+.form-column {
+    scrollbar-width: thin;
+    scrollbar-color: #adb5bd #f0f0f0; /* thumb track */
+}
+.calculated-attributes-column {
+    scrollbar-color: #6c757d #212529; /* thumb track */
+}
+
+/* --- Pour les navigateurs Webkit (Chrome, Safari, Edge) --- */
+.form-column::-webkit-scrollbar,
+.calculated-attributes-column::-webkit-scrollbar {
+    width: 8px;
+}
+
+.form-column::-webkit-scrollbar-track,
+.calculated-attributes-column::-webkit-scrollbar-track {
+    background: transparent; /* Le fond de la piste est transparent pour se fondre */
+}
+
+.form-column::-webkit-scrollbar-thumb {
+    background-color: #adb5bd; /* Couleur du curseur, gris moyen */
+    border-radius: 4px;
+    border: 2px solid #f0f0f0; /* Crée un effet de "flottement" avec la couleur de fond de la colonne */
+}
+
+.calculated-attributes-column::-webkit-scrollbar-thumb {
+    background-color: #6c757d; /* Un gris plus visible sur le fond sombre */
+    border-radius: 4px;
+    border: 2px solid #212529; /* Couleur de fond de la colonne de gauche */
+}
+
+.form-column::-webkit-scrollbar-thumb:hover,
+.calculated-attributes-column::-webkit-scrollbar-thumb:hover {
+    background-color: #495057; /* Plus foncé au survol pour les deux */
 }
 
 /*
