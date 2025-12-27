@@ -61,7 +61,7 @@ export default class extends Controller {
      * @param {object} detail.entityFormCanvas - La configuration (canvas) du formulaire.
      * @param {object} detail.entity - L'entité à éditer, ou un objet vide pour une création.
      */
-    async start(detail) {
+    start(detail) {
         this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
         this.isCreateMode = !(this.entity && this.entity.id);
@@ -280,6 +280,7 @@ export default class extends Controller {
     _getSkeletonHtml() {
         return `
             <div class="modal-header">
+                <h5 class="modal-title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5>
                 <button type="button" class="btn-close btn-close-white" disabled></button>
             </div>
             <div class="dialog-progress-container is-loading">
@@ -287,19 +288,26 @@ export default class extends Controller {
             </div>
             <div class="modal-body-split">
                 <div class="calculated-attributes-column">
-                    <div class="skeleton-line" style="height: 40px;"></div>
-                    <div class="skeleton-line" style="height: 40px;"></div>
+                    <div class="skeleton-line mb-4" style="width: 70%; height: 20px;"></div>
+                    <div class="skeleton-line mb-3" style="width: 90%;"></div>
+                    <div class="skeleton-line mb-3" style="width: 80%;"></div>
+                    <div class="skeleton-line" style="width: 85%;"></div>
                 </div>
-                <div class="form-column">
-                    <div class="skeleton-line" style="width: 100%; height: 40px; margin: 2px">Veuillez patienter svp...</div>
-                    <div class="skeleton-line" style="width: 100%; height: 40px; padding: 5px; margin: 2px;"></div>
-                    <div class="skeleton-line" style="width: 100%; height: 40px; padding: 5px; margin: 2px;"></div>
-                    <div class="skeleton-line" style="width: 100%; height: 40px; padding: 5px; margin: 2px;"></div>
+                <div class="form-column p-4">
+                    <div class="text-center text-muted mb-4">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ms-2">Chargement du formulaire, veuillez patienter...</span>
+                    </div>
+                    <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
+                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                    <div class="skeleton-line mb-4" style="width: 50%; height: 14px;"></div>
+                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                    <div class="skeleton-line" style="height: 80px;"></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="skeleton-line" style="width: 120px; height: 40px; border-radius: var(--bs-border-radius);"></div>
-                <div class="skeleton-line" style="width: 120px; height: 40px; border-radius: var(--bs-border-radius);"></div>
+                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
             </div>
         `;
     }
