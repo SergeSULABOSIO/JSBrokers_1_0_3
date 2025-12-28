@@ -6665,118 +6665,122 @@ class Constante
     public function getEntityFormCanvas($object, $idEntreprise): array
     {
         $isParentNew = ($object->getId() === null);
-        if ($object instanceof NotificationSinistre) {
-            // L'ID est nécessaire pour construire les endpoints, assurons-nous qu'il est accessible.
-            // En mode création, l'ID sera null, nous gérerons ce cas côté client.
-            $notificationId = $object->getId() ?? 0;
+        $entityClassName = get_class($object);
+        $layout = [];
+        $parametres = [];
 
-            return [
-                "parametres" => [
+        switch ($entityClassName) {
+            case NotificationSinistre::class:
+                $notificationId = $object->getId() ?? 0;
+                $parametres = [
                     "titre_creation" => "Nouvelle Notification de Sinistre",
                     "titre_modification" => "Modification de la Notification #%id%",
                     "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
-                    "endpoint_delete_url" => "/admin/notificationsinistre/api/delete", // AJOUT DE L'URL DE SUPPRESSION
+                    "endpoint_delete_url" => "/admin/notificationsinistre/api/delete",
                     "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildNotificationSinistreLayout($notificationId, $isParentNew)
-            ];
-        }
-        if ($object instanceof Contact) {
-            // L'ID est nécessaire pour construire les endpoints, assurons-nous qu'il est accessible.
-            // En mode création, l'ID sera null, nous gérerons ce cas côté client.
-            $contactId = $object->getId() ?? 0;
-            return [
-                "parametres" => [
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildNotificationSinistreLayout($notificationId, $isParentNew);
+                break;
+
+            case Contact::class:
+                $contactId = $object->getId() ?? 0;
+                $parametres = [
                     "titre_creation" => "Nouveau contact",
                     "titre_modification" => "Modification du contact #%id%",
                     "endpoint_submit_url" => "/admin/contact/api/submit",
                     "endpoint_form_url" => "/admin/contact/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildContactLayout($contactId, $isParentNew)
-            ];
-        }
-        if ($object instanceof PieceSinistre) {
-            $pieceId = $object->getId() ?? 0;
-            return [
-                "parametres" => [
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildContactLayout($contactId, $isParentNew);
+                break;
+
+            case PieceSinistre::class:
+                $pieceId = $object->getId() ?? 0;
+                $parametres = [
                     "titre_creation" => "Nouvelle pièce",
                     "titre_modification" => "Modification de la pièce #%id%",
                     "endpoint_submit_url" => "/admin/piecesinistre/api/submit",
                     "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildPieceSinistreLayout($pieceId, $isParentNew)
-            ];
-        }
-        if ($object instanceof Document) {
-            $documentId = $object->getId() ?? 0;
-            return [
-                "parametres" => [
-                    "titre_creation" => "Nouvelle Document",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildPieceSinistreLayout($pieceId, $isParentNew);
+                break;
+
+            case Document::class:
+                $documentId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Document",
                     "titre_modification" => "Modification du document #%id%",
                     "endpoint_submit_url" => "/admin/document/api/submit",
                     "endpoint_form_url" => "/admin/document/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildDocumentLayout($documentId, $isParentNew)
-            ];
-        }
-        if ($object instanceof OffreIndemnisationSinistre) {
-            $offreId = $object->getId() ?? 0;
-            return [
-                "parametres" => [
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildDocumentLayout($documentId, $isParentNew);
+                break;
+
+            case OffreIndemnisationSinistre::class:
+                $offreId = $object->getId() ?? 0;
+                $parametres = [
                     "titre_creation" => "Nouvelle offre d'indemnisation",
                     "titre_modification" => "Modification de l'offre #%id%",
                     "endpoint_submit_url" => "/admin/offreindemnisation/api/submit",
                     "endpoint_form_url" => "/admin/offreindemnisation/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildOffreIndemnisationLayout($offreId, $isParentNew)
-            ];
-        }
-        if ($object instanceof Tache) {
-            $tacheId = $object->getId() ?? 0; // On récupère l'ID de la tâche parente
-            return [
-                "parametres" => [
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildOffreIndemnisationLayout($offreId, $isParentNew);
+                break;
+
+            case Tache::class:
+                $tacheId = $object->getId() ?? 0;
+                $parametres = [
                     "titre_creation" => "Nouvelle tâche",
                     "titre_modification" => "Modification de la tâche #%id%",
                     "endpoint_submit_url" => "/admin/tache/api/submit",
                     "endpoint_form_url" => "/admin/tache/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildTacheLayout($tacheId, $isParentNew)
-            ];
-        }
-        if ($object instanceof Paiement) {
-            $paiementId = $object->getId() ?? 0; // On récupère l'ID de la tâche parente
-            return [
-                "parametres" => [
-                    "titre_creation" => "Nouvau Paiement",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildTacheLayout($tacheId, $isParentNew);
+                break;
+
+            case Paiement::class:
+                $paiementId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Paiement",
                     "titre_modification" => "Modification du paiement #%id%",
                     "endpoint_submit_url" => "/admin/paiement/api/submit",
                     "endpoint_form_url" => "/admin/paiement/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildPaiementLayout($paiementId, $isParentNew)
-            ];
-        }
-        if ($object instanceof Feedback) {
-            $feedbackId = $object->getId() ?? 0;
-            return [
-                "parametres" => [
-                    "titre_creation" => "Nouvau Feedback",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildPaiementLayout($paiementId, $isParentNew);
+                break;
+
+            case Feedback::class:
+                $feedbackId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Feedback",
                     "titre_modification" => "Modification du feedback #%id%",
                     "endpoint_submit_url" => "/admin/feedback/api/submit",
                     "endpoint_form_url" => "/admin/feedback/api/get-form",
-                    "isCreationMode" => ($isParentNew === true)
-                ],
-                "form_layout" => $this->buildFeedbackLayout($feedbackId, $isParentNew)
-            ];
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildFeedbackLayout($feedbackId, $isParentNew);
+                break;
+
+            default:
+                return [];
         }
 
-        return [];
+        // Si aucune configuration n'a été trouvée, on retourne un tableau vide.
+        if (empty($parametres) && empty($layout)) {
+            return [];
+        }
+
+        return [
+            "parametres" => $parametres,
+            "form_layout" => $layout,
+            "fields_map" => $this->buildFieldsMap($layout) // Ajout de la carte des champs pour un accès optimisé
+        ];
     }
 
     /**
@@ -6999,6 +7003,35 @@ class Constante
         return $config;
     }
 
+    /**
+     * NOUVEAU : Construit une carte "aplatie" des champs du formulaire pour un accès direct.
+     *
+     * @param array $formLayout La structure hiérarchique du layout.
+     * @return array Une carte où les clés sont les 'field_code' et les valeurs sont la configuration du champ.
+     */
+    private function buildFieldsMap(array $formLayout): array
+    {
+        $fieldsMap = [];
+        if (empty($formLayout)) {
+            return $fieldsMap;
+        }
+
+        foreach ($formLayout as $row) {
+            if (!isset($row['colonnes']) || !is_array($row['colonnes'])) continue;
+
+            foreach ($row['colonnes'] as $col) {
+                // La colonne peut contenir directement un champ ou un tableau de champs
+                $fields = $col['champs'] ?? (is_array($col) ? [$col] : []);
+
+                foreach ($fields as $field) {
+                    if (is_array($field) && isset($field['field_code'])) {
+                        $fieldsMap[$field['field_code']] = $field;
+                    }
+                }
+            }
+        }
+        return $fieldsMap;
+    }
 
 
     // ================================================================== //
