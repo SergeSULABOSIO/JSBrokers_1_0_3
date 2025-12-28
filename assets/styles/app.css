@@ -434,7 +434,6 @@ textarea:hover,
 }
 
 .app-dialog .modal-content,
-.app-dialog .modal-content form,
 #confirmation-dialog-modal .modal-content {
     width: 100%;
     display: flex;
