@@ -31,9 +31,9 @@ export default class extends Controller {
         >
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
-                    <div data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
-                        <div data-dialog-instance-target="content">
-                            <div class="modal-body text-center p-5 align-items-center justify-content-center" style="min-height: 100px;">
+                    <div data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal" class="d-flex flex-column flex-grow-1">
+                        <div data-dialog-instance-target="content" class="d-flex flex-column flex-grow-1">
+                            <div class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 100px;">
                                 <div class="spinner-border" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
