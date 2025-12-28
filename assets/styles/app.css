@@ -426,37 +426,10 @@ textarea:hover,
 ===================================================================
 */
 
-/* 1. MISE EN PAGE FLEXBOX (POUR TOUS LES DIALOGUES) */
-.app-dialog .modal-dialog,
-#confirmation-dialog-modal .modal-dialog {
-    display: flex;
-    max-height: 90vh;
-}
-
-.app-dialog .modal-content,
-#confirmation-dialog-modal .modal-content {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    min-height: 0; /* CRUCIAL: Permet au conteneur de se réduire pour que le défilement interne fonctionne. */
-}
-
-.app-dialog .modal-content {
-    border-radius: 15px;
-    border: none;
-}
-
-/* 2. COULEURS DES SECTIONS */
 .app-dialog .modal-header {
-    background-color: #343a40; /* Gris foncé par défaut */
-    color: white;
     border-bottom: none;
     padding: 1.2rem 1.5rem;
     flex-shrink: 0;
-}
-.app-dialog .modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 #confirmation-dialog-modal .modal-header {
