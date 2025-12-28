@@ -98,11 +98,24 @@ trait ControllerUtilsTrait
      * @param string $collectionFieldName Le 'field_code' du widget de collection à trouver.
      * @return array Les options trouvées, ou un tableau vide.
      */
-    private function getCollectionOptionsFromCanvas(array $entityFormCanvas, string $collectionFieldName): array
-    {
+    private function getCollectionOptionsFromCanvas(array $entityFormCanvas, string $collectionFieldName): array {
+        // OPTIMISATION : On vérifie d'abord si une carte aplatie des champs existe.
+        // Cette carte est générée dans le service Constante.php pour de meilleures performances.
+        if (isset($entityFormCanvas['fields_map'][$collectionFieldName])) {
+            $fieldConfig = $entityFormCanvas['fields_map'][$collectionFieldName];
+            // On s'assure que le champ trouvé est bien un widget de collection
+            if (($fieldConfig['widget'] ?? null) === 'collection') {
+                return $fieldConfig['options'] ?? [];
+            }
+        }
+
+        // Fallback : Si la carte n'existe pas ou si le champ n'est pas une collection,
+        // on utilise l'ancienne méthode de recherche pour assurer la rétrocompatibilité.
         foreach (($entityFormCanvas['form_layout'] ?? []) as $row) {
             foreach (($row['colonnes'] ?? []) as $col) {
-                foreach (($col['champs'] ?? []) as $field) {
+                // La colonne peut contenir directement un champ ou un tableau de champs
+                $champs = $col['champs'] ?? (is_array($col) ? [$col] : []);
+                foreach ($champs as $field) {
                     if (is_array($field) && ($field['widget'] ?? null) === 'collection' && ($field['field_code'] ?? null) === $collectionFieldName) {
                         return $field['options'] ?? [];
                     }
