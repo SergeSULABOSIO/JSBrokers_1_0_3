@@ -1,4 +1,5 @@
 {# templates/components/dialog/_form_content.html.twig #}
+{% form_theme form 'themes/_collection_widget.html.twig' %}
 {% set title = isCreationMode
     ? formCanvas.parametres.titre_creation
     : formCanvas.parametres.titre_modification|replace({'%id%': entity.id})
@@ -19,9 +20,32 @@
     </div>
 
     <div class="form-column">
-        <form name="{{ form.vars.name }}" method="post">
+        {{ form_start(form) }}
+        {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
+            {# Pour chaque ligne définie dans la configuration du layout... #}
+            {% for row in formCanvas.form_layout %}
+                <div class="row gx-3 {{ (row.couleur_fond is defined and row.couleur_fond) ? 'form-row-colored' : '' }}" style="{{ (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' }}">
+                    {% set col_class = 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
+                    {% for col in row.colonnes %}
+                        <div class="{{ col_class }}">
+                            {% set champs_list = col.champs is defined ? col.champs : [col] %}
+                            {% for field in champs_list %}
+                                {% if field is mapping and field.widget is defined and field.widget == 'collection' %}
+                                    {% set field_code = field.field_code %}
+                                    {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}{% endif %}
+                                {% else %}
+                                    {% set field_code = (field is mapping and field.field_code is defined) ? field.field_code : field %}
+                                    {% if form[field_code] is defined %}{{ form_row(form[field_code], {'manager_options': field.options|default({}) }) }}{% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
             {{ form_widget(form) }}
-        </form>
+        {% endif %}
+        {{ form_end(form, {'render_rest': false}) }}
     </div>
 </div>
 
