@@ -25,8 +25,7 @@ export default class extends Controller {
      */
     connect() {
         this.nomControleur = "Dialog-Instance";
-        this.elementDialogInstance = this.element;
-        const detail = this.elementDialogInstance.dialogDetail;
+        const detail = this.element.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail);
         this.cetteApplication = this.application;
 
@@ -86,7 +85,7 @@ export default class extends Controller {
         this._logState("loadContent", "1986", this.detail);
         console.log(`${this.nomControleur} - loadContent() - Demande de contenu pour ${this.dialogId}`);
         // NOUVEAU : On affiche le squelette de chargement pour une meilleure UX.
-        this.elementDialogInstance.innerHTML = this._getSkeletonHtml();
+        this.element.innerHTML = this._getSkeletonHtml();
 
         // Prépare les informations pour la requête que le Cerveau va exécuter
         const payload = {
@@ -116,7 +115,7 @@ export default class extends Controller {
 
         if (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
-            this.elementDialogInstance.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
+            this.element.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
             // Notifier le cerveau de l'échec de chargement
             this.notifyCerveau('app:error.api', {
                 error: `Échec du chargement du formulaire: ${errorMessage}`
@@ -125,10 +124,10 @@ export default class extends Controller {
         }
 
         // On remplace tout le contenu de la modale par le HTML reçu.
-        this.elementDialogInstance.innerHTML = html;
+        this.element.innerHTML = html;
 
         // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
-        const form = this.elementDialogInstance.querySelector('form');
+        const form = this.element.querySelector('form');
         if (form) {
             form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
         }
@@ -136,7 +135,7 @@ export default class extends Controller {
         const mainDialogElement = this.modalOutlet.element;
 
         // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
-        const hasCalculatedAttrs = this.elementDialogInstance.querySelector('.calculated-attributes-list li');
+        const hasCalculatedAttrs = this.element.querySelector('.calculated-attributes-list li');
         if (hasCalculatedAttrs) {
             mainDialogElement.classList.add('has-attributes-column');
         } else {
@@ -174,7 +173,7 @@ export default class extends Controller {
         const event = new CustomEvent('cerveau:event', {
             bubbles: true, detail: { type, source: this.nomControleur || 'Unknown', payload, timestamp: Date.now() }
         });
-        this.elementDialogInstance.dispatchEvent(event);
+        this.element.dispatchEvent(event);
     }
 
     /**
@@ -318,7 +317,7 @@ export default class extends Controller {
      * @param {string} message - Le message à afficher.
      */
     showFeedback(type, message) {
-        const feedbackContainer = this.elementDialogInstance.querySelector('.feedback-container');
+        const feedbackContainer = this.element.querySelector('.feedback-container');
         if (!feedbackContainer) return;
 
         // On formate la date et l'heure actuelles [cite: 7, 8]
@@ -357,9 +356,9 @@ export default class extends Controller {
      */
     displayErrors(errors) {
         // --- CORRECTION : S'assurer que la cible du feedback est définie ---
-        this.feedbackContainer = this.elementDialogInstance.querySelector('.feedback-container');
+        this.feedbackContainer = this.element.querySelector('.feedback-container');
 
-        const form = this.elementDialogInstance.querySelector('form');
+        const form = this.element.querySelector('form');
         for (const [fieldName, messages] of Object.entries(errors)) {
             // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
             if (fieldName === '') {
@@ -405,8 +404,7 @@ export default class extends Controller {
      */
     toggleLoading(isLoading) {
         // On cherche le bouton manuellement juste quand on en a besoin
-        // const button = this.element.querySelector('button[type="submit"]');
-        const button = this.elementDialogInstance.querySelector('[data-action*="#triggerSubmit"]');
+        const button = this.element.querySelector('[data-action*="#triggerSubmit"]');
 
         if (!button) return;
         button.disabled = isLoading;
@@ -426,7 +424,7 @@ export default class extends Controller {
             text.textContent = 'Enregistrer';
         }
         // --- AJOUT : Gère les autres boutons (Fermer, X) ---
-        const closeButtons = this.elementDialogInstance.querySelectorAll('[data-action*="#close"]');
+        const closeButtons = this.element.querySelectorAll('[data-action*="#close"]');
         closeButtons.forEach(btn => {
             btn.disabled = isLoading;
         });
@@ -438,7 +436,7 @@ export default class extends Controller {
      */
     toggleProgressBar(isLoading) {
         // On cherche le conteneur de la barre manuellement
-        const progressBarContainer = this.elementDialogInstance.querySelector('.dialog-progress-container');
+        const progressBarContainer = this.element.querySelector('.dialog-progress-container');
         if (progressBarContainer) {
             progressBarContainer.classList.toggle('is-loading', isLoading);
         }
@@ -448,7 +446,7 @@ export default class extends Controller {
      * Déclenche manuellement la soumission du formulaire interne.
      */
     triggerSubmit() {
-        const form = this.elementDialogInstance.querySelector('form');
+        const form = this.element.querySelector('form');
         if (form) {
             form.requestSubmit();
         }

@@ -30,10 +30,12 @@ export default class extends Controller {
             data-bs-keyboard="false"
         >
             <div class="modal-dialog modal-xl">
-                <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
-                    <div class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 300px;">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                <div class="modal-content">
+                    <div data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal" class="d-flex flex-column h-100">
+                        <div class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 300px;">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -86,7 +88,7 @@ export default class extends Controller {
         }
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
         const modalElement = this.createModalElement();
-        const instanceElement = modalElement.querySelector('.modal-content');
+        const instanceElement = modalElement.querySelector('[data-controller="dialog-instance"]');
         // NOUVEAU: Assigner l'ID à l'élément pour un ciblage facile et pour le débogage
         instanceElement.id = detail.dialogId;
 
