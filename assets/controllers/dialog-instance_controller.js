@@ -16,7 +16,10 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = ['modal'];
-    static targets = ['content'];
+    static targets = [
+        'content'
+    ];
+    
 
     /**
      * Méthode du cycle de vie de Stimulus.
@@ -27,7 +30,7 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "Dialog-Instance";
         const detail = this.element.dialogDetail;
-        console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail);
+        console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail, this.element, this.contentTarget);
         this.cetteApplication = this.application;
 
         this.boundHandleContentReady = this.handleContentReady.bind(this);
@@ -62,15 +65,15 @@ export default class extends Controller {
      * @param {object} detail.entity - L'entité à éditer, ou un objet vide pour une création.
      */
     start(detail) {
+        this.dialogId = detail.dialogId; // On stocke l'ID unique
         this.entityFormCanvas = detail.entityFormCanvas;
         this.entity = detail.entity;
+        this.userContext = detail.context || {}; //La variable context fourni à ce controlleur l'ID de l'entreprise et l'ID de l'invité
         this.isCreateMode = !(this.entity && this.entity.id);
-        this.context = detail.context || {};
         this.parentContext = detail.parentContext || null;
         this.formTemplateHTML = detail.formTemplateHTML || null;
-        this.dialogId = detail.dialogId; // On stocke l'ID unique
         this._logState('start', '1986', detail);
-
+        console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [start] - Code: 1986 - Start - Context:`, detail.context, this.context);
         // Charge le contenu complet depuis le serveur
         this.loadContent();
     }
