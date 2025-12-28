@@ -440,6 +440,7 @@ textarea:hover,
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    min-height: 0; /* CRUCIAL: Permet au conteneur de se réduire pour que le défilement interne fonctionne. */
 }
 
 .app-dialog .modal-content {
