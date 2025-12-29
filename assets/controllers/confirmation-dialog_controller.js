@@ -37,19 +37,14 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     handleCerveauEvent(event) {
-        console.log(this.nomControleur + " - Code: 1986 - handleCerveauEvent - ConfirmationDialogController", event.detail);
-        const { type } = event.detail.onConfirm;
-        switch (type) {
-            case 'app:api.delete-request':
-                this.open(event.detail);
-                break;
-            // case 'ui:confirmation.request':
-            //     this.open(event.detail);
-            //     break;
-            case 'app:error.api':
-                // Si une erreur API survient pendant que la confirmation est en attente, on arrête le chargement.
-                if (this.confirmButtonTarget.disabled) {
-                    this.handleError(event.detail);
+         // On filtre en fonction du type d'événement global, pas du payload.
+        switch (event.type) {
+            case 'ui:confirmation.request':
+                // On vérifie que le payload est correct avant de l'utiliser.
+                if (event.detail && event.detail.onConfirm) {
+                    this.open(event.detail);
+                } else {
+                    console.error(`[${this.nomControleur}] Demande de confirmation reçue avec un payload invalide.`, event.detail);
                 }
                 break;
             case 'ui:confirmation.error': // NOUVEAU : Gère l'erreur spécifique de confirmation

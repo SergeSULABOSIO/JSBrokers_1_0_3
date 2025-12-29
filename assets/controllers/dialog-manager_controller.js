@@ -90,9 +90,18 @@ export default class extends Controller {
         }
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
         const modalElement = this.createModalElement();
+
+        // NOUVEAU : On rend la liaison entre l'instance et sa modale parente infaillible
+        // en utilisant des ID uniques pour éviter toute ambiguïté potentielle.
+        const modalId = `modal-container-${detail.dialogId}`;
+        modalElement.id = modalId;
+
         const instanceElement = modalElement.querySelector('[data-controller="dialog-instance"]');
         // NOUVEAU: Assigner l'ID à l'élément pour un ciblage facile et pour le débogage
         instanceElement.id = detail.dialogId;
+
+        // On met à jour l'outlet pour qu'il cible l'ID unique de sa modale parente.
+        instanceElement.setAttribute('data-dialog-instance-modal-outlet', `#${modalId}`);
 
         instanceElement.dialogDetail = event.detail; // On attache les données ici
 
