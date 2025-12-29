@@ -1190,6 +1190,17 @@ textarea:hover,
     opacity: 1; /* Rendu visible */
 }
 
+/* NOUVEAU : L'icône à l'intérieur du bouton d'action.
+   On utilise stroke-width pour un effet "gras" sur les icônes SVG. */
+.list-row-actions-container .btn .ux-icon {
+    stroke-width: 2; /* Largeur de trait par défaut pour les icônes Lucide */
+    transition: stroke-width 0.15s ease-in-out;
+}
+
+.list-row-actions-container .btn:hover .ux-icon {
+    stroke-width: 2.5; /* Trait plus épais pour un effet "gras" au survol */
+}
+
 /* ================================================================== */
 /* NOUVEAU : Style pour le formulaire de recherche avancée          */
 /* ================================================================== */
