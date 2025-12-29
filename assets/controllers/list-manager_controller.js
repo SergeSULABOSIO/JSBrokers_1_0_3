@@ -58,10 +58,14 @@ export default class extends BaseController {
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.addEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
 
-        if (this.nbElementsValue === 0) {
-            this.listContainerTarget.classList.add('d-none');
-            this.emptyStateContainerTarget.classList.remove('d-none');
-            this._logDebug("Liste initialisée vide par le serveur. Affichage de l'état vide.");
+        // CORRECTION : On se base sur la présence réelle de lignes dans le DOM,
+        // et non plus sur la valeur 'nbelements'. C'est plus robuste et cohérent
+        // avec la logique de handleListRefreshed.
+        const hasRows = this.donneesTarget.querySelector('tr') !== null;
+        this.listContainerTarget.classList.toggle('d-none', !hasRows);
+        this.emptyStateContainerTarget.classList.toggle('d-none', hasRows);
+        if (!hasRows) {
+            this._logDebug("Liste initialisée vide. Affichage de l'état vide.");
         }
     }
 
