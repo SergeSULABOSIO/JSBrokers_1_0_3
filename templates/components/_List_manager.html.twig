@@ -45,13 +45,19 @@
                                 <div class='d-flex justify-content-end text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
                             </th>
                         {% endfor %}
+                        {# NOUVEAU : Colonne d'actions pour les collections dans un dialogue #}
+                        {% if usage is defined and usage == 'dialog' %}
+                            <th scope="col" style="width: 100px;" class="text-end pe-4">
+                                <div class='d-flex justify-content-end text-secondary m-2'>Actions</div>
+                            </th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody class="table-group-divider context-target" data-list-manager-target="donnees">
                     {# MODIFICATION : On rend les lignes directement côté serveur si des données sont passées.
                        Le contrôleur JS ne chargera les données que lors d'une recherche/refresh. #}
                     {% for entity in data %}
-                        {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas, 'entite_nom': entite_nom, 'entityCanvas': entityCanvas }) }}
+                        {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas, 'entite_nom': entite_nom, 'entityCanvas': entityCanvas, 'usage': usage|default('generic') }) }}
                     {% endfor %}
                 </tbody>
             </table>
