@@ -183,6 +183,7 @@ trait ControllerUtilsTrait
             'listId' => $listId, // NOUVEAU : ID unique pour le contrôleur list-manager.
             'can_add' => true, // On autorise l'ajout pour les listes de collection
             'data' => $data,
+            'usage' => $usage,
             'entite_nom' => $this->getEntityName($entityClass),
             'listeCanvas' => $this->constante->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
