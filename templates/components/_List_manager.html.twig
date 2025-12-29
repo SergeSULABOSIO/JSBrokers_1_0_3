@@ -57,18 +57,18 @@
             </table>
         </div>
         <div data-list-manager-target="emptyStateContainer" class="d-none h-100">
-            {% if customAddAction is defined %}
-                {# CAS : État vide pour une collection dans un dialogue. #}
+            {% if usage is defined and usage == 'dialog' %}
+                {# CAS : État vide pour une collection DANS UN FORMULAIRE D'ÉDITION. #}
                 {% set emptyStateParams = {
                     title: "La collection est vide",
                     description: "Ajouter un élément à la collection en cliquant sur le bouton \"Ajouter\".",
                     icon_name: entityCanvas.parametres.icone | default('lucide:folder-plus'),
                     button_text: "Ajouter",
-                    button_action: customAddAction,
+                    button_action: customAddAction, 
                     button_icon: "lucide:plus-circle"
                 } %}
             {% else %}
-                {# CAS : État vide pour une liste principale (résultat de recherche). #}
+                {# CAS : État vide pour une liste principale OU une collection contextuelle (hors formulaire). #}
                 {% set emptyStateParams = {
                     title: "Aucun élément trouvé",
                     description: "Essayez de réinitialiser vos critères ou d'ajouter un nouvel élément.",
