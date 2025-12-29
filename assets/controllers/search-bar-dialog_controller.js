@@ -19,18 +19,13 @@ export default class extends BaseController {
         this.modal = new Modal(this.advancedSearchModalTarget);
 
         this.boundOpenDialog = this.openDialog.bind(this);
-        this.boundAdjustZIndex = this.adjustZIndex.bind(this);
 
         // Écoute l'ordre d'ouverture venant du Cerveau
         document.addEventListener('dialog:search.open-request', this.boundOpenDialog);
-        
-        // Écouteur pour la gestion de la superposition (z-index)
-        this.advancedSearchModalTarget.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     disconnect() {
         document.removeEventListener('dialog:search.open-request', this.boundOpenDialog);
-        this.advancedSearchModalTarget.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     /**
@@ -107,31 +102,6 @@ export default class extends BaseController {
      */
     cancel() {
         this.modal.hide();
-    }
-
-    /**
-     * Ajuste le z-index pour s'assurer que cette modale apparaît au-dessus des autres.
-     */
-    adjustZIndex() {
-        const backdrops = document.querySelectorAll('.modal-backdrop.show');
-        if (backdrops.length > 1) {
-            const modals = document.querySelectorAll('.modal.show');
-            let maxZIndex = 0;
-            modals.forEach(modal => {
-                if (modal !== this.advancedSearchModalTarget) {
-                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
-                    if (zIndex > maxZIndex) {
-                        maxZIndex = zIndex;
-                    }
-                }
-            });
-
-            const myModal = this.advancedSearchModalTarget;
-            const myBackdrop = backdrops[backdrops.length - 1];
-
-            myBackdrop.style.zIndex = maxZIndex + 1;
-            myModal.style.zIndex = maxZIndex + 2;
-        }
     }
 
     /**
