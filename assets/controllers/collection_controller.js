@@ -187,45 +187,36 @@ export default class extends Controller {
      * Déclenche l'ouverture de la boîte de dialogue pour ajouter un nouvel élément.
      */
     addItem(event) {
-        this._logState("addItem", "1986");
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
-
-        // Contexte du parent immédiat (celui de la collection)
-        const parentContext = {};
-        if (this.parentFieldNameValue && this.parentEntityIdValue) {
-            parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
-        }
-
-        //Les variables à transporter
-        const entity = {};// Entité vide pour la création, avec l'id pour l'édition
-        const isCreationMode = true;
-        const entityFormCanvas = {
+ 
+        // Le "formCanvas" pour l'élément à créer (ex: un Contact).
+        // C'est la configuration pour le dialogue.
+        const formCanvas = {
             parametres: {
                 titre_creation: this.itemTitleCreateValue,
                 titre_modification: this.itemTitleEditValue,
                 endpoint_form_url: this.itemFormUrlValue,
                 endpoint_submit_url: this.itemSubmitUrlValue,
-                isCreationMode: true,
             }
         };
+ 
+        // Le contexte pour le nouvel élément.
         const context = {
-            // On fusionne le contexte reçu du dialogue parent (s'il existe)
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
-            ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
-
-        // On utilise le même événement que la toolbar pour une logique unifiée dans le cerveau.
-        this.notifyCerveau('ui:dialog.open-request', {
-            entity: entity, // Entité vide pour la création
-            isCreationMode: isCreationMode,
-            entityFormCanvas: entityFormCanvas,
+ 
+        // Le contexte parent pour lier le nouvel élément.
+        const parentContext = {
+            id: this.parentEntityIdValue,
+            fieldName: this.parentFieldNameValue
+        };
+ 
+        // On utilise le même événement que la barre d'outils pour une logique unifiée dans le cerveau.
+        this.notifyCerveau('ui:toolbar.add-request', {
+            formCanvas: formCanvas,
             context: context,
-            // On passe le contexte du parent pour l'imbrication
-            parentContext: {
-                id: this.parentEntityIdValue,
-                fieldName: this.parentFieldNameValue
-            }
+            parentContext: parentContext // On passe le contexte parent pour le lien
         });
     }
 
@@ -234,46 +225,37 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     editItem(event) {
+        event.stopPropagation();
         // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
         const row = event.currentTarget.closest('tr');
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
-
-        // Contexte du parent immédiat (celui de la collection)
-        const parentContext = {};
-        if (this.parentFieldNameValue && this.parentEntityIdValue) {
-            parentContext[this.parentFieldNameValue] = this.parentEntityIdValue;
-        }
-
-        //Les variables à transporter
-        const entity = { id: itemId };// Entité vide pour la création, avec l'id pour l'édition
-        const isCreationMode = false;
-        const entityFormCanvas = {
+ 
+        const formCanvas = {
             parametres: {
                 titre_creation: this.itemTitleCreateValue,
                 titre_modification: this.itemTitleEditValue,
                 endpoint_form_url: this.itemFormUrlValue,
                 endpoint_submit_url: this.itemSubmitUrlValue,
-                isCreationMode: false,
             }
         };
+ 
         const context = {
-            // On fusionne le contexte hérité du dialogue parent (ex: {notificationSinistre: 123})
-            ...this.contextValue,
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
-            ...parentContext, // Le parent immédiat écrase toute clé identique (ce qui est correct)
         };
-
-        // On utilise le même événement que la toolbar pour une logique unifiée dans le cerveau.
-        this.notifyCerveau('ui:dialog.open-request', {
-            entity: entity,
-            isCreationMode: isCreationMode,
-            entityFormCanvas: entityFormCanvas,
+ 
+        const parentContext = {
+            id: this.parentEntityIdValue,
+            fieldName: this.parentFieldNameValue
+        };
+ 
+        // On utilise le même événement que la barre d'outils.
+        this.notifyCerveau('ui:toolbar.edit-request', {
+            // La barre d'outils envoie un tableau `selection`. On imite cette structure.
+            selection: [{ entity: { id: itemId } }],
+            formCanvas: formCanvas,
             context: context,
-            parentContext: {
-                id: this.parentEntityIdValue,
-                fieldName: this.parentFieldNameValue
-            }
+            parentContext: parentContext
         });
     }
 

@@ -23,17 +23,12 @@ export default class extends Controller {
 
         this.boundClose = this.close.bind(this);
         document.addEventListener('ui:confirmation.close', this.boundClose);
-
-        // Écouteur pour la gestion du z-index
-        this.boundAdjustZIndex = this.adjustZIndex.bind(this);
-        this.element.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     disconnect() {
         document.removeEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
         document.removeEventListener('ui:confirmation.close', this.boundClose);
         document.removeEventListener('ui:confirmation.error', this.boundHandleCerveauEvent); // NOUVEAU
-        this.element.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
     }
 
     /**
@@ -135,39 +130,6 @@ export default class extends Controller {
         this.feedbackTarget.innerHTML = '';
         this.modal.hide();
         this.onConfirmDetail = null;
-    }
-
-    /**
-     * Ajuste le z-index pour s'assurer que cette modale apparaît au-dessus des autres.
-     */
-    adjustZIndex() {
-        // Trouve tous les backdrops visibles
-        const backdrops = document.querySelectorAll('.modal-backdrop.show');
-
-        // S'il y a plus d'un backdrop, cela signifie que nous superposons les modales
-        if (backdrops.length > 1) {
-            // Trouve le z-index le plus élevé parmi TOUTES les modales actuellement visibles
-            const modals = document.querySelectorAll('.modal.show');
-            let maxZIndex = 0;
-            modals.forEach(modal => {
-                // On s'assure de ne pas nous comparer à nous-même si notre z-index est déjà très élevé
-                if (modal !== this.element.closest('.modal')) {
-                    const zIndex = parseInt(window.getComputedStyle(modal).zIndex) || 1055;
-                    if (zIndex > maxZIndex) {
-                        maxZIndex = zIndex;
-                    }
-                }
-            });
-
-            // On récupère notre modale et son backdrop (c'est toujours le dernier ajouté)
-            const myModal = this.element.closest('.modal');
-            const myBackdrop = backdrops[backdrops.length - 1];
-
-            // On définit le z-index de notre modale pour être au-dessus du maximum trouvé,
-            // et celui de son backdrop juste en dessous.
-            myModal.style.zIndex = maxZIndex + 2;
-            myBackdrop.style.zIndex = maxZIndex + 1;
-        }
     }
 
     /**
