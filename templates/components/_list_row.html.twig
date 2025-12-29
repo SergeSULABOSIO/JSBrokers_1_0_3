@@ -15,10 +15,17 @@
 <tr
     id="liste_row_{{ entity.id }}"
     data-controller="list-row"
-    data-id="{{ entity.id }}" {# CORRECTION : Ajout de l'attribut data-id #}
+    data-id="{{ entity.id }}"
+    data-item-id="{{ entity.id }}" {# NOUVEAU : Ajout pour le comptage dans collection_controller #}
     data-list-row-idobjet-value="{{ entity.id }}"
     class="element-a-encadrer parent-a-options context-target align-middle"
-    data-action="click->list-row#toggleSelection"
+    data-action="
+        click->list-row#toggleSelection
+        {% if usage is defined and usage == 'dialog' %}
+            mouseenter->collection#showRowActions
+            mouseleave->collection#hideRowActions
+        {% endif %}
+    "
 >
     {# Colonne 1 : Statique (Case à cocher et ID) #}
     <td class="p-3 m-2" style="width:80px">
@@ -113,4 +120,18 @@
             </small>
         </td>
     {% endfor %}
+
+    {# NOUVEAU : Colonne pour les actions, uniquement en contexte de dialogue/collection #}
+    {% if usage is defined and usage == 'dialog' %}
+        <td class="text-end pe-3">
+            <div class="list-row-actions-container" data-collection-target="rowActions">
+                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm" title="Modifier" data-action="click->collection#editItem">
+                    <twig:UX:Icon name="lucide:edit" />
+                </button>
+                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm" title="Supprimer" data-action="click->collection#deleteItem">
+                    <twig:UX:Icon name="lucide:trash-2" />
+                </button>
+            </div>
+        </td>
+    {% endif %}
 </tr>

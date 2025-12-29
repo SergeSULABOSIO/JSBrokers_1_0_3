@@ -1169,6 +1169,27 @@ textarea:hover,
     visibility: visible;
 }
 
+/*
+===================================================================
+ SECTION: BOUTONS D'ACTION SUR LES LIGNES DE COLLECTION (SURVOL)
+===================================================================
+*/
+
+/* Style pour le conteneur des boutons d'action sur une ligne de collection.
+   Il est invisible par défaut et apparaît au survol. */
+.list-row-actions-container {
+    opacity: 0; /* Caché par défaut */
+    transition: opacity 0.2s ease-in-out;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+/* Classe ajoutée par collection_controller.js pour rendre les boutons visibles. */
+.list-row-actions-container.visible {
+    opacity: 1; /* Rendu visible */
+}
+
 /* ================================================================== */
 /* NOUVEAU : Style pour le formulaire de recherche avancée          */
 /* ================================================================== */
