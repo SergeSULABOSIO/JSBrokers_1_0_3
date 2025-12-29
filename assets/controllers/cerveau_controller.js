@@ -154,10 +154,6 @@ export default class extends Controller {
             case 'ui:search.reset-request':
                 this._handleSearchRequest({}); // On passe un objet vide pour réinitialiser.
                 break;
-            case 'ui:dialog.open-request': // Événement unifié pour ouvrir un dialogue
-                this.broadcast('app:loading.start');
-                this.openDialogBox(payload);
-                break;
             case 'ui:toolbar.add-request':
                 // LOGIQUE DÉPLACÉE : Le cerveau reçoit une demande simple et la transforme en appel complexe.
                 this.broadcast('app:loading.start');
@@ -166,7 +162,9 @@ export default class extends Controller {
                     entity: {},
                     entityFormCanvas: payload.formCanvas,
                     isCreationMode: true,
-                    context: payload.context
+                    context: payload.context,
+                    // NOUVEAU: On passe le contexte parent s'il est fourni (par une collection)
+                    parentContext: payload.parentContext || null
                 });
                 break;
             case 'ui:toolbar.edit-request':
@@ -177,7 +175,9 @@ export default class extends Controller {
                     entity: payload.selection[0].entity, // On prend la première (et unique) entité
                     entityFormCanvas: payload.formCanvas,
                     isCreationMode: false,
-                    context: payload.context
+                    context: payload.context,
+                    // NOUVEAU: On passe le contexte parent s'il est fourni (par une collection)
+                    parentContext: payload.parentContext || null
                 });
                 break;
             case 'ui:dialog.opened':
