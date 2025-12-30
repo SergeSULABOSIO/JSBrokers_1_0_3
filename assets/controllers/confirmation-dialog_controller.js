@@ -10,7 +10,15 @@ import { Modal } from 'bootstrap';
  * de l'action qu'il confirme.
  */
 export default class extends Controller {
-    static targets = ["title", "body", "confirmButton", "feedback", "progressBarContainer"];
+    static targets = [
+        "title", 
+        "body", 
+        "confirmButton", 
+        "feedback", 
+        "progressBarContainer",
+        "itemDetailsContainer", // NOUVEAU : Conteneur pour les détails
+        "itemList"              // NOUVEAU : Liste <ul> pour les éléments
+    ];
 
     connect() {
         this.nomControleur = "ConfirmationDialog";
@@ -61,10 +69,27 @@ export default class extends Controller {
      * @param {object} payload.onConfirm - L'action à notifier au Cerveau en cas de confirmation.
      */
     open(payload) {
-        const { title, body, onConfirm } = payload;
+        const { title, body, onConfirm, itemDescriptions } = payload;
         this.titleTarget.innerHTML = title || 'Confirmation requise';
         this.bodyTarget.innerHTML = body || 'Êtes-vous sûr ?';
         this.onConfirmDetail = onConfirm;
+
+        // NOUVEAU : Gère l'affichage des descriptions des éléments concernés.
+        if (itemDescriptions && itemDescriptions.length > 0) {
+            this.itemListTarget.innerHTML = ''; // Vide la liste précédente
+            itemDescriptions.forEach(description => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item py-1 px-0 border-0 d-flex align-items-center bg-transparent';
+                
+                // Utilise une icône Bootstrap pour la cohérence
+                li.innerHTML = `<i class="bi bi-file-earmark-minus me-2"></i> ${this._escapeHtml(description)}`;
+                this.itemListTarget.appendChild(li);
+            });
+            this.itemDetailsContainerTarget.style.display = 'block';
+        } else {
+            this.itemDetailsContainerTarget.style.display = 'none';
+        }
+
         this.modal.show();
     }
 
@@ -123,8 +148,26 @@ export default class extends Controller {
         this.toggleLoading(false); // S'assure que le bouton est réinitialisé en cas de fermeture manuelle
         this.toggleProgressBar(false);
         this.feedbackTarget.innerHTML = '';
+
+        // NOUVEAU : Réinitialise l'affichage des détails pour la prochaine ouverture.
+        if (this.hasItemDetailsContainerTarget) {
+            this.itemDetailsContainerTarget.style.display = 'none';
+            this.itemListTarget.innerHTML = '';
+        }
+
         this.modal.hide();
         this.onConfirmDetail = null;
+    }
+
+    /**
+     * NOUVEAU : Échappe le HTML pour éviter les injections XSS.
+     * @param {string} unsafe 
+     * @returns 
+     */
+    _escapeHtml(unsafe) {
+        return unsafe
+             .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     /**
