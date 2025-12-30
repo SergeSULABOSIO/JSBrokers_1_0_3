@@ -67,9 +67,10 @@ export default class extends Controller {
             return;
         }
 
+        // NOUVEAU : Affiche un squelette de chargement pour une meilleure UX.
+        this.listContainerTarget.innerHTML = this._getSkeletonHtml();
+
         try {
-            //Tout est activé car l'objet parent est maintenant disponible,
-            //On doit charger les élements de la collection
             const dialogListUrl = this.listUrlValue + "/dialog";
             const response = await fetch(dialogListUrl);
             if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
@@ -78,7 +79,6 @@ export default class extends Controller {
             this.listContainerTarget.innerHTML = html;
 
             this.updateCount();
-            this._logState('load', '1986 avec /dialog done.');
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
             console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
@@ -264,20 +264,25 @@ export default class extends Controller {
      * @param {MouseEvent} event
      */
     deleteItem(event) {
+        event.stopPropagation();
         // CORRECTION : On cherche l'ID sur la ligne parente (tr) la plus proche.
         const row = event.currentTarget.closest('tr');
         if (!row || !row.dataset.itemId) return;
         const itemId = row.dataset.itemId;
 
-        // On notifie le cerveau avec une demande de suppression simple et claire.
+        // On notifie le cerveau. C'est lui qui construira la demande de confirmation.
         // C'est le cerveau qui construira la demande de confirmation complexe.
-        this.notifyCerveau('ui:toolbar.delete-request', {
-            selection: [{ id: itemId }], // On simule un objet "selecto" pour être compatible avec la logique du cerveau
+        this.notifyCerveau('app:delete-request', {
+            selection: [{ id: itemId }], // Simule un selecto pour être compatible avec la logique du cerveau
             formCanvas: {
                 parametres: {
                     // On fournit juste l'URL de suppression, c'est tout ce dont le cerveau a besoin.
                     endpoint_delete_url: this.itemDeleteUrlValue,
                 }
+            },
+            // CRUCIAL : On s'identifie pour que le cerveau sache qui rafraîchir.
+            context: {
+                originatorId: this.element.id
             }
         });
     }
@@ -296,28 +301,29 @@ export default class extends Controller {
     }
 
     /**
-     * Affiche l'état actuel des valeurs du contrôleur dans la console pour le débogage.
-     * @param {string} callingFunction - Le nom de la fonction qui appelle ce logger.
-     * @param {string} code - Un code de suivi pour filtrer les logs.
+     * NOUVEAU : Génère le HTML pour un squelette de chargement de la liste de collection.
+     * @returns {string} Le HTML du squelette.
      * @private
      */
-    _logState(callingFunction, code) {
-        console.groupCollapsed(`${this.nomControleur} - ${callingFunction}() - Code:${code}`);
-        console.log(`| id:`, this.element.id);
-        console.log(`| url:`, this.urlValue);
-        console.log(`| listUrl:`, this.listUrlValue);
-        console.log(`| itemFormUrl:`, this.itemFormUrlValue);
-        console.log(`| itemSubmitUrl:`, this.itemSubmitUrlValue);
-        console.log(`| itemDeleteUrl:`, this.itemDeleteUrlValue);
-        console.log(`| itemTitleCreate:`, this.itemTitleCreateValue);
-        console.log(`| itemTitleEdit:`, this.itemTitleEditValue);
-        console.log(`| parentEntityId:`, this.parentEntityIdValue);
-        console.log(`| parentFieldName:`, this.parentFieldNameValue);
-        console.log(`| disabledValue:`, this.disabledValue);
-        console.log(`| entiteNom:`, this.entiteNomValue);
-        console.log(`| idEntreprise:`, this.idEntrepriseValue);
-        console.log(`| idInvite:`, this.idInviteValue);
-        console.log(`| context:`, this.contextValue);
-        console.groupEnd();
+    _getSkeletonHtml() {
+        const skeletonRow = `
+            <tr>
+                <td class="p-3 m-2" style="width:80px">
+                    <div class="skeleton-line" style="width: 40px; height: 24px; border-radius: var(--bs-border-radius-sm);"></div>
+                </td>
+                <td class="p-2">
+                    <div class="skeleton-line" style="width: 70%; height: 16px;"></div>
+                    <div class="skeleton-line" style="width: 50%; height: 12px; margin-top: 8px;"></div>
+                </td>
+                <td class="text-end pe-3">
+                    <div class="skeleton-line" style="width: 65px; height: 30px; border-radius: var(--bs-border-radius);"></div>
+                </td>
+            </tr>
+        `;
+        // On retourne une table avec quelques lignes de squelette pour un meilleur effet visuel.
+        // La structure de la table est nécessaire pour que les <tr> s'affichent correctement.
+        return `<div class="table-responsive"><table class="table table-hover table-sm"><tbody>
+            ${skeletonRow.repeat(3)}
+        </tbody></table></div>`;
     }
 }

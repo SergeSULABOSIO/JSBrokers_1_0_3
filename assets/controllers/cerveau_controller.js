@@ -232,7 +232,9 @@ export default class extends Controller {
                         payload: {
                             ids: payload.selection.map(s => s.id), // On extrait les IDs
                             url: payload.formCanvas.parametres.endpoint_delete_url, // On extrait l'URL du canvas
-                            originatorId: null, // La requête vient de la toolbar principale
+                            // NOUVEAU: On récupère l'originatorId depuis le contexte s'il existe (pour les collections),
+                            // sinon on prend l'ID de l'onglet actif (pour les listes principales).
+                            originatorId: payload.context?.originatorId || this.getActiveTabId(),
                         }
                     },
                     title: 'Confirmation de suppression',
@@ -672,7 +674,16 @@ export default class extends Controller {
                 this._showNotification(message, 'success');
                 // On réinitialise l'état de la sélection et on notifie tout le monde (toolbar, etc.)
                 this._setSelectionState([]);
-                this._requestListRefresh(originatorId);
+
+                // NOUVEAU : Logique de rafraîchissement intelligente
+                if (originatorId && String(originatorId).startsWith('collection-')) {
+                    // C'est une collection, on diffuse une demande de rafraîchissement ciblée.
+                    this.broadcast('app:list.refresh-request', { originatorId });
+                } else {
+                    // C'est une liste principale, on utilise l'ancienne logique.
+                    this._requestListRefresh(originatorId);
+                }
+
                 this.broadcast('ui:confirmation.close');
             })
             .catch(error => {
