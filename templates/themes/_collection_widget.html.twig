@@ -22,7 +22,14 @@
                 mouseleave->collection#logMouseLeave
              "
         >
-            <div class="title-left-block">
+            {# NOUVEAU: Conteneur pour l'état de chargement, initialement caché #}
+            <div class="title-left-block-loading" data-collection-target="titleLoading" style="display: none; align-items: center;">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span class="loading-text">Chargement de {{ form.vars.label|default(form.vars.name) }}...</span>
+            </div>
+
+            {# Conteneur pour le titre normal, qui sera caché pendant le chargement #}
+            <div class="title-left-block" data-collection-target="titleContent">
                 {# Ligne 1 #}
                 <div class="title-line-1">
                     <span class="toggle-icon">+</span>
@@ -34,6 +41,7 @@
                     <div class="title-line-2 form-text">{{ form.vars.help }}</div>
                 {% endif %}
             </div>
+
             {# --- CORRECTION : On rend toujours le bouton, mais on le cache avec une classe si désactivé --- #}
             <div class="title-right-block {{ isDisabled ? 'd-none' : '' }}" data-collection-target="addButtonContainer">
                 <button type="button" class="btn btn-sm btn-primary" data-action="click->collection#addItem">

@@ -13,7 +13,9 @@ export default class extends Controller {
         "listContainer",
         "addButtonContainer",
         "countBadge",
-        "rowActions" // NOUVEAU : Cible pour les conteneurs d'actions de ligne
+        "rowActions", // Cible pour les conteneurs d'actions de ligne
+        "titleLoading", // NOUVEAU : Cible pour le squelette du titre
+        "titleContent"  // NOUVEAU : Cible pour le contenu normal du titre
     ];
 
     static values = {
@@ -67,8 +69,8 @@ export default class extends Controller {
             return;
         }
 
-        // NOUVEAU : Affiche un squelette de chargement pour une meilleure UX.
-        this.listContainerTarget.innerHTML = this._getSkeletonHtml();
+        // NOUVEAU : Active l'état de chargement (squelette pour le titre et le contenu).
+        this._toggleLoadingState(true);
 
         try {
             const dialogListUrl = this.listUrlValue + "/dialog";
@@ -82,6 +84,9 @@ export default class extends Controller {
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
             console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
+        } finally {
+            // NOUVEAU : Désactive l'état de chargement dans tous les cas (succès ou erreur).
+            this._toggleLoadingState(false);
         }
     }
 
@@ -325,5 +330,23 @@ export default class extends Controller {
         return `<div class="table-responsive"><table class="table table-hover table-sm"><tbody>
             ${skeletonRow.repeat(3)}
         </tbody></table></div>`;
+    }
+
+    /**
+     * NOUVEAU : Affiche ou masque l'état de chargement du widget.
+     * @param {boolean} isLoading 
+     * @private
+     */
+    _toggleLoadingState(isLoading) {
+        // Gère l'affichage du squelette dans le titre de l'accordéon.
+        if (this.hasTitleLoadingTarget && this.hasTitleContentTarget) {
+            this.titleLoadingTarget.style.display = isLoading ? 'flex' : 'none';
+            this.titleContentTarget.style.display = isLoading ? 'none' : 'flex';
+        }
+        
+        // Gère l'affichage du squelette dans le contenu de l'accordéon.
+        if (isLoading) {
+            this.listContainerTarget.innerHTML = this._getSkeletonHtml();
+        }
     }
 }
