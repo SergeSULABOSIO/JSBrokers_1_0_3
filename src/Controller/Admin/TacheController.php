@@ -111,7 +111,7 @@ class TacheController extends AbstractController
             $request,
             Tache::class,
             TacheType::class,
-            function (Tache $tache) {
+            function (Tache $tache, array $data) {
                 // Le trait TimestampableTrait gère createdAt et updatedAt
                 // automatiquement grâce à l'annotation #[ORM\HasLifecycleCallbacks]
                 // et aux méthodes dans le trait.
@@ -122,7 +122,7 @@ class TacheController extends AbstractController
                     $tache->setExecutor($this->getInvite());
                 }
                 // Assure que la NotificationSinistre parente est définie si elle est passée.
-                $notificationId = $this->requestStack->getCurrentRequest()->request->get('notificationSinistre');
+                $notificationId = $data['notificationSinistre'] ?? null;
                 if ($notificationId && !$tache->getNotificationSinistre()) {
                     $notification = $this->notificationSinistreRepository->find($notificationId);
                     $tache->setNotificationSinistre($notification);

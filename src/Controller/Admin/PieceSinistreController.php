@@ -117,7 +117,7 @@ class PieceSinistreController extends AbstractController
             $request,
             PieceSinistre::class,
             PieceSinistreType::class,
-            function (PieceSinistre $piece) {
+            function (PieceSinistre $piece, array $data) {
                 // Initialisation pour une nouvelle pièce
                 if (!$piece->getId()) {
                     $piece->setReceivedAt(new DateTimeImmutable("now"));
@@ -128,7 +128,7 @@ class PieceSinistreController extends AbstractController
                 }
                 // Assure que la NotificationSinistre parente est définie si elle est passée
                 // dans la requête (via le parentContext du frontend).
-                $notificationId = $this->requestStack->getCurrentRequest()->request->get('notificationSinistre');
+                $notificationId = $data['notificationSinistre'] ?? null;
                 if ($notificationId && !$piece->getNotificationSinistre()) {
                     $notification = $this->notificationSinistreRepository->find($notificationId);
                     $piece->setNotificationSinistre($notification);
