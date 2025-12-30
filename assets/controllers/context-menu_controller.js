@@ -204,15 +204,11 @@ export default class extends Controller {
             return;
         }
 
-        // --- CORRECTION ---
-        // Le formCanvas doit provenir de l'élément sélectionné, car les actions (modifier, supprimer)
-        // dépendent du type de l'entité, et non du contexte global de l'onglet.
-        // On prend le canvas du premier élément sélectionné, en supposant qu'ils sont tous du même type.
-        const itemFormCanvas = this.entities.length > 0 ? this.entities[0].entityCanvas : this.entityFormCanvas;
-
+        // Le payload est maintenant générique, comme pour la barre d'outils.
+        // C'est au cerveau de l'interpréter.
         const payload = {
             selection: this.entities, // Envoie la sélection complète (objets selecto)
-            formCanvas: itemFormCanvas, // On envoie le canvas spécifique à l'entité.
+            formCanvas: this.entityFormCanvas, // Envoie le contexte du formulaire actif (celui de l'onglet)
         };
 
         this.notifyCerveau(eventName, payload);
