@@ -24,6 +24,7 @@
         >
             {# NOUVEAU: Conteneur pour l'état de chargement, initialement caché #}
             <div class="title-left-block-loading" data-collection-target="titleLoading" style="display: none; align-items: center;">
+                <span class="toggle-icon"></span> {# Espace réservé pour l'alignement avec le titre normal #}
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 <span class="loading-text">Chargement de {{ form.vars.label|default(form.vars.name) }}...</span>
             </div>

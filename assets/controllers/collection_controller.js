@@ -341,7 +341,9 @@ export default class extends Controller {
         // Gère l'affichage du squelette dans le titre de l'accordéon.
         if (this.hasTitleLoadingTarget && this.hasTitleContentTarget) {
             this.titleLoadingTarget.style.display = isLoading ? 'flex' : 'none';
-            this.titleContentTarget.style.display = isLoading ? 'none' : 'flex';
+            // CORRECTION: On utilise 'block' pour que le texte d'aide reste en dessous du titre.
+            // 'flex' mettrait le titre et l'aide sur la même ligne.
+            this.titleContentTarget.style.display = isLoading ? 'none' : 'block';
         }
         
         // Gère l'affichage du squelette dans le contenu de l'accordéon.
