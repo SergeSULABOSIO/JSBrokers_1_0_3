@@ -6689,6 +6689,7 @@ class Constante
                     "titre_creation" => "Nouveau contact",
                     "titre_modification" => "Modification du contact #%id%",
                     "endpoint_submit_url" => "/admin/contact/api/submit",
+                    "endpoint_delete_url" => "/admin/contact/api/delete",
                     "endpoint_form_url" => "/admin/contact/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
@@ -6701,6 +6702,7 @@ class Constante
                     "titre_creation" => "Nouvelle pièce",
                     "titre_modification" => "Modification de la pièce #%id%",
                     "endpoint_submit_url" => "/admin/piecesinistre/api/submit",
+                    "endpoint_delete_url" => "/admin/piecesinistre/api/delete",
                     "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
@@ -6713,6 +6715,7 @@ class Constante
                     "titre_creation" => "Nouveau Document",
                     "titre_modification" => "Modification du document #%id%",
                     "endpoint_submit_url" => "/admin/document/api/submit",
+                    "endpoint_delete_url" => "/admin/document/api/delete",
                     "endpoint_form_url" => "/admin/document/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
@@ -6725,6 +6728,7 @@ class Constante
                     "titre_creation" => "Nouvelle offre d'indemnisation",
                     "titre_modification" => "Modification de l'offre #%id%",
                     "endpoint_submit_url" => "/admin/offreindemnisation/api/submit",
+                    "endpoint_delete_url" => "/admin/offreindemnisation/api/delete",
                     "endpoint_form_url" => "/admin/offreindemnisation/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
@@ -6737,6 +6741,7 @@ class Constante
                     "titre_creation" => "Nouvelle tâche",
                     "titre_modification" => "Modification de la tâche #%id%",
                     "endpoint_submit_url" => "/admin/tache/api/submit",
+                    "endpoint_delete_url" => "/admin/tache/api/delete",
                     "endpoint_form_url" => "/admin/tache/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
@@ -6749,6 +6754,7 @@ class Constante
                     "titre_creation" => "Nouveau Paiement",
                     "titre_modification" => "Modification du paiement #%id%",
                     "endpoint_submit_url" => "/admin/paiement/api/submit",
+                    "endpoint_delete_url" => "/admin/paiement/api/delete",
                     "endpoint_form_url" => "/admin/paiement/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
@@ -6761,6 +6767,7 @@ class Constante
                     "titre_creation" => "Nouveau Feedback",
                     "titre_modification" => "Modification du feedback #%id%",
                     "endpoint_submit_url" => "/admin/feedback/api/submit",
+                    "endpoint_delete_url" => "/admin/feedback/api/delete",
                     "endpoint_form_url" => "/admin/feedback/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
