@@ -240,7 +240,9 @@ export default class extends Controller {
                         }
                     },
                     title: 'Confirmation de suppression',
-                    body: `Êtes-vous sûr de vouloir supprimer ${payload.selection.length} élément(s) ?`
+                    // NOUVEAU : Message de base + détails des éléments pour plus de clarté.
+                    body: `Vous êtes sur le point de supprimer définitivement ${payload.selection.length} élément(s).`,
+                    itemDescriptions: payload.selection.map(s => s.name || `Élément #${s.id}`)
                 };
                 this._requestDeleteConfirmation(deletePayload);
                 break;

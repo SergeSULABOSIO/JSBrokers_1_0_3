@@ -11,8 +11,23 @@
             <div class="dialog-progress-container" data-confirmation-dialog-target="progressBarContainer">
                 <div class="dialog-progress-bar" role="progressbar"></div>
             </div>
-            <div class="modal-body" data-confirmation-dialog-target="body">
+            <div class="modal-body pb-0" data-confirmation-dialog-target="body">
                 <p>Êtes-vous sûr de vouloir continuer ?</p>
+            </div>
+            {# NOUVEAU: Conteneur pour les détails des éléments à supprimer #}
+            <div class="modal-body pt-2" data-confirmation-dialog-target="itemDetailsContainer" style="display: none;">
+                <ul class="list-group list-group-flush small" data-confirmation-dialog-target="itemList">
+                    {# Les éléments seront injectés ici par le contrôleur #}
+                </ul>
+            </div>
+            {# NOUVEAU: Avertissement sur l'action irréversible #}
+            <div class="modal-body pt-1">
+                <div class="alert alert-warning d-flex align-items-center p-2" role="alert">
+                    <twig:UX:Icon name="bi:exclamation-triangle-fill" class="me-2 flex-shrink-0" style="width: 20px; height: 20px;" />
+                    <div>
+                        <strong>Attention :</strong> Cette action est irréversible.
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 {# AJOUT: Conteneur pour les messages d'erreur #}
