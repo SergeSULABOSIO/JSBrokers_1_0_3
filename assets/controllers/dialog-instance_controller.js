@@ -247,7 +247,7 @@ export default class extends Controller {
             } else {
                 // Cas 2 : C'était une ÉDITION. On ferme simplement la modale.
                 // Le rafraîchissement de la collection est déjà géré par l'événement 'app:entity.saved'.
-                this.close();
+                // this.close();
             }
  
         } catch (error) {
