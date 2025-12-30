@@ -6727,9 +6727,9 @@ class Constante
                 $parametres = [
                     "titre_creation" => "Nouvelle offre d'indemnisation",
                     "titre_modification" => "Modification de l'offre #%id%",
-                    "endpoint_submit_url" => "/admin/offreindemnisation/api/submit",
-                    "endpoint_delete_url" => "/admin/offreindemnisation/api/delete",
-                    "endpoint_form_url" => "/admin/offreindemnisation/api/get-form",
+                    "endpoint_submit_url" => "/admin/offreindemnisationsinistre/api/submit",
+                    "endpoint_delete_url" => "/admin/offreindemnisationsinistre/api/delete",
+                    "endpoint_form_url" => "/admin/offreindemnisationsinistre/api/get-form",
                     "isCreationMode" => $isParentNew
                 ];
                 $layout = $this->buildOffreIndemnisationLayout($offreId, $isParentNew);
