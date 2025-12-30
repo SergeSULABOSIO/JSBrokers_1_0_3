@@ -35,6 +35,7 @@ use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -55,6 +56,7 @@ class PieceSinistreController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer,
+        private NotificationSinistreRepository $notificationSinistreRepository,
     ) {}
 
     protected function getCollectionMap(): array
@@ -116,10 +118,20 @@ class PieceSinistreController extends AbstractController
             PieceSinistre::class,
             PieceSinistreType::class,
             function (PieceSinistre $piece) {
+                // Initialisation pour une nouvelle pièce
                 if (!$piece->getId()) {
                     $piece->setReceivedAt(new DateTimeImmutable("now"));
-                    // L'initialiseur de renderFormCanvas s'en occupe déjà
-                    // $piece->setInvite($this->getInvite());
+                }
+                // Assure que l'invite est toujours définie en utilisant l'utilisateur connecté.
+                if (!$piece->getInvite()) {
+                    $piece->setInvite($this->getInvite());
+                }
+                // Assure que la NotificationSinistre parente est définie si elle est passée
+                // dans la requête (via le parentContext du frontend).
+                $notificationId = $this->requestStack->getCurrentRequest()->request->get('notificationSinistre');
+                if ($notificationId && !$piece->getNotificationSinistre()) {
+                    $notification = $this->notificationSinistreRepository->find($notificationId);
+                    $piece->setNotificationSinistre($notification);
                 }
             }
         );
