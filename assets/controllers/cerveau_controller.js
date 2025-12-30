@@ -185,8 +185,18 @@ export default class extends Controller {
                 this.broadcast('app:loading.stop');
                 break;
             case 'app:entity.saved':
-                this._requestListRefresh(payload.originatorId);
                 this._showNotification('Enregistrement réussi !', 'success');
+                const originatorId = payload.originatorId;
+                if (originatorId) {
+                    // Si l'ID de l'initiateur commence par 'collection-', c'est un widget de collection.
+                    if (String(originatorId).startsWith('collection-')) {
+                        // On diffuse une demande de rafraîchissement ciblée pour cette collection.
+                        this.broadcast('app:list.refresh-request', { originatorId });
+                    } else {
+                        // Sinon, c'est une liste principale dans un onglet, on utilise l'ancienne logique.
+                        this._requestListRefresh(originatorId);
+                    }
+                }
                 break;
             case 'app:form.validation-error':
                 this._publishSelectionStatus('Erreur de validation. Veuillez corriger le formulaire.');
@@ -302,6 +312,10 @@ export default class extends Controller {
                 break;
             case 'ui:dialog.content-request':
                 this.handleDialogContentRequest(event.detail);
+                break;
+            // NOUVEAU : Gère la demande de fermeture d'une boîte de dialogue.
+            case 'ui:dialog.close-request':
+                this.broadcast('app:dialog.do-close', { dialogId: payload.dialogId });
                 break;
             case 'ui:dialog.closed':
                 break;

@@ -35,6 +35,9 @@ export default class extends Controller {
 
         this.boundHandleContentReady = this.handleContentReady.bind(this);
         document.addEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
+        // NOUVEAU : Écouteur pour la demande de fermeture ciblée venant du cerveau.
+        this.boundDoClose = this.doClose.bind(this);
+        document.addEventListener('app:dialog.do-close', this.boundDoClose);
 
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
@@ -55,6 +58,7 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
+        document.removeEventListener('app:dialog.do-close', this.boundDoClose);
     }
 
     /**
@@ -184,27 +188,25 @@ export default class extends Controller {
      * Gère la soumission du formulaire via AJAX.
      */
     async submitForm(event) {
-        console.log(this.nomControleur + " - submitForm() - Code:1986");
         event.preventDefault();
         this.toggleLoading(true);
         this.toggleProgressBar(true);
-        // this.clearErrors(); // On nettoie les anciennes erreurs
-
+ 
         this.feedbackContainer = this.contentTarget.querySelector('.feedback-container');
         if (this.feedbackContainer) {
             this.feedbackContainer.innerHTML = '';
         }
-
+ 
         // 1. On récupère les données du formulaire directement dans un objet FormData.
         const formData = new FormData(event.target);
-
+ 
         // 2. On AJOUTE nos données de contexte (ID, parent, etc.) à cet objet.
         if (this.entity && this.entity.id) {
             formData.append('id', this.entity.id);
         }
         // On fusionne tout le contexte. C'est plus simple et plus dynamique.
-        if (this.context) {
-            for (const [key, rawValue] of Object.entries(this.context)) {
+        if (this.userContext) {
+            for (const [key, rawValue] of Object.entries(this.userContext)) {
                 // CORRECTION : Gestion des valeurs complexes dans le contexte.
                 // Si la valeur est un objet avec un 'id', on prend l'id.
                 // Sinon, on prend la valeur brute. Cela évite d'envoyer "[object Object]".
@@ -212,7 +214,7 @@ export default class extends Controller {
                 if (typeof rawValue === 'object' && rawValue !== null && 'id' in rawValue) {
                     valueToAppend = rawValue.id;
                 }
-
+ 
                 formData.append(key, valueToAppend);
             }
         }
@@ -221,9 +223,7 @@ export default class extends Controller {
         if (this.parentContext && this.parentContext.id && this.parentContext.fieldName) {
             formData.append(this.parentContext.fieldName, this.parentContext.id);
         }
-
-        // console.log(`${this.nomControlleur} - SubmitForm - PARENT - ATTRIBUT AND ID:`, this.context);
-        // console.log(this.nomControlleur + " - Submit vers le serveur: " + this.entityFormCanvas.parametres.endpoint_submit_url, this.context);
+ 
         try {
             const response = await fetch(this.entityFormCanvas.parametres.endpoint_submit_url, {
                 method: 'POST',
@@ -231,28 +231,25 @@ export default class extends Controller {
             });
             const result = await response.json();
             if (!response.ok) throw result;
-
-            this.showFeedback('success', result.message);
-
-            // NOUVEAU : Notifier le cerveau du succès de l'enregistrement
+ 
+            // On notifie le cerveau du succès. C'est lui qui décidera qui doit être rafraîchi.
             this.notifyCerveau('app:entity.saved', {
                 entity: result.entity,
-                originatorId: this.context.originatorId // Pour savoir quelle collection rafraîchir
+                originatorId: this.userContext.originatorId // On passe l'ID de la collection qui a initié l'action.
             });
-
-            if (result.entity) {
+ 
+            // Cas 1 : C'était une CRÉATION. On reste dans la modale et on la recharge en mode ÉDITION.
+            if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
-
-                await this.reloadView(); // ON APPELLE NOTRE NOUVELLE FONCTION DE RECHARGEMENT
+                this.showFeedback('success', result.message); // On affiche le message de succès
+                await this.reloadView(); // On recharge le contenu de la modale (formulaire, etc.)
             } else {
-                // Si on est déjà en mode édition, on rafraîchit juste les listes
-                // sans recharger toute la vue.
-                this.notifyCerveau('app:list.refresh-request', {
-                    originatorId: this.context.originatorId
-                });
+                // Cas 2 : C'était une ÉDITION. On ferme simplement la modale.
+                // Le rafraîchissement de la collection est déjà géré par l'événement 'app:entity.saved'.
+                this.close();
             }
-
+ 
         } catch (error) {
             console.error(error);
             // NOUVEAU : Notifier le cerveau de l'échec de validation
@@ -260,11 +257,9 @@ export default class extends Controller {
                 message: error.message || 'Erreur de validation',
                 errors: error.errors || {}
             });
-
-            if (this.feedbackContainer) {
-                this.feedbackContainer.textContent = error.message || 'Une erreur est survenue.';
-                this.showFeedback('success', error.message);
-            }
+ 
+            this.showFeedback('error', error.message || 'Une erreur est survenue.');
+ 
             if (error.errors) {
                 this.displayErrors(error.errors);
             }
@@ -393,15 +388,25 @@ export default class extends Controller {
      * Ferme la modale et notifie le cerveau de cette action.
      */
     close() {
-        // NOUVEAU : Notifier le cerveau de la fermeture
-        this.notifyCerveau('ui:dialog.closed', {
-            entity: this.entity,
-            mode: this.isCreateMode ? 'creation' : 'edition'
-        });
-        this.toggleProgressBar(false); // <-- CACHER LA BARRE avant de fermer
-        this.modalOutlet.hide(); // On demande au contrôleur 'modal' de se fermer.
+        // On ne ferme plus directement. On demande au cerveau de le faire.
+        // Cela garantit que la fermeture est ciblée et orchestrée.
+        this.notifyCerveau('ui:dialog.close-request', { dialogId: this.dialogId });
     }
 
+    /**
+     * NOUVEAU : Méthode qui exécute la fermeture, appelée par le cerveau.
+     * @param {CustomEvent} event
+     */
+    doClose(event) {
+        // On s'assure que l'ordre de fermeture nous est bien destiné.
+        if (event.detail.dialogId === this.dialogId) {
+            this.toggleProgressBar(false); // On s'assure que la barre est cachée.
+            if (this.hasModalOutlet) {
+                this.modalOutlet.hide(); // On demande au contrôleur 'modal' de se fermer.
+            }
+        }
+    }
+    
     /**
      * Gère l'état visuel du bouton de soumission et des autres boutons (chargement/normal).
      * @param {boolean} isLoading - `true` pour afficher l'état de chargement, `false` sinon.
