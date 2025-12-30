@@ -33,6 +33,7 @@ use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -54,6 +55,7 @@ class TacheController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer,
+        private NotificationSinistreRepository $notificationSinistreRepository,
     ) {}
 
     protected function getCollectionMap(): array
@@ -114,6 +116,17 @@ class TacheController extends AbstractController
                 // automatiquement grâce à l'annotation #[ORM\HasLifecycleCallbacks]
                 // et aux méthodes dans le trait.
                 // Il n'est donc plus nécessaire de les définir manuellement ici.
+
+                // Assure que l'exécuteur (Invite) est toujours défini.
+                if (!$tache->getExecutor()) {
+                    $tache->setExecutor($this->getInvite());
+                }
+                // Assure que la NotificationSinistre parente est définie si elle est passée.
+                $notificationId = $this->requestStack->getCurrentRequest()->request->get('notificationSinistre');
+                if ($notificationId && !$tache->getNotificationSinistre()) {
+                    $notification = $this->notificationSinistreRepository->find($notificationId);
+                    $tache->setNotificationSinistre($notification);
+                }
             }
         );
     }
