@@ -226,15 +226,17 @@ export default class extends Controller {
                 break;
             case 'app:delete-request': // ANCIENNE ACTION DE LA TOOLBAR, maintenant renommée et gérée ici.
                 // LOGIQUE DÉPLACÉE : Le cerveau reçoit la demande de suppression et la transforme en demande de confirmation.
+                // NOUVEAU : On détermine si la requête vient d'un widget collection ou d'une liste/onglet.
+                const isFromCollectionWidget = !!payload.context?.originatorId;
+
                 const deletePayload = {
                     onConfirm: {
                         type: 'app:api.delete-request',
                         payload: {
                             ids: payload.selection.map(s => s.id), // On extrait les IDs
                             url: payload.formCanvas.parametres.endpoint_delete_url, // On extrait l'URL du canvas
-                            // NOUVEAU: On récupère l'originatorId depuis le contexte s'il existe (pour les collections),
-                            // sinon on prend l'ID de l'onglet actif (pour les listes principales).
                             originatorId: payload.context?.originatorId || this.getActiveTabId(),
+                            isFromCollectionWidget: isFromCollectionWidget // On transmet l'info
                         }
                     },
                     title: 'Confirmation de suppression',
@@ -654,7 +656,7 @@ export default class extends Controller {
      * @private
      */
     _handleApiDeleteRequest(payload) {
-        const { ids, url, originatorId } = payload;
+        const { ids, url, originatorId, isFromCollectionWidget } = payload;
 
         // On crée un tableau de promesses, une pour chaque requête de suppression.
         const deletePromises = ids.map(id => {
@@ -675,12 +677,12 @@ export default class extends Controller {
                 // On réinitialise l'état de la sélection et on notifie tout le monde (toolbar, etc.)
                 this._setSelectionState([]);
 
-                // NOUVEAU : Logique de rafraîchissement intelligente
-                if (originatorId && String(originatorId).startsWith('collection-')) {
-                    // C'est une collection, on diffuse une demande de rafraîchissement ciblée.
+                // NOUVEAU : Logique de rafraîchissement intelligente basée sur l'origine.
+                if (isFromCollectionWidget) {
+                    // C'est un widget de collection (dans un formulaire), on diffuse un événement simple.
                     this.broadcast('app:list.refresh-request', { originatorId });
                 } else {
-                    // C'est une liste principale, on utilise l'ancienne logique.
+                    // C'est une liste principale ou un onglet de collection, on utilise la logique de rafraîchissement d'onglet.
                     this._requestListRefresh(originatorId);
                 }
 
