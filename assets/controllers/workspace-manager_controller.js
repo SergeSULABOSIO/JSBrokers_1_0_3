@@ -192,20 +192,34 @@ export default class extends Controller {
      * @param {object} entityCanvas - La nouvelle structure avec "paramètres" et "liste"
      */
     createTab(entity, entityType, entityCanvas) {
-        const tabElement = this.tabTemplateTarget.content.cloneNode(true).firstElementChild;
-        tabElement.dataset.entityId = entity.id;
-        tabElement.dataset.entityType = entityType;
-
-        const params = entityCanvas.parametres;
-        tabElement.title = params.description;
-
-        // On ne modifie plus l'icône, on laisse celle par défaut du template.
-        tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
-
-        // --- Création du contenu de l'onglet (accordéon) ---
-        const contentElement = this.tabContentTemplateTarget.content.cloneNode(true).firstElementChild;
-        const accordionContainer = contentElement.querySelector('.accordion');
-        // --- MODIFICATION 3 : Utiliser entityCanvas.liste pour l'accordéon ---
+         const tabElement = this.tabTemplateTarget.content.cloneNode(true).firstElementChild;
+         tabElement.dataset.entityId = entity.id;
+         tabElement.dataset.entityType = entityType;
+ 
+         const params = entityCanvas.parametres;
+         tabElement.title = params.description;
+ 
+         tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
+ 
+         // --- Création du contenu de l'onglet ---
+         const contentElement = this.tabContentTemplate.content.cloneNode(true).firstElementChild;
+         const accordionContainer = contentElement.querySelector('.accordion');
+ 
+         // NOUVEAU : Création et insertion du panneau de description
+         const descriptionPanel = document.createElement('div');
+         descriptionPanel.className = 'description-panel';
+         descriptionPanel.innerHTML = this._buildDescriptionText(entity, entityType, entityCanvas);
+ 
+         // On cherche la barre de recherche pour insérer le panneau avant elle.
+         const searchBar = contentElement.querySelector('.accordion-search-bar');
+         if (searchBar) {
+             searchBar.parentNode.insertBefore(descriptionPanel, searchBar);
+         } else if (accordionContainer) {
+             accordionContainer.parentNode.insertBefore(descriptionPanel, accordionContainer);
+         } else {
+             contentElement.prepend(descriptionPanel);
+         }
+ 
         const accordionList = entityCanvas.liste; // 
         if (accordionList.length > 0) {
             accordionList.forEach(attribute => {
@@ -215,19 +229,19 @@ export default class extends Controller {
         } else {
             accordionContainer.innerHTML = `<div class="p-4 text-muted">Aucun champ à afficher pour cet objet.</div>`;
         }
-        // Lier le contenu à l'onglet via un ID unique
-        const tabId = `tab-content-${entityType}-${entity.id}`;
-        contentElement.id = tabId;
-        tabElement.dataset.tabContentId = tabId;
-
-        // Ajouter les nouveaux éléments au DOM
-        this.tabContainerTarget.appendChild(tabElement);
-        this.tabContentContainerTarget.appendChild(contentElement);
-
-        // Activer le nouvel onglet créé
-        this.activateTab({ currentTarget: tabElement });
-
-        console.log(this.nomControleur + " - Onglet ouvert:", entity);
+         // Lier le contenu à l'onglet via un ID unique
+         const tabId = `tab-content-${entityType}-${entity.id}`;
+         contentElement.id = tabId;
+         tabElement.dataset.tabContentId = tabId;
+ 
+         // Ajouter les nouveaux éléments au DOM
+         this.tabContainerTarget.appendChild(tabElement);
+         this.tabContentContainerTarget.appendChild(contentElement);
+ 
+         // Activer le nouvel onglet créé
+         this.activateTab({ currentTarget: tabElement });
+ 
+         console.log(this.nomControleur + " - Onglet ouvert:", entity);
     }
 
     /**
@@ -264,8 +278,8 @@ export default class extends Controller {
 
                     link.dataset.action = "click->workspace-manager#openRelatedEntity";
                     link.dataset.entityId = relatedEntity.id;
-                    // On nettoie le nom de l'entité pour n'garder que le nom de la classe.
-                    link.dataset.entityType = this._getCleanEntityName(attribute.targetEntity);
+                    // CORRECTION : Utiliser le nom de route fourni par le canvas
+                    link.dataset.entityType = attribute.targetEntityRouteName;
                     content.appendChild(link);
                     contentValueElement = link; // NOUVEAU : Attacher le tooltip au lien
                 } else {
@@ -290,8 +304,8 @@ export default class extends Controller {
 
                             link.dataset.action = "click->workspace-manager#openRelatedEntity";
                             link.dataset.entityId = item.id;
-                            // On nettoie le nom de l'entité pour n'garder que le nom de la classe.
-                            link.dataset.entityType = this._getCleanEntityName(attribute.targetEntity);
+                            // CORRECTION : Utiliser le nom de route fourni par le canvas
+                            link.dataset.entityType = attribute.targetEntityRouteName;
 
                             li.appendChild(link);
                             ol.appendChild(li);
@@ -389,19 +403,103 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Nettoie un nom de classe FQCN (Fully Qualified Class Name) pour ne garder que le nom court.
-     * Exemple : 'App\Entity\Tache' devient 'Tache'.
-     * @param {string} fqcn - Le nom de classe complet.
-     * @returns {string} Le nom de classe court.
+     * NOUVEAU : Routeur pour construire la description textuelle.
+     * Appelle une méthode spécifique si elle existe, sinon une méthode générique.
+     * @param {object} entity L'entité.
+     * @param {string} entityType Le type de l'entité.
+     * @param {object} entityCanvas Le canevas de l'entité.
+     * @returns {string} Le HTML de la description.
      * @private
      */
-    _getCleanEntityName(fqcn) {
-        if (!fqcn || typeof fqcn !== 'string') {
-            return '';
+    _buildDescriptionText(entity, entityType, entityCanvas) {
+        if (entityType === 'NotificationSinistre') {
+            return this._buildNotificationSinistreDescription(entity);
         }
-        // Sépare la chaîne par l'anti-slash et retourne le dernier élément.
-        const parts = fqcn.split('\\');
-        return parts[parts.length - 1];
+        return this._buildGenericDescription(entity, entityCanvas);
+    }
+
+    /**
+     * NOUVEAU : Construit une description narrative et professionnelle pour une NotificationSinistre.
+     * @param {object} entity L'entité NotificationSinistre.
+     * @returns {string} Le HTML de la description.
+     * @private
+     */
+    _buildNotificationSinistreDescription(entity) {
+        const parts = [];
+        const get = (code, displayField = null) => this._getVal(entity, code, displayField);
+
+        const refSinistre = get('referenceSinistre');
+        const refPolice = get('referencePolice');
+        const assure = get('assure', 'nom');
+        const assureur = get('assureur', 'nom');
+        const risque = get('risque', 'nomComplet');
+        const dateSurvenance = this.formatValue(get('occuredAt'), 'Date');
+        const dateNotification = this.formatValue(get('notifiedAt'), 'Date');
+        const description = get('descriptionDeFait');
+        const victimes = get('descriptionVictimes');
+        const dommage = this.formatValue(get('dommage'), 'Nombre', '$');
+        const evaluation = this.formatValue(get('evaluationChiffree'), 'Nombre', '$');
+
+        if (refSinistre) {
+            parts.push(`Ce dossier concerne le sinistre référencé <strong>${refSinistre}</strong>,`);
+        } else {
+            parts.push(`Ce dossier concerne un sinistre`);
+        }
+
+        if (dateSurvenance !== 'N/A') {
+            parts.push(`survenu le <strong>${dateSurvenance}</strong>`);
+            if (dateNotification !== 'N/A' && dateNotification !== dateSurvenance) {
+                parts.push(`et notifié le <strong>${dateNotification}</strong>.`);
+            } else {
+                parts.push('.');
+            }
+        }
+
+        const policyParts = [];
+        if (refPolice) policyParts.push(`Il est lié à la police d'assurance <strong>${refPolice}</strong>`);
+        if (assure) policyParts.push(`souscrite par <strong>${assure}</strong>`);
+        if (assureur) policyParts.push(`auprès de l'assureur <strong>${assureur}</strong>`);
+        if (risque) policyParts.push(`pour le risque <em>${risque}</em>.`);
+        if (policyParts.length > 0) parts.push(policyParts.join(' '));
+
+        if (description) parts.push(`Les circonstances rapportées sont les suivantes : <em>« ${description} »</em>.`);
+        if (victimes) parts.push(`Les victimes ou dommages sont décrits comme suit : <em>« ${victimes} »</em>.`);
+
+        const costParts = [];
+        if (dommage !== 'N/A') costParts.push(`Le dommage initialement estimé était de <strong>${dommage}</strong>`);
+        if (evaluation !== 'N/A') {
+            if (costParts.length > 0) {
+                costParts.push(`et a été réévalué à <strong>${evaluation}</strong>.`);
+            } else {
+                costParts.push(`Le dommage a été évalué à <strong>${evaluation}</strong>.`);
+            }
+        }
+        if (costParts.length > 0) parts.push(costParts.join(' '));
+
+        return `<p>${parts.join(' ')}</p>`;
+    }
+
+    /**
+     * NOUVEAU : Construit une description générique pour les entités non spécifiques.
+     * @param {object} entity L'entité.
+     * @param {object} entityCanvas Le canevas de l'entité.
+     * @returns {string} Le HTML de la description.
+     * @private
+     */
+    _buildGenericDescription(entity, entityCanvas) {
+        const mainTitleField = entityCanvas?.liste?.find(attr => attr.col_principale)?.texte_principal.attribut_code || 'nom';
+        const mainTitle = this._getVal(entity, mainTitleField);
+        if (!mainTitle) return '<p class="text-muted">Aucune description disponible pour cet élément.</p>';
+        return `<p>Détails pour l'élément : <strong>${mainTitle}</strong> (ID: ${entity.id}).</p>`;
+    }
+
+    _getVal(entity, code, displayField = null) {
+        if (!entity || !code) return null;
+        const value = entity[code];
+        if (value === null || typeof value === 'undefined') return null;
+        if (typeof value === 'object' && displayField && value[displayField]) return value[displayField];
+        if (typeof value === 'object' && !displayField) return null;
+        return value;
     }
 
     /**
