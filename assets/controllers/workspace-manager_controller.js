@@ -264,7 +264,8 @@ export default class extends Controller {
 
                     link.dataset.action = "click->workspace-manager#openRelatedEntity";
                     link.dataset.entityId = relatedEntity.id;
-                    link.dataset.entityType = attribute.targetEntity;
+                    // On nettoie le nom de l'entité pour n'garder que le nom de la classe.
+                    link.dataset.entityType = this._getCleanEntityName(attribute.targetEntity);
                     content.appendChild(link);
                     contentValueElement = link; // NOUVEAU : Attacher le tooltip au lien
                 } else {
@@ -289,7 +290,8 @@ export default class extends Controller {
 
                             link.dataset.action = "click->workspace-manager#openRelatedEntity";
                             link.dataset.entityId = item.id;
-                            link.dataset.entityType = attribute.targetEntity;
+                            // On nettoie le nom de l'entité pour n'garder que le nom de la classe.
+                            link.dataset.entityType = this._getCleanEntityName(attribute.targetEntity);
 
                             li.appendChild(link);
                             ol.appendChild(li);
@@ -384,6 +386,22 @@ export default class extends Controller {
             // 2. Cacher la barre de progression (toujours exécuté, même en cas d'erreur)
             this.progressBarTarget.style.display = 'none';
         }
+    }
+
+    /**
+     * NOUVEAU : Nettoie un nom de classe FQCN (Fully Qualified Class Name) pour ne garder que le nom court.
+     * Exemple : 'App\Entity\Tache' devient 'Tache'.
+     * @param {string} fqcn - Le nom de classe complet.
+     * @returns {string} Le nom de classe court.
+     * @private
+     */
+    _getCleanEntityName(fqcn) {
+        if (!fqcn || typeof fqcn !== 'string') {
+            return '';
+        }
+        // Sépare la chaîne par l'anti-slash et retourne le dernier élément.
+        const parts = fqcn.split('\\');
+        return parts[parts.length - 1];
     }
 
     /**

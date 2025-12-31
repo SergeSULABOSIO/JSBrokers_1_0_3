@@ -18,10 +18,12 @@ use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Entity\Contact;
 use App\Constantes\Constante;
-use App\Entity\PieceSinistre;
 use App\Entity\Document;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
+use App\Entity\PieceSinistre;
+use App\Repository\ContactRepository;
+use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
 use App\Form\NotificationSinistreType;
 use App\Repository\EntrepriseRepository;
@@ -42,6 +44,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 #[Route("/admin/notificationsinistre", name: 'admin.notificationsinistre.')]
 #[IsGranted('ROLE_USER')]
@@ -60,7 +63,7 @@ class NotificationSinistreController extends AbstractController
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
-        private SerializerInterface $serializer,
+        private SerializerInterface $serializer
     ) {}
 
     protected function getCollectionMap(): array
@@ -68,6 +71,7 @@ class NotificationSinistreController extends AbstractController
         // Utilise la méthode du trait pour construire dynamiquement la carte.
         return $this->buildCollectionMapFromEntity(NotificationSinistre::class);
     }
+    use ControllerUtilsTrait;
 
     protected function getParentAssociationMap(): array
     {
@@ -149,5 +153,28 @@ class NotificationSinistreController extends AbstractController
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
         return $this->handleCollectionApiRequest($id, $collectionName, NotificationSinistre::class, $usage);
+    }
+
+    /**
+     * NOUVEAU : Point de terminaison générique pour récupérer les détails d'une entité.
+     * Cette méthode est cruciale pour ouvrir des entités liées depuis le volet de visualisation.
+     *
+     * @param string $entityType Le nom simple de l'entité (ex: "tache", "contact").
+     * @param integer $id L'ID de l'entité à charger.
+     * @return JsonResponse
+     */
+    #[Route('/api/get-entity-details/{entityType}/{id}', name: 'api.get_entity_details', methods: ['GET'], requirements: ['id' => Requirement::DIGITS])]
+    public function getEntityDetailsApi(string $entityType, int $id): JsonResponse
+    {
+        // La logique de récupération est déjà dans le trait `ControllerUtilsTrait`.
+        // Cette méthode gère la recherche de l'entité par son nom court, la récupération
+        // de son canevas d'affichage et le calcul des valeurs dérivées.
+        // C'est une approche plus générique et DRY que le switch/case précédent.
+        $details = $this->getEntityDetailsForType($entityType, $id);
+
+        // Le trait a déjà fait tout le travail, il ne reste qu'à renvoyer la réponse JSON.
+        // Le groupe de sérialisation 'default' est utilisé pour correspondre à ce que le
+        // reste de l'application utilise, assurant la cohérence des données.
+        return $this->json($details, 200, [], ['groups' => 'default']);
     }
 }

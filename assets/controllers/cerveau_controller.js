@@ -114,6 +114,10 @@ export default class extends Controller {
                 this.broadcast('app:workspace.load-default');
                 break;
             case 'ui:tab.context-changed':
+                // NOUVEAU : Ajout pour gérer le changement de contexte d'onglet
+                // Met à jour l'état interne du cerveau avec l'ID de l'onglet actif et le nom de l'onglet.
+                // Cela permet de savoir quel onglet est actuellement affiché à l'utilisateur.
+                // La logique de mise à jour de l'affichage et de publication de l'état est gérée ci-dessous.
                 this.displayState.activeTabName = payload.tabName;
                 // Met à jour l'état interne du cerveau.
                 this.activeTabId = payload.tabId;
@@ -272,6 +276,11 @@ export default class extends Controller {
                 break;
             case 'app:loading.stop':
                 this.broadcast('app:loading.stop', payload);
+                break;
+            // NOUVEAU : Gère la demande d'ouverture d'une entité liée depuis un accordéon.
+            // Il relaie simplement la demande en tant qu'événement d'ouverture standard.
+            case 'ui:related-entity.open-request':
+                this.broadcast('app:liste-element:openned', payload);
                 break;
             // NOUVEAU : Gère la demande de chargement du contenu d'un onglet
             case 'app:tab-content.load-request':
