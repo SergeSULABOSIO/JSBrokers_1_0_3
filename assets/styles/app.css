@@ -559,7 +559,7 @@ textarea:hover,
 /* ================================================================== */
 
 .description-panel {
-    --description-panel-top-gap: 200px; /* NOUVEAU : Variable pour l'espace supérieur */
+    --description-panel-top-gap: 300px; /* NOUVEAU : Variable pour l'espace supérieur */
     position: relative; /* Requis pour positionner l'overlay */
     color: #ffffff; /* Texte en blanc pour contraster avec l'overlay */
     font-size: 0.95rem;
