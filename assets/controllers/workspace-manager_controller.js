@@ -206,6 +206,13 @@ export default class extends Controller {
         // NOUVEAU : Création et insertion du panneau de description
         const descriptionPanel = document.createElement('div');
         descriptionPanel.className = 'description-panel';
+
+        // NOUVEAU : On applique l'image de fond dynamiquement si elle est définie dans le canvas.
+        const backgroundImage = entityCanvas?.parametres?.background_image;
+        if (backgroundImage) {
+            descriptionPanel.style.backgroundImage = `url('${backgroundImage}')`;
+        }
+
         descriptionPanel.innerHTML = this._buildDescriptionText(entity, entityType, entityCanvas);
 
         // On cherche la barre de recherche pour insérer le panneau avant elle.
