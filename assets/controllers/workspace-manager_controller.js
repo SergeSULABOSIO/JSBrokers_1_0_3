@@ -198,7 +198,7 @@ export default class extends Controller {
         tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
 
         // --- Création du contenu de l'onglet ---
-        console.log(this.nomControleur + " - Code: 1986 - Création de l'onglet: - this.tabContentTemplate", this.tabContentTemplate);
+        console.log(this.nomControleur + " - Code: 1986 - Création de l'onglet: - this.tabContentTemplate", this.tabContentTemplateTarget);
 
         const contentElement = this.tabContentTemplateTarget.content.cloneNode(true).firstElementChild;
         const accordionContainer = contentElement.querySelector('.accordion');
@@ -511,6 +511,22 @@ export default class extends Controller {
         const mainTitle = this._getVal(entity, mainTitleField);
         if (!mainTitle) return '<p class="text-muted">Aucune description disponible pour cet élément.</p>';
         return `<p>Détails pour l'élément : <strong>${mainTitle}</strong> (ID: ${entity.id}).</p>`;
+    }
+
+    /**
+     * NOUVEAU : Extrait le nom de l'entité à partir de son FQCN (Fully Qualified Class Name).
+     * Ex: "App\Entity\Contact" -> "Contact"
+     * @param {string} fqcn Le nom complet de la classe.
+     * @returns {string} Le nom de l'entité.
+     * @private
+     */
+    _getCleanEntityName(fqcn) {
+        if (!fqcn || typeof fqcn !== 'string') {
+            return '';
+        }
+        // Trouve la dernière occurrence de '\' et prend ce qui suit.
+        const parts = fqcn.split('\\');
+        return parts[parts.length - 1];
     }
 
     _getVal(entity, code, displayField = null) {
