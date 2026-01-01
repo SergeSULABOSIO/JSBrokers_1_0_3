@@ -586,21 +586,36 @@ textarea:hover,
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.65); /* Fond noir avec 65% d'opacité */
     z-index: 1; /* Se place entre le fond et le texte */
+    transition: background-color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour l'overlay */
 }
 
 .description-panel p {
     margin-bottom: 0;
     position: relative; /* Assure que le texte est au-dessus de l'overlay */
     z-index: 2;
+    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour la couleur du texte */
 }
 
 .description-panel strong {
     color: #ffffff; /* Texte important en blanc pur */
+    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
 }
 
 .description-panel em {
     color: #e9ecef; /* Un gris très clair pour le texte moins important */
     font-style: normal;
+    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
+}
+
+/* --- NOUVEAU : Styles au survol de la souris --- */
+.description-panel:hover::before {
+    background-color: rgba(248, 249, 250, 0.85); /* Fond gris clair semi-transparent */
+}
+
+.description-panel:hover p,
+.description-panel:hover strong,
+.description-panel:hover em {
+    color: #212529; /* Texte noir pour une lisibilité maximale sur fond clair */
 }
 
 /*
