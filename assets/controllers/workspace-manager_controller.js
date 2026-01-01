@@ -16,10 +16,7 @@ export default class extends Controller {
         "tabContainer",
         "tabContentContainer",
         "tabTemplate",
-        "tabContentTemplate",
-        "item", 
-        "searchInput", 
-        "noResultsMessage"
+        "tabContentTemplate"
     ];
 
 
