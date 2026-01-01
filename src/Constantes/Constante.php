@@ -7109,6 +7109,16 @@ class Constante
                     "parametres" => [
                         "description" => "Notification Sinistre",
                         'icone' => 'emojione-monotone:fire',
+                        'description_template' => [
+                            "Ce dossier concerne le sinistre référencé [[*referenceSinistre]]",
+                            ", survenu le [[occuredAt]]",
+                            " et notifié le [[notifiedAt]].",
+                            " Il est lié à la police d'assurance [[*referencePolice]] souscrite par [[assure]] auprès de l'assureur [[assureur]].",
+                            " Le risque couvert est : [[risque]].",
+                            " Circonstances : <em>« [[descriptionDeFait]] »</em>.",
+                            " Dommage initialement estimé à [[dommage]]",
+                            ", réévalué à [[evaluationChiffree]]."
+                        ]
                     ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
