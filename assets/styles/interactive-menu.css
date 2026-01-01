@@ -119,8 +119,8 @@ html {
 
 /* Colonne 2 : Info & Rubriques */
 .menu-col-2 {
-  min-width: 300px; /* Example width */
-  max-width: 300px;
+  min-width: 350px; /* Example width */
+  max-width: 350px;
   background-color: #f0f0f0; /* Exemple de gris clair [cite: 63] */
   color: #333;
 }
@@ -243,8 +243,8 @@ html {
 .menu-col-4 {
   display: none; /* Cachée par défaut [cite: 22, 31] */
   flex-direction: column;
-  min-width: 300px; /* Même largeur que la colonne 2 [cite: 29] */
-  max-width: 300px;
+  min-width: 450px; /* Largeur doublée pour une meilleure visibilité */
+  max-width: 450px;
   height: 100%; /* [cite: 29] */
   background-color: #f0f0f0; /* Même fond que la colonne 2 [cite: 30] */
   color: #333; /* Même couleur de texte que la colonne 2 [cite: 30] */

@@ -264,10 +264,10 @@ export default class extends Controller {
         const title = document.createElement('div');
         title.className = 'accordion-title'; // Ensure this class is set
         title.dataset.action = 'click->workspace-manager#toggle'; // L'action appelle la méthode toggle de ce contrôleur
-        title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
+        title.innerHTML = `<span class="accordion-toggle">+</span> ${attribute.intitule}`;
 
         const content = document.createElement('div');
-        content.className = 'accordion-content open';
+        content.className = 'accordion-content';
 
         let contentValueElement; // NOUVEAU : Element qui va contenir la valeur et sur lequel on attachera le tooltip
 
