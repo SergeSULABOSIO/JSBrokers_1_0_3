@@ -131,15 +131,12 @@ export default class extends Controller {
         if (event.target.tagName.toLowerCase() === 'button' || event.target.closest('button')) {
             return;
         }
-        this.searchInputTarget.focus();
-
-
-        // On cherche le contrôleur de l'accordéon et on lui demande de focus son input
-        // const accordionController = this.application.getControllerForElementAndIdentifier(event.currentTarget.nextElementSibling, 'accordion');
-        // console.log(this.nomControleur + " - FocusSearch - Code: 1986 - Data:", accordionController);
-        // if (accordionController && accordionController.hasSearchInputTarget) {
-        //     accordionController.searchInputTarget.focus();
-        // }
+        // On ne peut pas utiliser de "target" car le champ est dans un template.
+        // On le cherche donc par rapport à l'élément cliqué (la barre de recherche).
+        const searchInput = event.currentTarget.querySelector('.accordion-search-input');
+        if (searchInput) {
+            searchInput.focus();
+        }
     }
 
 
@@ -155,7 +152,7 @@ export default class extends Controller {
         requestAnimationFrame(() => {
             // Le Cerveau envoie l'objet "selecto" complet. On le déstructure pour en extraire les informations nécessaires.
             const { entity, entityType, entityCanvas } = event.detail;
-    
+
             // Validation robuste des données reçues.
             if (!entity || typeof entity.id === 'undefined' || !entityType || !entityCanvas) {
                 console.error("WorkspaceManager - Validation échouée : l'objet 'selecto' reçu est invalide ou incomplet.", event.detail);
@@ -163,7 +160,7 @@ export default class extends Controller {
                 this.notifyCerveau('app:loading.stop', {});
                 return;
             }
-    
+
             // On vérifie si un onglet pour cette entité (même ID et même type) existe déjà.
             const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${entity.id}'][data-entity-type='${entityType}']`);
             if (existingTab) {
@@ -172,10 +169,10 @@ export default class extends Controller {
                 // On passe le 'entityCanvas' qui contient la structure correcte pour l'accordéon.
                 this.createTab(entity, entityType, entityCanvas);
             }
-    
+
             this.element.classList.add('visualization-visible');
             this.visualizationColumnTarget.style.display = 'flex';
-    
+
             // NOUVEAU : Notifier le cerveau que l'onglet est ouvert pour qu'il puisse arrêter le chargement.
             this.notifyCerveau('app:tab.opened', { entityId: entity.id, entityType: entityType });
         });
@@ -189,34 +186,38 @@ export default class extends Controller {
      * @param {object} entityCanvas - La nouvelle structure avec "paramètres" et "liste"
      */
     createTab(entity, entityType, entityCanvas) {
-         const tabElement = this.tabTemplateTarget.content.cloneNode(true).firstElementChild;
-         tabElement.dataset.entityId = entity.id;
-         tabElement.dataset.entityType = entityType;
- 
-         const params = entityCanvas.parametres;
-         tabElement.title = params.description;
- 
-         tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
- 
-         // --- Création du contenu de l'onglet ---
-         const contentElement = this.tabContentTemplate.content.cloneNode(true).firstElementChild;
-         const accordionContainer = contentElement.querySelector('.accordion');
- 
-         // NOUVEAU : Création et insertion du panneau de description
-         const descriptionPanel = document.createElement('div');
-         descriptionPanel.className = 'description-panel';
-         descriptionPanel.innerHTML = this._buildDescriptionText(entity, entityType, entityCanvas);
- 
-         // On cherche la barre de recherche pour insérer le panneau avant elle.
-         const searchBar = contentElement.querySelector('.accordion-search-bar');
-         if (searchBar) {
-             searchBar.parentNode.insertBefore(descriptionPanel, searchBar);
-         } else if (accordionContainer) {
-             accordionContainer.parentNode.insertBefore(descriptionPanel, accordionContainer);
-         } else {
-             contentElement.prepend(descriptionPanel);
-         }
- 
+        console.log(this.nomControleur + " - Code: 1986 - Création de l'onglet: - this.tabTemplateTarget", this.tabTemplateTarget);
+
+        const tabElement = this.tabTemplateTarget.content.cloneNode(true).firstElementChild;
+        tabElement.dataset.entityId = entity.id;
+        tabElement.dataset.entityType = entityType;
+
+        const params = entityCanvas.parametres;
+        tabElement.title = params.description;
+
+        tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
+
+        // --- Création du contenu de l'onglet ---
+        console.log(this.nomControleur + " - Code: 1986 - Création de l'onglet: - this.tabContentTemplate", this.tabContentTemplate);
+
+        const contentElement = this.tabContentTemplateTarget.content.cloneNode(true).firstElementChild;
+        const accordionContainer = contentElement.querySelector('.accordion');
+
+        // NOUVEAU : Création et insertion du panneau de description
+        const descriptionPanel = document.createElement('div');
+        descriptionPanel.className = 'description-panel';
+        descriptionPanel.innerHTML = this._buildDescriptionText(entity, entityType, entityCanvas);
+
+        // On cherche la barre de recherche pour insérer le panneau avant elle.
+        const searchBar = contentElement.querySelector('.accordion-search-bar');
+        if (searchBar) {
+            searchBar.parentNode.insertBefore(descriptionPanel, searchBar);
+        } else if (accordionContainer) {
+            accordionContainer.parentNode.insertBefore(descriptionPanel, accordionContainer);
+        } else {
+            contentElement.prepend(descriptionPanel);
+        }
+
         const accordionList = entityCanvas.liste; // 
         if (accordionList.length > 0) {
             accordionList.forEach(attribute => {
@@ -226,19 +227,19 @@ export default class extends Controller {
         } else {
             accordionContainer.innerHTML = `<div class="p-4 text-muted">Aucun champ à afficher pour cet objet.</div>`;
         }
-         // Lier le contenu à l'onglet via un ID unique
-         const tabId = `tab-content-${entityType}-${entity.id}`;
-         contentElement.id = tabId;
-         tabElement.dataset.tabContentId = tabId;
- 
-         // Ajouter les nouveaux éléments au DOM
-         this.tabContainerTarget.appendChild(tabElement);
-         this.tabContentContainerTarget.appendChild(contentElement);
- 
-         // Activer le nouvel onglet créé
-         this.activateTab({ currentTarget: tabElement });
- 
-         console.log(this.nomControleur + " - Onglet ouvert:", entity);
+        // Lier le contenu à l'onglet via un ID unique
+        const tabId = `tab-content-${entityType}-${entity.id}`;
+        contentElement.id = tabId;
+        tabElement.dataset.tabContentId = tabId;
+
+        // Ajouter les nouveaux éléments au DOM
+        this.tabContainerTarget.appendChild(tabElement);
+        this.tabContentContainerTarget.appendChild(contentElement);
+
+        // Activer le nouvel onglet créé
+        this.activateTab({ currentTarget: tabElement });
+
+        console.log(this.nomControleur + " - Onglet ouvert:", entity);
     }
 
     /**
@@ -681,10 +682,10 @@ export default class extends Controller {
         }
 
         // this._showWorkspaceSkeleton(); // DÉPLACÉ : L'appel est maintenant conditionnel (voir ci-dessus).
-        
+
         console.log(
-            `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`, 
-            { 
+            `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`,
+            {
                 componentName: event.currentTarget.dataset.workspaceManagerComponentNameParam,
                 entityName: event.currentTarget.dataset.workspaceManagerEntityNameParam,
                 isRestoration: isRestoration
@@ -693,7 +694,7 @@ export default class extends Controller {
         const clickedElement = event.currentTarget;
 
         // Si ce n'est PAS une restauration, on nettoie l'état.
-        
+
 
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
         const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
@@ -866,57 +867,63 @@ export default class extends Controller {
      * @param {InputEvent} event
      */
     filter(event) {
-         const input = event.currentTarget;
-         const searchTerm = input.value.trim().toLowerCase();
- 
-         // NOUVELLE LOGIQUE : On ne se fie plus à `this.itemTargets`.
-         // On trouve le conteneur de l'onglet parent de l'input qui a déclenché l'événement.
-         const tabContent = input.closest('.tab-content');
-         if (!tabContent) return;
- 
-         // On cherche les éléments et le message de "non trouvé" à l'intérieur de cet onglet spécifique.
-         const items = tabContent.querySelectorAll('.accordion-item');
-         const noResultsMessage = tabContent.querySelector('[data-workspace-manager-target="noResultsMessage"]');
- 
-         let visibleCount = 0;
- 
-         items.forEach(item => {
-             const titleElement = item.querySelector('.accordion-title');
-             if (!titleElement) return;
- 
-             const toggleIcon = titleElement.querySelector('.accordion-toggle');
-             const iconHtml = toggleIcon ? toggleIcon.outerHTML : '';
- 
-             if (!titleElement.dataset.originalTitle) {
-                 const tempClone = titleElement.cloneNode(true);
-                 tempClone.querySelector('.accordion-toggle')?.remove();
-                 titleElement.dataset.originalTitle = tempClone.textContent.trim();
-             }
- 
-             const originalTitleText = titleElement.dataset.originalTitle;
- 
-             if (originalTitleText.toLowerCase().includes(searchTerm)) {
-                 item.style.display = '';
-                 visibleCount++;
-                 const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-                 titleElement.innerHTML = `${iconHtml} ${searchTerm ? originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`) : originalTitleText}`;
-             } else {
-                 item.style.display = 'none';
-             }
-         });
- 
-         if (noResultsMessage) {
-             noResultsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
-         }
+        const input = event.currentTarget;
+        const searchTerm = input.value.trim().toLowerCase();
+
+        // NOUVELLE LOGIQUE : On ne se fie plus à `this.itemTargets`.
+        // On trouve le conteneur de l'onglet parent de l'input qui a déclenché l'événement.
+        const tabContent = input.closest('.tab-content');
+        if (!tabContent) return;
+
+        // On cherche les éléments et le message de "non trouvé" à l'intérieur de cet onglet spécifique.
+        const items = tabContent.querySelectorAll('.accordion-item');
+        const noResultsMessage = tabContent.querySelector('[data-workspace-manager-target="noResultsMessage"]');
+
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const titleElement = item.querySelector('.accordion-title');
+            if (!titleElement) return;
+
+            const toggleIcon = titleElement.querySelector('.accordion-toggle');
+            const iconHtml = toggleIcon ? toggleIcon.outerHTML : '';
+
+            if (!titleElement.dataset.originalTitle) {
+                const tempClone = titleElement.cloneNode(true);
+                tempClone.querySelector('.accordion-toggle')?.remove();
+                titleElement.dataset.originalTitle = tempClone.textContent.trim();
+            }
+
+            const originalTitleText = titleElement.dataset.originalTitle;
+
+            if (originalTitleText.toLowerCase().includes(searchTerm)) {
+                item.style.display = '';
+                visibleCount++;
+                const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+                titleElement.innerHTML = `${iconHtml} ${searchTerm ? originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`) : originalTitleText}`;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (noResultsMessage) {
+            noResultsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
     }
 
     /**
      * Réinitialise le champ de recherche et le filtre de l'accordéon.
      */
-    resetFilter() {
-        if (this.hasSearchInputTarget) {
-            this.searchInputTarget.value = '';
-            this.searchInputTarget.dispatchEvent(new Event('input'));
+    resetFilter(event) {
+        // On ne peut pas utiliser de "target". On cherche l'input par rapport au bouton cliqué.
+        const searchBar = event.currentTarget.closest('.accordion-search-bar');
+        if (searchBar) {
+            const searchInput = searchBar.querySelector('.accordion-search-input');
+            if (searchInput) {
+                searchInput.value = '';
+                // On déclenche manuellement l'événement 'input' pour que la méthode filter() s'exécute.
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
         }
     }
 
