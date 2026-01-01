@@ -559,13 +559,15 @@ textarea:hover,
 /* ================================================================== */
 
 .description-panel {
-    --description-panel-top-gap: 300px; /* NOUVEAU : Variable pour l'espace supérieur */
+    --description-panel-top-gap: 300px; /* Espace supérieur sans transparence */
+    --description-panel-side-gap: 5px;   /* NOUVEAU : Espace latéral sans transparence */
+    --description-panel-bottom-gap: 5px; /* NOUVEAU : Espace inférieur sans transparence */
     position: relative; /* Requis pour positionner l'overlay */
     color: #ffffff; /* Texte en blanc pour contraster avec l'overlay */
     font-size: 0.95rem;
     line-height: 1.6;
     border-radius: .375rem;
-    padding: var(--description-panel-top-gap) 1rem 1rem;
+    padding: var(--description-panel-top-gap) var(--description-panel-side-gap) var(--description-panel-bottom-gap);
     margin-bottom: 1rem;
     overflow: hidden; /* Assure que l'overlay respecte les coins arrondis */
     display: flex; /* Permet de centrer le contenu verticalement */
@@ -580,10 +582,10 @@ textarea:hover,
 .description-panel::before {
     content: '';
     position: absolute;
-    top: var(--description-panel-top-gap); /* MODIFIÉ : L'overlay commence après l'espace supérieur */
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: var(--description-panel-top-gap);
+    left: var(--description-panel-side-gap);
+    right: var(--description-panel-side-gap);
+    bottom: var(--description-panel-bottom-gap);
     background-color: rgba(0, 0, 0, 0.65); /* Fond noir avec 65% d'opacité */
     z-index: 1; /* Se place entre le fond et le texte */
     transition: background-color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour l'overlay */
