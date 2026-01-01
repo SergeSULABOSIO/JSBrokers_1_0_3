@@ -7109,7 +7109,7 @@ class Constante
                     "parametres" => [
                         "description" => "Notification Sinistre",
                         'icone' => 'emojione-monotone:fire',
-                        'background_image' => '../images/fitures/notification_sinistre.jpg',
+                        'background_image' => '/images/fitures/notification_sinistre.jpg',
                         'description_template' => [
                             "Ce dossier concerne le sinistre référencé [[*referenceSinistre]]",
                             ", survenu le [[occuredAt]]",

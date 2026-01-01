@@ -559,16 +559,16 @@ textarea:hover,
 /* ================================================================== */
 
 .description-panel {
+    --description-panel-top-gap: 200px; /* NOUVEAU : Variable pour l'espace supérieur */
     position: relative; /* Requis pour positionner l'overlay */
     color: #ffffff; /* Texte en blanc pour contraster avec l'overlay */
     font-size: 0.95rem;
     line-height: 1.6;
     border-radius: .375rem;
-    padding: 1rem;
+    padding: var(--description-panel-top-gap) 1rem 1rem;
     margin-bottom: 1rem;
     overflow: hidden; /* Assure que l'overlay respecte les coins arrondis */
     display: flex; /* Permet de centrer le contenu verticalement */
-    align-items: center;
     min-height: 150px; /* Hauteur minimale pour que l'image soit visible */
 
     /* --- Définition de l'image de fond --- */
@@ -580,7 +580,7 @@ textarea:hover,
 .description-panel::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: var(--description-panel-top-gap); /* MODIFIÉ : L'overlay commence après l'espace supérieur */
     left: 0;
     right: 0;
     bottom: 0;
