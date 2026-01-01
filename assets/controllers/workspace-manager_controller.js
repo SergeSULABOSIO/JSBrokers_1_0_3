@@ -869,48 +869,48 @@ export default class extends Controller {
      * @param {InputEvent} event
      */
     filter(event) {
-        const input = event.currentTarget;
-        const searchTerm = input.value.trim().toLowerCase();
-
-        console.log(this.nomControleur + " - Filter - Code: 1986 - Data:", event.currentTarget);
-
-        let visibleCount = 0;
-
-        this.itemTargets.forEach(item => {
-            const titleElement = item.querySelector('.accordion-title');
-            if (!titleElement) return;
-
-            const toggleIcon = titleElement.querySelector('.accordion-toggle');
-            const iconHtml = toggleIcon ? toggleIcon.outerHTML : '';
-
-            // Stocke le titre original une seule fois pour la performance
-            if (!titleElement.dataset.originalTitle) {
-                const tempClone = titleElement.cloneNode(true);
-                tempClone.querySelector('.accordion-toggle')?.remove();
-                titleElement.dataset.originalTitle = tempClone.textContent.trim();
-            }
-
-            const originalTitleText = titleElement.dataset.originalTitle;
-
-            if (originalTitleText.toLowerCase().includes(searchTerm)) {
-                item.style.display = '';
-                visibleCount++;
-
-                if (searchTerm) {
-                    const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-                    const highlightedText = originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`);
-                    titleElement.innerHTML = `${iconHtml} ${highlightedText}`;
-                } else {
-                    titleElement.innerHTML = `${iconHtml} ${originalTitleText}`;
-                }
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        if (this.hasNoResultsMessageTarget) {
-            this.noResultsMessageTarget.style.display = visibleCount === 0 ? 'block' : 'none';
-        }
+         const input = event.currentTarget;
+         const searchTerm = input.value.trim().toLowerCase();
+ 
+         // NOUVELLE LOGIQUE : On ne se fie plus à `this.itemTargets`.
+         // On trouve le conteneur de l'onglet parent de l'input qui a déclenché l'événement.
+         const tabContent = input.closest('.tab-content');
+         if (!tabContent) return;
+ 
+         // On cherche les éléments et le message de "non trouvé" à l'intérieur de cet onglet spécifique.
+         const items = tabContent.querySelectorAll('.accordion-item');
+         const noResultsMessage = tabContent.querySelector('[data-workspace-manager-target="noResultsMessage"]');
+ 
+         let visibleCount = 0;
+ 
+         items.forEach(item => {
+             const titleElement = item.querySelector('.accordion-title');
+             if (!titleElement) return;
+ 
+             const toggleIcon = titleElement.querySelector('.accordion-toggle');
+             const iconHtml = toggleIcon ? toggleIcon.outerHTML : '';
+ 
+             if (!titleElement.dataset.originalTitle) {
+                 const tempClone = titleElement.cloneNode(true);
+                 tempClone.querySelector('.accordion-toggle')?.remove();
+                 titleElement.dataset.originalTitle = tempClone.textContent.trim();
+             }
+ 
+             const originalTitleText = titleElement.dataset.originalTitle;
+ 
+             if (originalTitleText.toLowerCase().includes(searchTerm)) {
+                 item.style.display = '';
+                 visibleCount++;
+                 const regex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+                 titleElement.innerHTML = `${iconHtml} ${searchTerm ? originalTitleText.replace(regex, `<strong class="search-highlight">$&</strong>`) : originalTitleText}`;
+             } else {
+                 item.style.display = 'none';
+             }
+         });
+ 
+         if (noResultsMessage) {
+             noResultsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+         }
     }
 
     /**
