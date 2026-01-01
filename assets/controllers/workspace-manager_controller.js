@@ -410,71 +410,93 @@ export default class extends Controller {
      * @private
      */
     _buildDescriptionText(entity, entityType, entityCanvas) {
-        if (entityType === 'NotificationSinistre') {
-            return this._buildNotificationSinistreDescription(entity);
+        // NOUVEAU : On cherche un template de description dans le canevas.
+        const templateParts = entityCanvas?.parametres?.description_template;
+
+        if (templateParts && Array.isArray(templateParts)) {
+            // Si un template (sous forme de tableau) est trouvé, on utilise le nouveau constructeur.
+            return this._buildDescriptionFromTemplate(entity, entityCanvas, templateParts);
         }
+
+        // Sinon, on utilise la méthode générique par défaut.
         return this._buildGenericDescription(entity, entityCanvas);
     }
 
     /**
-     * NOUVEAU : Construit une description narrative et professionnelle pour une NotificationSinistre.
-     * @param {object} entity L'entité NotificationSinistre.
+     * NOUVEAU : Construit une description narrative en se basant sur un template (tableau de clauses).
+     * Chaque clause du template est traitée : si elle contient des ancres avec des valeurs valides,
+     * elle est ajoutée au texte final.
+     * @param {object} entity L'objet de données de l'entité.
+     * @param {object} entityCanvas Le canevas de configuration de l'entité.
+     * @param {string[]} templateParts Le tableau de clauses du template.
      * @returns {string} Le HTML de la description.
      * @private
      */
-    _buildNotificationSinistreDescription(entity) {
-        const parts = [];
-        const get = (code, displayField = null) => this._getVal(entity, code, displayField);
+    _buildDescriptionFromTemplate(entity, entityCanvas, templateParts) {
+        const builtParts = [];
+        const anchorRegex = /\[\[(.*?)\]\]/g;
 
-        const refSinistre = get('referenceSinistre');
-        const refPolice = get('referencePolice');
-        const assure = get('assure', 'nom');
-        const assureur = get('assureur', 'nom');
-        const risque = get('risque', 'nomComplet');
-        const dateSurvenance = this.formatValue(get('occuredAt'), 'Date');
-        const dateNotification = this.formatValue(get('notifiedAt'), 'Date');
-        const description = get('descriptionDeFait');
-        const victimes = get('descriptionVictimes');
-        const dommage = this.formatValue(get('dommage'), 'Nombre', '$');
-        const evaluation = this.formatValue(get('evaluationChiffree'), 'Nombre', '$');
+        for (const partTemplate of templateParts) {
+            let processedPart = partTemplate;
+            let hasContent = false;
+            const anchors = [...partTemplate.matchAll(anchorRegex)];
 
-        if (refSinistre) {
-            parts.push(`Ce dossier concerne le sinistre référencé <strong>${refSinistre}</strong>,`);
-        } else {
-            parts.push(`Ce dossier concerne un sinistre`);
-        }
-
-        if (dateSurvenance !== 'N/A') {
-            parts.push(`survenu le <strong>${dateSurvenance}</strong>`);
-            if (dateNotification !== 'N/A' && dateNotification !== dateSurvenance) {
-                parts.push(`et notifié le <strong>${dateNotification}</strong>.`);
+            if (anchors.length === 0) {
+                hasContent = true; // C'est une partie statique, on la garde.
             } else {
-                parts.push('.');
+                for (const anchor of anchors) {
+                    const anchorText = anchor[0]; // ex: [[*code]]
+                    const anchorContent = anchor[1]; // ex: *code
+
+                    const isImportant = anchorContent.startsWith('*');
+                    const code = isImportant ? anchorContent.substring(1) : anchorContent;
+
+                    const attribute = entityCanvas.liste.find(attr => attr.code === code);
+                    if (!attribute) {
+                        console.warn(`[WorkspaceManager] Ancre "${code}" introuvable dans le canevas.`);
+                        processedPart = processedPart.replace(anchorText, ''); // Retire l'ancre inconnue
+                        continue;
+                    }
+
+                    const value = this._getVal(entity, code, attribute.displayField);
+                    let formattedValue = '';
+
+                    if (value !== null && value !== '') {
+                        hasContent = true; // Cette clause a du contenu valide.
+                        switch (attribute.type) {
+                            case 'Relation':
+                                const relatedEntity = entity[attribute.code];
+                                const link = document.createElement('a');
+                                link.href = "#";
+                                link.textContent = value;
+                                link.dataset.action = "click->workspace-manager#openRelatedEntity";
+                                link.dataset.entityId = relatedEntity.id;
+                                link.dataset.entityType = this._getCleanEntityName(attribute.targetEntity);
+                                formattedValue = link.outerHTML;
+                                break;
+                            default: // Gère Nombre, Date, Entier, Texte
+                                formattedValue = this.formatValue(value, attribute.type, attribute.unite);
+                                break;
+                        }
+                        if (isImportant) {
+                            formattedValue = `<strong>${formattedValue}</strong>`;
+                        }
+                    }
+                    processedPart = processedPart.replace(anchorText, formattedValue);
+                }
+            }
+
+            if (hasContent) {
+                builtParts.push(processedPart);
             }
         }
 
-        const policyParts = [];
-        if (refPolice) policyParts.push(`Il est lié à la police d'assurance <strong>${refPolice}</strong>`);
-        if (assure) policyParts.push(`souscrite par <strong>${assure}</strong>`);
-        if (assureur) policyParts.push(`auprès de l'assureur <strong>${assureur}</strong>`);
-        if (risque) policyParts.push(`pour le risque <em>${risque}</em>.`);
-        if (policyParts.length > 0) parts.push(policyParts.join(' '));
+        let finalText = builtParts.join('').trim();
+        // Nettoyage final pour la grammaire
+        finalText = finalText.replace(/^, /g, '').replace(/^ et /g, ''); // Supprime ", " ou " et " en début de chaîne.
+        finalText = finalText.replace(/ \./g, '.').replace(/ ,/g, ','); // " ." -> "." | " ," -> ","
 
-        if (description) parts.push(`Les circonstances rapportées sont les suivantes : <em>« ${description} »</em>.`);
-        if (victimes) parts.push(`Les victimes ou dommages sont décrits comme suit : <em>« ${victimes} »</em>.`);
-
-        const costParts = [];
-        if (dommage !== 'N/A') costParts.push(`Le dommage initialement estimé était de <strong>${dommage}</strong>`);
-        if (evaluation !== 'N/A') {
-            if (costParts.length > 0) {
-                costParts.push(`et a été réévalué à <strong>${evaluation}</strong>.`);
-            } else {
-                costParts.push(`Le dommage a été évalué à <strong>${evaluation}</strong>.`);
-            }
-        }
-        if (costParts.length > 0) parts.push(costParts.join(' '));
-
-        return `<p>${parts.join(' ')}</p>`;
+        return `<p>${finalText}</p>`;
     }
 
     /**
