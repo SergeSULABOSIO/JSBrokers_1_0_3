@@ -6656,6 +6656,69 @@ class Constante
                     "colonnes_numeriques" => [],
                 ];
 
+            case Classeur::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Classeurs",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:folder-multiple"],
+                        "textes_secondaires" => [["attribut_code" => "description", "attribut_taille_max" => 50]],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case CompteBancaire::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Comptes Bancaires",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "intitule"],
+                            ["attribut_prefixe" => "N° ", "attribut_code" => "numero"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case ConditionPartage::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Conditions de Partage",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:share-variant"],
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Taux: ", "attribut_code" => "taux", "attribut_type" => "pourcentage"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Cotation::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Cotations",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:file-chart"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "assureur"],
+                            ["attribut_prefixe" => "Piste: ", "attribut_code" => "piste"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Prime TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "primeTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Comm. TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "commissionTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                    ],
+                ];
+
             case Avenant::class:
                 return [
                     "colonne_principale" => [
@@ -7393,19 +7456,50 @@ class Constante
                 ];
 
             case Client::class:
-                return [
-                    "parametres" => ["description" => "Client", "icone" => "mdi:account-group"],
+                 return [
+                    "parametres" => [
+                        "description" => "Client",
+                        "icone" => "mdi:account-group",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Client [[*nom]].",
+                            " Contact: [[email]] / [[telephone]].",
+                            " Adresse: [[adresse]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "email"],
-                            ["attribut_code" => "telephone", "attribut_prefixe" => " | Tel: "]
-                        ]],
-                        ["code" => "contacts", "intitule" => "Contacts", "type" => "Collection", "targetEntity" => Contact::class],
-                        ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class],
-                        ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class],
-                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                        ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "email", "intitule" => "Email", "type" => "Texte"],
+                        ["code" => "telephone", "intitule" => "Téléphone", "type" => "Texte"],
+                        ["code" => "adresse", "intitule" => "Adresse", "type" => "Texte"],
+                        ["code" => "groupe", "intitule" => "Groupe", "type" => "Relation", "targetEntity" => Groupe::class, "displayField" => "nom"],
+                        ["code" => "contacts", "intitule" => "Contacts", "type" => "Collection", "targetEntity" => Contact::class, "displayField" => "nom"],
+                        ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class, "displayField" => "nom"],
+                        ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                        ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
+                    ]
+                ];
+
+            case Contact::class:
+                return [
+                    "parametres" => [
+                        "description" => "Contact",
+                        "icone" => "mdi:account-box",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Contact: [[*nom]] ([[fonction]]).",
+                            " Email: [[email]] / Tél: [[telephone]]."
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "fonction", "intitule" => "Fonction", "type" => "Texte"],
+                        ["code" => "email", "intitule" => "Email", "type" => "Texte"],
+                        ["code" => "telephone", "intitule" => "Téléphone", "type" => "Texte"],
+                        ["code" => "client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
                     ]
                 ];
 
@@ -7488,6 +7582,24 @@ class Constante
     private function getMarketingEntityCanvas(string $entityClassName): array
     {
         switch ($entityClassName) {
+            case Feedback::class:
+                return [
+                    "parametres" => [
+                        "description" => "Feedback",
+                        "icone" => "mdi:message-reply-text",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Feedback du [[createdAt]].",
+                            " Action suivante: [[nextAction]] le [[nextActionAt]]."
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "description", "intitule" => "Description", "type" => "Texte"],
+                        ["code" => "createdAt", "intitule" => "Date", "type" => "Date"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                    ]
+                ];
             case Piste::class:
                 return [
                     "parametres" => ["description" => "Piste Commerciale", "icone" => "mdi:road-variant"],
@@ -7514,19 +7626,6 @@ class Constante
                         ["code" => "toBeEndedAt", "intitule" => "Échéance", "type" => "Date"],
                         ["code" => "closed", "intitule" => "Clôturée", "type" => "Booleen"],
                         ["code" => "feedbacks", "intitule" => "Feedbacks", "type" => "Collection", "targetEntity" => Feedback::class],
-                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                    ]
-                ];
-
-            case Feedback::class:
-                return [
-                    "parametres" => ["description" => "Feedback", "icone" => "mdi:message-reply-text"],
-                    "liste" => [
-                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "description", "intitule" => "Description", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "tache", "attribut_prefixe" => "Tâche: "]
-                        ]],
-                        ["code" => "createdAt", "intitule" => "Date", "type" => "Date"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
                     ]
                 ];
@@ -7619,16 +7718,25 @@ class Constante
                     ]
                 ];
             case CompteBancaire::class:
-                return [
-                    "parametres" => ["description" => "Compte Bancaire", "icone" => "mdi:bank"],
+                 return [
+                    "parametres" => [
+                        "description" => "Compte Bancaire",
+                        "icone" => "mdi:bank",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Compte [[*nom]] - [[banque]].",
+                            " N° [[numero]] / [[intitule]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "intitule", "intitule" => "Intitulé", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "numero", "attribut_prefixe" => "N° "],
-                            ["attribut_code" => "banque", "attribut_prefixe" => " | Banque: "]
-                        ]],
-                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                        ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "intitule", "intitule" => "Intitulé", "type" => "Texte"],
+                        ["code" => "numero", "intitule" => "Numéro", "type" => "Texte"],
+                        ["code" => "banque", "intitule" => "Banque", "type" => "Texte"],
+                        ["code" => "codeSwift", "intitule" => "Code Swift", "type" => "Texte"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                        ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
                     ]
                 ];
             case Note::class:
@@ -7704,29 +7812,59 @@ class Constante
     private function getAdministrationEntityCanvas(string $entityClassName): array
     {
         switch ($entityClassName) {
+            case Classeur::class:
+                return [
+                    "parametres" => [
+                        "description" => "Classeur",
+                        "icone" => "mdi:folder-multiple",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Classeur: [[*nom]].",
+                            " <em>« [[description]] »</em>"
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "description", "intitule" => "Description", "type" => "Texte"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                    ]
+                ];
             case Document::class:
                 return [
-                    "parametres" => ["description" => "Document", "icone" => "mdi:file-document"],
+                    "parametres" => [
+                        "description" => "Document",
+                        "icone" => "mdi:file-document",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Document: [[*nom]].",
+                            " Fichier: <em>[[nomFichierStocke]]</em>"
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "nomFichierStocke", "intitule" => "Fichier", "type" => "Texte"],
+                        ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
+                    ]
+                ];
+            case Entreprise::class:
+                return [
+                    "parametres" => [
+                        "description" => "Entreprise",
+                        "icone" => "mdi:office-building",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Entreprise: [[*nom]].",
+                            " Licence: [[licence]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "nomFichierStocke", "attribut_prefixe" => "Fichier: "]
                         ]],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-                    ]
-                ];
-            case Entreprise::class:
-                return [
-                    "parametres" => ["description" => "Entreprise", "icone" => "mdi:office-building"],
-                    "liste" => [
-                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "licence", "attribut_prefixe" => "Licence: "]
-                        ]],
-                        ["code" => "telephone", "intitule" => "Téléphone", "type" => "Texte"],
-                        ["code" => "email", "intitule" => "Email", "type" => "Texte"],
-                        ["code" => "utilisateurs", "intitule" => "Utilisateurs", "type" => "Collection", "targetEntity" => Utilisateur::class],
-                        ["code" => "invites", "intitule" => "Invités", "type" => "Collection", "targetEntity" => Invite::class],
                     ]
                 ];
             case Invite::class:
@@ -7826,6 +7964,39 @@ class Constante
                 ],
             ];
         }
+
+        if ($object instanceof Client) {
+            return [
+                "montant_commission_ttc" => [
+                    "description" => "Commissions TTC",
+                    "value" => ($this->Client_getMontant_commission_ttc($object, -1, false) ?? 0) * 100,
+                ],
+                "montant_commission_ttc_solde" => [
+                    "description" => "Solde Commissions",
+                    "value" => ($this->Client_getMontant_commission_ttc_solde($object, -1, false) ?? 0) * 100,
+                ],
+                "montant_prime_payable_par_client_solde" => [
+                    "description" => "Solde Primes",
+                    "value" => ($this->Client_getMontant_prime_payable_par_client_solde($object) ?? 0) * 100,
+                ],
+            ];
+        }
+
+        if ($object instanceof Cotation) {
+            return [
+                "primeTTC" => [
+                    "description" => "Prime TTC",
+                    "value" => ($this->Cotation_getMontant_prime_payable_par_client($object) ?? 0) * 100,
+                ],
+                "commissionTTC" => [
+                    "description" => "Commission TTC",
+                    "value" => ($this->Cotation_getMontant_commission_ttc($object, -1, false) ?? 0) * 100,
+                ],
+            ];
+        }
+
+
+
 
         // --- AJOUT : Logique pour OffreIndemnisationSinistre ---
         if ($object instanceof OffreIndemnisationSinistre) {

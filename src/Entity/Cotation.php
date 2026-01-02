@@ -6,6 +6,7 @@ use App\Repository\CotationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CotationRepository::class)]
 class Cotation
@@ -13,60 +14,73 @@ class Cotation
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $duree = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'cotations')]
+    #[Groups(['list:read'])]
     private ?Assureur $assureur = null;
 
     /**
      * @var Collection<int, Tache>
      */
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $taches;
 
     /**
      * @var Collection<int, ChargementPourPrime>
      */
     #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $chargements;
 
     /**
      * @var Collection<int, RevenuPourCourtier>
      */
     #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $revenus;
 
     /**
      * @var Collection<int, Tranche>
      */
     #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $tranches;
 
     #[ORM\ManyToOne(inversedBy: 'cotations', cascade: ['persist', 'remove'])]
+    #[Groups(['list:read'])]
     private ?Piste $piste = null;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     /**
      * @var Collection<int, Avenant>
      */
     #[ORM\OneToMany(targetEntity: Avenant::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $avenants;
 
     public function __construct()

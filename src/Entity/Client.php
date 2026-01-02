@@ -55,21 +55,21 @@ class Client
      * @var Collection<int, Piste>
      */
     #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'client')]
-    #[Groups(['list:read'])]
+    // #[Groups(['list:read'])]
     private Collection $pistes;
 
     /**
      * @var Collection<int, NotificationSinistre>
      */
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'assure')]
-    // #[Groups(['list:read'])] // POUR NE TOMBER DANS LA BOUCLE INFINIE QUAND IL FERA LA SERIALISATION DES ENTITES
+    #[Groups(['list:read'])] // POUR NE TOMBER DANS LA BOUCLE INFINIE QUAND IL FERA LA SERIALISATION DES ENTITES
     private Collection $notificationSinistres;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    // #[Groups(['list:read'])]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\ManyToOne(inversedBy: 'clients')]
@@ -80,14 +80,14 @@ class Client
      * @var Collection<int, Note>
      */
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'client')]
-    // #[Groups(['list:read'])]
+    #[Groups(['list:read'])]
     private Collection $notes;
 
     /**
      * @var Collection<int, Partenaire>
      */
     #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'clients')]
-    // #[Groups(['list:read'])]
+    #[Groups(['list:read'])]
     private Collection $partenaires;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -120,6 +120,49 @@ class Client
         $this->notes = new ArrayCollection();
         $this->partenaires = new ArrayCollection();
     }
+
+    //Attributs calculés
+    #[Groups(['list:read'])]
+    public ?float $montant_prime_payable_par_client = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_prime_payable_par_client_payee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_prime_payable_par_client_solde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_pure = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ht = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ttc = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ttc_collectee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ttc_solde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_taxe_payable_par_assureur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_taxe_payable_par_assureur_payee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_taxe_payable_par_assureur_solde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_retrocommissions_payable_par_courtier = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_retrocommissions_payable_par_courtier_payee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_retrocommissions_payable_par_courtier_solde = null;
 
     public function getId(): ?int
     {

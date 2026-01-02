@@ -6,6 +6,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\CompteBancaireRepository;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CompteBancaireRepository::class)]
 class CompteBancaire
@@ -13,42 +14,52 @@ class CompteBancaire
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $intitule = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $numero = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $banque = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $codeSwift = null;
 
     #[ORM\ManyToOne(inversedBy: 'compteBancaires')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'compteBancaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     /**
      * @var Collection<int, Note>
      */
     #[ORM\ManyToMany(targetEntity: Note::class, mappedBy: 'comptes')]
+    #[Groups(['list:read'])]
     private Collection $notes;
 
     /**
      * @var Collection<int, Paiement>
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'CompteBancaire')]
+    #[Groups(['list:read'])]
     private Collection $paiements;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     public function __construct()
