@@ -7298,15 +7298,55 @@ class Constante
         switch ($entityClassName) {
             case Assureur::class:
                 return [
-                    "parametres" => ["description" => "Assureur", "icone" => "mdi:shield-check"],
+                    "parametres" => [
+                        "description" => "Assureur",
+                        "icone" => "mdi:shield-check",
+                        'description_template' => [
+                            "L'assureur [[*nom]] est une entité clé de notre portefeuille.",
+                            " Contactable par email à l'adresse [[email]], par téléphone au [[telephone]] et physiquement à [[adressePhysique]].",
+                            " Les informations légales sont : N° Impôt [[numimpot]], ID.NAT [[idnat]], et RCCM [[rccm]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "email"],
-                            ["attribut_code" => "telephone", "attribut_prefixe" => " | Tel: "]
-                        ]],
-                        ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class],
-                        ["code" => "bordereaus", "intitule" => "Bordereaux", "type" => "Collection", "targetEntity" => Bordereau::class],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "email", "intitule" => "Email", "type" => "Texte"],
+                        ["code" => "telephone", "intitule" => "Téléphone", "type" => "Texte"],
+                        ["code" => "url", "intitule" => "Site Web", "type" => "Texte"],
+                        ["code" => "adressePhysique", "intitule" => "Adresse", "type" => "Texte"],
+                        ["code" => "numimpot", "intitule" => "N° Impôt", "type" => "Texte"],
+                        ["code" => "idnat", "intitule" => "ID.NAT", "type" => "Texte"],
+                        ["code" => "rccm", "intitule" => "RCCM", "type" => "Texte"],
+                        ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class, "displayField" => "nom"],
+                        ["code" => "bordereaus", "intitule" => "Bordereaux", "type" => "Collection", "targetEntity" => Bordereau::class, "displayField" => "nom"],
+                        ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
+                        [
+                            "code" => "montant_commission_ttc",
+                            "intitule" => "Commissions TTC",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Assureur_getMontant_commission_ttc",
+                            "description" => "Montant total des commissions (Toutes Taxes Comprises) générées par cet assureur."
+                        ],
+                        [
+                            "code" => "montant_commission_ttc_solde",
+                            "intitule" => "Solde Commissions",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Assureur_getMontant_commission_ttc_solde",
+                            "description" => "Montant des commissions TTC restant à percevoir de cet assureur."
+                        ],
+                        [
+                            "code" => "montant_prime_payable_par_client_solde",
+                            "intitule" => "Solde Primes Clients",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Assureur_getMontant_prime_payable_par_client_solde",
+                            "description" => "Montant des primes que les clients doivent encore payer pour les polices de cet assureur."
+                        ]
                     ]
                 ];
 
@@ -7661,6 +7701,24 @@ class Constante
                 "compensationDue" => [
                     "description" => "Compensation due",
                     "value" => ($this->Notification_Sinistre_getSoldeAVerser($object) ?? 0) * 100,
+                ],
+            ];
+        }
+
+        // --- AJOUT : Logique pour Assureur ---
+        if ($object instanceof Assureur) {
+            return [
+                "montant_commission_ttc" => [
+                    "description" => "Commissions TTC",
+                    "value" => ($this->Assureur_getMontant_commission_ttc($object, -1, false) ?? 0) * 100,
+                ],
+                "montant_commission_ttc_solde" => [
+                    "description" => "Solde Commissions",
+                    "value" => ($this->Assureur_getMontant_commission_ttc_solde($object, -1, false) ?? 0) * 100,
+                ],
+                "montant_prime_payable_par_client_solde" => [
+                    "description" => "Solde Primes Clients",
+                    "value" => ($this->Assureur_getMontant_prime_payable_par_client_solde($object) ?? 0) * 100,
                 ],
             ];
         }
