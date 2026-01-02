@@ -83,6 +83,14 @@ class Cotation
     #[Groups(['list:read'])]
     private Collection $avenants;
 
+    //Attributs calculés
+    #[Groups(['list:read'])]
+    public ?float $primeTTC;
+
+    #[Groups(['list:read'])]
+    public ?float $commissionTTC;
+
+
     public function __construct()
     {
         $this->taches = new ArrayCollection();
