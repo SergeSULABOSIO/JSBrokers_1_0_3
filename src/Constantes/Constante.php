@@ -7342,7 +7342,6 @@ class Constante
                     "parametres" => [
                         "description" => "Assureur",
                         "icone" => "mdi:shield-check",
-                        'background_image' => '/images/fitures/default.jpg',
                         'description_template' => [
                             "L'assureur [[*nom]] est une entité clé de notre portefeuille.",
                             " Contactable par email à l'adresse [[email]], par téléphone au [[telephone]] et physiquement à [[adressePhysique]].",
@@ -7389,21 +7388,6 @@ class Constante
                             "fonction" => "Assureur_getMontant_prime_payable_par_client_solde",
                             "description" => "Montant des primes que les clients doivent encore payer pour les polices de cet assureur."
                         ]
-                    ]
-                ];
-
-            case Avenant::class:
-                return [
-                    "parametres" => ["description" => "Avenant", "icone" => "mdi:file-document-edit"],
-                    "liste" => [
-                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "numero", "intitule" => "Numéro", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "cotation", "attribut_prefixe" => "Cotation: "]
-                        ]],
-                        ["code" => "startingAt", "intitule" => "Début", "type" => "Date"],
-                        ["code" => "endingAt", "intitule" => "Fin", "type" => "Date"],
-                        ["code" => "primeTTC", "intitule" => "Prime TTC", "type" => "Nombre", "unite" => "$"],
-                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
                     ]
                 ];
 
@@ -7557,7 +7541,6 @@ class Constante
         switch ($entityClassName) {
             case Bordereau::class:
                 return [
-                    "parametres" => ["description" => "Bordereau", "icone" => "mdi:file-table-box-multiple"],
                     "parametres" => [
                         "description" => "Bordereau",
                         "icone" => "mdi:file-table-box-multiple",
@@ -7570,21 +7553,15 @@ class Constante
                     ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "assureur"]
-                        ]],
-                        ["code" => "montantTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => "$"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
                         ["code" => "montantTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                         ["code" => "receivedAt", "intitule" => "Reçu le", "type" => "Date"],
-                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                     ]
                 ];
             case Chargement::class:
                 return [
-                    "parametres" => ["description" => "Type de chargement", "icone" => "mdi:cog-transfer"],
                     "parametres" => [
                         "description" => "Type de chargement",
                         "icone" => "mdi:cog-transfer",
@@ -7871,7 +7848,6 @@ class Constante
             ];
         }
 
-        // --- AJOUT : Logique pour les entités sans données numériques ---
         if ($object instanceof ChargementPourPrime) {
             return [
                 "montantFlatExceptionel" => [
