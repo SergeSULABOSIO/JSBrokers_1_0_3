@@ -27,6 +27,10 @@ class Assureur
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
+    private ?string $telephone = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $url = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -105,6 +109,18 @@ class Assureur
     public function setEmail(string $email): static
     {
         $this->email = $email;
+
+        return $this;
+    }
+
+    public function getTelephone(): ?string
+    {
+        return $this->telephone;
+    }
+
+    public function setTelephone(?string $telephone): static
+    {
+        $this->telephone = $telephone;
 
         return $this;
     }
@@ -305,4 +321,47 @@ class Assureur
 
         return $this;
     }
+
+    //Attributs calculés
+    #[Groups(['list:read'])]
+    public ?float $montant_prime_payable_par_client = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_prime_payable_par_client_payee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_prime_payable_par_client_solde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_pure = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ht = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ttc = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ttc_collectee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_commission_ttc_solde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_taxe_payable_par_assureur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_taxe_payable_par_assureur_payee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_taxe_payable_par_assureur_solde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_retrocommissions_payable_par_courtier = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_retrocommissions_payable_par_courtier_payee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_retrocommissions_payable_par_courtier_solde = null;
 }
