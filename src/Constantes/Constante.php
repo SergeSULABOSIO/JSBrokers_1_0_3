@@ -17,6 +17,7 @@ use App\Entity\Avenant;
 use App\Entity\Contact;
 use App\Entity\Tranche;
 use App\Entity\Assureur;
+use App\Entity\Classeur;
 use App\Entity\Cotation;
 use App\Entity\Document;
 use App\Entity\Feedback;
@@ -7862,7 +7863,7 @@ class Constante
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "nomFichierStocke", "attribut_prefixe" => "Fichier: "]
+                            ["attribut_code" => "licence", "attribut_prefixe" => "Licence: "]
                         ]],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
                     ]
