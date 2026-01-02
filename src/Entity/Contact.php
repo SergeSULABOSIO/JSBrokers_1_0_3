@@ -46,6 +46,10 @@ class Contact
     public const TYPE_CONTACT_ADMINISTRATION = 2;
     public const TYPE_CONTACT_AUTRES = 3;
 
+    //Attributs calculés
+    #[Groups(['list:read'])]
+    public ?string $type_string;
+
 
     public function getId(): ?int
     {
