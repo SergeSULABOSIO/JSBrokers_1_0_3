@@ -560,8 +560,8 @@ textarea:hover,
 
 .description-panel {
     --description-panel-top-gap: 300px; /* Espace supérieur sans transparence */
-    --description-panel-side-gap: 5px;   /* NOUVEAU : Espace latéral sans transparence */
-    --description-panel-bottom-gap: 5px; /* NOUVEAU : Espace inférieur sans transparence */
+    --description-panel-side-gap: 10px;   /* NOUVEAU : Espace latéral sans transparence */
+    --description-panel-bottom-gap: 10px; /* NOUVEAU : Espace inférieur sans transparence */
     position: relative; /* Requis pour positionner l'overlay */
     color: #ffffff; /* Texte en blanc pour contraster avec l'overlay */
     font-size: 0.95rem;
@@ -595,6 +595,8 @@ textarea:hover,
     margin-bottom: 0;
     position: relative; /* Assure que le texte est au-dessus de l'overlay */
     z-index: 2;
+    /* NOUVEAU : Ajoute un espacement interne pour que le texte ne colle pas aux bords de la zone transparente. */
+    padding: 10px;
     transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour la couleur du texte */
 }
 
