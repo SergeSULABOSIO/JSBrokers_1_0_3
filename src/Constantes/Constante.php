@@ -6422,25 +6422,34 @@ class Constante
                             [
                                 "attribut_prefixe" => "",
                                 "attribut_code" => "fonction",
+                                "attribut_code" => "type_string",
                                 "attribut_type" => "text",
                                 "attribut_taille_max" => null,
                                 "icone" => "mdi:briefcase-account",
+                                "icone" => "mdi:tag-outline",
                                 "icone_taille" => "16px",
                             ],
                             [
                                 "attribut_prefixe" => "Email: ",
                                 "attribut_code" => "email",
+                                "attribut_prefixe" => "",
+                                "attribut_code" => "fonction",
                                 "attribut_type" => "text",
                                 "attribut_taille_max" => null,
                                 "icone" => "mdi:email-outline",
+                                "icone" => "mdi:briefcase-account",
                                 "icone_taille" => "16px",
                             ],
                             [
                                 "attribut_prefixe" => "Tél.: ",
                                 "attribut_code" => "telephone",
+                                "attribut_prefixe" => "Client: ",
+                                "attribut_code" => "client",
                                 "attribut_type" => "text",
                                 "attribut_taille_max" => null,
                                 "icone" => "mdi:phone",
+                                "attribut_taille_max" => 30,
+                                "icone" => "mdi:account-group",
                                 "icone_taille" => "16px",
                             ],
                         ],
@@ -7501,6 +7510,14 @@ class Constante
                         ["code" => "email", "intitule" => "Email", "type" => "Texte"],
                         ["code" => "telephone", "intitule" => "Téléphone", "type" => "Texte"],
                         ["code" => "client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                        [
+                            "code" => "type_string",
+                            "intitule" => "Type",
+                            "type" => "Calcul",
+                            "format" => "Texte",
+                            "fonction" => "Contact_getTypeString",
+                            "description" => "Le type de contact (Production, Sinistre, etc.)."
+                        ],
                     ]
                 ];
 
