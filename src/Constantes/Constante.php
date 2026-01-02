@@ -7523,14 +7523,31 @@ class Constante
                     "parametres" => ["description" => "Cotation", "icone" => "mdi:file-chart"],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                            ["attribut_code" => "assureur", "attribut_prefixe" => "Assureur: "]
-                        ]],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
                         ["code" => "piste", "intitule" => "Piste", "type" => "Relation", "targetEntity" => Piste::class, "displayField" => "nom"],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
                         ["code" => "avenants", "intitule" => "Avenants", "type" => "Collection", "targetEntity" => Avenant::class],
                         ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                        [
+                            "code" => "primeTTC",
+                            "intitule" => "Prime TTC",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Cotation_getMontant_prime_payable_par_client",
+                            "description" => "Montant total de la prime TTC."
+                        ],
+                        [
+                            "code" => "commissionTTC",
+                            "intitule" => "Commission TTC",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Cotation_getCommissionTTC",
+                            "description" => "Montant total de la commission TTC."
+                        ],
                     ]
                 ];
 
