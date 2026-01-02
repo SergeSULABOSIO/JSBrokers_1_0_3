@@ -6,6 +6,7 @@ use App\Repository\ClasseurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ClasseurRepository::class)]
 class Classeur
@@ -14,21 +15,26 @@ class Classeur
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'classeurs')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'classeur')]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     public function __construct()
