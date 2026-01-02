@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\BordereauRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -13,37 +14,47 @@ class Bordereau implements OwnerAwareInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $type = null;
     public const TYPE_BOREDERAU_PRODUCTION = 0;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\ManyToOne(inversedBy: 'bordereaus')]
+    #[Groups(['list:read'])]
     private ?Assureur $assureur = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $receivedAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?float $montantTTC = null;
 
     #[ORM\ManyToOne(inversedBy: 'bordereaus')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'bordereau', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
    
