@@ -7301,6 +7301,7 @@ class Constante
                     "parametres" => [
                         "description" => "Assureur",
                         "icone" => "mdi:shield-check",
+                        'background_image' => '/images/fitures/default.jpg',
                         'description_template' => [
                             "L'assureur [[*nom]] est une entité clé de notre portefeuille.",
                             " Contactable par email à l'adresse [[email]], par téléphone au [[telephone]] et physiquement à [[adressePhysique]].",
