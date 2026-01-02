@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\ChargementRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -13,12 +14,15 @@ class Chargement
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 20)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     // #[ORM\Column(nullable: true)]
@@ -31,21 +35,25 @@ class Chargement
     // private ?float $tauxSurPrimeNette = null;
     
     #[ORM\ManyToOne(inversedBy: 'chargements')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, ChargementPourPrime>
      */
     #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'type')]
+    #[Groups(['list:read'])]
     private Collection $chargementPourPrimes;
 
     /**
      * @var Collection<int, TypeRevenu>
      */
     #[ORM\OneToMany(targetEntity: TypeRevenu::class, mappedBy: 'typeChargement')]
+    #[Groups(['list:read'])]
     private Collection $typeRevenus;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?int $fonction = null;
 
     public const FONCTION_PRIME_NETTE = 1;

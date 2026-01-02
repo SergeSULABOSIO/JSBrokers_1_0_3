@@ -6656,6 +6656,47 @@ class Constante
                     "colonnes_numeriques" => [],
                 ];
 
+            case Avenant::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Avenants",
+                        "texte_principal" => [
+                            "attribut_code" => "referencePolice",
+                            "icone" => "mdi:file-document-edit",
+                        ],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Avt n°", "attribut_code" => "numero"],
+                            ["attribut_prefixe" => "Effet: ", "attribut_code" => "startingAt", "attribut_type" => "date"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Prime TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "primeTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Comm. TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "commissionTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                    ],
+                ];
+
+            case AutoriteFiscale::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Autorités Fiscales",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [["attribut_code" => "abreviation"]],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
                 // ... Ajoutez d'autres `case` ici pour chaque entité que vous souhaitez afficher en liste
         }
         return [];
@@ -7517,24 +7558,86 @@ class Constante
             case Bordereau::class:
                 return [
                     "parametres" => ["description" => "Bordereau", "icone" => "mdi:file-table-box-multiple"],
+                    "parametres" => [
+                        "description" => "Bordereau",
+                        "icone" => "mdi:file-table-box-multiple",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Bordereau [[*nom]] de l'assureur [[assureur]]",
+                            ", reçu le [[receivedAt]]",
+                            " pour un montant total de [[montantTTC]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "assureur"]
                         ]],
                         ["code" => "montantTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
+                        ["code" => "montantTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                         ["code" => "receivedAt", "intitule" => "Reçu le", "type" => "Date"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                     ]
                 ];
             case Chargement::class:
                 return [
                     "parametres" => ["description" => "Type de chargement", "icone" => "mdi:cog-transfer"],
+                    "parametres" => [
+                        "description" => "Type de chargement",
+                        "icone" => "mdi:cog-transfer",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Type de chargement : [[*nom]].",
+                            " Description : <em>« [[description]] »</em>."
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "description", "intitule" => "Description", "type" => "Texte"],
+                        ["code" => "fonction", "intitule" => "Fonction", "type" => "Texte"], // Maybe a calculated field to get the text? For now, it's just the int.
+                        ["code" => "chargementPourPrimes", "intitule" => "Utilisations (Primes)", "type" => "Collection", "targetEntity" => ChargementPourPrime::class, "displayField" => "nom"],
+                        ["code" => "typeRevenus", "intitule" => "Utilisations (Revenus)", "type" => "Collection", "targetEntity" => TypeRevenu::class, "displayField" => "nom"],
+                    ]
+                ];
+            case AutoriteFiscale::class:
+                return [
+                    "parametres" => [
+                        "description" => "Autorité Fiscale",
+                        "icone" => "mdi:bank",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "L'autorité fiscale [[*nom]] ([[abreviation]]) est responsable de la collecte des taxes."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "description"]
                         ]],
+                    ]
+                ];
+            case ChargementPourPrime::class:
+                return [
+                    "parametres" => [
+                        "description" => "Chargement sur Prime",
+                        "icone" => "mdi:cash-plus",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Chargement [[*nom]] d'un montant de [[montantFlatExceptionel]]",
+                            " sur la cotation [[cotation]]."
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "type", "intitule" => "Type de chargement", "type" => "Relation", "targetEntity" => Chargement::class, "displayField" => "nom"],
+                        ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
+                        ["code" => "montantFlatExceptionel", "intitule" => "Montant", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                        ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
                     ]
                 ];
             case CompteBancaire::class:
@@ -7724,6 +7827,28 @@ class Constante
             ];
         }
 
+        if ($object instanceof Avenant) {
+            return [
+                "primeTTC" => [
+                    "description" => "Prime TTC",
+                    "value" => ($this->Avenant_getPrimeTTC($object) ?? 0) * 100,
+                ],
+                "commissionTTC" => [
+                    "description" => "Commission TTC",
+                    "value" => ($this->Avenant_getCommissionTTC($object, -1, false) ?? 0) * 100,
+                ],
+            ];
+        }
+
+        if ($object instanceof Bordereau) {
+            return [
+                "montantTTC" => [
+                    "description" => "Montant TTC",
+                    "value" => ($object->getMontantTTC() ?? 0) * 100,
+                ],
+            ];
+        }
+
         // --- AJOUT : Logique pour OffreIndemnisationSinistre ---
         if ($object instanceof OffreIndemnisationSinistre) {
             return [
@@ -7747,6 +7872,16 @@ class Constante
         }
 
         // --- AJOUT : Logique pour les entités sans données numériques ---
+        if ($object instanceof ChargementPourPrime) {
+            return [
+                "montantFlatExceptionel" => [
+                    "description" => "Montant",
+                    "value" => ($object->getMontantFlatExceptionel() ?? 0) * 100,
+                ],
+            ];
+        }
+
+
         if ($object instanceof Contact || $object instanceof PieceSinistre || $object instanceof Tache) {
             // Ces entités n'ont pas de valeurs numériques à totaliser.
             return [];
