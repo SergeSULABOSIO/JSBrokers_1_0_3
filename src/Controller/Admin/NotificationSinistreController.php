@@ -71,7 +71,6 @@ class NotificationSinistreController extends AbstractController
         // Utilise la méthode du trait pour construire dynamiquement la carte.
         return $this->buildCollectionMapFromEntity(NotificationSinistre::class);
     }
-    use ControllerUtilsTrait;
 
     protected function getParentAssociationMap(): array
     {
@@ -94,9 +93,10 @@ class NotificationSinistreController extends AbstractController
             NotificationSinistreType::class,
             $notification,
             function (NotificationSinistre $notification, Invite $invite) {
-                // Custom initializer for a new NotificationSinistre
+                $notification->setOccuredAt(new DateTimeImmutable("now"));
                 $notification->setNotifiedAt(new DateTimeImmutable("now"));
                 $notification->setInvite($invite);
+                $notification->setDescriptionDeFait("RAS");
             }
         );
     }
@@ -108,17 +108,7 @@ class NotificationSinistreController extends AbstractController
         return $this->handleFormSubmission(
             $request,
             NotificationSinistre::class,
-            NotificationSinistreType::class,
-            function (NotificationSinistre $notification, array $data) {
-                if (!$notification->getId()) {
-                    $notification->setOccuredAt(new DateTimeImmutable("now"));
-                    $notification->setNotifiedAt(new DateTimeImmutable("now"));
-                    $notification->setCreatedAt(new DateTimeImmutable("now"));
-                    $notification->setInvite($this->getInvite());
-                    $notification->setDescriptionDeFait("RAS");
-                }
-                $notification->setUpdatedAt(new DateTimeImmutable("now"));
-            }
+            NotificationSinistreType::class
         );
     }
 
