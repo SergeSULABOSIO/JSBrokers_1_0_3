@@ -343,8 +343,7 @@ trait ControllerUtilsTrait
     private function handleFormSubmission(
         Request $request,
         string $entityClass,
-        string $formTypeClass,
-        ?callable $initializer = null
+        string $formTypeClass
     ): JsonResponse {
         $data = $request->request->all();
         $files = $request->files->all();
@@ -353,10 +352,6 @@ trait ControllerUtilsTrait
         $entity = isset($data['id']) && $data['id']
             ? $this->em->getRepository($entityClass)->find($data['id'])
             : new $entityClass();
-
-        if (is_callable($initializer)) {
-            $initializer($entity, $submittedData);
-        }
 
         $form = $this->createForm($formTypeClass, $entity);
         $form->submit($submittedData, false);

@@ -110,24 +110,7 @@ class TacheController extends AbstractController
         return $this->handleFormSubmission(
             $request,
             Tache::class,
-            TacheType::class,
-            function (Tache $tache, array $data) {
-                // Le trait TimestampableTrait gère createdAt et updatedAt
-                // automatiquement grâce à l'annotation #[ORM\HasLifecycleCallbacks]
-                // et aux méthodes dans le trait.
-                // Il n'est donc plus nécessaire de les définir manuellement ici.
-
-                // Assure que l'exécuteur (Invite) est toujours défini.
-                if (!$tache->getExecutor()) {
-                    $tache->setExecutor($this->getInvite());
-                }
-                // Assure que la NotificationSinistre parente est définie si elle est passée.
-                $notificationId = $data['notificationSinistre'] ?? null;
-                if ($notificationId && !$tache->getNotificationSinistre()) {
-                    $notification = $this->notificationSinistreRepository->find($notificationId);
-                    $tache->setNotificationSinistre($notification);
-                }
-            }
+            TacheType::class
         );
     }
 

@@ -102,6 +102,7 @@ class PieceSinistreController extends AbstractController
             $piece,
             function (PieceSinistre $piece, \App\Entity\Invite $invite) {
                 // Custom initializer for a new PieceSinistre
+                $piece->setReceivedAt(new DateTimeImmutable("now"));
                 $piece->setInvite($invite);
             }
         );
@@ -116,24 +117,7 @@ class PieceSinistreController extends AbstractController
         return $this->handleFormSubmission(
             $request,
             PieceSinistre::class,
-            PieceSinistreType::class,
-            function (PieceSinistre $piece, array $data) {
-                // Initialisation pour une nouvelle pièce
-                if (!$piece->getId()) {
-                    $piece->setReceivedAt(new DateTimeImmutable("now"));
-                }
-                // Assure que l'invite est toujours définie en utilisant l'utilisateur connecté.
-                if (!$piece->getInvite()) {
-                    $piece->setInvite($this->getInvite());
-                }
-                // Assure que la NotificationSinistre parente est définie si elle est passée
-                // dans la requête (via le parentContext du frontend).
-                $notificationId = $data['notificationSinistre'] ?? null;
-                if ($notificationId && !$piece->getNotificationSinistre()) {
-                    $notification = $this->notificationSinistreRepository->find($notificationId);
-                    $piece->setNotificationSinistre($notification);
-                }
-            }
+            PieceSinistreType::class
         );
     }
 
