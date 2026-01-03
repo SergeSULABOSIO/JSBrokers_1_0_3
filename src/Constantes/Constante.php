@@ -5755,7 +5755,13 @@ class Constante
         return 0;
     }
 
-    public function Avenant_getCommissionTTC(Avenant $avenant, int $addressedTo, bool $onlySharable): float
+    public function Avenant_getCommissionTTC(Avenant $avenant): float
+    {
+        // Wrapper pour l'affichage en liste, sans filtre.
+        return $this->Avenant_getCommissionTTC_details($avenant, -1, false);
+    }
+
+    public function Avenant_getCommissionTTC_details(Avenant $avenant, int $addressedTo, bool $onlySharable): float
     {
         if ($avenant != null) {
             if ($avenant->getCotation() != null) {
