@@ -3,14 +3,11 @@
 namespace App\Form;
 
 use App\Entity\Assureur;
-use App\Entity\Entreprise;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 
 class AssureurType extends AbstractType
@@ -60,13 +57,6 @@ class AssureurType extends AbstractType
                     'placeholder' => "Adresse Physique",
                 ],
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
         ;
     }
 
@@ -74,7 +64,13 @@ class AssureurType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Assureur::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

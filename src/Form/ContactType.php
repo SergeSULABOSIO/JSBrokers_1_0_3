@@ -2,16 +2,12 @@
 
 namespace App\Form;
 
-use App\Entity\Client;
 use App\Entity\Contact;
-use App\Entity\Entreprise;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class ContactType extends AbstractType
 {
@@ -52,6 +48,11 @@ class ContactType extends AbstractType
                 'attr' => [
                     'placeholder' => "Fonction",
                 ],
+            ])
+            ->add('client', ClientAutocompleteField::class, [
+                'label' => "Client associé",
+                'required' => false, // Un contact peut être lié à un sinistre sans client direct
+                'help' => "Associez ce contact à un client existant."
             ])
         ;
     }

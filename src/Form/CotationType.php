@@ -2,28 +2,22 @@
 
 namespace App\Form;
 
-use App\Entity\Assureur;
 use App\Entity\Cotation;
 use App\Services\FormListenerFactory;
-use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class CotationType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface,
-        private ServiceMonnaies $serviceMonnaies
+        private TranslatorInterface $translatorInterface
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -42,9 +36,9 @@ class CotationType extends AbstractType
                     'placeholder' => "Durée en mois",
                 ],
             ])
-            ->add('assureur', EntityType::class, [
-                'class' => Assureur::class,
-                'choice_label' => 'nom',
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur",
+                'placeholder' => "Sélectionnez un assureur",
             ])
             ->add('chargements', CollectionType::class, [
                 'label' => "Composition de la prime d'assurance",
@@ -67,23 +61,6 @@ class CotationType extends AbstractType
                 ],
             ]);
 
-        // if ($options['cotation'] != null) {
-            // $builder
-            //     //champ non mappé
-            //     ->add('prime', MoneyType::class, [
-            //         'label' => "Prime TTC",
-            //         'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-            //         'grouping' => true,
-            //         'help' => "La somme des chargements (prime nette, accessoires, tva, etc) ci-haut, payable par le client.",
-            //         'mapped' => false,
-            //         'disabled' => true,
-            //         'attr' => [
-            //             'placeholder' => "Prime totale",
-            //         ],
-            //     ]);
-        // }
-
-
         $builder
             ->add('revenus', CollectionType::class, [
                 'label' => "Revenus",
@@ -105,45 +82,6 @@ class CotationType extends AbstractType
                     ]),
                 ],
             ]);
-
-        // if ($options['cotation'] != null) {
-        //     $builder
-        //         //champ non mappé
-        //         ->add('commissionNette', MoneyType::class, [
-        //             'label' => "Commission totale ht",
-        //             'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-        //             'grouping' => true,
-        //             'help' => "La somme des revenus ci-haut.",
-        //             'mapped' => false,
-        //             'disabled' => true,
-        //             'attr' => [
-        //                 'placeholder' => "Commission totale ht",
-        //             ],
-        //         ])
-        //         //champ non mappé
-        //         ->add('commissionNetteTva', MoneyType::class, [
-        //             'label' => "Taxes",
-        //             'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-        //             'grouping' => true,
-        //             'mapped' => false,
-        //             'disabled' => true,
-        //             'attr' => [
-        //                 'placeholder' => "Taxes",
-        //             ],
-        //         ])
-        //         //champ non mappé
-        //         ->add('commissionTTC', MoneyType::class, [
-        //             'label' => "Commission TTC",
-        //             'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-        //             'grouping' => true,
-        //             'mapped' => false,
-        //             'disabled' => true,
-        //             'attr' => [
-        //                 'placeholder' => "Commission TTC",
-        //             ],
-        //         ]);
-        // }
-
 
         $builder
             ->add('tranches', CollectionType::class, [
@@ -229,13 +167,6 @@ class CotationType extends AbstractType
                 ],
             ])
 
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
@@ -245,8 +176,13 @@ class CotationType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Cotation::class,
-            'cotation' => null,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
