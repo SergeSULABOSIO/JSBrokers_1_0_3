@@ -33,6 +33,7 @@ class JSBDynamicSearchService
         'Partenaire',
         'Monnaie',
         'Invite',
+        'AutoriteFiscale',
         'OffreIndemnisationSinistre',
         // Ajoutez ici toutes les autres entités que vous voulez rendre cherchables
     ];

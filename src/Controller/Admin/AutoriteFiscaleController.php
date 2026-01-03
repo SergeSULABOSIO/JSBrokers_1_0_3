@@ -2,11 +2,11 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Assureur;
-use App\Form\AssureurType;
+use App\Entity\AutoriteFiscale;
+use App\Form\AutoriteFiscaleType;
 use App\Constantes\Constante;
 use App\Repository\InviteRepository;
-use App\Repository\AssureurRepository;
+use App\Repository\AutoriteFiscaleRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
@@ -22,9 +22,9 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-#[Route("/admin/assureur", name: 'admin.assureur.')]
+#[Route("/admin/autoritefiscale", name: 'admin.autoritefiscale.')]
 #[IsGranted('ROLE_USER')]
-class AssureurController extends AbstractController
+class AutoriteFiscaleController extends AbstractController
 {
     use HandleChildAssociationTrait;
     use ControllerUtilsTrait;
@@ -35,7 +35,7 @@ class AssureurController extends AbstractController
         private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private AssureurRepository $assureurRepository,
+        private AutoriteFiscaleRepository $autoriteFiscaleRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer
@@ -43,59 +43,56 @@ class AssureurController extends AbstractController
 
     protected function getCollectionMap(): array
     {
-        return $this->buildCollectionMapFromEntity(Assureur::class);
+        return $this->buildCollectionMapFromEntity(AutoriteFiscale::class);
     }
 
     protected function getParentAssociationMap(): array
     {
-        return $this->buildParentAssociationMapFromEntity(Assureur::class);
+        return $this->buildParentAssociationMapFromEntity(AutoriteFiscale::class);
     }
-
 
     #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index(Request $request)
     {
-        return $this->renderViewOrListComponent(Assureur::class, $request);
+        return $this->renderViewOrListComponent(AutoriteFiscale::class, $request);
     }
 
-
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
-    public function getFormApi(?Assureur $assureur, Request $request): Response
+    public function getFormApi(?AutoriteFiscale $autoriteFiscale, Request $request): Response
     {
         return $this->renderFormCanvas(
             $request,
-            Assureur::class,
-            AssureurType::class,
-            $assureur
+            AutoriteFiscale::class,
+            AutoriteFiscaleType::class,
+            $autoriteFiscale
         );
     }
-
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): Response
     {
         return $this->handleFormSubmission(
             $request,
-            Assureur::class,
-            AssureurType::class
+            AutoriteFiscale::class,
+            AutoriteFiscaleType::class
         );
     }
 
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
-    public function deleteApi(Assureur $assureur): Response
+    public function deleteApi(AutoriteFiscale $autoriteFiscale): Response
     {
-        return $this->handleDeleteApi($assureur);
+        return $this->handleDeleteApi($autoriteFiscale);
     }
 
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request)
     {
-        return $this->renderViewOrListComponent(Assureur::class, $request, true);
+        return $this->renderViewOrListComponent(AutoriteFiscale::class, $request, true);
     }
 
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        return $this->handleCollectionApiRequest($id, $collectionName, Assureur::class, $usage);
+        return $this->handleCollectionApiRequest($id, $collectionName, AutoriteFiscale::class, $usage);
     }
 }

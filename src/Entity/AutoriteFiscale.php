@@ -28,9 +28,6 @@ class AutoriteFiscale
     #[ORM\ManyToOne(inversedBy: 'autoriteFiscales')]
     private ?Taxe $taxe = null;
 
-    #[ORM\ManyToOne(inversedBy: 'autoritesfiscales')]
-    private ?Note $note = null;
-
     /**
      * @var Collection<int, Note>
      */
@@ -80,18 +77,6 @@ class AutoriteFiscale
     public function setTaxe(?Taxe $taxe): static
     {
         $this->taxe = $taxe;
-
-        return $this;
-    }
-
-    public function getNote(): ?Note
-    {
-        return $this->note;
-    }
-
-    public function setNote(?Note $note): static
-    {
-        $this->note = $note;
 
         return $this;
     }

@@ -35,16 +35,15 @@ class AutoriteFiscaleType extends AbstractType
                     'placeholder' => "Abréviation",
                 ],
             ])
-            // ->add('taxe', EntityType::class, [
-            //     'class' => Taxe::class,
-            //     'choice_label' => 'id',
-            // ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
+            ->add('taxe', EntityType::class, [
+                'class' => Taxe::class,
+                // Le choice_label est défini sur 'code' pour un affichage plus pertinent,
+                // en se basant sur la configuration du CanvasBuilder.
+                'choice_label' => 'code',
+                'placeholder' => "Sélectionnez la taxe associée",
+                'label' => "Taxe associée",
+                // Le query_builder filtre les taxes pour ne montrer que celles de l'entreprise courante.
+                'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             ])
         ;
     }
