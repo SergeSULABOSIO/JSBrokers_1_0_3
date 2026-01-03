@@ -144,6 +144,21 @@ class Constante
         }
     }
 
+    public function Contact_getTypeString(?Contact $contact): ?string
+    {
+        if ($contact === null) {
+            return null;
+        }
+
+        return match ($contact->getType()) {
+            Contact::TYPE_CONTACT_PRODUCTION => $this->translator->trans("contact_type_production"),
+            Contact::TYPE_CONTACT_SINISTRE => $this->translator->trans("contact_type_sinistre"),
+            Contact::TYPE_CONTACT_ADMINISTRATION => $this->translator->trans("contact_type_administration"),
+            Contact::TYPE_CONTACT_AUTRES => $this->translator->trans("contact_type_autres"),
+            default => null,
+        };
+    }
+
     public function getTypeAvenant(int $code): string
     {
         switch ($code) {
