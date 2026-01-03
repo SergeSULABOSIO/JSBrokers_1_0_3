@@ -410,6 +410,12 @@ class Constante
         return null;
     }
 
+    public function Cotation_getCommissionTTC(?Cotation $cotation): float
+    {
+        // Wrapper pour Cotation_getMontant_commission_ttc avec des valeurs par défaut pour l'affichage en liste.
+        return $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
+    }
+
 
 
     /**

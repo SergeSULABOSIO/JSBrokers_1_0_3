@@ -113,7 +113,7 @@ class Cotation
 
     public function __toString()
     {
-        return $this->nom . " / " . $this->piste->getNom();
+        return $this->nom . ($this->piste ? " / " . $this->piste->getNom() : "");
     }
 
     public function setNom(string $nom): static
