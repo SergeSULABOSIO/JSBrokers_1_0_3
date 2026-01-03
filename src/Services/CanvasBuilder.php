@@ -1257,6 +1257,38 @@ class CanvasBuilder
     private function getProductionEntityCanvas(string $entityClassName): array
     {
         switch ($entityClassName) {
+            case Avenant::class:
+                return [
+                    "parametres" => ["description" => "Avenant", "icone" => "mdi:file-document-edit"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
+                        ["code" => "numero", "intitule" => "Numéro", "type" => "Texte"],
+                        ["code" => "description", "intitule" => "Description", "type" => "Texte"],
+                        ["code" => "startingAt", "intitule" => "Date d'effet", "type" => "Date"],
+                        ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
+                        ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                        [
+                            "code" => "primeTTC",
+                            "intitule" => "Prime TTC",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Avenant_getPrimeTTC",
+                            "description" => "Montant total de la prime TTC."
+                        ],
+                        [
+                            "code" => "commissionTTC",
+                            "intitule" => "Commission TTC",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Avenant_getCommissionTTC",
+                            "description" => "Montant total de la commission TTC."
+                        ],
+                    ]
+                ];
             case Assureur::class:
                 return [
                     "parametres" => [
