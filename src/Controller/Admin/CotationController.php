@@ -2,274 +2,97 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
-use App\Entity\Assureur;
-use App\Entity\Contact;
 use App\Entity\Cotation;
-use App\Entity\Piste;
-use App\Entity\Risque;
-use App\Entity\Taxe;
-use App\Form\AssureurType;
-use App\Form\ContactType;
 use App\Form\CotationType;
-use App\Repository\AssureurRepository;
-use App\Repository\ContactRepository;
 use App\Repository\CotationRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Services\ServiceMonnaies;
-use App\Services\ServiceTaxes;
+use App\Services\JSBDynamicSearchService;
 use Doctrine\ORM\EntityManagerInterface;
-use PHPUnit\Util\Json;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/cotation", name: 'admin.cotation.')]
 #[IsGranted('ROLE_USER')]
 class CotationController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private CotationRepository $cotationRepository,
         private Constante $constante,
-        private ServiceTaxes $serviceTaxes,
-        private ServiceMonnaies $serviceMonnaies,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer
+    ) {}
+
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(Cotation::class);
     }
 
-
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    protected function getParentAssociationMap(): array
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/cotation/index.html.twig', [
-            'pageName' => $this->translator->trans("cotation_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'cotations' => $this->cotationRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-            'activator' => $this->activator,
-        ]);
+        return $this->buildParentAssociationMapFromEntity(Cotation::class);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Cotation $cotation */
-        $cotation = new Cotation();
-        //Paramètres par défaut
-        // $contact->setEntreprise($entreprise);
-
-        $form = $this->createForm(CotationType::class, $cotation, [
-            "cotation" => $cotation
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($cotation);
-            $this->manager->flush();
-
-            return new Response(
-                "Ok__1986__" .
-                    count($cotation->getChargements()) . "__1986__" .
-                    count($cotation->getRevenus()) . "__1986__" .
-                    count($cotation->getAvenants()) . "__1986__" .
-                    count($cotation->getTranches()) . "__1986__" .
-                    count($cotation->getTaches()) . "__1986__" .
-                    count($cotation->getDocuments())
-            );
-        }
-        return $this->render('admin/cotation/create.html.twig', [
-            'pageName' => $this->translator->trans("cotation_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderViewOrListComponent(Cotation::class, $request);
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idCotation}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idCotation, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Cotation $cotation, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Cotation $cotation */
-        $cotation = $this->cotationRepository->find($idCotation);
-
-        $form = $this->createForm(CotationType::class, $cotation, [
-            "cotation" => $cotation
-        ]);
-        
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($cotation); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-
-            //Le serveur renvoie un objet JSON
-            return $this->getJsonData($cotation);
-        }
-        return $this->render('admin/cotation/edit.html.twig', [
-            'pageName' => $this->translator->trans("cotation_page_name_update", [
-                ":cotation" => $cotation->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'cotation' => $cotation,
-            'piste' => $cotation->getPiste(),
-            'entreprise' => $entreprise,
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Cotation::class,
+            CotationType::class,
+            $cotation
+        );
     }
 
-
-    #[Route('/viewtermespaiement/{idCotation}', name: 'viewtermespaiement', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function viewtermespaiement($idCotation)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Cotation $cotation */
-        $cotation = $this->cotationRepository->find($idCotation);
-
-        return $this->render('admin/cotation/view/termespaiement.html.twig', [
-            'utilisateur' => $user,
-            'cotation' => $cotation,
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-            'activator' => $this->activator,
-        ]);
+        return $this->handleFormSubmission(
+            $request,
+            Cotation::class,
+            CotationType::class
+        );
     }
 
-    #[Route('/viewAvenant/{idCotation}', name: 'viewAvenant', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function viewAvenant($idCotation)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Cotation $cotation): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Cotation $cotation */
-        $cotation = $this->cotationRepository->find($idCotation);
-
-        return $this->render('admin/avenant/view/simpleinfos.html.twig', [
-            'utilisateur' => $user,
-            'cotation' => $cotation,
-            'piste' => $cotation->getPiste(),
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-            'activator' => $this->activator,
-        ]);
+        return $this->handleDeleteApi($cotation);
     }
 
-
-    #[Route('/viewRevenu/{idCotation}', name: 'viewRevenu', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function viewRevenu($idCotation)
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Cotation $cotation */
-        $cotation = $this->cotationRepository->find($idCotation);
-
-        return $this->render('admin/cotation/view/revenucourtier.html.twig', [
-            'utilisateur' => $user,
-            'cotation' => $cotation,
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-            'activator' => $this->activator,
-        ]);
+        return $this->renderViewOrListComponent(Cotation::class, $request, true);
     }
 
-    #[Route('/viewPrime/{idCotation}', name: 'viewPrime', requirements: ['idCotation' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function viewPrime($idCotation)
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        
-        /** @var Cotation $cotation */
-        $cotation = $this->cotationRepository->find($idCotation);
-
-        return $this->render('admin/cotation/view/prime.html.twig', [
-            'utilisateur' => $user,
-            'cotation' => $cotation,
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-            'activator' => $this->activator,
-        ]);
-    }
-
-    private function getJsonData(?Cotation $cotation)
-    {
-        return $this->json(json_encode([
-            "reponse" => "Ok",
-            "nbChargements" => count($cotation->getChargements()),
-            "idcotation" => $cotation->getId(),
-            "nbRevenus" => count($cotation->getRevenus()),
-            "nbAvenants" => count($cotation->getAvenants()),
-            "nbTranches" => count($cotation->getTranches()),
-            "nbTaches" => count($cotation->getTaches()),
-            "nbDocuments" => count($cotation->getDocuments()),
-            "primeTTC" => "" . number_format($this->constante->Cotation_getMontant_prime_payable_par_client($cotation), 2, ",", " "),
-            "commissionHT" => "" . number_format($this->constante->Cotation_getMontant_commission_ht($cotation, -1, false), 2, ",", " "),
-            "commissionTaxe" => "" . number_format($this->constante->Cotation_getMontant_taxe_payable_par_assureur($cotation, -1, false), 2, ",", " "),
-            "commissionTTC" => "" . number_format($this->constante->Cotation_getMontant_commission_ttc($cotation, -1, false), 2, ",", " "),
-        ]));
-    }
-
-    #[Route('/remove/{idEntreprise}/{idCotation}', name: 'remove', requirements: ['idCotation' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idCotation, Request $request)
-    {
-        /** @var Cotation $cotation */
-        $cotation = $this->cotationRepository->find($idCotation);
-
-        $message = $this->translator->trans("cotation_deletion_ok", [
-            ":cotation" => $cotation->getNom(),
-        ]);
-
-        $this->manager->remove($cotation);
-        $this->manager->flush();
-
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.cotation.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+        return $this->handleCollectionApiRequest($id, $collectionName, Cotation::class, $usage);
     }
 }

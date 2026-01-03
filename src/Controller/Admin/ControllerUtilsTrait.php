@@ -521,6 +521,7 @@ trait ControllerUtilsTrait
             '_view_manager.html.twig' => [
                 \App\Entity\Monnaie::class => 'App\Controller\Admin\MonnaieController::index',
                 \App\Entity\CompteBancaire::class => 'App\Controller\Admin\CompteBancaireController::index',
+                \App\Entity\AutoriteFiscale::class => 'App\Controller\Admin\AutoriteFiscaleController::index',
                 \App\Entity\Taxe::class => 'App\Controller\Admin\TaxeController::index',
                 \App\Entity\TypeRevenu::class => 'App\Controller\Admin\TypeRevenuController::index',
                 \App\Entity\Tranche::class => 'App\Controller\Admin\TrancheController::index',

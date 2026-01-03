@@ -3,148 +3,99 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Assureur;
-use App\Entity\Entreprise;
 use App\Form\AssureurType;
 use App\Constantes\Constante;
-use App\Services\ServiceTaxes;
-use App\Constantes\MenuActivator;
-use App\Services\ServiceMonnaies;
 use App\Repository\InviteRepository;
 use App\Repository\AssureurRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/assureur", name: 'admin.assureur.')]
 #[IsGranted('ROLE_USER')]
 class AssureurController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private AssureurRepository $assureurRepository,
         private Constante $constante,
-        private ServiceMonnaies $serviceMonnaies,
-        private ServiceTaxes $serviceTaxes,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer
+    ) {}
+
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(Assureur::class);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(Assureur::class);
     }
 
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/assureur/index.html.twig', [
-            'pageName' => $this->translator->trans("assureur_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'assureurs' => $this->assureurRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-        ]);
+        return $this->renderViewOrListComponent(Assureur::class, $request);
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Assureur $assureur, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Assureur $assureur */
-        $assureur = new Assureur();
-        //Paramètres par défaut
-        $assureur->setEntreprise($entreprise);
-
-        $form = $this->createForm(AssureurType::class, $assureur);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($assureur);
-            $this->manager->flush();
-            
-            return new Response("Ok");
-        }
-        return $this->render('admin/assureur/create.html.twig', [
-            'pageName' => $this->translator->trans("assureur_page_name_new"),
-            'utilisateur' => $user,
-            'assureur' => $assureur,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Assureur::class,
+            AssureurType::class,
+            $assureur
+        );
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idAssureur}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idAssureur, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Assureur $assureur */
-        $assureur = $this->assureurRepository->find($idAssureur);
-
-        $form = $this->createForm(AssureurType::class, $assureur);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($assureur); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            
-            return new Response("Ok");
-        }
-        return $this->render('admin/assureur/edit.html.twig', [
-            'pageName' => $this->translator->trans("assureur_page_name_update", [
-                ":assureur" => $assureur->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'assureur' => $assureur,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->handleFormSubmission(
+            $request,
+            Assureur::class,
+            AssureurType::class
+        );
     }
 
-    #[Route('/remove/{idEntreprise}/{idAssureur}', name: 'remove', requirements: ['idAssureur' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idAssureur, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Assureur $assureur): Response
     {
-        /** @var Assureur $assureur */
-        $assureur = $this->assureurRepository->find($idAssureur);
+        return $this->handleDeleteApi($assureur);
+    }
 
-        $message = $this->translator->trans("assureur_deletion_ok", [
-            ":assureur" => $assureur->getNom(),
-        ]);;
-        
-        $this->manager->remove($assureur);
-        $this->manager->flush();
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
+    {
+        return $this->renderViewOrListComponent(Assureur::class, $request, true);
+    }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.assureur.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Assureur::class, $usage);
     }
 }
