@@ -27,13 +27,6 @@ class ClasseurType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
         ;
     }
 
@@ -41,7 +34,13 @@ class ClasseurType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Classeur::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

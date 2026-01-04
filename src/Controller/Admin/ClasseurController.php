@@ -2,156 +2,105 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
-use App\Entity\Chargement;
 use App\Entity\Classeur;
-use App\Form\ChargementType;
 use App\Form\ClasseurType;
-use App\Repository\ChargementRepository;
 use App\Repository\ClasseurRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use PhpParser\Builder\Class_;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-
 #[Route("/admin/classeur", name: 'admin.classeur.')]
 #[IsGranted('ROLE_USER')]
 class ClasseurController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private ClasseurRepository $classeurRepository,
         private Constante $constante,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_ADMINISTRATION);
     }
 
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(Classeur::class);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(Classeur::class);
+    }
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/classeur/index.html.twig', [
-            'pageName' => $this->translator->trans("classeur_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'classeurs' => $this->classeurRepository->paginate($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-        ]);
+        return $this->renderViewOrListComponent(Classeur::class, $request);
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Classeur $classeur, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Classeur $classeur */
-        $classeur = new Classeur();
-        //Paramètres par défaut
-        $classeur->setNom("CLSS" . (rand(0, 100)));
-        $classeur->setNom("");
-        $classeur->setEntreprise($entreprise);
-
-        $form = $this->createForm(ClasseurType::class, $classeur);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($classeur);
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("classeur_creation_ok", [
-                ":classeur" => $classeur->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.classeur.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/classeur/create.html.twig', [
-            'pageName' => $this->translator->trans("classeur_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Classeur::class,
+            ClasseurType::class,
+            $classeur,
+            function (Classeur $classeur, Invite $invite) {
+                $classeur->setEntreprise($invite->getEntreprise());
+            }
+        );
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idClasseur}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idClasseur, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Classeur $classeur */
-        $classeur = $this->classeurRepository->find($idClasseur);
-
-        $form = $this->createForm(ClasseurType::class, $classeur);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($classeur); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("classeur_edition_ok", [
-                ":classeur" => $classeur->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.classeur.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/classeur/edit.html.twig', [
-            'pageName' => $this->translator->trans("classeur_page_name_update", [
-                ":classeur" => $classeur->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'classeur' => $classeur,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->handleFormSubmission(
+            $request,
+            Classeur::class,
+            ClasseurType::class
+        );
     }
 
-    #[Route('/remove/{idEntreprise}/{idClasseur}', name: 'remove', requirements: ['idClasseur' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idClasseur, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Classeur $classeur): Response
     {
-        /** @var Classeur $classeur */
-        $classeur = $this->classeurRepository->find($idClasseur);
+        return $this->handleDeleteApi($classeur);
+    }
 
-        $message = $this->translator->trans("classeur_deletion_ok", [
-            ":classeur" => $classeur->getNom(),
-        ]);;
-        
-        $this->manager->remove($classeur);
-        $this->manager->flush();
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
+    {
+        return $this->renderViewOrListComponent(Classeur::class, $request, true);
+    }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.classeur.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Classeur::class, $usage);
     }
 }
