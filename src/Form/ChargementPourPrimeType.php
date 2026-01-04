@@ -13,9 +13,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\Form\Extension\Core\Type\PercentType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 
 class ChargementPourPrimeType extends AbstractType
 {
@@ -33,11 +31,9 @@ class ChargementPourPrimeType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
-            ->add('montantFlatExceptionel', MoneyType::class, [
+            ->add('montantFlatExceptionel', NumberType::class, [
                 'label' => "Montant",
                 'required' => false,
-                'currency' => "USD",
-                'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant",
                 ],
@@ -46,17 +42,10 @@ class ChargementPourPrimeType extends AbstractType
                 'label' => "Type de chargement",
                 'class' => Chargement::class,
                 'choice_label' => 'nom',
-            ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
+                'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
-
         ;
     }
 
@@ -64,7 +53,13 @@ class ChargementPourPrimeType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => ChargementPourPrime::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

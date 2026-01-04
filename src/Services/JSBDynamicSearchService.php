@@ -36,6 +36,7 @@ class JSBDynamicSearchService
         'Invite',
         'AutoriteFiscale',
         'Chargement',
+        'ChargementPourPrime',
         'OffreIndemnisationSinistre',
         // Ajoutez ici toutes les autres entités que vous voulez rendre cherchables
     ];
