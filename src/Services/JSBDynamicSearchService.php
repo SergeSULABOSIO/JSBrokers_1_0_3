@@ -23,6 +23,7 @@ class JSBDynamicSearchService
         'Paiement',
         'Document',
         'Tache',
+        'Bordereau',
         'PieceSinistre',
         'Contact',
         'OffreIndemnisationSinistre',
