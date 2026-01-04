@@ -56,6 +56,9 @@ class Chargement
     #[Groups(['list:read'])]
     private ?int $fonction = null;
 
+    #[Groups(['list:read'])]
+    public ?string $fonction_string;
+
     public const FONCTION_PRIME_NETTE = 1;
     public const FONCTION_FRONTING = 2;
     public const FONCTION_FRAIS_ADMIN = 3;

@@ -159,6 +159,21 @@ class Constante
         };
     }
 
+    public function Chargement_getFonctionString(?Chargement $chargement): ?string
+    {
+        if ($chargement === null) {
+            return null;
+        }
+
+        return match ($chargement->getFonction()) {
+            Chargement::FONCTION_PRIME_NETTE => "Prime nette",
+            Chargement::FONCTION_FRONTING => "Fronting",
+            Chargement::FONCTION_FRAIS_ADMIN => "Frais administratifs",
+            Chargement::FONCTION_TAXE => "Taxe",
+            default => "Non définie",
+        };
+    }
+
     public function getTypeAvenant(int $code): string
     {
         switch ($code) {

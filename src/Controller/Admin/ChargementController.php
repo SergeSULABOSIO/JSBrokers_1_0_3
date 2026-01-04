@@ -2,143 +2,103 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\Chargement;
 use App\Form\ChargementType;
 use App\Repository\ChargementRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/chargement", name: 'admin.chargement.')]
 #[IsGranted('ROLE_USER')]
 class ChargementController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private ChargementRepository $chargementRepository,
         private Constante $constante,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer
+    ) {}
+
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(Chargement::class);
     }
 
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(Chargement::class);
+    }
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/chargement/index.html.twig', [
-            'pageName' => $this->translator->trans("chargement_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'chargements' => $this->chargementRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-        ]);
+        return $this->renderViewOrListComponent(Chargement::class, $request);
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Chargement $chargement, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Chargement $chargement */
-        $chargement = new Chargement();
-        //Paramètres par défaut
-        $chargement->setNom("CHGM" . (rand(0, 100)));
-        $chargement->setEntreprise($entreprise);
-
-        $form = $this->createForm(ChargementType::class, $chargement);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($chargement);
-            $this->manager->flush();
-            return new Response("Ok");
-        }
-        return $this->render('admin/chargement/create.html.twig', [
-            'pageName' => $this->translator->trans("chargement_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'chargement' => $chargement,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Chargement::class,
+            ChargementType::class,
+            $chargement,
+            function (Chargement $chargement, Invite $invite) {
+                $chargement->setNom("CHGM" . (rand(0, 100)));
+                $chargement->setEntreprise($invite->getEntreprise());
+            }
+        );
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idChargement}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idChargement, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Chargement $chargement */
-        $chargement = $this->chargementRepository->find($idChargement);
-
-        $form = $this->createForm(ChargementType::class, $chargement);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($chargement); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            return new Response("Ok");
-
-        }
-        return $this->render('admin/chargement/edit.html.twig', [
-            'pageName' => $this->translator->trans("chargement_page_name_update", [
-                ":chargement" => $chargement->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'chargement' => $chargement,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->handleFormSubmission(
+            $request,
+            Chargement::class,
+            ChargementType::class
+        );
     }
 
-    #[Route('/remove/{idEntreprise}/{idChargement}', name: 'remove', requirements: ['idChargement' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idChargement, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Chargement $chargement): Response
     {
-        /** @var Chargement $chargement */
-        $chargement = $this->chargementRepository->find($idChargement);
+        return $this->handleDeleteApi($chargement);
+    }
 
-        $message = $this->translator->trans("chargement_deletion_ok", [
-            ":chargement" => $chargement->getNom(),
-        ]);;
-        
-        $this->manager->remove($chargement);
-        $this->manager->flush();
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
+    {
+        return $this->renderViewOrListComponent(Chargement::class, $request, true);
+    }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.chargement.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Chargement::class, $usage);
     }
 }
