@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\ChargementPourPrimeRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -11,9 +12,11 @@ class ChargementPourPrime
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'chargementPourPrimes')]
+    #[Groups(['list:read'])]
     private ?Chargement $type = null;
 
     #[ORM\Column(nullable: true)]
@@ -29,9 +32,11 @@ class ChargementPourPrime
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'chargements')]
+    #[Groups(['list:read'])]
     private ?Cotation $cotation = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     public function getId(): ?int
@@ -121,5 +126,10 @@ class ChargementPourPrime
         $this->nom = $nom;
 
         return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->nom ?? 'Nouveau chargement';
     }
 }

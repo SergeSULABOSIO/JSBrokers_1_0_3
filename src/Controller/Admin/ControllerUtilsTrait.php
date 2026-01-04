@@ -526,6 +526,7 @@ trait ControllerUtilsTrait
                 \App\Entity\TypeRevenu::class => 'App\Controller\Admin\TypeRevenuController::index',
                 \App\Entity\Tranche::class => 'App\Controller\Admin\TrancheController::index',
                 \App\Entity\Chargement::class => 'App\Controller\Admin\ChargementController::index',
+                \App\Entity\ChargementPourPrime::class => 'App\Controller\Admin\ChargementPourPrimeController::index',
                 \App\Entity\Note::class => 'App\Controller\Admin\NoteController::index',
                 \App\Entity\Paiement::class => 'App\Controller\Admin\PaiementController::index',
                 \App\Entity\Bordereau::class => 'App\Controller\Admin\BordereauController::index',
