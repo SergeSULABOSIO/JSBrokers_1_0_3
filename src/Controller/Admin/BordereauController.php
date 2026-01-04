@@ -2,28 +2,22 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
-use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\Invite;
-use App\Entity\Piste;
-use App\Entity\Tache;
 use App\Form\BordereauType;
-use App\Form\PisteType;
-use App\Form\TacheType;
 use App\Repository\BordereauRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\PisteRepository;
-use App\Repository\TacheRepository;
-use App\Services\ServiceMonnaies;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -34,131 +28,81 @@ use Symfony\Component\HttpFoundation\Response;
 #[IsGranted('ROLE_USER')]
 class BordereauController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private BordereauRepository $bordereauRepository,
-        private ServiceMonnaies $serviceMonnaie,
         private Constante $constante,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer
+    ) {}
+
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(Bordereau::class);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(Bordereau::class);
     }
 
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/bordereau/index.html.twig', [
-            'pageName' => $this->translator->trans("bordereau_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'bordereaux' => $this->bordereauRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'serviceMonnaie' => $this->serviceMonnaie,
-            'activator' => $this->activator,
-        ]);
+        return $this->renderViewOrListComponent(Bordereau::class, $request);
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Bordereau $bordereau, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->renderFormCanvas(
+            $request,
+            Bordereau::class,
+            BordereauType::class,
+            $bordereau,
+            function (Bordereau $bordereau, Invite $invite) {
+                $bordereau->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION);
+                $bordereau->setInvite($invite);
+                $bordereau->setReceivedAt(new DateTimeImmutable("now"));
+            }
+        );
+    }
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Bordereau $bordereau */
-        $bordereau = new Bordereau();
-        //Paramètres par défaut
-        $bordereau->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION);
-        $bordereau->setInvite($invite);
-        $bordereau->setReceivedAt(new DateTimeImmutable("now"));
-
-        $form = $this->createForm(BordereauType::class, $bordereau);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($bordereau);
-            $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("bordereau_creation_ok", [
-            //     ":bordereau" => $bordereau->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.bordereau.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
-            return new Response("Ok");
-        }
-        return $this->render('admin/bordereau/create.html.twig', [
-            'pageName' => $this->translator->trans("bordereau_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): Response
+    {
+        return $this->handleFormSubmission(
+            $request,
+            Bordereau::class,
+            BordereauType::class
+        );
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idBordereau}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idBordereau, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Bordereau $bordereau): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Bordereau $bordereau */
-        $bordereau = $this->bordereauRepository->find($idBordereau);
-
-        $form = $this->createForm(BordereauType::class, $bordereau);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($bordereau); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            return new Response("Ok");
-        }
-        return $this->render('admin/bordereau/edit.html.twig', [
-            'pageName' => $this->translator->trans("bordereau_page_name_update", [
-                ":bordereau" => $bordereau->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'bordereau' => $bordereau,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->handleDeleteApi($bordereau);
     }
 
-    #[Route('/remove/{idEntreprise}/{idBordereau}', name: 'remove', requirements: ['idBordereau' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idBordereau, Request $request)
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
     {
-        /** @var Bordereau $bordereau */
-        $bordereau = $this->bordereauRepository->find($idBordereau);
+        return $this->renderViewOrListComponent(Bordereau::class, $request, true);
+    }
 
-        $message = $this->translator->trans("bordereau_deletion_ok", [
-            ":bordereau" => $bordereau->getNom(),
-        ]);;
-        
-        $this->manager->remove($bordereau);
-        $this->manager->flush();
-
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.bordereau.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Bordereau::class, $usage);
     }
 }

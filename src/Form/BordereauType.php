@@ -9,14 +9,12 @@ use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class BordereauType extends AbstractType
@@ -47,18 +45,16 @@ class BordereauType extends AbstractType
                 'label' => "Date de réception",
                 'widget' => 'single_text',
             ])
-            ->add('montantTTC', MoneyType::class, [
+            ->add('montantTTC', NumberType::class, [
                 'label' => "Montant",
                 'required' => false,
-                'currency' => "USD",
-                'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant",
                 ],
             ])
-            ->add('assureur', EntityType::class, [
-                'class' => Assureur::class,
-                'choice_label' => 'nom',
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur",
+                'placeholder' => "Sélectionnez un assureur",
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
@@ -80,13 +76,6 @@ class BordereauType extends AbstractType
                     ]),
                 ],
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
@@ -96,7 +85,13 @@ class BordereauType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Bordereau::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
