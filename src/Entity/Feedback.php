@@ -181,4 +181,9 @@ class Feedback implements OwnerAwareInterface
 
         return $this;
     }
+
+    public function __toString(): string
+    {
+        return $this->description ?? 'Nouveau feedback';
+    }
 }
