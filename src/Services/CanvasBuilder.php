@@ -24,6 +24,8 @@ use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
+use App\Entity\Police;
+use App\Entity\Monnaie;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
@@ -340,6 +342,45 @@ class CanvasBuilder
                             "fonction" => "Assureur_getMontant_prime_payable_par_client_solde",
                             "description" => "Montant des primes que les clients doivent encore payer pour les polices de cet assureur."
                         ]
+                    ]
+                ];
+            case Police::class:
+                return [
+                    "parametres" => [
+                        "description" => "Police d'Assurance",
+                        "icone" => "mdi:file-document-check-outline",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Police n°[[*numero]] souscrite par [[assure]] auprès de [[assureur]].",
+                            " Période de couverture du [[startingAt]] au [[endingAt]]."
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "numero", "intitule" => "Numéro de Police", "type" => "Texte"],
+                        ["code" => "assure", "intitule" => "Assuré", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                        ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
+                        ["code" => "startingAt", "intitule" => "Date d'effet", "type" => "Date"],
+                        ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
+                        ["code" => "avenants", "intitule" => "Avenants", "type" => "Collection", "targetEntity" => Avenant::class, "displayField" => "numero"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                    ]
+                ];
+            case Monnaie::class:
+                return [
+                    "parametres" => [
+                        "description" => "Monnaie",
+                        "icone" => "mdi:currency-usd",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Monnaie: [[*nom]] ([[code]]) - Symbole: [[symbole]]."
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "code", "intitule" => "Code ISO", "type" => "Texte"],
+                        ["code" => "symbole", "intitule" => "Symbole", "type" => "Texte"],
                     ]
                 ];
 
@@ -1048,6 +1089,104 @@ class CanvasBuilder
                     "colonnes_numeriques" => [],
                 ];
 
+            case NotificationSinistre::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Sinistres",
+                        "texte_principal" => ["attribut_code" => "referenceSinistre", "icone" => "emojione-monotone:fire"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "assure"],
+                            ["attribut_code" => "assureur"],
+                            ["attribut_prefixe" => "Survenu le: ", "attribut_code" => "occuredAt", "attribut_type" => "date"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Dommage (av. éval.)",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "dommageAvantEvaluation",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Dommage (ap. éval.)",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "dommageApresEvaluation",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Compensation Due",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "compensationDue",
+                            "attribut_type" => "nombre",
+                        ],
+                    ],
+                ];
+
+            case Client::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Clients",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-group"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "email"],
+                            ["attribut_code" => "telephone"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Commissions TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "montant_commission_ttc",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Solde Primes",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "montant_prime_payable_par_client_solde",
+                            "attribut_type" => "nombre",
+                        ],
+                    ],
+                ];
+
+            case Assureur::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Assureurs",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:shield-check"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "email"],
+                            ["attribut_code" => "telephone"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Commissions TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "montant_commission_ttc",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Solde Commissions",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "montant_commission_ttc_solde",
+                            "attribut_type" => "nombre",
+                        ],
+                    ],
+                ];
+
+            case Piste::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Pistes",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:road-variant"],
+                        "textes_secondaires" => [["attribut_code" => "client"]],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
             case CompteBancaire::class:
                 return [
                     "colonne_principale" => [
@@ -1142,6 +1281,53 @@ class CanvasBuilder
                     "colonnes_numeriques" => [],
                 ];
 
+            case Tache::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Tâches",
+                        "texte_principal" => ["attribut_code" => "description", "icone" => "mdi:checkbox-marked-circle-outline"],
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Pour: ", "attribut_code" => "executor"],
+                            ["attribut_prefixe" => "Échéance: ", "attribut_code" => "toBeEndedAt", "attribut_type" => "date"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Contact::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Contacts",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-box"],
+                        "textes_secondaires" => [["attribut_code" => "fonction"], ["attribut_code" => "email"]],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case OffreIndemnisationSinistre::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Offres d'indemnisation",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "icon-park-outline:funds"],
+                        "textes_secondaires" => [["attribut_code" => "beneficiaire"]],
+                    ],
+                    "colonnes_numeriques" => [
+                        ["titre_colonne" => "Montant Payable", "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "attribut_code" => "montantPayable", "attribut_type" => "nombre"],
+                        ["titre_colonne" => "Comp. versée", "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "attribut_code" => "compensationVersee", "attribut_type" => "nombre"],
+                        ["titre_colonne" => "Solde à verser", "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "attribut_code" => "compensationAVersee", "attribut_type" => "nombre"],
+                    ],
+                ];
+
+            case PieceSinistre::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Pièces de Sinistre",
+                        "texte_principal" => ["attribut_code" => "description", "icone" => "codex:file"],
+                        "textes_secondaires" => [["attribut_prefixe" => "Reçu le: ", "attribut_code" => "receivedAt", "attribut_type" => "date"]],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
                 // ... Ajoutez d'autres `case` ici pour chaque entité que vous souhaitez afficher en liste
         }
         return [];
@@ -1180,6 +1366,71 @@ class CanvasBuilder
                     "isCreationMode" => $isParentNew
                 ];
                 $layout = $this->buildContactLayout($contactId, $isParentNew);
+                break;
+
+            case Client::class:
+                $clientId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Client",
+                    "titre_modification" => "Modification du Client #%id%",
+                    "endpoint_submit_url" => "/admin/client/api/submit",
+                    "endpoint_delete_url" => "/admin/client/api/delete",
+                    "endpoint_form_url" => "/admin/client/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildClientLayout($clientId, $isParentNew);
+                break;
+
+            case Assureur::class:
+                $assureurId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvel Assureur",
+                    "titre_modification" => "Modification de l'Assureur #%id%",
+                    "endpoint_submit_url" => "/admin/assureur/api/submit",
+                    "endpoint_delete_url" => "/admin/assureur/api/delete",
+                    "endpoint_form_url" => "/admin/assureur/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildAssureurLayout($assureurId, $isParentNew);
+                break;
+
+            case Piste::class:
+                $pisteId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Piste",
+                    "titre_modification" => "Modification de la Piste #%id%",
+                    "endpoint_submit_url" => "/admin/piste/api/submit",
+                    "endpoint_delete_url" => "/admin/piste/api/delete",
+                    "endpoint_form_url" => "/admin/piste/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildPisteLayout($pisteId, $isParentNew);
+                break;
+
+            case Cotation::class:
+                $cotationId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Cotation",
+                    "titre_modification" => "Modification de la Cotation #%id%",
+                    "endpoint_submit_url" => "/admin/cotation/api/submit",
+                    "endpoint_delete_url" => "/admin/cotation/api/delete",
+                    "endpoint_form_url" => "/admin/cotation/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildCotationLayout($cotationId, $isParentNew);
+                break;
+
+            case Avenant::class:
+                $avenantId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvel Avenant",
+                    "titre_modification" => "Modification de l'Avenant #%id%",
+                    "endpoint_submit_url" => "/admin/avenant/api/submit",
+                    "endpoint_delete_url" => "/admin/avenant/api/delete",
+                    "endpoint_form_url" => "/admin/avenant/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildAvenantLayout($avenantId, $isParentNew);
                 break;
 
             case PieceSinistre::class:
@@ -1325,6 +1576,88 @@ class CanvasBuilder
             "couleur_fond" => "white",
             "colonnes" => [
                 ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre", null, $isParentNew)]]
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildClientLayout(int $clientId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["groupe"]]]],
+        ];
+
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $clientId, "Contact", "client", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('pistes', 'piste', $clientId, "Piste", "client", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('notificationSinistres', 'notificationsinistre', $clientId, "Sinistre", "assure", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $clientId, "Document", "client", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('partenaires', 'partenaire', $clientId, "Partenaire", "client", null, $isParentNew)]]]];
+
+        return $layout;
+    }
+
+    private function buildAssureurLayout(int $assureurId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adressePhysique"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["idnat"]], ["champs" => ["rccm"]]]],
+        ];
+
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('cotations', 'cotation', $assureurId, "Cotation", "assureur", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('bordereaus', 'bordereau', $assureurId, "Bordereau", "assureur", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('notificationSinistres', 'notificationsinistre', $assureurId, "Sinistre", "assureur", null, $isParentNew)]]]];
+
+        return $layout;
+    }
+
+    private function buildPisteLayout(int $pisteId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["client"]], ["champs" => ["risque"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["primePotentielle"]]]],
+        ];
+
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('cotations', 'cotation', $pisteId, "Cotation", "piste", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pisteId, "Document", "piste", null, $isParentNew)]]]];
+
+        return $layout;
+    }
+
+    private function buildCotationLayout(int $cotationId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["piste"]], ["champs" => ["assureur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["duree"]]]],
+        ];
+
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('avenants', 'avenant', $cotationId, "Avenant", "cotation", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $cotationId, "Tâche", "cotation", null, $isParentNew)]]]];
+        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $cotationId, "Document", "cotation", null, $isParentNew)]]]];
+
+        return $layout;
+    }
+
+    private function buildAvenantLayout(int $avenantId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["cotation"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["numero"]], ["champs" => ["referencePolice"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["startingAt"]], ["champs" => ["endingAt"]]]],
+        ];
+
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $avenantId, "Document", 'avenant', null, $isParentNew)]]
             ]
         ];
 
