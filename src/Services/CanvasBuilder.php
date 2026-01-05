@@ -1828,6 +1828,14 @@ class CanvasBuilder
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "nomFichierStocke", "intitule" => "Fichier", "type" => "Texte"],
+                        [
+                            "code" => "parent_string",
+                            "intitule" => "Associé à",
+                            "type" => "Calcul",
+                            "format" => "Texte",
+                            "fonction" => "Document_getParentAsString",
+                            "description" => "L'entité parente à laquelle ce document est attaché."
+                        ],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
                     ]
                 ];
