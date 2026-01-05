@@ -1388,6 +1388,40 @@ class CanvasBuilder
                         ]
                     ]
                 ];
+            case ConditionPartage::class:
+                return [
+                    "parametres" => ["description" => "Condition de Partage", "icone" => "mdi:share-variant"],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "partenaire", "intitule" => "Partenaire", "type" => "Relation", "targetEntity" => Partenaire::class, "displayField" => "nom"],
+                        ["code" => "piste", "intitule" => "Piste (Exception)", "type" => "Relation", "targetEntity" => Piste::class, "displayField" => "nom"],
+                        ["code" => "taux", "intitule" => "Taux", "type" => "Nombre", "unite" => "%"],
+                        ["code" => "seuil", "intitule" => "Seuil", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                        [
+                            "code" => "formule_string",
+                            "intitule" => "Formule",
+                            "type" => "Calcul",
+                            "format" => "Texte",
+                            "fonction" => "ConditionPartage_getFormuleString",
+                        ],
+                        [
+                            "code" => "unite_mesure_string",
+                            "intitule" => "Unité de Mesure",
+                            "type" => "Calcul",
+                            "format" => "Texte",
+                            "fonction" => "ConditionPartage_getUniteMesureString",
+                        ],
+                        [
+                            "code" => "critere_risque_string",
+                            "intitule" => "Critère Risque",
+                            "type" => "Calcul",
+                            "format" => "Texte",
+                            "fonction" => "ConditionPartage_getCritereRisqueString",
+                        ],
+                        ["code" => "produits", "intitule" => "Risques Ciblés", "type" => "Collection", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
+                    ]
+                ];
 
             case Contact::class:
                 return [

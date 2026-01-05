@@ -10,10 +10,8 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 
 class ConditionPartageType extends AbstractType
@@ -51,11 +49,9 @@ class ConditionPartageType extends AbstractType
                    "Ne pas appliquer le seuil" => ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL,
                 ],
             ])
-            ->add('seuil', MoneyType::class, [
+            ->add('seuil', NumberType::class, [
                 'label' => "Seuil applicable",
                 'help' => "Le seuil à appliquer dans la condition de partage.",
-                'currency' => "USD",
-                'grouping' => true,
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Seuil",
@@ -96,14 +92,6 @@ class ConditionPartageType extends AbstractType
                     'placeholder' => "Risques concernés",
                 ],
             ])
-            
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
@@ -113,6 +101,13 @@ class ConditionPartageType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => ConditionPartage::class,
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
