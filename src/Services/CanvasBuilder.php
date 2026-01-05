@@ -44,600 +44,6 @@ class CanvasBuilder
     ) {
     }
 
-    /**
-     * Construit le "canevas de recherche" pour une entité donnée.
-     * Ce canevas définit les critères disponibles pour la recherche simple et avancée,
-     * en s'inspirant de la structure utilisée par le contrôleur Stimulus `search-bar`.
-     *
-     * @param string $entityClassName Le FQCN (Fully Qualified Class Name) de l'entité.
-     * @return array Un tableau de définitions de critères.
-     */
-    public function getSearchCanvas(string $entityClassName): array
-    {
-        $searchCriteria = [];
-        $entityCanvas = $this->getEntityCanvas($entityClassName);
-
-        // Si aucun canevas n'est défini pour cette entité, on ne peut rien faire.
-        if (empty($entityCanvas) || !isset($entityCanvas['liste'])) {
-            return [];
-        }
-
-        foreach ($entityCanvas['liste'] as $field) {
-            // On ignore les collections car elles ne sont pas des champs de recherche directs.
-            if ($field['type'] === 'Collection') {
-                continue;
-            }
-
-            // NOUVEAU : On ignore le champ 'id' qui n'est pas un critère de recherche pertinent.
-            if ($field['code'] === 'id') {
-                continue;
-            }
-
-            $criterion = [
-                'Nom' => $field['code'],
-                'Display' => $field['intitule'],
-                'isDefault' => false, // Par défaut, aucun n'est le critère simple.
-            ];
-
-            // Mappage des types PHP vers les types attendus par le JavaScript
-            switch ($field['type']) {
-                case 'Texte':
-                    $criterion['Type'] = 'Text';
-                    $criterion['Valeur'] = '';
-                    break;
-                case 'Relation': // Les relations sont souvent recherchées via un champ texte.
-                    $criterion['Type'] = 'Text'; // Pour le frontend, c'est un champ texte.
-                    $criterion['Valeur'] = '';
-                    $criterion['targetField'] = $field['displayField'] ?? 'nom'; // On spécifie sur quel champ de la relation chercher.
-                    break;
-
-                case 'Nombre':
-                case 'Entier':
-                    $criterion['Type'] = 'Number';
-                    $criterion['Valeur'] = 0;
-                    break;
-
-                case 'Date':
-                    // Un champ de date unique est transformé en une plage de dates pour la recherche.
-                    $criterion['Type'] = 'DateTimeRange';
-                    $criterion['Valeur'] = ['from' => '', 'to' => ''];
-                    break;
-
-                case 'Booleen':
-                    $criterion['Type'] = 'Options'; // Un booléen peut être représenté par des options "Oui/Non".
-                    $criterion['Valeur'] = [
-                        '1' => 'Oui',
-                        '0' => 'Non',
-                    ];
-                    break;
-
-                default:
-                    continue 2; // On saute ce champ si son type n'est pas géré.
-            }
-            $searchCriteria[] = $criterion;
-        }
-        return $searchCriteria;
-    }
-
-    public function getListeCanvas(string $entityClassName): array
-    {
-        switch ($entityClassName) {
-            case Document::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Documents",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "nom",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "mdi:file-document",
-                            "icone_taille" => "19px",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "Créé le: ",
-                                "attribut_code" => "createdAt",
-                                "attribut_type" => "date",
-                                "attribut_taille_max" => null,
-                                "icone" => "fluent-mdl2:date-time-mirrored",
-                                "icone_taille" => "16px",
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Classeur::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Classeurs",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:folder-multiple"],
-                        "textes_secondaires" => [["attribut_code" => "description", "attribut_taille_max" => 50]],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case CompteBancaire::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Comptes Bancaires",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            ["attribut_code" => "intitule"],
-                            ["attribut_prefixe" => "N° ", "attribut_code" => "numero"],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case ConditionPartage::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Conditions de Partage",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:share-variant"],
-                        "textes_secondaires" => [
-                            ["attribut_prefixe" => "Taux: ", "attribut_code" => "taux", "attribut_type" => "pourcentage"],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Cotation::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Cotations",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:file-chart"],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            ["attribut_code" => "assureur"],
-                            ["attribut_prefixe" => "Piste: ", "attribut_code" => "piste"],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [
-                        [
-                            "titre_colonne" => "Prime TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "primeTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Comm. TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "commissionTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                    ],
-                ];
-
-            case Avenant::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Avenants",
-                        "texte_principal" => [
-                            "attribut_code" => "referencePolice",
-                            "icone" => "mdi:file-document-edit",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            ["attribut_prefixe" => "Avt n°", "attribut_code" => "numero"],
-                            ["attribut_prefixe" => "Effet: ", "attribut_code" => "startingAt", "attribut_type" => "date"],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [
-                        [
-                            "titre_colonne" => "Prime TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "primeTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Comm. TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "commissionTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                    ],
-                ];
-
-            case AutoriteFiscale::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Autorités Fiscales",
-                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [["attribut_code" => "abreviation"]],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-                // ... Ajoutez d'autres `case` ici pour chaque entité que vous souhaitez afficher en liste
-        }
-        return [];
-    }
-
-
-    public function getEntityFormCanvas($object, $idEntreprise): array
-    {
-        $isParentNew = ($object->getId() === null);
-        $entityClassName = get_class($object);
-        $layout = [];
-        $parametres = [];
-
-        switch ($entityClassName) {
-            case NotificationSinistre::class:
-                $notificationId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouvelle Notification de Sinistre",
-                    "titre_modification" => "Modification de la Notification #%id%",
-                    "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
-                    "endpoint_delete_url" => "/admin/notificationsinistre/api/delete",
-                    "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildNotificationSinistreLayout($notificationId, $isParentNew);
-                break;
-
-            case Contact::class:
-                $contactId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau contact",
-                    "titre_modification" => "Modification du contact #%id%",
-                    "endpoint_submit_url" => "/admin/contact/api/submit",
-                    "endpoint_delete_url" => "/admin/contact/api/delete",
-                    "endpoint_form_url" => "/admin/contact/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildContactLayout($contactId, $isParentNew);
-                break;
-
-            case PieceSinistre::class:
-                $pieceId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouvelle pièce",
-                    "titre_modification" => "Modification de la pièce #%id%",
-                    "endpoint_submit_url" => "/admin/piecesinistre/api/submit",
-                    "endpoint_delete_url" => "/admin/piecesinistre/api/delete",
-                    "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildPieceSinistreLayout($pieceId, $isParentNew);
-                break;
-
-            case Document::class:
-                $documentId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau Document",
-                    "titre_modification" => "Modification du document #%id%",
-                    "endpoint_submit_url" => "/admin/document/api/submit",
-                    "endpoint_delete_url" => "/admin/document/api/delete",
-                    "endpoint_form_url" => "/admin/document/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildDocumentLayout($documentId, $isParentNew);
-                break;
-
-            case OffreIndemnisationSinistre::class:
-                $offreId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouvelle offre d'indemnisation",
-                    "titre_modification" => "Modification de l'offre #%id%",
-                    "endpoint_submit_url" => "/admin/offreindemnisationsinistre/api/submit",
-                    "endpoint_delete_url" => "/admin/offreindemnisationsinistre/api/delete",
-                    "endpoint_form_url" => "/admin/offreindemnisationsinistre/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildOffreIndemnisationLayout($offreId, $isParentNew);
-                break;
-
-            case Tache::class:
-                $tacheId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouvelle tâche",
-                    "titre_modification" => "Modification de la tâche #%id%",
-                    "endpoint_submit_url" => "/admin/tache/api/submit",
-                    "endpoint_delete_url" => "/admin/tache/api/delete",
-                    "endpoint_form_url" => "/admin/tache/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildTacheLayout($tacheId, $isParentNew);
-                break;
-
-            case Paiement::class:
-                $paiementId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau Paiement",
-                    "titre_modification" => "Modification du paiement #%id%",
-                    "endpoint_submit_url" => "/admin/paiement/api/submit",
-                    "endpoint_delete_url" => "/admin/paiement/api/delete",
-                    "endpoint_form_url" => "/admin/paiement/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildPaiementLayout($paiementId, $isParentNew);
-                break;
-
-            case Feedback::class:
-                $feedbackId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau Feedback",
-                    "titre_modification" => "Modification du feedback #%id%",
-                    "endpoint_submit_url" => "/admin/feedback/api/submit",
-                    "endpoint_delete_url" => "/admin/feedback/api/delete",
-                    "endpoint_form_url" => "/admin/feedback/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildFeedbackLayout($feedbackId, $isParentNew);
-                break;
-
-            default:
-                return [];
-        }
-
-        // Si aucune configuration n'a été trouvée, on retourne un tableau vide.
-        if (empty($parametres) && empty($layout)) {
-            return [];
-        }
-
-        return [
-            "parametres" => $parametres,
-            "form_layout" => $layout,
-            "fields_map" => $this->buildFieldsMap($layout) // Ajout de la carte des champs pour un accès optimisé
-        ];
-    }
-
-    /**
-     * Construit dynamiquement le layout du formulaire pour NotificationSinistre.
-     *
-     * @param integer $notificationId
-     * @param boolean $isParentNew
-     * @return array
-     */
-    private function buildNotificationSinistreLayout(int $notificationId, bool $isParentNew): array
-    {
-        $layout = [
-            // Ligne 1 : 2 colonnes
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["assure"]], ["champs" => ["assureur"]]]],
-            // Ligne 2 : 1 colonne
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["risque"]]]],
-            // Ligne 3 : 2 colonnes
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["referencePolice"]], ["champs" => ["referenceSinistre"]]]],
-            // Ligne 4 : 1 colonne
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["descriptionDeFait"]]]],
-            // Ligne 5 : 3 colonnes
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["occuredAt"]], ["champs" => ["notifiedAt"]], ["champs" => ["lieu"]]]],
-            // Ligne 6 : 1 colonne 
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["descriptionVictimes"]]]],
-            // Ligne 7 : 2 colonnes
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["dommage"]], ["champs" => ["evaluationChiffree"]]]]
-        ];
-
-        // On ajoute toujours les lignes de collection. Leur état sera géré par le flag 'disabled'.
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre", null, $isParentNew)]],
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre", null, $isParentNew)]]
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre", null, $isParentNew)]]
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre", null, $isParentNew)]]
-            ]
-        ];
-
-        return $layout;
-    }
-
-    private function buildPieceSinistreLayout(int $pieceId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fourniPar"]], ["champs" => ["receivedAt"]], ["champs" => ["type"]]]],
-        ];
-
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre', null, $isParentNew)]]
-            ]
-        ];
-
-        return $layout;
-    }
-
-    private function buildContactLayout(int $contactId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fonction"]], ["champs" => ["type"]]]],
-        ];
-
-        return $layout;
-    }
-
-    private function buildOffreIndemnisationLayout(int $offreId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["beneficiaire"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["franchiseAppliquee"]], ["champs" => ["montantPayable"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["referenceBancaire"]]]],
-        ];
-
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", ['source' => 'montantPayable', 'target' => 'montant'], $isParentNew)]],
-            ]
-        ];
-
-        return $layout;
-    }
-
-    private function buildDocumentLayout(int $documentId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["classeur"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
-        ];
-
-        return $layout;
-    }
-
-    private function buildTacheLayout(int $tacheId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["executor"]], ["champs" => ["closed"]]]],
-        ];
-
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache', null, $isParentNew)]],
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache', null, $isParentNew)]],
-            ]
-        ];
-
-        return $layout;
-    }
-
-    private function buildPaiementLayout(int $paiementId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montant"]], ["champs" => ["reference"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["paidAt"]], ["champs" => ["CompteBancaire"]]]],
-        ];
-
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement', null, $isParentNew)]]
-            ]
-        ];
-
-        return $layout;
-    }
-
-    private function buildFeedbackLayout(int $feedbackId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["hasNextAction"]], ["champs" => ["nextActionAt"]], ["champs" => ["type"]]]],
-        ];
-
-        // On ajoute toujours la ligne de collection.
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => ["nextAction"]],
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
-            ]
-        ];
-        return $layout;
-    }
-
-    /**
-     * MODIFIÉ : Accepte maintenant le nom de la route de l'entité en paramètre.
-     *
-     * @param string $fieldName Le nom de l'attribut dans l'entité parente (ex: 'contacts', 'pieces').
-     * @param string $entityRouteName Le nom utilisé dans la route pour cette entité (ex: 'contact', 'piecesinistre').
-     * @param integer $parentId L'ID de l'entité parente.
-     * @return array
-     */
-    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false): array
-    {
-        // L'ancienne logique de mappage est supprimée. On utilise directement le paramètre.
-        $config = [
-            "field_code" => $fieldName,
-            "widget" => "collection",
-            "options" => [
-                "listUrl"       => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
-                "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
-                "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
-                "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
-                "itemTitleCreate" => "Ajouter : " . $formtitle,
-                "itemTitleEdit" => "Modifier : " . $formtitle . " #%id%",
-                "parentEntityId" => $parentId,
-                "parentFieldName" => $parentFieldName,
-                "disabled" => $isParentNew, // Indique si le widget doit être désactivé
-                // L'URL est maintenant correcte, le JS l'utilisera
-                "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
-            ]
-        ];
-
-        // Si une configuration de valeur par défaut est fournie, on l'ajoute aux options
-        if ($defaultValueConfig) {
-            $config['options']['defaultValueConfig'] = json_encode($defaultValueConfig);
-        }
-
-        return $config;
-    }
-
-    /**
-     * NOUVEAU : Construit une carte "aplatie" des champs du formulaire pour un accès direct.
-     *
-     * @param array $formLayout La structure hiérarchique du layout.
-     * @return array Une carte où les clés sont les 'field_code' et les valeurs sont la configuration du champ.
-     */
-    private function buildFieldsMap(array $formLayout): array
-    {
-        $fieldsMap = [];
-        if (empty($formLayout)) {
-            return $fieldsMap;
-        }
-
-        foreach ($formLayout as $row) {
-            if (!isset($row['colonnes']) || !is_array($row['colonnes'])) continue;
-
-            foreach ($row['colonnes'] as $col) {
-                // La colonne peut contenir directement un champ ou un tableau de champs
-                $fields = $col['champs'] ?? (is_array($col) ? [$col] : []);
-
-                foreach ($fields as $field) {
-                    if (is_array($field) && isset($field['field_code'])) {
-                        $fieldsMap[$field['field_code']] = $field;
-                    }
-                }
-            }
-        }
-        return $fieldsMap;
-    }
-
-
     // ================================================================== //
     // == FONCTION PUBLIQUE PRINCIPALE (AIGUILLEUR)                    == //
     // ================================================================== //
@@ -1525,6 +931,599 @@ class CanvasBuilder
             default:
                 return [];
         }
+    }
+
+    /**
+     * Construit le "canevas de recherche" pour une entité donnée.
+     * Ce canevas définit les critères disponibles pour la recherche simple et avancée,
+     * en s'inspirant de la structure utilisée par le contrôleur Stimulus `search-bar`.
+     *
+     * @param string $entityClassName Le FQCN (Fully Qualified Class Name) de l'entité.
+     * @return array Un tableau de définitions de critères.
+     */
+    public function getSearchCanvas(string $entityClassName): array
+    {
+        $searchCriteria = [];
+        $entityCanvas = $this->getEntityCanvas($entityClassName);
+
+        // Si aucun canevas n'est défini pour cette entité, on ne peut rien faire.
+        if (empty($entityCanvas) || !isset($entityCanvas['liste'])) {
+            return [];
+        }
+
+        foreach ($entityCanvas['liste'] as $field) {
+            // On ignore les collections car elles ne sont pas des champs de recherche directs.
+            if ($field['type'] === 'Collection') {
+                continue;
+            }
+
+            // NOUVEAU : On ignore le champ 'id' qui n'est pas un critère de recherche pertinent.
+            if ($field['code'] === 'id') {
+                continue;
+            }
+
+            $criterion = [
+                'Nom' => $field['code'],
+                'Display' => $field['intitule'],
+                'isDefault' => false, // Par défaut, aucun n'est le critère simple.
+            ];
+
+            // Mappage des types PHP vers les types attendus par le JavaScript
+            switch ($field['type']) {
+                case 'Texte':
+                    $criterion['Type'] = 'Text';
+                    $criterion['Valeur'] = '';
+                    break;
+                case 'Relation': // Les relations sont souvent recherchées via un champ texte.
+                    $criterion['Type'] = 'Text'; // Pour le frontend, c'est un champ texte.
+                    $criterion['Valeur'] = '';
+                    $criterion['targetField'] = $field['displayField'] ?? 'nom'; // On spécifie sur quel champ de la relation chercher.
+                    break;
+
+                case 'Nombre':
+                case 'Entier':
+                    $criterion['Type'] = 'Number';
+                    $criterion['Valeur'] = 0;
+                    break;
+
+                case 'Date':
+                    // Un champ de date unique est transformé en une plage de dates pour la recherche.
+                    $criterion['Type'] = 'DateTimeRange';
+                    $criterion['Valeur'] = ['from' => '', 'to' => ''];
+                    break;
+
+                case 'Booleen':
+                    $criterion['Type'] = 'Options'; // Un booléen peut être représenté par des options "Oui/Non".
+                    $criterion['Valeur'] = [
+                        '1' => 'Oui',
+                        '0' => 'Non',
+                    ];
+                    break;
+
+                default:
+                    continue 2; // On saute ce champ si son type n'est pas géré.
+            }
+            $searchCriteria[] = $criterion;
+        }
+        return $searchCriteria;
+    }
+
+    public function getListeCanvas(string $entityClassName): array
+    {
+        switch ($entityClassName) {
+            case Document::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Documents",
+                        "texte_principal" => [
+                            "attribut_prefixe" => "",
+                            "attribut_code" => "nom",
+                            "attribut_type" => "text",
+                            "attribut_taille_max" => 50,
+                            "icone" => "mdi:file-document",
+                            "icone_taille" => "19px",
+                        ],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            [
+                                "attribut_prefixe" => "Créé le: ",
+                                "attribut_code" => "createdAt",
+                                "attribut_type" => "date",
+                                "attribut_taille_max" => null,
+                                "icone" => "fluent-mdl2:date-time-mirrored",
+                                "icone_taille" => "16px",
+                            ],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Classeur::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Classeurs",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:folder-multiple"],
+                        "textes_secondaires" => [["attribut_code" => "description", "attribut_taille_max" => 50]],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case CompteBancaire::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Comptes Bancaires",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "intitule"],
+                            ["attribut_prefixe" => "N° ", "attribut_code" => "numero"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case ConditionPartage::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Conditions de Partage",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:share-variant"],
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Taux: ", "attribut_code" => "taux", "attribut_type" => "pourcentage"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+            case Cotation::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Cotations",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:file-chart"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_code" => "assureur"],
+                            ["attribut_prefixe" => "Piste: ", "attribut_code" => "piste"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Prime TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "primeTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Comm. TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "commissionTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                    ],
+                ];
+
+            case Avenant::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Avenants",
+                        "texte_principal" => [
+                            "attribut_code" => "referencePolice",
+                            "icone" => "mdi:file-document-edit",
+                        ],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [
+                            ["attribut_prefixe" => "Avt n°", "attribut_code" => "numero"],
+                            ["attribut_prefixe" => "Effet: ", "attribut_code" => "startingAt", "attribut_type" => "date"],
+                        ],
+                    ],
+                    "colonnes_numeriques" => [
+                        [
+                            "titre_colonne" => "Prime TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "primeTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Comm. TTC",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "commissionTTC",
+                            "attribut_type" => "nombre",
+                        ],
+                    ],
+                ];
+
+            case AutoriteFiscale::class:
+                return [
+                    "colonne_principale" => [
+                        "titre_colonne" => "Autorités Fiscales",
+                        "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:bank"],
+                        "textes_secondaires_separateurs" => " • ",
+                        "textes_secondaires" => [["attribut_code" => "abreviation"]],
+                    ],
+                    "colonnes_numeriques" => [],
+                ];
+
+                // ... Ajoutez d'autres `case` ici pour chaque entité que vous souhaitez afficher en liste
+        }
+        return [];
+    }
+
+
+    public function getEntityFormCanvas($object, $idEntreprise): array
+    {
+        $isParentNew = ($object->getId() === null);
+        $entityClassName = get_class($object);
+        $layout = [];
+        $parametres = [];
+
+        switch ($entityClassName) {
+            case NotificationSinistre::class:
+                $notificationId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Notification de Sinistre",
+                    "titre_modification" => "Modification de la Notification #%id%",
+                    "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
+                    "endpoint_delete_url" => "/admin/notificationsinistre/api/delete",
+                    "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildNotificationSinistreLayout($notificationId, $isParentNew);
+                break;
+
+            case Contact::class:
+                $contactId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau contact",
+                    "titre_modification" => "Modification du contact #%id%",
+                    "endpoint_submit_url" => "/admin/contact/api/submit",
+                    "endpoint_delete_url" => "/admin/contact/api/delete",
+                    "endpoint_form_url" => "/admin/contact/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildContactLayout($contactId, $isParentNew);
+                break;
+
+            case PieceSinistre::class:
+                $pieceId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle pièce",
+                    "titre_modification" => "Modification de la pièce #%id%",
+                    "endpoint_submit_url" => "/admin/piecesinistre/api/submit",
+                    "endpoint_delete_url" => "/admin/piecesinistre/api/delete",
+                    "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildPieceSinistreLayout($pieceId, $isParentNew);
+                break;
+
+            case Document::class:
+                $documentId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Document",
+                    "titre_modification" => "Modification du document #%id%",
+                    "endpoint_submit_url" => "/admin/document/api/submit",
+                    "endpoint_delete_url" => "/admin/document/api/delete",
+                    "endpoint_form_url" => "/admin/document/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildDocumentLayout($documentId, $isParentNew);
+                break;
+
+            case OffreIndemnisationSinistre::class:
+                $offreId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle offre d'indemnisation",
+                    "titre_modification" => "Modification de l'offre #%id%",
+                    "endpoint_submit_url" => "/admin/offreindemnisationsinistre/api/submit",
+                    "endpoint_delete_url" => "/admin/offreindemnisationsinistre/api/delete",
+                    "endpoint_form_url" => "/admin/offreindemnisationsinistre/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildOffreIndemnisationLayout($offreId, $isParentNew);
+                break;
+
+            case Tache::class:
+                $tacheId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle tâche",
+                    "titre_modification" => "Modification de la tâche #%id%",
+                    "endpoint_submit_url" => "/admin/tache/api/submit",
+                    "endpoint_delete_url" => "/admin/tache/api/delete",
+                    "endpoint_form_url" => "/admin/tache/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildTacheLayout($tacheId, $isParentNew);
+                break;
+
+            case Paiement::class:
+                $paiementId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Paiement",
+                    "titre_modification" => "Modification du paiement #%id%",
+                    "endpoint_submit_url" => "/admin/paiement/api/submit",
+                    "endpoint_delete_url" => "/admin/paiement/api/delete",
+                    "endpoint_form_url" => "/admin/paiement/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildPaiementLayout($paiementId, $isParentNew);
+                break;
+
+            case Feedback::class:
+                $feedbackId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Feedback",
+                    "titre_modification" => "Modification du feedback #%id%",
+                    "endpoint_submit_url" => "/admin/feedback/api/submit",
+                    "endpoint_delete_url" => "/admin/feedback/api/delete",
+                    "endpoint_form_url" => "/admin/feedback/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildFeedbackLayout($feedbackId, $isParentNew);
+                break;
+
+            default:
+                return [];
+        }
+
+        // Si aucune configuration n'a été trouvée, on retourne un tableau vide.
+        if (empty($parametres) && empty($layout)) {
+            return [];
+        }
+
+        return [
+            "parametres" => $parametres,
+            "form_layout" => $layout,
+            "fields_map" => $this->buildFieldsMap($layout) // Ajout de la carte des champs pour un accès optimisé
+        ];
+    }
+
+    /**
+     * Construit dynamiquement le layout du formulaire pour NotificationSinistre.
+     *
+     * @param integer $notificationId
+     * @param boolean $isParentNew
+     * @return array
+     */
+    private function buildNotificationSinistreLayout(int $notificationId, bool $isParentNew): array
+    {
+        $layout = [
+            // Ligne 1 : 2 colonnes
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["assure"]], ["champs" => ["assureur"]]]],
+            // Ligne 2 : 1 colonne
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["risque"]]]],
+            // Ligne 3 : 2 colonnes
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["referencePolice"]], ["champs" => ["referenceSinistre"]]]],
+            // Ligne 4 : 1 colonne
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["descriptionDeFait"]]]],
+            // Ligne 5 : 3 colonnes
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["occuredAt"]], ["champs" => ["notifiedAt"]], ["champs" => ["lieu"]]]],
+            // Ligne 6 : 1 colonne 
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["descriptionVictimes"]]]],
+            // Ligne 7 : 2 colonnes
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["dommage"]], ["champs" => ["evaluationChiffree"]]]]
+        ];
+
+        // On ajoute toujours les lignes de collection. Leur état sera géré par le flag 'disabled'.
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre", null, $isParentNew)]],
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre", null, $isParentNew)]]
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre", null, $isParentNew)]]
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre", null, $isParentNew)]]
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildPieceSinistreLayout(int $pieceId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fourniPar"]], ["champs" => ["receivedAt"]], ["champs" => ["type"]]]],
+        ];
+
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre', null, $isParentNew)]]
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildContactLayout(int $contactId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fonction"]], ["champs" => ["type"]]]],
+        ];
+
+        return $layout;
+    }
+
+    private function buildOffreIndemnisationLayout(int $offreId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["beneficiaire"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["franchiseAppliquee"]], ["champs" => ["montantPayable"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["referenceBancaire"]]]],
+        ];
+
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", ['source' => 'montantPayable', 'target' => 'montant'], $isParentNew)]],
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildDocumentLayout(int $documentId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["classeur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
+        ];
+
+        return $layout;
+    }
+
+    private function buildTacheLayout(int $tacheId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["executor"]], ["champs" => ["closed"]]]],
+        ];
+
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache', null, $isParentNew)]],
+            ]
+        ];
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache', null, $isParentNew)]],
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildPaiementLayout(int $paiementId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montant"]], ["champs" => ["reference"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["paidAt"]], ["champs" => ["CompteBancaire"]]]],
+        ];
+
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement', null, $isParentNew)]]
+            ]
+        ];
+
+        return $layout;
+    }
+
+    private function buildFeedbackLayout(int $feedbackId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["hasNextAction"]], ["champs" => ["nextActionAt"]], ["champs" => ["type"]]]],
+        ];
+
+        // On ajoute toujours la ligne de collection.
+        $layout[] = [
+            "couleur_fond" => "white",
+            "colonnes" => [
+                ["champs" => ["nextAction"]],
+                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
+            ]
+        ];
+        return $layout;
+    }
+
+    /**
+     * MODIFIÉ : Accepte maintenant le nom de la route de l'entité en paramètre.
+     *
+     * @param string $fieldName Le nom de l'attribut dans l'entité parente (ex: 'contacts', 'pieces').
+     * @param string $entityRouteName Le nom utilisé dans la route pour cette entité (ex: 'contact', 'piecesinistre').
+     * @param integer $parentId L'ID de l'entité parente.
+     * @return array
+     */
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false): array
+    {
+        // L'ancienne logique de mappage est supprimée. On utilise directement le paramètre.
+        $config = [
+            "field_code" => $fieldName,
+            "widget" => "collection",
+            "options" => [
+                "listUrl"       => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
+                "itemFormUrl"   => "/admin/" . $entityRouteName . "/api/get-form",
+                "itemSubmitUrl" => "/admin/" . $entityRouteName . "/api/submit",
+                "itemDeleteUrl" => "/admin/" . $entityRouteName . "/api/delete",
+                "itemTitleCreate" => "Ajouter : " . $formtitle,
+                "itemTitleEdit" => "Modifier : " . $formtitle . " #%id%",
+                "parentEntityId" => $parentId,
+                "parentFieldName" => $parentFieldName,
+                "disabled" => $isParentNew, // Indique si le widget doit être désactivé
+                // L'URL est maintenant correcte, le JS l'utilisera
+                "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
+            ]
+        ];
+
+        // Si une configuration de valeur par défaut est fournie, on l'ajoute aux options
+        if ($defaultValueConfig) {
+            $config['options']['defaultValueConfig'] = json_encode($defaultValueConfig);
+        }
+
+        return $config;
+    }
+
+    /**
+     * NOUVEAU : Construit une carte "aplatie" des champs du formulaire pour un accès direct.
+     *
+     * @param array $formLayout La structure hiérarchique du layout.
+     * @return array Une carte où les clés sont les 'field_code' et les valeurs sont la configuration du champ.
+     */
+    private function buildFieldsMap(array $formLayout): array
+    {
+        $fieldsMap = [];
+        if (empty($formLayout)) {
+            return $fieldsMap;
+        }
+
+        foreach ($formLayout as $row) {
+            if (!isset($row['colonnes']) || !is_array($row['colonnes'])) continue;
+
+            foreach ($row['colonnes'] as $col) {
+                // La colonne peut contenir directement un champ ou un tableau de champs
+                $fields = $col['champs'] ?? (is_array($col) ? [$col] : []);
+
+                foreach ($fields as $field) {
+                    if (is_array($field) && isset($field['field_code'])) {
+                        $fieldsMap[$field['field_code']] = $field;
+                    }
+                }
+            }
+        }
+        return $fieldsMap;
     }
 
 
