@@ -35,6 +35,12 @@ use App\Entity\ConditionPartage;
 use App\Entity\ChargementPourPrime;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\Canvas\EntityCanvasProvider;
+use App\Services\Canvas\FormCanvasProvider;
+use App\Services\Canvas\ListCanvasProvider;
+use App\Services\Canvas\NumericCanvasProvider;
+use App\Services\Canvas\SearchCanvasProvider;
 
 class CanvasBuilder
 {
@@ -42,6 +48,12 @@ class CanvasBuilder
         private ServiceMonnaies $serviceMonnaies,
         private Constante $constante,
         private ServiceDates $serviceDates,
+        private EntityCanvasProvider $entityCanvasProvider,
+        private SearchCanvasProvider $searchCanvasProvider,
+        private ListCanvasProvider $listCanvasProvider,
+        private FormCanvasProvider $formCanvasProvider,
+        private NumericCanvasProvider $numericCanvasProvider,
+        private CalculationProvider $calculationProvider
     ) {
     }
 
