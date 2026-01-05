@@ -342,13 +342,6 @@ class EntrepriseType extends AbstractType
                 ],
             ])
 
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "entreprise_form_button_save_company",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
