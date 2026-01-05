@@ -546,6 +546,7 @@ trait ControllerUtilsTrait
                 \App\Entity\Contact::class => 'App\Controller\Admin\ContactController::index',
                 \App\Entity\Risque::class => 'App\Controller\Admin\RisqueController::index',
                 \App\Entity\Avenant::class => 'App\Controller\Admin\AvenantController::index',
+                \App\Entity\ConditionPartage::class => 'App\Controller\Admin\ConditionPartageController::index',
                 \App\Entity\Partenaire::class => 'App\Controller\Admin\PartenaireController::index',
                 \App\Entity\Cotation::class => 'App\Controller\Admin\CotationController::index',
             ],
