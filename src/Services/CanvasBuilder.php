@@ -24,7 +24,6 @@ use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
-use App\Entity\Police;
 use App\Entity\Monnaie;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
@@ -344,28 +343,7 @@ class CanvasBuilder
                         ]
                     ]
                 ];
-            case Police::class:
-                return [
-                    "parametres" => [
-                        "description" => "Police d'Assurance",
-                        "icone" => "mdi:file-document-check-outline",
-                        'background_image' => '/images/fitures/default.jpg',
-                        'description_template' => [
-                            "Police n°[[*numero]] souscrite par [[assure]] auprès de [[assureur]].",
-                            " Période de couverture du [[startingAt]] au [[endingAt]]."
-                        ]
-                    ],
-                    "liste" => [
-                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "numero", "intitule" => "Numéro de Police", "type" => "Texte"],
-                        ["code" => "assure", "intitule" => "Assuré", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
-                        ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
-                        ["code" => "startingAt", "intitule" => "Date d'effet", "type" => "Date"],
-                        ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
-                        ["code" => "avenants", "intitule" => "Avenants", "type" => "Collection", "targetEntity" => Avenant::class, "displayField" => "numero"],
-                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                    ]
-                ];
+            
             case Monnaie::class:
                 return [
                     "parametres" => [
