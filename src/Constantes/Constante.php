@@ -30,14 +30,12 @@ use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Entity\PieceSinistre;
 use App\Entity\CompteBancaire;
-use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\AutoriteFiscale;
 use App\Entity\ConditionPartage;
 use App\Services\ServiceMonnaies;
 use Doctrine\ORM\Query\Expr\Func;
 use PhpParser\Node\Expr\FuncCall;
-use App\Entity\RevenuPourCourtier;
 use App\Repository\NoteRepository;
 use App\Repository\TaxeRepository;
 use App\Entity\ChargementPourPrime;
@@ -76,7 +74,6 @@ class Constante
     public function __construct(
         private TranslatorInterface $translator,
         private ServiceTaxes $serviceTaxes,
-        private ServiceDates $serviceDates,
         private Security $security,
         private CotationRepository $cotationRepository,
         private AutoriteFiscaleRepository $autoriteFiscaleRepository,

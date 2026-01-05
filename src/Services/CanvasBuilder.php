@@ -60,10 +60,10 @@ class CanvasBuilder
      */
     public function Notification_Sinistre_getDelaiDeclaration(NotificationSinistre $sinistre): string
     {
-        return $this->calculationProvider->Notification_Sinistre_getDelaiDeclaration($sinistre);
+       return $this->calculationProvider->Notification_Sinistre_getDelaiDeclaration($sinistre);
     }
 
-    /**
+     /**
      * Calcule l'âge du dossier sinistre depuis sa création.
      */
     public function Notification_Sinistre_getAgeDossier(NotificationSinistre $sinistre): string
@@ -71,7 +71,7 @@ class CanvasBuilder
         return $this->calculationProvider->Notification_Sinistre_getAgeDossier($sinistre);
     }
 
-    /**
+     /**
      * Calcule le pourcentage de pièces fournies par rapport aux pièces attendues.
      */
     public function Notification_Sinistre_getIndiceCompletude(NotificationSinistre $sinistre): string
@@ -79,10 +79,10 @@ class CanvasBuilder
         return $this->calculationProvider->Notification_Sinistre_getIndiceCompletude($sinistre);
     }
 
-    /**
+     /**
      * Calcule le pourcentage payé d'une offre d'indemnisation.
      */
-    public function Offre_Indemnisation_getPourcentagePaye(OffreIndemnisationSinistre $offre): string
+    public function  Offre_Indemnisation_getPourcentagePaye(OffreIndemnisationSinistre $offre): string
     {
         return $this->calculationProvider->Offre_Indemnisation_getPourcentagePaye($offre);
     }
