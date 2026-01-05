@@ -78,6 +78,9 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'preuves')]
     private ?Paiement $paiement = null;
 
+    #[Groups(['list:read'])]
+    public ?string $parent_string;
+
     public function setFichier(?File $fichier = null): void
     {
         $this->fichier = $fichier;
@@ -309,5 +312,10 @@ class Document
         $this->paiement = $paiement;
 
         return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->nom ?? 'Nouveau document';
     }
 }

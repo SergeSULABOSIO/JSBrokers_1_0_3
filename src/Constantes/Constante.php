@@ -207,6 +207,27 @@ class Constante
         };
     }
 
+    public function Document_getParentAsString(?Document $document): ?string
+    {
+        if ($document === null) return null;
+
+        if ($document->getClasseur()) return "Classeur: " . $document->getClasseur()->getNom();
+        if ($document->getPieceSinistre()) return "Pièce Sinistre: " . $document->getPieceSinistre()->getDescription();
+        if ($document->getOffreIndemnisationSinistre()) return "Offre: " . $document->getOffreIndemnisationSinistre()->getNom();
+        if ($document->getCotation()) return "Cotation: " . $document->getCotation()->getNom();
+        if ($document->getAvenant()) return "Avenant: " . $document->getAvenant()->getReferencePolice();
+        if ($document->getTache()) return "Tâche: " . $document->getTache()->getDescription();
+        if ($document->getFeedback()) return "Feedback: " . $document->getFeedback()->getDescription();
+        if ($document->getClient()) return "Client: " . $document->getClient()->getNom();
+        if ($document->getBordereau()) return "Bordereau: " . $document->getBordereau()->getNom();
+        if ($document->getCompteBancaire()) return "Cpt. Bancaire: " . $document->getCompteBancaire()->getNom();
+        if ($document->getPiste()) return "Piste: " . $document->getPiste()->getNom();
+        if ($document->getPartenaire()) return "Partenaire: " . $document->getPartenaire()->getNom();
+        if ($document->getPaiement()) return "Paiement: " . $document->getPaiement()->getReference();
+
+        return "Non-associé";
+    }
+
 
     public function getTypeAvenant(int $code): string
     {
