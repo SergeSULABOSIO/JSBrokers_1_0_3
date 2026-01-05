@@ -122,370 +122,6 @@ class CanvasBuilder
     public function getListeCanvas(string $entityClassName): array
     {
         switch ($entityClassName) {
-            case NotificationSinistre::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Notifications",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "descriptionDeFait",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
-                            "icone_taille" => "19px", //largeur = hauteur
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "Le ",
-                                "attribut_code" => "occuredAt",
-                                "attribut_type" => "date",
-                                "attribut_taille_max" => null,
-                                "icone" => "fluent-mdl2:date-time-mirrored", //source: https://ux.symfony.com/icons
-                                "icone_taille" => "16px", //largeur = hauteur
-                            ],
-                            [
-                                "attribut_prefixe" => "Pol.: ",
-                                "attribut_code" => "referencePolice",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 30,
-                                "icone" => "iconamoon:edit-fill", //source: https://ux.symfony.com/icons
-                                "icone_taille" => "16px", //largeur = hauteur
-                            ],
-                            // [
-                            //     "attribut_prefixe" => "Sin.: ",
-                            //     "attribut_code" => "referenceSinistre",
-                            //     "attribut_type" => "text",
-                            //     "attribut_taille_max" => 30,
-                            //     "icone" => "emojione-monotone:fire", //source: https://ux.symfony.com/icons
-                            //     "icone_taille" => "16px", //largeur = hauteur
-                            // ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [
-                        [
-                            "titre_colonne" => "Dommage",
-                            "attribut_unité" => "$",
-                            "attribut_code" => "dommage",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Dm. évaluée",
-                            "attribut_unité" => "$",
-                            "attribut_code" => "evaluationChiffree",
-                            "attribut_type" => "nombre",
-                        ],
-                    ],
-                ];
-
-            case OffreIndemnisationSinistre::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Offres d'indemnisation",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "nom",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "icon-park-outline:funds",
-                            "icone_taille" => "19px", //largeur = hauteur
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "Bén.: ",
-                                "attribut_code" => "beneficiaire",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 20,
-                                "icone" => "raphael:user", //source: https://ux.symfony.com/icons
-                                "icone_taille" => "16px", //largeur = hauteur
-                            ],
-                            [
-                                "attribut_prefixe" => "Cte: ",
-                                "attribut_code" => "referenceBancaire",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 20,
-                                "icone" => "clarity:piggy-bank-solid", //source: https://ux.symfony.com/icons
-                                "icone_taille" => "16px", //largeur = hauteur
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [
-                        [
-                            "titre_colonne" => "Payé",
-                            "attribut_unité" => "$",
-                            "attribut_code" => "compensationVersee",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Solde",
-                            "attribut_unité" => "$",
-                            "attribut_code" => "compensationAVersee",
-                            "attribut_type" => "nombre",
-                        ],
-                    ],
-                ];
-
-            case PieceSinistre::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Pièces",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "description",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "codex:file",
-                            "icone_taille" => "19px", //largeur = hauteur
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "Reçu le ",
-                                "attribut_code" => "receivedAt",
-                                "attribut_type" => "date",
-                                "attribut_taille_max" => null,
-                                "icone" => "fluent-mdl2:date-time-mirrored", //source: https://ux.symfony.com/icons
-                                "icone_taille" => "16px", //largeur = hauteur
-                            ],
-                            [
-                                "attribut_prefixe" => "Fourni par: ",
-                                "attribut_code" => "fourniPar",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 30,
-                                "icone" => "raphael:user", //source: https://ux.symfony.com/icons
-                                "icone_taille" => "16px", //largeur = hauteur
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Contact::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Contacts",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "nom",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "mdi:account-box",
-                            "icone_taille" => "19px",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "",
-                                "attribut_code" => "type_string",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => null,
-                                "icone" => "mdi:tag-outline",
-                                "icone_taille" => "16px",
-                            ],
-                            [
-                                "attribut_prefixe" => "",
-                                "attribut_code" => "fonction",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => null,
-                                "icone" => "mdi:briefcase-account",
-                                "icone_taille" => "16px",
-                            ],
-                            [
-                                "attribut_prefixe" => "Client: ",
-                                "attribut_code" => "client",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 30,
-                                "icone" => "mdi:account-group",
-                                "icone_taille" => "16px",
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Client::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Clients",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "nom",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "mdi:account-group",
-                            "icone_taille" => "19px",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "",
-                                "attribut_code" => "email",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => null,
-                                "icone" => "mdi:email-outline",
-                                "icone_taille" => "16px",
-                            ],
-                            [
-                                "attribut_prefixe" => "",
-                                "attribut_code" => "telephone",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => null,
-                                "icone" => "mdi:phone",
-                                "icone_taille" => "16px",
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Assureur::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Assureurs",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "nom",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "mdi:shield-check",
-                            "icone_taille" => "19px",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "Email: ",
-                                "attribut_code" => "email",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => null,
-                                "icone" => "mdi:email-outline",
-                                "icone_taille" => "16px",
-                            ],
-                            [
-                                "attribut_prefixe" => "Tél.: ",
-                                "attribut_code" => "telephone",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => null,
-                                "icone" => "mdi:phone",
-                                "icone_taille" => "16px",
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Tache::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Tâches",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "description",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 70,
-                            "icone" => "mdi:checkbox-marked-circle-outline",
-                            "icone_taille" => "19px",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "Échéance: ",
-                                "attribut_code" => "toBeEndedAt",
-                                "attribut_type" => "date",
-                                "attribut_taille_max" => null,
-                                "icone" => "fluent-mdl2:date-time-mirrored",
-                                "icone_taille" => "16px",
-                            ],
-                            [
-                                "attribut_prefixe" => "Pour: ",
-                                "attribut_code" => "executor",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => null,
-                                "icone" => "raphael:user",
-                                "icone_taille" => "16px",
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Feedback::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Feedbacks",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "description",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "fluent-mdl2:feedback",
-                            "icone_taille" => "19px",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "Suivante: ",
-                                "attribut_code" => "nextAction",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 30,
-                                "icone" => "mdi:checkbox-marked-circle-outline",
-                                "icone_taille" => "16px",
-                            ],
-                            [
-                                "attribut_prefixe" => "Créé le: ",
-                                "attribut_code" => "nextActionAt",
-                                "attribut_type" => "date",
-                                "attribut_taille_max" => null,
-                                "icone" => "fluent-mdl2:date-time-mirrored",
-                                "icone_taille" => "16px",
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [],
-                ];
-
-            case Paiement::class:
-                return [
-                    "colonne_principale" => [
-                        "titre_colonne" => "Paiements",
-                        "texte_principal" => [
-                            "attribut_prefixe" => "",
-                            "attribut_code" => "reference",
-                            "attribut_type" => "text",
-                            "attribut_taille_max" => 50,
-                            "icone" => "mdi:cash-multiple",
-                            "icone_taille" => "19px",
-                        ],
-                        "textes_secondaires_separateurs" => " • ",
-                        "textes_secondaires" => [
-                            [
-                                "attribut_prefixe" => "",
-                                "attribut_code" => "description",
-                                "attribut_type" => "text",
-                                "attribut_taille_max" => 40,
-                                "icone" => "mdi:information-outline",
-                                "icone_taille" => "16px",
-                            ],
-                            [
-                                "attribut_prefixe" => "Payé le: ",
-                                "attribut_code" => "paidAt",
-                                "attribut_type" => "date",
-                                "attribut_taille_max" => null,
-                                "icone" => "fluent-mdl2:date-time-mirrored",
-                                "icone_taille" => "16px",
-                            ],
-                        ],
-                    ],
-                    "colonnes_numeriques" => [
-                        [
-                            "titre_colonne" => "Montant",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "montant",
-                            "attribut_type" => "nombre",
-                        ],
-                    ],
-                ];
-
             case Document::class:
                 return [
                     "colonne_principale" => [
@@ -1009,62 +645,6 @@ class CanvasBuilder
     {
         // Cet "aiguilleur" garde le code principal propre et lisible.
         switch ($entityClassName) {
-            // --- Groupe SINISTRE ---
-            case NotificationSinistre::class:
-            case OffreIndemnisationSinistre::class:
-            case PieceSinistre::class:
-                return $this->getSinistreEntityCanvas($entityClassName);
-
-                // --- Groupe PRODUCTION ---
-            case Assureur::class:
-            case Avenant::class:
-            case Client::class:
-            case Contact::class:
-            case Cotation::class:
-            case Groupe::class:
-            case Partenaire::class:
-            case Risque::class:
-                return $this->getProductionEntityCanvas($entityClassName);
-
-                // --- Groupe MARKETING ---
-            case Piste::class:
-            case Tache::class:
-            case Feedback::class:
-                return $this->getMarketingEntityCanvas($entityClassName);
-
-                // --- Groupe FINANCE ---
-            case Bordereau::class:
-            case Chargement::class:
-            case CompteBancaire::class:
-            case Note::class:
-            case Paiement::class:
-            case Taxe::class:
-            case Tranche::class:
-            case TypeRevenu::class:
-                return $this->getFinanceEntityCanvas($entityClassName);
-
-                // --- Groupe ADMINISTRATION ---
-            case Document::class:
-            case Entreprise::class:
-            case Invite::class:
-            case Utilisateur::class:
-                return $this->getAdministrationEntityCanvas($entityClassName);
-
-            default:
-                return [];
-        }
-    }
-
-    // ================================================================== //
-    // == FONCTIONS PRIVÉES PAR GROUPE LOGIQUE                         == //
-    // ================================================================== //
-
-    /**
-     * Gère les canevas pour les entités du groupe SINISTRE.
-     */
-    private function getSinistreEntityCanvas(string $entityClassName): array
-    {
-        switch ($entityClassName) {
             case NotificationSinistre::class:
                 return [
                     "parametres" => [
@@ -1194,7 +774,15 @@ class CanvasBuilder
 
             case OffreIndemnisationSinistre::class:
                 return [
-                    "parametres" => ["description" => "Offre d'Indemnisation", "icone" => "icon-park-outline:funds"],
+                    "parametres" => [
+                        "description" => "Offre d'Indemnisation",
+                        "icone" => "icon-park-outline:funds",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Offre d'indemnisation: [[*nom]] pour le bénéficiaire [[beneficiaire]].",
+                            " Montant payable de [[montantPayable]] avec une franchise de [[franchiseAppliquee]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Description", "type" => "Texte"],
@@ -1237,7 +825,14 @@ class CanvasBuilder
 
             case PieceSinistre::class:
                 return [
-                    "parametres" => ["description" => "Pièce Sinistre", "icone" => "codex:file"],
+                    "parametres" => [
+                        "description" => "Pièce Sinistre",
+                        "icone" => "codex:file",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Pièce de sinistre: [[*description]] fournie par [[fourniPar]] le [[receivedAt]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "description", "intitule" => "Description", "type" => "Texte"],
@@ -1247,19 +842,17 @@ class CanvasBuilder
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                     ]
                 ];
-        }
-        return [];
-    }
-
-    /**
-     * Gère les canevas pour les entités du groupe PRODUCTION.
-     */
-    private function getProductionEntityCanvas(string $entityClassName): array
-    {
-        switch ($entityClassName) {
             case Avenant::class:
                 return [
-                    "parametres" => ["description" => "Avenant", "icone" => "mdi:file-document-edit"],
+                    "parametres" => [
+                        "description" => "Avenant",
+                        "icone" => "mdi:file-document-edit",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Avenant n°[[*numero]] de la police [[referencePolice]].",
+                            " Période de couverture du [[startingAt]] au [[endingAt]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
@@ -1390,7 +983,16 @@ class CanvasBuilder
                 ];
             case ConditionPartage::class:
                 return [
-                    "parametres" => ["description" => "Condition de Partage", "icone" => "mdi:share-variant"],
+                    "parametres" => [
+                        "description" => "Condition de Partage",
+                        "icone" => "mdi:share-variant",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Condition de partage: [[*nom]] pour le partenaire [[partenaire]].",
+                            " Taux de [[taux]]% appliqué sur [[unite_mesure_string]]",
+                            " avec la formule: [[formule_string]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
@@ -1454,7 +1056,15 @@ class CanvasBuilder
 
             case Cotation::class:
                 return [
-                    "parametres" => ["description" => "Cotation", "icone" => "mdi:file-chart"],
+                    "parametres" => [
+                        "description" => "Cotation",
+                        "icone" => "mdi:file-chart",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Cotation: [[*nom]] pour la piste [[piste]].",
+                            " Assureur: [[assureur]]. Durée: [[duree]] mois."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
@@ -1487,7 +1097,15 @@ class CanvasBuilder
 
             case Groupe::class:
                 return [
-                    "parametres" => ["description" => "Groupe de clients", "icone" => "mdi:account-multiple"],
+                    "parametres" => [
+                        "description" => "Groupe de clients",
+                        "icone" => "mdi:account-multiple",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Groupe de clients: [[*nom]].",
+                            " Description: <em>« [[description]] »</em>."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom du groupe", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1499,7 +1117,15 @@ class CanvasBuilder
 
             case Partenaire::class:
                 return [
-                    "parametres" => ["description" => "Partenaire", "icone" => "mdi:handshake"],
+                    "parametres" => [
+                        "description" => "Partenaire",
+                        "icone" => "mdi:handshake",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Partenaire: [[*nom]]. Part de commission: [[part]]%.",
+                            " Contact: [[email]] / [[telephone]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1513,7 +1139,15 @@ class CanvasBuilder
 
             case Risque::class:
                 return [
-                    "parametres" => ["description" => "Risque", "icone" => "mdi:hazard-lights"],
+                    "parametres" => [
+                        "description" => "Risque",
+                        "icone" => "mdi:hazard-lights",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Risque: [[*nomComplet]] (Code: [[code]]).",
+                            " Branche: [[branche_string]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nomComplet", "intitule" => "Nom complet", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1524,16 +1158,6 @@ class CanvasBuilder
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class],
                     ]
                 ];
-        }
-        return [];
-    }
-
-    /**
-     * Gère les canevas pour les entités du groupe MARKETING.
-     */
-    private function getMarketingEntityCanvas(string $entityClassName): array
-    {
-        switch ($entityClassName) {
             case Feedback::class:
                 return [
                     "parametres" => [
@@ -1554,7 +1178,15 @@ class CanvasBuilder
                 ];
             case Piste::class:
                 return [
-                    "parametres" => ["description" => "Piste Commerciale", "icone" => "mdi:road-variant"],
+                    "parametres" => [
+                        "description" => "Piste Commerciale",
+                        "icone" => "mdi:road-variant",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Piste commerciale: [[*nom]] pour le client [[client]].",
+                            " Risque: [[risque]]. Prime potentielle: [[primePotentielle]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1569,7 +1201,15 @@ class CanvasBuilder
 
             case Tache::class:
                 return [
-                    "parametres" => ["description" => "Tâche", "icone" => "mdi:checkbox-marked-circle-outline"],
+                    "parametres" => [
+                        "description" => "Tâche",
+                        "icone" => "mdi:checkbox-marked-circle-outline",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Tâche: [[*description]].",
+                            " À exécuter par [[executor]] avant le [[toBeEndedAt]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "description", "intitule" => "Description", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1579,47 +1219,6 @@ class CanvasBuilder
                         ["code" => "closed", "intitule" => "Clôturée", "type" => "Booleen"],
                         ["code" => "feedbacks", "intitule" => "Feedbacks", "type" => "Collection", "targetEntity" => Feedback::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                    ]
-                ];
-        }
-        return [];
-    }
-
-    /**
-     * Gère les canevas pour les entités du groupe FINANCE.
-     */
-    private function getFinanceEntityCanvas(string $entityClassName): array
-    {
-        switch ($entityClassName) {
-            case CompteBancaire::class:
-                return [
-                    "parametres" => [
-                        "description" => "Compte Bancaire",
-                        "icone" => "mdi:bank",
-                        'background_image' => '/images/fitures/default.jpg',
-                        'description_template' => [
-                            "Compte [[*nom]] - [[banque]].",
-                            " N° [[numero]] / [[intitule]]."
-                        ]
-                    ],
-                    "liste" => [
-                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
-                        ["code" => "intitule", "intitule" => "Intitulé", "type" => "Texte"],
-                        ["code" => "numero", "intitule" => "Numéro", "type" => "Texte"],
-                        ["code" => "banque", "intitule" => "Banque", "type" => "Texte"],
-                        ["code" => "codeSwift", "intitule" => "Code Swift", "type" => "Texte"],
-                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                        ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
-                        [
-                            "code" => "montantDebit", "intitule" => "Débit", "type" => "Calcul", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "format" => "Nombre", "fonction" => "CompteBancaire_getMontantDebit",
-                        ],
-                        [
-                            "code" => "montantCredit", "intitule" => "Crédit", "type" => "Calcul", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "format" => "Nombre", "fonction" => "CompteBancaire_getMontantCredit",
-                        ],
-                        [
-                            "code" => "montantSolde", "intitule" => "Solde", "type" => "Calcul", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "format" => "Nombre", "fonction" => "CompteBancaire_getMontantSolde",
-                        ],
                     ]
                 ];
             case Bordereau::class:
@@ -1724,7 +1323,16 @@ class CanvasBuilder
                 ];
             case Note::class:
                 return [
-                    "parametres" => ["description" => "Note (Débit/Crédit)", "icone" => "mdi:note-text"],
+                    "parametres" => [
+                        "description" => "Note (Débit/Crédit)",
+                        "icone" => "mdi:note-text",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Note: [[*nom]] - Réf: [[reference]].",
+                            " Adressée à [[addressed_to_string]].",
+                            " Statut: [[status_string]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1737,7 +1345,15 @@ class CanvasBuilder
                 ];
             case Paiement::class:
                 return [
-                    "parametres" => ["description" => "Paiement", "icone" => "mdi:cash-multiple"],
+                    "parametres" => [
+                        "description" => "Paiement",
+                        "icone" => "mdi:cash-multiple",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Paiement Réf: [[*reference]] d'un montant de [[montant]].",
+                            " Payé le [[paidAt]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "reference", "intitule" => "Référence", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1751,7 +1367,15 @@ class CanvasBuilder
                 ];
             case Taxe::class:
                 return [
-                    "parametres" => ["description" => "Taxe", "icone" => "mdi:percent-box"],
+                    "parametres" => [
+                        "description" => "Taxe",
+                        "icone" => "mdi:percent-box",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Taxe: [[*code]] - [[description]].",
+                            " Taux IARD: [[tauxIARD]]%, Taux VIE: [[tauxVIE]]%."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "code", "intitule" => "Code", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1763,7 +1387,15 @@ class CanvasBuilder
                 ];
             case Tranche::class:
                 return [
-                    "parametres" => ["description" => "Tranche", "icone" => "mdi:chart-pie"],
+                    "parametres" => [
+                        "description" => "Tranche",
+                        "icone" => "mdi:chart-pie",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Tranche: [[*nom]] représentant [[pourcentage]]% de la cotation [[cotation]],",
+                            " payable le [[payableAt]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
@@ -1776,7 +1408,15 @@ class CanvasBuilder
                 ];
             case TypeRevenu::class:
                 return [
-                    "parametres" => ["description" => "Type de Revenu", "icone" => "mdi:cash-register"],
+                    "parametres" => [
+                        "description" => "Type de Revenu",
+                        "icone" => "mdi:cash-register",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Type de revenu: [[*nom]].",
+                            " Redevable: [[redevable_string]]. Partagé: [[shared_string]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true],
@@ -1785,16 +1425,6 @@ class CanvasBuilder
                         ["code" => "shared", "intitule" => "Partagé", "type" => "Booleen"],
                     ]
                 ];
-        }
-        return [];
-    }
-
-    /**
-     * Gère les canevas pour les entités du groupe ADMINISTRATION.
-     */
-    private function getAdministrationEntityCanvas(string $entityClassName): array
-    {
-        switch ($entityClassName) {
             case Classeur::class:
                 return [
                     "parametres" => [
@@ -1860,7 +1490,14 @@ class CanvasBuilder
                 ];
             case Invite::class:
                 return [
-                    "parametres" => ["description" => "Invitation", "icone" => "mdi:email-plus"],
+                    "parametres" => [
+                        "description" => "Invitation",
+                        "icone" => "mdi:email-plus",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Invitation pour [[*email]] ([[nom]]). Statut: [[status_string]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "email", "intitule" => "Email", "type" => "Texte", "col_principale" => true],
@@ -1870,7 +1507,14 @@ class CanvasBuilder
                 ];
             case Utilisateur::class:
                 return [
-                    "parametres" => ["description" => "Utilisateur", "icone" => "mdi:account-key"],
+                    "parametres" => [
+                        "description" => "Utilisateur",
+                        "icone" => "mdi:account-key",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Utilisateur: [[*nom]] ([[email]]). Statut: [[status_string]]."
+                        ]
+                    ],
                     "liste" => [
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true],
@@ -1878,11 +1522,10 @@ class CanvasBuilder
                         ["code" => "isVerified", "intitule" => "Vérifié", "type" => "Booleen"],
                     ]
                 ];
+            default:
+                return [];
         }
-        return [];
     }
-
-
 
 
     public function getNumericAttributesAndValues($object): array
@@ -1986,9 +1629,6 @@ class CanvasBuilder
             ];
         }
 
-
-
-
         // --- AJOUT : Logique pour OffreIndemnisationSinistre ---
         if ($object instanceof OffreIndemnisationSinistre) {
             return [
@@ -2042,33 +1682,6 @@ class CanvasBuilder
             $numericValues[$entity->getId()] = $this->getNumericAttributesAndValues($entity);
         }
         return $numericValues;
-    }
-
-    public function loadCalculatedValue($entityCanvas, $data)
-    {
-        foreach ($data as $entity) {
-            if (isset($entityCanvas['liste'])) {
-                foreach ($entityCanvas['liste'] as $field) {
-                    if ($field['type'] === 'Calcul') {
-                        $functionName = $field['fonction'];
-                        $args = [];
-                        if (!empty($field['params'])) {
-                            $paramNames = $field['params'];
-                            $args = array_map(function ($paramName) use ($entity) {
-                                $getter = 'get' . ucfirst($paramName);
-                                return method_exists($entity, $getter) ? $entity->$getter() : null;
-                            }, $paramNames);
-                        } else {
-                            $args[] = $entity;
-                        }
-                        if (method_exists($this->constante, $functionName)) {
-                            $calculatedValue = $this->constante->$functionName(...$args);
-                            $entity->{$field['code']} = $calculatedValue;
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**
