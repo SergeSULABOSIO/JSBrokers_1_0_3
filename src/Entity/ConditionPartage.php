@@ -66,6 +66,15 @@ class ConditionPartage
     #[Groups(['list:read'])]
     private ?int $uniteMesure = null;
 
+    #[Groups(['list:read'])]
+    public ?string $formule_string;
+
+    #[Groups(['list:read'])]
+    public ?string $critere_risque_string;
+
+    #[Groups(['list:read'])]
+    public ?string $unite_mesure_string;
+
   
     
 
@@ -215,5 +224,10 @@ class ConditionPartage
         $this->uniteMesure = $uniteMesure;
 
         return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->nom ?? 'Nouvelle condition';
     }
 }

@@ -174,6 +174,40 @@ class Constante
         };
     }
 
+    public function ConditionPartage_getFormuleString(?ConditionPartage $condition): ?string
+    {
+        if ($condition === null) return null;
+        return match ($condition->getFormule()) {
+            ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL => "Assiette >= Seuil",
+            ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL => "Assiette < Seuil",
+            ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL => "Sans seuil",
+            default => "Inconnue",
+        };
+    }
+
+    public function ConditionPartage_getCritereRisqueString(?ConditionPartage $condition): ?string
+    {
+        if ($condition === null) return null;
+        return match ($condition->getCritereRisque()) {
+            ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES => "Exclure risques ciblés",
+            ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES => "Inclure risques ciblés",
+            ConditionPartage::CRITERE_PAS_RISQUES_CIBLES => "Aucun risque ciblé",
+            default => "Inconnu",
+        };
+    }
+
+    public function ConditionPartage_getUniteMesureString(?ConditionPartage $condition): ?string
+    {
+        if ($condition === null) return null;
+        return match ($condition->getUniteMesure()) {
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => "Com. pure du risque",
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => "Com. pure du client",
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => "Com. pure du partenaire",
+            default => "Non définie",
+        };
+    }
+
+
     public function getTypeAvenant(int $code): string
     {
         switch ($code) {
