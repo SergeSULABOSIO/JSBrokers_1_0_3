@@ -30,12 +30,14 @@ use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Entity\PieceSinistre;
 use App\Entity\CompteBancaire;
+use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\AutoriteFiscale;
 use App\Entity\ConditionPartage;
 use App\Services\ServiceMonnaies;
 use Doctrine\ORM\Query\Expr\Func;
 use PhpParser\Node\Expr\FuncCall;
+use App\Entity\RevenuPourCourtier;
 use App\Repository\NoteRepository;
 use App\Repository\TaxeRepository;
 use App\Entity\ChargementPourPrime;
@@ -85,6 +87,7 @@ class Constante
         private UtilisateurRepository $utilisateurRepository,
         private ServiceMonnaies $serviceMonnaies,
         private InviteRepository $inviteRepository,
+        private ServiceDates $serviceDates,
         // private ChargementsLoader $chargementsLoader,
     ) {}
 
