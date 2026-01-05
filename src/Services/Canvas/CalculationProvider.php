@@ -10,6 +10,10 @@ use DateTimeImmutable;
 
 class CalculationProvider
 {
+    /**
+     * @param ServiceDates $serviceDates
+     * @param Constante $constante
+     */
     public function __construct(
         private ServiceDates $serviceDates,
         private Constante $constante
@@ -67,4 +71,128 @@ class CalculationProvider
         $pourcentage = ($totalVerse / $montantPayable) * 100;
         return round($pourcentage) . ' %';
     }
+
+        /**
+     * Calcule le montant total de l'indemnisation convenue pour ce sinistre.
+     */
+    public function Notification_Sinistre_getCompensation(NotificationSinistre $sinistre): float
+    {
+        $compensation = 0;
+        if ($sinistre != null) {
+            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $compensation += $offre_indemnisation->getMontantPayable();
+            }
+        }
+        return $compensation;
+    }
+
+    /**
+     * Calcule le montant cumulé des paiements déjà effectués pour cette indemnisation.
+     */
+    public function Notification_Sinistre_getCompensationVersee(NotificationSinistre $sinistre): float
+    {
+        $montant = 0;
+        if ($sinistre != null) {
+            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $montant += $this->Offre_Indemnisation_getCompensationVersee($offre_indemnisation);
+            }
+        }
+        return $montant;
+    }
+
+    /**
+     * Calcule le montant restant à payer pour solder complètement ce dossier sinistre.
+     */
+    public function Notification_Sinistre_getSoldeAVerser(NotificationSinistre $sinistre): float
+    {
+        $montant = 0;
+        if ($sinistre != null) {
+            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $montant += $this->Offre_Indemnisation_getSoldeAVerser($offre_indemnisation);
+            }
+        }
+        return $montant;
+    }
+
+    /**
+     * Calcule le montant de la franchise qui a été appliquée conformément aux termes de la police.
+     */
+    public function Notification_Sinistre_getFranchise(NotificationSinistre $sinistre): float
+    {
+        $montant = 0;
+        if ($sinistre != null) {
+            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $montant += $offre_indemnisation->getFranchiseAppliquee();
+            }
+        }
+        return $montant;
+    }
+
+    /**
+     * Calcule la durée totale en jours entre la notification du sinistre et le dernier paiement de règlement.
+     */
+    public function Notification_Sinistre_getDureeReglement(NotificationSinistre $notification_sinistre): int
+    {
+        $duree = -1;
+        $dateNotfication = $notification_sinistre->getNotifiedAt();
+        $dateRgelement = null;
+        if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
+            $offres = $notification_sinistre->getOffreIndemnisationSinistres();
+            if (count($offres) != 0) {
+                $reglements = ($offres[count($offres) - 1])->getPaiements();
+                $dateRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
+                $duree = $this->serviceDates->daysEntre($dateNotfication, $dateRgelement);
+            }
+        }
+        return $duree;
+    }
+
+    /**
+     * Récupère la date à laquelle le tout dernier paiement a été effectué pour ce sinistre.
+     */
+    public function Notification_Sinistre_getDateDernierRgelement(NotificationSinistre $notification_sinistre): ?\DateTimeInterface
+    {
+        $dateDernierRgelement = null;
+        if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
+            $offres = $notification_sinistre->getOffreIndemnisationSinistres();
+            if (count($offres) != 0) {
+                $reglements = ($offres[count($offres) - 1])->getPaiements();
+                $dateDernierRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
+            }
+        }
+        return $dateDernierRgelement;
+    }
+
+    /**
+     * Calcule le montant cumulé des paiements déjà effectués pour cette offre.
+     */
+    public function Offre_Indemnisation_getCompensationVersee(OffreIndemnisationSinistre $offre_indemnisation): float
+    {
+        $montant = 0;
+        if ($offre_indemnisation != null) {
+            foreach ($offre_indemnisation->getPaiements() as $paiement) {
+                $montant += $paiement->getMontant();
+            }
+        }
+        return $montant;
+    }
+
+    /**
+     * Calcule le montant restant à payer pour solder cette offre.
+     */
+    public function Offre_Indemnisation_getSoldeAVerser(OffreIndemnisationSinistre $offre_indemnisation): float
+    {
+        $montant = 0;
+        if ($offre_indemnisation != null) {
+            $compensation = 0;
+            if ($offre_indemnisation->getNotificationSinistre() != null) {
+                $compensation = $offre_indemnisation->getMontantPayable();
+            }
+            $compensationVersee = $this->Offre_Indemnisation_getCompensationVersee($offre_indemnisation);
+            $montant = $compensation - $compensationVersee;
+        }
+        return $montant;
+    }
+
+}
 }
