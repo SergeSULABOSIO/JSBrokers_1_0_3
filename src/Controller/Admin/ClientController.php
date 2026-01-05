@@ -3,166 +3,108 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Client;
-use App\Entity\Assureur;
 use App\Form\ClientType;
 use App\Entity\Entreprise;
-use App\Form\AssureurType;
 use App\Constantes\Constante;
 use App\Services\ServiceTaxes;
-use App\Constantes\MenuActivator;
 use App\Services\ServiceMonnaies;
 use App\Repository\ClientRepository;
 use App\Repository\InviteRepository;
-use App\Repository\AssureurRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/admin/client", name: 'admin.client.')]
 #[IsGranted('ROLE_USER')]
 class ClientController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private ClientRepository $clientRepository,
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
         private ServiceTaxes $serviceTaxes,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
 
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(Client::class);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(Client::class);
+    }
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/client/index.html.twig', [
-            'pageName' => $this->translator->trans("client_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'clients' => $this->clientRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-        ]);
+        return $this->renderViewOrListComponent(Client::class, $request);
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Client $client, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Client $client */
-        $client = new Client();
-        //Paramètres par défaut
-        $client->setExonere(false);
-        $client->setEntreprise($entreprise);
-
-        $form = $this->createForm(ClientType::class, $client);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($client);
-            $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("client_creation_ok", [
-            //     ":client" => $client->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.client.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
-
-            return new Response(
-                "Ok__1986__" . 
-                count($client->getContacts()) . "__1986__" . 
-                count($client->getDocuments())
-            );
-        }
-        return $this->render('admin/client/create.html.twig', [
-            'pageName' => $this->translator->trans("client_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'client' => $client,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Client::class,
+            ClientType::class,
+            $client,
+            function (Client $client, \App\Entity\Invite $invite) {
+                $client->setExonere(false);
+                $client->setEntreprise($invite->getEntreprise());
+            }
+        );
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idClient}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idClient, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Client $client */
-        $client = $this->clientRepository->find($idClient);
-
-        $form = $this->createForm(ClientType::class, $client);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($client); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-
-            return new Response(
-                "Ok__1986__" . 
-                count($client->getContacts()) . "__1986__" . 
-                count($client->getDocuments())
-            );
-        }
-        return $this->render('admin/client/edit.html.twig', [
-            'pageName' => $this->translator->trans("client_page_name_update", [
-                ":client" => $client->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'client' => $client,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->handleFormSubmission(
+            $request,
+            Client::class,
+            ClientType::class
+        );
     }
 
-    #[Route('/remove/{idEntreprise}/{idClient}', name: 'remove', requirements: ['idClient' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idClient, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Client $client): Response
     {
-        /** @var Client $client */
-        $client = $this->clientRepository->find($idClient);
+        return $this->handleDeleteApi($client);
+    }
 
-        $message = $this->translator->trans("client_deletion_ok", [
-            ":client" => $client->getNom(),
-        ]);;
-        
-        $this->manager->remove($client);
-        $this->manager->flush();
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
+    {
+        return $this->renderViewOrListComponent(Client::class, $request, true);
+    }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.client.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Client::class, $usage);
     }
 }

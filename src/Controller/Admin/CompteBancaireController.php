@@ -2,23 +2,23 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Taxe;
-use App\Form\TaxeType;
+use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
 use App\Entity\CompteBancaire;
-use App\Services\ServiceTaxes;
 use App\Form\CompteBancaireType;
-use App\Constantes\MenuActivator;
-use App\Services\ServiceMonnaies;
-use App\Repository\TaxeRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\CompteBancaireRepository;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -29,133 +29,79 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class CompteBancaireController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private CompteBancaireRepository $compteBancaireRepository,
         private Constante $constante,
-        private ServiceMonnaies $serviceMonnaies,
-        private ServiceTaxes $serviceTaxes,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
 
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(CompteBancaire::class);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(CompteBancaire::class);
+    }
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/comptebancaire/index.html.twig', [
-            'pageName' => $this->translator->trans("comptebancaire_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'comptebancaires' => $this->compteBancaireRepository->paginate($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-        ]);
+        return $this->renderViewOrListComponent(CompteBancaire::class, $request);
     }
 
 
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?CompteBancaire $compteBancaire, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var CompteBancaire $compteBancaire */
-        $compteBancaire = new CompteBancaire();
-        //Paramètres par défaut
-        $compteBancaire->setEntreprise($entreprise);
-        
-
-        $form = $this->createForm(CompteBancaireType::class, $compteBancaire);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($compteBancaire);
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("comptebancaire_creation_ok", [
-                ":comptebancaire" => $compteBancaire->getIntitule(),
-            ]));
-            return $this->redirectToRoute("admin.comptebancaire.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/comptebancaire/create.html.twig', [
-            'pageName' => $this->translator->trans("comptebancaire_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            CompteBancaire::class,
+            CompteBancaireType::class,
+            $compteBancaire,
+            function (CompteBancaire $compteBancaire, Invite $invite) {
+                $compteBancaire->setEntreprise($invite->getEntreprise());
+            }
+        );
     }
 
 
-    #[Route('/edit/{idEntreprise}/{idCompteBancaire}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idCompteBancaire, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var CompteBancaire $compteBancaire */
-        $compteBancaire = $this->compteBancaireRepository->find($idCompteBancaire);
-
-        $form = $this->createForm(CompteBancaireType::class, $compteBancaire);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($compteBancaire); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("comptebancaire_edition_ok", [
-                ":comptebancaire" => $compteBancaire->getIntitule(),
-            ]));
-            return $this->redirectToRoute("admin.comptebancaire.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/comptebancaire/edit.html.twig', [
-            'pageName' => $this->translator->trans("compteBancaire_page_name_update", [
-                ":comptebancaire" => $compteBancaire->getIntitule(),
-            ]),
-            'utilisateur' => $user,
-            'comptebancaire' => $compteBancaire,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->handleFormSubmission(
+            $request,
+            CompteBancaire::class,
+            CompteBancaireType::class
+        );
     }
 
-    #[Route('/remove/{idEntreprise}/{idCompteBancaire}', name: 'remove', requirements: ['idCompteBancaire' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idCompteBancaire, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(CompteBancaire $compteBancaire): Response
     {
-        /** @var CompteBancaire $compteBancaire */
-        $compteBancaire = $this->compteBancaireRepository->find($idCompteBancaire);
+        return $this->handleDeleteApi($compteBancaire);
+    }
 
-        $message = $this->translator->trans("comptebancaire_deletion_ok", [
-            ":comptebancaire" => $compteBancaire->getIntitule(),
-        ]);;
-        
-        $this->manager->remove($compteBancaire);
-        $this->manager->flush();
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
+    {
+        return $this->renderViewOrListComponent(CompteBancaire::class, $request, true);
+    }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.comptebancaire.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, CompteBancaire::class, $usage);
     }
 }
