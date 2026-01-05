@@ -38,6 +38,7 @@ class JSBDynamicSearchService
         'Chargement',
         'ChargementPourPrime',
         'Classeur',
+        'CompteBancaire',
         'OffreIndemnisationSinistre',
         // Ajoutez ici toutes les autres entités que vous voulez rendre cherchables
     ];

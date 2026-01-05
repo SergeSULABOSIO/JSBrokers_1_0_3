@@ -125,7 +125,7 @@ class CompteBancaire
 
     public function __toString()
     {
-        return $this->intitule . " - " . $this->banque . " - " . $this->numero;
+        return $this->nom ?? ($this->intitule . " - " . $this->banque);
     }
 
     public function getEntreprise(): ?Entreprise

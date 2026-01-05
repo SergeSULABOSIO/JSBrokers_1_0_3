@@ -1368,6 +1368,24 @@ class CanvasBuilder
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                         ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
+                        [
+                            "code" => "montant_commission_ttc",
+                            "intitule" => "Commissions TTC",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Client_getMontant_commission_ttc",
+                            "description" => "Montant total des commissions TTC générées par ce client."
+                        ],
+                        [
+                            "code" => "montant_prime_payable_par_client_solde",
+                            "intitule" => "Solde Primes",
+                            "type" => "Calcul",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "fonction" => "Client_getMontant_prime_payable_par_client_solde",
+                            "description" => "Montant des primes que ce client doit encore payer."
+                        ]
                     ]
                 ];
 
@@ -1539,6 +1557,37 @@ class CanvasBuilder
     private function getFinanceEntityCanvas(string $entityClassName): array
     {
         switch ($entityClassName) {
+            case CompteBancaire::class:
+                return [
+                    "parametres" => [
+                        "description" => "Compte Bancaire",
+                        "icone" => "mdi:bank",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Compte [[*nom]] - [[banque]].",
+                            " N° [[numero]] / [[intitule]]."
+                        ]
+                    ],
+                    "liste" => [
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "intitule", "intitule" => "Intitulé", "type" => "Texte"],
+                        ["code" => "numero", "intitule" => "Numéro", "type" => "Texte"],
+                        ["code" => "banque", "intitule" => "Banque", "type" => "Texte"],
+                        ["code" => "codeSwift", "intitule" => "Code Swift", "type" => "Texte"],
+                        ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                        ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
+                        [
+                            "code" => "montantDebit", "intitule" => "Débit", "type" => "Calcul", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "format" => "Nombre", "fonction" => "CompteBancaire_getMontantDebit",
+                        ],
+                        [
+                            "code" => "montantCredit", "intitule" => "Crédit", "type" => "Calcul", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "format" => "Nombre", "fonction" => "CompteBancaire_getMontantCredit",
+                        ],
+                        [
+                            "code" => "montantSolde", "intitule" => "Solde", "type" => "Calcul", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "format" => "Nombre", "fonction" => "CompteBancaire_getMontantSolde",
+                        ],
+                    ]
+                ];
             case Bordereau::class:
                 return [
                     "parametres" => [
