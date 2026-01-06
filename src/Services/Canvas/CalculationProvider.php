@@ -237,6 +237,7 @@ class CalculationProvider
         $commission_nette = 0;
         $commission_pure = 0;
         $commission_partageable = 0;
+        $reserve = 0;
         $retro_commission_partenaire = 0;
         $retro_commission_partenaire_payee = 0;
         $taxe_courtier = 0;
@@ -477,8 +478,8 @@ class CalculationProvider
 
         // Calculate claim totals
         foreach ($sinistresAcalculer as $sinistre) {
-            $sinistre_payable += $this->getNotificationSinistreCompensation($sinistre);
-            $sinistre_paye += $this->getNotificationSinistreCompensationVersee($sinistre);
+            $sinistre_payable += $this->Notification_Sinistre_getCompensation($sinistre);
+            $sinistre_paye += $this->Notification_Sinistre_getCompensationVersee($sinistre);
         }
 
         // 5. Apply tranche percentage if provided
@@ -491,6 +492,7 @@ class CalculationProvider
                 $commission_pure *= $pourcentage;
                 $commission_partageable *= $pourcentage;
                 $retro_commission_partenaire *= $pourcentage;
+                $reserve *= $pourcentage;
                 // Les montants payés ne sont pas affectés par le pourcentage de la tranche dans ce contexte.
                 $taxe_courtier *= $pourcentage;
                 $taxe_assureur *= $pourcentage;
@@ -498,6 +500,7 @@ class CalculationProvider
         }
 
         // 6. Final calculations
+        $reserve = $commission_pure - $retro_commission_partenaire;
         $prime_totale_solde = $prime_totale - $prime_totale_payee;
         $commission_totale_solde = $commission_totale - $commission_totale_encaissee;
         $retro_commission_partenaire_solde = $retro_commission_partenaire - $retro_commission_partenaire_payee;
@@ -516,6 +519,7 @@ class CalculationProvider
             'commission_nette' => $commission_nette,
             'commission_pure' => $commission_pure,
             'commission_partageable' => $commission_partageable,
+            'reserve' => $reserve,
             'retro_commission_partenaire' => $retro_commission_partenaire,
             'retro_commission_partenaire_payee' => $retro_commission_partenaire_payee,
             'retro_commission_partenaire_solde' => $retro_commission_partenaire_solde,
@@ -793,5 +797,4 @@ class CalculationProvider
         }
         return null;
     }
-
 }
