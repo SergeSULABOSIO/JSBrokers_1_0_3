@@ -218,7 +218,7 @@ class CalculationProvider
             foreach ($invite->getPistes() as $piste) {
                 $process = false;
                 if ($isBound) {
-                    if ($this->constante->Piste_isBound($piste)) {
+                    if ($this->pisteIsBound($piste)) {
                         $process = true;
                     }
                 } else {
