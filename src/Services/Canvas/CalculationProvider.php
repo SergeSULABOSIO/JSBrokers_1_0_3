@@ -3,13 +3,20 @@
 namespace App\Services\Canvas;
 
 use App\Constantes\Constante;
+use App\Entity\Avenant;
+use App\Entity\Assureur;
+use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
+use App\Entity\Groupe;
+use App\Entity\Invite;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Partenaire;
 use App\Entity\Risque;
+use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
@@ -215,38 +222,153 @@ class CalculationProvider
     /**
      * Calcule le montant total de la prime et de la commission pour une entreprise.
      *
-     * @param Entreprise|Piste|Cotation $subject L'entité (Entreprise, Piste ou Cotation) pour laquelle calculer les montants.
-     * @param boolean $isBound Si true, ne calcule que pour les polices souscrites (avec avenant). Sinon, pour toutes les propositions.
+     * @param Entreprise $entreprise L'entreprise de base pour le calcul.
+     * @param boolean $isBound Si true, ne calcule que pour les polices souscrites (avec avenant).
+     * @param array $options Tableau de filtres optionnels. Peut contenir : 'pisteCible', 'cotationCible', 'assureurCible', 'risqueCible', 'partenaireCible', 'inviteCible', 'groupeCible', 'avenantCible', 'clientCible', 'trancheCible', 'brancheCible', 'reper' ('deteEffet' ou 'echeance'), 'entre', 'et'.
      * @return array Un tableau associatif avec 'prime_totale' and 'commission_totale'.
      */
-    public function getMontants(Entreprise|Piste|Cotation $subject, bool $isBound): array
+    public function getMontants(Entreprise $entreprise, bool $isBound, array $options = []): array
     {
         $prime_totale = 0;
         $commission_totale = 0;
 
-        if ($subject instanceof Piste) {
-            // Cas où une Piste spécifique est fournie
-            if (!$isBound || $this->pisteIsBound($subject)) {
-                $prime_totale = $this->getPisteMontantPrimePayableParClient($subject);
-                $commission_totale = $this->getPisteMontantCommissionTtc($subject, -1, false);
-            }
-        } elseif ($subject instanceof Cotation) {
-            // Cas où une Cotation spécifique est fournie
-            if (!$isBound || $this->cotationIsBound($subject)) {
-                $prime_totale = $this->getCotationMontantPrimePayableParClient($subject);
-                $commission_totale = $this->getCotationMontantCommissionTtc($subject, -1, false);
-            }
-        } elseif ($subject instanceof Entreprise) {
-            // Cas où une Entreprise est fournie
-            foreach ($subject->getInvites() as $invite) {
-                foreach ($invite->getPistes() as $piste) {
-                    if ($isBound && !$this->pisteIsBound($piste)) {
-                        continue;
-                    }
+        // 1. Extract filters from options
+        /** @var Piste|null $pisteCible */
+        $pisteCible = $options['pisteCible'] ?? null;
+        /** @var Cotation|null $cotationCible */
+        $cotationCible = $options['cotationCible'] ?? null;
+        /** @var Assureur|null $assureurCible */
+        $assureurCible = $options['assureurCible'] ?? null;
+        /** @var Risque|null $risqueCible */
+        $risqueCible = $options['risqueCible'] ?? null;
+        /** @var Partenaire|null $partenaireCible */
+        $partenaireCible = $options['partenaireCible'] ?? null;
+        /** @var Invite|null $inviteCible */
+        $inviteCible = $options['inviteCible'] ?? null;
+        /** @var Groupe|null $groupeCible */
+        $groupeCible = $options['groupeCible'] ?? null;
+        /** @var Avenant|null $avenantCible */
+        $avenantCible = $options['avenantCible'] ?? null;
+        /** @var Client|null $clientCible */
+        $clientCible = $options['clientCible'] ?? null;
+        /** @var Tranche|null $trancheCible */
+        $trancheCible = $options['trancheCible'] ?? null;
+        /** @var string|null $brancheCible */
+        $brancheCible = $options['brancheCible'] ?? null;
+        /** @var string|null $reper */
+        $reper = $options['reper'] ?? null;
+        /** @var string|null $dateA_str */
+        $dateA_str = $options['entre'] ?? null;
+        /** @var string|null $dateB_str */
+        $dateB_str = $options['et'] ?? null;
 
-                    $prime_totale += $this->getPisteMontantPrimePayableParClient($piste);
-                    $commission_totale += $this->getPisteMontantCommissionTtc($piste, -1, false);
+        // 2. Get initial pool of all cotations from the Entreprise
+        $cotationsAcalculer = [];
+        foreach ($entreprise->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                foreach ($piste->getCotations() as $cotation) {
+                    $cotationsAcalculer[] = $cotation;
                 }
+            }
+        }
+
+        // 3. Apply filters sequentially
+        if ($avenantCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $cotation->getAvenants()->contains($avenantCible));
+        }
+        if ($cotationCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $cotation === $cotationCible);
+        }
+        if ($trancheCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $trancheCible->getCotation() === $cotation);
+        }
+        if ($pisteCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $cotation->getPiste() === $pisteCible);
+        }
+        if ($assureurCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $cotation->getAssureur() === $assureurCible);
+        }
+        if ($risqueCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($risqueCible) {
+                return $cotation->getPiste() && $cotation->getPiste()->getRisque() === $risqueCible;
+            });
+        }
+        if ($inviteCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($inviteCible) {
+                return $cotation->getPiste() && $cotation->getPiste()->getInvite() === $inviteCible;
+            });
+        }
+        if ($groupeCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($groupeCible) {
+                return $cotation->getPiste() && $cotation->getPiste()->getClient() && $cotation->getPiste()->getClient()->getGroupe() === $groupeCible;
+            });
+        }
+        if ($clientCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($clientCible) {
+                return $cotation->getPiste() && $cotation->getPiste()->getClient() === $clientCible;
+            });
+        }
+        if ($partenaireCible) {
+            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($partenaireCible) {
+                if (!$cotation->getPiste()) return false;
+                if ($cotation->getPiste()->getPartenaires()->contains($partenaireCible)) return true;
+                return $cotation->getPiste()->getClient() && $cotation->getPiste()->getClient()->getPartenaires()->contains($partenaireCible);
+            });
+        }
+        if ($brancheCible) {
+            $brancheCode = -1;
+            if ($brancheCible === 'IARD') {
+                $brancheCode = Risque::BRANCHE_IARD_OU_NON_VIE;
+            } elseif ($brancheCible === 'VIE') {
+                $brancheCode = Risque::BRANCHE_VIE;
+            }
+
+            if ($brancheCode !== -1) {
+                $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $cotation->getPiste() && $cotation->getPiste()->getRisque() && $cotation->getPiste()->getRisque()->getBranche() === $brancheCode);
+            }
+        }
+        if ($reper && $dateA_str && $dateB_str) {
+            $dateA = DateTimeImmutable::createFromFormat('d/m/Y', $dateA_str);
+            $dateB = DateTimeImmutable::createFromFormat('d/m/Y', $dateB_str);
+
+            if ($dateA && $dateB) {
+                $dateA = $dateA->setTime(0, 0, 0);
+                $dateB = $dateB->setTime(23, 59, 59);
+
+                $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($reper, $dateA, $dateB) {
+                    foreach ($cotation->getAvenants() as $avenant) {
+                        $dateToCheck = null;
+                        if ($reper === 'dateEffet') {
+                            $dateToCheck = $avenant->getStartingAt();
+                        } elseif ($reper === 'echeance') {
+                            $dateToCheck = $avenant->getEndingAt();
+                        }
+
+                        if ($dateToCheck && $dateToCheck >= $dateA && $dateToCheck <= $dateB) {
+                            return true; // Keep this cotation
+                        }
+                    }
+                    return false; // Discard this cotation
+                });
+            }
+        }
+
+        // 4. Calculate totals from the filtered list
+        foreach ($cotationsAcalculer as $cotation) {
+            if ($isBound && !$this->cotationIsBound($cotation)) {
+                continue; // On saute les cotations non-souscrites si isBound est true.
+            }
+
+            $prime_totale += $this->getCotationMontantPrimePayableParClient($cotation);
+            $commission_totale += $this->getCotationMontantCommissionTtc($cotation, -1, false);
+        }
+
+        // 5. Apply tranche percentage if provided
+        if ($trancheCible) {
+            $pourcentage = $trancheCible->getPourcentage();
+            if ($pourcentage !== null) {
+                $prime_totale *= $pourcentage;
+                $commission_totale *= $pourcentage;
             }
         }
 
