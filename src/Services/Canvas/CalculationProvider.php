@@ -231,6 +231,11 @@ class CalculationProvider
     {
         $prime_totale = 0;
         $commission_totale = 0;
+        $commission_nette = 0;
+        $commission_pure = 0;
+        $commission_partageable = 0;
+        $taxe_courtier = 0;
+        $taxe_assureur = 0;
 
         // 1. Extract filters from options
         /** @var Piste|null $pisteCible */
@@ -359,8 +364,31 @@ class CalculationProvider
                 continue; // On saute les cotations non-souscrites si isBound est true.
             }
 
+            $isIARD = $this->isIARD($cotation);
+
+            // Prime
             $prime_totale += $this->getCotationMontantPrimePayableParClient($cotation);
+
+            // Commission Totale (TTC)
             $commission_totale += $this->getCotationMontantCommissionTtc($cotation, -1, false);
+
+            // Commission Nette (HT)
+            $cotation_com_nette = $this->getCotationMontantCommissionHt($cotation, -1, false);
+            $commission_nette += $cotation_com_nette;
+
+            // Taxes
+            $cotation_taxe_courtier = $this->serviceTaxes->getMontantTaxe($cotation_com_nette, $isIARD, false);
+            $cotation_taxe_assureur = $this->serviceTaxes->getMontantTaxe($cotation_com_nette, $isIARD, true);
+            $taxe_courtier += $cotation_taxe_courtier;
+            $taxe_assureur += $cotation_taxe_assureur;
+
+            // Commission Pure
+            $commission_pure += $cotation_com_nette - $cotation_taxe_courtier;
+
+            // Assiette partageable (Commission Pure sur revenus partageables)
+            $cotation_com_nette_partageable = $this->getCotationMontantCommissionHt($cotation, -1, true);
+            $cotation_taxe_courtier_partageable = $this->serviceTaxes->getMontantTaxe($cotation_com_nette_partageable, $isIARD, false);
+            $commission_partageable += $cotation_com_nette_partageable - $cotation_taxe_courtier_partageable;
         }
 
         // 5. Apply tranche percentage if provided
@@ -369,12 +397,22 @@ class CalculationProvider
             if ($pourcentage !== null) {
                 $prime_totale *= $pourcentage;
                 $commission_totale *= $pourcentage;
+                $commission_nette *= $pourcentage;
+                $commission_pure *= $pourcentage;
+                $commission_partageable *= $pourcentage;
+                $taxe_courtier *= $pourcentage;
+                $taxe_assureur *= $pourcentage;
             }
         }
 
         return [
             'prime_totale' => $prime_totale,
             'commission_totale' => $commission_totale,
+            'commission_nette' => $commission_nette,
+            'commission_pure' => $commission_pure,
+            'commission_partageable' => $commission_partageable,
+            'taxe_courtier' => $taxe_courtier,
+            'taxe_assureur' => $taxe_assureur,
         ];
     }
 
