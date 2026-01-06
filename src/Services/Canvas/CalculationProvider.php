@@ -541,28 +541,6 @@ class CalculationProvider
         return $cotation && count($cotation->getAvenants()) > 0;
     }
 
-    private function pisteIsBound(?Piste $piste): bool
-    {
-        if ($piste) {
-            foreach ($piste->getCotations() as $cotation) {
-                if ($this->cotationIsBound($cotation)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private function getPisteMontantPrimePayableParClient(?Piste $piste): float
-    {
-        $total = 0;
-        if ($piste) {
-            foreach ($piste->getCotations() as $cotation) {
-                $total += $this->getCotationMontantPrimePayableParClient($cotation);
-            }
-        }
-        return $total;
-    }
 
     private function getCotationMontantPrimePayableParClient(?Cotation $cotation): float
     {
@@ -573,17 +551,6 @@ class CalculationProvider
             }
         }
         return $montant;
-    }
-
-    private function getPisteMontantCommissionTtc(?Piste $piste, int $addressedTo, bool $onlySharable): float
-    {
-        $total = 0;
-        if ($piste) {
-            foreach ($piste->getCotations() as $cotation) {
-                $total += $this->getCotationMontantCommissionTtc($cotation, $addressedTo, $onlySharable);
-            }
-        }
-        return $total;
     }
 
     private function getCotationMontantCommissionTtc(?Cotation $cotation, ?int $addressedTo, bool $onlySharable): float
