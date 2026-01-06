@@ -202,30 +202,48 @@ class CalculationProvider
         return $montant;
     }
 
+
+
+
+
+
+
+
+
+    
+
     /**
      * Calcule le montant total de la prime et de la commission pour une entreprise.
      *
-     * @param Entreprise $entreprise L'entreprise pour laquelle calculer les montants.
+     * @param Entreprise|Piste|Cotation $subject L'entité (Entreprise, Piste ou Cotation) pour laquelle calculer les montants.
      * @param boolean $isBound Si true, ne calcule que pour les polices souscrites (avec avenant). Sinon, pour toutes les propositions.
      * @return array Un tableau associatif avec 'prime_totale' and 'commission_totale'.
      */
-    public function getMontants(Entreprise $entreprise, bool $isBound): array
+    public function getMontants(Entreprise|Piste|Cotation $subject, bool $isBound): array
     {
         $prime_totale = 0;
         $commission_totale = 0;
 
-        foreach ($entreprise->getInvites() as $invite) {
-            foreach ($invite->getPistes() as $piste) {
-                $process = false;
-                if ($isBound) {
-                    if ($this->pisteIsBound($piste)) {
-                        $process = true;
+        if ($subject instanceof Piste) {
+            // Cas où une Piste spécifique est fournie
+            if (!$isBound || $this->pisteIsBound($subject)) {
+                $prime_totale = $this->getPisteMontantPrimePayableParClient($subject);
+                $commission_totale = $this->getPisteMontantCommissionTtc($subject, -1, false);
+            }
+        } elseif ($subject instanceof Cotation) {
+            // Cas où une Cotation spécifique est fournie
+            if (!$isBound || $this->cotationIsBound($subject)) {
+                $prime_totale = $this->getCotationMontantPrimePayableParClient($subject);
+                $commission_totale = $this->getCotationMontantCommissionTtc($subject, -1, false);
+            }
+        } elseif ($subject instanceof Entreprise) {
+            // Cas où une Entreprise est fournie
+            foreach ($subject->getInvites() as $invite) {
+                foreach ($invite->getPistes() as $piste) {
+                    if ($isBound && !$this->pisteIsBound($piste)) {
+                        continue;
                     }
-                } else {
-                    $process = true;
-                }
 
-                if ($process) {
                     $prime_totale += $this->getPisteMontantPrimePayableParClient($piste);
                     $commission_totale += $this->getPisteMontantCommissionTtc($piste, -1, false);
                 }
@@ -238,11 +256,16 @@ class CalculationProvider
         ];
     }
 
+    private function cotationIsBound(?Cotation $cotation): bool
+    {
+        return $cotation && count($cotation->getAvenants()) > 0;
+    }
+
     private function pisteIsBound(?Piste $piste): bool
     {
         if ($piste) {
             foreach ($piste->getCotations() as $cotation) {
-                if (count($cotation->getAvenants()) > 0) {
+                if ($this->cotationIsBound($cotation)) {
                     return true;
                 }
             }
@@ -321,9 +344,12 @@ class CalculationProvider
         $montant = 0;
         if ($cotation) {
             foreach ($cotation->getRevenus() as $revenu) {
-                $shouldProcess = !$onlySharable || ($revenu->getTypeRevenu()->isShared());
-                if ($shouldProcess) {
-                    $montant += $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
+                $typeRevenu = $revenu->getTypeRevenu();
+                if ($typeRevenu) {
+                    $shouldProcess = !$onlySharable || $typeRevenu->isShared();
+                    if ($shouldProcess) {
+                        $montant += $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
+                    }
                 }
             }
         }
@@ -332,8 +358,13 @@ class CalculationProvider
 
     private function getRevenuMontantHtAddressedTo(int $addressedTo, RevenuPourCourtier $revenu): float
     {
+        $typeRevenu = $revenu->getTypeRevenu();
+        if (!$typeRevenu) {
+            return 0;
+        }
+
         if ($addressedTo !== -1) {
-            if ($revenu->getTypeRevenu()->getRedevable() == $addressedTo) {
+            if ($typeRevenu->getRedevable() == $addressedTo) {
                 return $this->getRevenuMontantHt($revenu);
             }
             return 0;
@@ -346,23 +377,25 @@ class CalculationProvider
         $montant = 0;
         if ($revenu) {
             $typeRevenu = $revenu->getTypeRevenu();
-            $cotation = $revenu->getCotation();
-            $montantChargementPrime = $this->getCotationMontantChargementPrime($cotation, $typeRevenu);
-
-            if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
-                $risque = $this->getCotationRisque($cotation);
-                if ($risque) {
-                    $montant += $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
-                }
-            } else {
-                if ($revenu->getTauxExceptionel() != 0) {
-                    $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
-                } elseif ($revenu->getMontantFlatExceptionel() != 0) {
-                    $montant += $revenu->getMontantFlatExceptionel();
-                } elseif ($typeRevenu->getPourcentage() != 0) {
-                    $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
-                } elseif ($typeRevenu->getMontantflat() != 0) {
-                    $montant += $montantChargementPrime * $typeRevenu->getMontantflat();
+            if ($typeRevenu) {
+                $cotation = $revenu->getCotation();
+                $montantChargementPrime = $this->getCotationMontantChargementPrime($cotation, $typeRevenu);
+    
+                if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
+                    $risque = $this->getCotationRisque($cotation);
+                    if ($risque) {
+                        $montant += $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
+                    }
+                } else {
+                    if ($revenu->getTauxExceptionel() != 0) {
+                        $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
+                    } elseif ($revenu->getMontantFlatExceptionel() != 0) {
+                        $montant += $revenu->getMontantFlatExceptionel();
+                    } elseif ($typeRevenu->getPourcentage() != 0) {
+                        $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
+                    } elseif ($typeRevenu->getMontantflat() != 0) {
+                        $montant += $montantChargementPrime * $typeRevenu->getMontantflat();
+                    }
                 }
             }
         }
