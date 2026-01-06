@@ -3,9 +3,16 @@
 namespace App\Services\Canvas;
 
 use App\Constantes\Constante;
+use App\Entity\Cotation;
+use App\Entity\Entreprise;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Piste;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
+use App\Entity\TypeRevenu;
 use App\Services\ServiceDates;
+use App\Services\ServiceTaxes;
 use DateTimeImmutable;
 
 class CalculationProvider
@@ -16,7 +23,8 @@ class CalculationProvider
      */
     public function __construct(
         private ServiceDates $serviceDates,
-        private Constante $constante
+        private Constante $constante,
+        private ServiceTaxes $serviceTaxes
     ) {
     }
 
@@ -192,6 +200,194 @@ class CalculationProvider
             $montant = $compensation - $compensationVersee;
         }
         return $montant;
+    }
+
+    /**
+     * Calcule le montant total de la prime et de la commission pour une entreprise.
+     *
+     * @param Entreprise $entreprise L'entreprise pour laquelle calculer les montants.
+     * @param boolean $isBound Si true, ne calcule que pour les polices souscrites (avec avenant). Sinon, pour toutes les propositions.
+     * @return array Un tableau associatif avec 'prime_totale' and 'commission_totale'.
+     */
+    public function getMontants(Entreprise $entreprise, bool $isBound): array
+    {
+        $prime_totale = 0;
+        $commission_totale = 0;
+
+        foreach ($entreprise->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                $process = false;
+                if ($isBound) {
+                    if ($this->constante->Piste_isBound($piste)) {
+                        $process = true;
+                    }
+                } else {
+                    $process = true;
+                }
+
+                if ($process) {
+                    $prime_totale += $this->getPisteMontantPrimePayableParClient($piste);
+                    $commission_totale += $this->getPisteMontantCommissionTtc($piste, -1, false);
+                }
+            }
+        }
+
+        return [
+            'prime_totale' => $prime_totale,
+            'commission_totale' => $commission_totale,
+        ];
+    }
+
+    private function pisteIsBound(?Piste $piste): bool
+    {
+        if ($piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                if (count($cotation->getAvenants()) > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private function getPisteMontantPrimePayableParClient(?Piste $piste): float
+    {
+        $total = 0;
+        if ($piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                $total += $this->getCotationMontantPrimePayableParClient($cotation);
+            }
+        }
+        return $total;
+    }
+
+    private function getCotationMontantPrimePayableParClient(?Cotation $cotation): float
+    {
+        $montant = 0;
+        if ($cotation) {
+            foreach ($cotation->getChargements() as $chargement) {
+                $montant += $chargement->getMontantFlatExceptionel();
+            }
+        }
+        return $montant;
+    }
+
+    private function getPisteMontantCommissionTtc(?Piste $piste, int $addressedTo, bool $onlySharable): float
+    {
+        $total = 0;
+        if ($piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                $total += $this->getCotationMontantCommissionTtc($cotation, $addressedTo, $onlySharable);
+            }
+        }
+        return $total;
+    }
+
+    private function getCotationMontantCommissionTtc(?Cotation $cotation, ?int $addressedTo, bool $onlySharable): float
+    {
+        if (!$cotation) return 0;
+
+        $comTTCAssureur = $this->getCotationMontantCommissionTtcPayableParAssureur($cotation, $onlySharable);
+        $comTTCClient = $this->getCotationMontantCommissionTtcPayableParClient($cotation, $onlySharable);
+        return round($comTTCAssureur + $comTTCClient, 2);
+    }
+
+    private function getCotationMontantCommissionTtcPayableParAssureur(?Cotation $cotation, bool $onlySharable): float
+    {
+        if (!$cotation) return 0;
+        $net = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
+        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+        return $net + $taxe;
+    }
+
+    private function getCotationMontantCommissionTtcPayableParClient(?Cotation $cotation, bool $onlySharable): float
+    {
+        if (!$cotation) return 0;
+        $net = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
+        $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
+        return $net + $taxe;
+    }
+
+    private function isIARD(?Cotation $cotation): bool
+    {
+        if ($cotation && $cotation->getPiste() && $cotation->getPiste()->getRisque()) {
+            return $cotation->getPiste()->getRisque()->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE;
+        }
+        return false;
+    }
+
+    private function getCotationMontantCommissionHt(?Cotation $cotation, int $addressedTo, bool $onlySharable): float
+    {
+        $montant = 0;
+        if ($cotation) {
+            foreach ($cotation->getRevenus() as $revenu) {
+                $shouldProcess = !$onlySharable || ($revenu->getTypeRevenu()->isShared());
+                if ($shouldProcess) {
+                    $montant += $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
+                }
+            }
+        }
+        return $montant;
+    }
+
+    private function getRevenuMontantHtAddressedTo(int $addressedTo, RevenuPourCourtier $revenu): float
+    {
+        if ($addressedTo !== -1) {
+            if ($revenu->getTypeRevenu()->getRedevable() == $addressedTo) {
+                return $this->getRevenuMontantHt($revenu);
+            }
+            return 0;
+        }
+        return $this->getRevenuMontantHt($revenu);
+    }
+
+    private function getRevenuMontantHt(?RevenuPourCourtier $revenu): float
+    {
+        $montant = 0;
+        if ($revenu) {
+            $typeRevenu = $revenu->getTypeRevenu();
+            $cotation = $revenu->getCotation();
+            $montantChargementPrime = $this->getCotationMontantChargementPrime($cotation, $typeRevenu);
+
+            if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
+                $risque = $this->getCotationRisque($cotation);
+                if ($risque) {
+                    $montant += $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
+                }
+            } else {
+                if ($revenu->getTauxExceptionel() != 0) {
+                    $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
+                } elseif ($revenu->getMontantFlatExceptionel() != 0) {
+                    $montant += $revenu->getMontantFlatExceptionel();
+                } elseif ($typeRevenu->getPourcentage() != 0) {
+                    $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
+                } elseif ($typeRevenu->getMontantflat() != 0) {
+                    $montant += $montantChargementPrime * $typeRevenu->getMontantflat();
+                }
+            }
+        }
+        return $montant;
+    }
+
+    private function getCotationMontantChargementPrime(?Cotation $cotation, ?TypeRevenu $typeRevenu): float
+    {
+        $montantChargementCible = 0;
+        if ($cotation && $typeRevenu) {
+            foreach ($cotation->getChargements() as $loading) {
+                if ($loading->getType() == $typeRevenu->getTypeChargement()) {
+                    $montantChargementCible = $loading->getMontantFlatExceptionel();
+                }
+            }
+        }
+        return $montantChargementCible;
+    }
+
+    private function getCotationRisque(?Cotation $cotation): ?Risque
+    {
+        if ($cotation && $cotation->getPiste()) {
+            return $cotation->getPiste()->getRisque();
+        }
+        return null;
     }
 
 }
