@@ -5,6 +5,7 @@ namespace App\Services\Canvas;
 use App\Constantes\Constante;
 use App\Entity\Avenant;
 use App\Entity\Assureur;
+use App\Entity\ConditionPartage;
 use App\Entity\Chargement;
 use App\Entity\Client;
 use App\Entity\Cotation;
@@ -226,7 +227,7 @@ class CalculationProvider
      *
      * @param Entreprise $entreprise L'entreprise de base pour le calcul.
      * @param boolean $isBound Si true, ne calcule que pour les polices souscrites (avec avenant).
-     * @param array $options Tableau de filtres optionnels. Peut contenir : 'pisteCible', 'cotationCible', 'assureurCible', 'risqueCible', 'partenaireCible', 'inviteCible', 'groupeCible', 'avenantCible', 'clientCible', 'trancheCible', 'brancheCible', 'reper' ('deteEffet' ou 'echeance'), 'entre', 'et', 'typeRevenuCible', 'revenuPourCourtierCible', 'paiementCible', 'notificationSinistreCible'.
+     * @param array $options Tableau de filtres optionnels. Peut contenir : 'pisteCible', 'cotationCible', 'assureurCible', 'risqueCible', 'partenaireCible', 'inviteCible', 'groupeCible', 'avenantCible', 'clientCible', 'trancheCible', 'brancheCible', 'reper' ('deteEffet' ou 'echeance'), 'entre', 'et', 'typeRevenuCible', 'revenuPourCourtierCible', 'paiementCible', 'notificationSinistreCible', 'conditionPartageCible'.
      * @return array Un tableau associatif avec 'prime_totale' and 'commission_totale'.
      */
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
@@ -286,6 +287,8 @@ class CalculationProvider
         $paiementCible = $options['paiementCible'] ?? null;
         /** @var NotificationSinistre|null $notificationSinistreCible */
         $notificationSinistreCible = $options['notificationSinistreCible'] ?? null;
+        /** @var ConditionPartage|null $conditionPartageCible */
+        $conditionPartageCible = $options['conditionPartageCible'] ?? null;
 
         // 2. Get initial pool of all cotations from the Entreprise
         $cotationsAcalculer = [];
@@ -306,6 +309,46 @@ class CalculationProvider
         }
 
         // 3. Apply filters sequentially
+        if ($conditionPartageCible) {
+            if ($pisteExceptionnelle = $conditionPartageCible->getPiste()) {
+                // This is an exceptional condition for a specific Piste.
+                // We only consider cotations from this Piste.
+                $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $cotation->getPiste() === $pisteExceptionnelle);
+            } elseif ($partenaireDeLaCondition = $conditionPartageCible->getPartenaire()) {
+                // This is a general condition for a Partenaire.
+                // First, filter cotations related to this partner.
+                $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($partenaireDeLaCondition) {
+                    if (!$cotation->getPiste()) return false;
+                    if ($cotation->getPiste()->getPartenaires()->contains($partenaireDeLaCondition)) return true;
+                    return $cotation->getPiste()->getClient() && $cotation->getPiste()->getClient()->getPartenaires()->contains($partenaireDeLaCondition);
+                });
+
+                // Second, apply the risk criteria from the condition.
+                $critereRisque = $conditionPartageCible->getCritereRisque();
+                $risquesCibles = $conditionPartageCible->getProduits();
+
+                if ($critereRisque !== ConditionPartage::CRITERE_PAS_RISQUES_CIBLES && !$risquesCibles->isEmpty()) {
+                    $idsRisquesCibles = array_map(fn ($r) => $r->getId(), $risquesCibles->toArray());
+
+                    $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($critereRisque, $idsRisquesCibles) {
+                        $idRisqueCotation = $cotation->getPiste()?->getRisque()?->getId();
+                        if (!$idRisqueCotation) {
+                            return false; // Can't apply filter if cotation has no risk.
+                        }
+                        $dansLaListe = in_array($idRisqueCotation, $idsRisquesCibles);
+
+                        if ($critereRisque === ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES) {
+                            return $dansLaListe;
+                        }
+
+                        if ($critereRisque === ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES) {
+                            return !$dansLaListe;
+                        }
+                        return true;
+                    });
+                }
+            }
+        }
         if ($avenantCible) {
             $cotationsAcalculer = array_filter($cotationsAcalculer, fn (Cotation $cotation) => $cotation->getAvenants()->contains($avenantCible));
         }
