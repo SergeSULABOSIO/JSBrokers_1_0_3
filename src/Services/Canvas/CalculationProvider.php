@@ -5,6 +5,7 @@ namespace App\Services\Canvas;
 use App\Constantes\Constante;
 use App\Entity\Avenant;
 use App\Entity\Assureur;
+use App\Entity\Chargement;
 use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
@@ -236,6 +237,7 @@ class CalculationProvider
         $commission_totale_encaissee = 0;
         $commission_nette = 0;
         $commission_pure = 0;
+        $prime_nette = 0;
         $commission_partageable = 0;
         $reserve = 0;
         $retro_commission_partenaire = 0;
@@ -439,6 +441,9 @@ class CalculationProvider
 
             $isIARD = $this->isIARD($cotation);
 
+            // Prime Nette
+            $prime_nette += $this->getCotationMontantPrimeNette($cotation);
+
             // Prime
             $prime_cotation = $this->getCotationMontantPrimePayableParClient($cotation);
             $prime_totale += $prime_cotation;
@@ -491,6 +496,7 @@ class CalculationProvider
                 $commission_nette *= $pourcentage;
                 $commission_pure *= $pourcentage;
                 $commission_partageable *= $pourcentage;
+                $prime_nette *= $pourcentage;
                 $retro_commission_partenaire *= $pourcentage;
                 $reserve *= $pourcentage;
                 // Les montants payés ne sont pas affectés par le pourcentage de la tranche dans ce contexte.
@@ -508,6 +514,15 @@ class CalculationProvider
         $taxe_assureur_solde = $taxe_assureur - $taxe_assureur_payee;
         $sinistre_solde = $sinistre_payable - $sinistre_paye;
         $taux_sinistralite = ($prime_totale > 0) ? ($sinistre_payable / $prime_totale) * 100 : 0;
+        $taux_de_commission = ($prime_nette > 0) ? ($commission_nette / $prime_nette) * 100 : 0;
+        $taux_de_retrocommission_effectif = ($commission_partageable > 0) ? ($retro_commission_partenaire / $commission_partageable) * 100 : 0;
+        $taux_de_paiement_prime = ($prime_totale > 0) ? ($prime_totale_payee / $prime_totale) * 100 : 0;
+        $taux_de_paiement_commission = ($commission_totale > 0) ? ($commission_totale_encaissee / $commission_totale) * 100 : 0;
+        $taux_de_paiement_retro_commission = ($retro_commission_partenaire > 0) ? ($retro_commission_partenaire_payee / $retro_commission_partenaire) * 100 : 0;
+        $taux_de_paiement_taxe_courtier = ($taxe_courtier > 0) ? ($taxe_courtier_payee / $taxe_courtier) * 100 : 0;
+        $taux_de_paiement_taxe_assureur = ($taxe_assureur > 0) ? ($taxe_assureur_payee / $taxe_assureur) * 100 : 0;
+        $taux_de_paiement_sinistre = ($sinistre_payable > 0) ? ($sinistre_paye / $sinistre_payable) * 100 : 0;
+
 
         return [
             'prime_totale' => $prime_totale,
@@ -519,6 +534,7 @@ class CalculationProvider
             'commission_nette' => $commission_nette,
             'commission_pure' => $commission_pure,
             'commission_partageable' => $commission_partageable,
+            'prime_nette' => $prime_nette,
             'reserve' => $reserve,
             'retro_commission_partenaire' => $retro_commission_partenaire,
             'retro_commission_partenaire_payee' => $retro_commission_partenaire_payee,
@@ -533,6 +549,14 @@ class CalculationProvider
             'sinistre_paye' => $sinistre_paye,
             'sinistre_solde' => $sinistre_solde,
             'taux_sinistralite' => $taux_sinistralite,
+            'taux_de_commission' => $taux_de_commission,
+            'taux_de_retrocommission_effectif' => $taux_de_retrocommission_effectif,
+            'taux_de_paiement_prime' => $taux_de_paiement_prime,
+            'taux_de_paiement_commission' => $taux_de_paiement_commission,
+            'taux_de_paiement_retro_commission' => $taux_de_paiement_retro_commission,
+            'taux_de_paiement_taxe_courtier' => $taux_de_paiement_taxe_courtier,
+            'taux_de_paiement_taxe_assureur' => $taux_de_paiement_taxe_assureur,
+            'taux_de_paiement_sinistre' => $taux_de_paiement_sinistre,
         ];
     }
 
@@ -541,6 +565,28 @@ class CalculationProvider
         return $cotation && count($cotation->getAvenants()) > 0;
     }
 
+    private function pisteIsBound(?Piste $piste): bool
+    {
+        if ($piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                if ($this->cotationIsBound($cotation)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private function getPisteMontantPrimePayableParClient(?Piste $piste): float
+    {
+        $total = 0;
+        if ($piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                $total += $this->getCotationMontantPrimePayableParClient($cotation);
+            }
+        }
+        return $total;
+    }
 
     private function getCotationMontantPrimePayableParClient(?Cotation $cotation): float
     {
@@ -551,6 +597,17 @@ class CalculationProvider
             }
         }
         return $montant;
+    }
+
+    private function getPisteMontantCommissionTtc(?Piste $piste, int $addressedTo, bool $onlySharable): float
+    {
+        $total = 0;
+        if ($piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                $total += $this->getCotationMontantCommissionTtc($cotation, $addressedTo, $onlySharable);
+            }
+        }
+        return $total;
     }
 
     private function getCotationMontantCommissionTtc(?Cotation $cotation, ?int $addressedTo, bool $onlySharable): float
@@ -763,5 +820,39 @@ class CalculationProvider
             return $cotation->getPiste()->getRisque();
         }
         return null;
+    }
+
+    private function getCotationMontantChargementPrime(?Cotation $cotation, ?TypeRevenu $typeRevenu): float
+    {
+        $montantChargementCible = 0;
+        if ($cotation && $typeRevenu) {
+            foreach ($cotation->getChargements() as $loading) {
+                if ($loading->getType() == $typeRevenu->getTypeChargement()) {
+                    $montantChargementCible = $loading->getMontantFlatExceptionel();
+                }
+            }
+        }
+        return $montantChargementCible;
+    }
+
+    private function getCotationRisque(?Cotation $cotation): ?Risque
+    {
+        if ($cotation && $cotation->getPiste()) {
+            return $cotation->getPiste()->getRisque();
+        }
+        return null;
+    }
+
+    private function getCotationMontantPrimeNette(?Cotation $cotation): float
+    {
+        $montant = 0;
+        if ($cotation) {
+            foreach ($cotation->getChargements() as $chargement) {
+                if ($chargement->getType() && $chargement->getType()->getFonction() === Chargement::FONCTION_PRIME_NETTE) {
+                    $montant += $chargement->getMontantFlatExceptionel();
+                }
+            }
+        }
+        return $montant;
     }
 }
