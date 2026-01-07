@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\ClientRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -13,6 +14,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
 class Client
 {
+    use CalculatedIndicatorsTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -111,6 +114,11 @@ class Client
     public const CIVILITE_ENTREPRISE = 2;
     public const CIVILITE_ASBL = 3;
 
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
     public function __construct()
     {
         $this->contacts = new ArrayCollection();
@@ -119,59 +127,6 @@ class Client
         $this->documents = new ArrayCollection();
         $this->notes = new ArrayCollection();
         $this->partenaires = new ArrayCollection();
-    }
-
-    //Attributs calculés
-    #[Groups(['list:read'])]
-    public ?float $montant_prime_payable_par_client = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_prime_payable_par_client_payee = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_prime_payable_par_client_solde = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_commission_pure = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_commission_ht = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_commission_ttc = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_commission_ttc_collectee = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_commission_ttc_solde = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_taxe_payable_par_assureur = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_taxe_payable_par_assureur_payee = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_taxe_payable_par_assureur_solde = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_retrocommissions_payable_par_courtier = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_retrocommissions_payable_par_courtier_payee = null;
-
-    #[Groups(['list:read'])]
-    public ?float $montant_retrocommissions_payable_par_courtier_solde = null;
-
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getNom(): ?string
-    {
-        return $this->nom;
     }
 
     public function setNom(string $nom): static
