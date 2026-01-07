@@ -2,13 +2,16 @@
 
 namespace App\Entity;
 
-use Symfony\Component\Serializer\Annotation\Groups;
-use App\Repository\ChargementPourPrimeRepository;
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
+use App\Repository\ChargementPourPrimeRepository;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ChargementPourPrimeRepository::class)]
 class ChargementPourPrime
 {
+    use CalculatedIndicatorsTrait;
+    
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

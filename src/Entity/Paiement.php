@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PaiementRepository;
 use App\Entity\Traits\TimestampableTrait;
 use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -14,6 +15,8 @@ use Symfony\Component\Serializer\Annotation\Groups;
 class Paiement
 {
     use TimestampableTrait;
+    use CalculatedIndicatorsTrait;
+
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

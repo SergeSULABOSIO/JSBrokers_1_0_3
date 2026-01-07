@@ -2,14 +2,17 @@
 
 namespace App\Entity;
 
-use App\Repository\PisteRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\PisteRepository;
+use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: PisteRepository::class)]
 class Piste implements OwnerAwareInterface
 {
+    use CalculatedIndicatorsTrait;
+
     //Type d'Avenant
     public const AVENANT_SOUSCRIPTION = 0;
     public const AVENANT_INCORPORATION = 1;
