@@ -14,11 +14,17 @@ use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\PieceSinistre;
 use App\Entity\Tache;
+use App\Services\Canvas\CalculationProvider;
 
 class NumericCanvasProvider
 {
     public function __construct(private Constante $constante)
     {
+    public function __construct(
+        private Constante $constante,
+        private CalculationProvider $calculationProvider
+        )
+    { 
     }
 
     public function getAttributesAndValues($object): array
@@ -36,18 +42,22 @@ class NumericCanvasProvider
                 'franchise' => [
                     "description" => "Franchise",
                     "value" => ($this->constante->Notification_Sinistre_getFranchise($object) ?? 0) * 100,
+                    "value" => ($this->calculationProvider->Notification_Sinistre_getFranchise($object) ?? 0) * 100,
                 ],
                 "compensationTotale" => [
                     "description" => "Compensation totale",
                     "value" => ($this->constante->Notification_Sinistre_getCompensation($object) ?? 0) * 100,
+                    "value" => ($this->calculationProvider->Notification_Sinistre_getCompensation($object) ?? 0) * 100,
                 ],
                 "compensationVersee" => [
                     "description" => "Compensation versée",
                     "value" => ($this->constante->Notification_Sinistre_getCompensationVersee($object) ?? 0) * 100,
+                    "value" => ($this->calculationProvider->Notification_Sinistre_getCompensationVersee($object) ?? 0) * 100,
                 ],
                 "compensationDue" => [
                     "description" => "Compensation due",
                     "value" => ($this->constante->Notification_Sinistre_getSoldeAVerser($object) ?? 0) * 100,
+                    "value" => ($this->calculationProvider->Notification_Sinistre_getSoldeAVerser($object) ?? 0) * 100,
                 ],
             ];
         }
@@ -136,10 +146,12 @@ class NumericCanvasProvider
                 "compensationVersee" => [
                     "description" => "Comp. versée",
                     "value" => ($this->constante->Offre_Indemnisation_getCompensationVersee($object) ?? 0) * 100,
+                    "value" => ($this->calculationProvider->Offre_Indemnisation_getCompensationVersee($object) ?? 0) * 100,
                 ],
                 "compensationAVersee" => [
                     "description" => "Solde à verser",
                     "value" => ($this->constante->Offre_Indemnisation_getSoldeAVerser($object) ?? 0) * 100,
+                    "value" => ($this->calculationProvider->Offre_Indemnisation_getSoldeAVerser($object) ?? 0) * 100,
                 ],
             ];
         }
