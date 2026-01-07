@@ -58,15 +58,39 @@ class ListCanvasProvider
                     ],
                     "colonnes_numeriques" => [
                         [
-                            "titre_colonne" => "Commissions TTC",
+                            "titre_colonne" => "Prime Nette",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "montant_commission_ttc",
+                            "attribut_code" => "prime_nette",
                             "attribut_type" => "nombre",
                         ],
                         [
-                            "titre_colonne" => "Solde Commissions",
+                            "titre_colonne" => "Prime Totale",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "montant_commission_ttc_solde",
+                            "attribut_code" => "prime_totale",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Comm. Pure",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "commission_pure",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Comm. Nette",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "commission_nette",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Comm. Totale",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "commission_totale",
+                            "attribut_type" => "nombre",
+                        ],
+                        [
+                            "titre_colonne" => "Rétro-comm.",
+                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "attribut_code" => "retro_commission_partenaire",
                             "attribut_type" => "nombre",
                         ],
                     ],
