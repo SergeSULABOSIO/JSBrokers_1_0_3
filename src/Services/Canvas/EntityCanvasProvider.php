@@ -42,6 +42,60 @@ class EntityCanvasProvider
     ) {
     }
 
+    private function getGlobalIndicatorsCanvas(string $entityName): array
+    {
+        $indicators = [
+            ['code' => 'prime_totale', 'intitule' => 'Prime Totale', 'description' => "Montant total de la prime brute due, toutes taxes et frais de chargement inclus, avant toute déduction.", 'is_percentage' => false],
+            ['code' => 'prime_totale_payee', 'intitule' => 'Prime Payée', 'description' => "Cumul des paiements de prime déjà effectués par le client. Reflète l'état des encaissements.", 'is_percentage' => false],
+            ['code' => 'prime_totale_solde', 'intitule' => 'Solde Prime', 'description' => "Montant de la prime totale qui reste à payer par le client. Indicateur clé du recouvrement.", 'is_percentage' => false],
+            ['code' => 'commission_totale', 'intitule' => 'Commission Totale', 'description' => "Montant total de la commission TTC due au courtier, incluant toutes les taxes applicables sur la commission.", 'is_percentage' => false],
+            ['code' => 'commission_totale_encaissee', 'intitule' => 'Commission Encaissée', 'description' => "Montant total de la commission que le courtier a effectivement déjà perçu, que ce soit de l'assureur ou du client.", 'is_percentage' => false],
+            ['code' => 'commission_totale_solde', 'intitule' => 'Solde Commission', 'description' => "Montant de la commission totale qui reste à encaisser par le courtier. Essentiel pour la trésorerie.", 'is_percentage' => false],
+            ['code' => 'commission_nette', 'intitule' => 'Commission Nette', 'description' => "Montant de la commission avant l'application des taxes (HT). C'est la base de calcul pour les impôts.", 'is_percentage' => false],
+            ['code' => 'commission_pure', 'intitule' => 'Commission Pure', 'description' => "Commission nette après déduction des taxes à la charge du courtier. Représente le revenu brut du courtier.", 'is_percentage' => false],
+            ['code' => 'commission_partageable', 'intitule' => 'Assiette Partageable', 'description' => "Part de la commission pure qui sert de base au calcul de la rétrocession due aux partenaires d'affaires.", 'is_percentage' => false],
+            ['code' => 'prime_nette', 'intitule' => 'Prime Nette', 'description' => "Base de la prime utilisée pour le calcul des commissions. Exclut généralement les taxes et certains frais.", 'is_percentage' => false],
+            ['code' => 'reserve', 'intitule' => 'Réserve Courtier', 'description' => "Bénéfice final revenant au courtier après paiement des taxes et des rétrocessions aux partenaires.", 'is_percentage' => false],
+            ['code' => 'retro_commission_partenaire', 'intitule' => 'Rétrocommission Partenaire', 'description' => "Montant total de la commission à reverser aux partenaires d'affaires, calculé sur l'assiette partageable.", 'is_percentage' => false],
+            ['code' => 'retro_commission_partenaire_payee', 'intitule' => 'Rétrocommission Payée', 'description' => "Montant de la rétrocommission qui a déjà été effectivement payé aux partenaires.", 'is_percentage' => false],
+            ['code' => 'retro_commission_partenaire_solde', 'intitule' => 'Solde Rétrocommission', 'description' => "Montant de la rétrocommission qui reste à payer aux partenaires. Suivi des dettes envers les apporteurs.", 'is_percentage' => false],
+            ['code' => 'taxe_courtier', 'intitule' => 'Taxe Courtier', 'description' => "Montant total des taxes dues par le courtier sur les commissions perçues. Une charge fiscale directe.", 'is_percentage' => false],
+            ['code' => 'taxe_courtier_payee', 'intitule' => 'Taxe Courtier Payée', 'description' => "Montant des taxes sur commission que le courtier a déjà versées à l'autorité fiscale.", 'is_percentage' => false],
+            ['code' => 'taxe_courtier_solde', 'intitule' => 'Solde Taxe Courtier', 'description' => "Montant des taxes sur commission restant à payer par le courtier à l'autorité fiscale.", 'is_percentage' => false],
+            ['code' => 'taxe_assureur', 'intitule' => 'Taxe Assureur', 'description' => "Montant total des taxes dues par l'assureur sur les commissions. Le courtier agit souvent comme collecteur.", 'is_percentage' => false],
+            ['code' => 'taxe_assureur_payee', 'intitule' => 'Taxe Assureur Payée', 'description' => "Montant des taxes sur commission que le courtier a déjà reversées à l'assureur (ou payées pour son compte).", 'is_percentage' => false],
+            ['code' => 'taxe_assureur_solde', 'intitule' => 'Solde Taxe Assureur', 'description' => "Montant des taxes sur commission collectées par le courtier et restant à reverser à l'assureur.", 'is_percentage' => false],
+            ['code' => 'sinistre_payable', 'intitule' => 'Sinistre Payable', 'description' => "Montant total des indemnisations convenues pour les sinistres survenus, avant tout paiement.", 'is_percentage' => false],
+            ['code' => 'sinistre_paye', 'intitule' => 'Sinistre Payé', 'description' => "Montant total des indemnisations déjà versées aux assurés ou bénéficiaires pour les sinistres.", 'is_percentage' => false],
+            ['code' => 'sinistre_solde', 'intitule' => 'Solde Sinistre', 'description' => "Montant des indemnisations qui reste à payer pour solder entièrement les dossiers sinistres.", 'is_percentage' => false],
+            ['code' => 'taux_sinistralite', 'intitule' => 'Taux de Sinistralité', 'description' => "Rapport sinistres/primes (S/P). Évalue la qualité technique d'un risque ou d'un portefeuille.", 'is_percentage' => true],
+            ['code' => 'taux_de_commission', 'intitule' => 'Taux de Commission', 'description' => "Rapport entre la commission nette et la prime nette. Mesure la rentabilité brute d'une affaire.", 'is_percentage' => true],
+            ['code' => 'taux_de_retrocommission_effectif', 'intitule' => 'Taux Rétro. Effectif', 'description' => "Rapport entre la rétrocommission et l'assiette partageable. Mesure le coût réel du partenariat.", 'is_percentage' => true],
+            ['code' => 'taux_de_paiement_prime', 'intitule' => 'Taux Paiement Prime', 'description' => "Pourcentage de la prime totale qui a été effectivement payé par le client. Indicateur de recouvrement.", 'is_percentage' => true],
+            ['code' => 'taux_de_paiement_commission', 'intitule' => 'Taux Encaissement Comm.', 'description' => "Pourcentage de la commission totale qui a été effectivement encaissée par le courtier.", 'is_percentage' => true],
+            ['code' => 'taux_de_paiement_retro_commission', 'intitule' => 'Taux Paiement Rétro.', 'description' => "Pourcentage de la rétrocommission due qui a été effectivement payée aux partenaires.", 'is_percentage' => true],
+            ['code' => 'taux_de_paiement_taxe_courtier', 'intitule' => 'Taux Paiement Taxe Courtier', 'description' => "Pourcentage de la taxe courtier due qui a été effectivement payée à l'autorité fiscale.", 'is_percentage' => true],
+            ['code' => 'taux_de_paiement_taxe_assureur', 'intitule' => 'Taux Paiement Taxe Assureur', 'description' => "Pourcentage de la taxe assureur due qui a été effectivement payée.", 'is_percentage' => true],
+            ['code' => 'taux_de_paiement_sinistre', 'intitule' => 'Taux Paiement Sinistre', 'description' => "Pourcentage de l'indemnisation totale payable qui a déjà été versée aux sinistrés.", 'is_percentage' => true],
+        ];
+
+        $canvas = [];
+        foreach ($indicators as $indicator) {
+            $isPercentage = $indicator['is_percentage'];
+            $camelCaseCode = str_replace('_', '', ucwords($indicator['code'], '_'));
+            $canvas[] = [
+                "code" => $indicator['code'],
+                "intitule" => $indicator['intitule'],
+                "type" => "Calcul",
+                "format" => "Nombre",
+                "unite" => $isPercentage ? "%" : $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "fonction" => $entityName . '_get' . $camelCaseCode,
+                "description" => $indicator['description']
+            ];
+        }
+        return $canvas;
+    }
+
     public function getCanvas(string $entityClassName): array
     {
         // Cet "aiguilleur" garde le code principal propre et lisible.
@@ -63,7 +117,7 @@ class EntityCanvasProvider
                             ", réévalué à [[evaluationChiffree]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
                         ["code" => "referenceSinistre", "intitule" => "Réf. Sinistre", "type" => "Texte"],
@@ -88,33 +142,6 @@ class EntityCanvasProvider
                             "format" => "Texte",
                             "fonction" => "Notification_Sinistre_getDelaiDeclaration",
                             "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
-                        ],
-                        [
-                            "code" => "compensation",
-                            "intitule" => "Compensation",
-                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Notification_Sinistre_getCompensation",
-                            "description" => "📊 Montant total de l'indemnisation convenue pour ce sinistre." // MODIFICATION: Ajout
-                        ],
-                        [
-                            "code" => "compensationVersee",
-                            "intitule" => "Comp. versée",
-                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Notification_Sinistre_getCompensationVersee",
-                            "description" => "📊 Montant cumulé des paiements déjà effectués pour cette indemnisation." // MODIFICATION: Ajout
-                        ],
-                        [
-                            "code" => "compensationSoldeAverser",
-                            "intitule" => "Solde à verser",
-                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Notification_Sinistre_getSoldeAVerser",
-                            "description" => "📊 Montant restant à payer pour solder complètement ce dossier sinistre." // MODIFICATION: Ajout
                         ],
                         [
                             "code" => "compensationFranchise",
@@ -170,7 +197,7 @@ class EntityCanvasProvider
                             "fonction" => "Notification_Sinistre_getAgeDossier",
                             "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
                         ],
-                    ],
+                    ], $this->getGlobalIndicatorsCanvas("NotificationSinistre"))
                 ];
 
             case OffreIndemnisationSinistre::class:
@@ -184,7 +211,7 @@ class EntityCanvasProvider
                             " Montant payable de [[montantPayable]] avec une franchise de [[franchiseAppliquee]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Description", "type" => "Texte"],
                         ["code" => "beneficiaire", "intitule" => "Bénéficiaire", "type" => "Texte"],
@@ -195,24 +222,6 @@ class EntityCanvasProvider
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                         ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
                         [
-                            "code" => "compensationVersee",
-                            "intitule" => "Comp. versée",
-                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Offre_Indemnisation_getCompensationVersee",
-                            "description" => "📊 Montant cumulé des paiements déjà effectués pour cette offre." // MODIFICATION: Ajout
-                        ],
-                        [
-                            "code" => "compensationAVersee",
-                            "intitule" => "Solde à verser",
-                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Offre_Indemnisation_getSoldeAVerser",
-                            "description" => "Montant restant à payer pour solder cette offre." // MODIFICATION: Ajout
-                        ],
-                        [
                             "code" => "pourcentagePaye",
                             "intitule" => "Pourcentage Payé",
                             "type" => "Calcul",
@@ -221,7 +230,7 @@ class EntityCanvasProvider
                             "fonction" => "Offre_Indemnisation_getPourcentagePaye",
                             "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
                         ]
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("OffreIndemnisationSinistre"))
                 ];
 
             case PieceSinistre::class:
@@ -234,14 +243,14 @@ class EntityCanvasProvider
                             "Pièce de sinistre: [[*description]] fournie par [[fourniPar]] le [[receivedAt]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                         ["code" => "fourniPar", "intitule" => "Fourni par", "type" => "Texte"],
                         ["code" => "receivedAt", "intitule" => "Date de réception", "type" => "Date"],
                         ["code" => "notificationSinistre", "intitule" => "Notification Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("PieceSinistre"))
                 ];
             case Avenant::class:
                 return [
@@ -254,7 +263,7 @@ class EntityCanvasProvider
                             " Période de couverture du [[startingAt]] au [[endingAt]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
                         ["code" => "numero", "intitule" => "Numéro", "type" => "Texte"],
@@ -263,25 +272,7 @@ class EntityCanvasProvider
                         ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
                         ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                        [
-                            "code" => "primeTTC",
-                            "intitule" => "Prime TTC",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Avenant_getPrimeTTC",
-                            "description" => "Montant total de la prime TTC."
-                        ],
-                        [
-                            "code" => "commissionTTC",
-                            "intitule" => "Commission TTC",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Avenant_getCommissionTTC",
-                            "description" => "Montant total de la commission TTC."
-                        ],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Avenant"))
                 ];
             case Assureur::class:
                 return [
@@ -295,7 +286,7 @@ class EntityCanvasProvider
                             " Les informations légales sont : N° Impôt [[numimpot]], ID.NAT [[idnat]], et RCCM [[rccm]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "email", "intitule" => "Email", "type" => "Texte"],
@@ -308,34 +299,7 @@ class EntityCanvasProvider
                         ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class, "displayField" => "nom"],
                         ["code" => "bordereaus", "intitule" => "Bordereaux", "type" => "Collection", "targetEntity" => Bordereau::class, "displayField" => "nom"],
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
-                        [
-                            "code" => "montant_commission_ttc",
-                            "intitule" => "Commissions TTC",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Assureur_getMontant_commission_ttc",
-                            "description" => "Montant total des commissions (Toutes Taxes Comprises) générées par cet assureur."
-                        ],
-                        [
-                            "code" => "montant_commission_ttc_solde",
-                            "intitule" => "Solde Commissions",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Assureur_getMontant_commission_ttc_solde",
-                            "description" => "Montant des commissions TTC restant à percevoir de cet assureur."
-                        ],
-                        [
-                            "code" => "montant_prime_payable_par_client_solde",
-                            "intitule" => "Solde Primes Clients",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Assureur_getMontant_prime_payable_par_client_solde",
-                            "description" => "Montant des primes que les clients doivent encore payer pour les polices de cet assureur."
-                        ]
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Assureur"))
                 ];
             
             case Monnaie::class:
@@ -348,12 +312,12 @@ class EntityCanvasProvider
                             "Monnaie: [[*nom]] ([[code]]) - Symbole: [[symbole]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "code", "intitule" => "Code ISO", "type" => "Texte"],
                         ["code" => "symbole", "intitule" => "Symbole", "type" => "Texte"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Monnaie"))
                 ];
 
             case Client::class:
@@ -368,7 +332,7 @@ class EntityCanvasProvider
                             " Adresse: [[adresse]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "email", "intitule" => "Email", "type" => "Texte"],
@@ -380,25 +344,7 @@ class EntityCanvasProvider
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                         ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
-                        [
-                            "code" => "montant_commission_ttc",
-                            "intitule" => "Commissions TTC",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Client_getMontant_commission_ttc",
-                            "description" => "Montant total des commissions TTC générées par ce client."
-                        ],
-                        [
-                            "code" => "montant_prime_payable_par_client_solde",
-                            "intitule" => "Solde Primes",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Client_getMontant_prime_payable_par_client_solde",
-                            "description" => "Montant des primes que ce client doit encore payer."
-                        ]
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Client"))
                 ];
             case ConditionPartage::class:
                 return [
@@ -412,7 +358,7 @@ class EntityCanvasProvider
                             " avec la formule: [[formule_string]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "partenaire", "intitule" => "Partenaire", "type" => "Relation", "targetEntity" => Partenaire::class, "displayField" => "nom"],
@@ -441,7 +387,7 @@ class EntityCanvasProvider
                             "fonction" => "ConditionPartage_getCritereRisqueString",
                         ],
                         ["code" => "produits", "intitule" => "Risques Ciblés", "type" => "Collection", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("ConditionPartage"))
                 ];
 
             case Contact::class:
@@ -455,7 +401,7 @@ class EntityCanvasProvider
                             " Email: [[email]] / Tél: [[telephone]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "fonction", "intitule" => "Fonction", "type" => "Texte"],
@@ -470,7 +416,7 @@ class EntityCanvasProvider
                             "fonction" => "Contact_getTypeString",
                             "description" => "Le type de contact (Production, Sinistre, etc.)."
                         ],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Contact"))
                 ];
 
             case Cotation::class:
@@ -484,7 +430,7 @@ class EntityCanvasProvider
                             " Assureur: [[assureur]]. Durée: [[duree]] mois."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
@@ -493,25 +439,7 @@ class EntityCanvasProvider
                         ["code" => "avenants", "intitule" => "Avenants", "type" => "Collection", "targetEntity" => Avenant::class],
                         ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                        [
-                            "code" => "primeTTC",
-                            "intitule" => "Prime TTC",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Cotation_getMontant_prime_payable_par_client",
-                            "description" => "Montant total de la prime TTC."
-                        ],
-                        [
-                            "code" => "commissionTTC",
-                            "intitule" => "Commission TTC",
-                            "type" => "Calcul",
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "format" => "Nombre",
-                            "fonction" => "Cotation_getCommissionTTC",
-                            "description" => "Montant total de la commission TTC."
-                        ],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Cotation"))
                 ];
 
             case Groupe::class:
@@ -525,13 +453,13 @@ class EntityCanvasProvider
                             " Description: <em>« [[description]] »</em>."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom du groupe", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "description"]
                         ]],
                         ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Groupe"))
                 ];
 
             case Partenaire::class:
@@ -545,7 +473,7 @@ class EntityCanvasProvider
                             " Contact: [[email]] / [[telephone]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "email"]
@@ -553,7 +481,7 @@ class EntityCanvasProvider
                         ["code" => "part", "intitule" => "Part (%)", "type" => "Nombre", "unite" => "%"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
                         ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Partenaire"))
                 ];
 
             case Risque::class:
@@ -567,7 +495,7 @@ class EntityCanvasProvider
                             " Branche: [[branche_string]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nomComplet", "intitule" => "Nom complet", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "code", "attribut_prefixe" => "Code: "]
@@ -575,7 +503,7 @@ class EntityCanvasProvider
                         ["code" => "imposable", "intitule" => "Imposable", "type" => "Booleen"],
                         ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class],
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Risque"))
                 ];
             case Feedback::class:
                 return [
@@ -588,12 +516,12 @@ class EntityCanvasProvider
                             " Action suivante: [[nextAction]] le [[nextActionAt]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                         ["code" => "createdAt", "intitule" => "Date", "type" => "Date"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Feedback"))
                 ];
             case Piste::class:
                 return [
@@ -606,7 +534,7 @@ class EntityCanvasProvider
                             " Risque: [[risque]]. Prime potentielle: [[primePotentielle]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "client"]
@@ -615,7 +543,7 @@ class EntityCanvasProvider
                         ["code" => "primePotentielle", "intitule" => "Prime potentielle", "type" => "Nombre", "unite" => "$"],
                         ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Piste"))
                 ];
 
             case Tache::class:
@@ -629,7 +557,7 @@ class EntityCanvasProvider
                             " À exécuter par [[executor]] avant le [[toBeEndedAt]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "description", "intitule" => "Description", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "executor", "attribut_prefixe" => "Pour: "]
@@ -638,7 +566,7 @@ class EntityCanvasProvider
                         ["code" => "closed", "intitule" => "Clôturée", "type" => "Booleen"],
                         ["code" => "feedbacks", "intitule" => "Feedbacks", "type" => "Collection", "targetEntity" => Feedback::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Tache"))
                 ];
             case Bordereau::class:
                 return [
@@ -652,14 +580,14 @@ class EntityCanvasProvider
                             " pour un montant total de [[montantTTC]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
                         ["code" => "montantTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                         ["code" => "receivedAt", "intitule" => "Reçu le", "type" => "Date"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Bordereau"))
                 ];
             case Chargement::class:
                 return [
@@ -672,14 +600,14 @@ class EntityCanvasProvider
                             " Description : <em>« [[description]] »</em>."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                         ["code" => "fonction", "intitule" => "Fonction", "type" => "Texte"], // Maybe a calculated field to get the text? For now, it's just the int.
                         ["code" => "chargementPourPrimes", "intitule" => "Utilisations (Primes)", "type" => "Collection", "targetEntity" => ChargementPourPrime::class, "displayField" => "nom"],
                         ["code" => "typeRevenus", "intitule" => "Utilisations (Revenus)", "type" => "Collection", "targetEntity" => TypeRevenu::class, "displayField" => "nom"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Chargement"))
                 ];
             case AutoriteFiscale::class:
                 return [
@@ -691,12 +619,12 @@ class EntityCanvasProvider
                             "L'autorité fiscale [[*nom]] ([[abreviation]]) est responsable de la collecte des taxes."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "description"]
                         ]],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("AutoriteFiscale"))
                 ];
             case ChargementPourPrime::class:
                 return [
@@ -709,14 +637,14 @@ class EntityCanvasProvider
                             " sur la cotation [[cotation]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "type", "intitule" => "Type de chargement", "type" => "Relation", "targetEntity" => Chargement::class, "displayField" => "nom"],
                         ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
                         ["code" => "montantFlatExceptionel", "intitule" => "Montant", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("ChargementPourPrime"))
                 ];
             case CompteBancaire::class:
                 return [
@@ -729,7 +657,7 @@ class EntityCanvasProvider
                             " N° [[numero]] / [[intitule]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "intitule", "intitule" => "Intitulé", "type" => "Texte"],
@@ -738,7 +666,7 @@ class EntityCanvasProvider
                         ["code" => "codeSwift", "intitule" => "Code Swift", "type" => "Texte"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                         ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("CompteBancaire"))
                 ];
             case Note::class:
                 return [
@@ -752,7 +680,7 @@ class EntityCanvasProvider
                             " Statut: [[status_string]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "reference"]
@@ -760,7 +688,7 @@ class EntityCanvasProvider
                         ["code" => "validated", "intitule" => "Validée", "type" => "Booleen"],
                         ["code" => "createdAt", "intitule" => "Créée le", "type" => "Date"],
                         ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Note"))
                 ];
             case Paiement::class:
                 return [
@@ -773,7 +701,7 @@ class EntityCanvasProvider
                             " Payé le [[paidAt]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "reference", "intitule" => "Référence", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "description"]
@@ -782,7 +710,7 @@ class EntityCanvasProvider
                         ["code" => "montant", "intitule" => "Montant", "type" => "Nombre", "unite" => "$"],
                         ["code" => "paidAt", "intitule" => "Payé le", "type" => "Date"],
                         ["code" => "preuves", "intitule" => "Preuves (Documents)", "type" => "Collection", "targetEntity" => Document::class],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Paiement"))
                 ];
             case Taxe::class:
                 return [
@@ -795,14 +723,14 @@ class EntityCanvasProvider
                             " Taux IARD: [[tauxIARD]]%, Taux VIE: [[tauxVIE]]%."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "code", "intitule" => "Code", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "description"]
                         ]],
                         ["code" => "tauxIARD", "intitule" => "Taux IARD", "type" => "Nombre", "unite" => "%"],
                         ["code" => "tauxVIE", "intitule" => "Taux VIE", "type" => "Nombre", "unite" => "%"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Taxe"))
                 ];
             case Tranche::class:
                 return [
@@ -815,7 +743,7 @@ class EntityCanvasProvider
                             " payable le [[payableAt]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "cotation", "attribut_prefixe" => "Cotation: "]
@@ -823,7 +751,7 @@ class EntityCanvasProvider
                         ["code" => "montantFlat", "intitule" => "Montant", "type" => "Nombre", "unite" => "$"],
                         ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
                         ["code" => "payableAt", "intitule" => "Payable le", "type" => "Date"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Tranche"))
                 ];
             case TypeRevenu::class:
                 return [
@@ -836,13 +764,13 @@ class EntityCanvasProvider
                             " Redevable: [[redevable_string]]. Partagé: [[shared_string]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true],
                         ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
                         ["code" => "montantflat", "intitule" => "Montant", "type" => "Nombre", "unite" => "$"],
                         ["code" => "shared", "intitule" => "Partagé", "type" => "Booleen"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("TypeRevenu"))
                 ];
             case Classeur::class:
                 return [
@@ -855,12 +783,12 @@ class EntityCanvasProvider
                             " <em>« [[description]] »</em>"
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Classeur"))
                 ];
             case Document::class:
                 return [
@@ -873,7 +801,7 @@ class EntityCanvasProvider
                             " Fichier: <em>[[nomFichierStocke]]</em>"
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                         ["code" => "nomFichierStocke", "intitule" => "Fichier", "type" => "Texte"],
@@ -886,7 +814,7 @@ class EntityCanvasProvider
                             "description" => "L'entité parente à laquelle ce document est attaché."
                         ],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Document"))
                 ];
             case Entreprise::class:
                 return [
@@ -899,13 +827,13 @@ class EntityCanvasProvider
                             " Licence: [[licence]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
                             ["attribut_code" => "licence", "attribut_prefixe" => "Licence: "]
                         ]],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Entreprise"))
                 ];
             case Invite::class:
                 return [
@@ -917,12 +845,12 @@ class EntityCanvasProvider
                             "Invitation pour [[*email]] ([[nom]]). Statut: [[status_string]]."
                         ]
                     ],
-                    "liste" => [
+                    "liste" => array_merge([
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "email", "intitule" => "Email", "type" => "Texte", "col_principale" => true],
                         ["code" => "createdAt", "intitule" => "Invité le", "type" => "Date"],
                         ["code" => "isVerified", "intitule" => "Acceptée", "type" => "Booleen"],
-                    ]
+                    ], $this->getGlobalIndicatorsCanvas("Invite"))
                 ];
             case Utilisateur::class:
                 return [

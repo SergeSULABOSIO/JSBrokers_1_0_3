@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\AssureurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -11,6 +12,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: AssureurRepository::class)]
 class Assureur
 {
+    use CalculatedIndicatorsTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

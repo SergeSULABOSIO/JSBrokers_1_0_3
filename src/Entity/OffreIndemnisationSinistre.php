@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
@@ -11,6 +12,8 @@ use App\Repository\OffreIndemnisationSinistreRepository;
 #[ORM\Entity(repositoryClass: OffreIndemnisationSinistreRepository::class)]
 class OffreIndemnisationSinistre
 {
+    use CalculatedIndicatorsTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

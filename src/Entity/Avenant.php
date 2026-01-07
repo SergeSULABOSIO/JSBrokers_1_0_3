@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\AvenantRepository;
 use BadFunctionCallException;
@@ -12,6 +13,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: AvenantRepository::class)]
 class Avenant
 {
+    use CalculatedIndicatorsTrait;
+
     //Renewal status
     public const RENEWAL_STATUS_LOST        = 0;
     public const RENEWAL_STATUS_ONCE_OFF    = 1;
@@ -65,12 +68,6 @@ class Avenant
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $numero = null;
-
-    #[Groups(['list:read'])]
-    public ?float $primeTTC = null;
-
-    #[Groups(['list:read'])]
-    public ?float $commissionTTC = null;
 
     public function __construct()
     {
