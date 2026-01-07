@@ -38,9 +38,7 @@ use App\Services\ServiceMonnaies;
 
 class ListCanvasProvider
 {
-    public function __construct(private ServiceMonnaies $serviceMonnaies)
-    {
-    }
+    public function __construct(private ServiceMonnaies $serviceMonnaies) {}
 
     public function getCanvas(string $entityClassName): array
     {
@@ -56,44 +54,7 @@ class ListCanvasProvider
                             ["attribut_code" => "telephone"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
-                        [
-                            "titre_colonne" => "Prime Nette",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "prime_nette",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Prime Totale",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "prime_totale",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Comm. Pure",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "commission_pure",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Comm. Nette",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "commission_nette",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Comm. Totale",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "commission_totale",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Rétro-comm.",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "retro_commission_partenaire",
-                            "attribut_type" => "nombre",
-                        ],
-                    ],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case AutoriteFiscale::class:
@@ -104,7 +65,7 @@ class ListCanvasProvider
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [["attribut_code" => "abreviation"]],
                     ],
-                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
+                    "colonnes_numeriques" => [],
                 ];
 
             case Avenant::class:
@@ -121,20 +82,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Effet: ", "attribut_code" => "startingAt", "attribut_type" => "date"],
                         ],
                     ],
-                    "colonnes_numeriques" => array_merge([
-                        [
-                            "titre_colonne" => "Prime TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "primeTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Comm. TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "commissionTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                    ], $this->getSharedNumericColumns()),
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Bordereau::class:
@@ -155,7 +103,7 @@ class ListCanvasProvider
                             "attribut_code" => "montantTTC",
                             "attribut_type" => "nombre",
                         ],
-                    ], $this->getSharedNumericColumns()),
+                    ]),
                 ];
 
             case Document::class:
@@ -216,7 +164,7 @@ class ListCanvasProvider
                         "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:folder-multiple"],
                         "textes_secondaires" => [["attribut_code" => "description", "attribut_taille_max" => 50]],
                     ],
-                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
+                    "colonnes_numeriques" => [],
                 ];
 
             case Client::class:
@@ -230,20 +178,7 @@ class ListCanvasProvider
                             ["attribut_code" => "telephone"],
                         ],
                     ],
-                    "colonnes_numeriques" => array_merge([
-                        [
-                            "titre_colonne" => "Commissions TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "montant_commission_ttc",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Solde Primes",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "montant_prime_payable_par_client_solde",
-                            "attribut_type" => "nombre",
-                        ],
-                    ], $this->getSharedNumericColumns()),
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case CompteBancaire::class:
@@ -257,7 +192,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "N° ", "attribut_code" => "numero"],
                         ],
                     ],
-                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
+                    "colonnes_numeriques" => [],
                 ];
 
             case NotificationSinistre::class:
@@ -330,20 +265,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Piste: ", "attribut_code" => "piste"],
                         ],
                     ],
-                    "colonnes_numeriques" => array_merge([
-                        [
-                            "titre_colonne" => "Prime TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "primeTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                        [
-                            "titre_colonne" => "Comm. TTC",
-                            "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                            "attribut_code" => "commissionTTC",
-                            "attribut_type" => "nombre",
-                        ],
-                    ], $this->getSharedNumericColumns()),
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Entreprise::class:
@@ -419,7 +341,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Symbole: ", "attribut_code" => "symbole"],
                         ],
                     ],
-                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
+                    "colonnes_numeriques" => [],
                 ];
 
             case Note::class:
@@ -433,7 +355,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Statut: ", "attribut_code" => "status_string"],
                         ],
                     ],
-                    "colonnes_numeriques" => array_merge([
+                    "colonnes_numeriques" => [
                         [
                             "titre_colonne" => "Montant Payable",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -452,7 +374,7 @@ class ListCanvasProvider
                             "attribut_code" => "montant_solde",
                             "attribut_type" => "nombre",
                         ],
-                    ], $this->getSharedNumericColumns()),
+                    ],
                 ];
 
             case Paiement::class:
@@ -590,7 +512,7 @@ class ListCanvasProvider
                             ["attribut_code" => "description", "attribut_taille_max" => 50],
                         ],
                     ],
-                    "colonnes_numeriques" => array_merge([
+                    "colonnes_numeriques" => [
                         [
                             "titre_colonne" => "Taux IARD",
                             "attribut_unité" => "%",
@@ -603,7 +525,7 @@ class ListCanvasProvider
                             "attribut_code" => "tauxVIE",
                             "attribut_type" => "nombre",
                         ],
-                    ], $this->getSharedNumericColumns()),
+                    ],
                 ];
 
             case Tranche::class:
@@ -666,6 +588,12 @@ class ListCanvasProvider
                 "attribut_type" => "nombre",
             ],
             [
+                "titre_colonne" => "Comm. Pure",
+                "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "attribut_code" => "commission_pure",
+                "attribut_type" => "nombre",
+            ],
+            [
                 "titre_colonne" => "Comm. Nette",
                 "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 "attribut_code" => "commission_nette",
@@ -675,6 +603,12 @@ class ListCanvasProvider
                 "titre_colonne" => "Comm. Totale",
                 "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 "attribut_code" => "commission_totale",
+                "attribut_type" => "nombre",
+            ],
+            [
+                "titre_colonne" => "Rétro-comm.",
+                "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "attribut_code" => "retro_commission_partenaire",
                 "attribut_type" => "nombre",
             ],
         ];
