@@ -2,14 +2,17 @@
 
 namespace App\Entity;
 
-use App\Repository\TrancheRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\TrancheRepository;
+use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: TrancheRepository::class)]
 class Tranche
 {
+    use CalculatedIndicatorsTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

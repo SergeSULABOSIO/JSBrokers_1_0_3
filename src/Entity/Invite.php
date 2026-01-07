@@ -2,16 +2,19 @@
 
 namespace App\Entity;
 
-use Symfony\Component\Serializer\Annotation\Groups;
-use App\Repository\InviteRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\InviteRepository;
+use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: InviteRepository::class)]
 class Invite implements OwnerAwareInterface
 {
+    use CalculatedIndicatorsTrait;
+
     public const ACCESS_LECTURE = 0;
     public const ACCESS_ECRITURE = 1;
     public const ACCESS_MODIFICATION = 2;

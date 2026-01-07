@@ -2,14 +2,17 @@
 
 namespace App\Entity;
 
-use App\Repository\ModelePieceSinistreRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Doctrine\Common\Collections\ArrayCollection;
+use App\Repository\ModelePieceSinistreRepository;
 
 #[ORM\Entity(repositoryClass: ModelePieceSinistreRepository::class)]
 class ModelePieceSinistre
 {
+    use CalculatedIndicatorsTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
