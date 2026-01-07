@@ -237,31 +237,14 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["dommage"]], ["champs" => ["evaluationChiffree"]]]]
         ];
 
-        // On ajoute toujours les lignes de collection. Leur état sera géré par le flag 'disabled'.
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $notificationId, "Contact", "notificationSinistre", null, $isParentNew)]],
-            ]
+        $collections = [
+            ['fieldName' => 'contacts', 'entityRouteName' => 'contact', 'formTitle' => 'Contact', 'parentFieldName' => 'notificationSinistre'],
+            ['fieldName' => 'pieces', 'entityRouteName' => 'piecesinistre', 'formTitle' => 'Pièce Sinistre', 'parentFieldName' => 'notificationSinistre'],
+            ['fieldName' => 'offreIndemnisationSinistres', 'entityRouteName' => 'offreindemnisationsinistre', 'formTitle' => "Offre d'indemnisation", 'parentFieldName' => 'notificationSinistre'],
+            ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'notificationSinistre'],
         ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('pieces', 'piecesinistre', $notificationId, "Pièce Sinistre", "notificationSinistre", null, $isParentNew)]]
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('offreIndemnisationSinistres', 'offreindemnisationsinistre', $notificationId, "Offre d'indemnisation", "notificationSinistre", null, $isParentNew)]]
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $notificationId, "Tâche", "notificationSinistre", null, $isParentNew)]]
-            ]
-        ];
+
+        $this->addCollectionWidgetsToLayout($layout, $notificationId, $isParentNew, $collections);
 
         return $layout;
     }
@@ -275,12 +258,15 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["groupe"]]]],
         ];
 
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('contacts', 'contact', $clientId, "Contact", "client", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('pistes', 'piste', $clientId, "Piste", "client", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('notificationSinistres', 'notificationsinistre', $clientId, "Sinistre", "assure", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $clientId, "Document", "client", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('partenaires', 'partenaire', $clientId, "Partenaire", "client", null, $isParentNew)]]]];
+        $collections = [
+            ['fieldName' => 'contacts', 'entityRouteName' => 'contact', 'formTitle' => 'Contact', 'parentFieldName' => 'client'],
+            ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'parentFieldName' => 'client'],
+            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'assure'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'client'],
+            ['fieldName' => 'partenaires', 'entityRouteName' => 'partenaire', 'formTitle' => 'Partenaire', 'parentFieldName' => 'client'],
+        ];
 
+        $this->addCollectionWidgetsToLayout($layout, $clientId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -293,10 +279,13 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["idnat"]], ["champs" => ["rccm"]]]],
         ];
 
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('cotations', 'cotation', $assureurId, "Cotation", "assureur", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('bordereaus', 'bordereau', $assureurId, "Bordereau", "assureur", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('notificationSinistres', 'notificationsinistre', $assureurId, "Sinistre", "assureur", null, $isParentNew)]]]];
+        $collections = [
+            ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'assureur'],
+            ['fieldName' => 'bordereaus', 'entityRouteName' => 'bordereau', 'formTitle' => 'Bordereau', 'parentFieldName' => 'assureur'],
+            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'assureur'],
+        ];
 
+        $this->addCollectionWidgetsToLayout($layout, $assureurId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -308,9 +297,12 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["primePotentielle"]]]],
         ];
 
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('cotations', 'cotation', $pisteId, "Cotation", "piste", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pisteId, "Document", "piste", null, $isParentNew)]]]];
+        $collections = [
+            ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'piste'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'piste'],
+        ];
 
+        $this->addCollectionWidgetsToLayout($layout, $pisteId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -322,10 +314,13 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["duree"]]]],
         ];
 
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('avenants', 'avenant', $cotationId, "Avenant", "cotation", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $cotationId, "Tâche", "cotation", null, $isParentNew)]]]];
-        $layout[] = ["couleur_fond" => "white", "colonnes" => [["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $cotationId, "Document", "cotation", null, $isParentNew)]]]];
+        $collections = [
+            ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'cotation'],
+        ];
 
+        $this->addCollectionWidgetsToLayout($layout, $cotationId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -338,13 +333,11 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["startingAt"]], ["champs" => ["endingAt"]]]],
         ];
 
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $avenantId, "Document", 'avenant', null, $isParentNew)]]
-            ]
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'avenant'],
         ];
 
+        $this->addCollectionWidgetsToLayout($layout, $avenantId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -355,13 +348,11 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fourniPar"]], ["champs" => ["receivedAt"]], ["champs" => ["type"]]]],
         ];
 
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $pieceId, "Document", 'pieceSinistre', null, $isParentNew)]]
-            ]
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'pieceSinistre'],
         ];
 
+        $this->addCollectionWidgetsToLayout($layout, $pieceId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -385,25 +376,13 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["referenceBancaire"]]]],
         ];
 
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('taches', 'tache', $offreId, "Tâche", "offreIndemnisationSinistre", null, $isParentNew)]],
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $offreId, "Document", 'offreIndemnisationSinistre', null, $isParentNew)]],
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $offreId, "Paiement", "offreIndemnisationSinistre", ['source' => 'montantPayable', 'target' => 'montant'], $isParentNew)]],
-            ]
+        $collections = [
+            ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'offreIndemnisationSinistre'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'offreIndemnisationSinistre'],
+            ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'offreIndemnisationSinistre', 'defaultValueConfig' => ['source' => 'montantPayable', 'target' => 'montant']],
         ];
 
+        $this->addCollectionWidgetsToLayout($layout, $offreId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -424,19 +403,12 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["executor"]], ["champs" => ["closed"]]]],
         ];
 
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('feedbacks', 'feedback', $tacheId, "Feedback", 'tache', null, $isParentNew)]],
-            ]
-        ];
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $tacheId, "Document", 'tache', null, $isParentNew)]],
-            ]
+        $collections = [
+            ['fieldName' => 'feedbacks', 'entityRouteName' => 'feedback', 'formTitle' => 'Feedback', 'parentFieldName' => 'tache'],
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'tache'],
         ];
 
+        $this->addCollectionWidgetsToLayout($layout, $tacheId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -448,13 +420,11 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["paidAt"]], ["champs" => ["CompteBancaire"]]]],
         ];
 
-        $layout[] = [
-            "couleur_fond" => "white",
-            "colonnes" => [
-                ["champs" => [$this->getCollectionWidgetConfig('preuves', 'document', $paiementId, "Preuve", 'paiement', null, $isParentNew)]]
-            ]
+        $collections = [
+            ['fieldName' => 'preuves', 'entityRouteName' => 'document', 'formTitle' => 'Preuve', 'parentFieldName' => 'paiement'],
         ];
 
+        $this->addCollectionWidgetsToLayout($layout, $paiementId, $isParentNew, $collections);
         return $layout;
     }
 
@@ -474,6 +444,26 @@ class FormCanvasProvider
             ]
         ];
         return $layout;
+    }
+
+    private function addCollectionWidgetsToLayout(array &$layout, int $parentId, bool $isParentNew, array $collectionsConfig): void
+    {
+        foreach ($collectionsConfig as $config) {
+            $layout[] = [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["champs" => [$this->getCollectionWidgetConfig(
+                        $config['fieldName'],
+                        $config['entityRouteName'],
+                        $parentId,
+                        $config['formTitle'],
+                        $config['parentFieldName'],
+                        $config['defaultValueConfig'] ?? null,
+                        $isParentNew
+                    )]],
+                ]
+            ];
+        }
     }
 
     /**
