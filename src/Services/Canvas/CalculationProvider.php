@@ -85,7 +85,7 @@ class CalculationProvider
         if ($montantPayable == 0 || $montantPayable === null) {
             return '100 %'; // Si rien n'est à payer, c'est considéré comme payé.
         }
-        $totalVerse = $this->constante->Offre_Indemnisation_getCompensationVersee($offre);
+        $totalVerse = $this->Offre_Indemnisation_getCompensationVersee($offre);
         $pourcentage = ($totalVerse / $montantPayable) * 100;
         return round($pourcentage) . ' %';
     }
