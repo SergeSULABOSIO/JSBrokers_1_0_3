@@ -104,7 +104,7 @@ class ListCanvasProvider
                         "textes_secondaires_separateurs" => " • ",
                         "textes_secondaires" => [["attribut_code" => "abreviation"]],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Avenant::class:
@@ -121,7 +121,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Effet: ", "attribut_code" => "startingAt", "attribut_type" => "date"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Prime TTC",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -134,7 +134,7 @@ class ListCanvasProvider
                             "attribut_code" => "commissionTTC",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case Bordereau::class:
@@ -148,14 +148,14 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Reçu le: ", "attribut_code" => "receivedAt", "attribut_type" => "date"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Montant TTC",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                             "attribut_code" => "montantTTC",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case Document::class:
@@ -194,7 +194,7 @@ class ListCanvasProvider
                             ["attribut_code" => "description", "attribut_taille_max" => 50],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case ChargementPourPrime::class:
@@ -206,7 +206,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Cotation: ", "attribut_code" => "cotation"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Classeur::class:
@@ -216,7 +216,7 @@ class ListCanvasProvider
                         "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:folder-multiple"],
                         "textes_secondaires" => [["attribut_code" => "description", "attribut_taille_max" => 50]],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Client::class:
@@ -230,7 +230,7 @@ class ListCanvasProvider
                             ["attribut_code" => "telephone"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Commissions TTC",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -243,7 +243,7 @@ class ListCanvasProvider
                             "attribut_code" => "montant_prime_payable_par_client_solde",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case CompteBancaire::class:
@@ -257,7 +257,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "N° ", "attribut_code" => "numero"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case NotificationSinistre::class:
@@ -303,7 +303,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Taux: ", "attribut_code" => "taux", "attribut_type" => "pourcentage"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Contact::class:
@@ -316,7 +316,7 @@ class ListCanvasProvider
                             ["attribut_code" => "email"]
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Cotation::class:
@@ -330,7 +330,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Piste: ", "attribut_code" => "piste"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Prime TTC",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -343,7 +343,7 @@ class ListCanvasProvider
                             "attribut_code" => "commissionTTC",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case Entreprise::class:
@@ -355,7 +355,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Licence: ", "attribut_code" => "licence"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Feedback::class:
@@ -367,7 +367,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Créé le: ", "attribut_code" => "createdAt", "attribut_type" => "date"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Groupe::class:
@@ -379,7 +379,7 @@ class ListCanvasProvider
                             ["attribut_code" => "description", "attribut_taille_max" => 50],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Invite::class:
@@ -393,7 +393,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Statut: ", "attribut_code" => "status_string"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case ModelePieceSinistre::class:
@@ -405,7 +405,7 @@ class ListCanvasProvider
                             ["attribut_code" => "description", "attribut_taille_max" => 50],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Monnaie::class:
@@ -419,7 +419,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Symbole: ", "attribut_code" => "symbole"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Note::class:
@@ -433,7 +433,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Statut: ", "attribut_code" => "status_string"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Montant Payable",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -452,7 +452,7 @@ class ListCanvasProvider
                             "attribut_code" => "montant_solde",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case Paiement::class:
@@ -464,14 +464,14 @@ class ListCanvasProvider
                             ["attribut_code" => "description", "attribut_taille_max" => 50],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Montant",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                             "attribut_code" => "montant",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case Partenaire::class:
@@ -483,15 +483,14 @@ class ListCanvasProvider
                             ["attribut_code" => "email"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Part (%)",
                             "attribut_unité" => "%",
                             "attribut_code" => "part",
                             "attribut_type" => "nombre",
                         ],
-                    ],
-                    "colonnes_numeriques" => [],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case OffreIndemnisationSinistre::class:
@@ -501,11 +500,11 @@ class ListCanvasProvider
                         "texte_principal" => ["attribut_code" => "nom", "icone" => "icon-park-outline:funds"],
                         "textes_secondaires" => [["attribut_code" => "beneficiaire"]],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         ["titre_colonne" => "Montant Payable", "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "attribut_code" => "montantPayable", "attribut_type" => "nombre"],
                         ["titre_colonne" => "Comp. versée", "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "attribut_code" => "compensationVersee", "attribut_type" => "nombre"],
                         ["titre_colonne" => "Solde à verser", "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "attribut_code" => "compensationAVersee", "attribut_type" => "nombre"],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case PieceSinistre::class:
@@ -515,7 +514,7 @@ class ListCanvasProvider
                         "texte_principal" => ["attribut_code" => "description", "icone" => "codex:file"],
                         "textes_secondaires" => [["attribut_prefixe" => "Reçu le: ", "attribut_code" => "receivedAt", "attribut_type" => "date"]],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Piste::class:
@@ -525,7 +524,7 @@ class ListCanvasProvider
                         "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:road-variant"],
                         "textes_secondaires" => [["attribut_code" => "client"]],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case RevenuPourCourtier::class:
@@ -539,7 +538,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Cotation: ", "attribut_code" => "cotation"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Montant",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -552,7 +551,7 @@ class ListCanvasProvider
                             "attribut_code" => "tauxExceptionel",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case Risque::class:
@@ -566,7 +565,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Branche: ", "attribut_code" => "branche_string"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Tache::class:
@@ -579,7 +578,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Échéance: ", "attribut_code" => "toBeEndedAt", "attribut_type" => "date"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
 
             case Taxe::class:
@@ -591,7 +590,7 @@ class ListCanvasProvider
                             ["attribut_code" => "description", "attribut_taille_max" => 50],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Taux IARD",
                             "attribut_unité" => "%",
@@ -604,7 +603,7 @@ class ListCanvasProvider
                             "attribut_code" => "tauxVIE",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case Tranche::class:
@@ -618,7 +617,7 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Payable le: ", "attribut_code" => "payableAt", "attribut_type" => "date"],
                         ],
                     ],
-                    "colonnes_numeriques" => [
+                    "colonnes_numeriques" => array_merge([
                         [
                             "titre_colonne" => "Montant",
                             "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -631,7 +630,7 @@ class ListCanvasProvider
                             "attribut_code" => "pourcentage",
                             "attribut_type" => "nombre",
                         ],
-                    ],
+                    ], $this->getSharedNumericColumns()),
                 ];
 
             case TypeRevenu::class:
@@ -645,9 +644,39 @@ class ListCanvasProvider
                             ["attribut_prefixe" => "Partagé: ", "attribut_code" => "shared_string"],
                         ],
                     ],
-                    "colonnes_numeriques" => [],
+                    "colonnes_numeriques" => $this->getSharedNumericColumns(),
                 ];
         }
         return [];
+    }
+
+    private function getSharedNumericColumns(): array
+    {
+        return [
+            [
+                "titre_colonne" => "Prime Nette",
+                "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "attribut_code" => "prime_nette",
+                "attribut_type" => "nombre",
+            ],
+            [
+                "titre_colonne" => "Prime Totale",
+                "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "attribut_code" => "prime_totale",
+                "attribut_type" => "nombre",
+            ],
+            [
+                "titre_colonne" => "Comm. Nette",
+                "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "attribut_code" => "commission_nette",
+                "attribut_type" => "nombre",
+            ],
+            [
+                "titre_colonne" => "Comm. Totale",
+                "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                "attribut_code" => "commission_totale",
+                "attribut_type" => "nombre",
+            ],
+        ];
     }
 }
