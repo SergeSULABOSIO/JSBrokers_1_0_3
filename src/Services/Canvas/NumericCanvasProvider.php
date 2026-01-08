@@ -28,7 +28,6 @@ class NumericCanvasProvider
 {
     public function __construct(
         private CalculationProvider $calculationProvider,
-        private ServiceMonnaies $serviceMonnaies
     ) {}
 
     public function getAttributesAndValues($object): array
@@ -47,25 +46,7 @@ class NumericCanvasProvider
                     "description" => "Franchise",
                     "value" => ($this->calculationProvider->Notification_Sinistre_getFranchise($object) ?? 0) * 100,
                 ],
-                "compensationTotale" => [
-                    "description" => "Compensation totale",
-                    "value" => ($this->calculationProvider->Notification_Sinistre_getCompensation($object) ?? 0) * 100,
-                ],
-                "compensationVersee" => [
-                    "description" => "Compensation versée",
-                    "value" => ($this->calculationProvider->Notification_Sinistre_getCompensationVersee($object) ?? 0) * 100,
-                ],
-                "compensationDue" => [
-                    "description" => "Compensation due",
-                    "value" => ($this->calculationProvider->Notification_Sinistre_getSoldeAVerser($object) ?? 0) * 100,
-                ],
             ], $this->getCalculatedIndicatorsNumericAttributes($object));
-        }
-        if ($object instanceof Assureur) {
-            return $this->getCalculatedIndicatorsNumericAttributes($object);
-        }
-        if ($object instanceof Avenant) {
-            return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
         if ($object instanceof Bordereau) {
             return array_merge([
@@ -74,12 +55,6 @@ class NumericCanvasProvider
                     "value" => ($object->getMontantTTC() ?? 0) * 100,
                 ],
             ], $this->getCalculatedIndicatorsNumericAttributes($object));
-        }
-        if ($object instanceof Client) {
-            return $this->getCalculatedIndicatorsNumericAttributes($object);
-        }
-        if ($object instanceof Cotation) {
-            return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
         if ($object instanceof OffreIndemnisationSinistre) {
             return array_merge([
@@ -97,8 +72,18 @@ class NumericCanvasProvider
                 ],
             ], $this->getCalculatedIndicatorsNumericAttributes($object));
         }
-
-
+        if ($object instanceof Assureur) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Avenant) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Client) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Cotation) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
         if ($object instanceof AutoriteFiscale) {
             return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
@@ -129,7 +114,6 @@ class NumericCanvasProvider
         if ($object instanceof Tranche) {
             return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
-
         return [];
     }
 
@@ -157,8 +141,6 @@ class NumericCanvasProvider
     private function getCalculatedIndicatorsNumericAttributes(object $object): array
     {
         $attributes = [];
-        $currencyCode = $this->serviceMonnaies->getCodeMonnaieAffichage();
-
         $indicators = [
             'prime_totale' => ['description' => 'Prime Totale', 'is_percentage' => false],
             'prime_totale_payee' => ['description' => 'Prime Payée', 'is_percentage' => false],
