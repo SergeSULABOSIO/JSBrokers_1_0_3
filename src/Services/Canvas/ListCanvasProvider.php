@@ -587,12 +587,12 @@ class ListCanvasProvider
                 "attribut_code" => "prime_totale",
                 "attribut_type" => "nombre",
             ],
-            [
-                "titre_colonne" => "Comm. Pure",
-                "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                "attribut_code" => "commission_pure",
-                "attribut_type" => "nombre",
-            ],
+            // [
+            //     "titre_colonne" => "Comm. Pure",
+            //     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+            //     "attribut_code" => "commission_pure",
+            //     "attribut_type" => "nombre",
+            // ],
             [
                 "titre_colonne" => "Comm. Nette",
                 "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
