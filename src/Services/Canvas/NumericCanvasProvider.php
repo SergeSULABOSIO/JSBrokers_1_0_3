@@ -20,12 +20,9 @@ use App\Services\Canvas\CalculationProvider;
 class NumericCanvasProvider
 {
     public function __construct(
-        private Constante $constante,
         private CalculationProvider $calculationProvider,
         private ServiceMonnaies $serviceMonnaies
-        )
-    { 
-    }
+    ) {}
 
     public function getAttributesAndValues($object): array
     {
@@ -57,38 +54,12 @@ class NumericCanvasProvider
                 ],
             ], $this->getCalculatedIndicatorsNumericAttributes($object));
         }
-
-        // --- AJOUT : Logique pour Assureur ---
         if ($object instanceof Assureur) {
-            return [
-                "montant_commission_ttc" => [
-                    "description" => "Commissions TTC",
-                    "value" => ($this->constante->Assureur_getMontant_commission_ttc($object, -1, false) ?? 0) * 100,
-                ],
-                "montant_commission_ttc_solde" => [
-                    "description" => "Solde Commissions",
-                    "value" => ($this->constante->Assureur_getMontant_commission_ttc_solde($object, -1, false) ?? 0) * 100,
-                ],
-                "montant_prime_payable_par_client_solde" => [
-                    "description" => "Solde Primes Clients",
-                    "value" => ($this->constante->Assureur_getMontant_prime_payable_par_client_solde($object) ?? 0) * 100,
-                ],
-            ];
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
-
         if ($object instanceof Avenant) {
-            return [
-                "primeTTC" => [
-                    "description" => "Prime TTC",
-                    "value" => ($this->constante->Avenant_getPrimeTTC($object) ?? 0) * 100,
-                ],
-                "commissionTTC" => [
-                    "description" => "Commission TTC",
-                    "value" => ($this->constante->Avenant_getCommissionTTC($object, -1, false) ?? 0) * 100,
-                ],
-            ];
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
-
         if ($object instanceof Bordereau) {
             return [
                 "montantTTC" => [
@@ -97,66 +68,27 @@ class NumericCanvasProvider
                 ],
             ];
         }
-
         if ($object instanceof Client) {
-            return [
-                "montant_commission_ttc" => [
-                    "description" => "Commissions TTC",
-                    "value" => ($this->constante->Client_getMontant_commission_ttc($object, -1, false) ?? 0) * 100,
-                ],
-                "montant_commission_ttc_solde" => [
-                    "description" => "Solde Commissions",
-                    "value" => ($this->constante->Client_getMontant_commission_ttc_solde($object, -1, false) ?? 0) * 100,
-                ],
-                "montant_prime_payable_par_client_solde" => [
-                    "description" => "Solde Primes",
-                    "value" => ($this->constante->Client_getMontant_prime_payable_par_client_solde($object) ?? 0) * 100,
-                ],
-            ];
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
-
         if ($object instanceof Cotation) {
-            return [
-                "primeTTC" => [
-                    "description" => "Prime TTC",
-                    "value" => ($this->constante->Cotation_getMontant_prime_payable_par_client($object) ?? 0) * 100,
-                ],
-                "commissionTTC" => [
-                    "description" => "Commission TTC",
-                    "value" => ($this->constante->Cotation_getMontant_commission_ttc($object, -1, false) ?? 0) * 100,
-                ],
-            ];
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
-
-        // --- AJOUT : Logique pour OffreIndemnisationSinistre ---
         if ($object instanceof OffreIndemnisationSinistre) {
-            return [
-                "montantPayable" => [
-                    "description" => "Montant Payable",
-                    "value" => ($object->getMontantPayable() ?? 0) * 100,
-                ],
+            return array_merge([
                 "franchiseAppliquee" => [
                     "description" => "Franchise",
                     "value" => ($object->getFranchiseAppliquee() ?? 0) * 100,
                 ],
-                "compensationVersee" => [
-                    "description" => "Comp. versée",
-                    "value" => ($this->calculationProvider->Offre_Indemnisation_getCompensationVersee($object) ?? 0) * 100,
-                ],
-                "compensationAVersee" => [
-                    "description" => "Solde à verser",
-                    "value" => ($this->calculationProvider->Offre_Indemnisation_getSoldeAVerser($object) ?? 0) * 100,
-                ],
-            ];
+            ], $this->getCalculatedIndicatorsNumericAttributes($object));
         }
-
         if ($object instanceof ChargementPourPrime) {
-            return [
+            return array_merge([
                 "montantFlatExceptionel" => [
                     "description" => "Montant",
                     "value" => ($object->getMontantFlatExceptionel() ?? 0) * 100,
                 ],
-            ];
+            ], $this->getCalculatedIndicatorsNumericAttributes($object));
         }
 
 
