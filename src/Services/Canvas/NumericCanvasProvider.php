@@ -4,16 +4,23 @@ namespace App\Services\Canvas;
 
 use App\Constantes\Constante;
 use App\Entity\Assureur;
+use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
 use App\Entity\Bordereau;
+use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
+use App\Entity\ConditionPartage;
 use App\Entity\Contact;
 use App\Entity\Cotation;
+use App\Entity\Document;
+use App\Entity\Entreprise;
+use App\Entity\Feedback;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\PieceSinistre;
 use App\Entity\Tache;
+use App\Entity\Tranche;
 use App\Services\ServiceMonnaies;
 use App\Services\Canvas\CalculationProvider;
 
@@ -61,12 +68,12 @@ class NumericCanvasProvider
             return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
         if ($object instanceof Bordereau) {
-            return [
+            return array_merge([
                 "montantTTC" => [
                     "description" => "Montant TTC",
                     "value" => ($object->getMontantTTC() ?? 0) * 100,
                 ],
-            ];
+            ], $this->getCalculatedIndicatorsNumericAttributes($object));
         }
         if ($object instanceof Client) {
             return $this->getCalculatedIndicatorsNumericAttributes($object);
@@ -92,9 +99,35 @@ class NumericCanvasProvider
         }
 
 
-        if ($object instanceof Contact || $object instanceof PieceSinistre || $object instanceof Tache) {
-            // Ces entités n'ont pas de valeurs numériques à totaliser.
-            return [];
+        if ($object instanceof AutoriteFiscale) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Chargement) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Client) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof ConditionPartage) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Contact) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Document) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Entreprise) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Feedback) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Tache) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
+        }
+        if ($object instanceof Tranche) {
+            return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
 
         return [];
