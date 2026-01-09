@@ -137,40 +137,6 @@ class CalculationProvider
         }, 0.0);
     }
 
-    /**
-     * Calcule la durée totale en jours entre la notification du sinistre et le dernier paiement de règlement.
-     */
-    private function getNotificationSinistreDureeReglement(NotificationSinistre $notification_sinistre): ?int
-    {
-        $dateDernierReglement = $this->getNotificationSinistreDateDernierReglement($notification_sinistre);
-        $dateNotification = $notification_sinistre->getNotifiedAt();
-
-        if (!$dateDernierReglement || !$dateNotification) {
-            return null;
-        }
-
-        return $this->serviceDates->daysEntre($dateNotification, $dateDernierReglement);
-    }
-
-    /**
-     * Récupère la date à laquelle le tout dernier paiement a été effectué pour ce sinistre.
-     */
-    private function getNotificationSinistreDateDernierReglement(NotificationSinistre $notification_sinistre): ?\DateTimeInterface
-    {
-        if ($this->getNotificationSinistreSoldeAVerser($notification_sinistre) !== 0.0) {
-            return null; // Pas encore totalement réglé
-        }
-
-        $dateDernierReglement = null;
-        foreach ($notification_sinistre->getOffreIndemnisationSinistres() as $offre) {
-            foreach ($offre->getPaiements() as $paiement) {
-                if ($paiement->getPaidAt() && (!$dateDernierReglement || $paiement->getPaidAt() > $dateDernierReglement)) {
-                    $dateDernierReglement = $paiement->getPaidAt();
-                }
-            }
-        }
-        return $dateDernierRgelement;
-    }
 
     /**
      * Calcule le montant cumulé des paiements déjà effectués pour cette offre.
