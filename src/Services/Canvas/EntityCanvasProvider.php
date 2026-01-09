@@ -140,7 +140,7 @@ class EntityCanvasProvider
                             "type" => "Calcul",
                             "unite" => "",
                             "format" => "Texte",
-                            "fonction" => "Notification_Sinistre_getDelaiDeclaration",
+                            "fonction" => "getNotificationSinistreDelaiDeclaration",
                             "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
                         ],
                         [
@@ -149,7 +149,7 @@ class EntityCanvasProvider
                             "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                             "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                             "format" => "Nombre",
-                            "fonction" => "Notification_Sinistre_getFranchise",
+                            "fonction" => "getNotificationSinistreFranchise",
                             "description" => "📊 Montant de la franchise qui a été appliquée conformément aux termes de la police." // MODIFICATION: Ajout
                         ],
                         [
@@ -167,7 +167,7 @@ class EntityCanvasProvider
                             "type" => "Calcul",
                             "unite" => "",
                             "format" => "Texte",
-                            "fonction" => "Notification_Sinistre_getIndiceCompletude",
+                            "fonction" => "getNotificationSinistreIndiceCompletude",
                             "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
                         ],
                         [
@@ -176,7 +176,7 @@ class EntityCanvasProvider
                             "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                             "unite" => "",
                             "format" => "Texte",
-                            "fonction" => "Notification_Sinistre_getDureeReglement",
+                            "fonction" => "getNotificationSinistreDureeReglement",
                             "description" => "⏱️ Durée totale en jours entre la notification du sinistre et le dernier paiement de règlement." // MODIFICATION: Ajout
                         ],
                         [
@@ -185,7 +185,7 @@ class EntityCanvasProvider
                             "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
                             "unite" => "",
                             "format" => "Date",
-                            "fonction" => "Notification_Sinistre_getDateDernierRgelement",
+                            "fonction" => "getNotificationSinistreDateDernierReglement",
                             "description" => "⏱️ Date à laquelle le tout dernier paiement a été effectué pour ce sinistre." // MODIFICATION: Ajout
                         ],
                         [
@@ -194,7 +194,7 @@ class EntityCanvasProvider
                             "type" => "Calcul",
                             "unite" => "",
                             "format" => "Texte",
-                            "fonction" => "Notification_Sinistre_getAgeDossier",
+                            "fonction" => "getNotificationSinistreAgeDossier",
                             "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
                         ],
                     ], $this->getGlobalIndicatorsCanvas("NotificationSinistre"))
@@ -227,7 +227,7 @@ class EntityCanvasProvider
                             "type" => "Calcul",
                             "unite" => "",
                             "format" => "Texte",
-                            "fonction" => "Offre_Indemnisation_getPourcentagePaye",
+                            "fonction" => "getOffreIndemnisationPourcentagePaye",
                             "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
                         ]
                     ], $this->getGlobalIndicatorsCanvas("OffreIndemnisationSinistre"))
