@@ -424,15 +424,6 @@ class Constante
     ];
 
 
-
-
-
-
-
-
-
-
-
     public function isIARD(?Cotation $cotation): bool
     {
         if ($cotation) {
@@ -444,10 +435,6 @@ class Constante
         }
         return false;
     }
-
-
-
-
 
     /**
      * RISQUE ou COUVERTURE
@@ -461,11 +448,6 @@ class Constante
         }
         return null;
     }
-
-
-
-
-
 
     /**
      * CLIENT
@@ -485,8 +467,6 @@ class Constante
         // Wrapper pour Cotation_getMontant_commission_ttc avec des valeurs par défaut pour l'affichage en liste.
         return $this->Cotation_getMontant_commission_ttc($cotation, -1, false);
     }
-
-
 
     /**
      * PARTENAIRE
@@ -514,6 +494,7 @@ class Constante
         }
         return "";
     }
+
     public function Tranche_getPartenaire(?Tranche $tranche)
     {
         if ($tranche != null) {
@@ -559,9 +540,6 @@ class Constante
         }
         return false;
     }
-
-
-
 
 
     /**
@@ -1865,45 +1843,7 @@ class Constante
     {
         $solde = $this->Revenu_getMontant_taxe_payable_par_courtier($revenu) - $this->Revenu_getMontant_taxe_payable_par_courtier_payee($revenu);
         return round($solde, 4);
-    }
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo): float
-    {
-        $retrocom = 0;
-        if ($revenu != null) {
-            /** @var Cotation $cotation */
-            $cotation = $revenu->getCotation();
-            if ($cotation != null) {
-                if ($partenaireCible != null) {
-                    if ($revenu->getTypeRevenu()->isShared() == true) {
-
-                        /** @var Partenaire $partenaire */
-                        $partenaire = $this->Cotation_getPartenaire($cotation);
-
-                        if ($partenaire != null) {
-                            //On s'assurer que nous parlons du même partenaire
-                            if ($this->isSamePartenaire($partenaire, $partenaireCible)) {
-                                //D'abord, on traite les conditions spéciale attachées à la piste
-                                $conditionsPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles();
-                                if (count($conditionsPartagePiste) != 0) {
-                                    $retrocom = $this->Revenu_appliquerConditionsSpeciales($conditionsPartagePiste[0], $revenu, $addressedTo);
-                                } else {
-                                    $conditionsPartagePartenaire = $partenaire->getConditionPartages();
-                                    if (count($conditionsPartagePartenaire) != 0) {
-                                        $retrocom = $this->Revenu_appliquerConditionsSpeciales($conditionsPartagePartenaire[0], $revenu, $addressedTo);
-                                    } else if ($partenaire->getPart() != 0) {
-                                        $assiette = $this->Revenu_getMontant_pure($revenu, $addressedTo, true);
-                                        $retrocom = $assiette * $partenaire->getPart();
-                                    }
-                                }
-                            }
-                        }
-                        // dd("Montant Retrocom: " . $retrocom);
-                    }
-                }
-            }
-        }
-        return $retrocom;
-    }
+    }   
     public function Revenu_getMontant_retrocommissions_payable_par_courtier_payee(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
     {
         $retCotPaye = 0;
@@ -2351,7 +2291,6 @@ class Constante
         }
         return $str;
     }
-
     public function Tranche_isAlreadyInADifferentNote(?Tranche $tranche, $posteFacturable)
     {
         $rep = false;
@@ -2434,7 +2373,6 @@ class Constante
         $solde = $this->Tranche_getMontant_taxe_payable_par_courtier($tranche, $onlySharable) - $this->Tranche_getMontant_taxe_payable_par_courtier_payee($tranche);
         return round($solde, 4);
     }
-
     public function Cotation_getMontant_taxe_payable_par_courtier_payee(?Cotation $cotation): float
     {
         $montant = 0;
@@ -2819,7 +2757,6 @@ class Constante
         $taxe = $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
         return $net + $taxe;
     }
-
     public function Cotation_getMontant_commission_ht(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
@@ -2837,7 +2774,6 @@ class Constante
         }
         return $montant;
     }
-
     private function Revenu_getMontant_ht_addressedTo($addressedTo, RevenuPourCourtier $revenu)
     {
         $montant = 0;
@@ -2850,7 +2786,6 @@ class Constante
         }
         return $montant;
     }
-
     private function Cotation_getMontant_chargement_prime(Cotation $cotation, TypeRevenu $typeRevenu)
     {
         $montantChargementCible = 0;
@@ -2864,7 +2799,6 @@ class Constante
         }
         return $montantChargementCible;
     }
-
     public function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
     {
         $montant = 0;
@@ -2909,20 +2843,7 @@ class Constante
 
 
 
-
-    /**
-     * RETRO-COMMISSION DUE AU PARTENAIRE
-     */
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
-    {
-        $montant = 0;
-        if ($cotation != null) {
-            foreach ($cotation->getRevenus() as $revenu) {
-                $montant += $this->Revenu_getMontant_retrocommissions_payable_par_courtier($revenu, $partenaireCible, $addressedTo);
-            }
-        }
-        return $montant;
-    }
+    
 
     private function isSamePartenaire(?Partenaire $partenaire, ?Partenaire $partenaireCible): bool
     {
@@ -3065,57 +2986,7 @@ class Constante
         }
         return $montant;
     }
-    private function Revenu_appliquerConditionsSpeciales(?ConditionPartage $conditionPartage, RevenuPourCourtier $revenu, $addressedTo): float
-    {
-        $montant = 0;
-        //Assiette de l'affaire individuelle
-        $assiette = $this->Revenu_getMontant_pure($revenu, $addressedTo, true);
-        // dd("Je suis ici ", $assiette_commission_pure);
-
-        //Application de l'unité de mésure
-        $uniteMesure = match ($conditionPartage->getUniteMesure()) {
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $this->Cotation_getSommeCommissionPureRisque($revenu->getCotation(), $addressedTo, true),
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $this->Cotation_getSommeCommissionPureClient($revenu->getCotation(), $addressedTo, true),
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->Cotation_getSommeCommissionPurePartenaire($revenu->getCotation(), $addressedTo, true),
-        };
-
-        // dd("Unité de mésure: " . $uniteMesure);
-
-        $formule = $conditionPartage->getFormule();
-        $seuil = $conditionPartage->getSeuil();
-        $risque = $revenu->getCotation()->getPiste()->getRisque();
-        //formule
-        switch ($formule) {
-            case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
-                // dd("ici");
-                return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
-                break;
-            case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
-                if ($uniteMesure < $seuil) {
-                    // dd("On partage car l'assiette de " . $assiette_commission_pure . " est inférieur au seuil de " . $seuil);
-                    return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
-                } else {
-                    // dd("La condition n'est pas respectée ", "Assiette:" . $assiette_commission_pure, "Seuil:" . $seuil);
-                    return 0;
-                }
-                break;
-            case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
-                // dd("Ici ", $montant, $uniteMesure, $seuil);
-                if ($uniteMesure >= $seuil) {
-                    // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
-                    return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
-                } else {
-                    // dd("On ne partage pas");
-                    return 0;
-                }
-                break;
-
-            default:
-                # code...
-                break;
-        }
-        return $montant;
-    }
+    
     private function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
     {
         $montant = 0;
@@ -3890,7 +3761,6 @@ class Constante
         };
         return $strRenewalCondition;
     }
-
     public function Avenant_getRenewalStatus(Avenant $avenantEncours)
     {
         $renewalStatus = [
@@ -3947,7 +3817,6 @@ class Constante
         // dd($renewalStatus);
         return $renewalStatus;
     }
-
     public function Piste_getMontant_taxe_payable_par_assureur_payee(?Piste $piste)
     {
         $tot = 0;
@@ -4139,6 +4008,7 @@ class Constante
         }
         return "";
     }
+
     public function Taxe_getNomAutoriteFiscale(?Taxe $taxe)
     {
         if ($taxe != null) {
