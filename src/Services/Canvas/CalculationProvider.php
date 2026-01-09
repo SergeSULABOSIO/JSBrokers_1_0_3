@@ -19,7 +19,6 @@ use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
-use App\Constantes\Constante;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\ConditionPartage;
@@ -33,11 +32,9 @@ class CalculationProvider
 {
     /**
      * @param ServiceDates $serviceDates
-     * @param Constante $constante
      */
     public function __construct(
         private ServiceDates $serviceDates,
-        // private Constante $constante,
         private CotationRepository $cotationRepository,
         private Security $security,
         private ServiceTaxes $serviceTaxes
