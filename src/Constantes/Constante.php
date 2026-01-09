@@ -3938,6 +3938,130 @@ class Constante
         return $tot;
     }
 
+    /**
+     * Calcule le montant total de la prime et de la commission pour une entreprise.
+     *
+     * @param Entreprise $entreprise L'entreprise de base pour le calcul.
+     * @param boolean $isBound Si true, ne calcule que pour les polices souscrites (avec avenant).
+     * @param array $options Tableau de filtres optionnels. Peut contenir : 'pisteCible', 'cotationCible', 'assureurCible', 'risqueCible', 'partenaireCible', 'inviteCible', 'groupeCible', 'avenantCible', 'clientCible', 'trancheCible', 'brancheCible', 'reper' ('deteEffet' ou 'echeance'), 'entre', 'et', 'typeRevenuCible', 'revenuPourCourtierCible', 'paiementCible', 'notificationSinistreCible', 'conditionPartageCible'.
+     * @return array Un tableau associatif avec 'prime_totale' and 'commission_totale'.
+     */
+    public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
+    {
+        $prime_totale = 0;
+        $prime_totale_payee = 0;
+        $commission_totale = 0;
+        $commission_totale_encaissee = 0;
+        $commission_nette = 0;
+        $commission_pure = 0;
+        $prime_nette = 0;
+        $commission_partageable = 0;
+        $reserve = 0;
+        $retro_commission_partenaire = 0;
+        $retro_commission_partenaire_payee = 0;
+        $taxe_courtier = 0;
+        $taxe_courtier_payee = 0;
+        $taxe_assureur = 0;
+        $taxe_assureur_payee = 0;
+        $sinistre_payable = 0;
+        $sinistre_paye = 0;
+
+        // 1. Extract filters from options
+        /** @var Piste|null $pisteCible */
+        $pisteCible = $options['pisteCible'] ?? null;
+        /** @var Cotation|null $cotationCible */
+        $cotationCible = $options['cotationCible'] ?? null;
+        /** @var Assureur|null $assureurCible */
+        $assureurCible = $options['assureurCible'] ?? null;
+        /** @var Risque|null $risqueCible */
+        $risqueCible = $options['risqueCible'] ?? null;
+        /** @var Partenaire|null $partenaireCible */
+        $partenaireCible = $options['partenaireCible'] ?? null;
+        /** @var Invite|null $inviteCible */
+        $inviteCible = $options['inviteCible'] ?? null;
+        /** @var Groupe|null $groupeCible */
+        $groupeCible = $options['groupeCible'] ?? null;
+        /** @var Avenant|null $avenantCible */
+        $avenantCible = $options['avenantCible'] ?? null;
+        /** @var Client|null $clientCible */
+        $clientCible = $options['clientCible'] ?? null;
+        /** @var Tranche|null $trancheCible */
+        $trancheCible = $options['trancheCible'] ?? null;
+        /** @var string|null $brancheCible */
+        $brancheCible = $options['brancheCible'] ?? null;
+        /** @var string|null $reper */
+        $reper = $options['reper'] ?? null;
+        /** @var string|null $dateA_str */
+        $dateA_str = $options['entre'] ?? null;
+        /** @var string|null $dateB_str */
+        $dateB_str = $options['et'] ?? null;
+        /** @var TypeRevenu|null $typeRevenuCible */
+        $typeRevenuCible = $options['typeRevenuCible'] ?? null;
+        /** @var RevenuPourCourtier|null $revenuPourCourtierCible */
+        $revenuPourCourtierCible = $options['revenuPourCourtierCible'] ?? null;
+        /** @var Paiement|null $paiementCible */
+        $paiementCible = $options['paiementCible'] ?? null;
+        /** @var NotificationSinistre|null $notificationSinistreCible */
+        $notificationSinistreCible = $options['notificationSinistreCible'] ?? null;
+        /** @var ConditionPartage|null $conditionPartageCible */
+        $conditionPartageCible = $options['conditionPartageCible'] ?? null;
+
+        $qb = $this->cotationRepository->createQueryBuilder('c');
+        $qb->select('SUM(c.montantPrime) as prime_totale, SUM(c.commission) as commission_totale')
+            ->join('c.piste', 'p')
+            ->join('p.invite', 'i')
+            ->where('i.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise);
+
+        if ($avenantCible) {
+            $qb->andWhere('c.avenant = :avenantCible')->setParameter('avenantCible', $avenantCible);
+        }
+        if ($cotationCible) {
+            $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
+        }
+        if ($pisteCible) {
+            $qb->andWhere('c.piste = :pisteCible')->setParameter('pisteCible', $pisteCible);
+        }
+        if ($assureurCible) {
+            $qb->andWhere('c.assureur = :assureurCible')->setParameter('assureurCible', $assureurCible);
+        }
+        if ($risqueCible) {
+            $qb->andWhere('p.risque = :risqueCible')->setParameter('risqueCible', $risqueCible);
+        }
+        if ($inviteCible) {
+            $qb->andWhere('p.invite = :inviteCible')->setParameter('inviteCible', $inviteCible);
+        }
+        if ($groupeCible) {
+            $qb->andWhere('p.client.groupe = :groupeCible')->setParameter('groupeCible', $groupeCible);
+        }
+        if ($clientCible) {
+            $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
+        }
+        if ($partenaireCible) {
+            $qb->andWhere(':partenaireCible MEMBER OF p.partenaires')->setParameter('partenaireCible', $partenaireCible);
+        }
+        if ($brancheCible) {
+            $qb->andWhere('p.risque.branche = :brancheCible')->setParameter('brancheCible', $brancheCible);
+        }
+
+        $result = $qb->getQuery()->getSingleResult();
+
+        if ($result) {
+            $prime_totale = $result['prime_totale'] ?? 0;
+            $commission_totale = $result['commission_totale'] ?? 0;
+        }
+
+        return [
+            'prime_totale' => $prime_totale,
+            'prime_totale_payee' => $prime_totale_payee,
+            'prime_totale_solde' => 0,
+            'commission_totale' => $commission_totale,
+            'commission_totale_encaissee' => $commission_totale_encaissee,
+            'commission_totale_solde' => 0,
+            'commission_nette' => $commission_nette,
+            'commission_pure' => $commission_pure,
+            'commission_partageable' => $commission_partageable,
+            'prime_nette'
 
 
 

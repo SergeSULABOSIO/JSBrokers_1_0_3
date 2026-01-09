@@ -19,6 +19,7 @@ use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
+use App\Repository\CotationRepository;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\ConditionPartage;
@@ -34,7 +35,8 @@ class CalculationProvider
     public function __construct(
         private ServiceDates $serviceDates,
         private Security $security,
-        private ServiceTaxes $serviceTaxes
+        private ServiceTaxes $serviceTaxes,
+        private CotationRepository $cotationRepository
     ) {}
 
     /**
@@ -45,7 +47,7 @@ class CalculationProvider
         if (!$sinistre->getOccuredAt() || !$sinistre->getNotifiedAt()) {
             return 'N/A';
         }
-        $jours = $this->serviceDates->daysEntre($sinistre->getOccuredAt(), $sinistre->getNotifiedAt());
+        $jours = $this->serviceDates->daysEntre($sinistre->getOccuredAt(), $sinistre->getNotifiedAt()) ?? 0;
         return $jours . ' jour(s)';
     }
 
@@ -57,7 +59,7 @@ class CalculationProvider
         if (!$sinistre->getCreatedAt()) {
             return 'N/A';
         }
-        $jours = $this->serviceDates->daysEntre($sinistre->getCreatedAt(), new DateTimeImmutable());
+        $jours = $this->serviceDates->daysEntre($sinistre->getCreatedAt(), new DateTimeImmutable()) ?? 0;
         return $jours . ' jour(s)';
     }
 
@@ -102,13 +104,9 @@ class CalculationProvider
      */
     private function getNotificationSinistreCompensation(NotificationSinistre $sinistre): float
     {
-        $compensation = 0;
-        if ($sinistre != null) {
-            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
-                $compensation += $offre_indemnisation->getMontantPayable();
-            }
-        }
-        return $compensation;
+        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
+            return $carry + ($offre->getMontantPayable() ?? 0);
+        }, 0.0);
     }
 
     /**
@@ -116,13 +114,9 @@ class CalculationProvider
      */
     private function getNotificationSinistreCompensationVersee(NotificationSinistre $sinistre): float
     {
-        $montant = 0;
-        if ($sinistre != null) {
-            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
-                $montant += $this->getOffreIndemnisationCompensationVersee($offre_indemnisation);
-            }
-        }
-        return $montant;
+        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
+            return $carry + $this->getOffreIndemnisationCompensationVersee($offre);
+        }, 0.0);
     }
 
     /**
@@ -130,13 +124,7 @@ class CalculationProvider
      */
     private function getNotificationSinistreSoldeAVerser(NotificationSinistre $sinistre): float
     {
-        $montant = 0;
-        if ($sinistre != null) {
-            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
-                $montant += $this->getOffreIndemnisationSoldeAVerser($offre_indemnisation);
-            }
-        }
-        return $montant;
+        return $this->getNotificationSinistreCompensation($sinistre) - $this->getNotificationSinistreCompensationVersee($sinistre);
     }
 
     /**
@@ -144,32 +132,24 @@ class CalculationProvider
      */
     private function getNotificationSinistreFranchise(NotificationSinistre $sinistre): float
     {
-        $montant = 0;
-        if ($sinistre != null) {
-            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
-                $montant += $offre_indemnisation->getFranchiseAppliquee();
-            }
-        }
-        return $montant;
+        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
+            return $carry + ($offre->getFranchiseAppliquee() ?? 0);
+        }, 0.0);
     }
 
     /**
      * Calcule la durée totale en jours entre la notification du sinistre et le dernier paiement de règlement.
      */
-    private function getNotificationSinistreDureeReglement(NotificationSinistre $notification_sinistre): int
+    private function getNotificationSinistreDureeReglement(NotificationSinistre $notification_sinistre): ?int
     {
-        $duree = -1;
-        $dateNotfication = $notification_sinistre->getNotifiedAt();
-        $dateRgelement = null;
-        if ($this->getNotificationSinistreSoldeAVerser($notification_sinistre) == 0) {
-            $offres = $notification_sinistre->getOffreIndemnisationSinistres();
-            if (count($offres) != 0) {
-                $reglements = ($offres[count($offres) - 1])->getPaiements();
-                $dateRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
-                $duree = $this->serviceDates->daysEntre($dateNotfication, $dateRgelement);
-            }
+        $dateDernierReglement = $this->getNotificationSinistreDateDernierReglement($notification_sinistre);
+        $dateNotification = $notification_sinistre->getNotifiedAt();
+
+        if (!$dateDernierReglement || !$dateNotification) {
+            return null;
         }
-        return $duree;
+
+        return $this->serviceDates->daysEntre($dateNotification, $dateDernierReglement);
     }
 
     /**
@@ -177,12 +157,16 @@ class CalculationProvider
      */
     private function getNotificationSinistreDateDernierReglement(NotificationSinistre $notification_sinistre): ?\DateTimeInterface
     {
-        $dateDernierRgelement = null;
-        if ($this->getNotificationSinistreSoldeAVerser($notification_sinistre) == 0) {
-            $offres = $notification_sinistre->getOffreIndemnisationSinistres();
-            if (count($offres) != 0) {
-                $reglements = ($offres[count($offres) - 1])->getPaiements();
-                $dateDernierRgelement = ($reglements[count($reglements) - 1])->getPaidAt();
+        if ($this->getNotificationSinistreSoldeAVerser($notification_sinistre) !== 0.0) {
+            return null; // Pas encore totalement réglé
+        }
+
+        $dateDernierReglement = null;
+        foreach ($notification_sinistre->getOffreIndemnisationSinistres() as $offre) {
+            foreach ($offre->getPaiements() as $paiement) {
+                if ($paiement->getPaidAt() && (!$dateDernierReglement || $paiement->getPaidAt() > $dateDernierReglement)) {
+                    $dateDernierReglement = $paiement->getPaidAt();
+                }
             }
         }
         return $dateDernierRgelement;
@@ -193,13 +177,9 @@ class CalculationProvider
      */
     private function getOffreIndemnisationCompensationVersee(OffreIndemnisationSinistre $offre_indemnisation): float
     {
-        $montant = 0;
-        if ($offre_indemnisation != null) {
-            foreach ($offre_indemnisation->getPaiements() as $paiement) {
-                $montant += $paiement->getMontant();
-            }
-        }
-        return $montant;
+        return array_reduce($offre_indemnisation->getPaiements()->toArray(), function ($carry, Paiement $paiement) {
+            return $carry + ($paiement->getMontant() ?? 0);
+        }, 0.0);
     }
 
     /**
@@ -207,16 +187,9 @@ class CalculationProvider
      */
     private function getOffreIndemnisationSoldeAVerser(OffreIndemnisationSinistre $offre_indemnisation): float
     {
-        $montant = 0;
-        if ($offre_indemnisation != null) {
-            $compensation = 0;
-            if ($offre_indemnisation->getNotificationSinistre() != null) {
-                $compensation = $offre_indemnisation->getMontantPayable();
-            }
-            $compensationVersee = $this->getOffreIndemnisationCompensationVersee($offre_indemnisation);
-            $montant = $compensation - $compensationVersee;
-        }
-        return $montant;
+        $montantPayable = $offre_indemnisation->getMontantPayable() ?? 0.0;
+        $compensationVersee = $this->getOffreIndemnisationCompensationVersee($offre_indemnisation);
+        return $montantPayable - $compensationVersee;
     }
 
 
@@ -379,26 +352,21 @@ class CalculationProvider
 
         switch ($conditionPartage->getCritereRisque()) {
             case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
-                // Si la collection de produits ciblés ne contient pas le risque actuel, on applique le taux.
                 if (!$produitsCible->contains($risque)) {
                     return $assiette * $taux;
                 }
                 return 0.0;
 
             case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
-                // Si la collection de produits ciblés contient le risque actuel, on applique le taux.
                 if ($produitsCible->contains($risque)) {
                     return $assiette * $taux;
                 }
                 return 0.0;
 
             case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
-                // Aucun filtre sur le risque, on applique toujours le taux.
                 return $assiette * $taux;
-            default:
-                // Dans tous les autres cas, on ne calcule pas de rétrocommission.
-                return 0.0;
         }
+        return 0.0;
     }
 
     private function getRevenuMontantHtAddressedTo($addressedTo, RevenuPourCourtier $revenu)
@@ -432,6 +400,7 @@ class CalculationProvider
         }
         return $montant;
     }
+
     private function getCotationMontantCommissionPure(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
         $comHT = $this->getCotationMontantCommissionHt($cotation, $addressedTo, $onlySharable);
@@ -439,13 +408,21 @@ class CalculationProvider
         return $comHT - $taxeCourtier;
     }
 
+    /**
+     * Calcule le montant de la taxe courtier pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @param boolean $onlySharable
+     * @return float
+     */
     private function getCotationMontantTaxePayableParCourtier(?Cotation $cotation, bool $onlySharable): float
     {
         return $this->getTotalNet($cotation, $onlySharable, false);
     }
 
-    private function getTotalNet(Cotation $cotation, bool $onlySharable, bool $isTaxAssureur)
+    private function getTotalNet(?Cotation $cotation, bool $onlySharable, bool $isTaxAssureur): float
     {
+        if (!$cotation) return 0.0;
         $isIARD = $this->isIARD($cotation);
         $net_payable_par_assureur = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
         $net_payable_par_client = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
@@ -562,36 +539,26 @@ class CalculationProvider
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->getCotationSommeCommissionPurePartenaire($revenu->getCotation(), $addressedTo, true),
         };
 
-        // dd("Unité de mésure: " . $uniteMesure);
-
         $formule = $conditionPartage->getFormule();
         $seuil = $conditionPartage->getSeuil();
         $risque = $revenu->getCotation()->getPiste()->getRisque();
+
         //formule
         switch ($formule) {
             case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
-                // dd("ici");
                 return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
-                break;
             case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
                 if ($uniteMesure < $seuil) {
-                    // dd("On partage car l'assiette de " . $assiette_commission_pure . " est inférieur au seuil de " . $seuil);
                     return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
                 } else {
-                    // dd("La condition n'est pas respectée ", "Assiette:" . $assiette_commission_pure, "Seuil:" . $seuil);
                     return 0;
                 }
-                break;
             case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
-                // dd("Ici ", $montant, $uniteMesure, $seuil);
                 if ($uniteMesure >= $seuil) {
-                    // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
                     return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
                 } else {
-                    // dd("On ne partage pas");
                     return 0;
                 }
-                break;
 
             default:
                 # code...
@@ -600,257 +567,115 @@ class CalculationProvider
         return $montant;
     }
 
-    /**
-     * Calcule le montant total de la prime et de la commission pour une entreprise.
-     *
-     * @param Entreprise $entreprise L'entreprise de base pour le calcul.
-     * @param boolean $isBound Si true, ne calcule que pour les polices souscrites (avec avenant).
-     * @param array $options Tableau de filtres optionnels. Peut contenir : 'pisteCible', 'cotationCible', 'assureurCible', 'risqueCible', 'partenaireCible', 'inviteCible', 'groupeCible', 'avenantCible', 'clientCible', 'trancheCible', 'brancheCible', 'reper' ('deteEffet' ou 'echeance'), 'entre', 'et', 'typeRevenuCible', 'revenuPourCourtierCible', 'paiementCible', 'notificationSinistreCible', 'conditionPartageCible'.
-     * @return array Un tableau associatif avec 'prime_totale' and 'commission_totale'.
-     */
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
     {
-        $prime_totale = 0;
-        $prime_totale_payee = 0;
-        $commission_totale = 0;
-        $commission_totale_encaissee = 0;
-        $commission_nette = 0;
-        $commission_pure = 0;
-        $prime_nette = 0;
-        $commission_partageable = 0;
-        $reserve = 0;
-        $retro_commission_partenaire = 0;
-        $retro_commission_partenaire_payee = 0;
-        $taxe_courtier = 0;
-        $taxe_courtier_payee = 0;
-        $taxe_assureur = 0;
-        $taxe_assureur_payee = 0;
-        $sinistre_payable = 0;
-        $sinistre_paye = 0;
+        // Initialisation des variables de totaux
+        $totals = array_fill_keys([
+            'prime_totale', 'prime_totale_payee', 'commission_totale', 'commission_totale_encaissee',
+            'commission_nette', 'commission_pure', 'prime_nette', 'commission_partageable', 'reserve',
+            'retro_commission_partenaire', 'retro_commission_partenaire_payee', 'taxe_courtier',
+            'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye'
+        ], 0.0);
+        extract($totals);
 
-        // 1. Extract filters from options
-        /** @var Piste|null $pisteCible */
+        // 1. Extraire les filtres des options
         $pisteCible = $options['pisteCible'] ?? null;
-        /** @var Cotation|null $cotationCible */
         $cotationCible = $options['cotationCible'] ?? null;
-        /** @var Assureur|null $assureurCible */
         $assureurCible = $options['assureurCible'] ?? null;
-        /** @var Risque|null $risqueCible */
         $risqueCible = $options['risqueCible'] ?? null;
-        /** @var Partenaire|null $partenaireCible */
         $partenaireCible = $options['partenaireCible'] ?? null;
-        /** @var Invite|null $inviteCible */
         $inviteCible = $options['inviteCible'] ?? null;
-        /** @var Groupe|null $groupeCible */
         $groupeCible = $options['groupeCible'] ?? null;
-        /** @var Avenant|null $avenantCible */
         $avenantCible = $options['avenantCible'] ?? null;
-        /** @var Client|null $clientCible */
         $clientCible = $options['clientCible'] ?? null;
-        /** @var Tranche|null $trancheCible */
         $trancheCible = $options['trancheCible'] ?? null;
-        /** @var string|null $brancheCible */
         $brancheCible = $options['brancheCible'] ?? null;
-        /** @var string|null $reper */
         $reper = $options['reper'] ?? null;
-        /** @var string|null $dateA_str */
         $dateA_str = $options['entre'] ?? null;
-        /** @var string|null $dateB_str */
         $dateB_str = $options['et'] ?? null;
-        /** @var TypeRevenu|null $typeRevenuCible */
         $typeRevenuCible = $options['typeRevenuCible'] ?? null;
-        /** @var RevenuPourCourtier|null $revenuPourCourtierCible */
         $revenuPourCourtierCible = $options['revenuPourCourtierCible'] ?? null;
-        /** @var Paiement|null $paiementCible */
         $paiementCible = $options['paiementCible'] ?? null;
-        /** @var NotificationSinistre|null $notificationSinistreCible */
         $notificationSinistreCible = $options['notificationSinistreCible'] ?? null;
-        /** @var ConditionPartage|null $conditionPartageCible */
         $conditionPartageCible = $options['conditionPartageCible'] ?? null;
 
-        // 2. Get initial pool of all cotations from the Entreprise
-        $cotationsAcalculer = [];
-        foreach ($entreprise->getInvites() as $invite) {
-            foreach ($invite->getPistes() as $piste) {
-                foreach ($piste->getCotations() as $cotation) {
-                    $cotationsAcalculer[] = $cotation;
-                }
+        // 2. Construire la requête dynamique pour les Cotations
+        $qb = $this->cotationRepository->createQueryBuilder('c')
+            ->join('c.piste', 'p')
+            ->join('p.invite', 'i')
+            ->where('i.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise);
+
+        // Appliquer les filtres
+        if ($isBound) {
+            $qb->andWhere($qb->expr()->gt('SIZE(c.avenants)', 0));
+        }
+        if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
+        if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
+        if ($assureurCible) $qb->andWhere('c.assureur = :assureurCible')->setParameter('assureurCible', $assureurCible);
+        if ($risqueCible) $qb->andWhere('p.risque = :risqueCible')->setParameter('risqueCible', $risqueCible);
+        if ($inviteCible) $qb->andWhere('p.invite = :inviteCible')->setParameter('inviteCible', $inviteCible);
+        if ($clientCible) $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
+        if ($groupeCible) $qb->join('p.client', 'cl_g')->andWhere('cl_g.groupe = :groupeCible')->setParameter('groupeCible', $groupeCible);
+        if ($partenaireCible) $qb->join('p.partenaires', 'pa')->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
+        if ($avenantCible) $qb->join('c.avenants', 'av')->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
+        if ($trancheCible) $qb->join('c.tranches', 't')->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
+        if ($revenuPourCourtierCible) $qb->join('c.revenus', 'rpc')->andWhere('rpc = :revenuPourCourtierCible')->setParameter('revenuPourCourtierCible', $revenuPourCourtierCible);
+        if ($typeRevenuCible) $qb->join('c.revenus', 'rpc_tr')->andWhere('rpc_tr.typeRevenu = :typeRevenuCible')->setParameter('typeRevenuCible', $typeRevenuCible);
+
+        if ($brancheCible) {
+            $brancheCode = ($brancheCible === 'IARD') ? Risque::BRANCHE_IARD_OU_NON_VIE : (($brancheCible === 'VIE') ? Risque::BRANCHE_VIE : -1);
+            if ($brancheCode !== -1) {
+                $qb->join('p.risque', 'r_b')->andWhere('r_b.branche = :brancheCode')->setParameter('brancheCode', $brancheCode);
             }
         }
 
-        // Get initial pool of all claims from the Entreprise
+        if ($reper && $dateA_str && $dateB_str) {
+            $dateA = DateTimeImmutable::createFromFormat('d/m/Y', $dateA_str);
+            $dateB = DateTimeImmutable::createFromFormat('d/m/Y', $dateB_str);
+            if ($dateA && $dateB) {
+                $qb->join('c.avenants', 'av_date')
+                   ->andWhere($qb->expr()->between(($reper === 'dateEffet' ? 'av_date.startingAt' : 'av_date.endingAt'), ':dateA', ':dateB'))
+                   ->setParameter('dateA', $dateA->setTime(0, 0, 0))
+                   ->setParameter('dateB', $dateB->setTime(23, 59, 59));
+            }
+        }
+
+        if ($notificationSinistreCible && $notificationSinistreCible->getReferencePolice()) {
+            $qb->join('c.avenants', 'av_sin')->andWhere('av_sin.referencePolice = :refPolice')->setParameter('refPolice', $notificationSinistreCible->getReferencePolice());
+        }
+
+        if ($paiementCible) {
+            if ($note = $paiementCible->getNote()) {
+                $subQuery = $this->cotationRepository->createQueryBuilder('c_sub')
+                    ->select('c_sub.id')->join('c_sub.tranches', 't_sub')->join('t_sub.articles', 'a_sub')
+                    ->where('a_sub.note = :note')->getDQL();
+                $qb->andWhere($qb->expr()->in('c.id', $subQuery))->setParameter('note', $note);
+            } else {
+                $qb->andWhere('1=0');
+            }
+        }
+
+        // 3. Exécuter la requête pour obtenir les cotations filtrées
+        $cotationsAcalculer = $qb->getQuery()->getResult();
+
+        // Récupérer et filtrer les sinistres (logique non optimisée pour l'instant)
         $sinistresAcalculer = [];
         foreach ($entreprise->getInvites() as $invite) {
             foreach ($invite->getNotificationSinistres() as $sinistre) {
                 $sinistresAcalculer[] = $sinistre;
             }
         }
-
-        // 3. Apply filters sequentially
-        if ($conditionPartageCible) {
-            if ($pisteExceptionnelle = $conditionPartageCible->getPiste()) {
-                // This is an exceptional condition for a specific Piste.
-                // We only consider cotations from this Piste.
-                $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $cotation->getPiste() === $pisteExceptionnelle);
-            } elseif ($partenaireDeLaCondition = $conditionPartageCible->getPartenaire()) {
-                // This is a general condition for a Partenaire.
-                // First, filter cotations related to this partner.
-                $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($partenaireDeLaCondition) {
-                    if (!$cotation->getPiste()) return false;
-                    if ($cotation->getPiste()->getPartenaires()->contains($partenaireDeLaCondition)) return true;
-                    return $cotation->getPiste()->getClient() && $cotation->getPiste()->getClient()->getPartenaires()->contains($partenaireDeLaCondition);
-                });
-
-                // Second, apply the risk criteria from the condition.
-                $critereRisque = $conditionPartageCible->getCritereRisque();
-                $risquesCibles = $conditionPartageCible->getProduits();
-
-                if ($critereRisque !== ConditionPartage::CRITERE_PAS_RISQUES_CIBLES && !$risquesCibles->isEmpty()) {
-                    $idsRisquesCibles = array_map(fn($r) => $r->getId(), $risquesCibles->toArray());
-
-                    $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($critereRisque, $idsRisquesCibles) {
-                        $idRisqueCotation = $cotation->getPiste()?->getRisque()?->getId();
-                        if (!$idRisqueCotation) {
-                            return false; // Can't apply filter if cotation has no risk.
-                        }
-                        $dansLaListe = in_array($idRisqueCotation, $idsRisquesCibles);
-
-                        if ($critereRisque === ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES) {
-                            return $dansLaListe;
-                        }
-
-                        if ($critereRisque === ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES) {
-                            return !$dansLaListe;
-                        }
-                        return true;
-                    });
-                }
-            }
-        }
-        if ($avenantCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $cotation->getAvenants()->contains($avenantCible));
-        }
-        if ($cotationCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $cotation === $cotationCible);
-        }
-        if ($revenuPourCourtierCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $cotation === $revenuPourCourtierCible->getCotation());
-        }
-        if ($typeRevenuCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($typeRevenuCible) {
-                foreach ($cotation->getRevenus() as $revenu) {
-                    if ($revenu->getTypeRevenu() === $typeRevenuCible) {
-                        return true;
-                    }
-                }
-                return false;
-            });
-        }
-        if ($trancheCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $trancheCible->getCotation() === $cotation);
-        }
-        if ($pisteCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $cotation->getPiste() === $pisteCible);
-        }
-        if ($assureurCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $cotation->getAssureur() === $assureurCible);
-        }
-        if ($risqueCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($risqueCible) {
-                return $cotation->getPiste() && $cotation->getPiste()->getRisque() === $risqueCible;
-            });
-        }
-        if ($inviteCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($inviteCible) {
-                return $cotation->getPiste() && $cotation->getPiste()->getInvite() === $inviteCible;
-            });
-        }
-        if ($groupeCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($groupeCible) {
-                return $cotation->getPiste() && $cotation->getPiste()->getClient() && $cotation->getPiste()->getClient()->getGroupe() === $groupeCible;
-            });
-        }
-        if ($clientCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($clientCible) {
-                return $cotation->getPiste() && $cotation->getPiste()->getClient() === $clientCible;
-            });
-        }
-        if ($partenaireCible) {
-            $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($partenaireCible) {
-                if (!$cotation->getPiste()) return false;
-                if ($cotation->getPiste()->getPartenaires()->contains($partenaireCible)) return true;
-                return $cotation->getPiste()->getClient() && $cotation->getPiste()->getClient()->getPartenaires()->contains($partenaireCible);
-            });
-        }
-        if ($brancheCible) {
-            $brancheCode = -1;
-            if ($brancheCible === 'IARD') {
-                $brancheCode = Risque::BRANCHE_IARD_OU_NON_VIE;
-            } elseif ($brancheCible === 'VIE') {
-                $brancheCode = Risque::BRANCHE_VIE;
-            }
-
-            if ($brancheCode !== -1) {
-                $cotationsAcalculer = array_filter($cotationsAcalculer, fn(Cotation $cotation) => $cotation->getPiste() && $cotation->getPiste()->getRisque() && $cotation->getPiste()->getRisque()->getBranche() === $brancheCode);
-            }
-        }
         if ($notificationSinistreCible) {
             $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $notificationSinistreCible);
-            $refPolice = $notificationSinistreCible->getReferencePolice();
-            if ($refPolice) {
-                $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($refPolice) {
-                    foreach ($cotation->getAvenants() as $avenant) {
-                        if ($avenant->getReferencePolice() === $refPolice) return true;
-                    }
-                    return false;
-                });
-            } else {
-                $cotationsAcalculer = [];
-            }
         }
         if ($paiementCible) {
-            if ($note = $paiementCible->getNote()) {
-                $idsCotationsDeLaNote = [];
-                foreach ($note->getArticles() as $article) {
-                    if ($cotation = $article->getTranche()?->getCotation()) {
-                        $idsCotationsDeLaNote[$cotation->getId()] = true;
-                    }
-                }
-                $cotationsAcalculer = array_filter($cotationsAcalculer, fn($c) => isset($idsCotationsDeLaNote[$c->getId()]));
-                $sinistresAcalculer = []; // A payment on a note is not for a claim
-            } elseif ($offre = $paiementCible->getOffreIndemnisationSinistre()) {
+            if ($offre = $paiementCible->getOffreIndemnisationSinistre()) {
                 if ($sinistreDuPaiement = $offre->getNotificationSinistre()) {
                     $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $sinistreDuPaiement);
                 }
-                $cotationsAcalculer = []; // A payment on a claim offer doesn't filter cotations for now
             } else {
-                $cotationsAcalculer = [];
                 $sinistresAcalculer = [];
-            }
-        }
-        if ($reper && $dateA_str && $dateB_str) {
-            $dateA = DateTimeImmutable::createFromFormat('d/m/Y', $dateA_str);
-            $dateB = DateTimeImmutable::createFromFormat('d/m/Y', $dateB_str);
-
-            if ($dateA && $dateB) {
-                $dateA = $dateA->setTime(0, 0, 0);
-                $dateB = $dateB->setTime(23, 59, 59);
-
-                $cotationsAcalculer = array_filter($cotationsAcalculer, function (Cotation $cotation) use ($reper, $dateA, $dateB) {
-                    foreach ($cotation->getAvenants() as $avenant) {
-                        $dateToCheck = null;
-                        if ($reper === 'dateEffet') {
-                            $dateToCheck = $avenant->getStartingAt();
-                        } elseif ($reper === 'echeance') {
-                            $dateToCheck = $avenant->getEndingAt();
-                        }
-
-                        if ($dateToCheck && $dateToCheck >= $dateA && $dateToCheck <= $dateB) {
-                            return true; // Keep this cotation
-                        }
-                    }
-                    return false; // Discard this cotation
-                });
             }
         }
 
@@ -1027,6 +852,12 @@ class CalculationProvider
         return $montant;
     }
 
+    /**
+     * Calcule le montant de la prime nette pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @return float
+     */
     private function getNoteMontantPaye(?Note $note): float
     {
         $montant = 0;
@@ -1083,6 +914,13 @@ class CalculationProvider
         return round($comTTCAssureur + $comTTCClient, 2);
     }
 
+    /**
+     * Calcule le montant de la commission TTC payable par l'assureur pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @param boolean $onlySharable
+     * @return float
+     */
     private function getCotationMontantCommissionTtcPayableParAssureur(?Cotation $cotation, bool $onlySharable): float
     {
         if (!$cotation) return 0;
@@ -1091,6 +929,13 @@ class CalculationProvider
         return $net + $taxe;
     }
 
+    /**
+     * Calcule le montant de la commission TTC payable par le client pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @param boolean $onlySharable
+     * @return float
+     */
     private function getCotationMontantCommissionTtcPayableParClient(?Cotation $cotation, bool $onlySharable): float
     {
         if (!$cotation) return 0;
@@ -1099,6 +944,12 @@ class CalculationProvider
         return $net + $taxe;
     }
 
+    /**
+     * Vérifie si une cotation appartient à la branche IARD.
+     *
+     * @param Cotation|null $cotation
+     * @return boolean
+     */
     private function isIARD(?Cotation $cotation): bool
     {
         if ($cotation && $cotation->getPiste() && $cotation->getPiste()->getRisque()) {
@@ -1107,6 +958,13 @@ class CalculationProvider
         return false;
     }
 
+    /**
+     * Calcule le montant de la taxe courtier pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @param boolean $onlySharable
+     * @return float
+     */
     private function getCotationMontantTaxeCourtier(?Cotation $cotation, bool $onlySharable): float
     {
         if (!$cotation) return 0;
@@ -1114,6 +972,14 @@ class CalculationProvider
         return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), false);
     }
 
+    /**
+     * Calcule le montant de la commission TTC pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @param integer|null $addressedTo
+     * @param boolean $onlySharable
+     * @return float
+     */
     private function getCotationMontantTaxeAssureur(?Cotation $cotation, bool $onlySharable): float
     {
         if (!$cotation) return 0;
@@ -1121,6 +987,12 @@ class CalculationProvider
         return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
     }
 
+    /**
+     * Calcule le montant total payable pour une note.
+     *
+     * @param Note|null $note
+     * @return float
+     */
     private function getNoteMontantPayable(?Note $note): float
     {
         $montant = 0;
@@ -1132,6 +1004,14 @@ class CalculationProvider
         return $montant;
     }
 
+    /**
+     * Calcule le montant de la commission HT pour une cotation donnée.
+     *
+     * @param Cotation|null $cotation
+     * @param int $addressedTo
+     * @param boolean $onlySharable
+     * @return float
+     */
     private function getCotationMontantCommissionEncaissee(?Cotation $cotation): float
     {
         $montant = 0;
@@ -1143,6 +1023,12 @@ class CalculationProvider
         return $montant;
     }
 
+    /**
+     * Calcule le montant de la commission encaissée pour une tranche.
+     *
+     * @param Tranche|null $tranche
+     * @return float
+     */
     private function getTrancheMontantCommissionEncaissee(?Tranche $tranche): float
     {
         $montant = 0;
@@ -1150,7 +1036,7 @@ class CalculationProvider
             foreach ($tranche->getArticles() as $article) {
                 $note = $article->getNote();
                 if ($note && ($note->getAddressedTo() == \App\Entity\Note::TO_ASSUREUR || $note->getAddressedTo() == \App\Entity\Note::TO_CLIENT)) {
-                    $montantPayableNote = $this->getNoteMontantPayable($note);
+                    $montantPayableNote = $this->getNoteMontantPayable($note); // Potentiel bug: division par zéro
                     if ($montantPayableNote > 0) {
                         $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
                         $montant += $proportionPaiement * $article->getMontant();
@@ -1161,6 +1047,12 @@ class CalculationProvider
         return $montant;
     }
 
+    /**
+     * Calcule le montant total de la commission encaissée pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @return float
+     */
     private function getCotationMontantTaxeCourtierPayee(?Cotation $cotation): float
     {
         $montant = 0;
@@ -1172,6 +1064,12 @@ class CalculationProvider
         return $montant;
     }
 
+    /**
+     * Calcule le montant de la taxe courtier payée pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @return float
+     */
     private function getCotationMontantTaxeAssureurPayee(?Cotation $cotation): float
     {
         $montant = 0;
@@ -1183,14 +1081,27 @@ class CalculationProvider
         return $montant;
     }
 
+    /**
+     * Calcule le montant de la taxe payée pour une tranche.
+     *
+     * @param Tranche|null $tranche
+     * @param boolean $isTaxeAssureur
+     * @return float
+     */
     private function getTrancheMontantTaxePayee(?Tranche $tranche, bool $isTaxeAssureur): float
     {
         // Cette logique est une simplification et suppose que les notes de taxe sont bien identifiées.
         // La logique complète dans Constante.php est plus complexe et dépend des repositories.
         // Pour une implémentation complète, il faudrait répliquer cette logique ici.
-        return 0; // Placeholder
+        return 0.0; // Placeholder
     }
 
+    /**
+     * Calcule le montant HT d'un revenu.
+     *
+     * @param RevenuPourCourtier|null $revenu
+     * @return float
+     */
     private function getRevenuMontantHt(?RevenuPourCourtier $revenu): float
     {
         $montant = 0;
@@ -1221,6 +1132,12 @@ class CalculationProvider
         return $montant;
     }
 
+    /**
+     * Calcule le montant de la taxe assureur payée pour une cotation.
+     *
+     * @param Cotation|null $cotation
+     * @return float
+     */
     private function getCotationMontantPrimeNette(?Cotation $cotation): float
     {
         $montant = 0;
