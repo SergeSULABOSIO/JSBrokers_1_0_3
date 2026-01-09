@@ -575,6 +575,7 @@ class CalculationProvider
         // Appliquer les filtres
         if ($isBound) {
             $qb->andWhere($qb->expr()->gt('SIZE(c.avenants)', 0));
+
         }
         if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
         if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
@@ -594,6 +595,10 @@ class CalculationProvider
             if ($brancheCode !== -1) {
                 $qb->join('p.risque', 'r_b')->andWhere('r_b.branche = :brancheCode')->setParameter('brancheCode', $brancheCode);
             }
+        }
+
+        if ($conditionPartageCible) {
+            $qb->join('p.conditionsPartageExceptionnelles', 'cp')->andWhere('cp = :conditionPartageCible')->setParameter('conditionPartageCible', $conditionPartageCible);
         }
 
         if ($reper && $dateA_str && $dateB_str) {
@@ -846,6 +851,7 @@ class CalculationProvider
                 return $this->getCotationPartenaire($tranche->getCotation());
             }
         }
+
         return null;
     }
 
