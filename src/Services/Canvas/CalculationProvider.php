@@ -226,13 +226,15 @@ class CalculationProvider
     /**
      * RETRO-COMMISSION DUE AU PARTENAIRE
      */
-    private function getCotationMontantRetrocommissionsPayableParCourtier(?Cotation $cotation, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
+    private function getCotationMontantRetrocommissionsPayableParCourtier(?Cotation $cotation, ?Partenaire $partenaireCible, $addressedTo): float
     {
-        $montant = 0;
-        if ($cotation != null) {
-            foreach ($cotation->getRevenus() as $revenu) {
-                $montant += $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, $partenaireCible, $addressedTo);
-            }
+        if (!$cotation) {
+            return 0.0;
+        }
+
+        $montant = 0.0;
+        foreach ($cotation->getRevenus() as $revenu) {
+            $montant += $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, $partenaireCible, $addressedTo);
         }
         return $montant;
     }
@@ -269,41 +271,41 @@ class CalculationProvider
 
     private function getRevenuMontantRetrocommissionsPayableParCourtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo): float
     {
-        $retrocom = 0;
-        if ($revenu != null) {
-            /** @var Cotation $cotation */
-            $cotation = $revenu->getCotation();
-            if ($cotation != null) {
-                if ($partenaireCible != null) {
-                    if ($revenu->getTypeRevenu()->isShared() == true) {
-
-                        /** @var Partenaire $partenaire */
-                        $partenaire = $this->getCotationPartenaire($cotation);
-
-                        if ($partenaire != null) {
-                            //On s'assurer que nous parlons du même partenaire
-                            if ($this->isSamePartenaire($partenaire, $partenaireCible)) {
-                                //D'abord, on traite les conditions spéciale attachées à la piste
-                                $conditionsPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles();
-                                if (count($conditionsPartagePiste) != 0) {
-                                    $retrocom = $this->applyRevenuConditionsSpeciales($conditionsPartagePiste[0], $revenu, $addressedTo);
-                                } else {
-                                    $conditionsPartagePartenaire = $partenaire->getConditionPartages();
-                                    if (count($conditionsPartagePartenaire) != 0) {
-                                        $retrocom = $this->applyRevenuConditionsSpeciales($conditionsPartagePartenaire[0], $revenu, $addressedTo);
-                                    } else if ($partenaire->getPart() != 0) {
-                                        $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
-                                        $retrocom = $assiette * $partenaire->getPart();
-                                    }
-                                }
-                            }
-                        }
-                        // dd("Montant Retrocom: " . $retrocom);
-                    }
-                }
-            }
+        // 1. Gardes de protection pour la robustesse et la lisibilité
+        if (!$revenu || !$partenaireCible || !$revenu->getTypeRevenu() || !$revenu->getTypeRevenu()->isShared()) {
+            return 0.0;
         }
-        return $retrocom;
+
+        $cotation = $revenu->getCotation();
+        if (!$cotation || !$cotation->getPiste()) {
+            return 0.0;
+        }
+
+        $partenaireAffaire = $this->getCotationPartenaire($cotation);
+        if (!$partenaireAffaire || !$this->isSamePartenaire($partenaireAffaire, $partenaireCible)) {
+            return 0.0;
+        }
+
+        // 2. Logique de partage hiérarchique
+        // Priorité 1 : Conditions exceptionnelles sur la Piste
+        $conditionsPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles();
+        if (!$conditionsPartagePiste->isEmpty()) {
+            return $this->applyRevenuConditionsSpeciales($conditionsPartagePiste->first(), $revenu, $addressedTo);
+        }
+
+        // Priorité 2 : Conditions générales sur le Partenaire
+        $conditionsPartagePartenaire = $partenaireAffaire->getConditionPartages();
+        if (!$conditionsPartagePartenaire->isEmpty()) {
+            return $this->applyRevenuConditionsSpeciales($conditionsPartagePartenaire->first(), $revenu, $addressedTo);
+        }
+
+        // Priorité 3 : Taux par défaut du partenaire
+        if ($partenaireAffaire->getPart() > 0) {
+            $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
+            return $assiette * $partenaireAffaire->getPart();
+        }
+
+        return 0.0;
     }
 
     private function getCotationMontantChargementPrime(Cotation $cotation, TypeRevenu $typeRevenu)
@@ -596,39 +598,6 @@ class CalculationProvider
                 break;
         }
         return $montant;
-    }
-
-    private function calculateRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette)
-    {
-        if (!$conditionPartage || !$risque) {
-            return 0;
-        }
-        $taux = $conditionPartage->getTaux();
-        $produitsCible = $conditionPartage->getProduits();
-
-        switch ($conditionPartage->getCritereRisque()) {
-            case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
-                // Si la collection de produits ciblés ne contient pas le risque actuel, on applique le taux.
-                if (!$produitsCible->contains($risque)) {
-                    return $assiette * $taux;
-                }
-                return 0;
-
-            case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
-                // Si la collection de produits ciblés contient le risque actuel, on applique le taux.
-                if ($produitsCible->contains($risque)) {
-                    return $assiette * $taux;
-                }
-                break;
-                return 0;
-
-            case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
-                // Aucun filtre sur le risque, on applique toujours le taux.
-                return $assiette * $taux;
-            default:
-                // Dans tous les autres cas, on ne calcule pas de rétrocommission.
-                return 0;
-        }
     }
 
     /**
@@ -929,7 +898,7 @@ class CalculationProvider
             $commission_partageable += $cotation_com_nette_partageable - $cotation_taxe_courtier_partageable;
 
             // Rétro-commissions (Logique complexe conservée dans Constante pour le moment)
-            $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1, true);
+            $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1);
             $retro_commission_partenaire_payee += $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, $partenaireCible);
         }
 
