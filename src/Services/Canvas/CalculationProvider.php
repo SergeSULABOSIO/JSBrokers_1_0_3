@@ -43,7 +43,7 @@ class CalculationProvider
     /**
      * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
      */
-    public function Notification_Sinistre_getDelaiDeclaration(NotificationSinistre $sinistre): string
+    private function Notification_Sinistre_getDelaiDeclaration(NotificationSinistre $sinistre): string
     {
         if (!$sinistre->getOccuredAt() || !$sinistre->getNotifiedAt()) {
             return 'N/A';
@@ -55,7 +55,7 @@ class CalculationProvider
     /**
      * Calcule l'âge du dossier sinistre depuis sa création.
      */
-    public function Notification_Sinistre_getAgeDossier(NotificationSinistre $sinistre): string
+    private function Notification_Sinistre_getAgeDossier(NotificationSinistre $sinistre): string
     {
         if (!$sinistre->getCreatedAt()) {
             return 'N/A';
@@ -67,7 +67,7 @@ class CalculationProvider
     /**
      * Calcule le pourcentage de pièces fournies par rapport aux pièces attendues.
      */
-    public function Notification_Sinistre_getIndiceCompletude(NotificationSinistre $sinistre): string
+    private function Notification_Sinistre_getIndiceCompletude(NotificationSinistre $sinistre): string
     {
         $attendus = count($this->getEnterprise()->getModelePieceSinistres());
         if ($attendus === 0) {
@@ -78,7 +78,7 @@ class CalculationProvider
         return round($pourcentage) . ' %';
     }
 
-    public function getEnterprise(): Entreprise
+    private function getEnterprise(): Entreprise
     {
         /** @var Utilisateur $user */
         $user = $this->security->getUser();
@@ -89,7 +89,7 @@ class CalculationProvider
     /**
      * Calcule le pourcentage payé d'une offre d'indemnisation.
      */
-    public function Offre_Indemnisation_getPourcentagePaye(OffreIndemnisationSinistre $offre): string
+    private function Offre_Indemnisation_getPourcentagePaye(OffreIndemnisationSinistre $offre): string
     {
         $montantPayable = $offre->getMontantPayable();
         if ($montantPayable == 0 || $montantPayable === null) {
@@ -103,7 +103,7 @@ class CalculationProvider
     /**
      * Calcule le montant total de l'indemnisation convenue pour ce sinistre.
      */
-    public function Notification_Sinistre_getCompensation(NotificationSinistre $sinistre): float
+    private function Notification_Sinistre_getCompensation(NotificationSinistre $sinistre): float
     {
         $compensation = 0;
         if ($sinistre != null) {
@@ -117,7 +117,7 @@ class CalculationProvider
     /**
      * Calcule le montant cumulé des paiements déjà effectués pour cette indemnisation.
      */
-    public function Notification_Sinistre_getCompensationVersee(NotificationSinistre $sinistre): float
+    private function Notification_Sinistre_getCompensationVersee(NotificationSinistre $sinistre): float
     {
         $montant = 0;
         if ($sinistre != null) {
@@ -131,7 +131,7 @@ class CalculationProvider
     /**
      * Calcule le montant restant à payer pour solder complètement ce dossier sinistre.
      */
-    public function Notification_Sinistre_getSoldeAVerser(NotificationSinistre $sinistre): float
+    private function Notification_Sinistre_getSoldeAVerser(NotificationSinistre $sinistre): float
     {
         $montant = 0;
         if ($sinistre != null) {
@@ -145,7 +145,7 @@ class CalculationProvider
     /**
      * Calcule le montant de la franchise qui a été appliquée conformément aux termes de la police.
      */
-    public function Notification_Sinistre_getFranchise(NotificationSinistre $sinistre): float
+    private function Notification_Sinistre_getFranchise(NotificationSinistre $sinistre): float
     {
         $montant = 0;
         if ($sinistre != null) {
@@ -159,7 +159,7 @@ class CalculationProvider
     /**
      * Calcule la durée totale en jours entre la notification du sinistre et le dernier paiement de règlement.
      */
-    public function Notification_Sinistre_getDureeReglement(NotificationSinistre $notification_sinistre): int
+    private function Notification_Sinistre_getDureeReglement(NotificationSinistre $notification_sinistre): int
     {
         $duree = -1;
         $dateNotfication = $notification_sinistre->getNotifiedAt();
@@ -178,7 +178,7 @@ class CalculationProvider
     /**
      * Récupère la date à laquelle le tout dernier paiement a été effectué pour ce sinistre.
      */
-    public function Notification_Sinistre_getDateDernierRgelement(NotificationSinistre $notification_sinistre): ?\DateTimeInterface
+    private function Notification_Sinistre_getDateDernierRgelement(NotificationSinistre $notification_sinistre): ?\DateTimeInterface
     {
         $dateDernierRgelement = null;
         if ($this->Notification_Sinistre_getSoldeAVerser($notification_sinistre) == 0) {
@@ -194,7 +194,7 @@ class CalculationProvider
     /**
      * Calcule le montant cumulé des paiements déjà effectués pour cette offre.
      */
-    public function Offre_Indemnisation_getCompensationVersee(OffreIndemnisationSinistre $offre_indemnisation): float
+    private function Offre_Indemnisation_getCompensationVersee(OffreIndemnisationSinistre $offre_indemnisation): float
     {
         $montant = 0;
         if ($offre_indemnisation != null) {
@@ -208,7 +208,7 @@ class CalculationProvider
     /**
      * Calcule le montant restant à payer pour solder cette offre.
      */
-    public function Offre_Indemnisation_getSoldeAVerser(OffreIndemnisationSinistre $offre_indemnisation): float
+    private function Offre_Indemnisation_getSoldeAVerser(OffreIndemnisationSinistre $offre_indemnisation): float
     {
         $montant = 0;
         if ($offre_indemnisation != null) {
@@ -229,7 +229,7 @@ class CalculationProvider
     /**
      * RETRO-COMMISSION DUE AU PARTENAIRE
      */
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
+    private function Cotation_getMontant_retrocommissions_payable_par_courtier(?Cotation $cotation, ?Partenaire $partenaireCible, $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
         if ($cotation != null) {
@@ -241,7 +241,7 @@ class CalculationProvider
     }
 
 
-    public function Cotation_getPartenaire(?Cotation $cotation)
+    private function Cotation_getPartenaire(?Cotation $cotation)
     {
         if ($cotation != null) {
             if ($cotation->getPiste() != null) {
@@ -270,7 +270,7 @@ class CalculationProvider
     }
 
 
-    public function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo): float
+    private function Revenu_getMontant_retrocommissions_payable_par_courtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo): float
     {
         $retrocom = 0;
         if ($revenu != null) {
@@ -323,7 +323,7 @@ class CalculationProvider
         return $montantChargementCible;
     }
 
-    public function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
+    private function Revenu_getMontant_ht(?RevenuPourCourtier $revenu): float
     {
         $montant = 0;
         if ($revenu != null) {
@@ -363,7 +363,7 @@ class CalculationProvider
         return $montant;
     }
 
-    public function Cotation_getRisque(?Cotation $cotation)
+    private function Cotation_getRisque(?Cotation $cotation)
     {
         if ($cotation) {
             if ($cotation->getPiste()) {
@@ -397,7 +397,7 @@ class CalculationProvider
         return $commissionPure;
     }
 
-    public function Revenu_getMontant_pure(?RevenuPourCourtier $revenu, $addressedTo, bool $onlySharable): float
+    private function Revenu_getMontant_pure(?RevenuPourCourtier $revenu, $addressedTo, bool $onlySharable): float
     {
         if ($addressedTo != -1) {
             if ($revenu->getTypeRevenu()->getRedevable() == $addressedTo) {
@@ -461,7 +461,7 @@ class CalculationProvider
     }
 
 
-    public function Cotation_getMontant_commission_ht(?Cotation $cotation, $addressedTo, bool $onlySharable): float
+    private function Cotation_getMontant_commission_ht(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
         $montant = 0;
         if ($cotation) {
@@ -478,14 +478,14 @@ class CalculationProvider
         }
         return $montant;
     }
-    public function Cotation_getMontant_commission_pure(?Cotation $cotation, $addressedTo, bool $onlySharable): float
+    private function Cotation_getMontant_commission_pure(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
         $comHT = $this->Cotation_getMontant_commission_ht($cotation, $addressedTo, $onlySharable);
         $taxeCourtier = $this->Cotation_getMontant_taxe_payable_par_courtier($cotation, $onlySharable);
         return $comHT - $taxeCourtier;
     }
 
-    public function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation, bool $onlySharable): float
+    private function Cotation_getMontant_taxe_payable_par_courtier(?Cotation $cotation, bool $onlySharable): float
     {
         return $this->getTotalNet($cotation, $onlySharable, false);
     }
@@ -988,7 +988,7 @@ class CalculationProvider
         return $montant;
     }
 
-    public function Note_getMontant_payable(?Note $note): float
+    private function Note_getMontant_payable(?Note $note): float
     {
         $montant = 0;
         if ($note) {
@@ -999,7 +999,7 @@ class CalculationProvider
         return $montant;
     }
 
-    public function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
+    private function Tranche_getMontant_retrocommissions_payable_par_courtier_payee(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
     {
         $montant = 0;
         if (count($tranche->getArticles())) {
@@ -1029,7 +1029,7 @@ class CalculationProvider
         return $montant;
     }
 
-    public function Note_getMontant_paye(?Note $note): float
+    private function Note_getMontant_paye(?Note $note): float
     {
         $montant = 0;
         if ($note) {
@@ -1044,7 +1044,7 @@ class CalculationProvider
         return $montant;
     }
 
-    public function Tranche_getPartenaire(?Tranche $tranche)
+    private function Tranche_getPartenaire(?Tranche $tranche)
     {
         if ($tranche != null) {
             if ($tranche->getCotation() != null) {
@@ -1054,7 +1054,7 @@ class CalculationProvider
         return null;
     }
 
-    public function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation, ?Partenaire $partenaireCible): float
+    private function Cotation_getMontant_retrocommissions_payable_par_courtier_payee(?Cotation $cotation, ?Partenaire $partenaireCible): float
     {
         $montant = 0;
         if ($cotation != null) {
