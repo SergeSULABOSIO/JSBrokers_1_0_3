@@ -4,15 +4,9 @@ namespace App\Services\Canvas;
 
 
 use App\Entity\Note;
-use App\Entity\Piste;
-use App\Entity\Client;
-use App\Entity\Groupe;
-use App\Entity\Invite;
 use App\Entity\Risque;
 use DateTimeImmutable;
-use App\Entity\Avenant;
 use App\Entity\Tranche;
-use App\Entity\Assureur;
 use App\Entity\Cotation;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
@@ -66,7 +60,7 @@ class CalculationProvider
     /**
      * Calcule le pourcentage de pièces fournies par rapport aux pièces attendues.
      */
-    private function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
+    public function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
     {
         $attendus = count($this->getEntreprise()->getModelePieceSinistres());
         if ($attendus === 0) {
@@ -83,20 +77,6 @@ class CalculationProvider
         $user = $this->security->getUser();
 
         return $user->getConnectedTo();
-    }
-
-    /**
-     * Calcule le pourcentage payé d'une offre d'indemnisation.
-     */
-    private function getOffreIndemnisationPourcentagePaye(OffreIndemnisationSinistre $offre): string
-    {
-        $montantPayable = $offre->getMontantPayable();
-        if ($montantPayable == 0 || $montantPayable === null) {
-            return '100 %'; // Si rien n'est à payer, c'est considéré comme payé.
-        }
-        $totalVerse = $this->getOffreIndemnisationCompensationVersee($offre);
-        $pourcentage = ($totalVerse / $montantPayable) * 100;
-        return round($pourcentage) . ' %';
     }
 
     /**
@@ -139,19 +119,6 @@ class CalculationProvider
             return $carry + ($paiement->getMontant() ?? 0);
         }, 0.0);
     }
-
-    /**
-     * Calcule le montant restant à payer pour solder cette offre.
-     */
-    private function getOffreIndemnisationSoldeAVerser(OffreIndemnisationSinistre $offre_indemnisation): float
-    {
-        $montantPayable = $offre_indemnisation->getMontantPayable() ?? 0.0;
-        $compensationVersee = $this->getOffreIndemnisationCompensationVersee($offre_indemnisation);
-        return $montantPayable - $compensationVersee;
-    }
-
-
-
 
 
     /**
