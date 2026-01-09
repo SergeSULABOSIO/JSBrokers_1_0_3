@@ -2,28 +2,29 @@
 namespace App\Services\Canvas;
 
 
-use App\Constantes\Constante;
-use App\Entity\Avenant;
-use App\Entity\Assureur;
-use App\Entity\ConditionPartage;
-use App\Entity\Chargement;
+use App\Entity\Piste;
 use App\Entity\Client;
-use App\Entity\Cotation;
-use App\Entity\Entreprise;
 use App\Entity\Groupe;
 use App\Entity\Invite;
-use App\Entity\NotificationSinistre;
-use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Piste;
-use App\Entity\Paiement;
-use App\Entity\RevenuPourCourtier;
-use App\Entity\Partenaire;
 use App\Entity\Risque;
+use DateTimeImmutable;
+use App\Entity\Avenant;
 use App\Entity\Tranche;
+use App\Entity\Assureur;
+use App\Entity\Cotation;
+use App\Entity\Paiement;
+use App\Entity\Chargement;
+use App\Entity\Entreprise;
+use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
+use App\Constantes\Constante;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
-use DateTimeImmutable;
+use App\Entity\ConditionPartage;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\NotificationSinistre;
+use App\Entity\OffreIndemnisationSinistre;
+use Symfony\Bundle\SecurityBundle\Security;
 
 class CalculationProvider
 {
@@ -33,7 +34,8 @@ class CalculationProvider
      */
     public function __construct(
         private ServiceDates $serviceDates,
-        private Constante $constante,
+        // private Constante $constante,
+        private Security $security,
         private ServiceTaxes $serviceTaxes
     ) {
     }
@@ -67,13 +69,21 @@ class CalculationProvider
      */
     public function Notification_Sinistre_getIndiceCompletude(NotificationSinistre $sinistre): string
     {
-        $attendus = count($this->constante->getEnterprise()->getModelePieceSinistres());
+        $attendus = count($this->getEnterprise()->getModelePieceSinistres());
         if ($attendus === 0) {
             return '100 %'; // S'il n'y a aucune pièce modèle, le dossier est complet.
         }
         $fournis = count($sinistre->getPieces());
         $pourcentage = ($fournis / $attendus) * 100;
         return round($pourcentage) . ' %';
+    }
+
+    public function getEnterprise(): Entreprise
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+
+        return $user->getConnectedTo();
     }
 
     /**

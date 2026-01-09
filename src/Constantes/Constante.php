@@ -4526,13 +4526,7 @@ class Constante
     }
 
 
-    public function getEnterprise(): Entreprise
-    {
-        /** @var Utilisateur $user */
-        $user = $this->security->getUser();
-
-        return $user->getConnectedTo();
-    }
+    
 
 
 
