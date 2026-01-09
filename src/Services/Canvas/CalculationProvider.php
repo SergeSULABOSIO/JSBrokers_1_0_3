@@ -33,14 +33,27 @@ class CalculationProvider
         private CotationRepository $cotationRepository
     ) {}
 
-public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
+    public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
     {
         // Initialisation des variables de totaux
         $totals = array_fill_keys([
-            'prime_totale', 'prime_totale_payee', 'commission_totale', 'commission_totale_encaissee',
-            'commission_nette', 'commission_pure', 'prime_nette', 'commission_partageable', 'reserve',
-            'retro_commission_partenaire', 'retro_commission_partenaire_payee', 'taxe_courtier',
-            'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye'
+            'prime_totale',
+            'prime_totale_payee',
+            'commission_totale',
+            'commission_totale_encaissee',
+            'commission_nette',
+            'commission_pure',
+            'prime_nette',
+            'commission_partageable',
+            'reserve',
+            'retro_commission_partenaire',
+            'retro_commission_partenaire_payee',
+            'taxe_courtier',
+            'taxe_courtier_payee',
+            'taxe_assureur',
+            'taxe_assureur_payee',
+            'sinistre_payable',
+            'sinistre_paye'
         ], 0.0);
         extract($totals);
 
@@ -75,7 +88,6 @@ public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, arr
         // Appliquer les filtres
         if ($isBound) {
             $qb->andWhere($qb->expr()->gt('SIZE(c.avenants)', 0));
-
         }
         if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
         if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
@@ -106,9 +118,9 @@ public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, arr
             $dateB = DateTimeImmutable::createFromFormat('d/m/Y', $dateB_str);
             if ($dateA && $dateB) {
                 $qb->join('c.avenants', 'av_date')
-                   ->andWhere($qb->expr()->between(($reper === 'dateEffet' ? 'av_date.startingAt' : 'av_date.endingAt'), ':dateA', ':dateB'))
-                   ->setParameter('dateA', $dateA->setTime(0, 0, 0))
-                   ->setParameter('dateB', $dateB->setTime(23, 59, 59));
+                    ->andWhere($qb->expr()->between(($reper === 'dateEffet' ? 'av_date.startingAt' : 'av_date.endingAt'), ':dateA', ':dateB'))
+                    ->setParameter('dateA', $dateA->setTime(0, 0, 0))
+                    ->setParameter('dateB', $dateB->setTime(23, 59, 59));
             }
         }
 
