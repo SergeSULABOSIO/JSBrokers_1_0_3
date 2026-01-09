@@ -26,9 +26,7 @@ use App\Services\Canvas\CalculationProvider;
 
 class NumericCanvasProvider
 {
-    public function __construct(
-        private CalculationProvider $calculationProvider,
-    ) {}
+    public function __construct() {}
 
     public function getAttributesAndValues($object): array
     {
@@ -44,7 +42,7 @@ class NumericCanvasProvider
                 ],
                 'franchise' => [
                     "description" => "Franchise",
-                    "value" => ($this->calculationProvider->Notification_Sinistre_getFranchise($object) ?? 0) * 100,
+                    "value" => ($this->getFranchiseForNotificationSinistre($object) ?? 0) * 100,
                 ],
             ], $this->getCalculatedIndicatorsNumericAttributes($object));
         }
@@ -115,6 +113,17 @@ class NumericCanvasProvider
             return $this->getCalculatedIndicatorsNumericAttributes($object);
         }
         return [];
+    }
+
+    private function getFranchiseForNotificationSinistre(NotificationSinistre $sinistre): float
+    {
+        $montant = 0;
+        if ($sinistre != null) {
+            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
+                $montant += $offre_indemnisation->getFranchiseAppliquee();
+            }
+        }
+        return $montant;
     }
 
     public function getAttributesAndValuesForCollection($data): array
