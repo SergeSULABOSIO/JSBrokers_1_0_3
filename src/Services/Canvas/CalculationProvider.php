@@ -42,7 +42,7 @@ class CalculationProvider
     /**
      * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
      */
-    private function getNotificationSinistreDelaiDeclaration(NotificationSinistre $sinistre): string
+    public function getNotificationSinistreDelaiDeclaration(NotificationSinistre $sinistre): string
     {
         if (!$sinistre->getOccuredAt() || !$sinistre->getNotifiedAt()) {
             return 'N/A';
@@ -54,7 +54,7 @@ class CalculationProvider
     /**
      * Calcule l'âge du dossier sinistre depuis sa création.
      */
-    private function getNotificationSinistreAgeDossier(NotificationSinistre $sinistre): string
+    public function getNotificationSinistreAgeDossier(NotificationSinistre $sinistre): string
     {
         if (!$sinistre->getCreatedAt()) {
             return 'N/A';
@@ -130,7 +130,7 @@ class CalculationProvider
     /**
      * Calcule le montant de la franchise qui a été appliquée conformément aux termes de la police.
      */
-    private function getNotificationSinistreFranchise(NotificationSinistre $sinistre): float
+    public function getNotificationSinistreFranchise(NotificationSinistre $sinistre): float
     {
         return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
             return $carry + ($offre->getFranchiseAppliquee() ?? 0);
@@ -655,8 +655,6 @@ class CalculationProvider
             if ($isBound && !$this->isCotationBound($cotation)) {
                 continue; // On saute les cotations non-souscrites si isBound est true.
             }
-
-            $isIARD = $this->isIARD($cotation);
 
             // Prime Nette
             $prime_nette += $this->getCotationMontantPrimeNette($cotation);
