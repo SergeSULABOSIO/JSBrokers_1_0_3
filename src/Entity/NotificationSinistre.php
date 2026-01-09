@@ -143,6 +143,24 @@ class NotificationSinistre implements OwnerAwareInterface
     public ?string $ageDossier;
 
     #[Groups(['list:read'])]
+    public ?float $tauxIndemnisation;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreOffres;
+
+    #[Groups(['list:read'])]
+    public ?int $nombrePaiements;
+
+    #[Groups(['list:read'])]
+    public ?float $montantMoyenParPaiement;
+
+    #[Groups(['list:read'])]
+    public ?string $delaiTraitementInitial;
+
+    #[Groups(['list:read'])]
+    public ?float $ratioPaiementsEvaluation;
+
+    #[Groups(['list:read'])]
     public ?string $indiceCompletude;
 
     public function __construct()
