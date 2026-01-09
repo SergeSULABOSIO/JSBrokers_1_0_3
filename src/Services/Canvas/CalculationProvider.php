@@ -23,19 +23,16 @@ use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\ConditionPartage;
 use App\Entity\RevenuPourCourtier;
-use App\Entity\NotificationSinistre;
-use App\Repository\CotationRepository;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\NotificationSinistre;
 use Symfony\Bundle\SecurityBundle\Security;
 
 class CalculationProvider
 {
     /**
-     * @param ServiceDates $serviceDates
      */
     public function __construct(
         private ServiceDates $serviceDates,
-        private CotationRepository $cotationRepository,
         private Security $security,
         private ServiceTaxes $serviceTaxes
     ) {}
@@ -371,40 +368,35 @@ class CalculationProvider
 
     private function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
     {
-        $montant = 0;
+        if (!$conditionPartage || !$risque) {
+            return 0.0;
+        }
+
         $taux = $conditionPartage->getTaux();
         $produitsCible = $conditionPartage->getProduits();
 
         switch ($conditionPartage->getCritereRisque()) {
             case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
-                $canShare = true;
-                foreach ($produitsCible as $produitCible) {
-                    if ($produitCible == $risque) {
-                        //Ketourah / Ketura, je t'aime.
-                        // dd("On ne partage pas car " . $risque . " est dans ", $produitsCible);
-                        $canShare = false;
-                    }
+                // Si la collection de produits ciblés ne contient pas le risque actuel, on applique le taux.
+                if (!$produitsCible->contains($risque)) {
+                    return $assiette * $taux;
                 }
-                $montant = $canShare == true ? ($assiette * $taux) : 0;
-                break;
-            case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
-                foreach ($produitsCible as $produitCible) {
-                    if ($produitCible == $risque) {
-                        // dd("Oui, on partage car " . $risque . " est dans ", $produitsCible);
-                        $montant = $assiette * $taux;
-                    }
-                }
-                break;
-            case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
-                //On applique le taux à l'assiette
-                $montant = $assiette * $taux;
-                break;
+                return 0.0;
 
+            case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
+                // Si la collection de produits ciblés contient le risque actuel, on applique le taux.
+                if ($produitsCible->contains($risque)) {
+                    return $assiette * $taux;
+                }
+                return 0.0;
+
+            case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
+                // Aucun filtre sur le risque, on applique toujours le taux.
+                return $assiette * $taux;
             default:
-                # code...
-                break;
+                // Dans tous les autres cas, on ne calcule pas de rétrocommission.
+                return 0.0;
         }
-        return $montant;
     }
 
     private function getRevenuMontantHtAddressedTo($addressedTo, RevenuPourCourtier $revenu)
@@ -462,9 +454,29 @@ class CalculationProvider
     private function getCotationSommeCommissionPureRisque(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
         $somme = 0;
+        if (!$cotation || !$cotation->getPiste()) {
+            return 0.0;
+        }
+
         /** @var Entreprise $entreprise */
         $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $cotationsDuPartenaire = $this->cotationRepository->loadCotationsWithPartnerRisque($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getRisque(), $this->getCotationPartenaire($cotation));
+        $exerciceCible = $cotation->getPiste()->getExercice();
+        $risqueCible = $cotation->getPiste()->getRisque();
+        $partenaireCible = $this->getCotationPartenaire($cotation);
+
+        $cotationsDuPartenaire = [];
+        foreach ($entreprise->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($piste->getExercice() === $exerciceCible && $piste->getRisque() === $risqueCible) {
+                    foreach ($piste->getCotations() as $c) {
+                        if ($this->getCotationPartenaire($c) === $partenaireCible) {
+                            $cotationsDuPartenaire[] = $c;
+                        }
+                    }
+                }
+            }
+        }
+
         foreach ($cotationsDuPartenaire as $proposition) {
             $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
         }
@@ -473,25 +485,61 @@ class CalculationProvider
 
     private function getCotationSommeCommissionPureClient(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
-        // dd($cotation->getAvenants()[0]);
-        // dd("Unité de mésure: ", $cotation);
-
         $somme = 0;
+        if (!$cotation || !$cotation->getPiste()) {
+            return 0.0;
+        }
+
         /** @var Entreprise $entreprise */
         $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $cotationsDuPartenaire = $this->cotationRepository->loadCotationsWithPartnerClient($cotation->getPiste()->getExercice(), $entreprise, $cotation->getPiste()->getClient(), $this->getCotationPartenaire($cotation));
+        $exerciceCible = $cotation->getPiste()->getExercice();
+        $clientCible = $cotation->getPiste()->getClient();
+        $partenaireCible = $this->getCotationPartenaire($cotation);
+
+        $cotationsDuPartenaire = [];
+        foreach ($entreprise->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($piste->getExercice() === $exerciceCible && $piste->getClient() === $clientCible) {
+                    foreach ($piste->getCotations() as $c) {
+                        if ($this->getCotationPartenaire($c) === $partenaireCible) {
+                            $cotationsDuPartenaire[] = $c;
+                        }
+                    }
+                }
+            }
+        }
+
         foreach ($cotationsDuPartenaire as $proposition) {
             $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
         }
         return $somme;
     }
 
-    private function Cotation_getSommeCommissionPurePartenaire(?Cotation $cotation, $addressedTo, bool $onlySharable): float
+    private function getCotationSommeCommissionPurePartenaire(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
         $somme = 0;
+        if (!$cotation || !$cotation->getPiste()) {
+            return 0.0;
+        }
+
         /** @var Entreprise $entreprise */
         $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $cotationsDuPartenaire = $this->cotationRepository->loadCotationsWithPartnerAll($cotation->getPiste()->getExercice(), $entreprise, $this->getCotationPartenaire($cotation));
+        $exerciceCible = $cotation->getPiste()->getExercice();
+        $partenaireCible = $this->getCotationPartenaire($cotation);
+
+        $cotationsDuPartenaire = [];
+        foreach ($entreprise->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($piste->getExercice() === $exerciceCible) {
+                    foreach ($piste->getCotations() as $c) {
+                        if ($this->getCotationPartenaire($c) === $partenaireCible) {
+                            $cotationsDuPartenaire[] = $c;
+                        }
+                    }
+                }
+            }
+        }
+
         foreach ($cotationsDuPartenaire as $proposition) {
             $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
         }
@@ -550,6 +598,38 @@ class CalculationProvider
         return $montant;
     }
 
+    private function calculateRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette)
+    {
+        if (!$conditionPartage || !$risque) {
+            return 0;
+        }
+        $taux = $conditionPartage->getTaux();
+        $produitsCible = $conditionPartage->getProduits();
+
+        switch ($conditionPartage->getCritereRisque()) {
+            case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
+                // Si la collection de produits ciblés ne contient pas le risque actuel, on applique le taux.
+                if (!$produitsCible->contains($risque)) {
+                    return $assiette * $taux;
+                }
+                return 0;
+
+            case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
+                // Si la collection de produits ciblés contient le risque actuel, on applique le taux.
+                if ($produitsCible->contains($risque)) {
+                    return $assiette * $taux;
+                }
+                break;
+                return 0;
+
+            case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
+                // Aucun filtre sur le risque, on applique toujours le taux.
+                return $assiette * $taux;
+            default:
+                // Dans tous les autres cas, on ne calcule pas de rétrocommission.
+                return 0;
+        }
+    }
 
     /**
      * Calcule le montant total de la prime et de la commission pour une entreprise.
