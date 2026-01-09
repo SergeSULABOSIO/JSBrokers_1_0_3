@@ -33,6 +33,37 @@ class CalculationProvider
         private CotationRepository $cotationRepository
     ) {}
 
+    /**
+     * Calcule les indicateurs spécifiques pour une entité donnée.
+     *
+     * @param object $entity L'entité pour laquelle calculer les indicateurs.
+     * @return array Un tableau associatif d'indicateurs calculés.
+     */
+    public function getIndicateursSpecifics(object $entity): array
+    {
+        $indicateurs = [];
+
+        switch (get_class($entity)) {
+            case NotificationSinistre::class:
+                /** @var NotificationSinistre $entity */
+                $indicateurs = [
+                    'delaiDeclaration' => $this->getNotificationSinistreDelaiDeclaration($entity),
+                    'ageDossier' => $this->getNotificationSinistreAgeDossier($entity),
+                    'franchise' => $this->getNotificationSinistreFranchise($entity),
+                    'tauxIndemnisation' => $this->getNotificationSinistreTauxIndemnisation($entity),
+                    'nombreOffres' => $this->getNotificationSinistreNombreOffres($entity),
+                    'nombrePaiements' => $this->getNotificationSinistreNombrePaiements($entity),
+                    'montantMoyenParPaiement' => $this->getNotificationSinistreMontantMoyenParPaiement($entity),
+                    'delaiTraitementInitial' => $this->getNotificationSinistreDelaiTraitementInitial($entity),
+                    'ratioPaiementsEvaluation' => $this->getNotificationSinistreRatioPaiementsEvaluation($entity),
+                ];
+                break;
+                // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
+        }
+
+        return $indicateurs;
+    }
+
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
     {
         // Initialisation des variables de totaux
@@ -357,13 +388,6 @@ class CalculationProvider
     /**
      * Calcule le montant de la franchise qui a été appliquée conformément aux termes de la police.
      */
-    public function getNotificationSinistreFranchise(NotificationSinistre $sinistre): float
-    {
-        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
-            return $carry + ($offre->getFranchiseAppliquee() ?? 0);
-        }, 0.0);
-    }
-
 
     /**
      * Calcule le montant cumulé des paiements déjà effectués pour cette offre.
@@ -375,6 +399,89 @@ class CalculationProvider
         }, 0.0);
     }
 
+    /**
+     * Calcule le montant de la franchise qui a été appliquée conformément aux termes de la police.
+     */
+    private function getNotificationSinistreFranchise(NotificationSinistre $sinistre): float
+    {
+        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
+            return $carry + ($offre->getFranchiseAppliquee() ?? 0);
+        }, 0.0);
+    }
+
+    /**
+     * Calcule le taux d'indemnisation (offres / évaluation).
+     */
+    private function getNotificationSinistreTauxIndemnisation(NotificationSinistre $sinistre): ?float
+    {
+        $compensation = $this->getNotificationSinistreCompensation($sinistre);
+        $evaluation = $sinistre->getEvaluationChiffree();
+
+        if ($evaluation > 0) {
+            return round(($compensation / $evaluation) * 100, 2);
+        }
+        return null;
+    }
+
+    /**
+     * Calcule le nombre total d'offres d'indemnisation.
+     */
+    private function getNotificationSinistreNombreOffres(NotificationSinistre $sinistre): int
+    {
+        return $sinistre->getOffreIndemnisationSinistres()->count();
+    }
+
+    /**
+     * Calcule le nombre total de paiements effectués.
+     */
+    private function getNotificationSinistreNombrePaiements(NotificationSinistre $sinistre): int
+    {
+        $nombrePaiements = 0;
+        foreach ($sinistre->getOffreIndemnisationSinistres() as $offre) {
+            $nombrePaiements += $offre->getPaiements()->count();
+        }
+        return $nombrePaiements;
+    }
+
+    /**
+     * Calcule le montant moyen par paiement.
+     */
+    private function getNotificationSinistreMontantMoyenParPaiement(NotificationSinistre $sinistre): ?float
+    {
+        $compensationVersee = $this->getNotificationSinistreCompensationVersee($sinistre);
+        $nombrePaiements = $this->getNotificationSinistreNombrePaiements($sinistre);
+
+        if ($nombrePaiements > 0) {
+            return round($compensationVersee / $nombrePaiements, 2);
+        }
+        return null;
+    }
+
+    /**
+     * Calcule le délai de traitement initial (création à notification).
+     */
+    private function getNotificationSinistreDelaiTraitementInitial(NotificationSinistre $sinistre): string
+    {
+        if (!$sinistre->getCreatedAt() || !$sinistre->getNotifiedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($sinistre->getCreatedAt(), $sinistre->getNotifiedAt()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule le ratio des paiements par rapport à l'évaluation chiffrée.
+     */
+    private function getNotificationSinistreRatioPaiementsEvaluation(NotificationSinistre $sinistre): ?float
+    {
+        $compensationVersee = $this->getNotificationSinistreCompensationVersee($sinistre);
+        $evaluation = $sinistre->getEvaluationChiffree();
+
+        if ($evaluation > 0) {
+            return round(($compensationVersee / $evaluation) * 100, 2);
+        }
+        return null;
+    }
 
     /**
      * RETRO-COMMISSION DUE AU PARTENAIRE
