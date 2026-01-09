@@ -2,19 +2,38 @@
 
 namespace App\Services\Canvas;
 
-use App\Entity\Avenant;
 use App\Entity\Assureur;
+use App\Entity\AutoriteFiscale;
+use App\Entity\Avenant;
+use App\Entity\Bordereau;
+use App\Entity\Chargement;
+use App\Entity\ChargementPourPrime;
+use App\Entity\Classeur;
 use App\Entity\Client;
+use App\Entity\CompteBancaire;
+use App\Entity\ConditionPartage;
 use App\Entity\Contact;
 use App\Entity\Cotation;
 use App\Entity\Document;
+use App\Entity\Entreprise;
 use App\Entity\Feedback;
+use App\Entity\Groupe;
+use App\Entity\Invite;
+use App\Entity\ModelePieceSinistre;
+use App\Entity\Monnaie;
+use App\Entity\Note;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\Paiement;
+use App\Entity\Partenaire;
 use App\Entity\PieceSinistre;
 use App\Entity\Piste;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
 use App\Entity\Tache;
+use App\Entity\Taxe;
+use App\Entity\Tranche;
+use App\Entity\TypeRevenu;
 
 class FormCanvasProvider
 {
@@ -193,6 +212,214 @@ class FormCanvasProvider
                     "isCreationMode" => $isParentNew
                 ];
                 $layout = $this->buildFeedbackLayout($feedbackId, $isParentNew);
+                break;
+
+            case Groupe::class:
+                $groupeId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Groupe",
+                    "titre_modification" => "Modification du Groupe #%id%",
+                    "endpoint_submit_url" => "/admin/groupe/api/submit",
+                    "endpoint_delete_url" => "/admin/groupe/api/delete",
+                    "endpoint_form_url" => "/admin/groupe/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildGroupeLayout($groupeId, $isParentNew);
+                break;
+
+            case Partenaire::class:
+                $partenaireId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Partenaire",
+                    "titre_modification" => "Modification du Partenaire #%id%",
+                    "endpoint_submit_url" => "/admin/partenaire/api/submit",
+                    "endpoint_delete_url" => "/admin/partenaire/api/delete",
+                    "endpoint_form_url" => "/admin/partenaire/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildPartenaireLayout($partenaireId, $isParentNew);
+                break;
+
+            case Risque::class:
+                $risqueId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Risque",
+                    "titre_modification" => "Modification du Risque #%id%",
+                    "endpoint_submit_url" => "/admin/risque/api/submit",
+                    "endpoint_delete_url" => "/admin/risque/api/delete",
+                    "endpoint_form_url" => "/admin/risque/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildRisqueLayout($risqueId, $isParentNew);
+                break;
+
+            case Bordereau::class:
+                $bordereauId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Bordereau",
+                    "titre_modification" => "Modification du Bordereau #%id%",
+                    "endpoint_submit_url" => "/admin/bordereau/api/submit",
+                    "endpoint_delete_url" => "/admin/bordereau/api/delete",
+                    "endpoint_form_url" => "/admin/bordereau/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildBordereauLayout($bordereauId, $isParentNew);
+                break;
+
+            case Chargement::class:
+                $chargementId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Type de Chargement",
+                    "titre_modification" => "Modification du Type de Chargement #%id%",
+                    "endpoint_submit_url" => "/admin/chargement/api/submit",
+                    "endpoint_delete_url" => "/admin/chargement/api/delete",
+                    "endpoint_form_url" => "/admin/chargement/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildChargementLayout($chargementId, $isParentNew);
+                break;
+
+            case AutoriteFiscale::class:
+                $autoriteId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Autorité Fiscale",
+                    "titre_modification" => "Modification de l'Autorité Fiscale #%id%",
+                    "endpoint_submit_url" => "/admin/autoritefiscale/api/submit",
+                    "endpoint_delete_url" => "/admin/autoritefiscale/api/delete",
+                    "endpoint_form_url" => "/admin/autoritefiscale/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildAutoriteFiscaleLayout($autoriteId, $isParentNew);
+                break;
+
+            case CompteBancaire::class:
+                $compteId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Compte Bancaire",
+                    "titre_modification" => "Modification du Compte Bancaire #%id%",
+                    "endpoint_submit_url" => "/admin/comptebancaire/api/submit",
+                    "endpoint_delete_url" => "/admin/comptebancaire/api/delete",
+                    "endpoint_form_url" => "/admin/comptebancaire/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildCompteBancaireLayout($compteId, $isParentNew);
+                break;
+
+            case Note::class:
+                $noteId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Note",
+                    "titre_modification" => "Modification de la Note #%id%",
+                    "endpoint_submit_url" => "/admin/note/api/submit",
+                    "endpoint_delete_url" => "/admin/note/api/delete",
+                    "endpoint_form_url" => "/admin/note/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildNoteLayout($noteId, $isParentNew);
+                break;
+
+            case Taxe::class:
+                $taxeId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Taxe",
+                    "titre_modification" => "Modification de la Taxe #%id%",
+                    "endpoint_submit_url" => "/admin/taxe/api/submit",
+                    "endpoint_delete_url" => "/admin/taxe/api/delete",
+                    "endpoint_form_url" => "/admin/taxe/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildTaxeLayout($taxeId, $isParentNew);
+                break;
+
+            case Tranche::class:
+                $trancheId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Tranche",
+                    "titre_modification" => "Modification de la Tranche #%id%",
+                    "endpoint_submit_url" => "/admin/tranche/api/submit",
+                    "endpoint_delete_url" => "/admin/tranche/api/delete",
+                    "endpoint_form_url" => "/admin/tranche/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildTrancheLayout($trancheId, $isParentNew);
+                break;
+
+            case TypeRevenu::class:
+                $typeRevenuId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Type de Revenu",
+                    "titre_modification" => "Modification du Type de Revenu #%id%",
+                    "endpoint_submit_url" => "/admin/typerevenu/api/submit",
+                    "endpoint_delete_url" => "/admin/typerevenu/api/delete",
+                    "endpoint_form_url" => "/admin/typerevenu/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildTypeRevenuLayout($typeRevenuId, $isParentNew);
+                break;
+
+            case Classeur::class:
+                $classeurId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Classeur",
+                    "titre_modification" => "Modification du Classeur #%id%",
+                    "endpoint_submit_url" => "/admin/classeur/api/submit",
+                    "endpoint_delete_url" => "/admin/classeur/api/delete",
+                    "endpoint_form_url" => "/admin/classeur/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildClasseurLayout($classeurId, $isParentNew);
+                break;
+
+            case Entreprise::class:
+                $entrepriseId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Entreprise",
+                    "titre_modification" => "Modification de l'Entreprise #%id%",
+                    "endpoint_submit_url" => "/admin/entreprise/api/submit",
+                    "endpoint_delete_url" => "/admin/entreprise/api/delete",
+                    "endpoint_form_url" => "/admin/entreprise/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildEntrepriseLayout($entrepriseId, $isParentNew);
+                break;
+
+            case Invite::class:
+                $inviteId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Invitation",
+                    "titre_modification" => "Modification de l'Invitation #%id%",
+                    "endpoint_submit_url" => "/admin/invite/api/submit",
+                    "endpoint_delete_url" => "/admin/invite/api/delete",
+                    "endpoint_form_url" => "/admin/invite/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildInviteLayout($inviteId, $isParentNew);
+                break;
+
+            case ConditionPartage::class:
+                $conditionId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouvelle Condition de Partage",
+                    "titre_modification" => "Modification de la Condition #%id%",
+                    "endpoint_submit_url" => "/admin/conditionpartage/api/submit",
+                    "endpoint_delete_url" => "/admin/conditionpartage/api/delete",
+                    "endpoint_form_url" => "/admin/conditionpartage/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildConditionPartageLayout($conditionId, $isParentNew);
+                break;
+
+            case RevenuPourCourtier::class:
+                $revenuId = $object->getId() ?? 0;
+                $parametres = [
+                    "titre_creation" => "Nouveau Revenu pour Courtier",
+                    "titre_modification" => "Modification du Revenu #%id%",
+                    "endpoint_submit_url" => "/admin/revenupourcourtier/api/submit",
+                    "endpoint_delete_url" => "/admin/revenupourcourtier/api/delete",
+                    "endpoint_form_url" => "/admin/revenupourcourtier/api/get-form",
+                    "isCreationMode" => $isParentNew
+                ];
+                $layout = $this->buildRevenuPourCourtierLayout($revenuId, $isParentNew);
                 break;
 
             default:
@@ -442,6 +669,181 @@ class FormCanvasProvider
                 ["champs" => ["nextAction"]],
                 ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
             ]
+        ];
+        return $layout;
+    }
+
+    private function buildGroupeLayout(int $groupeId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+        ];
+        $collections = [['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'groupe']];
+        $this->addCollectionWidgetsToLayout($layout, $groupeId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildPartenaireLayout(int $partenaireId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["part"]]]],
+        ];
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'partenaire'],
+            ['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'partenaires'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $partenaireId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildRisqueLayout(int $risqueId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nomComplet"]], ["champs" => ["code"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["branche"]], ["champs" => ["imposable"]]]],
+        ];
+        $collections = [
+            ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'parentFieldName' => 'risque'],
+            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'risque'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $risqueId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildBordereauLayout(int $bordereauId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["assureur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantTTC"]], ["champs" => ["receivedAt"]]]],
+        ];
+        $collections = [['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'bordereau']];
+        $this->addCollectionWidgetsToLayout($layout, $bordereauId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildChargementLayout(int $chargementId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["fonction"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+        ];
+        return $layout;
+    }
+
+    private function buildAutoriteFiscaleLayout(int $autoriteId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["abreviation"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+        ];
+        return $layout;
+    }
+
+    private function buildCompteBancaireLayout(int $compteId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["banque"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["intitule"]], ["champs" => ["numero"]], ["champs" => ["codeSwift"]]]],
+        ];
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'compteBancaire'],
+            ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'compteBancaire'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $compteId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildNoteLayout(int $noteId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["reference"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["validated"]]]],
+        ];
+        $collections = [['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'note']];
+        $this->addCollectionWidgetsToLayout($layout, $noteId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildTaxeLayout(int $taxeId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["code"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["tauxIARD"]], ["champs" => ["tauxVIE"]]]],
+        ];
+        return $layout;
+    }
+
+    private function buildTrancheLayout(int $trancheId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["cotation"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantFlat"]], ["champs" => ["pourcentage"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["payableAt"]]]],
+        ];
+        return $layout;
+    }
+
+    private function buildTypeRevenuLayout(int $typeRevenuId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["pourcentage"]], ["champs" => ["montantflat"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["shared"]]]],
+        ];
+        return $layout;
+    }
+
+    private function buildClasseurLayout(int $classeurId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+        ];
+        $collections = [['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'classeur']];
+        $this->addCollectionWidgetsToLayout($layout, $classeurId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildEntrepriseLayout(int $entrepriseId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["licence"]]]],
+        ];
+        return $layout;
+    }
+
+    private function buildInviteLayout(int $inviteId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["email"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["isVerified"]]]],
+        ];
+        return $layout;
+    }
+
+    private function buildConditionPartageLayout(int $conditionId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["partenaire"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["taux"]], ["champs" => ["seuil"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["formule"]], ["champs" => ["uniteMesure"]], ["champs" => ["critereRisque"]]]],
+        ];
+        $collections = [['fieldName' => 'produits', 'entityRouteName' => 'risque', 'formTitle' => 'Risque', 'parentFieldName' => 'conditionPartage']];
+        $this->addCollectionWidgetsToLayout($layout, $conditionId, $isParentNew, $collections);
+        return $layout;
+    }
+
+    private function buildRevenuPourCourtierLayout(int $revenuId, bool $isParentNew): array
+    {
+        $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["cotation"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["typeRevenu"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantFlatExceptionel"]], ["champs" => ["tauxExceptionel"]]]],
         ];
         return $layout;
     }
