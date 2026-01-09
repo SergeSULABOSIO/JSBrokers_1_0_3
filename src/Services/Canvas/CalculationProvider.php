@@ -120,14 +120,6 @@ class CalculationProvider
     }
 
     /**
-     * Calcule le montant restant à payer pour solder complètement ce dossier sinistre.
-     */
-    private function getNotificationSinistreSoldeAVerser(NotificationSinistre $sinistre): float
-    {
-        return $this->getNotificationSinistreCompensation($sinistre) - $this->getNotificationSinistreCompensationVersee($sinistre);
-    }
-
-    /**
      * Calcule le montant de la franchise qui a été appliquée conformément aux termes de la police.
      */
     public function getNotificationSinistreFranchise(NotificationSinistre $sinistre): float
