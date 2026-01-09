@@ -571,12 +571,12 @@ class CalculationProvider
         switch ($formule) {
             case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
                 // dd("ici");
-                return $this->calculateRetroCommission($risque, $conditionPartage, $assiette);
+                return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
                 break;
             case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
                 if ($uniteMesure < $seuil) {
                     // dd("On partage car l'assiette de " . $assiette_commission_pure . " est inférieur au seuil de " . $seuil);
-                    return $this->calculateRetroCommission($risque, $conditionPartage, $assiette);
+                    return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
                 } else {
                     // dd("La condition n'est pas respectée ", "Assiette:" . $assiette_commission_pure, "Seuil:" . $seuil);
                     return 0;
@@ -586,7 +586,7 @@ class CalculationProvider
                 // dd("Ici ", $montant, $uniteMesure, $seuil);
                 if ($uniteMesure >= $seuil) {
                     // dd("On partage car l'assiette de " . $assiette_commission_pure . " est au moins égal (soit supérieur ou égal) au seuil de " . $seuil);
-                    return $this->calculateRetroCommission($risque, $conditionPartage, $assiette);
+                    return $this->calculerRetroCommission($risque, $conditionPartage, $assiette);
                 } else {
                     // dd("On ne partage pas");
                     return 0;
