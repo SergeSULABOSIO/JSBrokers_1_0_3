@@ -33,6 +33,249 @@ class CalculationProvider
         private CotationRepository $cotationRepository
     ) {}
 
+public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
+    {
+        // Initialisation des variables de totaux
+        $totals = array_fill_keys([
+            'prime_totale', 'prime_totale_payee', 'commission_totale', 'commission_totale_encaissee',
+            'commission_nette', 'commission_pure', 'prime_nette', 'commission_partageable', 'reserve',
+            'retro_commission_partenaire', 'retro_commission_partenaire_payee', 'taxe_courtier',
+            'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye'
+        ], 0.0);
+        extract($totals);
+
+        // 1. Extraire les filtres des options
+        $pisteCible = $options['pisteCible'] ?? null;
+        $cotationCible = $options['cotationCible'] ?? null;
+        $assureurCible = $options['assureurCible'] ?? null;
+        $risqueCible = $options['risqueCible'] ?? null;
+        $partenaireCible = $options['partenaireCible'] ?? null;
+        $inviteCible = $options['inviteCible'] ?? null;
+        $groupeCible = $options['groupeCible'] ?? null;
+        $avenantCible = $options['avenantCible'] ?? null;
+        $clientCible = $options['clientCible'] ?? null;
+        $trancheCible = $options['trancheCible'] ?? null;
+        $brancheCible = $options['brancheCible'] ?? null;
+        $reper = $options['reper'] ?? null;
+        $dateA_str = $options['entre'] ?? null;
+        $dateB_str = $options['et'] ?? null;
+        $typeRevenuCible = $options['typeRevenuCible'] ?? null;
+        $revenuPourCourtierCible = $options['revenuPourCourtierCible'] ?? null;
+        $paiementCible = $options['paiementCible'] ?? null;
+        $notificationSinistreCible = $options['notificationSinistreCible'] ?? null;
+        $conditionPartageCible = $options['conditionPartageCible'] ?? null;
+
+        // 2. Construire la requête dynamique pour les Cotations
+        $qb = $this->cotationRepository->createQueryBuilder('c')
+            ->join('c.piste', 'p')
+            ->join('p.invite', 'i')
+            ->where('i.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise);
+
+        // Appliquer les filtres
+        if ($isBound) {
+            $qb->andWhere($qb->expr()->gt('SIZE(c.avenants)', 0));
+
+        }
+        if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
+        if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
+        if ($assureurCible) $qb->andWhere('c.assureur = :assureurCible')->setParameter('assureurCible', $assureurCible);
+        if ($risqueCible) $qb->andWhere('p.risque = :risqueCible')->setParameter('risqueCible', $risqueCible);
+        if ($inviteCible) $qb->andWhere('p.invite = :inviteCible')->setParameter('inviteCible', $inviteCible);
+        if ($clientCible) $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
+        if ($groupeCible) $qb->join('p.client', 'cl_g')->andWhere('cl_g.groupe = :groupeCible')->setParameter('groupeCible', $groupeCible);
+        if ($partenaireCible) $qb->join('p.partenaires', 'pa')->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
+        if ($avenantCible) $qb->join('c.avenants', 'av')->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
+        if ($trancheCible) $qb->join('c.tranches', 't')->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
+        if ($revenuPourCourtierCible) $qb->join('c.revenus', 'rpc')->andWhere('rpc = :revenuPourCourtierCible')->setParameter('revenuPourCourtierCible', $revenuPourCourtierCible);
+        if ($typeRevenuCible) $qb->join('c.revenus', 'rpc_tr')->andWhere('rpc_tr.typeRevenu = :typeRevenuCible')->setParameter('typeRevenuCible', $typeRevenuCible);
+
+        if ($brancheCible) {
+            $brancheCode = ($brancheCible === 'IARD') ? Risque::BRANCHE_IARD_OU_NON_VIE : (($brancheCible === 'VIE') ? Risque::BRANCHE_VIE : -1);
+            if ($brancheCode !== -1) {
+                $qb->join('p.risque', 'r_b')->andWhere('r_b.branche = :brancheCode')->setParameter('brancheCode', $brancheCode);
+            }
+        }
+
+        if ($conditionPartageCible) {
+            $qb->join('p.conditionsPartageExceptionnelles', 'cp')->andWhere('cp = :conditionPartageCible')->setParameter('conditionPartageCible', $conditionPartageCible);
+        }
+
+        if ($reper && $dateA_str && $dateB_str) {
+            $dateA = DateTimeImmutable::createFromFormat('d/m/Y', $dateA_str);
+            $dateB = DateTimeImmutable::createFromFormat('d/m/Y', $dateB_str);
+            if ($dateA && $dateB) {
+                $qb->join('c.avenants', 'av_date')
+                   ->andWhere($qb->expr()->between(($reper === 'dateEffet' ? 'av_date.startingAt' : 'av_date.endingAt'), ':dateA', ':dateB'))
+                   ->setParameter('dateA', $dateA->setTime(0, 0, 0))
+                   ->setParameter('dateB', $dateB->setTime(23, 59, 59));
+            }
+        }
+
+        if ($notificationSinistreCible && $notificationSinistreCible->getReferencePolice()) {
+            $qb->join('c.avenants', 'av_sin')->andWhere('av_sin.referencePolice = :refPolice')->setParameter('refPolice', $notificationSinistreCible->getReferencePolice());
+        }
+
+        if ($paiementCible) {
+            if ($note = $paiementCible->getNote()) {
+                $subQuery = $this->cotationRepository->createQueryBuilder('c_sub')
+                    ->select('c_sub.id')->join('c_sub.tranches', 't_sub')->join('t_sub.articles', 'a_sub')
+                    ->where('a_sub.note = :note')->getDQL();
+                $qb->andWhere($qb->expr()->in('c.id', $subQuery))->setParameter('note', $note);
+            } else {
+                $qb->andWhere('1=0');
+            }
+        }
+
+        // 3. Exécuter la requête pour obtenir les cotations filtrées
+        $cotationsAcalculer = $qb->getQuery()->getResult();
+
+        // Récupérer et filtrer les sinistres (logique non optimisée pour l'instant)
+        $sinistresAcalculer = [];
+        foreach ($entreprise->getInvites() as $invite) {
+            foreach ($invite->getNotificationSinistres() as $sinistre) {
+                $sinistresAcalculer[] = $sinistre;
+            }
+        }
+        if ($notificationSinistreCible) {
+            $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $notificationSinistreCible);
+        }
+        if ($paiementCible) {
+            if ($offre = $paiementCible->getOffreIndemnisationSinistre()) {
+                if ($sinistreDuPaiement = $offre->getNotificationSinistre()) {
+                    $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $sinistreDuPaiement);
+                }
+            } else {
+                $sinistresAcalculer = [];
+            }
+        }
+
+        // 4. Calculate totals from the filtered list
+        foreach ($cotationsAcalculer as $cotation) {
+            if ($isBound && !$this->isCotationBound($cotation)) {
+                continue; // On saute les cotations non-souscrites si isBound est true.
+            }
+
+            // Prime Nette
+            $prime_nette += $this->getCotationMontantPrimeNette($cotation);
+
+            // Prime
+            $prime_cotation = $this->getCotationMontantPrimePayableParClient($cotation);
+            $prime_totale += $prime_cotation;
+            // La logique de facturation des primes n'étant pas clairement définie via les Articles,
+            // le calcul du montant payé ne peut être implémenté de manière fiable pour le moment.
+            // $prime_totale_payee += $this->getCotationMontantPrimePayableParClientPayee($cotation);
+
+            // Commission Totale (TTC)
+            $commission_ttc_cotation = $this->getCotationMontantCommissionTtc($cotation, -1, false);
+            $commission_totale += $commission_ttc_cotation;
+            $commission_totale_encaissee += $this->getCotationMontantCommissionEncaissee($cotation);
+
+            // Commission Nette (HT)
+            $cotation_com_nette = $this->getCotationMontantCommissionHt($cotation, -1, false);
+            $commission_nette += $cotation_com_nette;
+
+            // Taxes
+            $cotation_taxe_courtier = $this->getCotationMontantTaxeCourtier($cotation, false);
+            $cotation_taxe_assureur = $this->getCotationMontantTaxeAssureur($cotation, false);
+            $taxe_courtier += $cotation_taxe_courtier;
+            $taxe_assureur += $cotation_taxe_assureur;
+            $taxe_courtier_payee += $this->getCotationMontantTaxeCourtierPayee($cotation);
+            $taxe_assureur_payee += $this->getCotationMontantTaxeAssureurPayee($cotation);
+
+            // Commission Pure
+            $commission_pure += $cotation_com_nette - $cotation_taxe_courtier;
+
+            // Assiette partageable (Commission Pure sur revenus partageables)
+            $cotation_com_nette_partageable = $this->getCotationMontantCommissionHt($cotation, -1, true);
+            $cotation_taxe_courtier_partageable = $this->getCotationMontantTaxeCourtier($cotation, true);
+            $commission_partageable += $cotation_com_nette_partageable - $cotation_taxe_courtier_partageable;
+
+            // Rétro-commissions (Logique complexe conservée dans Constante pour le moment)
+            $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1);
+            $retro_commission_partenaire_payee += $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, $partenaireCible);
+        }
+
+        // Calculate claim totals
+        foreach ($sinistresAcalculer as $sinistre) {
+            $sinistre_payable += $this->getNotificationSinistreCompensation($sinistre);
+            $sinistre_paye += $this->getNotificationSinistreCompensationVersee($sinistre);
+        }
+
+        // 5. Apply tranche percentage if provided
+        if ($trancheCible) {
+            $pourcentage = $trancheCible->getPourcentage();
+            if ($pourcentage !== null) {
+                $prime_totale *= $pourcentage;
+                $commission_totale *= $pourcentage;
+                $commission_nette *= $pourcentage;
+                $commission_pure *= $pourcentage;
+                $commission_partageable *= $pourcentage;
+                $prime_nette *= $pourcentage;
+                $retro_commission_partenaire *= $pourcentage;
+                $reserve *= $pourcentage;
+                // Les montants payés ne sont pas affectés par le pourcentage de la tranche dans ce contexte.
+                $taxe_courtier *= $pourcentage;
+                $taxe_assureur *= $pourcentage;
+            }
+        }
+
+        // 6. Final calculations
+        $reserve = $commission_pure - $retro_commission_partenaire;
+        $prime_totale_solde = $prime_totale - $prime_totale_payee;
+        $commission_totale_solde = $commission_totale - $commission_totale_encaissee;
+        $retro_commission_partenaire_solde = $retro_commission_partenaire - $retro_commission_partenaire_payee;
+        $taxe_courtier_solde = $taxe_courtier - $taxe_courtier_payee;
+        $taxe_assureur_solde = $taxe_assureur - $taxe_assureur_payee;
+        $sinistre_solde = $sinistre_payable - $sinistre_paye;
+        $taux_sinistralite = ($prime_totale > 0) ? ($sinistre_payable / $prime_totale) * 100 : 0;
+        $taux_de_commission = ($prime_nette > 0) ? ($commission_nette / $prime_nette) * 100 : 0;
+        $taux_de_retrocommission_effectif = ($commission_partageable > 0) ? ($retro_commission_partenaire / $commission_partageable) * 100 : 0;
+        $taux_de_paiement_prime = ($prime_totale > 0) ? ($prime_totale_payee / $prime_totale) * 100 : 0;
+        $taux_de_paiement_commission = ($commission_totale > 0) ? ($commission_totale_encaissee / $commission_totale) * 100 : 0;
+        $taux_de_paiement_retro_commission = ($retro_commission_partenaire > 0) ? ($retro_commission_partenaire_payee / $retro_commission_partenaire) * 100 : 0;
+        $taux_de_paiement_taxe_courtier = ($taxe_courtier > 0) ? ($taxe_courtier_payee / $taxe_courtier) * 100 : 0;
+        $taux_de_paiement_taxe_assureur = ($taxe_assureur > 0) ? ($taxe_assureur_payee / $taxe_assureur) * 100 : 0;
+        $taux_de_paiement_sinistre = ($sinistre_payable > 0) ? ($sinistre_paye / $sinistre_payable) * 100 : 0;
+
+
+        return [
+            'prime_totale' => $prime_totale,
+            'prime_totale_payee' => $prime_totale_payee,
+            'prime_totale_solde' => $prime_totale_solde,
+            'commission_totale' => $commission_totale,
+            'commission_totale_encaissee' => $commission_totale_encaissee,
+            'commission_totale_solde' => $commission_totale_solde,
+            'commission_nette' => $commission_nette,
+            'commission_pure' => $commission_pure,
+            'commission_partageable' => $commission_partageable,
+            'prime_nette' => $prime_nette,
+            'reserve' => $reserve,
+            'retro_commission_partenaire' => $retro_commission_partenaire,
+            'retro_commission_partenaire_payee' => $retro_commission_partenaire_payee,
+            'retro_commission_partenaire_solde' => $retro_commission_partenaire_solde,
+            'taxe_courtier' => $taxe_courtier,
+            'taxe_courtier_payee' => $taxe_courtier_payee,
+            'taxe_courtier_solde' => $taxe_courtier_solde,
+            'taxe_assureur' => $taxe_assureur,
+            'taxe_assureur_payee' => $taxe_assureur_payee,
+            'taxe_assureur_solde' => $taxe_assureur_solde,
+            'sinistre_payable' => $sinistre_payable,
+            'sinistre_paye' => $sinistre_paye,
+            'sinistre_solde' => $sinistre_solde,
+            'taux_sinistralite' => $taux_sinistralite,
+            'taux_de_commission' => $taux_de_commission,
+            'taux_de_retrocommission_effectif' => $taux_de_retrocommission_effectif,
+            'taux_de_paiement_prime' => $taux_de_paiement_prime,
+            'taux_de_paiement_commission' => $taux_de_paiement_commission,
+            'taux_de_paiement_retro_commission' => $taux_de_paiement_retro_commission,
+            'taux_de_paiement_taxe_courtier' => $taux_de_paiement_taxe_courtier,
+            'taux_de_paiement_taxe_assureur' => $taux_de_paiement_taxe_assureur,
+            'taux_de_paiement_sinistre' => $taux_de_paiement_sinistre,
+        ];
+    }
+
+
     /**
      * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
      */
@@ -490,248 +733,6 @@ class CalculationProvider
                 break;
         }
         return $montant;
-    }
-
-    public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
-    {
-        // Initialisation des variables de totaux
-        $totals = array_fill_keys([
-            'prime_totale', 'prime_totale_payee', 'commission_totale', 'commission_totale_encaissee',
-            'commission_nette', 'commission_pure', 'prime_nette', 'commission_partageable', 'reserve',
-            'retro_commission_partenaire', 'retro_commission_partenaire_payee', 'taxe_courtier',
-            'taxe_courtier_payee', 'taxe_assureur', 'taxe_assureur_payee', 'sinistre_payable', 'sinistre_paye'
-        ], 0.0);
-        extract($totals);
-
-        // 1. Extraire les filtres des options
-        $pisteCible = $options['pisteCible'] ?? null;
-        $cotationCible = $options['cotationCible'] ?? null;
-        $assureurCible = $options['assureurCible'] ?? null;
-        $risqueCible = $options['risqueCible'] ?? null;
-        $partenaireCible = $options['partenaireCible'] ?? null;
-        $inviteCible = $options['inviteCible'] ?? null;
-        $groupeCible = $options['groupeCible'] ?? null;
-        $avenantCible = $options['avenantCible'] ?? null;
-        $clientCible = $options['clientCible'] ?? null;
-        $trancheCible = $options['trancheCible'] ?? null;
-        $brancheCible = $options['brancheCible'] ?? null;
-        $reper = $options['reper'] ?? null;
-        $dateA_str = $options['entre'] ?? null;
-        $dateB_str = $options['et'] ?? null;
-        $typeRevenuCible = $options['typeRevenuCible'] ?? null;
-        $revenuPourCourtierCible = $options['revenuPourCourtierCible'] ?? null;
-        $paiementCible = $options['paiementCible'] ?? null;
-        $notificationSinistreCible = $options['notificationSinistreCible'] ?? null;
-        $conditionPartageCible = $options['conditionPartageCible'] ?? null;
-
-        // 2. Construire la requête dynamique pour les Cotations
-        $qb = $this->cotationRepository->createQueryBuilder('c')
-            ->join('c.piste', 'p')
-            ->join('p.invite', 'i')
-            ->where('i.entreprise = :entreprise')
-            ->setParameter('entreprise', $entreprise);
-
-        // Appliquer les filtres
-        if ($isBound) {
-            $qb->andWhere($qb->expr()->gt('SIZE(c.avenants)', 0));
-
-        }
-        if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
-        if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
-        if ($assureurCible) $qb->andWhere('c.assureur = :assureurCible')->setParameter('assureurCible', $assureurCible);
-        if ($risqueCible) $qb->andWhere('p.risque = :risqueCible')->setParameter('risqueCible', $risqueCible);
-        if ($inviteCible) $qb->andWhere('p.invite = :inviteCible')->setParameter('inviteCible', $inviteCible);
-        if ($clientCible) $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
-        if ($groupeCible) $qb->join('p.client', 'cl_g')->andWhere('cl_g.groupe = :groupeCible')->setParameter('groupeCible', $groupeCible);
-        if ($partenaireCible) $qb->join('p.partenaires', 'pa')->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
-        if ($avenantCible) $qb->join('c.avenants', 'av')->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
-        if ($trancheCible) $qb->join('c.tranches', 't')->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
-        if ($revenuPourCourtierCible) $qb->join('c.revenus', 'rpc')->andWhere('rpc = :revenuPourCourtierCible')->setParameter('revenuPourCourtierCible', $revenuPourCourtierCible);
-        if ($typeRevenuCible) $qb->join('c.revenus', 'rpc_tr')->andWhere('rpc_tr.typeRevenu = :typeRevenuCible')->setParameter('typeRevenuCible', $typeRevenuCible);
-
-        if ($brancheCible) {
-            $brancheCode = ($brancheCible === 'IARD') ? Risque::BRANCHE_IARD_OU_NON_VIE : (($brancheCible === 'VIE') ? Risque::BRANCHE_VIE : -1);
-            if ($brancheCode !== -1) {
-                $qb->join('p.risque', 'r_b')->andWhere('r_b.branche = :brancheCode')->setParameter('brancheCode', $brancheCode);
-            }
-        }
-
-        if ($conditionPartageCible) {
-            $qb->join('p.conditionsPartageExceptionnelles', 'cp')->andWhere('cp = :conditionPartageCible')->setParameter('conditionPartageCible', $conditionPartageCible);
-        }
-
-        if ($reper && $dateA_str && $dateB_str) {
-            $dateA = DateTimeImmutable::createFromFormat('d/m/Y', $dateA_str);
-            $dateB = DateTimeImmutable::createFromFormat('d/m/Y', $dateB_str);
-            if ($dateA && $dateB) {
-                $qb->join('c.avenants', 'av_date')
-                   ->andWhere($qb->expr()->between(($reper === 'dateEffet' ? 'av_date.startingAt' : 'av_date.endingAt'), ':dateA', ':dateB'))
-                   ->setParameter('dateA', $dateA->setTime(0, 0, 0))
-                   ->setParameter('dateB', $dateB->setTime(23, 59, 59));
-            }
-        }
-
-        if ($notificationSinistreCible && $notificationSinistreCible->getReferencePolice()) {
-            $qb->join('c.avenants', 'av_sin')->andWhere('av_sin.referencePolice = :refPolice')->setParameter('refPolice', $notificationSinistreCible->getReferencePolice());
-        }
-
-        if ($paiementCible) {
-            if ($note = $paiementCible->getNote()) {
-                $subQuery = $this->cotationRepository->createQueryBuilder('c_sub')
-                    ->select('c_sub.id')->join('c_sub.tranches', 't_sub')->join('t_sub.articles', 'a_sub')
-                    ->where('a_sub.note = :note')->getDQL();
-                $qb->andWhere($qb->expr()->in('c.id', $subQuery))->setParameter('note', $note);
-            } else {
-                $qb->andWhere('1=0');
-            }
-        }
-
-        // 3. Exécuter la requête pour obtenir les cotations filtrées
-        $cotationsAcalculer = $qb->getQuery()->getResult();
-
-        // Récupérer et filtrer les sinistres (logique non optimisée pour l'instant)
-        $sinistresAcalculer = [];
-        foreach ($entreprise->getInvites() as $invite) {
-            foreach ($invite->getNotificationSinistres() as $sinistre) {
-                $sinistresAcalculer[] = $sinistre;
-            }
-        }
-        if ($notificationSinistreCible) {
-            $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $notificationSinistreCible);
-        }
-        if ($paiementCible) {
-            if ($offre = $paiementCible->getOffreIndemnisationSinistre()) {
-                if ($sinistreDuPaiement = $offre->getNotificationSinistre()) {
-                    $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $sinistreDuPaiement);
-                }
-            } else {
-                $sinistresAcalculer = [];
-            }
-        }
-
-        // 4. Calculate totals from the filtered list
-        foreach ($cotationsAcalculer as $cotation) {
-            if ($isBound && !$this->isCotationBound($cotation)) {
-                continue; // On saute les cotations non-souscrites si isBound est true.
-            }
-
-            // Prime Nette
-            $prime_nette += $this->getCotationMontantPrimeNette($cotation);
-
-            // Prime
-            $prime_cotation = $this->getCotationMontantPrimePayableParClient($cotation);
-            $prime_totale += $prime_cotation;
-            // La logique de facturation des primes n'étant pas clairement définie via les Articles,
-            // le calcul du montant payé ne peut être implémenté de manière fiable pour le moment.
-            // $prime_totale_payee += $this->getCotationMontantPrimePayableParClientPayee($cotation);
-
-            // Commission Totale (TTC)
-            $commission_ttc_cotation = $this->getCotationMontantCommissionTtc($cotation, -1, false);
-            $commission_totale += $commission_ttc_cotation;
-            $commission_totale_encaissee += $this->getCotationMontantCommissionEncaissee($cotation);
-
-            // Commission Nette (HT)
-            $cotation_com_nette = $this->getCotationMontantCommissionHt($cotation, -1, false);
-            $commission_nette += $cotation_com_nette;
-
-            // Taxes
-            $cotation_taxe_courtier = $this->getCotationMontantTaxeCourtier($cotation, false);
-            $cotation_taxe_assureur = $this->getCotationMontantTaxeAssureur($cotation, false);
-            $taxe_courtier += $cotation_taxe_courtier;
-            $taxe_assureur += $cotation_taxe_assureur;
-            $taxe_courtier_payee += $this->getCotationMontantTaxeCourtierPayee($cotation);
-            $taxe_assureur_payee += $this->getCotationMontantTaxeAssureurPayee($cotation);
-
-            // Commission Pure
-            $commission_pure += $cotation_com_nette - $cotation_taxe_courtier;
-
-            // Assiette partageable (Commission Pure sur revenus partageables)
-            $cotation_com_nette_partageable = $this->getCotationMontantCommissionHt($cotation, -1, true);
-            $cotation_taxe_courtier_partageable = $this->getCotationMontantTaxeCourtier($cotation, true);
-            $commission_partageable += $cotation_com_nette_partageable - $cotation_taxe_courtier_partageable;
-
-            // Rétro-commissions (Logique complexe conservée dans Constante pour le moment)
-            $retro_commission_partenaire += $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, $partenaireCible, -1);
-            $retro_commission_partenaire_payee += $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, $partenaireCible);
-        }
-
-        // Calculate claim totals
-        foreach ($sinistresAcalculer as $sinistre) {
-            $sinistre_payable += $this->getNotificationSinistreCompensation($sinistre);
-            $sinistre_paye += $this->getNotificationSinistreCompensationVersee($sinistre);
-        }
-
-        // 5. Apply tranche percentage if provided
-        if ($trancheCible) {
-            $pourcentage = $trancheCible->getPourcentage();
-            if ($pourcentage !== null) {
-                $prime_totale *= $pourcentage;
-                $commission_totale *= $pourcentage;
-                $commission_nette *= $pourcentage;
-                $commission_pure *= $pourcentage;
-                $commission_partageable *= $pourcentage;
-                $prime_nette *= $pourcentage;
-                $retro_commission_partenaire *= $pourcentage;
-                $reserve *= $pourcentage;
-                // Les montants payés ne sont pas affectés par le pourcentage de la tranche dans ce contexte.
-                $taxe_courtier *= $pourcentage;
-                $taxe_assureur *= $pourcentage;
-            }
-        }
-
-        // 6. Final calculations
-        $reserve = $commission_pure - $retro_commission_partenaire;
-        $prime_totale_solde = $prime_totale - $prime_totale_payee;
-        $commission_totale_solde = $commission_totale - $commission_totale_encaissee;
-        $retro_commission_partenaire_solde = $retro_commission_partenaire - $retro_commission_partenaire_payee;
-        $taxe_courtier_solde = $taxe_courtier - $taxe_courtier_payee;
-        $taxe_assureur_solde = $taxe_assureur - $taxe_assureur_payee;
-        $sinistre_solde = $sinistre_payable - $sinistre_paye;
-        $taux_sinistralite = ($prime_totale > 0) ? ($sinistre_payable / $prime_totale) * 100 : 0;
-        $taux_de_commission = ($prime_nette > 0) ? ($commission_nette / $prime_nette) * 100 : 0;
-        $taux_de_retrocommission_effectif = ($commission_partageable > 0) ? ($retro_commission_partenaire / $commission_partageable) * 100 : 0;
-        $taux_de_paiement_prime = ($prime_totale > 0) ? ($prime_totale_payee / $prime_totale) * 100 : 0;
-        $taux_de_paiement_commission = ($commission_totale > 0) ? ($commission_totale_encaissee / $commission_totale) * 100 : 0;
-        $taux_de_paiement_retro_commission = ($retro_commission_partenaire > 0) ? ($retro_commission_partenaire_payee / $retro_commission_partenaire) * 100 : 0;
-        $taux_de_paiement_taxe_courtier = ($taxe_courtier > 0) ? ($taxe_courtier_payee / $taxe_courtier) * 100 : 0;
-        $taux_de_paiement_taxe_assureur = ($taxe_assureur > 0) ? ($taxe_assureur_payee / $taxe_assureur) * 100 : 0;
-        $taux_de_paiement_sinistre = ($sinistre_payable > 0) ? ($sinistre_paye / $sinistre_payable) * 100 : 0;
-
-
-        return [
-            'prime_totale' => $prime_totale,
-            'prime_totale_payee' => $prime_totale_payee,
-            'prime_totale_solde' => $prime_totale_solde,
-            'commission_totale' => $commission_totale,
-            'commission_totale_encaissee' => $commission_totale_encaissee,
-            'commission_totale_solde' => $commission_totale_solde,
-            'commission_nette' => $commission_nette,
-            'commission_pure' => $commission_pure,
-            'commission_partageable' => $commission_partageable,
-            'prime_nette' => $prime_nette,
-            'reserve' => $reserve,
-            'retro_commission_partenaire' => $retro_commission_partenaire,
-            'retro_commission_partenaire_payee' => $retro_commission_partenaire_payee,
-            'retro_commission_partenaire_solde' => $retro_commission_partenaire_solde,
-            'taxe_courtier' => $taxe_courtier,
-            'taxe_courtier_payee' => $taxe_courtier_payee,
-            'taxe_courtier_solde' => $taxe_courtier_solde,
-            'taxe_assureur' => $taxe_assureur,
-            'taxe_assureur_payee' => $taxe_assureur_payee,
-            'taxe_assureur_solde' => $taxe_assureur_solde,
-            'sinistre_payable' => $sinistre_payable,
-            'sinistre_paye' => $sinistre_paye,
-            'sinistre_solde' => $sinistre_solde,
-            'taux_sinistralite' => $taux_sinistralite,
-            'taux_de_commission' => $taux_de_commission,
-            'taux_de_retrocommission_effectif' => $taux_de_retrocommission_effectif,
-            'taux_de_paiement_prime' => $taux_de_paiement_prime,
-            'taux_de_paiement_commission' => $taux_de_paiement_commission,
-            'taux_de_paiement_retro_commission' => $taux_de_paiement_retro_commission,
-            'taux_de_paiement_taxe_courtier' => $taux_de_paiement_taxe_courtier,
-            'taux_de_paiement_taxe_assureur' => $taux_de_paiement_taxe_assureur,
-            'taux_de_paiement_sinistre' => $taux_de_paiement_sinistre,
-        ];
     }
 
     private function isCotationBound(?Cotation $cotation): bool
