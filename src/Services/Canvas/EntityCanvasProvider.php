@@ -136,21 +136,18 @@ class EntityCanvasProvider
                         ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
                         [
                             "code" => "delaiDeclaration",
-                            "intitule" => "Délai Déclaration",
-                            "type" => "Calcul",
-                            "unite" => "",
+                            "intitule" => "Délai de déclaration",
+                            "type" => "Texte",
                             "format" => "Texte",
-                            "fonction" => "getNotificationSinistreDelaiDeclaration",
                             "description" => "⏱️ Mesure la réactivité de l'assuré à déclarer son sinistre (entre la date de survenance et la date de notification)."
                         ],
                         [
-                            "code" => "compensationFranchise",
+                            "code" => "franchise",
                             "intitule" => "Franchise appliquée",
-                            "type" => "Calcul", // On utilise ce type pour déclencher la logique dans le contrôleur
+                            "type" => "Nombre",
                             "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                             "format" => "Nombre",
-                            "fonction" => "getNotificationSinistreFranchise",
-                            "description" => "📊 Montant de la franchise qui a été appliquée conformément aux termes de la police." // MODIFICATION: Ajout
+                            "description" => "Montant de la franchise qui a été appliquée conformément aux termes de la police."
                         ],
                         [
                             "code" => "statusDocumentsAttendus",
@@ -164,10 +161,8 @@ class EntityCanvasProvider
                         [
                             "code" => "indiceCompletude",
                             "intitule" => "Complétude Pièces",
-                            "type" => "Calcul",
-                            "unite" => "",
+                            "type" => "Texte",
                             "format" => "Texte",
-                            "fonction" => "getNotificationSinistreIndiceCompletude",
                             "description" => "📊 Pourcentage des pièces requises qui ont été effectivement fournies pour ce dossier."
                         ],
                         [
@@ -191,11 +186,54 @@ class EntityCanvasProvider
                         [
                             "code" => "ageDossier",
                             "intitule" => "Âge du Dossier",
-                            "type" => "Calcul",
-                            "unite" => "",
+                            "type" => "Texte",
                             "format" => "Texte",
-                            "fonction" => "getNotificationSinistreAgeDossier",
                             "description" => "⏳ Indique depuis combien de temps le dossier est ouvert. Crucial pour prioriser les cas anciens."
+                        ],
+                        [
+                            "code" => "tauxIndemnisation",
+                            "intitule" => "Taux d'indemnisation",
+                            "type" => "Nombre",
+                            "unite" => "%",
+                            "format" => "Nombre",
+                            "description" => "Rapport entre le montant total des offres et l'évaluation du dommage. Mesure la couverture réelle proposée."
+                        ],
+                        [
+                            "code" => "nombreOffres",
+                            "intitule" => "Nombre d'offres",
+                            "type" => "Entier",
+                            "format" => "Nombre",
+                            "description" => "Nombre total d'offres d'indemnisation. Un nombre élevé peut indiquer un dossier complexe."
+                        ],
+                        [
+                            "code" => "nombrePaiements",
+                            "intitule" => "Nombre de paiements",
+                            "type" => "Entier",
+                            "format" => "Nombre",
+                            "description" => "Nombre total de versements effectués pour ce sinistre."
+                        ],
+                        [
+                            "code" => "montantMoyenParPaiement",
+                            "intitule" => "Paiement moyen",
+                            "type" => "Nombre",
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                            "format" => "Nombre",
+                            "description" => "Montant moyen versé par paiement. Utile pour analyser les flux de trésorerie."
+                        ],
+                        [
+                            "code" => "delaiTraitementInitial",
+                            "intitule" => "Délai de traitement initial",
+                            "type" => "Texte",
+                            "format" => "Texte",
+                            "description" => "Temps écoulé entre la création du dossier et sa notification formelle. Mesure l'efficacité administrative."
+                        ],
+                        [
+                            "code" => "ratioPaiementsEvaluation",
+                            "intitule" => "Ratio Paiements / Évaluation",
+                            "type" => "Nombre",
+                            "unite" => "%",
+                            "format" => "Nombre",
+                            "description" => "Progression du règlement effectif par rapport à l'estimation du dommage."
                         ],
                     ], $this->getGlobalIndicatorsCanvas("NotificationSinistre"))
                 ];
