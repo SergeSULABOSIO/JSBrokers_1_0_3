@@ -67,7 +67,19 @@ class OffreIndemnisationSinistre
 
     //Attributs calculés
     #[Groups(['list:read'])]
-    public ?string $indiceComplpourcentagePayeetude;
+    public ?float $compensationVersee;
+
+    #[Groups(['list:read'])]
+    public ?float $soldeAVerser;
+
+    #[Groups(['list:read'])]
+    public ?float $pourcentagePaye;
+
+    #[Groups(['list:read'])]
+    public ?int $nombrePaiements;
+
+    #[Groups(['list:read'])]
+    public ?float $montantMoyenParPaiement;
 
     public function __construct()
     {

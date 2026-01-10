@@ -259,15 +259,40 @@ class EntityCanvasProvider
                         ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                         ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
-                        [
-                            "code" => "pourcentagePaye",
-                            "intitule" => "Pourcentage Payé",
-                            "type" => "Calcul",
-                            "unite" => "",
-                            "format" => "Texte",
-                            "fonction" => "getOffreIndemnisationPourcentagePaye",
-                            "description" => "🟩 Fournit un indicateur visuel de l'état d'avancement du paiement de l'offre."
-                        ]
+                        ["code" => "compensationVersee", 
+                            "intitule" => "Montant versé", 
+                            "type" => "Nombre", 
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
+                            "format" => "Nombre", 
+                            "description" => "Montant total déjà versé pour cette offre."
+                        ],
+                        ["code" => "soldeAVerser", 
+                            "intitule" => "Solde à verser", 
+                            "type" => "Nombre", 
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
+                            "format" => "Nombre", 
+                            "description" => "Montant restant à payer pour solder cette offre."
+                        ],
+                        ["code" => "pourcentagePaye", 
+                            "intitule" => "Taux de paiement", 
+                            "type" => "Nombre", 
+                            "unite" => "%", 
+                            "format" => "Nombre", 
+                            "description" => "Pourcentage du montant payable qui a déjà été versé."
+                        ],
+                        ["code" => "nombrePaiements", 
+                            "intitule" => "Nb. Paiements", 
+                            "type" => "Entier", 
+                            "format" => "Nombre", 
+                            "description" => "Nombre total de versements effectués pour cette offre."
+                        ],
+                        ["code" => "montantMoyenParPaiement", 
+                            "intitule" => "Paiement moyen", 
+                            "type" => "Nombre", 
+                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
+                            "format" => "Nombre", 
+                            "description" => "Montant moyen de chaque versement effectué."
+                        ],
                     ], $this->getGlobalIndicatorsCanvas("OffreIndemnisationSinistre"))
                 ];
 
