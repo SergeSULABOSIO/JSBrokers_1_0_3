@@ -58,6 +58,16 @@ class CalculationProvider
                     'ratioPaiementsEvaluation' => $this->getNotificationSinistreRatioPaiementsEvaluation($entity),
                 ];
                 break;
+            case OffreIndemnisationSinistre::class:
+                /** @var OffreIndemnisationSinistre $entity */
+                $indicateurs = [
+                    'compensationVersee' => $this->getOffreIndemnisationCompensationVersee($entity),
+                    'soldeAVerser' => $this->getOffreIndemnisationSoldeAVerser($entity),
+                    'pourcentagePaye' => $this->getOffreIndemnisationPourcentagePaye($entity),
+                    'nombrePaiements' => $this->getOffreIndemnisationNombrePaiements($entity),
+                    'montantMoyenParPaiement' => $this->getOffreIndemnisationMontantMoyenParPaiement($entity),
+                ];
+                break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
 
@@ -320,30 +330,6 @@ class CalculationProvider
 
 
     /**
-     * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
-     */
-    public function getNotificationSinistreDelaiDeclaration(NotificationSinistre $sinistre): string
-    {
-        if (!$sinistre->getOccuredAt() || !$sinistre->getNotifiedAt()) {
-            return 'N/A';
-        }
-        $jours = $this->serviceDates->daysEntre($sinistre->getOccuredAt(), $sinistre->getNotifiedAt()) ?? 0;
-        return $jours . ' jour(s)';
-    }
-
-    /**
-     * Calcule l'âge du dossier sinistre depuis sa création.
-     */
-    public function getNotificationSinistreAgeDossier(NotificationSinistre $sinistre): string
-    {
-        if (!$sinistre->getCreatedAt()) {
-            return 'N/A';
-        }
-        $jours = $this->serviceDates->daysEntre($sinistre->getCreatedAt(), new DateTimeImmutable()) ?? 0;
-        return $jours . ' jour(s)';
-    }
-
-    /**
      * Calcule le pourcentage de pièces fournies par rapport aux pièces attendues.
      */
     public function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
@@ -397,6 +383,41 @@ class CalculationProvider
         return array_reduce($offre_indemnisation->getPaiements()->toArray(), function ($carry, Paiement $paiement) {
             return $carry + ($paiement->getMontant() ?? 0);
         }, 0.0);
+    }
+
+    /**
+     * Calcule le montant restant à payer pour solder cette offre.
+     */
+    private function getOffreIndemnisationSoldeAVerser(OffreIndemnisationSinistre $offre_indemnisation): float
+    {
+        $montantPayable = $offre_indemnisation->getMontantPayable() ?? 0.0;
+        $compensationVersee = $this->getOffreIndemnisationCompensationVersee($offre_indemnisation);
+        return $montantPayable - $compensationVersee;
+    }
+
+
+    /**
+     * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
+     */
+    private function getNotificationSinistreDelaiDeclaration(NotificationSinistre $sinistre): string
+    {
+        if (!$sinistre->getOccuredAt() || !$sinistre->getNotifiedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($sinistre->getOccuredAt(), $sinistre->getNotifiedAt()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule l'âge du dossier sinistre depuis sa création.
+     */
+    private function getNotificationSinistreAgeDossier(NotificationSinistre $sinistre): string
+    {
+        if (!$sinistre->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($sinistre->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
     }
 
     /**
@@ -482,6 +503,41 @@ class CalculationProvider
         }
         return null;
     }
+
+    /**
+     * Calcule le pourcentage du montant payable qui a été versé.
+     */
+    private function getOffreIndemnisationPourcentagePaye(OffreIndemnisationSinistre $offre): ?float
+    {
+        $montantPayable = $offre->getMontantPayable();
+        if ($montantPayable > 0) {
+            $compensationVersee = $this->getOffreIndemnisationCompensationVersee($offre);
+            return round(($compensationVersee / $montantPayable) * 100, 2);
+        }
+        return 0.0; // Retourne 0 si le montant payable est 0 ou null
+    }
+
+    /**
+     * Compte le nombre de paiements pour une offre.
+     */
+    private function getOffreIndemnisationNombrePaiements(OffreIndemnisationSinistre $offre): int
+    {
+        return $offre->getPaiements()->count();
+    }
+
+    /**
+     * Calcule le montant moyen par paiement pour une offre.
+     */
+    private function getOffreIndemnisationMontantMoyenParPaiement(OffreIndemnisationSinistre $offre): ?float
+    {
+        $nombrePaiements = $this->getOffreIndemnisationNombrePaiements($offre);
+        if ($nombrePaiements > 0) {
+            $compensationVersee = $this->getOffreIndemnisationCompensationVersee($offre);
+            return round($compensationVersee / $nombrePaiements, 2);
+        }
+        return null;
+    }
+
 
     /**
      * RETRO-COMMISSION DUE AU PARTENAIRE
