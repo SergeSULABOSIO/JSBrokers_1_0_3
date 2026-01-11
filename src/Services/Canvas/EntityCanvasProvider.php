@@ -34,11 +34,13 @@ use App\Entity\ChargementPourPrime;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Services\ServiceMonnaies;
+use App\Services\Canvas\CalculationProvider;
 
 class EntityCanvasProvider
 {
     public function __construct(
-        private ServiceMonnaies $serviceMonnaies
+        private ServiceMonnaies $serviceMonnaies,
+        private CalculationProvider $calculationProvider
     ) {
     }
 
@@ -249,51 +251,22 @@ class EntityCanvasProvider
                             " Montant payable de [[montantPayable]] avec une franchise de [[franchiseAppliquee]]."
                         ]
                     ],
-                    "liste" => array_merge([
+                    "liste" => array_merge(
+                        // 1. Attributs directs de l'entité
                         ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                         ["code" => "nom", "intitule" => "Description", "type" => "Texte"],
                         ["code" => "beneficiaire", "intitule" => "Bénéficiaire", "type" => "Texte"],
-                        ["code" => "montantPayable", "intitule" => "Montant Payable", "type" => "Nombre", "unite" => "$"],
-                        ["code" => "franchiseAppliquee", "intitule" => "Franchise", "type" => "Nombre", "unite" => "$"],
+                        ["code" => "montantPayable", "intitule" => "Montant Payable", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                        ["code" => "franchiseAppliquee", "intitule" => "Franchise", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                         ["code" => "notificationSinistre", "intitule" => "Notification Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
                         ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                         ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
-                        ["code" => "compensationVersee", 
-                            "intitule" => "Montant versé", 
-                            "type" => "Nombre", 
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
-                            "format" => "Nombre", 
-                            "description" => "Montant total déjà versé pour cette offre."
-                        ],
-                        ["code" => "soldeAVerser", 
-                            "intitule" => "Solde à verser", 
-                            "type" => "Nombre", 
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
-                            "format" => "Nombre", 
-                            "description" => "Montant restant à payer pour solder cette offre."
-                        ],
-                        ["code" => "pourcentagePaye", 
-                            "intitule" => "Taux de paiement", 
-                            "type" => "Nombre", 
-                            "unite" => "%", 
-                            "format" => "Nombre", 
-                            "description" => "Pourcentage du montant payable qui a déjà été versé."
-                        ],
-                        ["code" => "nombrePaiements", 
-                            "intitule" => "Nb. Paiements", 
-                            "type" => "Entier", 
-                            "format" => "Nombre", 
-                            "description" => "Nombre total de versements effectués pour cette offre."
-                        ],
-                        ["code" => "montantMoyenParPaiement", 
-                            "intitule" => "Paiement moyen", 
-                            "type" => "Nombre", 
-                            "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
-                            "format" => "Nombre", 
-                            "description" => "Montant moyen de chaque versement effectué."
-                        ],
-                    ], $this->getGlobalIndicatorsCanvas("OffreIndemnisationSinistre"))
+                        // 2. Indicateurs spécifiques à l'offre
+                        $this->calculationProvider->getSpecificIndicatorsCanvas(OffreIndemnisationSinistre::class),
+                        // 3. Indicateurs globaux partagés
+                        $this->getGlobalIndicatorsCanvas("OffreIndemnisationSinistre")
+                    )
                 ];
 
             case PieceSinistre::class:

@@ -15,6 +15,7 @@ use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
 use App\Repository\CotationRepository;
 use App\Services\ServiceDates;
+use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
 use App\Entity\ConditionPartage;
 use App\Entity\RevenuPourCourtier;
@@ -30,7 +31,8 @@ class CalculationProvider
         private ServiceDates $serviceDates,
         private Security $security,
         private ServiceTaxes $serviceTaxes,
-        private CotationRepository $cotationRepository
+        private CotationRepository $cotationRepository,
+        private ServiceMonnaies $serviceMonnaies
     ) {}
 
     /**
@@ -72,6 +74,58 @@ class CalculationProvider
         }
 
         return $indicateurs;
+    }
+
+    /**
+     * Construit le canevas pour les indicateurs spécifiques à une entité.
+     *
+     * @param string $entityClassName Le nom de la classe de l'entité.
+     * @return array Un tableau de définitions de champs pour le canevas.
+     */
+    public function getSpecificIndicatorsCanvas(string $entityClassName): array
+    {
+        $canvas = [];
+        switch ($entityClassName) {
+            case OffreIndemnisationSinistre::class:
+                $canvas = [
+                    ["code" => "compensationVersee", 
+                        "intitule" => "Montant versé", 
+                        "type" => "Nombre", 
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
+                        "format" => "Nombre", 
+                        "description" => "Montant total déjà versé pour cette offre."
+                    ],
+                    ["code" => "soldeAVerser", 
+                        "intitule" => "Solde à verser", 
+                        "type" => "Nombre", 
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
+                        "format" => "Nombre", 
+                        "description" => "Montant restant à payer pour solder cette offre."
+                    ],
+                    ["code" => "pourcentagePaye", 
+                        "intitule" => "Taux de paiement", 
+                        "type" => "Nombre", 
+                        "unite" => "%", 
+                        "format" => "Nombre", 
+                        "description" => "Pourcentage du montant payable qui a déjà été versé."
+                    ],
+                    ["code" => "nombrePaiements", 
+                        "intitule" => "Nb. Paiements", 
+                        "type" => "Entier", 
+                        "format" => "Nombre", 
+                        "description" => "Nombre total de versements effectués pour cette offre."
+                    ],
+                    ["code" => "montantMoyenParPaiement", 
+                        "intitule" => "Paiement moyen", 
+                        "type" => "Nombre", 
+                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
+                        "format" => "Nombre", 
+                        "description" => "Montant moyen de chaque versement effectué."
+                    ],
+                ];
+                break;
+        }
+        return $canvas;
     }
 
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
