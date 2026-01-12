@@ -426,12 +426,21 @@ class CalculationProvider
      */
     private function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
     {
-        $attendus = count($this->getEntreprise()->getModelePieceSinistres());
-        if ($attendus === 0) {
+        $modelesAttendus = $this->getEntreprise()->getModelePieceSinistres();
+        $nombreAttendus = count($modelesAttendus);
+
+        if ($nombreAttendus === 0) {
             return '100 %'; // S'il n'y a aucune pièce modèle, le dossier est complet.
         }
-        $fournis = count($sinistre->getPieces());
-        $pourcentage = ($fournis / $attendus) * 100;
+
+        $typesFournisUniques = [];
+        foreach ($sinistre->getPieces() as $piece) {
+            if ($type = $piece->getType()) {
+                $typesFournisUniques[$type->getId()] = true;
+            }
+        }
+        $nombreFournis = count($typesFournisUniques);
+        $pourcentage = ($nombreFournis / $nombreAttendus) * 100;
         return round($pourcentage) . ' %';
     }
 
