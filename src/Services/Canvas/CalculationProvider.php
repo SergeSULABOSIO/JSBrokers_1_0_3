@@ -129,6 +129,7 @@ class CalculationProvider
         // 2. Construire la requête dynamique pour les Cotations
         $qb = $this->cotationRepository->createQueryBuilder('c')
             ->join('c.piste', 'p')
+            ->addSelect('p', 'i') // Hydrate les objets Piste et Invite pour éviter les requêtes N+1
             ->join('p.invite', 'i')
             ->where('i.entreprise = :entreprise')
             ->setParameter('entreprise', $entreprise);
@@ -386,26 +387,6 @@ class CalculationProvider
         $montantPayable = $offre_indemnisation->getMontantPayable() ?? 0.0;
         $compensationVersee = $this->getOffreIndemnisationCompensationVersee($offre_indemnisation);
         return $montantPayable - $compensationVersee;
-    }
-
-    /**
-     * Calcule le montant total de l'indemnisation convenue pour ce sinistre.
-     */
-    private function getNotificationSinistreCompensation(NotificationSinistre $sinistre): float
-    {
-        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
-            return $carry + ($offre->getMontantPayable() ?? 0);
-        }, 0.0);
-    }
-
-    /**
-     * Calcule le montant cumulé des paiements déjà effectués pour cette indemnisation.
-     */
-    private function getNotificationSinistreCompensationVersee(NotificationSinistre $sinistre): float
-    {
-        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
-            return $carry + $this->getOffreIndemnisationCompensationVersee($offre);
-        }, 0.0);
     }
 
     /**
@@ -1026,7 +1007,10 @@ class CalculationProvider
 
     private function isCotationBound(?Cotation $cotation): bool
     {
-        return $cotation && count($cotation->getAvenants()) > 0;
+        // Correction pour la performance et la sécurité :
+        // 1. On vérifie que $cotation n'est pas null.
+        // 2. On utilise isEmpty() qui est optimisé par Doctrine et ne charge pas toute la collection.
+        return $cotation && !$cotation->getAvenants()->isEmpty();
     }
 
     private function getCotationMontantPrimePayableParClient(?Cotation $cotation): float
