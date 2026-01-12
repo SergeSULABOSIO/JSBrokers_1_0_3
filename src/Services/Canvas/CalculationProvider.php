@@ -3,26 +3,30 @@
 namespace App\Services\Canvas;
 
 
-use App\Entity\Taxe;
 use App\Entity\Note;
+use App\Entity\Taxe;
 use App\Entity\Risque;
 use DateTimeImmutable;
+use App\Entity\Contact;
 use App\Entity\Tranche;
 use App\Entity\Cotation;
+use App\Entity\Document;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
-use App\Repository\CotationRepository;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
-use App\Repository\TaxeRepository;
 use App\Entity\ConditionPartage;
-use App\Repository\NotificationSinistreRepository;
 use App\Entity\RevenuPourCourtier;
-use App\Entity\OffreIndemnisationSinistre;
+use App\Repository\TaxeRepository;
 use App\Entity\NotificationSinistre;
+use App\Repository\CotationRepository;
+use App\Entity\OffreIndemnisationSinistre;
+
+use App\Repository\NotificationSinistreRepository;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Bundle\SecurityBundle\Security; // Correction: S'assurer que cette ligne est bien présente
 
 class CalculationProvider
@@ -35,7 +39,8 @@ class CalculationProvider
         private ServiceTaxes $serviceTaxes,
         private CotationRepository $cotationRepository,
         private NotificationSinistreRepository $notificationSinistreRepository,
-        private TaxeRepository $taxeRepository
+        private TaxeRepository $taxeRepository,
+        private TranslatorInterface $translator
     ) {}
 
     /**
@@ -1422,5 +1427,102 @@ class CalculationProvider
         }
 
         return 0.0;
+    }
+
+    public function Contact_getTypeString(?Contact $contact): ?string
+    {
+        if ($contact === null) {
+            return null;
+        }
+
+        return match ($contact->getType()) {
+            Contact::TYPE_CONTACT_PRODUCTION => $this->translator->trans("contact_type_production"),
+            Contact::TYPE_CONTACT_SINISTRE => $this->translator->trans("contact_type_sinistre"),
+            Contact::TYPE_CONTACT_ADMINISTRATION => $this->translator->trans("contact_type_administration"),
+            Contact::TYPE_CONTACT_AUTRES => $this->translator->trans("contact_type_autres"),
+            default => null,
+        };
+    }
+
+    public function Chargement_getFonctionString(?Chargement $chargement): ?string
+    {
+        if ($chargement === null) {
+            return null;
+        }
+
+        return match ($chargement->getFonction()) {
+            Chargement::FONCTION_PRIME_NETTE => "Prime nette",
+            Chargement::FONCTION_FRONTING => "Fronting",
+            Chargement::FONCTION_FRAIS_ADMIN => "Frais administratifs",
+            Chargement::FONCTION_TAXE => "Taxe",
+            default => "Non définie",
+        };
+    }
+
+    public function ConditionPartage_getFormuleString(?ConditionPartage $condition): ?string
+    {
+        if ($condition === null) return null;
+        return match ($condition->getFormule()) {
+            ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL => "Assiette >= Seuil",
+            ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL => "Assiette < Seuil",
+            ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL => "Sans seuil",
+            default => "Inconnue",
+        };
+    }
+
+    public function ConditionPartage_getCritereRisqueString(?ConditionPartage $condition): ?string
+    {
+        if ($condition === null) return null;
+        return match ($condition->getCritereRisque()) {
+            ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES => "Exclure risques ciblés",
+            ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES => "Inclure risques ciblés",
+            ConditionPartage::CRITERE_PAS_RISQUES_CIBLES => "Aucun risque ciblé",
+            default => "Inconnu",
+        };
+    }
+
+    public function ConditionPartage_getUniteMesureString(?ConditionPartage $condition): ?string
+    {
+        if ($condition === null) return null;
+        return match ($condition->getUniteMesure()) {
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => "Com. pure du risque",
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => "Com. pure du client",
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => "Com. pure du partenaire",
+            default => "Non définie",
+        };
+    }
+
+    public function Document_getParentAsString(?Document $document): ?string
+    {
+        if ($document === null) {
+            return null;
+        }
+
+        // Cette carte de correspondance améliore la lisibilité et la maintenabilité.
+        // Chaque entrée associe une méthode "getter" à une fonction anonyme (closure)
+        // qui formate la chaîne de caractères de sortie.
+        $parentGetters = [
+            'getClasseur' => fn ($e) => "Classeur: " . $e->getNom(),
+            'getPieceSinistre' => fn ($e) => "Pièce Sinistre: " . $e->getDescription(),
+            'getOffreIndemnisationSinistre' => fn ($e) => "Offre: " . $e->getNom(),
+            'getCotation' => fn ($e) => "Cotation: " . $e->getNom(),
+            'getAvenant' => fn ($e) => "Avenant: " . $e->getReferencePolice(),
+            'getTache' => fn ($e) => "Tâche: " . $e->getDescription(),
+            'getFeedback' => fn ($e) => "Feedback: " . $e->getDescription(),
+            'getClient' => fn ($e) => "Client: " . $e->getNom(),
+            'getBordereau' => fn ($e) => "Bordereau: " . $e->getNom(),
+            'getCompteBancaire' => fn ($e) => "Cpt. Bancaire: " . $e->getNom(),
+            'getPiste' => fn ($e) => "Piste: " . $e->getNom(),
+            'getPartenaire' => fn ($e) => "Partenaire: " . $e->getNom(),
+            'getPaiement' => fn ($e) => "Paiement: " . $e->getReference(),
+        ];
+
+        foreach ($parentGetters as $getter => $formatter) {
+            if ($parent = $document->$getter()) {
+                return $formatter($parent);
+            }
+        }
+
+        return "Non-associé";
     }
 }
