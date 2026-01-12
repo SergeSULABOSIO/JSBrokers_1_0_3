@@ -15,7 +15,6 @@ use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
 use App\Repository\CotationRepository;
 use App\Services\ServiceDates;
-use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
 use App\Entity\ConditionPartage;
 use App\Entity\RevenuPourCourtier;
@@ -31,8 +30,7 @@ class CalculationProvider
         private ServiceDates $serviceDates,
         private Security $security,
         private ServiceTaxes $serviceTaxes,
-        private CotationRepository $cotationRepository,
-        private ServiceMonnaies $serviceMonnaies
+        private CotationRepository $cotationRepository
     ) {}
 
     /**
@@ -49,15 +47,22 @@ class CalculationProvider
             case NotificationSinistre::class:
                 /** @var NotificationSinistre $entity */
                 $indicateurs = [
-                    'delaiDeclaration' => $this->getNotificationSinistreDelaiDeclaration($entity),
-                    'ageDossier' => $this->getNotificationSinistreAgeDossier($entity),
-                    'franchise' => $this->getNotificationSinistreFranchise($entity),
+                    'delaiDeclaration' => $this->calculateDelaiDeclaration($entity),
+                    'ageDossier' => $this->calculateAgeDossier($entity),
+                    'compensationFranchise' => $this->calculateFranchise($entity),
                     'tauxIndemnisation' => $this->getNotificationSinistreTauxIndemnisation($entity),
                     'nombreOffres' => $this->getNotificationSinistreNombreOffres($entity),
                     'nombrePaiements' => $this->getNotificationSinistreNombrePaiements($entity),
                     'montantMoyenParPaiement' => $this->getNotificationSinistreMontantMoyenParPaiement($entity),
                     'delaiTraitementInitial' => $this->getNotificationSinistreDelaiTraitementInitial($entity),
                     'ratioPaiementsEvaluation' => $this->getNotificationSinistreRatioPaiementsEvaluation($entity),
+                    'compensation' => $this->getNotificationSinistreCompensation($entity),
+                    'compensationVersee' => $this->getNotificationSinistreCompensationVersee($entity),
+                    'compensationSoldeAverser' => $this->getNotificationSinistreSoldeAVerser($entity),
+                    'indiceCompletude' => $this->getNotificationSinistreIndiceCompletude($entity),
+                    'dateDernierReglement' => $this->getNotificationSinistreDateDernierReglement($entity),
+                    'dureeReglement' => $this->getNotificationSinistreDureeReglement($entity),
+                    'statusDocumentsAttendus' => $this->getNotificationSinistreStatusDocumentsAttendus($entity),
                 ];
                 break;
             case OffreIndemnisationSinistre::class:
@@ -74,58 +79,6 @@ class CalculationProvider
         }
 
         return $indicateurs;
-    }
-
-    /**
-     * Construit le canevas pour les indicateurs spécifiques à une entité.
-     *
-     * @param string $entityClassName Le nom de la classe de l'entité.
-     * @return array Un tableau de définitions de champs pour le canevas.
-     */
-    public function getSpecificIndicatorsCanvas(string $entityClassName): array
-    {
-        $canvas = [];
-        switch ($entityClassName) {
-            case OffreIndemnisationSinistre::class:
-                $canvas = [
-                    ["code" => "compensationVersee", 
-                        "intitule" => "Montant versé", 
-                        "type" => "Nombre", 
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
-                        "format" => "Nombre", 
-                        "description" => "Montant total déjà versé pour cette offre."
-                    ],
-                    ["code" => "soldeAVerser", 
-                        "intitule" => "Solde à verser", 
-                        "type" => "Nombre", 
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
-                        "format" => "Nombre", 
-                        "description" => "Montant restant à payer pour solder cette offre."
-                    ],
-                    ["code" => "pourcentagePaye", 
-                        "intitule" => "Taux de paiement", 
-                        "type" => "Nombre", 
-                        "unite" => "%", 
-                        "format" => "Nombre", 
-                        "description" => "Pourcentage du montant payable qui a déjà été versé."
-                    ],
-                    ["code" => "nombrePaiements", 
-                        "intitule" => "Nb. Paiements", 
-                        "type" => "Entier", 
-                        "format" => "Nombre", 
-                        "description" => "Nombre total de versements effectués pour cette offre."
-                    ],
-                    ["code" => "montantMoyenParPaiement", 
-                        "intitule" => "Paiement moyen", 
-                        "type" => "Nombre", 
-                        "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), 
-                        "format" => "Nombre", 
-                        "description" => "Montant moyen de chaque versement effectué."
-                    ],
-                ];
-                break;
-        }
-        return $canvas;
     }
 
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
@@ -345,7 +298,6 @@ class CalculationProvider
         $taux_de_paiement_taxe_assureur = ($taxe_assureur > 0) ? ($taxe_assureur_payee / $taxe_assureur) * 100 : 0;
         $taux_de_paiement_sinistre = ($sinistre_payable > 0) ? ($sinistre_paye / $sinistre_payable) * 100 : 0;
 
-
         return [
             'prime_totale' => $prime_totale,
             'prime_totale_payee' => $prime_totale_payee,
@@ -380,21 +332,6 @@ class CalculationProvider
             'taux_de_paiement_taxe_assureur' => $taux_de_paiement_taxe_assureur,
             'taux_de_paiement_sinistre' => $taux_de_paiement_sinistre,
         ];
-    }
-
-
-    /**
-     * Calcule le pourcentage de pièces fournies par rapport aux pièces attendues.
-     */
-    public function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
-    {
-        $attendus = count($this->getEntreprise()->getModelePieceSinistres());
-        if ($attendus === 0) {
-            return '100 %'; // S'il n'y a aucune pièce modèle, le dossier est complet.
-        }
-        $fournis = count($sinistre->getPieces());
-        $pourcentage = ($fournis / $attendus) * 100;
-        return round($pourcentage) . ' %';
     }
 
     private function getEntreprise(): Entreprise
@@ -465,7 +402,7 @@ class CalculationProvider
     /**
      * Calcule l'âge du dossier sinistre depuis sa création.
      */
-    private function getNotificationSinistreAgeDossier(NotificationSinistre $sinistre): string
+    private function calculateAgeDossier(NotificationSinistre $sinistre): string
     {
         if (!$sinistre->getCreatedAt()) {
             return 'N/A';
@@ -477,11 +414,25 @@ class CalculationProvider
     /**
      * Calcule le montant de la franchise qui a été appliquée conformément aux termes de la police.
      */
-    private function getNotificationSinistreFranchise(NotificationSinistre $sinistre): float
+    private function calculateFranchise(NotificationSinistre $sinistre): float
     {
         return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
             return $carry + ($offre->getFranchiseAppliquee() ?? 0);
         }, 0.0);
+    }
+
+    /**
+     * Calcule le pourcentage de pièces fournies par rapport aux pièces attendues.
+     */
+    private function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
+    {
+        $attendus = count($this->getEntreprise()->getModelePieceSinistres());
+        if ($attendus === 0) {
+            return '100 %'; // S'il n'y a aucune pièce modèle, le dossier est complet.
+        }
+        $fournis = count($sinistre->getPieces());
+        $pourcentage = ($fournis / $attendus) * 100;
+        return round($pourcentage) . ' %';
     }
 
     /**
