@@ -3,6 +3,7 @@
 namespace App\Services\Canvas;
 
 
+use App\Entity\Taxe;
 use App\Entity\Note;
 use App\Entity\Risque;
 use DateTimeImmutable;
@@ -16,6 +17,7 @@ use App\Entity\TypeRevenu;
 use App\Repository\CotationRepository;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
+use App\Repository\TaxeRepository;
 use App\Entity\ConditionPartage;
 use App\Repository\NotificationSinistreRepository;
 use App\Entity\RevenuPourCourtier;
@@ -32,7 +34,8 @@ class CalculationProvider
         private Security $security,
         private ServiceTaxes $serviceTaxes,
         private CotationRepository $cotationRepository,
-        private NotificationSinistreRepository $notificationSinistreRepository
+        private NotificationSinistreRepository $notificationSinistreRepository,
+        private TaxeRepository $taxeRepository
     ) {}
 
     /**
@@ -1226,17 +1229,23 @@ class CalculationProvider
             return $montant;
         }
 
-        // Détermine à qui la note de taxe doit être adressée.
-        $targetAddressedTo = $isTaxeAssureur ? Note::TO_TAXE_ASSUREUR : Note::TO_TAXE_COURTIER;
+        // Détermine le type de redevable que nous recherchons (assureur ou courtier).
+        $targetRedevable = $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER;
 
         foreach ($tranche->getArticles() as $article) {
             $note = $article->getNote();
-            // On ne traite que les articles liés à une note du bon type (taxe courtier ou assureur).
-            if ($note && $note->getAddressedTo() === $targetAddressedTo) {
-                $montantPayableNote = $this->getNoteMontantPayable($note);
-                if ($montantPayableNote > 0) {
-                    $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
-                    $montant += $proportionPaiement * $article->getMontant();
+            // On ne traite que les articles liés à une note adressée à l'autorité fiscale.
+            if ($note && $note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) {
+                // L'idPoste de l'article contient l'ID de l'entité Taxe.
+                $taxe = $this->taxeRepository->find($article->getIdPoste());
+
+                // On vérifie que la taxe existe et que son redevable correspond à notre cible.
+                if ($taxe && $taxe->getRedevable() === $targetRedevable) {
+                    $montantPayableNote = $this->getNoteMontantPayable($note);
+                    if ($montantPayableNote > 0) {
+                        $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                        $montant += $proportionPaiement * $article->getMontant();
+                    }
                 }
             }
         }
