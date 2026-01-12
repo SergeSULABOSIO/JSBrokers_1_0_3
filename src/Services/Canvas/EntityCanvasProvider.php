@@ -331,6 +331,62 @@ class EntityCanvasProvider
                     ],
                 ];
                 break;
+            case Partenaire::class:
+                $canvas = [
+                    [
+                        "code" => "nombrePistesApportees", "intitule" => "Nb. Pistes", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de pistes commerciales apportées par ce partenaire."
+                    ],
+                    [
+                        "code" => "nombreClientsAssocies", "intitule" => "Nb. Clients", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de clients directement associés à ce partenaire."
+                    ],
+                    [
+                        "code" => "nombrePolicesGenerees", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de polices d'assurance générées à partir des pistes de ce partenaire."
+                    ],
+                    [
+                        "code" => "nombreConditionsPartage", "intitule" => "Nb. Conditions", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de conditions de partage de commission spécifiques définies pour ce partenaire."
+                    ],
+                ];
+                break;
+            case ConditionPartage::class:
+                $canvas = [
+                    [
+                        "code" => "descriptionRegle", "intitule" => "Description de la Règle", "type" => "Texte", "format" => "Texte",
+                        "description" => "Un résumé lisible de la condition de partage."
+                    ],
+                    [
+                        "code" => "nombreRisquesCibles", "intitule" => "Nb. Risques Ciblés", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de produits/risques spécifiques visés par cette condition."
+                    ],
+                    [
+                        "code" => "porteeCondition", "intitule" => "Portée", "type" => "Texte", "format" => "Texte",
+                        "description" => "Indique si la condition est générale (liée au partenaire) ou exceptionnelle (liée à une piste)."
+                    ],
+                ];
+                break;
+            case Risque::class:
+                $canvas = [
+                    [
+                        "code" => "brancheString", "intitule" => "Branche", "type" => "Texte", "format" => "Texte",
+                        "description" => "La branche d'assurance (IARD ou Vie)."
+                    ],
+                    [
+                        "code" => "nombrePistes", "intitule" => "Nb. Pistes", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de pistes commerciales associées à ce risque."
+                    ],
+                    [
+                        "code" => "nombreSinistres", "intitule" => "Nb. Sinistres", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de sinistres déclarés pour ce risque."
+                    ],
+                    [
+                        "code" => "nombrePolices", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de polices actives pour ce risque."
+                    ],
+                ];
+                break;
         }
         return $canvas;
     }
@@ -569,7 +625,9 @@ class EntityCanvasProvider
                             "fonction" => "ConditionPartage_getCritereRisqueString",
                         ],
                         ["code" => "produits", "intitule" => "Risques Ciblés", "type" => "Collection", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
-                    ], $this->getGlobalIndicatorsCanvas("ConditionPartage"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(ConditionPartage::class),
+                    $this->getGlobalIndicatorsCanvas("ConditionPartage"))
                 ];
 
             case Contact::class:
@@ -665,7 +723,9 @@ class EntityCanvasProvider
                         ["code" => "part", "intitule" => "Part (%)", "type" => "Nombre", "unite" => "%"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
                         ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class],
-                    ], $this->getGlobalIndicatorsCanvas("Partenaire"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Partenaire::class),
+                    $this->getGlobalIndicatorsCanvas("Partenaire"))
                 ];
 
             case Risque::class:
@@ -687,7 +747,9 @@ class EntityCanvasProvider
                         ["code" => "imposable", "intitule" => "Imposable", "type" => "Booleen"],
                         ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class],
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class],
-                    ], $this->getGlobalIndicatorsCanvas("Risque"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Risque::class),
+                    $this->getGlobalIndicatorsCanvas("Risque"))
                 ];
             case Feedback::class:
                 return [

@@ -144,6 +144,32 @@ class CalculationProvider
                     'tauxTransformationCotations' => $this->calculateAssureurTauxTransformation($entity),
                 ];
                 break;
+            case Partenaire::class:
+                /** @var Partenaire $entity */
+                $indicateurs = [
+                    'nombrePistesApportees' => $this->countPartenairePistes($entity),
+                    'nombreClientsAssocies' => $this->countPartenaireClients($entity),
+                    'nombrePolicesGenerees' => $this->countPartenairePolices($entity),
+                    'nombreConditionsPartage' => $this->countPartenaireConditions($entity),
+                ];
+                break;
+            case ConditionPartage::class:
+                /** @var ConditionPartage $entity */
+                $indicateurs = [
+                    'descriptionRegle' => $this->getConditionPartageDescriptionRegle($entity),
+                    'nombreRisquesCibles' => $this->countConditionPartageRisquesCibles($entity),
+                    'porteeCondition' => $this->getConditionPartagePortee($entity),
+                ];
+                break;
+            case Risque::class:
+                /** @var Risque $entity */
+                $indicateurs = [
+                    'brancheString' => $this->getRisqueBrancheString($entity),
+                    'nombrePistes' => $this->countRisquePistes($entity),
+                    'nombreSinistres' => $this->countRisqueSinistres($entity),
+                    'nombrePolices' => $this->countRisquePolices($entity),
+                ];
+                break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
 
@@ -1852,5 +1878,111 @@ class CalculationProvider
         $taux = ($policesSouscrites / $totalCotations) * 100;
 
         return round($taux, 2) . ' %';
+    }
+
+    // --- Indicateurs pour Partenaire ---
+
+    private function countPartenairePistes(Partenaire $partenaire): int
+    {
+        return $partenaire->getPistes()->count();
+    }
+
+    private function countPartenaireClients(Partenaire $partenaire): int
+    {
+        return $partenaire->getClients()->count();
+    }
+
+    private function countPartenairePolices(Partenaire $partenaire): int
+    {
+        $count = 0;
+        foreach ($partenaire->getPistes() as $piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                if (!$cotation->getAvenants()->isEmpty()) {
+                    $count++;
+                }
+            }
+        }
+        return $count;
+    }
+
+    private function countPartenaireConditions(Partenaire $partenaire): int
+    {
+        return $partenaire->getConditionPartages()->count();
+    }
+
+    // --- Indicateurs pour ConditionPartage ---
+
+    private function getConditionPartageDescriptionRegle(ConditionPartage $condition): string
+    {
+        $taux = $condition->getTaux() ?? 0;
+        $formule = $this->ConditionPartage_getFormuleString($condition);
+        $critere = $this->ConditionPartage_getCritereRisqueString($condition);
+        $nbRisques = $this->countConditionPartageRisquesCibles($condition);
+
+        $description = "Appliquer {$taux}%";
+
+        if ($formule !== "Sans seuil") {
+            $seuil = $condition->getSeuil() ?? 0;
+            $unite = $this->ConditionPartage_getUniteMesureString($condition);
+            $description .= " si {$unite} {$formule} {$seuil}";
+        }
+
+        if ($critere !== "Aucun risque ciblé") {
+            $description .= ", en se basant sur le critère '{$critere}' avec {$nbRisques} risque(s).";
+        }
+
+        return $description;
+    }
+
+    private function countConditionPartageRisquesCibles(ConditionPartage $condition): int
+    {
+        return $condition->getProduits()->count();
+    }
+
+    private function getConditionPartagePortee(ConditionPartage $condition): string
+    {
+        if ($condition->getPiste()) {
+            return 'Exceptionnelle (Piste)';
+        }
+        if ($condition->getPartenaire()) {
+            return 'Générale (Partenaire)';
+        }
+        return 'Non définie';
+    }
+
+    // --- Indicateurs pour Risque ---
+
+    public function getRisqueBrancheString(?Risque $risque): ?string
+    {
+        if ($risque === null) return null;
+
+        return match ($risque->getBranche()) {
+            Risque::BRANCHE_IARD_OU_NON_VIE => 'IARD / Non-Vie',
+            Risque::BRANCHE_VIE => 'Vie',
+            default => 'Inconnue',
+        };
+    }
+
+    private function countRisquePistes(Risque $risque): int
+    {
+        return $risque->getPistes()->count();
+    }
+
+    private function countRisqueSinistres(Risque $risque): int
+    {
+        return $risque->getNotificationSinistres()->count();
+    }
+
+    private function countRisquePolices(Risque $risque): int
+    {
+        $count = 0;
+        foreach ($risque->getPistes() as $piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                if (!$cotation->getAvenants()->isEmpty()) {
+                    $count++;
+                }
+            }
+        }
+        return $count;
     }
 }
