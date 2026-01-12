@@ -452,6 +452,46 @@ class EntityCanvasProvider
                     ],
                 ];
                 break;
+            case Invite::class:
+                $canvas = [
+                    [
+                        "code" => "ageInvitation", "intitule" => "Ancienneté", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nombre de jours depuis l'envoi de l'invitation."
+                    ],
+                    [
+                        "code" => "tachesEnCours", "intitule" => "Tâches en cours", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de tâches assignées à cet invité qui ne sont pas encore clôturées."
+                    ],
+                    [
+                        "code" => "rolePrincipal", "intitule" => "Rôle(s) Principal(aux)", "type" => "Texte", "format" => "Texte",
+                        "description" => "Le ou les départements principaux dans lesquels l'invité a des droits."
+                    ],
+                ];
+                break;
+            case Entreprise::class:
+                $canvas = [
+                    [
+                        "code" => "ageEntreprise", "intitule" => "Ancienneté", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nombre de jours depuis la création de l'entreprise."
+                    ],
+                    [
+                        "code" => "nombreCollaborateurs", "intitule" => "Nb. Collaborateurs", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total d'utilisateurs invités dans l'entreprise."
+                    ],
+                    [
+                        "code" => "nombreClients", "intitule" => "Nb. Clients", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de clients enregistrés."
+                    ],
+                    [
+                        "code" => "nombrePartenaires", "intitule" => "Nb. Partenaires", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de partenaires d'affaires."
+                    ],
+                    [
+                        "code" => "nombreAssureurs", "intitule" => "Nb. Assureurs", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total d'assureurs enregistrés."
+                    ],
+                ];
+                break;
         }
         return $canvas;
     }
@@ -1172,7 +1212,9 @@ class EntityCanvasProvider
                             ["attribut_code" => "licence", "attribut_prefixe" => "Licence: "]
                         ]],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-                    ], $this->getGlobalIndicatorsCanvas("Entreprise"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Entreprise::class),
+                    $this->getGlobalIndicatorsCanvas("Entreprise"))
                 ];
             case Invite::class:
                 return [
@@ -1189,7 +1231,9 @@ class EntityCanvasProvider
                         ["code" => "email", "intitule" => "Email", "type" => "Texte", "col_principale" => true],
                         ["code" => "createdAt", "intitule" => "Invité le", "type" => "Date"],
                         ["code" => "isVerified", "intitule" => "Acceptée", "type" => "Booleen"],
-                    ], $this->getGlobalIndicatorsCanvas("Invite"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Invite::class),
+                    $this->getGlobalIndicatorsCanvas("Invite"))
                 ];
             case Utilisateur::class:
                 return [

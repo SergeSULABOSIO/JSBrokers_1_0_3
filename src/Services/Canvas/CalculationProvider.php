@@ -11,6 +11,7 @@ use DateTimeImmutable;
 use App\Entity\Client;
 use App\Entity\Assureur;
 use App\Entity\Contact;
+use App\Entity\Invite;
 use App\Entity\Tranche;
 use App\Entity\Feedback;
 use App\Entity\Cotation;
@@ -201,6 +202,24 @@ class CalculationProvider
                     'redevableString' => $this->getTypeRevenuRedevableString($entity),
                     'sharedString' => $this->getTypeRevenuSharedString($entity),
                     'nombreUtilisations' => $this->countTypeRevenuUtilisations($entity),
+                ];
+                break;
+            case Invite::class:
+                /** @var Invite $entity */
+                $indicateurs = [
+                    'ageInvitation' => $this->calculateInviteAge($entity),
+                    'tachesEnCours' => $this->countInviteTachesEnCours($entity),
+                    'rolePrincipal' => $this->getInviteRolePrincipal($entity),
+                ];
+                break;
+            case Entreprise::class:
+                /** @var Entreprise $entity */
+                $indicateurs = [
+                    'ageEntreprise' => $this->calculateEntrepriseAge($entity),
+                    'nombreCollaborateurs' => $this->countEntrepriseCollaborateurs($entity),
+                    'nombreClients' => $this->countEntrepriseClients($entity),
+                    'nombrePartenaires' => $this->countEntreprisePartenaires($entity),
+                    'nombreAssureurs' => $this->countEntrepriseAssureurs($entity),
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -2137,5 +2156,78 @@ class CalculationProvider
     private function countTypeRevenuUtilisations(TypeRevenu $typeRevenu): int
     {
         return $typeRevenu->getRevenuPourCourtiers()->count();
+    }
+
+    // --- Indicateurs pour Invite ---
+
+    private function calculateInviteAge(Invite $invite): string
+    {
+        if (!$invite->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($invite->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function countInviteTachesEnCours(Invite $invite): int
+    {
+        return $invite->getTaches()->filter(fn(Tache $tache) => !$tache->isClosed())->count();
+    }
+
+    public function getInviteRolePrincipal(Invite $invite): string
+    {
+        $roles = [];
+        if (!$invite->getRolesEnProduction()->isEmpty()) {
+            $roles[] = 'Production';
+        }
+        if (!$invite->getRolesEnSinistre()->isEmpty()) {
+            $roles[] = 'Sinistre';
+        }
+        if (!$invite->getRolesEnMarketing()->isEmpty()) {
+            $roles[] = 'Marketing';
+        }
+        if (!$invite->getRolesEnFinance()->isEmpty()) {
+            $roles[] = 'Finance';
+        }
+        if (!$invite->getRolesEnAdministration()->isEmpty()) {
+            $roles[] = 'Administration';
+        }
+
+        if (empty($roles)) {
+            return 'Aucun rôle';
+        }
+
+        return implode(' / ', $roles);
+    }
+
+    // --- Indicateurs pour Entreprise ---
+
+    private function calculateEntrepriseAge(Entreprise $entreprise): string
+    {
+        if (!$entreprise->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($entreprise->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function countEntrepriseCollaborateurs(Entreprise $entreprise): int
+    {
+        return $entreprise->getInvites()->count();
+    }
+
+    private function countEntrepriseClients(Entreprise $entreprise): int
+    {
+        return $entreprise->getClients()->count();
+    }
+
+    private function countEntreprisePartenaires(Entreprise $entreprise): int
+    {
+        return $entreprise->getPartenaires()->count();
+    }
+
+    private function countEntrepriseAssureurs(Entreprise $entreprise): int
+    {
+        return $entreprise->getAssureurs()->count();
     }
 }
