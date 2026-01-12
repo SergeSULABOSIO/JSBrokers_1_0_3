@@ -80,6 +80,15 @@ class CalculationProvider
                     'montantMoyenParPaiement' => $this->getOffreIndemnisationMontantMoyenParPaiement($entity),
                 ];
                 break;
+            case Cotation::class:
+                /** @var Cotation $entity */
+                $indicateurs = [
+                    'statutSouscription' => $this->calculateStatutSouscription($entity),
+                    'delaiDepuisCreation' => $this->calculateDelaiDepuisCreation($entity),
+                    'nombreTranches' => $this->calculateNombreTranches($entity),
+                    'montantMoyenTranche' => $this->calculateMontantMoyenTranche($entity),
+                ];
+                break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
 
@@ -1361,5 +1370,57 @@ class CalculationProvider
             $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
         }
         return $somme;
+    }
+
+    /**
+     * Calcule le statut de souscription d'une cotation.
+     */
+    private function calculateStatutSouscription(Cotation $cotation): string
+    {
+        return $this->isCotationBound($cotation) ? 'Souscrite' : 'En attente';
+    }
+
+    /**
+     * Calcule le délai en jours depuis la création de la cotation.
+     */
+    private function calculateDelaiDepuisCreation(Cotation $cotation): string
+    {
+        if (!$cotation->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($cotation->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule le nombre de tranches de paiement pour une cotation.
+     */
+    private function calculateNombreTranches(Cotation $cotation): int
+    {
+        return $cotation->getTranches()->count();
+    }
+
+    /**
+     * Calcule le montant moyen par tranche de paiement.
+     */
+    private function calculateMontantMoyenTranche(Cotation $cotation): float
+    {
+        $nombreTranches = $this->calculateNombreTranches($cotation);
+        if ($nombreTranches === 0) {
+            return 0.0;
+        }
+
+        // Pour obtenir la prime totale, on doit la calculer ici.
+        // On ne peut pas se fier à l'indicateur global qui n'est pas encore calculé à ce stade.
+        $primeTotale = 0.0;
+        foreach ($cotation->getChargements() as $chargement) {
+            $primeTotale += $chargement->getMontantFlatExceptionel() ?? 0;
+        }
+
+        if ($primeTotale > 0) {
+            return round($primeTotale / $nombreTranches, 2);
+        }
+
+        return 0.0;
     }
 }

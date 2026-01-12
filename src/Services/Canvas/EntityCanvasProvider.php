@@ -211,6 +211,26 @@ class EntityCanvasProvider
                     ],
                 ];
                 break;
+            case Cotation::class:
+                $canvas = [
+                    [
+                        "code" => "statutSouscription", "intitule" => "Statut", "type" => "Texte", "format" => "Texte",
+                        "description" => "Indique si la cotation a été transformée en police d'assurance (souscrite) ou si elle est toujours en attente."
+                    ],
+                    [
+                        "code" => "delaiDepuisCreation", "intitule" => "Âge Cotation", "type" => "Texte", "format" => "Texte",
+                        "description" => "⏳ Nombre de jours écoulés depuis la création de cette proposition de cotation."
+                    ],
+                    [
+                        "code" => "nombreTranches", "intitule" => "Nb. Tranches", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de tranches de paiement prévues pour cette cotation."
+                    ],
+                    [
+                        "code" => "montantMoyenTranche", "intitule" => "Tranche Moyenne", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "format" => "Nombre",
+                        "description" => "Montant moyen d'une tranche de paiement, calculé en divisant la prime totale par le nombre de tranches."
+                    ],
+                ];
+                break;
         }
         return $canvas;
     }
@@ -495,7 +515,9 @@ class EntityCanvasProvider
                         ["code" => "avenants", "intitule" => "Avenants", "type" => "Collection", "targetEntity" => Avenant::class],
                         ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                    ], $this->getGlobalIndicatorsCanvas("Cotation"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Cotation::class),
+                    $this->getGlobalIndicatorsCanvas("Cotation"))
                 ];
 
             case Groupe::class:
