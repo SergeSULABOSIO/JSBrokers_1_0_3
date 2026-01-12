@@ -368,7 +368,6 @@ class EntityCanvasProvider
                         ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
                         ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                    ], $this->getGlobalIndicatorsCanvas("Avenant"))
                     ], 
                     $this->getSpecificIndicatorsCanvas(Avenant::class),
                     $this->getGlobalIndicatorsCanvas("Avenant"))
