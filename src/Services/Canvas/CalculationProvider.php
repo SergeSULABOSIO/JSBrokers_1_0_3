@@ -20,7 +20,7 @@ use App\Entity\ConditionPartage;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\NotificationSinistre;
-use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Bundle\SecurityBundle\Security; // Correction: S'assurer que cette ligne est bien présente
 
 class CalculationProvider
 {
@@ -128,11 +128,29 @@ class CalculationProvider
 
         // 2. Construire la requête dynamique pour les Cotations
         $qb = $this->cotationRepository->createQueryBuilder('c')
+            // Jointures INNER pour le filtrage principal
             ->join('c.piste', 'p')
-            ->addSelect('p', 'i') // Hydrate les objets Piste et Invite pour éviter les requêtes N+1
             ->join('p.invite', 'i')
+            // Jointures LEFT pour l'Eager Loading et éviter les problèmes N+1 dans la boucle
+            ->leftJoin('c.avenants', 'av')
+            ->leftJoin('c.revenus', 'rev')
+            ->leftJoin('rev.typeRevenu', 'rt')
+            ->leftJoin('c.tranches', 't')
+            ->leftJoin('t.articles', 'art')
+            ->leftJoin('art.note', 'n')
+            ->leftJoin('n.paiements', 'np')
+            ->leftJoin('c.chargements', 'ch')
+            ->leftJoin('ch.type', 'cht')
+            ->leftJoin('p.risque', 'r')
+            ->leftJoin('p.client', 'cl')
+            ->leftJoin('p.partenaires', 'pa')
+            ->leftJoin('cl.partenaires', 'clpa')
+            // Sélectionne toutes les entités jointes pour les hydrater en une seule requête
+            ->addSelect('p', 'i', 'av', 'rev', 'rt', 't', 'art', 'n', 'np', 'ch', 'cht', 'r', 'cl', 'pa', 'clpa')
             ->where('i.entreprise = :entreprise')
-            ->setParameter('entreprise', $entreprise);
+            ->setParameter('entreprise', $entreprise)
+            ->distinct() // DISTINCT est crucial pour éviter les doublons dus aux jointures "to-many"
+        ;
 
         // Appliquer les filtres
         if ($isBound) {
