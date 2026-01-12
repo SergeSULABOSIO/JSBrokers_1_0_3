@@ -19,6 +19,8 @@ use DateTimeImmutable;
 use App\Entity\Contact;
 use App\Constantes\Constante;
 use App\Entity\Document;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
 use App\Services\ServiceMonnaies;
 use App\Entity\NotificationSinistre;
 use App\Entity\PieceSinistre;
@@ -63,7 +65,9 @@ class NotificationSinistreController extends AbstractController
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder,
+        private CalculationProvider $calculationProvider
     ) {}
 
     protected function getCollectionMap(): array

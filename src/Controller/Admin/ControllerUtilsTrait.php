@@ -100,7 +100,7 @@ trait ControllerUtilsTrait
      */
     private function getCollectionOptionsFromCanvas(array $entityFormCanvas, string $collectionFieldName): array {
         // OPTIMISATION : On vérifie d'abord si une carte aplatie des champs existe.
-        // Cette carte est générée dans le service Constante.php pour de meilleures performances.
+        // Cette carte est générée par le FormCanvasProvider pour de meilleures performances.
         if (isset($entityFormCanvas['fields_map'][$collectionFieldName])) {
             $fieldConfig = $entityFormCanvas['fields_map'][$collectionFieldName];
             // On s'assure que le champ trouvé est bien un widget de collection
@@ -165,12 +165,14 @@ trait ControllerUtilsTrait
         $data,
         string $collectionFieldName
     ): Response {
-        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+        foreach ($data as $item) {
+            $this->loadCalculatedValues($entityCanvas, $item);
+        }
         // CORRECTION : Le list-manager de la collection a besoin du formCanvas de l'entité qu'il gère (l'enfant),
         // et non celui du parent, pour que la barre des totaux et la barre d'outils fonctionnent correctement.
-        $entityFormCanvas = $this->constante->getEntityFormCanvas(new $entityClass(), $this->getEntreprise()->getId());
-        
+        $entityFormCanvas = $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), $this->getEntreprise()->getId());
+
         // dd($entityFormCanvas);
 
         // CORRECTION : Le template a été renommé '_list_manager.html.twig'.
@@ -185,9 +187,9 @@ trait ControllerUtilsTrait
             'data' => $data,
             'usage' => $usage,
             'entite_nom' => $this->getEntityName($entityClass),
-            'listeCanvas' => $this->constante->getListeCanvas($entityClass),
+            'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
-            'numericAttributesAndValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // NOUVEAU : Pour la barre des totaux.
+            'numericAttributesAndValues' => $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data), // NOUVEAU : Pour la barre des totaux.
             'entityFormCanvas' => $entityFormCanvas,
             'serverRootName' => $this->getServerRootName($entityClass),
             'idInvite' => $this->getInvite()->getId(),
@@ -237,13 +239,13 @@ trait ControllerUtilsTrait
             $data = $searchResult['data'];
 
             // Extraction des données numériques et rendu du HTML partiel de la liste
-            $numericData = $this->constante->getNumericAttributesAndValuesForTotalsBar($data);
+            $numericData = $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data);
             // OPTIMISATION : On ne passe au template que les variables strictement nécessaires.
             $html = $this->renderView('components/_list_content.html.twig', [
                 'data' => $data,
-                'listeCanvas' => $this->constante->getListeCanvas($entityClass),
+                'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
                 'entite_nom' => $this->getEntityName($entityClass), // CORRECTION : On passe le nom de l'entité
-                'entityCanvas' => $this->constante->getEntityCanvas($entityClass) // CORRECTION : On passe le canvas de l'entité
+                'entityCanvas' => $this->canvasBuilder->getEntityCanvas($entityClass) // CORRECTION : On passe le canvas de l'entité
             ]);
 
             // On retourne la réponse JSON structurée attendue par le Cerveau
@@ -260,8 +262,10 @@ trait ControllerUtilsTrait
             $template = 'components/_view_manager.html.twig';
         }
 
-        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
-        $this->constante->loadCalculatedValue($entityCanvas, $data);
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+        foreach ($data as $item) {
+            $this->loadCalculatedValues($entityCanvas, $item);
+        }
 
         // NOUVEAU : Construire l'URL de la liste principale pour la persistance de l'état.
         // C'est l'URL que le list-manager utilisera pour s'identifier.
@@ -272,11 +276,11 @@ trait ControllerUtilsTrait
             'entite_nom' => $this->getEntityName($entityClass),
             'serverRootName' => $this->getServerRootName($entityClass),
             'constante' => $this->constante,
-            'listeCanvas' => $this->constante->getListeCanvas($entityClass),
+            'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->constante->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise), 
-            'searchCanvas' => $this->constante->getSearchCanvas($entityClass),
-            'numericAttributesAndValues' => $this->constante->getNumericAttributesAndValuesForTotalsBar($data), // Pass for dynamic queries
+            'entityFormCanvas' => $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
+            'searchCanvas' => $this->canvasBuilder->getSearchCanvas($entityClass),
+            'numericAttributesAndValues' => $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data), // Pass for dynamic queries
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,
             'mainListUrl' => $mainListUrl, // On passe l'URL au template
@@ -315,13 +319,13 @@ trait ControllerUtilsTrait
         }
 
         $form = $this->createForm($formTypeClass, $entity);
-        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
-        $this->constante->loadCalculatedValue($entityCanvas, [$entity]);
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+        $this->loadCalculatedValues($entityCanvas, $entity);
         $isCreationMode = ($entity->getId() === null);
 
         return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
-            'formCanvas' => $this->constante->getEntityFormCanvas($entity, $entreprise->getId()),
+            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId()),
             'entityCanvas' => $entityCanvas,
             'entity' => $entity,
             'isCreationMode' => $isCreationMode,
@@ -626,8 +630,8 @@ trait ControllerUtilsTrait
                 }
 
                 // On appelle la fonction du service avec les arguments préparés
-                if (method_exists($this->constante, $functionName)) {
-                    $calculatedValue = $this->constante->$functionName(...$args);
+                if (method_exists($this->calculationProvider, $functionName)) {
+                    $calculatedValue = $this->calculationProvider->$functionName(...$args);
                     // On ajoute le résultat à l'objet entité pour la sérialisation
                     $entity->{$field['code']} = $calculatedValue;
                 }
@@ -680,11 +684,14 @@ trait ControllerUtilsTrait
             throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
         }
 
-        $entityCanvas = $this->constante->getEntityCanvas($entityClass);
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         $this->loadCalculatedValues($entityCanvas, $entity);
         
         // NOUVEAU : On charge également les indicateurs spécifiques (ex: Âge de la cotation, etc.)
-        $this->constante->loadSpecificIndicators($entity);
+        $specificIndicators = $this->calculationProvider->getIndicateursSpecifics($entity);
+        foreach ($specificIndicators as $key => $value) {
+            $entity->{$key} = $value;
+        }
 
         // On retourne le tableau de données prêt à être sérialisé.
         return ['entity' => $entity, 'entityType' => $entityType, 'entityCanvas' => $entityCanvas];
