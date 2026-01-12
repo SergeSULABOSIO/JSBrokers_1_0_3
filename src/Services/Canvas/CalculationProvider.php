@@ -19,6 +19,7 @@ use App\Entity\Document;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
+use App\Entity\Groupe;
 use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
 use App\Services\ServiceDates;
@@ -168,6 +169,38 @@ class CalculationProvider
                     'nombrePistes' => $this->countRisquePistes($entity),
                     'nombreSinistres' => $this->countRisqueSinistres($entity),
                     'nombrePolices' => $this->countRisquePolices($entity),
+                ];
+                break;
+            case Document::class:
+                /** @var Document $entity */
+                $indicateurs = [
+                    'ageDocument' => $this->calculateDocumentAge($entity),
+                    'typeFichier' => $this->getDocumentTypeFichier($entity),
+                ];
+                break;
+            case Groupe::class:
+                /** @var Groupe $entity */
+                $indicateurs = [
+                    'nombreClients' => $this->countGroupeClients($entity),
+                    'nombrePolices' => $this->countGroupePolices($entity),
+                    'nombreSinistres' => $this->countGroupeSinistres($entity),
+                ];
+                break;
+            case RevenuPourCourtier::class:
+                /** @var RevenuPourCourtier $entity */
+                $indicateurs = [
+                    'montantCalculeHT' => $this->getRevenuMontantHt($entity),
+                    'montantCalculeTTC' => $this->getRevenuPourCourtierMontantTTC($entity),
+                    'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
+                ];
+                break;
+            case TypeRevenu::class:
+                /** @var TypeRevenu $entity */
+                $indicateurs = [
+                    'descriptionModeCalcul' => $this->getTypeRevenuDescriptionModeCalcul($entity),
+                    'redevableString' => $this->getTypeRevenuRedevableString($entity),
+                    'sharedString' => $this->getTypeRevenuSharedString($entity),
+                    'nombreUtilisations' => $this->countTypeRevenuUtilisations($entity),
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -1984,5 +2017,125 @@ class CalculationProvider
             }
         }
         return $count;
+    }
+
+    // --- Indicateurs pour Document ---
+
+    private function calculateDocumentAge(Document $document): string
+    {
+        if (!$document->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($document->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function getDocumentTypeFichier(Document $document): string
+    {
+        $nomFichier = $document->getNomFichierStocke();
+        if (!$nomFichier) {
+            return 'Inconnu';
+        }
+        return pathinfo($nomFichier, PATHINFO_EXTENSION);
+    }
+
+    // --- Indicateurs pour Groupe ---
+
+    private function countGroupeClients(Groupe $groupe): int
+    {
+        return $groupe->getClients()->count();
+    }
+
+    private function countGroupePolices(Groupe $groupe): int
+    {
+        $count = 0;
+        foreach ($groupe->getClients() as $client) {
+            $count += $this->countClientPolices($client);
+        }
+        return $count;
+    }
+
+    private function countGroupeSinistres(Groupe $groupe): int
+    {
+        $count = 0;
+        foreach ($groupe->getClients() as $client) {
+            $count += $this->countClientSinistres($client);
+        }
+        return $count;
+    }
+
+    // --- Indicateurs pour RevenuPourCourtier ---
+
+    private function getRevenuPourCourtierMontantTTC(RevenuPourCourtier $revenu): float
+    {
+        $montantHT = $this->getRevenuMontantHt($revenu);
+        if ($montantHT === 0.0) {
+            return 0.0;
+        }
+        // La taxe s'applique sur la commission, qui est un revenu. On considère que la taxe assureur s'applique.
+        $taxe = $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), true);
+        return $montantHT + $taxe;
+    }
+
+    private function getRevenuPourCourtierDescriptionCalcul(RevenuPourCourtier $revenu): string
+    {
+        $typeRevenu = $revenu->getTypeRevenu();
+        if (!$typeRevenu) {
+            return "Type de revenu non défini";
+        }
+
+        if ($revenu->getTauxExceptionel()) {
+            return "Taux exceptionnel de " . $revenu->getTauxExceptionel() . "%";
+        }
+        if ($revenu->getMontantFlatExceptionel()) {
+            return "Montant fixe exceptionnel de " . $revenu->getMontantFlatExceptionel();
+        }
+        if ($typeRevenu->getPourcentage()) {
+            return "Taux par défaut de " . $typeRevenu->getPourcentage() . "%";
+        }
+        if ($typeRevenu->getMontantflat()) {
+            return "Montant fixe par défaut de " . $typeRevenu->getMontantflat();
+        }
+        if ($typeRevenu->isAppliquerPourcentageDuRisque() && $revenu->getCotation()?->getPiste()?->getRisque()) {
+            $tauxRisque = $revenu->getCotation()->getPiste()->getRisque()->getPourcentageCommissionSpecifiqueHT();
+            return "Taux du risque de " . $tauxRisque . "%";
+        }
+
+        return "Logique de calcul non spécifiée";
+    }
+
+    // --- Indicateurs pour TypeRevenu ---
+
+    public function getTypeRevenuDescriptionModeCalcul(?TypeRevenu $typeRevenu): ?string
+    {
+        if ($typeRevenu === null) return null;
+        return match ($typeRevenu->getModeCalcul()) {
+            TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT => "Pourcentage sur chargement",
+            TypeRevenu::MODE_CALCUL_MONTANT_FLAT => "Montant fixe",
+            default => "Non défini",
+        };
+    }
+
+    public function getTypeRevenuRedevableString(?TypeRevenu $typeRevenu): ?string
+    {
+        if ($typeRevenu === null) return null;
+        return match ($typeRevenu->getRedevable()) {
+            TypeRevenu::REDEVABLE_CLIENT => "Client",
+            TypeRevenu::REDEVABLE_ASSUREUR => "Assureur",
+            TypeRevenu::REDEVABLE_REASSURER => "Réassureur",
+            TypeRevenu::REDEVABLE_PARTENAIRE => "Partenaire",
+            default => "Non défini",
+        };
+    }
+
+    public function getTypeRevenuSharedString(?TypeRevenu $typeRevenu): ?string
+    {
+        if ($typeRevenu === null) return null;
+        return $typeRevenu->isShared() ? "Oui" : "Non";
+    }
+
+    private function countTypeRevenuUtilisations(TypeRevenu $typeRevenu): int
+    {
+        return $typeRevenu->getRevenuPourCourtiers()->count();
     }
 }
