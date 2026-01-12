@@ -6,9 +6,11 @@ namespace App\Services\Canvas;
 use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Entity\Risque;
+use App\Entity\Tache;
 use DateTimeImmutable;
 use App\Entity\Contact;
 use App\Entity\Tranche;
+use App\Entity\Feedback;
 use App\Entity\Cotation;
 use App\Entity\Avenant;
 use App\Entity\Document;
@@ -102,6 +104,25 @@ class CalculationProvider
                     'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
                     'ageAvenant' => $this->calculateAgeAvenant($entity),
                     'statutRenouvellement' => $this->getAvenantStatutRenouvellementString($entity),
+                ];
+                break;
+            case Tache::class:
+                /** @var Tache $entity */
+                $indicateurs = [
+                    'statutExecution' => $this->getTacheStatutExecutionString($entity),
+                    'delaiRestant' => $this->calculateTacheDelaiRestant($entity),
+                    'ageTache' => $this->calculateTacheAge($entity),
+                    'nombreFeedbacks' => $this->countTacheFeedbacks($entity),
+                    'contexteTache' => $this->getTacheContexteString($entity),
+                ];
+                break;
+            case Feedback::class:
+                /** @var Feedback $entity */
+                $indicateurs = [
+                    'typeString' => $this->getFeedbackTypeString($entity),
+                    'delaiProchaineAction' => $this->calculateFeedbackDelaiProchaineAction($entity),
+                    'ageFeedback' => $this->calculateFeedbackAge($entity),
+                    'statutProchaineAction' => $this->getFeedbackStatutProchaineActionString($entity),
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -1594,5 +1615,130 @@ class CalculationProvider
             Avenant::RENEWAL_STATUS_CANCELLED => $this->translator->trans('renewal_status_cancelled', [], 'messages'),
             default => $this->translator->trans('renewal_status_unknown', [], 'messages'),
         };
+    }
+
+    // --- Indicateurs pour Tache ---
+
+    /**
+     * Retourne le statut d'exécution de la tâche sous forme de chaîne.
+     */
+    public function getTacheStatutExecutionString(Tache $tache): string
+    {
+        if ($tache->isClosed()) {
+            return $this->translator->trans('tache_status_completed', [], 'messages');
+        }
+        if ($tache->getToBeEndedAt() < new DateTimeImmutable()) {
+            return $this->translator->trans('tache_status_expired', [], 'messages');
+        }
+        return $this->translator->trans('tache_status_running', [], 'messages');
+    }
+
+    /**
+     * Calcule le délai restant avant l'échéance de la tâche.
+     */
+    private function calculateTacheDelaiRestant(Tache $tache): string
+    {
+        if ($tache->isClosed() || !$tache->getToBeEndedAt()) {
+            return 'N/A';
+        }
+        $now = new DateTimeImmutable();
+        if ($tache->getToBeEndedAt() < $now) {
+            $jours = $this->serviceDates->daysEntre($tache->getToBeEndedAt(), $now) ?? 0;
+            return $this->translator->trans('tache_expired_since', ['%days%' => $jours], 'messages');
+        }
+        $jours = $this->serviceDates->daysEntre($now, $tache->getToBeEndedAt()) ?? 0;
+        return $this->translator->trans('tache_remaining_days', ['%days%' => $jours], 'messages');
+    }
+
+    /**
+     * Calcule l'âge de la tâche depuis sa création.
+     */
+    private function calculateTacheAge(Tache $tache): string
+    {
+        if (!$tache->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($tache->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Compte le nombre de feedbacks associés à une tâche.
+     */
+    private function countTacheFeedbacks(Tache $tache): int
+    {
+        return $tache->getFeedbacks()->count();
+    }
+
+    /**
+     * Retourne une chaîne décrivant le contexte auquel la tâche est liée.
+     */
+    public function getTacheContexteString(?Tache $tache): ?string
+    {
+        if ($tache === null) return null;
+
+        if ($parent = $tache->getPiste()) return "Piste: " . $parent->getNom();
+        if ($parent = $tache->getCotation()) return "Cotation: " . $parent->getNom();
+        if ($parent = $tache->getNotificationSinistre()) return "Sinistre: " . $parent->getReferenceSinistre();
+        if ($parent = $tache->getOffreIndemnisationSinistre()) return "Offre: " . $parent->getNom();
+
+        return "Non-associé";
+    }
+
+
+    // --- Indicateurs pour Feedback ---
+
+    /**
+     * Retourne le type de feedback sous forme de chaîne.
+     */
+    public function getFeedbackTypeString(?Feedback $feedback): ?string
+    {
+        if ($feedback === null) return null;
+
+        return match ($feedback->getType()) {
+            Feedback::TYPE_PHYSICAL_MEETING => $this->translator->trans('feedback_type_physical_meeting', [], 'messages'),
+            Feedback::TYPE_CALL => $this->translator->trans('feedback_type_call', [], 'messages'),
+            Feedback::TYPE_EMAIL => $this->translator->trans('feedback_type_email', [], 'messages'),
+            Feedback::TYPE_SMS => $this->translator->trans('feedback_type_sms', [], 'messages'),
+            Feedback::TYPE_UNDEFINED => $this->translator->trans('feedback_type_undefined', [], 'messages'),
+            default => null,
+        };
+    }
+
+    /**
+     * Calcule le délai avant la prochaine action planifiée.
+     */
+    private function calculateFeedbackDelaiProchaineAction(Feedback $feedback): string
+    {
+        if (!$feedback->hasNextAction() || !$feedback->getNextActionAt()) {
+            return 'N/A';
+        }
+        $now = new DateTimeImmutable();
+        if ($feedback->getNextActionAt() < $now) {
+            return 'Expirée';
+        }
+        $jours = $this->serviceDates->daysEntre($now, $feedback->getNextActionAt()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule l'âge du feedback depuis sa création.
+     */
+    private function calculateFeedbackAge(Feedback $feedback): string
+    {
+        if (!$feedback->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($feedback->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Retourne le statut de la prochaine action sous forme de chaîne.
+     */
+    public function getFeedbackStatutProchaineActionString(?Feedback $feedback): ?string
+    {
+        if ($feedback === null) return null;
+        return $feedback->hasNextAction() ? 'Planifiée' : 'Aucune';
     }
 }
