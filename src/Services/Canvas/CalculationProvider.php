@@ -388,6 +388,102 @@ class CalculationProvider
         return $montantPayable - $compensationVersee;
     }
 
+    /**
+     * Calcule le montant total de l'indemnisation convenue pour ce sinistre.
+     */
+    private function getNotificationSinistreCompensation(NotificationSinistre $sinistre): float
+    {
+        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
+            return $carry + ($offre->getMontantPayable() ?? 0);
+        }, 0.0);
+    }
+
+    /**
+     * Calcule le montant cumulé des paiements déjà effectués pour cette indemnisation.
+     */
+    private function getNotificationSinistreCompensationVersee(NotificationSinistre $sinistre): float
+    {
+        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, OffreIndemnisationSinistre $offre) {
+            return $carry + $this->getOffreIndemnisationCompensationVersee($offre);
+        }, 0.0);
+    }
+
+    /**
+     * Calcule le solde de l'indemnisation restant à verser.
+     */
+    private function getNotificationSinistreSoldeAVerser(NotificationSinistre $sinistre): float
+    {
+        return $this->getNotificationSinistreCompensation($sinistre) - $this->getNotificationSinistreCompensationVersee($sinistre);
+    }
+
+    /**
+     * Trouve la date du tout dernier règlement pour un sinistre.
+     */
+    private function getNotificationSinistreDateDernierReglement(NotificationSinistre $sinistre): ?\DateTimeInterface
+    {
+        $dateDernierReglement = null;
+        foreach ($sinistre->getOffreIndemnisationSinistres() as $offre) {
+            foreach ($offre->getPaiements() as $paiement) {
+                if ($paiement->getPaidAt() && (!$dateDernierReglement || $paiement->getPaidAt() > $dateDernierReglement)) {
+                    $dateDernierReglement = $paiement->getPaidAt();
+                }
+            }
+        }
+        return $dateDernierReglement;
+    }
+
+    /**
+     * Calcule la durée totale de règlement d'un sinistre en jours.
+     */
+    private function getNotificationSinistreDureeReglement(NotificationSinistre $sinistre): ?int
+    {
+        $dateDernierReglement = $this->getNotificationSinistreDateDernierReglement($sinistre);
+        $dateNotification = $sinistre->getNotifiedAt();
+
+        if (!$dateDernierReglement || !$dateNotification) {
+            return null;
+        }
+
+        return $this->serviceDates->daysEntre($dateNotification, $dateDernierReglement);
+    }
+
+    /**
+     * Calcule le statut des documents attendus pour un sinistre.
+     */
+    private function getNotificationSinistreStatusDocumentsAttendus(NotificationSinistre $sinistre): array
+    {
+        $modelesAttendus = $this->getEntreprise()->getModelePieceSinistres();
+        $nombreAttendus = $modelesAttendus->count();
+
+        if ($nombreAttendus === 0) {
+            return [
+                "Attendus" => "0 pc(s)",
+                "Fournis" => "0 pc(s)",
+                "Manquants" => "0 pc(s)",
+            ];
+        }
+
+        $typesFournis = [];
+        foreach ($sinistre->getPieces() as $piece) {
+            if ($type = $piece->getType()) {
+                $typesFournis[$type->getId()] = true;
+            }
+        }
+        $nombreFournis = count($typesFournis);
+
+        $nombreManquants = 0;
+        foreach ($modelesAttendus as $modele) {
+            if (!isset($typesFournis[$modele->getId()])) {
+                $nombreManquants++;
+            }
+        }
+
+        return [
+            "Attendus" => $nombreAttendus . " pc(s)",
+            "Fournis" => $nombreFournis . " pc(s)",
+            "Manquants" => $nombreManquants . " pc(s)",
+        ];
+    }
 
     /**
      * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
