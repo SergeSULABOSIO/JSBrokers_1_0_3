@@ -69,6 +69,10 @@ class Avenant
     #[Groups(['list:read'])]
     private ?string $numero = null;
 
+    #[ORM\Column(type: 'integer', nullable: true)]
+    #[Groups(['list:read'])]
+    private ?int $renewalStatus = self::RENEWAL_STATUS_RUNNING;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -220,5 +224,17 @@ class Avenant
     public function __toString()
     {
         return $this->numero;
+    }
+
+    public function getRenewalStatus(): ?int
+    {
+        return $this->renewalStatus;
+    }
+
+    public function setRenewalStatus(?int $renewalStatus): static
+    {
+        $this->renewalStatus = $renewalStatus;
+
+        return $this;
     }
 }
