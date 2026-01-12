@@ -178,10 +178,12 @@ class CalculationProvider
 
         if ($paiementCible) {
             if ($note = $paiementCible->getNote()) {
-                $subQuery = $this->cotationRepository->createQueryBuilder('c_sub')
-                    ->select('c_sub.id')->join('c_sub.tranches', 't_sub')->join('t_sub.articles', 'a_sub')
-                    ->where('a_sub.note = :note')->getDQL();
-                $qb->andWhere($qb->expr()->in('c.id', $subQuery))->setParameter('note', $note);
+                // On utilise des jointures directes pour lier la cotation au paiement via la note.
+                // C'est plus lisible et idiomatique que de construire une sous-requête en DQL.
+                $qb->join('c.tranches', 't_payment')->join('t_payment.articles', 'a_payment')
+                   ->andWhere('a_payment.note = :payment_note')
+                   ->setParameter('payment_note', $note)
+                   ->distinct(); // On ajoute distinct pour éviter les doublons si plusieurs articles de la même cotation sont dans la note.
             } else {
                 $qb->andWhere('1=0');
             }
