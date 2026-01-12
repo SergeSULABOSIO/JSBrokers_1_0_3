@@ -33,6 +33,7 @@ use App\Entity\CompteBancaire;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\AutoriteFiscale;
+use App\Services\Canvas\CalculationProvider;
 use App\Entity\ConditionPartage;
 use App\Services\ServiceMonnaies;
 use Doctrine\ORM\Query\Expr\Func;
@@ -89,6 +90,7 @@ class Constante
         private InviteRepository $inviteRepository,
         private ServiceDates $serviceDates,
         // private ChargementsLoader $chargementsLoader,
+        private CalculationProvider $calculationProvider
     ) {}
 
     public const STATUS_DUE = "AmountDue";
@@ -6270,5 +6272,22 @@ class Constante
         $tabFinaleOrdonne[] = $dataSet;
 
         return $tabFinaleOrdonne;
+    }
+
+    /**
+     * Charge les indicateurs spécifiques (non-globaux) sur une entité.
+     *
+     * @param object $entity L'entité à peupler.
+     * @return void
+     */
+    public function loadSpecificIndicators(object $entity): void
+    {
+        $specificIndicators = $this->calculationProvider->getIndicateursSpecifics($entity);
+        foreach ($specificIndicators as $code => $value) {
+            // On vérifie que la propriété publique existe avant de l'assigner
+            if (property_exists($entity, $code)) {
+                $entity->{$code} = $value;
+            }
+        }
     }
 }

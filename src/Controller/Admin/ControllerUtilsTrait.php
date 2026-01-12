@@ -682,6 +682,9 @@ trait ControllerUtilsTrait
 
         $entityCanvas = $this->constante->getEntityCanvas($entityClass);
         $this->loadCalculatedValues($entityCanvas, $entity);
+        
+        // NOUVEAU : On charge également les indicateurs spécifiques (ex: Âge de la cotation, etc.)
+        $this->constante->loadSpecificIndicators($entity);
 
         // On retourne le tableau de données prêt à être sérialisé.
         return ['entity' => $entity, 'entityType' => $entityType, 'entityCanvas' => $entityCanvas];

@@ -93,6 +93,18 @@ class Cotation
     #[Groups(['list:read'])]
     public ?float $commissionTTC;
 
+    #[Groups(['list:read'])]
+    public ?string $statutSouscription = null;
+
+    #[Groups(['list:read'])]
+    public ?string $delaiDepuisCreation = null;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreTranches = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantMoyenTranche = null;
+
 
     public function __construct()
     {
