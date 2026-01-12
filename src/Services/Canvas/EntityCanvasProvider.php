@@ -251,6 +251,50 @@ class EntityCanvasProvider
                     ],
                 ];
                 break;
+            case Tache::class:
+                $canvas = [
+                    [
+                        "code" => "statutExecution", "intitule" => "Statut", "type" => "Texte", "format" => "Texte",
+                        "description" => "Statut d'avancement de la tâche (En cours, Expirée, Terminée)."
+                    ],
+                    [
+                        "code" => "delaiRestant", "intitule" => "Délai restant", "type" => "Texte", "format" => "Texte",
+                        "description" => "Temps restant avant l'échéance de la tâche."
+                    ],
+                    [
+                        "code" => "ageTache", "intitule" => "Âge de la tâche", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nombre de jours écoulés depuis la création de la tâche."
+                    ],
+                    [
+                        "code" => "nombreFeedbacks", "intitule" => "Nb. Feedbacks", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de feedbacks enregistrés pour cette tâche."
+                    ],
+                    [
+                        "code" => "contexteTache", "intitule" => "Contexte", "type" => "Texte", "format" => "Texte",
+                        "description" => "Entité parente à laquelle cette tâche est liée."
+                    ],
+                ];
+                break;
+            case Feedback::class:
+                $canvas = [
+                    [
+                        "code" => "typeString", "intitule" => "Type", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nature du feedback (Appel, Email, etc.)."
+                    ],
+                    [
+                        "code" => "delaiProchaineAction", "intitule" => "Délai Proch. Action", "type" => "Texte", "format" => "Texte",
+                        "description" => "Temps restant avant la prochaine action planifiée."
+                    ],
+                    [
+                        "code" => "ageFeedback", "intitule" => "Âge du feedback", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nombre de jours écoulés depuis la création du feedback."
+                    ],
+                    [
+                        "code" => "statutProchaineAction", "intitule" => "Statut Action", "type" => "Texte", "format" => "Texte",
+                        "description" => "Indique si une prochaine action est planifiée."
+                    ],
+                ];
+                break;
         }
         return $canvas;
     }
@@ -621,7 +665,9 @@ class EntityCanvasProvider
                         ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                         ["code" => "createdAt", "intitule" => "Date", "type" => "Date"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                    ], $this->getGlobalIndicatorsCanvas("Feedback"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Feedback::class),
+                    $this->getGlobalIndicatorsCanvas("Feedback"))
                 ];
             case Piste::class:
                 return [
@@ -666,7 +712,9 @@ class EntityCanvasProvider
                         ["code" => "closed", "intitule" => "Clôturée", "type" => "Booleen"],
                         ["code" => "feedbacks", "intitule" => "Feedbacks", "type" => "Collection", "targetEntity" => Feedback::class],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class],
-                    ], $this->getGlobalIndicatorsCanvas("Tache"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Tache::class),
+                    $this->getGlobalIndicatorsCanvas("Tache"))
                 ];
             case Bordereau::class:
                 return [

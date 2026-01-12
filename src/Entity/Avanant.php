@@ -1,6 +1,6 @@
 <?php
-
 namespace App\Entity;
+
 
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
