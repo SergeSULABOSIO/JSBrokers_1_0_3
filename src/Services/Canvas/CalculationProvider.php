@@ -427,7 +427,7 @@ class CalculationProvider
     private function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
     {
         $modelesAttendus = $this->getEntreprise()->getModelePieceSinistres();
-        $nombreAttendus = count($modelesAttendus);
+        $nombreAttendus = $modelesAttendus->count();
 
         if ($nombreAttendus === 0) {
             return '100 %'; // S'il n'y a aucune pièce modèle, le dossier est complet.
