@@ -17,6 +17,12 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<Cotation>
+ *
+ * @method \Doctrine\ORM\QueryBuilder createQueryBuilder(string $alias, string $indexBy = null)
+ * @method Cotation|null find($id, $lockMode = null, $lockVersion = null)
+ * @method Cotation|null findOneBy(array $criteria, array $orderBy = null)
+ * @method Cotation[]    findAll()
+ * @method Cotation[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class CotationRepository extends ServiceEntityRepository
 {
