@@ -8,6 +8,8 @@ use App\Entity\Taxe;
 use App\Entity\Risque;
 use App\Entity\Tache;
 use DateTimeImmutable;
+use App\Entity\Client;
+use App\Entity\Assureur;
 use App\Entity\Contact;
 use App\Entity\Tranche;
 use App\Entity\Feedback;
@@ -123,6 +125,23 @@ class CalculationProvider
                     'delaiProchaineAction' => $this->calculateFeedbackDelaiProchaineAction($entity),
                     'ageFeedback' => $this->calculateFeedbackAge($entity),
                     'statutProchaineAction' => $this->getFeedbackStatutProchaineActionString($entity),
+                ];
+                break;
+            case Client::class:
+                /** @var Client $entity */
+                $indicateurs = [
+                    'civiliteString' => $this->getClientCiviliteString($entity),
+                    'nombrePistes' => $this->countClientPistes($entity),
+                    'nombreSinistres' => $this->countClientSinistres($entity),
+                    'nombrePolices' => $this->countClientPolices($entity),
+                ];
+                break;
+            case Assureur::class:
+                /** @var Assureur $entity */
+                $indicateurs = [
+                    'nombrePolicesSouscrites' => $this->countAssureurPolicesSouscrites($entity),
+                    'nombreSinistresGeres' => $this->countAssureurSinistresGeres($entity),
+                    'tauxTransformationCotations' => $this->calculateAssureurTauxTransformation($entity),
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -1740,5 +1759,98 @@ class CalculationProvider
     {
         if ($feedback === null) return null;
         return $feedback->hasNextAction() ? 'Planifiée' : 'Aucune';
+    }
+
+    // --- Indicateurs pour Client ---
+
+    /**
+     * Retourne la civilité du client sous forme de chaîne.
+     */
+    public function getClientCiviliteString(?Client $client): ?string
+    {
+        if ($client === null || $client->getCivilite() === null) {
+            return null;
+        }
+
+        return match ($client->getCivilite()) {
+            Client::CIVILITE_Mr => $this->translator->trans('client_civility_mr', [], 'messages'),
+            Client::CIVILITE_Mme => $this->translator->trans('client_civility_mrs', [], 'messages'),
+            Client::CIVILITE_ENTREPRISE => $this->translator->trans('client_civility_company', [], 'messages'),
+            Client::CIVILITE_ASBL => $this->translator->trans('client_civility_ngo', [], 'messages'),
+            default => $this->translator->trans('client_civility_unknown', [], 'messages'),
+        };
+    }
+
+    /**
+     * Compte le nombre de pistes commerciales pour un client.
+     */
+    private function countClientPistes(Client $client): int
+    {
+        return $client->getPistes()->count();
+    }
+
+    /**
+     * Compte le nombre de sinistres déclarés pour un client.
+     */
+    private function countClientSinistres(Client $client): int
+    {
+        return $client->getNotificationSinistres()->count();
+    }
+
+    /**
+     * Compte le nombre de polices (cotations avec avenant) pour un client.
+     */
+    private function countClientPolices(Client $client): int
+    {
+        $count = 0;
+        foreach ($client->getPistes() as $piste) {
+            foreach ($piste->getCotations() as $cotation) {
+                if (!$cotation->getAvenants()->isEmpty()) {
+                    $count++;
+                }
+            }
+        }
+        return $count;
+    }
+
+
+    // --- Indicateurs pour Assureur ---
+
+    /**
+     * Compte le nombre de polices souscrites auprès d'un assureur.
+     */
+    private function countAssureurPolicesSouscrites(Assureur $assureur): int
+    {
+        $count = 0;
+        foreach ($assureur->getCotations() as $cotation) {
+            if (!$cotation->getAvenants()->isEmpty()) {
+                $count++;
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * Compte le nombre de sinistres gérés par un assureur.
+     */
+    private function countAssureurSinistresGeres(Assureur $assureur): int
+    {
+        return $assureur->getNotificationSinistres()->count();
+    }
+
+    /**
+     * Calcule le taux de transformation des cotations en polices pour un assureur.
+     */
+    private function calculateAssureurTauxTransformation(Assureur $assureur): string
+    {
+        $totalCotations = $assureur->getCotations()->count();
+        if ($totalCotations === 0) {
+            return 'N/A';
+        }
+
+        $policesSouscrites = $this->countAssureurPolicesSouscrites($assureur);
+        $taux = ($policesSouscrites / $totalCotations) * 100;
+
+        return round($taux, 2) . ' %';
     }
 }

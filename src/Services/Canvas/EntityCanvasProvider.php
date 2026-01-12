@@ -295,6 +295,42 @@ class EntityCanvasProvider
                     ],
                 ];
                 break;
+            case Client::class:
+                $canvas = [
+                    [
+                        "code" => "civiliteString", "intitule" => "Civilité", "type" => "Texte", "format" => "Texte",
+                        "description" => "Forme juridique ou civilité du client."
+                    ],
+                    [
+                        "code" => "nombrePistes", "intitule" => "Nb. Pistes", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de pistes commerciales ouvertes pour ce client."
+                    ],
+                    [
+                        "code" => "nombreSinistres", "intitule" => "Nb. Sinistres", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de sinistres déclarés par ce client."
+                    ],
+                    [
+                        "code" => "nombrePolices", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de polices d'assurance actives (cotations transformées) pour ce client."
+                    ],
+                ];
+                break;
+            case Assureur::class:
+                $canvas = [
+                    [
+                        "code" => "nombrePolicesSouscrites", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de polices souscrites auprès de cet assureur."
+                    ],
+                    [
+                        "code" => "nombreSinistresGeres", "intitule" => "Nb. Sinistres", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de sinistres gérés par cet assureur."
+                    ],
+                    [
+                        "code" => "tauxTransformationCotations", "intitule" => "Taux Transfo.", "type" => "Texte", "format" => "Texte",
+                        "description" => "Pourcentage de cotations transformées en polices d'assurance."
+                    ],
+                ];
+                break;
         }
         return $canvas;
     }
@@ -441,7 +477,9 @@ class EntityCanvasProvider
                         ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class, "displayField" => "nom"],
                         ["code" => "bordereaus", "intitule" => "Bordereaux", "type" => "Collection", "targetEntity" => Bordereau::class, "displayField" => "nom"],
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
-                    ], $this->getGlobalIndicatorsCanvas("Assureur"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Assureur::class),
+                    $this->getGlobalIndicatorsCanvas("Assureur"))
                 ];
             
             case Monnaie::class:
@@ -486,7 +524,9 @@ class EntityCanvasProvider
                         ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                         ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
-                    ], $this->getGlobalIndicatorsCanvas("Client"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Client::class),
+                    $this->getGlobalIndicatorsCanvas("Client"))
                 ];
             case ConditionPartage::class:
                 return [
